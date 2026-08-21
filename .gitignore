@@ -1,0 +1,11 @@
+# Programme machinery — never version-controlled (charter commit policy)
+.agents/
+explainers/
+.claude/
+
+# Build products and local tooling state
+build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+.DS_Store
