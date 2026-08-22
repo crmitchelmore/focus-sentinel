@@ -1,6 +1,66 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "shell.cockpit.heading" : {
+      "comment" : "Heading of the main cockpit window.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus Sentinel"
+          }
+        }
+      }
+    },
+    "shell.cockpit.openSettings" : {
+      "comment" : "Cockpit button that opens the Settings window.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Settings"
+          }
+        }
+      }
+    },
+    "shell.cockpit.sensing.unavailable" : {
+      "comment" : "Cockpit line: no activity source is running yet.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No activity source is running, so nothing on screen is being judged."
+          }
+        }
+      }
+    },
+    "shell.cockpit.store.ready" : {
+      "comment" : "Cockpit line: the local store opened successfully.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Local data store is open and versioned at schema 1.0.0."
+          }
+        }
+      }
+    },
+    "shell.cockpit.store.unavailable" : {
+      "comment" : "Cockpit line: the local store could not be opened.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Local data store could not be opened. Nothing will be saved this session."
+          }
+        }
+      }
+    },
     "shell.command.closeWindow" : {
       "comment" : "File menu item that closes the frontmost window.",
       "extractionState" : "manual",
@@ -21,6 +81,102 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Focus Sentinel Help"
+          }
+        }
+      }
+    },
+    "shell.help.column.action" : {
+      "comment" : "Column heading in the Keyboard Shortcuts window: the action's name.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Action"
+          }
+        }
+      }
+    },
+    "shell.help.column.shortcut" : {
+      "comment" : "Column heading in the Keyboard Shortcuts window: the key equivalent.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shortcut"
+          }
+        }
+      }
+    },
+    "shell.help.group.file" : {
+      "comment" : "Group heading in the Keyboard Shortcuts window for actions in the File menu.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "File Menu"
+          }
+        }
+      }
+    },
+    "shell.help.group.help" : {
+      "comment" : "Group heading in the Keyboard Shortcuts window for actions in the Help menu.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Help Menu"
+          }
+        }
+      }
+    },
+    "shell.help.heading" : {
+      "comment" : "Heading of the Keyboard Shortcuts reference window.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keyboard Shortcuts"
+          }
+        }
+      }
+    },
+    "shell.help.introduction" : {
+      "comment" : "Sentence under the Keyboard Shortcuts heading explaining where the list comes from.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "These are the shortcuts Focus Sentinel adds. Everything else in the menu bar is the standard Mac set."
+          }
+        }
+      }
+    },
+    "shell.window.cockpit.title" : {
+      "comment" : "Title of the main cockpit window, as it appears in the Window menu.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus Sentinel"
+          }
+        }
+      }
+    },
+    "shell.window.help.title" : {
+      "comment" : "Title of the Keyboard Shortcuts window, as it appears in the Window menu.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keyboard Shortcuts"
           }
         }
       }

@@ -100,4 +100,18 @@ final class AppComposition {
     var observationAvailability: ObservationAvailability {
         activityObserver.availability
     }
+
+    /// Everything the cockpit draws, as one value.
+    ///
+    /// The composition root translates the concrete implementations it chose into the plain
+    /// value `FocusUI` consumes. That translation happening *here* is what lets `FocusUI`
+    /// stay free of any dependency on `FocusSensing` — the UI never learns which observer it
+    /// was handed, only what that observer currently reports.
+    var cockpitState: CockpitState {
+        CockpitState(
+            status: currentStatus,
+            storeIsReady: storeStatus.isReady,
+            isObservingActivity: activityObserver.availability.isAvailable
+        )
+    }
 }
