@@ -15,7 +15,7 @@ and `tuist` is not used.
 |---|---|
 | `FocusSentinel.xcodeproj/` | the **hand-authored, committed** Xcode project (see "The project file" below) |
 | `Focus.xcworkspace/` | the workspace that owns the shared schemes; the unit lane lives here |
-| `App/` | the thin app target — composition root, scenes, entitlements, string catalog |
+| `App/` | the thin app target — composition root, scenes, entitlements, and a deliberately empty string catalog (see "Strings" below) |
 | `Packages/FocusCore` | domain types, SwiftData schema, status tokens, clocks, appearance traits |
 | `Packages/FocusRules` | the deterministic rule model |
 | `Packages/FocusClassify` | the classification seam — no networking, ever |
@@ -180,6 +180,31 @@ shell frames to the same directory when the grants exist. That directory is evid
 source: it is never committed.
 
 ---
+
+## Strings
+
+Every string a person can read comes from a String Catalog and is reached through a generated
+typed symbol — never a bare literal, never `String(format:)`. `scripts/check-strings.sh` is a
+gate stage and checks both directions: no hardcoded user-visible literal, and no key that is
+in a catalog but unused or used but missing.
+
+There are three catalogs and each module resolves its own against its own bundle, so they are
+checked separately:
+
+| catalog | keys | who reads it |
+|---|---|---|
+| `Packages/FocusUI/Sources/FocusUI/Resources/Localizable.xcstrings` | every shell, settings and help string | `FocusUI`, and the app target through `ShellStrings` |
+| `Packages/FocusCore/Sources/FocusCore/Resources/Localizable.xcstrings` | the `FocusStatus` short labels | `FocusCore` |
+| `App/Localizable.xcstrings` | **none, by design** | nothing yet |
+
+The app target's catalog is empty because the app target is a composition root: it declares
+scenes and wires concrete types to protocols, and even its window titles are `FocusUI` keys
+resolved from `FocusUI`'s bundle. The file is kept rather than deleted because it is the
+declared home for anything the app target ever does own, and because deleting it would remove
+the `App` row from the lint's table — the only check that would notice an app-target source
+starting to name a catalog key that its bundle cannot resolve. So the lint asserts the
+emptiness instead: `App` is listed in `EXPECTS_NO_STRINGS`, and a key appearing there fails
+the gate with instructions to move it to `FocusUI` or to change the list on purpose.
 
 ## The project file
 

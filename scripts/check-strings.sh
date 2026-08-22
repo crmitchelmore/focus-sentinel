@@ -33,6 +33,22 @@
 #
 # Modules are checked separately, because each resolves its own catalog against its own
 # bundle: `FocusUI` cannot see the app's catalog and the app cannot see `FocusCore`'s.
+#
+# ## Why `App/Localizable.xcstrings` has no keys in it
+#
+# The app target is a composition root. It declares scenes and wires concrete types to
+# protocols; every string a person can read — window titles included — is owned by `FocusUI`
+# and reached through `ShellStrings`, which resolves against `FocusUI`'s bundle. So the app's
+# own catalog is legitimately empty, and it is kept rather than deleted because it is the
+# declared home for anything the app target ever does own, and because deleting it would take
+# the `App` row out of the table below and with it the only check that notices the day an
+# app-target source starts naming a catalog key. An empty catalog with a live assertion over
+# it is a guard; no catalog at all is a blind spot.
+#
+# That is what `EXPECTS_NO_STRINGS` below enforces: the app target must keep declaring and
+# referencing zero keys. A module in that list which grows a key fails the gate, and the fix
+# is to move the string to `FocusUI` — or, if it genuinely belongs to the app target, to take
+# the module out of the list deliberately.
 set -u
 
 REPO_ROOT="${0:A:h}/.."
@@ -89,6 +105,11 @@ MODULES = {
     ),
 }
 
+# Modules whose catalog is deliberately empty. See the header: the app target is a
+# composition root and owns no user-visible text, so its catalog is the guard rather than the
+# content, and this is the assertion that keeps it one.
+EXPECTS_NO_STRINGS = ("App",)
+
 LITERAL = re.compile(r'"([^"\\\n]+)"')
 COMMENT = re.compile(r'^\s*(//|///|\*|/\*)')
 
@@ -137,6 +158,19 @@ for module, (catalog_path, source_dir) in sorted(MODULES.items()):
     declared = set(entries)
 
     print(f"-- {module}: {len(declared)} catalog key(s), {len(referenced)} referenced in source")
+
+    if module in EXPECTS_NO_STRINGS:
+        owned = sorted(declared | referenced)
+        report(
+            not owned,
+            f"{module}: owns no user-visible text, as the catalog split intends",
+            [f"unexpected key: {key}" for key in owned]
+            + [
+                "The app target is a composition root: user-visible text belongs to FocusUI",
+                "and is reached through ShellStrings. Move the key there, or take this module",
+                "out of EXPECTS_NO_STRINGS deliberately.",
+            ],
+        )
 
     unreferenced = sorted(declared - referenced)
     report(
