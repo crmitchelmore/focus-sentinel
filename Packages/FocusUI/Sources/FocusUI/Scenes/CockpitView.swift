@@ -39,6 +39,11 @@ public struct CockpitView: View {
     /// focus; re-seeded whenever the priority underneath it changes.
     @State private var doneWhenDraft: String = ""
 
+    /// Whether the capture field is open while a priority already exists — the "change my
+    /// mind" path. With no priority the field is always open, because it is the only thing
+    /// the window is for.
+    @State private var isCapturing: Bool = false
+
     @ScaledMetric(relativeTo: .body) private var rowSpacing: CGFloat = 12
     @ScaledMetric(relativeTo: .largeTitle) private var sectionSpacing: CGFloat = 20
 
@@ -53,6 +58,13 @@ public struct CockpitView: View {
 
             if let priority = state.priority {
                 doneWhenSection(priority)
+            }
+
+            if showsCapture {
+                capture
+            }
+
+            if let priority = state.priority {
                 primaryActions(priority)
             }
 
@@ -106,26 +118,35 @@ public struct CockpitView: View {
     /// answer, so there is no validation here and nothing is ever refused. The field commits
     /// on Return and on losing focus, because a person who types a sentence and then clicks
     /// elsewhere has not asked to throw it away.
+    @ViewBuilder
     private func doneWhenSection(_ priority: PrioritySnapshot) -> some View {
         VStack(alignment: .leading, spacing: rowSpacing / 3) {
             ShellText(.priorityDoneWhenLabel, role: .caption)
                 .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
 
-            TextField(
-                text: $doneWhenDraft,
-                prompt: Text(ShellStrings.resource(.priorityDoneWhenPrompt))
-            ) {
-                ShellText(.priorityDoneWhenLabel)
+            if actions == nil {
+                // Read-only: the value, not a control. See `showsCapture` for why a cockpit
+                // with no host draws no fields.
+                Text(verbatim: priority.doneWhen ?? "")
+                    .font(DesignTokens.font(.body, scale: textScale))
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                TextField(
+                    text: $doneWhenDraft,
+                    prompt: Text(ShellStrings.resource(.priorityDoneWhenPrompt))
+                ) {
+                    ShellText(.priorityDoneWhenLabel)
+                }
+                .labelsHidden()
+                .font(DesignTokens.font(.body, scale: textScale))
+                .focused($focus, equals: .cockpitDoneWhen)
+                .onSubmit { commitDoneWhen(priority) }
+                .onChange(of: focus) { _, newValue in
+                    if newValue != .cockpitDoneWhen { commitDoneWhen(priority) }
+                }
+                .accessibilityLabel(Text(ShellStrings.resource(.priorityDoneWhenLabel)))
             }
-            .labelsHidden()
-            .font(DesignTokens.font(.body, scale: textScale))
-            .focused($focus, equals: .cockpitDoneWhen)
-            .disabled(actions == nil)
-            .onSubmit { commitDoneWhen(priority) }
-            .onChange(of: focus) { _, newValue in
-                if newValue != .cockpitDoneWhen { commitDoneWhen(priority) }
-            }
-            .accessibilityLabel(Text(ShellStrings.resource(.priorityDoneWhenLabel)))
         }
     }
 
@@ -144,6 +165,37 @@ public struct CockpitView: View {
     /// only thing a person does *to* a priority that ends it. Clear is beside it because
     /// putting the priority down is not the same as finishing it, and an app that only offers
     /// "done" teaches people to lie to it.
+    /// The capture field is always open when there is nothing to work on — that is the only
+    /// thing an empty cockpit is for — and opens on demand when there is.
+    ///
+    /// With no mutation host it is not shown at all, rather than shown disabled: a field a
+    /// person can type a sentence into that then goes nowhere is worse than no field. That is
+    /// also what keeps the committed baselines honest — measured on this machine, an
+    /// AppKit-backed `TextField` does not rasterise under `ImageRenderer` and draws SwiftUI's
+    /// yellow "unrenderable view" placeholder, so a read-only render is a picture of the
+    /// cockpit rather than a picture of a broken control.
+    private var showsCapture: Bool {
+        actions != nil && (state.priority == nil || isCapturing)
+    }
+
+    /// One sentence in, one priority out.
+    ///
+    /// Committing while a priority already exists **replaces** it: a second activation
+    /// replaces, never queues (F-02), and the replaced task keeps every word, context item
+    /// and rule it had, because the store re-points a pointer rather than deleting a row.
+    private var capture: some View {
+        CaptureFieldView(
+            commit: { intent, doneWhen in
+                actions?.setPriority(intent: intent, doneWhen: doneWhen)
+                isCapturing = false
+            },
+            isEnabled: actions != nil,
+            fieldFocus: .cockpitCaptureField,
+            buttonFocus: .cockpitSetPriority,
+            focus: $focus
+        )
+    }
+
     private func primaryActions(_ priority: PrioritySnapshot) -> some View {
         HStack(spacing: rowSpacing) {
             Button {
@@ -151,9 +203,22 @@ public struct CockpitView: View {
             } label: {
                 ShellText(.priorityActionComplete)
             }
-            .keyboardShortcut(.defaultAction)
+            // Return belongs to whichever surface the user is actually in: while the capture
+            // field is open, its own submit is the primary gesture, and two default actions
+            // in one window is a coin toss the user has to lose to find out about.
+            .keyboardShortcut(showsCapture ? nil : .defaultAction)
             .focused($focus, equals: .cockpitComplete)
             .disabled(actions == nil)
+
+            if !showsCapture {
+                Button {
+                    isCapturing = true
+                    focus = .cockpitCaptureField
+                } label: {
+                    ShellText(.priorityActionChange)
+                }
+                .disabled(actions == nil)
+            }
 
             Button {
                 actions?.clear()

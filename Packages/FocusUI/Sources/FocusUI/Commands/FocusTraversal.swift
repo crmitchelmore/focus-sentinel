@@ -6,6 +6,8 @@ import SwiftUI
 /// makes sense in the cockpit has nothing to say about the order inside a Settings tab.
 public enum FocusSurface: String, Sendable, CaseIterable, Hashable, Identifiable {
     case cockpit
+    /// The global quick-capture panel, summoned by the hot key from anywhere on the Mac.
+    case quickCapture
     case settingsGeneral
     case settingsPrivacy
 
@@ -20,6 +22,10 @@ public enum FocusSurface: String, Sendable, CaseIterable, Hashable, Identifiable
 /// declared here appears in exactly one surface's order — so a field that is added and never
 /// placed is a failure, not an invisible dead end.
 public enum FocusField: String, Sendable, CaseIterable, Hashable, Identifiable {
+    /// The cockpit's capture field, where the one thing is typed.
+    case cockpitCaptureField
+    /// The cockpit's Set Priority button.
+    case cockpitSetPriority
     /// The definition-of-done field, directly under the priority hero.
     case cockpitDoneWhen
     /// The cockpit's primary action: finish the current priority.
@@ -30,6 +36,11 @@ public enum FocusField: String, Sendable, CaseIterable, Hashable, Identifiable {
     case generalAppearancePicker
     /// The "Reveal Data Store in Finder" button in Privacy settings.
     case privacyRevealStore
+    /// The quick-capture panel's field and its Set Priority button. Separate cases from the
+    /// cockpit's, because the panel is its own surface with its own Tab order and its own
+    /// Escape behaviour.
+    case quickCaptureField
+    case quickCaptureSet
 
     public var id: String { rawValue }
 }
@@ -72,9 +83,23 @@ public enum FocusTraversal {
             surface: .cockpit,
             // Top to bottom, in the order the column reads: the definition of done sits
             // under the hero, the primary action under that, and the route to Settings last.
-            order: [.cockpitDoneWhen, .cockpitComplete, .cockpitOpenSettings],
+            order: [
+                .cockpitCaptureField,
+                .cockpitSetPriority,
+                .cockpitDoneWhen,
+                .cockpitComplete,
+                .cockpitOpenSettings
+            ],
             defaultField: .cockpitComplete,
             cancel: .none
+        ),
+        SurfaceFocus(
+            surface: .quickCapture,
+            order: [.quickCaptureField, .quickCaptureSet],
+            defaultField: .quickCaptureSet,
+            // Escape closes the panel without saving. It is a transient surface summoned over
+            // someone else's work, so backing out of it must be free.
+            cancel: .dismissWindow
         ),
         SurfaceFocus(
             surface: .settingsGeneral,

@@ -31,6 +31,16 @@ public enum ShellStrings {
     public static func string(_ key: ShellStringKey) -> String {
         String(localized: resource(key))
     }
+
+    /// A catalog entry with **one** argument — the user's own words, and nothing else.
+    ///
+    /// This is the whole of standing condition 4's mechanism for the refinement strip: the
+    /// sentence around the suggestion is authored, translated text from the catalog, and the
+    /// only thing substituted into it is a phrase the user typed. No prose is composed at
+    /// runtime, by a model or by anything else, here or in e06.
+    public static func string(_ key: ShellStringKey, argument: String) -> String {
+        String(format: string(key), argument)
+    }
 }
 
 /// Every user-visible string `FocusUI` owns, as a typed key.
@@ -61,6 +71,27 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case priorityDoneWhenPrompt = "priority.doneWhen.prompt"
     case priorityActionComplete = "priority.action.complete"
     case priorityActionClear = "priority.action.clear"
+    case priorityActionChange = "priority.action.change"
+
+    // Capture, and the deterministic refinement strip
+    case captureFieldLabel = "capture.field.label"
+    case captureFieldPrompt = "capture.field.prompt"
+    case captureActionSet = "capture.action.set"
+    case captureActionRefine = "capture.action.refine"
+    case captureRefineHeading = "capture.refine.heading"
+    case captureFindingNoLeadingVerb = "capture.finding.noLeadingVerb"
+    case captureFindingTooShort = "capture.finding.tooShort"
+    case captureFindingNounOnlyPhrase = "capture.finding.nounOnlyPhrase"
+    case captureFindingNoOutcome = "capture.finding.noOutcome"
+    case captureSuggestionStartWithVerb = "capture.suggestion.startWithVerb"
+    case captureSuggestionSayMore = "capture.suggestion.sayMore"
+    case captureSuggestionNameTheOutcome = "capture.suggestion.nameTheOutcome"
+    case captureSuggestionDoneWhen = "capture.suggestion.doneWhen"
+    case captureSuggestionDoneWhenLabel = "capture.suggestion.doneWhenLabel"
+    case captureSuggestionUse = "capture.suggestion.use"
+    case captureSuggestionKeep = "capture.suggestion.keep"
+    case capturePanelTitle = "capture.panel.title"
+    case capturePanelHint = "capture.panel.hint"
 
     // Keyboard shortcuts reference
     case helpHeading = "shell.help.heading"
@@ -162,6 +193,8 @@ extension View {
 public struct ShellText: View {
     private let resource: LocalizedStringResource
     private let role: DesignTokens.FontRole
+    /// The one substitution, for the format-string entries. `nil` for every plain entry.
+    private let argument: String?
 
     @Environment(\.shellStringTransform) private var transform
     @Environment(\.shellTextScale) private var scale
@@ -170,6 +203,18 @@ public struct ShellText: View {
     public init(_ key: ShellStringKey, role: DesignTokens.FontRole = .body) {
         self.resource = ShellStrings.resource(key)
         self.role = role
+        self.argument = nil
+    }
+
+    /// A format entry from the catalog with the user's own phrase substituted into it.
+    ///
+    /// The transform runs on the *format* and the argument is substituted afterwards, so the
+    /// pseudo-localisation lane expands the authored half and leaves the user's words alone —
+    /// which is exactly what a real translation does.
+    public init(_ key: ShellStringKey, role: DesignTokens.FontRole = .body, argument: String) {
+        self.resource = ShellStrings.resource(key)
+        self.role = role
+        self.argument = argument
     }
 
     /// A string from some other package's catalog — the status labels, which `FocusCore`
@@ -183,10 +228,13 @@ public struct ShellText: View {
     public init(resource: LocalizedStringResource, role: DesignTokens.FontRole = .body) {
         self.resource = resource
         self.role = role
+        self.argument = nil
     }
 
     public var body: some View {
-        Text(verbatim: transform(String(localized: resource)))
+        let format = transform(String(localized: resource))
+        let drawn = argument.map { String(format: format, $0) } ?? format
+        return Text(verbatim: drawn)
             .font(DesignTokens.font(role, scale: scale))
     }
 }

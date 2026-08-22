@@ -1,6 +1,234 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "capture.action.refine" : {
+      "comment" : "Button that opens the suggestion strip on demand, before Set Priority has been pressed.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Refine"
+          }
+        }
+      }
+    },
+    "capture.action.set" : {
+      "comment" : "Button that commits the typed sentence as the current priority. Never disabled by validation.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set Priority"
+          }
+        }
+      }
+    },
+    "capture.field.label" : {
+      "comment" : "Accessibility label for the capture field, where the user types the one thing.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Priority"
+          }
+        }
+      }
+    },
+    "capture.field.prompt" : {
+      "comment" : "Placeholder in the capture field.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Say what you are trying to do, in one sentence"
+          }
+        }
+      }
+    },
+    "capture.finding.noLeadingVerb" : {
+      "comment" : "Refinement explanation: the sentence does not begin with an imperative verb.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "That describes a state rather than naming a job."
+          }
+        }
+      }
+    },
+    "capture.finding.noOutcome" : {
+      "comment" : "Refinement explanation: there is a verb but no concrete outcome.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "That names an action but not what it will produce."
+          }
+        }
+      }
+    },
+    "capture.finding.nounOnlyPhrase" : {
+      "comment" : "Refinement explanation: the sentence is a bare noun phrase.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "That names a topic rather than something to do."
+          }
+        }
+      }
+    },
+    "capture.finding.tooShort" : {
+      "comment" : "Refinement explanation: the sentence is a single word or barely any characters.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "There is not much here to work from."
+          }
+        }
+      }
+    },
+    "capture.panel.hint" : {
+      "comment" : "Footer hint in the quick-capture panel.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Return sets it · ⌘Return sets it and returns you to what you were doing · Escape closes"
+          }
+        }
+      }
+    },
+    "capture.panel.title" : {
+      "comment" : "Title of the global quick-capture panel.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quick Capture"
+          }
+        }
+      }
+    },
+    "capture.refine.heading" : {
+      "comment" : "Heading of the refinement strip under the capture field.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A suggestion, made of your own words"
+          }
+        }
+      }
+    },
+    "capture.suggestion.doneWhen" : {
+      "comment" : "Pre-filled definition of done. The single argument is the object phrase from the user's own sentence.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ is finished"
+          }
+        }
+      }
+    },
+    "capture.suggestion.doneWhenLabel" : {
+      "comment" : "Caption above the pre-filled done-when in the refinement strip.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suggested definition of done"
+          }
+        }
+      }
+    },
+    "capture.suggestion.keep" : {
+      "comment" : "Button that dismisses the suggestion and leaves the typed sentence untouched.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep My Words"
+          }
+        }
+      }
+    },
+    "capture.suggestion.nameTheOutcome" : {
+      "comment" : "Suggested rewrite. The single argument is the user's own sentence.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Name what it will produce: “%@”"
+          }
+        }
+      }
+    },
+    "capture.suggestion.sayMore" : {
+      "comment" : "Suggested rewrite. The single argument is the user's own sentence.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Say a little more than “%@”"
+          }
+        }
+      }
+    },
+    "capture.suggestion.startWithVerb" : {
+      "comment" : "Suggested rewrite. The single argument is the user's own sentence, re-ordered — never new words.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start with a verb: “%@”"
+          }
+        }
+      }
+    },
+    "capture.suggestion.use" : {
+      "comment" : "Button that puts the suggested rewrite into the capture field.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use This"
+          }
+        }
+      }
+    },
+    "priority.action.change" : {
+      "comment" : "Cockpit button that reopens the capture field so a new sentence can replace the current priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Change Priority…"
+          }
+        }
+      }
+    },
     "priority.action.clear" : {
       "comment" : "Cockpit button that puts the current priority down without completing it.",
       "extractionState" : "manual",

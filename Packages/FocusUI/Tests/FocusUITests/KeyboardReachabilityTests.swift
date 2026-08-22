@@ -122,6 +122,9 @@ struct KeyboardReachabilityTests {
         #expect(FocusTraversal.contract(for: .cockpit).cancel == .none)
         #expect(FocusTraversal.contract(for: .settingsGeneral).cancel == .dismissWindow)
         #expect(FocusTraversal.contract(for: .settingsPrivacy).cancel == .dismissWindow)
+        // The quick-capture panel is summoned over someone else's work: backing out of it
+        // without saving anything must always be one key away.
+        #expect(FocusTraversal.contract(for: .quickCapture).cancel == .dismissWindow)
     }
 
     @Test("Return activates the primary action wherever a surface has one")
@@ -137,7 +140,8 @@ struct KeyboardReachabilityTests {
 
     @Test("the cockpit and both Settings tabs each have a focusable element")
     func everyShellSurfaceIsReachable() {
-        #expect(FocusTraversal.firstField(in: .cockpit) == .cockpitDoneWhen)
+        #expect(FocusTraversal.firstField(in: .cockpit) == .cockpitCaptureField)
+        #expect(FocusTraversal.firstField(in: .quickCapture) == .quickCaptureField)
         #expect(FocusTraversal.firstField(in: .settingsGeneral) == .generalAppearancePicker)
         #expect(FocusTraversal.firstField(in: .settingsPrivacy) == .privacyRevealStore)
     }
