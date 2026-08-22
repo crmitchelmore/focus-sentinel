@@ -93,6 +93,22 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case capturePanelTitle = "capture.panel.title"
     case capturePanelHint = "capture.panel.hint"
 
+    // The context pack
+    case contextHeading = "context.pack.heading"
+    case contextEmpty = "context.pack.empty"
+    case contextKeywordPrompt = "context.keyword.prompt"
+    case contextActionAddKeyword = "context.action.addKeyword"
+    case contextActionAddFiles = "context.action.addFiles"
+    case contextActionRemove = "context.action.remove"
+    case contextActionLocate = "context.action.locate"
+    case contextFileMissing = "context.file.missing"
+    case contextAppNotInstalled = "context.app.notInstalled"
+    case contextKindApp = "context.kind.app"
+    case contextKindDomain = "context.kind.domain"
+    case contextKindKeyword = "context.kind.keyword"
+    case contextKindFile = "context.kind.file"
+    case contextKindUnknown = "context.kind.unknown"
+
     // Keyboard shortcuts reference
     case helpHeading = "shell.help.heading"
     case helpIntroduction = "shell.help.introduction"

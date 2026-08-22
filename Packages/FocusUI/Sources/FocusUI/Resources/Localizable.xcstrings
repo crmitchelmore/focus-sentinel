@@ -217,6 +217,174 @@
         }
       }
     },
+    "context.action.addFiles" : {
+      "comment" : "Button that opens the file importer to attach files to the context pack.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add Files…"
+          }
+        }
+      }
+    },
+    "context.action.addKeyword" : {
+      "comment" : "Button that adds the typed keyword to the context pack.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add"
+          }
+        }
+      }
+    },
+    "context.action.locate" : {
+      "comment" : "Button on a context chip whose file can no longer be found, offering to re-attach it.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Locate…"
+          }
+        }
+      }
+    },
+    "context.action.remove" : {
+      "comment" : "Accessibility label for the button that removes one context item.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove"
+          }
+        }
+      }
+    },
+    "context.app.notInstalled" : {
+      "comment" : "Shown on an application chip whose bundle identifier resolves to no installed app.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not installed"
+          }
+        }
+      }
+    },
+    "context.file.missing" : {
+      "comment" : "Shown on a file chip whose bookmark no longer resolves. The chip is never removed automatically.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Missing"
+          }
+        }
+      }
+    },
+    "context.keyword.prompt" : {
+      "comment" : "Placeholder in the field that adds a keyword to the context pack.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add a keyword"
+          }
+        }
+      }
+    },
+    "context.kind.app" : {
+      "comment" : "The name of the application context-item kind, drawn when the user differentiates without colour.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App"
+          }
+        }
+      }
+    },
+    "context.kind.domain" : {
+      "comment" : "The name of the web-origin context-item kind.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Site"
+          }
+        }
+      }
+    },
+    "context.kind.file" : {
+      "comment" : "The name of the file context-item kind.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "File"
+          }
+        }
+      }
+    },
+    "context.kind.keyword" : {
+      "comment" : "The name of the keyword context-item kind.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keyword"
+          }
+        }
+      }
+    },
+    "context.kind.unknown" : {
+      "comment" : "The name given to a stored context item of a kind this build does not understand.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unrecognised"
+          }
+        }
+      }
+    },
+    "context.pack.empty" : {
+      "comment" : "Shown in place of the context pack when a task has no context items yet.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drag an app, a link or a file here, or type a keyword."
+          }
+        }
+      }
+    },
+    "context.pack.heading" : {
+      "comment" : "Caption above the task's context pack in the cockpit.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Context"
+          }
+        }
+      }
+    },
     "priority.action.change" : {
       "comment" : "Cockpit button that reopens the capture field so a new sentence can replace the current priority.",
       "extractionState" : "manual",

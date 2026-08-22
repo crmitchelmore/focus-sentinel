@@ -58,6 +58,7 @@ public struct CockpitView: View {
 
             if let priority = state.priority {
                 doneWhenSection(priority)
+                contextSection(priority)
             }
 
             if showsCapture {
@@ -165,6 +166,25 @@ public struct CockpitView: View {
     /// only thing a person does *to* a priority that ends it. Clear is beside it because
     /// putting the priority down is not the same as finishing it, and an app that only offers
     /// "done" teaches people to lie to it.
+    // MARK: - Context pack (F-09)
+
+    /// What is on the desk for this priority: apps, sites, keywords and files.
+    ///
+    /// It sits below the definition of done and above the actions, at `.callout` and smaller,
+    /// so it can never compete with the hero for the eye.
+    private func contextSection(_ priority: PrioritySnapshot) -> some View {
+        ContextChipRow(
+            items: priority.contextItems,
+            add: actions.map { host in
+                { drafts in
+                    for draft in drafts { host.addContext(taskID: priority.id, item: draft) }
+                }
+            },
+            remove: actions.map { host in { id in host.removeContext(id: id) } },
+            focus: $focus
+        )
+    }
+
     /// The capture field is always open when there is nothing to work on — that is the only
     /// thing an empty cockpit is for — and opens on demand when there is.
     ///

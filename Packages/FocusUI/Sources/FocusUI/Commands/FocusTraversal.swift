@@ -28,6 +28,10 @@ public enum FocusField: String, Sendable, CaseIterable, Hashable, Identifiable {
     case cockpitSetPriority
     /// The definition-of-done field, directly under the priority hero.
     case cockpitDoneWhen
+    /// The field that adds a keyword to the context pack.
+    case cockpitContextKeyword
+    /// The button that opens the file importer for the context pack.
+    case cockpitContextAddFiles
     /// The cockpit's primary action: finish the current priority.
     case cockpitComplete
     /// The cockpit's route to Settings.
@@ -87,6 +91,8 @@ public enum FocusTraversal {
                 .cockpitCaptureField,
                 .cockpitSetPriority,
                 .cockpitDoneWhen,
+                .cockpitContextKeyword,
+                .cockpitContextAddFiles,
                 .cockpitComplete,
                 .cockpitOpenSettings
             ],
