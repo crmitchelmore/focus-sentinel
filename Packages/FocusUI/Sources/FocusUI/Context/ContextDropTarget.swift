@@ -73,20 +73,29 @@ extension View {
     /// `(items, location) -> Bool` form is deprecated — and
     /// `pasteDestination(for:action:validator:)`. Paste is wired to the same decoder as the
     /// drop, so ⌘V and a drag put exactly the same thing in the pack.
+    /// The modifiers are attached only when there is somewhere for a drop to *go*, rather
+    /// than attached-and-disabled. Two reasons, and both are about honesty: a view advertising
+    /// a drop destination it will refuse is a lie told with the cursor, and a drop destination
+    /// makes its whole subtree unrenderable under `ImageRenderer` — measured on this machine —
+    /// so a read-only render would be a yellow placeholder where the chips should be.
+    @ViewBuilder
     public func contextDropTarget(
         isEnabled: Bool = true,
         receive: @escaping ([ContextItemDraft]) -> Void
     ) -> some View {
-        dropDestination(for: DroppedContext.self, isEnabled: isEnabled) { items, _ in
-            let drafts = ContextDecoder.decode(items)
-            guard !drafts.isEmpty else { return }
-            receive(drafts)
-        }
-        .pasteDestination(for: DroppedContext.self) { items in
-            guard isEnabled else { return }
-            let drafts = ContextDecoder.decode(items)
-            guard !drafts.isEmpty else { return }
-            receive(drafts)
+        if isEnabled {
+            dropDestination(for: DroppedContext.self) { items, _ in
+                let drafts = ContextDecoder.decode(items)
+                guard !drafts.isEmpty else { return }
+                receive(drafts)
+            }
+            .pasteDestination(for: DroppedContext.self) { items in
+                let drafts = ContextDecoder.decode(items)
+                guard !drafts.isEmpty else { return }
+                receive(drafts)
+            }
+        } else {
+            self
         }
     }
 }

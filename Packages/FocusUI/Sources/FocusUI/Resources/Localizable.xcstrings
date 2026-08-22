@@ -421,6 +421,102 @@
         }
       }
     },
+    "priority.complete.action.cancel" : {
+      "comment" : "Button that closes the completion sheet without finishing anything.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancel"
+          }
+        }
+      }
+    },
+    "priority.complete.action.confirm" : {
+      "comment" : "Button that finishes the priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Complete"
+          }
+        }
+      }
+    },
+    "priority.complete.heading" : {
+      "comment" : "Heading of the completion sheet.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Finish this priority"
+          }
+        }
+      }
+    },
+    "priority.complete.note" : {
+      "comment" : "Explains that the completion sheet never requires a reflection.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Both are optional. Completing works with them empty."
+          }
+        }
+      }
+    },
+    "priority.complete.restart.label" : {
+      "comment" : "Caption above the optional field recording where to pick the work up again.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Where to restart"
+          }
+        }
+      }
+    },
+    "priority.complete.restart.prompt" : {
+      "comment" : "Placeholder in the optional where-to-restart field.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Where to pick this up next time"
+          }
+        }
+      }
+    },
+    "priority.complete.shipped.label" : {
+      "comment" : "Caption above the optional field recording what was finished.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "What shipped"
+          }
+        }
+      }
+    },
+    "priority.complete.shipped.prompt" : {
+      "comment" : "Placeholder in the optional what-shipped field.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anything worth remembering about what you finished"
+          }
+        }
+      }
+    },
     "priority.doneWhen.label" : {
       "comment" : "Caption above the definition-of-done field, directly under the priority.",
       "extractionState" : "manual",
@@ -453,6 +549,294 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "What is the one thing?"
+          }
+        }
+      }
+    },
+    "priority.recent.action.again" : {
+      "comment" : "Button that makes a previous priority the current one, with its stored context.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Work on This Again"
+          }
+        }
+      }
+    },
+    "priority.recent.completed" : {
+      "comment" : "Shown on a previous priority that was finished.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Completed"
+          }
+        }
+      }
+    },
+    "priority.recent.contextItems" : {
+      "comment" : "Accessibility label for the count of context items carried by a previous priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Context items"
+          }
+        }
+      }
+    },
+    "priority.recent.heading" : {
+      "comment" : "Caption above the history of previous commitments.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recent priorities"
+          }
+        }
+      }
+    },
+    "priority.ritual.action.dismiss" : {
+      "comment" : "Ritual banner button that dismisses it. Dismissing also writes the day key, so it asks once.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not Today"
+          }
+        }
+      }
+    },
+    "priority.ritual.action.set" : {
+      "comment" : "Ritual banner button that moves focus to the capture field.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Answer Now"
+          }
+        }
+      }
+    },
+    "priority.ritual.message" : {
+      "comment" : "The daily ritual banner's question, shown once per local day.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "What is the one thing today?"
+          }
+        }
+      }
+    },
+    "priority.rules.action.addRelated" : {
+      "comment" : "Button that adds a new rule saying the subject supports the priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add as Related"
+          }
+        }
+      }
+    },
+    "priority.rules.action.addUnrelated" : {
+      "comment" : "Button that adds a new rule saying the subject does not support the priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add as Unrelated"
+          }
+        }
+      }
+    },
+    "priority.rules.action.remove" : {
+      "comment" : "Accessibility label for the button that deletes one rule.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove Rule"
+          }
+        }
+      }
+    },
+    "priority.rules.empty" : {
+      "comment" : "Shown when the current priority has no rules of its own.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing is ruled in or out for this priority yet."
+          }
+        }
+      }
+    },
+    "priority.rules.heading" : {
+      "comment" : "Caption above the per-task relevance rules.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rules for this priority"
+          }
+        }
+      }
+    },
+    "priority.rules.scope.app" : {
+      "comment" : "Rule scope: the rule is about a whole application.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Application"
+          }
+        }
+      }
+    },
+    "priority.rules.scope.domain" : {
+      "comment" : "Rule scope: the rule is about a web origin.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Website"
+          }
+        }
+      }
+    },
+    "priority.rules.scope.session" : {
+      "comment" : "Rule scope: the rule lasts until this priority is completed.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This session only"
+          }
+        }
+      }
+    },
+    "priority.rules.scope.titleToken" : {
+      "comment" : "Rule scope: the rule is about a word drawn from a window or tab title.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Word in a title"
+          }
+        }
+      }
+    },
+    "priority.rules.subject.prompt" : {
+      "comment" : "Placeholder in the field that names what a new rule is about.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bundle identifier, site or word"
+          }
+        }
+      }
+    },
+    "priority.rules.verdict.relevant" : {
+      "comment" : "Rule verdict: the subject supports the current priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Related"
+          }
+        }
+      }
+    },
+    "priority.rules.verdict.uncertain" : {
+      "comment" : "Rule verdict: the user explicitly declined to decide. Never treated as unrelated.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Undecided"
+          }
+        }
+      }
+    },
+    "priority.rules.verdict.unrelated" : {
+      "comment" : "Rule verdict: the subject does not support the current priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unrelated"
+          }
+        }
+      }
+    },
+    "priority.timebox.label" : {
+      "comment" : "Caption above the timebox control.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Timebox"
+          }
+        }
+      }
+    },
+    "priority.timebox.none" : {
+      "comment" : "Timebox choice that clears the timebox.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No Timebox"
+          }
+        }
+      }
+    },
+    "priority.timebox.overtime" : {
+      "comment" : "Timebox readout once the box is spent. The argument is a formatted duration.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ over"
+          }
+        }
+      }
+    },
+    "priority.timebox.remaining" : {
+      "comment" : "Timebox readout while still inside the box. The argument is a formatted duration.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ left"
           }
         }
       }

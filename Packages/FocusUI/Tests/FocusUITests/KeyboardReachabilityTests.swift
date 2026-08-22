@@ -125,6 +125,8 @@ struct KeyboardReachabilityTests {
         // The quick-capture panel is summoned over someone else's work: backing out of it
         // without saving anything must always be one key away.
         #expect(FocusTraversal.contract(for: .quickCapture).cancel == .dismissWindow)
+        // A sheet always has a way out that changes nothing.
+        #expect(FocusTraversal.contract(for: .completionSheet).cancel == .dismissWindow)
     }
 
     @Test("Return activates the primary action wherever a surface has one")
@@ -140,8 +142,15 @@ struct KeyboardReachabilityTests {
 
     @Test("the cockpit and both Settings tabs each have a focusable element")
     func everyShellSurfaceIsReachable() {
-        #expect(FocusTraversal.firstField(in: .cockpit) == .cockpitCaptureField)
+        // The ritual banner sits above everything else while it is shown, so it comes first
+        // in the order; the capture field is next, and is where focus lands on an ordinary
+        // day when the banner is absent.
+        #expect(FocusTraversal.firstField(in: .cockpit) == .cockpitRitualDismiss)
+        #expect(
+            FocusTraversal.next(after: .cockpitRitualDismiss, in: .cockpit) == .cockpitCaptureField
+        )
         #expect(FocusTraversal.firstField(in: .quickCapture) == .quickCaptureField)
+        #expect(FocusTraversal.firstField(in: .completionSheet) == .completionShipped)
         #expect(FocusTraversal.firstField(in: .settingsGeneral) == .generalAppearancePicker)
         #expect(FocusTraversal.firstField(in: .settingsPrivacy) == .privacyRevealStore)
     }

@@ -8,6 +8,8 @@ public enum FocusSurface: String, Sendable, CaseIterable, Hashable, Identifiable
     case cockpit
     /// The global quick-capture panel, summoned by the hot key from anywhere on the Mac.
     case quickCapture
+    /// The sheet that finishes a priority.
+    case completionSheet
     case settingsGeneral
     case settingsPrivacy
 
@@ -22,16 +24,22 @@ public enum FocusSurface: String, Sendable, CaseIterable, Hashable, Identifiable
 /// declared here appears in exactly one surface's order — so a field that is added and never
 /// placed is a failure, not an invisible dead end.
 public enum FocusField: String, Sendable, CaseIterable, Hashable, Identifiable {
+    /// The daily ritual banner's dismissal, above everything else while it is shown.
+    case cockpitRitualDismiss
     /// The cockpit's capture field, where the one thing is typed.
     case cockpitCaptureField
     /// The cockpit's Set Priority button.
     case cockpitSetPriority
     /// The definition-of-done field, directly under the priority hero.
     case cockpitDoneWhen
+    /// The timebox control. One identity for the control, not one per preset button.
+    case cockpitTimebox
     /// The field that adds a keyword to the context pack.
     case cockpitContextKeyword
     /// The button that opens the file importer for the context pack.
     case cockpitContextAddFiles
+    /// The field that names what a new per-task rule is about.
+    case cockpitRuleSubject
     /// The cockpit's primary action: finish the current priority.
     case cockpitComplete
     /// The cockpit's route to Settings.
@@ -45,6 +53,10 @@ public enum FocusField: String, Sendable, CaseIterable, Hashable, Identifiable {
     /// Escape behaviour.
     case quickCaptureField
     case quickCaptureSet
+    /// The completion sheet's two optional reflection fields and its Complete button.
+    case completionShipped
+    case completionRestartPoint
+    case completionConfirm
 
     public var id: String { rawValue }
 }
@@ -88,11 +100,14 @@ public enum FocusTraversal {
             // Top to bottom, in the order the column reads: the definition of done sits
             // under the hero, the primary action under that, and the route to Settings last.
             order: [
+                .cockpitRitualDismiss,
                 .cockpitCaptureField,
                 .cockpitSetPriority,
                 .cockpitDoneWhen,
+                .cockpitTimebox,
                 .cockpitContextKeyword,
                 .cockpitContextAddFiles,
+                .cockpitRuleSubject,
                 .cockpitComplete,
                 .cockpitOpenSettings
             ],
@@ -105,6 +120,12 @@ public enum FocusTraversal {
             defaultField: .quickCaptureSet,
             // Escape closes the panel without saving. It is a transient surface summoned over
             // someone else's work, so backing out of it must be free.
+            cancel: .dismissWindow
+        ),
+        SurfaceFocus(
+            surface: .completionSheet,
+            order: [.completionShipped, .completionRestartPoint, .completionConfirm],
+            defaultField: .completionConfirm,
             cancel: .dismissWindow
         ),
         SurfaceFocus(

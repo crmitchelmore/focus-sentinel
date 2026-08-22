@@ -44,6 +44,10 @@ public struct CockpitView: View {
     /// the window is for.
     @State private var isCapturing: Bool = false
 
+    /// Whether the completion sheet is up. Completing is a deliberate act with two things
+    /// worth recording, so it gets a sheet rather than happening under the pointer.
+    @State private var isCompleting: Bool = false
+
     @ScaledMetric(relativeTo: .body) private var rowSpacing: CGFloat = 12
     @ScaledMetric(relativeTo: .largeTitle) private var sectionSpacing: CGFloat = 20
 
@@ -54,11 +58,25 @@ public struct CockpitView: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: sectionSpacing) {
+            if state.showsRitualPrompt, actions != nil {
+                RitualBanner(
+                    answer: {
+                        actions?.dismissRitual()
+                        isCapturing = true
+                        focus = .cockpitCaptureField
+                    },
+                    dismiss: { actions?.dismissRitual() },
+                    focus: $focus
+                )
+            }
+
             header
 
             if let priority = state.priority {
                 doneWhenSection(priority)
+                timeboxSection(priority)
                 contextSection(priority)
+                rulesSection(priority)
             }
 
             if showsCapture {
@@ -68,6 +86,11 @@ public struct CockpitView: View {
             if let priority = state.priority {
                 primaryActions(priority)
             }
+
+            RecentPrioritiesView(
+                rows: state.recent,
+                activate: actions.map { host in { id in host.activate(taskID: id) } }
+            )
 
             footer
 
@@ -84,6 +107,22 @@ public struct CockpitView: View {
         .onAppear { doneWhenDraft = state.priority?.doneWhen ?? "" }
         .onChange(of: state.priority?.id) { doneWhenDraft = state.priority?.doneWhen ?? "" }
         .onChange(of: state.priority?.doneWhen) { doneWhenDraft = state.priority?.doneWhen ?? "" }
+        .sheet(isPresented: $isCompleting) {
+            if let priority = state.priority {
+                CompletionSheet(
+                    intent: priority.intent,
+                    complete: { shipped, restartPoint in
+                        actions?.complete(
+                            taskID: priority.id,
+                            shipped: shipped,
+                            restartPoint: restartPoint
+                        )
+                        isCompleting = false
+                    },
+                    cancel: { isCompleting = false }
+                )
+            }
+        }
     }
 
     // MARK: - The hero
@@ -166,6 +205,40 @@ public struct CockpitView: View {
     /// only thing a person does *to* a priority that ends it. Clear is beside it because
     /// putting the priority down is not the same as finishing it, and an app that only offers
     /// "done" teaches people to lie to it.
+    // MARK: - Timebox (F-12)
+
+    private func timeboxSection(_ priority: PrioritySnapshot) -> some View {
+        TimeboxControl(
+            timeboxSeconds: priority.timeboxSeconds,
+            state: priority.timebox,
+            choose: actions.map { host in
+                { seconds in host.setTimebox(taskID: priority.id, seconds: seconds) }
+            },
+            focus: $focus
+        )
+    }
+
+    // MARK: - Per-task rules (F-11)
+
+    private func rulesSection(_ priority: PrioritySnapshot) -> some View {
+        TaskRulesView(
+            rules: priority.rules,
+            add: actions.map { host in
+                { scope, subject, verdict in
+                    host.addRule(
+                        taskID: priority.id,
+                        scope: scope,
+                        subject: subject,
+                        verdict: verdict
+                    )
+                }
+            },
+            change: actions.map { host in { id, verdict in host.changeRule(id: id, verdict: verdict) } },
+            remove: actions.map { host in { id in host.removeRule(id: id) } },
+            focus: $focus
+        )
+    }
+
     // MARK: - Context pack (F-09)
 
     /// What is on the desk for this priority: apps, sites, keywords and files.
@@ -219,7 +292,7 @@ public struct CockpitView: View {
     private func primaryActions(_ priority: PrioritySnapshot) -> some View {
         HStack(spacing: rowSpacing) {
             Button {
-                actions?.complete(taskID: priority.id, shipped: nil, restartPoint: nil)
+                isCompleting = true
             } label: {
                 ShellText(.priorityActionComplete)
             }
