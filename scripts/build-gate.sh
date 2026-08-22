@@ -3,9 +3,9 @@
 #
 #   scripts/build-gate.sh
 #
-# Ten stages. Every build and test command redirects **unpiped** to its own log file — no
-# `tee`, no `xcpretty`, no `| grep` — and is judged on its exit status alone. A build whose
-# output was piped into something is not a verified build.
+# Every build and test command redirects **unpiped** to its own log file — no `tee`, no
+# `xcpretty`, no `| grep` — and is judged on its exit status alone. A build whose output was
+# piped into something is not a verified build.
 #
 # The gate does **not** short-circuit: every stage runs, so one early failure cannot hide
 # three later ones. It prints a summary table and exits non-zero if any stage failed.
@@ -14,16 +14,21 @@
 #
 # Nothing here needs Accessibility, Screen Recording or Automation — not for the app, and
 # not for the shell that invokes it. Revoking every permission on this Mac must still leave
-# a green gate. That is why the live `osascript` + `screencapture` lane is not a stage: it
-# produces evidence a human reads, never a pass/fail criterion, and the gate never invokes
-# it.
+# a green gate. That is why the live `osascript` + `screencapture` lane is not a stage and is
+# never invoked from here: it produces evidence a human reads, never a pass/fail criterion.
+# Run it separately, when the grants exist:
+#
+#   scripts/live-shell-drive.sh
 #
 # ## Environment
 #
 #   FOCUS_DERIVED_DATA     default /tmp/focus-dd
 #   FOCUS_LOG_DIR          default /tmp
 #   FOCUS_RESULT_BUNDLE    default a unique timestamped path under $FOCUS_LOG_DIR
-#   FOCUS_EVIDENCE_DIR     if set, logs and the self-check JSON are copied here at the end
+#   FOCUS_EVIDENCE_DIR     if set, the whole evidence set is assembled there under the names
+#                          the epic's validation section asks for
+#   FOCUS_SNAPSHOT_OUT     where the snapshot lane wrote its renders; defaults to the
+#                          harness's own default, $TMPDIR/focus-snapshots
 set -u
 
 REPO_ROOT="${0:A:h}/.."
@@ -43,6 +48,20 @@ rm -rf -- "$RB"
 GATE_LOG="$LOG_DIR/focus-gate.log"
 DESTINATION='platform=macOS,arch=arm64'
 
+# The self-check JSON is written to a known path per configuration rather than a mktemp one,
+# because it is evidence in its own right and the manifest below has to be able to find it.
+SELFCHECK_JSON="$LOG_DIR/focus-selfcheck.json"
+SELFCHECK_JSON_RELEASE="$LOG_DIR/focus-selfcheck-release.json"
+
+# The snapshot lane writes every render — matching or not — to a plain directory, which is
+# what makes evidence collection a `cp -R` rather than a dependence on `xcresulttool`'s
+# shifting subcommand surface. Measured: `xcodebuild` does not forward its own environment to
+# a SwiftPM test target's process, so setting this here cannot *redirect* the renders; it
+# names where to look for them, and the default is the harness's own default.
+TMP_ROOT="${TMPDIR:-/tmp}"
+SNAPSHOT_OUT="${FOCUS_SNAPSHOT_OUT:-${TMP_ROOT%/}/focus-snapshots}"
+SNAPSHOT_OUT="${SNAPSHOT_OUT%/}"
+
 typeset -a STAGE_NAMES STAGE_CODES STAGE_LOGS
 
 record() {
@@ -59,7 +78,12 @@ run_stage() {
     record "$name" "$?" "$log"
 }
 
-{
+# The whole gate is a function rather than a `{ … }` block. A `{ … } > log` group is not a
+# subshell, so an `exit` inside it terminates the script outright — which is what used to
+# happen here, and it meant the summary table was written to the log and then never echoed:
+# running the gate printed nothing at all. A function returns, and the caller stays alive to
+# print what it produced.
+gate() {
     print "FOCUS BUILD GATE"
     print "repo:           $REPO_ROOT"
     print "derived data:   $DD"
@@ -111,10 +135,15 @@ run_stage() {
     run_stage "entitlements-release" "$LOG_DIR/focus-entitlements-release.log" \
         scripts/entitlement-check.sh "$DD/Build/Products/Release/FocusSentinel.app"
 
-    # 9 — the zero-grant shell self-check, on both configurations
-    run_stage "selfcheck-debug" "$LOG_DIR/focus-selfcheck.log" \
+    # 9 — the zero-grant shell self-check, on both configurations.
+    # FOCUS_EVIDENCE_DIR is deliberately cleared for the child: the gate assembles the
+    # evidence set itself, under one set of names, after every stage has finished. Left set,
+    # the Release run would silently overwrite the Debug run's selfcheck.json.
+    FOCUS_EVIDENCE_DIR= FOCUS_SELFCHECK_JSON="$SELFCHECK_JSON" \
+        run_stage "selfcheck-debug" "$LOG_DIR/focus-selfcheck.log" \
         scripts/self-check.sh "$DD/Build/Products/Debug/FocusSentinel.app"
-    run_stage "selfcheck-release" "$LOG_DIR/focus-selfcheck-release.log" \
+    FOCUS_EVIDENCE_DIR= FOCUS_SELFCHECK_JSON="$SELFCHECK_JSON_RELEASE" \
+        run_stage "selfcheck-release" "$LOG_DIR/focus-selfcheck-release.log" \
         scripts/self-check.sh "$DD/Build/Products/Release/FocusSentinel.app"
 
     # 10 — project integrity again. Stages 5–7 are the ones that could provoke a rewrite.
@@ -122,7 +151,7 @@ run_stage() {
 
     # --- summary --------------------------------------------------------------------------
 
-    failed=0
+    local failed=0 i
     print
     print "=============================================================="
     printf '%-24s %-6s %s\n' "STAGE" "EXIT" "LOG"
@@ -132,8 +161,16 @@ run_stage() {
         (( STAGE_CODES[$i] != 0 )) && failed=1
     done
     print "--------------------------------------------------------------"
-    print "result bundle: $RB"
-    print "finished:      $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    print "result bundle:  $RB"
+    print "self-check:     $SELFCHECK_JSON"
+    print "snapshots:      $SNAPSHOT_OUT"
+    print "finished:       $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    print
+    print "The live osascript/screencapture lane is deliberately NOT a stage: it needs"
+    print "Accessibility and Screen Recording on the driving shell, and no acceptance"
+    print "criterion may depend on a permission grant. Run scripts/live-shell-drive.sh"
+    print "separately for that evidence; it skips and exits 0 when a grant is missing."
+    print
 
     if (( failed == 0 )); then
         print "GATE RESULT: PASS"
@@ -142,19 +179,76 @@ run_stage() {
     fi
     print "=============================================================="
 
-    if [[ -n "${FOCUS_EVIDENCE_DIR:-}" ]]; then
-        mkdir -p -- "$FOCUS_EVIDENCE_DIR"
-        for i in {1..${#STAGE_LOGS}}; do
-            [[ -f "${STAGE_LOGS[$i]}" ]] && cp -- "${STAGE_LOGS[$i]}" "$FOCUS_EVIDENCE_DIR/"
-        done
-        print "evidence copied to $FOCUS_EVIDENCE_DIR"
+    return $failed
+}
+
+# Assemble the evidence set under the names the epic's validation section asks for. The
+# evidence directory is never committed; it exists so a closing epic can be audited from
+# artefacts rather than from assertions about artefacts.
+collect_evidence() {
+    local dir="$1" from to
+    mkdir -p -- "$dir" || return 1
+
+    # source-in-$LOG_DIR  →  name-in-evidence
+    local -a manifest
+    manifest=(
+        "focus-project.log:project.log"
+        "focus-project-post.log:project-post.log"
+        "focus-boundaries.log:boundaries.log"
+        "focus-boundaries-binary.log:boundaries-binary.log"
+        "focus-forbidden.log:forbidden.log"
+        "focus-strings.log:strings.log"
+        "focus-build.log:build-debug.log"
+        "focus-build-release.log:build-release.log"
+        "focus-test.log:test.log"
+        "focus-entitlements.log:entitlements.txt"
+        "focus-entitlements-release.log:entitlements-release.txt"
+        "focus-selfcheck.log:selfcheck.log"
+        "focus-selfcheck-release.log:selfcheck-release.log"
+        "focus-selfcheck.json:selfcheck.json"
+        "focus-selfcheck-release.json:selfcheck-release.json"
+    )
+
+    print
+    print "== evidence → $dir"
+    local entry
+    for entry in $manifest; do
+        from="$LOG_DIR/${entry%%:*}"
+        to="$dir/${entry##*:}"
+        if [[ -f "$from" ]]; then
+            cp -- "$from" "$to" && print "   $to"
+        else
+            print -u2 "   MISSING $from (would have been ${entry##*:})"
+        fi
+    done
+
+    # The snapshot renders: a plain directory copy, by design.
+    if [[ -d "$SNAPSHOT_OUT" ]]; then
+        rm -rf -- "$dir/snapshots"
+        cp -R -- "$SNAPSHOT_OUT" "$dir/snapshots" \
+            && print "   $dir/snapshots ($(ls -1 -- "$dir/snapshots" | wc -l | tr -d ' ') files)"
+    else
+        print -u2 "   MISSING $SNAPSHOT_OUT (the snapshot renders)"
     fi
 
-    exit $failed
-# Unpiped, like every stage inside it: the gate's own summary is redirected to a file, never
-# piped through `tee`. It is echoed to the terminal afterwards by reading the file back.
-} > "$GATE_LOG" 2>&1
+    print
+    print "The live lane's artefacts — menus.txt and the shell frames — are written straight"
+    print "into this directory by scripts/live-shell-drive.sh when the grants exist, and are"
+    print "absent when they do not. That absence never blocks the epic."
+}
+
+gate > "$GATE_LOG" 2>&1
 gate_rc=$?
 
+if [[ -n "${FOCUS_EVIDENCE_DIR:-}" ]]; then
+    collect_evidence "$FOCUS_EVIDENCE_DIR" >> "$GATE_LOG" 2>&1
+fi
+
 cat -- "$GATE_LOG"
+
+# gate.log is copied last, because until now it was still being written.
+if [[ -n "${FOCUS_EVIDENCE_DIR:-}" ]]; then
+    cp -- "$GATE_LOG" "$FOCUS_EVIDENCE_DIR/gate.log"
+fi
+
 exit $gate_rc

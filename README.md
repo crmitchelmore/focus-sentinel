@@ -21,8 +21,8 @@ and `tuist` is not used.
 | `Packages/FocusClassify` | the classification seam — no networking, ever |
 | `Packages/FocusSensing` | macOS observation adapters |
 | `Packages/FocusUI` | every SwiftUI view, scene, command and design token |
-| `scripts/` | the build gate and its stages |
-| `Tools/` | test drivers only; not part of the shipping app's package graph |
+| `scripts/` | the build gate and its stages, plus the live evidence lane |
+| `Tools/windowid` | a test driver: window ids for `screencapture -l`, read from the public window list without ever asking for a window *name*. Not part of the shipping app's package graph |
 
 ---
 
@@ -83,7 +83,93 @@ scripts/build-gate.sh
 ```
 
 Runs every stage, redirecting each one unpiped to its own log, and exits non-zero if any stage
-failed. It never short-circuits: a failing early stage does not hide a later one.
+failed. It never short-circuits: a failing early stage does not hide a later one. The stages:
+
+| # | stage | what it proves |
+|---|---|---|
+| 1 | `verify-project.sh` | the project file parses, and git has not been rewritten behind you |
+| 2 | `check-boundaries.sh` | the package import matrix holds; zero third-party dependencies |
+| 3 | `check-forbidden.sh` | no `kCGWindowName`, no Apple Events, no private APIs, no plan-less `ModelContainer` |
+| 4 | `check-strings.sh` | no hardcoded user-visible string; the catalogs and the code agree both ways |
+| 5 | Debug build | `EXIT=0` |
+| 6 | Release build | `EXIT=0` |
+| 7 | the unit lane | every package test target, headless |
+| 7b | `check-boundaries.sh` again | `nm -u FocusClassify.o` has no networking symbol — the binary-level form of the assertion, which needs a build product to exist |
+| 8 | `entitlement-check.sh` ×2 | no network entitlement, Debug **and** Release |
+| 9 | `self-check.sh` ×2 | the app's own zero-grant report of its menu bar, window and key equivalents |
+| 10 | `verify-project.sh` again | the build did not rewrite the project |
+
+---
+
+## Verification
+
+There are two kinds of check in this repository and the difference is not a matter of taste.
+
+**The gate runs with zero TCC grants — for the app *and* for the shell that invokes it.**
+Nothing above needs Accessibility, Screen Recording or Automation. Revoke every permission on
+this Mac and the gate must still be green; that is the contract, and it is why the app reports
+its own menu bar from inside its own process instead of being interrogated from outside.
+
+**The live lane needs three grants and is therefore evidence, never a criterion.**
+`scripts/live-shell-drive.sh` drives the real app with `osascript` and captures its windows
+with `screencapture`, which works only because the driving shell holds Accessibility,
+Automation and Screen Recording. No acceptance criterion may depend on a permission grant, so
+what this lane produces is quality evidence a human reads. When a grant is missing it prints
+`LIVE-LANE SKIPPED: <grant>` and exits `0`, and `build-gate.sh` never invokes it.
+
+Reproducing each lane by hand:
+
+```
+# builds
+xcodebuild -workspace Focus.xcworkspace -scheme FocusSentinel -configuration Debug \
+  -destination 'platform=macOS,arch=arm64' -derivedDataPath /tmp/focus-dd build \
+  > /tmp/focus-build.log 2>&1; echo "EXIT=$?"
+
+# the unit lane (see the result-bundle rule above)
+RB="/tmp/focus-e01-$(date -u +%Y%m%dT%H%M%SZ)-$$.xcresult"; rm -rf -- "$RB"
+xcodebuild -workspace Focus.xcworkspace -scheme FocusUnitTests \
+  -destination 'platform=macOS,arch=arm64' -derivedDataPath /tmp/focus-dd \
+  -resultBundlePath "$RB" test > /tmp/focus-test.log 2>&1; echo "EXIT=$? RB=$RB"
+
+# the static gates
+scripts/verify-project.sh   > /tmp/focus-project.log    2>&1; echo "EXIT=$?"
+scripts/check-boundaries.sh > /tmp/focus-boundaries.log 2>&1; echo "EXIT=$?"
+scripts/check-forbidden.sh  > /tmp/focus-forbidden.log  2>&1; echo "EXIT=$?"
+scripts/check-strings.sh    > /tmp/focus-strings.log    2>&1; echo "EXIT=$?"
+
+# entitlements and the zero-grant self-check, on both configurations
+scripts/entitlement-check.sh /tmp/focus-dd/Build/Products/Debug/FocusSentinel.app
+scripts/self-check.sh        /tmp/focus-dd/Build/Products/Debug/FocusSentinel.app
+scripts/self-check.sh        /tmp/focus-dd/Build/Products/Release/FocusSentinel.app
+
+# the TCC-gated evidence lane — read the frames it captures; capturing them is not the point
+scripts/live-shell-drive.sh
+```
+
+Never pipe any of it. Redirect unpiped to a log and gate on the explicit exit status.
+
+### Environment contracts
+
+| variable | used by | meaning |
+|---|---|---|
+| `FOCUS_DERIVED_DATA` | the gate, the live lane | build location. Default `/tmp/focus-dd` |
+| `FOCUS_LOG_DIR` | the gate | where the stage logs are written. Default `/tmp` |
+| `FOCUS_RESULT_BUNDLE` | the gate | the unit lane's `-resultBundlePath`. Default is unique per run; either way it is `rm -rf`'d immediately before the run |
+| `FOCUS_EVIDENCE_DIR` | the gate, `self-check.sh`, the live lane | where the evidence set is assembled. Default for the live lane: `.agents/evidence/e01`. **Never committed** |
+| `FOCUS_SNAPSHOT_OUT` | the snapshot lane, the gate | where snapshot renders are written. Default `$TMPDIR/focus-snapshots`. Note that `xcodebuild` does not forward its environment to a SwiftPM test process, so under the gate this names where to *look*, not where to write |
+| `FOCUS_SNAPSHOT_RECORD=1` | the snapshot lane | re-record the committed baselines instead of comparing. `swift test` only, for the same reason. Recorded PNGs are read by eye before being committed |
+| `FOCUS_FIXTURE_RECORD=1` | `MigrationFixtureTests` | rewrite the committed v1 store fixture instead of asserting against it |
+| `FOCUS_SELFCHECK_JSON` | `self-check.sh` | where the app's self-check report is written |
+| `FOCUS_LIVE_TEXT_SIZE=raised` | the live lane | capture `main-accessibility.png` — only meaningful once the system-wide Text Size has been raised by hand, because macOS has no injectable Dynamic Type |
+
+### Evidence
+
+With `FOCUS_EVIDENCE_DIR` set, the gate assembles `gate.log`, `build-debug.log`,
+`build-release.log`, `test.log`, `project.log`, `boundaries.log`, `forbidden.log`,
+`strings.log`, `entitlements.txt`, `selfcheck.json`, `selfcheck.log`, their Release
+counterparts, and a `snapshots/` copy of every render. The live lane adds `menus.txt` and the
+shell frames to the same directory when the grants exist. That directory is evidence, not
+source: it is never committed.
 
 ---
 
