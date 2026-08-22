@@ -33,11 +33,23 @@ struct KeyboardReachabilityTests {
         }
     }
 
-    @Test("every action carries a discoverable key equivalent in e01")
+    @Test("every action carries a discoverable key equivalent")
     func everyActionIsBound() {
-        // Per the Court's ruling not every action needs a shortcut — but both of e01's do,
-        // and losing one would be a regression rather than a design change.
+        // Per the Court's ruling not every action needs a shortcut — but every one the shell
+        // ships today does, and losing one would be a regression rather than a design change.
         #expect(registry.actions.allSatisfy { $0.shortcut != nil })
+    }
+
+    @Test("a priority command reaches a surface that answers it")
+    func priorityCommandsHaveASurface() {
+        // The other half of "reachable": a key equivalent that arrives somewhere nothing is
+        // listening is a shortcut in the reference and a dead end in the app. Every priority
+        // command is answered by the cockpit, whose focus contract names the field each one
+        // lands in.
+        let cockpit = FocusTraversal.contract(for: .cockpit)
+        #expect(cockpit.order.contains(.cockpitCaptureField))
+        #expect(cockpit.order.contains(.cockpitComplete))
+        #expect(cockpit.order.contains(.cockpitContextAddFiles))
     }
 
     // MARK: - The traversal model

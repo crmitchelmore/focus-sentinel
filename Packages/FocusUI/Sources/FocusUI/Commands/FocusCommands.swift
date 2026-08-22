@@ -17,11 +17,16 @@ import SwiftUI
 /// rewrites them for no reason is less Mac-native, not more.
 public struct ShellCommands: Commands {
     private let registry: CommandRegistry
+    private let commandCenter: FocusCommandCenter
 
     @Environment(\.openWindow) private var openWindow
 
-    public init(registry: CommandRegistry = .shell) {
+    public init(
+        registry: CommandRegistry = .shell,
+        commandCenter: FocusCommandCenter = .shared
+    ) {
         self.registry = registry
+        self.commandCenter = commandCenter
     }
 
     public var body: some Commands {
@@ -52,6 +57,13 @@ public struct ShellCommands: Commands {
             NSApp.keyWindow?.performClose(nil)
         case .openWindow(let window):
             openWindow(id: window.id)
+        case .priority(let command):
+            // The window comes forward first and the command follows. If the cockpit was
+            // closed it is not listening yet, so the centre holds the command until it is —
+            // which is what makes ⌘N from a closed window land in the capture field rather
+            // than doing nothing visible.
+            openWindow(id: ShellWindow.cockpit.id)
+            commandCenter.send(command)
         }
     }
 }

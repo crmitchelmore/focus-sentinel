@@ -30,6 +30,10 @@ public struct CockpitView: View {
     /// can never look live and do nothing.
     public let actions: (any PriorityActing)?
 
+    /// Where the File menu's commands arrive. Injectable so a test can drive the cockpit the
+    /// way ⌘N does, without a menu bar.
+    public let commandCenter: FocusCommandCenter
+
     @Environment(\.appearanceTraits) private var traits
     @Environment(\.openSettings) private var openSettings
     @Environment(\.shellTextScale) private var textScale
@@ -48,12 +52,21 @@ public struct CockpitView: View {
     /// worth recording, so it gets a sheet rather than happening under the pointer.
     @State private var isCompleting: Bool = false
 
+    /// Bumped when the File menu's ⌘O arrives, which is how a menu item reaches a sheet that
+    /// belongs to a subview.
+    @State private var fileImportToken: Int = 0
+
     @ScaledMetric(relativeTo: .body) private var rowSpacing: CGFloat = 12
     @ScaledMetric(relativeTo: .largeTitle) private var sectionSpacing: CGFloat = 20
 
-    public init(state: CockpitState, actions: (any PriorityActing)? = nil) {
+    public init(
+        state: CockpitState,
+        actions: (any PriorityActing)? = nil,
+        commandCenter: FocusCommandCenter = .shared
+    ) {
         self.state = state
         self.actions = actions
+        self.commandCenter = commandCenter
     }
 
     public var body: some View {
@@ -104,7 +117,11 @@ public struct CockpitView: View {
         // has landed in before reading the priority out of it.
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text(ShellStrings.resource(.cockpitHeading)))
-        .onAppear { doneWhenDraft = state.priority?.doneWhen ?? "" }
+        .onAppear {
+            doneWhenDraft = state.priority?.doneWhen ?? ""
+            commandCenter.register(perform(_:))
+        }
+        .onDisappear { commandCenter.unregister() }
         .onChange(of: state.priority?.id) { doneWhenDraft = state.priority?.doneWhen ?? "" }
         .onChange(of: state.priority?.doneWhen) { doneWhenDraft = state.priority?.doneWhen ?? "" }
         // The one and only surface an incoming `focus://` URL can reach. There is no path from
@@ -134,6 +151,34 @@ public struct CockpitView: View {
                     cancel: { isCompleting = false }
                 )
             }
+        }
+    }
+
+    // MARK: - The File menu
+
+    /// Carry out a command that arrived from the menu bar (F-90, F-145).
+    ///
+    /// Each one lands on the surface that already does the job, so a key equivalent and a
+    /// click are the same code path rather than two implementations of the same idea.
+    ///
+    /// ⌘O with no priority is the one that needs explaining: there is nothing to attach
+    /// context *to* until there is a commitment, so it asks for one rather than opening a file
+    /// panel whose result would have nowhere to go.
+    private func perform(_ command: PriorityCommand) {
+        switch command {
+        case .newPriority:
+            isCapturing = true
+            focus = .cockpitCaptureField
+        case .completePriority:
+            guard state.priority != nil else { return }
+            isCompleting = true
+        case .addFilesToContext:
+            guard state.priority != nil else {
+                isCapturing = true
+                focus = .cockpitCaptureField
+                return
+            }
+            fileImportToken &+= 1
         }
     }
 
@@ -280,6 +325,7 @@ public struct CockpitView: View {
                 }
             },
             remove: actions.map { host in { id in host.removeContext(id: id) } },
+            importFilesToken: fileImportToken,
             focus: $focus
         )
     }

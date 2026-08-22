@@ -57,6 +57,8 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     // Menu commands
     case commandCloseWindow = "shell.command.closeWindow"
     case commandHelp = "shell.command.help"
+    case commandNewPriority = "shell.command.newPriority"
+    case commandAddFilesToContext = "shell.command.addFilesToContext"
 
     // Cockpit
     case cockpitHeading = "shell.cockpit.heading"

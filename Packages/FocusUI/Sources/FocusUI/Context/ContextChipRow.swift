@@ -22,6 +22,9 @@ public struct ContextChipRow: View {
     /// Add whatever was dropped, pasted, typed or chosen.
     public let add: (([ContextItemDraft]) -> Void)?
     public let remove: ((UUID) -> Void)?
+    /// Bumped by the surrounding surface to open the file importer from the File menu (⌘O).
+    /// A token rather than a binding, so the row keeps sole ownership of its own sheet state.
+    public let importFilesToken: Int
 
     @Environment(\.appearanceTraits) private var traits
     @Environment(\.shellTextScale) private var textScale
@@ -40,11 +43,13 @@ public struct ContextChipRow: View {
         items: [ContextItemValue],
         add: (([ContextItemDraft]) -> Void)? = nil,
         remove: ((UUID) -> Void)? = nil,
+        importFilesToken: Int = 0,
         focus: FocusState<FocusField?>.Binding
     ) {
         self.items = items
         self.add = add
         self.remove = remove
+        self.importFilesToken = importFilesToken
         self._focus = focus
     }
 
@@ -91,6 +96,11 @@ public struct ContextChipRow: View {
         // when the set of file attachments actually changes.
         .task(id: items.filter { $0.kind == .file }.map(\.id)) {
             previewURLs = resolvedFileURLs()
+        }
+        .onChange(of: importFilesToken) {
+            guard add != nil else { return }
+            relocating = nil
+            isImportingFiles = true
         }
     }
 

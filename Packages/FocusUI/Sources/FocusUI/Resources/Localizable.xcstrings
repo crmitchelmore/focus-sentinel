@@ -1165,6 +1165,18 @@
         }
       }
     },
+    "shell.command.addFilesToContext" : {
+      "comment" : "File menu item that opens the file importer for the current priority's context pack.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add Files to Context…"
+          }
+        }
+      }
+    },
     "shell.command.closeWindow" : {
       "comment" : "File menu item that closes the frontmost window.",
       "extractionState" : "manual",
@@ -1185,6 +1197,18 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Focus Sentinel Help"
+          }
+        }
+      }
+    },
+    "shell.command.newPriority" : {
+      "comment" : "File menu item that brings the cockpit forward and puts the cursor in the capture field.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New Priority"
           }
         }
       }
