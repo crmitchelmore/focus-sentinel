@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Scheme
+   LastUpgradeVersion = "2620"
+   version = "1.7">
+   <BuildAction
+      parallelizeBuildables = "YES"
+      buildImplicitDependencies = "YES">
+   </BuildAction>
+   <TestAction
+      buildConfiguration = "Debug"
+      selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
+      selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
+      shouldUseLaunchSchemeArgsEnv = "NO">
+      <Testables>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "FocusCoreTests"
+               BuildableName = "FocusCoreTests.xctest"
+               BlueprintName = "FocusCoreTests"
+               ReferencedContainer = "container:Packages/FocusCore">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "FocusRulesTests"
+               BuildableName = "FocusRulesTests.xctest"
+               BlueprintName = "FocusRulesTests"
+               ReferencedContainer = "container:Packages/FocusRules">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "FocusClassifyTests"
+               BuildableName = "FocusClassifyTests.xctest"
+               BlueprintName = "FocusClassifyTests"
+               ReferencedContainer = "container:Packages/FocusClassify">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "FocusSensingTests"
+               BuildableName = "FocusSensingTests.xctest"
+               BlueprintName = "FocusSensingTests"
+               ReferencedContainer = "container:Packages/FocusSensing">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "FocusUITests"
+               BuildableName = "FocusUITests.xctest"
+               BlueprintName = "FocusUITests"
+               ReferencedContainer = "container:Packages/FocusUI">
+            </BuildableReference>
+         </TestableReference>
+      </Testables>
+      <EnvironmentVariables>
+         <EnvironmentVariable
+            key = "FOCUS_GATE_LANE"
+            value = "xcodebuild"
+            isEnabled = "YES">
+         </EnvironmentVariable>
+      </EnvironmentVariables>
+   </TestAction>
+   <AnalyzeAction
+      buildConfiguration = "Debug">
+   </AnalyzeAction>
+</Scheme>

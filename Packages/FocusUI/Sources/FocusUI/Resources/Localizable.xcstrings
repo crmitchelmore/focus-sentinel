@@ -1,0 +1,306 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "settings.appearance.dark" : {
+      "comment" : "Appearance preference: always dark.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dark"
+          }
+        }
+      }
+    },
+    "settings.appearance.label" : {
+      "comment" : "Label for the appearance preference control in General settings.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Appearance"
+          }
+        }
+      }
+    },
+    "settings.appearance.light" : {
+      "comment" : "Appearance preference: always light.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Light"
+          }
+        }
+      }
+    },
+    "settings.appearance.matchSystem" : {
+      "comment" : "Appearance preference: follow the Mac's own setting.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Match System"
+          }
+        }
+      }
+    },
+    "settings.appearance.note" : {
+      "comment" : "Explains that the app follows the system accent colour and accessibility settings.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus Sentinel follows your Mac's accent colour and your Accessibility display settings — Increase Contrast, Reduce Transparency, Reduce Motion and Differentiate Without Colour — automatically."
+          }
+        }
+      }
+    },
+    "settings.general.title" : {
+      "comment" : "Title of the General settings tab.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "General"
+          }
+        }
+      }
+    },
+    "settings.privacy.reveal" : {
+      "comment" : "Button that reveals the local data store in the Finder.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reveal Data Store in Finder"
+          }
+        }
+      }
+    },
+    "settings.privacy.statement" : {
+      "comment" : "The local-only privacy statement shown in the Privacy settings tab.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Everything Focus Sentinel knows about you stays on this Mac. There is no account, no sync, no telemetry and no analytics, and the app ships with no network entitlement at all. Your priorities, sessions and rules live in one local file:"
+          }
+        }
+      }
+    },
+    "settings.privacy.storeLabel" : {
+      "comment" : "Caption above the file-system path of the local data store in the Privacy settings tab.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Data store"
+          }
+        }
+      }
+    },
+    "settings.privacy.title" : {
+      "comment" : "Title of the Privacy settings tab.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Privacy"
+          }
+        }
+      }
+    },
+    "shell.cockpit.heading" : {
+      "comment" : "Heading of the main cockpit window.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus Sentinel"
+          }
+        }
+      }
+    },
+    "shell.cockpit.openSettings" : {
+      "comment" : "Cockpit button that opens the Settings window.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Settings"
+          }
+        }
+      }
+    },
+    "shell.cockpit.sensing.unavailable" : {
+      "comment" : "Cockpit line: no activity source is running yet.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No activity source is running, so nothing on screen is being judged."
+          }
+        }
+      }
+    },
+    "shell.cockpit.store.ready" : {
+      "comment" : "Cockpit line: the local store opened successfully.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Local data store is open and versioned at schema 1.0.0."
+          }
+        }
+      }
+    },
+    "shell.cockpit.store.unavailable" : {
+      "comment" : "Cockpit line: the local store could not be opened.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Local data store could not be opened. Nothing will be saved this session."
+          }
+        }
+      }
+    },
+    "shell.command.closeWindow" : {
+      "comment" : "File menu item that closes the frontmost window.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Close Window"
+          }
+        }
+      }
+    },
+    "shell.command.help" : {
+      "comment" : "Help menu item that opens the in-app Keyboard Shortcuts reference.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus Sentinel Help"
+          }
+        }
+      }
+    },
+    "shell.help.column.action" : {
+      "comment" : "Column heading in the Keyboard Shortcuts window: the action's name.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Action"
+          }
+        }
+      }
+    },
+    "shell.help.column.shortcut" : {
+      "comment" : "Column heading in the Keyboard Shortcuts window: the key equivalent.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shortcut"
+          }
+        }
+      }
+    },
+    "shell.help.group.file" : {
+      "comment" : "Group heading in the Keyboard Shortcuts window for actions in the File menu.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "File Menu"
+          }
+        }
+      }
+    },
+    "shell.help.group.help" : {
+      "comment" : "Group heading in the Keyboard Shortcuts window for actions in the Help menu.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Help Menu"
+          }
+        }
+      }
+    },
+    "shell.help.heading" : {
+      "comment" : "Heading of the Keyboard Shortcuts reference window.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keyboard Shortcuts"
+          }
+        }
+      }
+    },
+    "shell.help.introduction" : {
+      "comment" : "Sentence under the Keyboard Shortcuts heading explaining where the list comes from.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "These are the shortcuts Focus Sentinel adds. Everything else in the menu bar is the standard Mac set."
+          }
+        }
+      }
+    },
+    "shell.window.cockpit.title" : {
+      "comment" : "Title of the main cockpit window, as it appears in the Window menu.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus Sentinel"
+          }
+        }
+      }
+    },
+    "shell.window.help.title" : {
+      "comment" : "Title of the Keyboard Shortcuts window, as it appears in the Window menu.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keyboard Shortcuts"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

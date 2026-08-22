@@ -1,0 +1,134 @@
+import FocusCore
+import SwiftUI
+import Testing
+
+@testable import FocusUI
+
+/// F-149's substrate half, proved rather than promised.
+///
+/// Translation is parked, so the question a test can honestly answer is not "is the French
+/// right" but "does the shell survive what translation does to it": strings roughly twice as
+/// long, in characters that are not ASCII. Every render here goes through the *same* text
+/// seam the app uses, so a component that quietly clips at 2× expansion fails here and not
+/// in front of a user.
+@Suite("Pseudo-localisation", .enabled(if: LocalizationLane.catalogsAreCompiled))
+@MainActor
+struct PseudoLocalizationTests {
+    // MARK: - The transform itself
+
+    @Test("the transform is deterministic and roughly doubles length")
+    func transformIsDeterministicAndExpands() {
+        let source = "Close Window"
+        let first = PseudoLocale.expand(source)
+        let second = PseudoLocale.expand(source)
+
+        #expect(first == second)
+        #expect(first.hasPrefix(PseudoLocale.opening))
+        #expect(first.hasSuffix(PseudoLocale.closing))
+        #expect(first.count >= Int(Double(source.count) * 1.8))
+        #expect(first != source)
+    }
+
+    @Test("the transform leaves an empty string alone and preserves shortcut glyphs")
+    func transformIsConservative() {
+        #expect(PseudoLocale.expand("") == "")
+        // The shortcut column is symbols, not prose; accenting ⌘ would make the reference
+        // unreadable for no gain.
+        #expect(PseudoLocale.expand("⌘W").contains("⌘"))
+    }
+
+    @Test("the transform reaches the views through the shell's own text seam")
+    func transformReachesTheViews() throws {
+        // If the seam were bypassed — a view drawing `Text(resource)` directly — the
+        // pseudo-localised render would be pixel-identical to the plain one, and this is the
+        // assertion that would catch it.
+        let plain = try SnapshotHarness.render(
+            CockpitView(state: .ready),
+            traits: .light,
+            name: "pseudo.seam.plain"
+        )
+        let pseudo = try SnapshotHarness.render(
+            CockpitView(state: .ready),
+            traits: .light,
+            transform: PseudoLocale.transform,
+            name: "pseudo.seam.pseudo"
+        )
+
+        let differs = PNGCompare.areDistinct(plain.pixels, pseudo.pixels)
+        #expect(differs, "the pseudo transform never reached the cockpit's text")
+    }
+
+    // MARK: - Every component survives 2× expansion
+
+    @Test(
+        "expanded text draws more ink and never shrinks the layout",
+        arguments: SnapshotComponent.allCases
+    )
+    func expandedTextDrawsMoreInk(component: SnapshotComponent) throws {
+        for size in SnapshotTypeSize.allCases {
+            let plain = try SnapshotHarness.render(
+                component.view,
+                traits: .light,
+                textScale: size.textScale,
+                width: component.width,
+                name: "\(component.rawValue).plain.\(size.rawValue)"
+            )
+            let pseudo = try SnapshotHarness.render(
+                component.view,
+                traits: .light,
+                textScale: size.textScale,
+                width: component.width,
+                transform: PseudoLocale.transform,
+                name: "\(component.rawValue).pseudo.\(size.rawValue)"
+            )
+
+            // **Ink, not frame.** The obvious assertion — "the render gets taller" — is
+            // wrong for a layout that deliberately has slack in it: the cockpit reserves
+            // room below its button, so two extra wrapped lines land in space it already
+            // had and the frame stays 584px in both. Measured, not assumed. What cannot
+            // stay the same is how much ink is on the page: doubling every string draws
+            // more glyphs, and a view that dropped or truncated its strings would draw
+            // fewer.
+            let plainInk = PNGCompare.inkPixels(plain.pixels)
+            let pseudoInk = PNGCompare.inkPixels(pseudo.pixels)
+            #expect(
+                pseudoInk > plainInk,
+                "\(component.rawValue) drew no extra text when pseudo-localised (\(plainInk) → \(pseudoInk)): the strings never reached the view"
+            )
+
+            // And nothing may get *smaller*, which is what clipping to a fixed frame looks
+            // like from outside.
+            #expect(pseudo.height >= plain.height)
+            #expect(pseudo.width >= plain.width)
+
+            if component.width == nil {
+                // A self-sizing component has no fixed width to wrap inside, so it grows
+                // sideways instead.
+                #expect(
+                    pseudo.width > plain.width,
+                    "\(component.rawValue) did not widen (\(plain.width) → \(pseudo.width))"
+                )
+            }
+        }
+    }
+
+    // MARK: - The committed pseudo-localised pass
+
+    @Test(
+        "the pseudo-localised pass matches its baseline",
+        arguments: SnapshotComponent.allCases
+    )
+    func pseudoLocalisedPassMatchesBaseline(component: SnapshotComponent) throws {
+        // One committed pass, at the default text size in light appearance, so a change in
+        // how expansion lands in the layout is visible as a diff rather than only as a
+        // number.
+        try SnapshotHarness.assertSnapshot(
+            component.view,
+            component: component.rawValue,
+            variant: "light",
+            width: component.width,
+            transform: PseudoLocale.transform,
+            baselineSuffix: "pseudo"
+        )
+    }
+}
