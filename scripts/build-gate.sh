@@ -122,6 +122,81 @@ run_stage() {
     record "$name" "$?" "$log"
 }
 
+# Packaging — the assertions exit status cannot make (e02 R-15, probes P-66a/P-66b).
+#
+# `CFBundleURLTypes` is an array of dictionaries, which no `INFOPLIST_KEY_*` build setting can
+# express, so it ships as a partial `Config/FocusSentinel-Info.plist` merged with the generated
+# one. Measured: putting that partial file in `App/` instead builds **green** and still gets it
+# wrong — `App/` is a `PBXFileSystemSynchronizedRootGroup`, so the plist joins Copy Bundle
+# Resources, the log gains `warning: The Copy Bundle Resources build phase contains this
+# target's Info.plist file …`, and the product ships a second, misleading `Info.plist` inside
+# `Contents/Resources/`. `EXCLUDED_SOURCE_FILE_NAMES` does not suppress it.
+#
+# A green build is therefore not evidence that the packaging is right. These three reads are:
+# the warning is absent from both build logs, neither product has a stray resource plist, and
+# the merged plist still carries the scheme on both configurations.
+check_packaging() {
+    local rc=0 config log app warnings key
+    for config in Debug Release; do
+        if [[ "$config" == "Debug" ]]; then
+            log="$LOG_DIR/focus-build.log"
+        else
+            log="$LOG_DIR/focus-build-release.log"
+        fi
+        app="$DD/Build/Products/$config/FocusSentinel.app"
+
+        if [[ ! -f "$log" ]]; then
+            print -u2 "FAIL [$config] no build log at $log"
+            rc=1
+            continue
+        fi
+
+        warnings=$(grep -c "Copy Bundle Resources build phase contains" "$log" 2>/dev/null)
+        if [[ "$warnings" != "0" ]]; then
+            print -u2 "FAIL [$config] $warnings Copy-Bundle-Resources Info.plist warning(s) in $log"
+            print -u2 "    The partial plist has drifted back inside the synchronized App/ group."
+            print -u2 "    It belongs at Config/FocusSentinel-Info.plist (plan R-15, probe P-66b)."
+            rc=1
+        else
+            print "ok   [$config] no Copy-Bundle-Resources Info.plist warning"
+        fi
+
+        if [[ ! -d "$app" ]]; then
+            print -u2 "FAIL [$config] no app bundle at $app"
+            rc=1
+            continue
+        fi
+
+        if [[ -e "$app/Contents/Resources/Info.plist" ]]; then
+            print -u2 "FAIL [$config] the product ships a stray Contents/Resources/Info.plist"
+            rc=1
+        else
+            print "ok   [$config] Contents/Resources holds no Info.plist"
+            print "     $(ls -1 -- "$app/Contents/Resources" | tr '\n' ' ')"
+        fi
+
+        if /usr/libexec/PlistBuddy -c 'Print :CFBundleURLTypes:0:CFBundleURLSchemes:0' \
+            "$app/Contents/Info.plist" 2>/dev/null | grep -qx 'focus'; then
+            print "ok   [$config] the merged Info.plist declares the focus scheme"
+        else
+            print -u2 "FAIL [$config] the merged Info.plist does not declare the focus scheme"
+            rc=1
+        fi
+
+        # The generated keys have to survive the merge too — that is the half P-66 measured and
+        # the half a hand-written plist would silently take away.
+        for key in CFBundleDisplayName LSMinimumSystemVersion NSPrincipalClass CFBundleIdentifier; do
+            if /usr/libexec/PlistBuddy -c "Print :$key" "$app/Contents/Info.plist" > /dev/null 2>&1; then
+                print "ok   [$config] the merged Info.plist still carries $key"
+            else
+                print -u2 "FAIL [$config] the merged Info.plist lost the generated key $key"
+                rc=1
+            fi
+        done
+    done
+    return $rc
+}
+
 # The whole gate is a function rather than a `{ … }` block. A `{ … } > log` group is not a
 # subshell, so an `exit` inside it terminates the script outright — which is what used to
 # happen here, and it meant the summary table was written to the log and then never echoed:
@@ -159,6 +234,10 @@ gate() {
     run_stage "build-release" "$LOG_DIR/focus-build-release.log" \
         xcodebuild -workspace Focus.xcworkspace -scheme FocusSentinel \
         -configuration Release -destination "$DESTINATION" -derivedDataPath "$DD" build
+
+    # 6a — packaging, read from the two logs and the two products stages 5 and 6 just made.
+    # Zero grants, and it catches the one failure a green build cannot (see check_packaging).
+    run_stage "packaging" "$LOG_DIR/focus-packaging.log" check_packaging
 
     # 7 — the headless unit lane, the only lane that compiles String Catalogs
     rm -rf -- "$RB"
@@ -261,6 +340,7 @@ collect_evidence() {
         "focus-strings.log:strings.log"
         "focus-build.log:build-debug.log"
         "focus-build-release.log:build-release.log"
+        "focus-packaging.log:packaging.log"
         "focus-test.log:test.log"
         "focus-entitlements.log:entitlements.txt"
         "focus-entitlements-release.log:entitlements-release.txt"
