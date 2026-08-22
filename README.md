@@ -95,7 +95,7 @@ failed. It never short-circuits: a failing early stage does not hide a later one
 | 6 | Release build | `EXIT=0` |
 | 7 | the unit lane | every package test target, headless |
 | 7b | `check-boundaries.sh` again | `nm -u FocusClassify.o` has no networking symbol — the binary-level form of the assertion, which needs a build product to exist |
-| 8 | `entitlement-check.sh` ×2 | no network entitlement, Debug **and** Release |
+| 8 | `entitlement-check.sh` ×2 | no network entitlement, Debug **and** Release; and `get-task-allow` present in Debug, **absent** in Release |
 | 9 | `self-check.sh` ×2 | the app's own zero-grant report of its menu bar, window and key equivalents |
 | 10 | `verify-project.sh` again | the build did not rewrite the project |
 
@@ -138,7 +138,8 @@ scripts/check-forbidden.sh  > /tmp/focus-forbidden.log  2>&1; echo "EXIT=$?"
 scripts/check-strings.sh    > /tmp/focus-strings.log    2>&1; echo "EXIT=$?"
 
 # entitlements and the zero-grant self-check, on both configurations
-scripts/entitlement-check.sh /tmp/focus-dd/Build/Products/Debug/FocusSentinel.app
+scripts/entitlement-check.sh /tmp/focus-dd/Build/Products/Debug/FocusSentinel.app   Debug
+scripts/entitlement-check.sh /tmp/focus-dd/Build/Products/Release/FocusSentinel.app Release
 scripts/self-check.sh        /tmp/focus-dd/Build/Products/Debug/FocusSentinel.app
 scripts/self-check.sh        /tmp/focus-dd/Build/Products/Release/FocusSentinel.app
 
@@ -197,6 +198,12 @@ This Mac holds exactly one code-signing identity (`Apple Development`) and zero
 artefact is an **ad-hoc-signed local `.app`**. There is no notarisation, no Developer ID
 signing, no App Store submission and no hardened runtime — not in this epic and not in a later
 one.
+
+Because the Release product *is* the shipped artefact, it does not carry
+`com.apple.security.get-task-allow`. Ad-hoc signing injects that entitlement into both
+configurations by default; the Release configuration sets
+`CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO` to keep it out, Debug sets it to `YES` deliberately
+so a debugger can still attach, and `scripts/entitlement-check.sh` asserts both directions.
 
 ## Privacy posture
 

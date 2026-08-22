@@ -129,11 +129,13 @@ gate() {
         run_stage "boundaries-binary" "$LOG_DIR/focus-boundaries-binary.log" \
         scripts/check-boundaries.sh
 
-    # 8 — entitlements, on both configurations
+    # 8 — entitlements, on both configurations. The configuration is passed explicitly
+    # because the assertion differs: get-task-allow belongs in Debug and must be absent from
+    # the Release product, which is the artefact this programme actually ships.
     run_stage "entitlements-debug" "$LOG_DIR/focus-entitlements.log" \
-        scripts/entitlement-check.sh "$DD/Build/Products/Debug/FocusSentinel.app"
+        scripts/entitlement-check.sh "$DD/Build/Products/Debug/FocusSentinel.app" Debug
     run_stage "entitlements-release" "$LOG_DIR/focus-entitlements-release.log" \
-        scripts/entitlement-check.sh "$DD/Build/Products/Release/FocusSentinel.app"
+        scripts/entitlement-check.sh "$DD/Build/Products/Release/FocusSentinel.app" Release
 
     # 9 — the zero-grant shell self-check, on both configurations.
     # FOCUS_EVIDENCE_DIR is deliberately cleared for the child: the gate assembles the
