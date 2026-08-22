@@ -169,30 +169,6 @@
         }
       }
     },
-    "shell.command.closeWindow" : {
-      "comment" : "File menu item that closes the frontmost window.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Close Window"
-          }
-        }
-      }
-    },
-    "shell.command.help" : {
-      "comment" : "Help menu item that opens the in-app Keyboard Shortcuts reference.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Focus Sentinel Help"
-          }
-        }
-      }
-    },
     "shell.help.heading" : {
       "comment" : "Heading of the Keyboard Shortcuts reference window.",
       "extractionState" : "manual",

@@ -30,14 +30,14 @@ struct FocusSentinelApp: App {
     @State private var appearance = AppearanceObserver()
 
     var body: some Scene {
-        Window(Text(LocalizedStringResource("shell.window.cockpit.title")), id: WindowID.cockpit) {
+        Window(Text(LocalizedStringResource("shell.window.cockpit.title")), id: ShellWindow.cockpit.id) {
             CockpitScreen(composition: composition)
                 .appearanceTraits(appearance.traits)
         }
         .commands { ShellCommands() }
         .modelContainer(composition.modelContainer)
 
-        Window(Text(LocalizedStringResource("shell.window.help.title")), id: WindowID.help) {
+        Window(Text(LocalizedStringResource("shell.window.help.title")), id: ShellWindow.help.id) {
             ShortcutsScreen()
                 .appearanceTraits(appearance.traits)
         }
@@ -47,96 +47,6 @@ struct FocusSentinelApp: App {
                 .appearanceTraits(appearance.traits)
         }
         .modelContainer(composition.modelContainer)
-    }
-}
-
-/// Scene identifiers, in one place so a menu item can never point at a window id that no
-/// scene declares.
-enum WindowID {
-    static let cockpit = "cockpit"
-    static let help = "help"
-}
-
-// MARK: - Shell actions
-
-/// One shell action: what it is called, what it is bound to, and where it lives.
-///
-/// The menu bar and the Keyboard Shortcuts window are both built from this one table, so
-/// they cannot drift apart. e01 has exactly two actions; anything without real behaviour
-/// today is deliberately not here.
-struct ShellAction: Identifiable {
-    enum Placement: String, CaseIterable {
-        case file
-        case help
-    }
-
-    let id: String
-    let title: LocalizedStringResource
-    let key: KeyEquivalent
-    let modifiers: EventModifiers
-    /// How the shortcut is drawn in the reference window, e.g. `⌘W`.
-    let shortcutGlyphs: String
-    let placement: Placement
-}
-
-enum ShellActions {
-    /// "Close Window ⌘W".
-    ///
-    /// This action is not optional decoration. A `Window`-scene app that leaves
-    /// `.newItem` replaced by nothing gets **no File menu at all** and leaves ⌘W unbound —
-    /// a closable window with no keyboard close, which is a HIG defect. Registering one
-    /// real action materialises the File menu, after which AppKit adds its own `Close` and
-    /// `Close All ⌥⌘W` beneath it.
-    static let closeWindow = ShellAction(
-        id: "shell.closeWindow",
-        title: LocalizedStringResource("shell.command.closeWindow"),
-        key: "w",
-        modifiers: .command,
-        shortcutGlyphs: "⌘W",
-        placement: .file
-    )
-
-    /// "Focus Sentinel Help ⌘?" — opens the in-app shortcuts reference.
-    static let help = ShellAction(
-        id: "shell.help",
-        title: LocalizedStringResource("shell.command.help"),
-        key: "?",
-        modifiers: .command,
-        shortcutGlyphs: "⌘?",
-        placement: .help
-    )
-
-    static let all: [ShellAction] = [closeWindow, help]
-}
-
-/// The menu bar, built from the action table.
-struct ShellCommands: Commands {
-    @Environment(\.openWindow) private var openWindow
-
-    var body: some Commands {
-        CommandGroup(replacing: .newItem) {
-            Button {
-                NSApp.keyWindow?.performClose(nil)
-            } label: {
-                Text(ShellActions.closeWindow.title)
-            }
-            .keyboardShortcut(
-                ShellActions.closeWindow.key,
-                modifiers: ShellActions.closeWindow.modifiers
-            )
-        }
-
-        CommandGroup(replacing: .help) {
-            Button {
-                openWindow(id: WindowID.help)
-            } label: {
-                Text(ShellActions.help.title)
-            }
-            .keyboardShortcut(
-                ShellActions.help.key,
-                modifiers: ShellActions.help.modifiers
-            )
-        }
     }
 }
 
@@ -260,12 +170,12 @@ private struct ShortcutsScreen: View {
                 .lineLimit(nil)
 
             Grid(alignment: .leading, horizontalSpacing: spacing * 2, verticalSpacing: spacing) {
-                ForEach(ShellActions.all) { action in
+                ForEach(CommandRegistry.shell.actions) { action in
                     GridRow {
                         Text(action.title)
                             .lineLimit(nil)
                             .fixedSize(horizontal: false, vertical: true)
-                        Text(verbatim: action.shortcutGlyphs)
+                        Text(verbatim: action.shortcut?.glyphs ?? "")
                             .monospaced()
                     }
                 }
