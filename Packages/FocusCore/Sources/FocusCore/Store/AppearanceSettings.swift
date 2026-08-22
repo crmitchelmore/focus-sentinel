@@ -28,12 +28,12 @@ extension FocusStore {
         _ preference: AppearancePreference,
         in context: ModelContext,
         now: Date
-    ) throws -> FocusSchemaV1.AppSettingsRecord {
-        let row: FocusSchemaV1.AppSettingsRecord
+    ) throws -> FocusSchemaV2.AppSettingsRecord {
+        let row: FocusSchemaV2.AppSettingsRecord
         if let existing = settingsRow(in: context) {
             row = existing
         } else {
-            row = FocusSchemaV1.AppSettingsRecord(
+            row = FocusSchemaV2.AppSettingsRecord(
                 appearancePreferenceRaw: preference.rawValue,
                 schemaTouchedAt: now
             )
@@ -47,8 +47,8 @@ extension FocusStore {
 
     /// The settings row, if the store has one.
     @MainActor
-    public static func settingsRow(in context: ModelContext) -> FocusSchemaV1.AppSettingsRecord? {
-        var descriptor = FetchDescriptor<FocusSchemaV1.AppSettingsRecord>(
+    public static func settingsRow(in context: ModelContext) -> FocusSchemaV2.AppSettingsRecord? {
+        var descriptor = FetchDescriptor<FocusSchemaV2.AppSettingsRecord>(
             sortBy: [SortDescriptor(\.schemaTouchedAt, order: .forward)]
         )
         descriptor.fetchLimit = 1
