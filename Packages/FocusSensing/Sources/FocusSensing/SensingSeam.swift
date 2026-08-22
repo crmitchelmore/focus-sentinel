@@ -139,4 +139,3 @@ public struct NullActivityObserver: ActivityObserving, IdleObserving {
         .zero
     }
 }
-
