@@ -81,7 +81,17 @@ public enum DesignTokens {
     // MARK: - Typography
 
     /// The shell's type roles. Semantic, never a point size at a call site.
+    ///
+    /// `priorityHero` is the only role that is not one of the system's text styles, and it is
+    /// declared here rather than written at a call site for exactly the reason the rest of
+    /// this file exists: F-02 promises that the priority is *always* more prominent than
+    /// anything else on the screen, and a promise that lives in one view's modifier chain is
+    /// one refactor away from being false. Declared as a role, it is comparable — and
+    /// `TypeHierarchyTests` asserts `priorityHero > largeTitle ≥ every other role`, so no
+    /// later epic can give a secondary surface a bigger font without failing the gate.
     public enum FontRole: String, Sendable, CaseIterable, Hashable {
+        /// The priority intent, and nothing else in the whole package.
+        case priorityHero
         case largeTitle
         case title2
         case title3
@@ -92,8 +102,19 @@ public enum DesignTokens {
         case footnote
 
         /// The system's own font for this role — what the shell draws normally.
+        ///
+        /// Every role but the hero is a semantic system font, so the shell follows the Mac's
+        /// own typography — including the system-wide Text Size setting — with no point size
+        /// written down. The hero cannot be one: there is no system text style larger than
+        /// `.largeTitle`, so it is derived *from* `.largeTitle`'s current size rather than
+        /// hardcoded, and grows with the system setting for the same reason the others do.
         var system: Font {
             switch self {
+            case .priorityHero:
+                .system(
+                    size: NSFont.preferredFont(forTextStyle: .largeTitle).pointSize * Self.heroScale,
+                    weight: .semibold
+                )
             case .largeTitle: .largeTitle
             case .title2: .title2
             case .title3: .title3
@@ -109,7 +130,7 @@ public enum DesignTokens {
         /// role's current point size rather than hardcoding one.
         var appKitStyle: NSFont.TextStyle {
             switch self {
-            case .largeTitle: .largeTitle
+            case .priorityHero, .largeTitle: .largeTitle
             case .title2: .title2
             case .title3: .title3
             case .headline: .headline
@@ -119,6 +140,39 @@ public enum DesignTokens {
             case .footnote: .footnote
             }
         }
+
+        /// How much larger than its AppKit text style this role is drawn. `1` everywhere but
+        /// the hero.
+        var pointSizeMultiplier: CGFloat {
+            switch self {
+            case .priorityHero: Self.heroScale
+            default: 1
+            }
+        }
+
+        /// The weight this role forces, or `nil` to inherit — which is what every system
+        /// role does, so that a call site's own `.fontWeight(_:)` still wins.
+        var weight: Font.Weight? {
+            switch self {
+            case .priorityHero: .semibold
+            default: nil
+            }
+        }
+
+        /// The hero's factor over `largeTitle`. One number, in one place, named.
+        static let heroScale: CGFloat = 1.6
+    }
+
+    /// The point size a role resolves to right now, at a given scale.
+    ///
+    /// Public because the type hierarchy is an *assertion*, not a taste: the hero has to be
+    /// provably larger than every other role, and the app's own `--focus-self-check` reports
+    /// the same two numbers at runtime. Comparing `Font` values could never do either — two
+    /// `Font`s are opaque and only equatable, never ordered.
+    public static func pointSize(_ role: FontRole, scale: ShellTextScale = .standard) -> CGFloat {
+        NSFont.preferredFont(forTextStyle: role.appKitStyle).pointSize
+            * role.pointSizeMultiplier
+            * scale.multiplier
     }
 
     /// The font for a role at a given text scale.
@@ -141,8 +195,12 @@ public enum DesignTokens {
     /// proving it by injection is the same doctrine `AppearanceTraits` already follows.
     public static func font(_ role: FontRole, scale: ShellTextScale = .standard) -> Font {
         guard scale != .standard else { return role.system }
-        let base = NSFont.preferredFont(forTextStyle: role.appKitStyle).pointSize
-        return .system(size: base * scale.multiplier)
+        let size = pointSize(role, scale: scale)
+        // The weight is applied only where the role forces one. Passing `.regular` for the
+        // system roles would override a call site's own `.fontWeight(.semibold)`, which is
+        // how the cockpit heading and the help headings are drawn.
+        guard let weight = role.weight else { return .system(size: size) }
+        return .system(size: size, weight: weight)
     }
 
     /// Spacing that grows with the text around it.
