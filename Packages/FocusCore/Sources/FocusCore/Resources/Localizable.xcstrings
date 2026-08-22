@@ -1,7 +1,66 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-
+    "status.break.short" : {
+      "comment" : "Short status label: the user is on a deliberate break.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On Break"
+          }
+        }
+      }
+    },
+    "status.paused.short" : {
+      "comment" : "Short status label: the session is paused, or nothing is being observed.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paused"
+          }
+        }
+      }
+    },
+    "status.relevant.short" : {
+      "comment" : "Short status label: what is on screen supports the current priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Relevant"
+          }
+        }
+      }
+    },
+    "status.uncertain.short" : {
+      "comment" : "Short status label: there is not enough evidence to judge.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uncertain"
+          }
+        }
+      }
+    },
+    "status.unrelated.short" : {
+      "comment" : "Short status label: what is on screen does not support the current priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unrelated"
+          }
+        }
+      }
+    }
   },
   "version" : "1.0"
 }
