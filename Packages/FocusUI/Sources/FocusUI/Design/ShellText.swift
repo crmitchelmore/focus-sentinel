@@ -55,6 +55,13 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case cockpitSensingUnavailable = "shell.cockpit.sensing.unavailable"
     case cockpitOpenSettings = "shell.cockpit.openSettings"
 
+    // The priority itself
+    case priorityHeroEmpty = "priority.hero.empty"
+    case priorityDoneWhenLabel = "priority.doneWhen.label"
+    case priorityDoneWhenPrompt = "priority.doneWhen.prompt"
+    case priorityActionComplete = "priority.action.complete"
+    case priorityActionClear = "priority.action.clear"
+
     // Keyboard shortcuts reference
     case helpHeading = "shell.help.heading"
     case helpIntroduction = "shell.help.introduction"

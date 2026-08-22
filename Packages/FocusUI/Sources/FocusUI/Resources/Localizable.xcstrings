@@ -1,6 +1,66 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "priority.action.clear" : {
+      "comment" : "Cockpit button that puts the current priority down without completing it.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear Priority"
+          }
+        }
+      }
+    },
+    "priority.action.complete" : {
+      "comment" : "Primary cockpit button that finishes the current priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Complete Priority"
+          }
+        }
+      }
+    },
+    "priority.doneWhen.label" : {
+      "comment" : "Caption above the definition-of-done field, directly under the priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Done when"
+          }
+        }
+      }
+    },
+    "priority.doneWhen.prompt" : {
+      "comment" : "Placeholder in the definition-of-done field. It is optional and never required.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "What will be true when it is finished?"
+          }
+        }
+      }
+    },
+    "priority.hero.empty" : {
+      "comment" : "The priority hero when nothing has been committed to yet: the question itself, drawn at hero size.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "What is the one thing?"
+          }
+        }
+      }
+    },
     "settings.appearance.dark" : {
       "comment" : "Appearance preference: always dark.",
       "extractionState" : "manual",

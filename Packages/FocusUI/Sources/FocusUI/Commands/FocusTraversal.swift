@@ -20,7 +20,11 @@ public enum FocusSurface: String, Sendable, CaseIterable, Hashable, Identifiable
 /// declared here appears in exactly one surface's order — so a field that is added and never
 /// placed is a failure, not an invisible dead end.
 public enum FocusField: String, Sendable, CaseIterable, Hashable, Identifiable {
-    /// The cockpit's primary button.
+    /// The definition-of-done field, directly under the priority hero.
+    case cockpitDoneWhen
+    /// The cockpit's primary action: finish the current priority.
+    case cockpitComplete
+    /// The cockpit's route to Settings.
     case cockpitOpenSettings
     /// The appearance preference picker in General settings.
     case generalAppearancePicker
@@ -66,8 +70,10 @@ public enum FocusTraversal {
     public static let surfaces: [SurfaceFocus] = [
         SurfaceFocus(
             surface: .cockpit,
-            order: [.cockpitOpenSettings],
-            defaultField: .cockpitOpenSettings,
+            // Top to bottom, in the order the column reads: the definition of done sits
+            // under the hero, the primary action under that, and the route to Settings last.
+            order: [.cockpitDoneWhen, .cockpitComplete, .cockpitOpenSettings],
+            defaultField: .cockpitComplete,
             cancel: .none
         ),
         SurfaceFocus(

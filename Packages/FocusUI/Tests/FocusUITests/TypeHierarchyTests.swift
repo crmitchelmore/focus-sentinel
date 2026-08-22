@@ -128,6 +128,13 @@ struct TypeHierarchyTests {
     /// declaration, not a use of it.
     static let declarationFile = "DesignTokens.swift"
 
+    /// `.priorityHero` as a whole member name.
+    ///
+    /// The word boundary is load-bearing: a plain substring search also matches the catalog
+    /// key `.priorityHeroEmpty`, which is a *string*, not the type role, and counting it would
+    /// make this assertion fail for a reason that has nothing to do with the hierarchy.
+    static let heroReference = try! NSRegularExpression(pattern: #"\.priorityHero\b"#)
+
     static func heroUseSites() throws -> [UseSite] {
         var sites: [UseSite] = []
         let enumerator = FileManager.default.enumerator(
@@ -148,7 +155,9 @@ struct TypeHierarchyTests {
                 if trimmed.hasPrefix("//") || trimmed.hasPrefix("*") || trimmed.hasPrefix("/*") {
                     continue
                 }
-                if line.contains(".priorityHero") {
+                let lineText = String(line)
+                let range = NSRange(lineText.startIndex..<lineText.endIndex, in: lineText)
+                if heroReference.firstMatch(in: lineText, range: range) != nil {
                     sites.append(UseSite(file: file.lastPathComponent, line: offset + 1))
                 }
             }

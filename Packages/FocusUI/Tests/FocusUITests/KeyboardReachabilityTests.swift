@@ -126,7 +126,9 @@ struct KeyboardReachabilityTests {
 
     @Test("Return activates the primary action wherever a surface has one")
     func defaultActionsAreBound() {
-        #expect(FocusTraversal.contract(for: .cockpit).defaultField == .cockpitOpenSettings)
+        // The cockpit's primary action is finishing the priority — the one thing a person
+        // does *to* a commitment that ends it. Opening Settings is a route, not an action.
+        #expect(FocusTraversal.contract(for: .cockpit).defaultField == .cockpitComplete)
         #expect(FocusTraversal.contract(for: .settingsPrivacy).defaultField == .privacyRevealStore)
         // General settings has no primary action — a picker is not something Return
         // "confirms" — so it declares none rather than inventing one.
@@ -135,7 +137,7 @@ struct KeyboardReachabilityTests {
 
     @Test("the cockpit and both Settings tabs each have a focusable element")
     func everyShellSurfaceIsReachable() {
-        #expect(FocusTraversal.firstField(in: .cockpit) == .cockpitOpenSettings)
+        #expect(FocusTraversal.firstField(in: .cockpit) == .cockpitDoneWhen)
         #expect(FocusTraversal.firstField(in: .settingsGeneral) == .generalAppearancePicker)
         #expect(FocusTraversal.firstField(in: .settingsPrivacy) == .privacyRevealStore)
     }
