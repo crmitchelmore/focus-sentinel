@@ -385,6 +385,150 @@
         }
       }
     },
+    "handoff.confirm.action.cancel" : {
+      "comment" : "Button that dismisses the handoff and changes nothing. Also what Escape does.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep Mine"
+          }
+        }
+      }
+    },
+    "handoff.confirm.action.replace" : {
+      "comment" : "Destructive button that accepts the incoming priority in place of the current one.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Replace Priority"
+          }
+        }
+      }
+    },
+    "handoff.confirm.current.label" : {
+      "comment" : "Caption above the priority the store currently holds.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Working on now"
+          }
+        }
+      }
+    },
+    "handoff.confirm.current.none" : {
+      "comment" : "Shown in place of the current priority when there is none.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing yet"
+          }
+        }
+      }
+    },
+    "handoff.confirm.explanation" : {
+      "comment" : "Explains that an external URL cannot replace the priority without this confirmation.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Something outside Focus Sentinel asked to change what you are working on. Nothing has changed yet."
+          }
+        }
+      }
+    },
+    "handoff.confirm.heading" : {
+      "comment" : "Heading of the sheet an incoming focus:// URL lands on.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Replace your priority?"
+          }
+        }
+      }
+    },
+    "handoff.confirm.incoming.label" : {
+      "comment" : "Caption above the incoming priority from the URL.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Asked for"
+          }
+        }
+      }
+    },
+    "handoff.flag.controlCharacters" : {
+      "comment" : "Disclosure on the handoff sheet.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Control characters were removed from the incoming text."
+          }
+        }
+      }
+    },
+    "handoff.flag.doneWhenTruncated" : {
+      "comment" : "Disclosure on the handoff sheet. The argument is the original character count.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The incoming definition of done was %@ characters and was cut to fit."
+          }
+        }
+      }
+    },
+    "handoff.flag.duplicateKeys" : {
+      "comment" : "Disclosure on the handoff sheet. The argument is a list of query-key names.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repeated values were ignored for %@; the first of each was used."
+          }
+        }
+      }
+    },
+    "handoff.flag.taskTruncated" : {
+      "comment" : "Disclosure on the handoff sheet. The argument is the original character count.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The incoming task was %@ characters and was cut to fit."
+          }
+        }
+      }
+    },
+    "handoff.flag.unknownItems" : {
+      "comment" : "Disclosure on the handoff sheet. The argument is a list of query-key names.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "These parts of the link were not understood and were ignored: %@."
+          }
+        }
+      }
+    },
     "priority.action.change" : {
       "comment" : "Cockpit button that reopens the capture field so a new sentence can replace the current priority.",
       "extractionState" : "manual",

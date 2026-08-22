@@ -10,6 +10,8 @@ public enum FocusSurface: String, Sendable, CaseIterable, Hashable, Identifiable
     case quickCapture
     /// The sheet that finishes a priority.
     case completionSheet
+    /// The sheet an incoming focus:// handoff lands on.
+    case handoffConfirm
     case settingsGeneral
     case settingsPrivacy
 
@@ -57,6 +59,9 @@ public enum FocusField: String, Sendable, CaseIterable, Hashable, Identifiable {
     case completionShipped
     case completionRestartPoint
     case completionConfirm
+    /// The handoff sheet's two buttons — and there are only ever two.
+    case handoffReplace
+    case handoffCancel
 
     public var id: String { rawValue }
 }
@@ -126,6 +131,14 @@ public enum FocusTraversal {
             surface: .completionSheet,
             order: [.completionShipped, .completionRestartPoint, .completionConfirm],
             defaultField: .completionConfirm,
+            cancel: .dismissWindow
+        ),
+        SurfaceFocus(
+            surface: .handoffConfirm,
+            // Cancel first and Cancel by default: Return must never be the key that gives
+            // away the priority the user was already working on.
+            order: [.handoffCancel, .handoffReplace],
+            defaultField: .handoffCancel,
             cancel: .dismissWindow
         ),
         SurfaceFocus(

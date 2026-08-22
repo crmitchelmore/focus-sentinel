@@ -125,6 +125,20 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case capturePanelTitle = "capture.panel.title"
     case capturePanelHint = "capture.panel.hint"
 
+    // The focus:// handoff confirmation
+    case handoffHeading = "handoff.confirm.heading"
+    case handoffExplanation = "handoff.confirm.explanation"
+    case handoffCurrentLabel = "handoff.confirm.current.label"
+    case handoffCurrentNone = "handoff.confirm.current.none"
+    case handoffIncomingLabel = "handoff.confirm.incoming.label"
+    case handoffActionReplace = "handoff.confirm.action.replace"
+    case handoffActionCancel = "handoff.confirm.action.cancel"
+    case handoffFlagTaskTruncated = "handoff.flag.taskTruncated"
+    case handoffFlagDoneWhenTruncated = "handoff.flag.doneWhenTruncated"
+    case handoffFlagControlCharacters = "handoff.flag.controlCharacters"
+    case handoffFlagDuplicateKeys = "handoff.flag.duplicateKeys"
+    case handoffFlagUnknownItems = "handoff.flag.unknownItems"
+
     // The context pack
     case contextHeading = "context.pack.heading"
     case contextEmpty = "context.pack.empty"

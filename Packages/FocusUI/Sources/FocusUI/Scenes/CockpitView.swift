@@ -107,6 +107,18 @@ public struct CockpitView: View {
         .onAppear { doneWhenDraft = state.priority?.doneWhen ?? "" }
         .onChange(of: state.priority?.id) { doneWhenDraft = state.priority?.doneWhen ?? "" }
         .onChange(of: state.priority?.doneWhen) { doneWhenDraft = state.priority?.doneWhen ?? "" }
+        // The one and only surface an incoming `focus://` URL can reach. There is no path from
+        // here to a store mutation that does not go through a person pressing Replace.
+        .sheet(isPresented: handoffPresentation) {
+            if let request = state.pendingHandoff {
+                HandoffConfirmationSheet(
+                    request: request,
+                    current: state.priority,
+                    replace: { actions?.acceptHandoff(request) },
+                    cancel: { actions?.cancelHandoff() }
+                )
+            }
+        }
         .sheet(isPresented: $isCompleting) {
             if let priority = state.priority {
                 CompletionSheet(
@@ -123,6 +135,20 @@ public struct CockpitView: View {
                 )
             }
         }
+    }
+
+    /// Whether the handoff sheet is up.
+    ///
+    /// Derived from the state rather than stored: the pending handoff belongs to the host, so
+    /// dismissing the sheet by any route — the buttons, Escape, the window — has to tell the
+    /// host, and a local `@State` mirror could disagree with it.
+    private var handoffPresentation: Binding<Bool> {
+        Binding(
+            get: { state.pendingHandoff != nil },
+            set: { presented in
+                if !presented { actions?.cancelHandoff() }
+            }
+        )
     }
 
     // MARK: - The hero
