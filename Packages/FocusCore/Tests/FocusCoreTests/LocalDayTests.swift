@@ -58,7 +58,7 @@ struct LocalDayTests {
         #expect(LocalDay.containing(justAfter, calendar: utc).key == "2026-01-01")
     }
 
-    @Test("today reads from an injected clock, never from a bare Date()")
+    @Test("today reads from an injected clock, never from the system one")
     func todayIsInjected() throws {
         let utc = try calendar("UTC")
         let clock = FixedDateProvider.reference
