@@ -107,8 +107,7 @@ public struct CockpitView: View {
     }
 
     private var heading: some View {
-        ShellText(.cockpitHeading)
-            .font(.largeTitle)
+        ShellText(.cockpitHeading, role: .largeTitle)
             .fontWeight(.semibold)
             .foregroundStyle(DesignTokens.Palette.primaryText)
             .lineLimit(nil)

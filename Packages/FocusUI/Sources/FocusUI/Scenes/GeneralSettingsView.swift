@@ -52,13 +52,15 @@ public struct GeneralSettingsView: View {
             .pickerStyle(.inline)
             .focused($focus, equals: .generalAppearancePicker)
 
-            ShellText(.settingsAppearanceNote)
-                .font(.footnote)
+            ShellText(.settingsAppearanceNote, role: .footnote)
                 .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
                 .lineLimit(nil)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .formStyle(.grouped)
+        // The *columns* form style — SwiftUI's default on macOS — rather than `.grouped`.
+        // Measured: a grouped form is List-backed and rasterises to a solid rectangle under
+        // `ImageRenderer`, so a grouped pane could never be snapshot-verified at all. The
+        // columns style is equally standard Settings chrome and is drawn by SwiftUI itself.
         .padding(spacing)
         .frame(maxWidth: .infinity, alignment: .leading)
         .defaultFocus($focus, .generalAppearancePicker)

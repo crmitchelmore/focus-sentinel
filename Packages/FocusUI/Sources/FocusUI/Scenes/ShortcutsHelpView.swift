@@ -64,67 +64,81 @@ public struct ShortcutsHelpView: View {
     }
 
     public var body: some View {
-        let groups = Self.groups(for: registry)
+        // The scroll view is the *window's* affordance: at the largest accessibility text
+        // size the reference can outgrow a small window, and scrolling is how a Mac window
+        // handles that. The content itself is a separate view so the snapshot lane can
+        // measure the thing that must never clip, rather than measuring a scroll view's
+        // fixed frame and learning nothing.
+        ScrollView {
+            ShortcutsHelpContent(registry: registry)
+        }
+        .frame(minWidth: 360, minHeight: 240)
+        .background(DesignTokens.Palette.windowBackground)
+    }
+}
 
-        return ScrollView {
-            VStack(alignment: .leading, spacing: spacing * 2) {
+/// The shortcut reference's content, without the window's scrolling.
+struct ShortcutsHelpContent: View {
+    let registry: CommandRegistry
+
+    @Environment(\.appearanceTraits) private var traits
+    @Environment(\.shellTextScale) private var textScale
+    @ScaledMetric(relativeTo: .body) private var spacing: CGFloat = 12
+
+    var body: some View {
+        let groups = ShortcutsHelpView.groups(for: registry)
+
+        return VStack(alignment: .leading, spacing: spacing * 2) {
+            VStack(alignment: .leading, spacing: spacing / 2) {
+                ShellText(.helpHeading, role: .title2)
+                    .fontWeight(.semibold)
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                ShellText(.helpIntroduction, role: .callout)
+                    .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            ForEach(groups) { group in
                 VStack(alignment: .leading, spacing: spacing / 2) {
-                    ShellText(.helpHeading)
-                        .font(.title2)
-                        .fontWeight(.semibold)
+                    ShellText(group.headingKey, role: .headline)
                         .lineLimit(nil)
-                        .fixedSize(horizontal: false, vertical: true)
 
-                    ShellText(.helpIntroduction)
-                        .font(.callout)
-                        .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
-                        .lineLimit(nil)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+                    Grid(
+                        alignment: .leading,
+                        horizontalSpacing: spacing * 2,
+                        verticalSpacing: spacing / 2
+                    ) {
+                        GridRow {
+                            ShellText(.helpColumnAction, role: .caption)
+                                .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+                            ShellText(.helpColumnShortcut, role: .caption)
+                                .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+                        }
 
-                ForEach(groups) { group in
-                    VStack(alignment: .leading, spacing: spacing / 2) {
-                        ShellText(group.headingKey)
-                            .font(.headline)
-                            .lineLimit(nil)
-
-                        Grid(
-                            alignment: .leading,
-                            horizontalSpacing: spacing * 2,
-                            verticalSpacing: spacing / 2
-                        ) {
+                        ForEach(group.rows) { row in
                             GridRow {
-                                ShellText(.helpColumnAction)
-                                    .font(.caption)
-                                    .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
-                                ShellText(.helpColumnShortcut)
-                                    .font(.caption)
-                                    .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
-                            }
-
-                            ForEach(group.rows) { row in
-                                GridRow {
-                                    ShellText(row.titleKey)
-                                        .lineLimit(nil)
-                                        .fixedSize(horizontal: false, vertical: true)
-                                    // The glyph string is the shortcut itself, not prose:
-                                    // `verbatim` because it must never be sent through a
-                                    // catalog, and `monospaced` so ⌘, ⌥ and ⇧ line up down
-                                    // the column.
-                                    Text(verbatim: row.glyphs ?? "—")
-                                        .monospaced()
-                                }
+                                ShellText(row.titleKey)
+                                    .lineLimit(nil)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                // The glyph string is the shortcut itself, not prose:
+                                // `verbatim` because it must never be sent through a
+                                // catalog, and `monospaced` so ⌘, ⌥ and ⇧ line up down
+                                // the column.
+                                Text(verbatim: row.glyphs ?? "—")
+                                    .font(DesignTokens.font(.body, scale: textScale))
+                                    .monospaced()
                             }
                         }
                     }
                 }
-
-                Spacer(minLength: 0)
             }
-            .padding(spacing * 2)
-            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Spacer(minLength: 0)
         }
-        .frame(minWidth: 360, minHeight: 240)
-        .background(DesignTokens.Palette.windowBackground)
+        .padding(spacing * 2)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }

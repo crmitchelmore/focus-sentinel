@@ -33,7 +33,12 @@ let package = Package(
         ),
         .testTarget(
             name: "FocusUITests",
-            dependencies: ["FocusUI"]
+            dependencies: ["FocusUI"],
+            // The committed snapshot baselines are read from the source tree through
+            // `#filePath` — they must be writable when re-recording, which a bundled copy
+            // would not be — so they are excluded from the target rather than declared as
+            // resources.
+            exclude: ["__Snapshots__"]
         )
     ]
 )

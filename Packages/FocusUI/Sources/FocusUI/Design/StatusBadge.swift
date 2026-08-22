@@ -67,6 +67,7 @@ public struct StatusBadge: View {
     public let labelRequested: Bool
 
     @Environment(\.appearanceTraits) private var traits
+    @Environment(\.shellTextScale) private var textScale
     @ScaledMetric(relativeTo: .title2) private var glyphSize: CGFloat = 22
     @ScaledMetric(relativeTo: .body) private var spacing: CGFloat = 8
 
@@ -98,14 +99,16 @@ public struct StatusBadge: View {
                 Image(systemName: status.symbolName)
                     .symbolRenderingMode(.hierarchical)
                     .foregroundStyle(DesignTokens.tint(for: status))
-                    .font(.title3)
+                    .font(DesignTokens.font(.title3, scale: textScale))
             }
-            .frame(width: glyphSize, height: glyphSize)
+            .frame(
+                width: DesignTokens.spacing(glyphSize, scale: textScale),
+                height: DesignTokens.spacing(glyphSize, scale: textScale)
+            )
             .accessibilityHidden(true)
 
             if Self.showsLabel(requested: labelRequested, traits: traits) {
                 ShellText(resource: status.shortLabelResource)
-                    .font(.body)
                     .foregroundStyle(DesignTokens.Palette.primaryText)
                     .lineLimit(nil)
                     .fixedSize(horizontal: false, vertical: true)

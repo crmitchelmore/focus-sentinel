@@ -112,20 +112,57 @@ extension View {
     }
 }
 
+/// How large the shell draws its text.
+///
+/// macOS has no injectable Dynamic Type — measured on this machine, an injected
+/// `dynamicTypeSize` changes neither font size nor `@ScaledMetric` output — so the shell
+/// carries its own scale. `standard` is the system's own typography, which already follows
+/// the Mac's system-wide Text Size setting; the larger scale is what the snapshot and
+/// pseudo-localisation lanes inject to prove the layout grows instead of truncating.
+public enum ShellTextScale: String, Sendable, CaseIterable, Hashable {
+    /// The system's typography, unmodified. What the app always runs at.
+    case standard
+    /// Roughly twice the system size — the largest accessibility text size, simulated.
+    case accessibilityLarge
+
+    public var multiplier: CGFloat {
+        switch self {
+        case .standard: 1
+        case .accessibilityLarge: 2
+        }
+    }
+}
+
+extension EnvironmentValues {
+    /// The text scale in force for this subtree. `standard` everywhere in the app.
+    @Entry public var shellTextScale: ShellTextScale = .standard
+}
+
+extension View {
+    /// Draw this subtree's text at a given scale. Used by the snapshot and
+    /// pseudo-localisation lanes; the app never calls it.
+    public func shellTextScale(_ scale: ShellTextScale) -> some View {
+        environment(\.shellTextScale, scale)
+    }
+}
+
 /// A piece of user-visible text.
 ///
 /// Every string the shell draws goes through this view. It resolves the catalog entry, hands
-/// it to whatever transform is in force, and draws the result — which is what makes the
-/// pseudo-localisation pass a property of the real views rather than of a test-only copy of
-/// them.
+/// it to whatever transform is in force, applies the shell's type role at the scale in
+/// force, and draws the result — which is what makes the pseudo-localisation and
+/// large-text passes properties of the real views rather than of a test-only copy of them.
 public struct ShellText: View {
     private let resource: LocalizedStringResource
+    private let role: DesignTokens.FontRole
 
     @Environment(\.shellStringTransform) private var transform
+    @Environment(\.shellTextScale) private var scale
 
     /// A string from `FocusUI`'s own catalog.
-    public init(_ key: ShellStringKey) {
+    public init(_ key: ShellStringKey, role: DesignTokens.FontRole = .body) {
         self.resource = ShellStrings.resource(key)
+        self.role = role
     }
 
     /// A string from some other package's catalog — the status labels, which `FocusCore`
@@ -136,11 +173,13 @@ public struct ShellText: View {
     /// makes `ShellText(.settingsAppearanceLabel)` ambiguous between this initialiser and
     /// the key one — under `xcodebuild` only, where those symbols exist. The label is what
     /// keeps the two lanes compiling the same source.
-    public init(resource: LocalizedStringResource) {
+    public init(resource: LocalizedStringResource, role: DesignTokens.FontRole = .body) {
         self.resource = resource
+        self.role = role
     }
 
     public var body: some View {
         Text(verbatim: transform(String(localized: resource)))
+            .font(DesignTokens.font(role, scale: scale))
     }
 }

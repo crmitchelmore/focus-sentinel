@@ -78,6 +78,82 @@ public enum DesignTokens {
         traits.reduceMotion ? nil : .smooth(duration: 0.2)
     }
 
+    // MARK: - Typography
+
+    /// The shell's type roles. Semantic, never a point size at a call site.
+    public enum FontRole: String, Sendable, CaseIterable, Hashable {
+        case largeTitle
+        case title2
+        case title3
+        case headline
+        case body
+        case callout
+        case caption
+        case footnote
+
+        /// The system's own font for this role — what the shell draws normally.
+        var system: Font {
+            switch self {
+            case .largeTitle: .largeTitle
+            case .title2: .title2
+            case .title3: .title3
+            case .headline: .headline
+            case .body: .body
+            case .callout: .callout
+            case .caption: .caption
+            case .footnote: .footnote
+            }
+        }
+
+        /// The AppKit text style this role corresponds to, used to ask the system for the
+        /// role's current point size rather than hardcoding one.
+        var appKitStyle: NSFont.TextStyle {
+            switch self {
+            case .largeTitle: .largeTitle
+            case .title2: .title2
+            case .title3: .title3
+            case .headline: .headline
+            case .body: .body
+            case .callout: .callout
+            case .caption: .caption1
+            case .footnote: .footnote
+            }
+        }
+    }
+
+    /// The font for a role at a given text scale.
+    ///
+    /// At `.standard` this is the *semantic* system font — `Font.body`, `Font.largeTitle` —
+    /// so the shell follows the Mac's own typography, including the system-wide Text Size
+    /// setting, with no point size written down anywhere.
+    ///
+    /// At a larger scale the base size is asked of the system
+    /// (`NSFont.preferredFont(forTextStyle:).pointSize`) and multiplied, so there is still
+    /// no hardcoded size — the scale is a factor applied to whatever the system says the
+    /// role is worth today.
+    ///
+    /// **Why this exists at all.** macOS has no injectable Dynamic Type: measured on this
+    /// machine, `.environment(\.dynamicTypeSize, .accessibility5)` and
+    /// `.dynamicTypeSize(.accessibility5)` change neither text size nor `@ScaledMetric`
+    /// output — a paragraph renders at exactly the same pixel height at `.large` and at
+    /// `.accessibility5`. Injecting a scale is therefore the only way to prove that the
+    /// shell survives large text without mutating the developer's own System Settings, and
+    /// proving it by injection is the same doctrine `AppearanceTraits` already follows.
+    public static func font(_ role: FontRole, scale: ShellTextScale = .standard) -> Font {
+        guard scale != .standard else { return role.system }
+        let base = NSFont.preferredFont(forTextStyle: role.appKitStyle).pointSize
+        return .system(size: base * scale.multiplier)
+    }
+
+    /// Spacing that grows with the text around it.
+    ///
+    /// `@ScaledMetric` is the documented mechanism and is used throughout the shell, but it
+    /// is inert on macOS for the same reason the fonts are: it keys on `dynamicTypeSize`.
+    /// Where spacing must visibly track the injected scale, it goes through here.
+    public static func spacing(_ base: CGFloat, scale: ShellTextScale = .standard) -> CGFloat {
+        base * scale.multiplier
+    }
+
     // MARK: - Colour
 
     /// Semantic colours, resolved from the system.
