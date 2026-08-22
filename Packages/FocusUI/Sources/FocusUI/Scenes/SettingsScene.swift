@@ -1,3 +1,4 @@
+import AppKit
 import FocusCore
 import SwiftUI
 
@@ -53,6 +54,11 @@ public struct ShellSettingsView: View {
                 .tag(SettingsTab.privacy)
         }
         .frame(minWidth: 460)
+        // Escape backs out of Settings, which is what `CancelBehaviour.dismissWindow`
+        // declares for both panes and what a Mac user expects of a preferences window.
+        .onExitCommand {
+            NSApp.keyWindow?.performClose(nil)
+        }
     }
 
     private func tabLabel(_ tab: SettingsTab) -> some View {

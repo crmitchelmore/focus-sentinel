@@ -26,6 +26,7 @@ public struct GeneralSettingsView: View {
     @Binding private var preference: AppearancePreference
 
     @Environment(\.appearanceTraits) private var traits
+    @FocusState private var focus: FocusField?
     @ScaledMetric(relativeTo: .body) private var spacing: CGFloat = 12
 
     public init(preference: Binding<AppearancePreference>) {
@@ -49,6 +50,7 @@ public struct GeneralSettingsView: View {
                 ShellText(.settingsAppearanceLabel)
             }
             .pickerStyle(.inline)
+            .focused($focus, equals: .generalAppearancePicker)
 
             ShellText(.settingsAppearanceNote)
                 .font(.footnote)
@@ -59,5 +61,6 @@ public struct GeneralSettingsView: View {
         .formStyle(.grouped)
         .padding(spacing)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .defaultFocus($focus, .generalAppearancePicker)
     }
 }

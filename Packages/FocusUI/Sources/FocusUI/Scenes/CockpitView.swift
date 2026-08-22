@@ -54,6 +54,7 @@ public struct CockpitView: View {
 
     @Environment(\.appearanceTraits) private var traits
     @Environment(\.openSettings) private var openSettings
+    @FocusState private var focus: FocusField?
 
     @ScaledMetric(relativeTo: .body) private var rowSpacing: CGFloat = 12
     @ScaledMetric(relativeTo: .largeTitle) private var sectionSpacing: CGFloat = 20
@@ -95,12 +96,14 @@ public struct CockpitView: View {
                 ShellText(.cockpitOpenSettings)
             }
             .keyboardShortcut(.defaultAction)
+            .focused($focus, equals: .cockpitOpenSettings)
 
             Spacer(minLength: 0)
         }
         .padding(sectionSpacing)
         .frame(minWidth: 420, minHeight: 260, alignment: .topLeading)
         .background(DesignTokens.Palette.windowBackground)
+        .defaultFocus($focus, .cockpitOpenSettings)
     }
 
     private var heading: some View {

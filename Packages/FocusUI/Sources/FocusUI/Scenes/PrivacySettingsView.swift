@@ -12,6 +12,7 @@ public struct PrivacySettingsView: View {
     private let storeURL: URL
 
     @Environment(\.appearanceTraits) private var traits
+    @FocusState private var focus: FocusField?
     @ScaledMetric(relativeTo: .body) private var spacing: CGFloat = 12
 
     public init(storeURL: URL = FocusStore.applicationSupportURL) {
@@ -52,10 +53,13 @@ public struct PrivacySettingsView: View {
             } label: {
                 ShellText(.settingsPrivacyReveal)
             }
+            .keyboardShortcut(.defaultAction)
+            .focused($focus, equals: .privacyRevealStore)
 
             Spacer(minLength: 0)
         }
         .padding(spacing * 2)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .defaultFocus($focus, .privacyRevealStore)
     }
 }
