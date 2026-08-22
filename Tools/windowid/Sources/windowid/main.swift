@@ -40,16 +40,30 @@ struct WindowRecord {
     }
 }
 
+/// The form of an owner name that two spellings of the same application agree on.
+///
+/// `kCGWindowOwnerName` is the *display* name — `Focus Sentinel`, with a space — while the
+/// product, the target, the scheme and the bundle executable are all `FocusSentinel`. Asking
+/// for the name you build with and being told there is no such window is a trap worth
+/// closing: matching is exact first, and falls back to this normalisation, which drops
+/// whitespace and case so `FocusSentinel`, `focus sentinel` and `Focus Sentinel` are one key.
+func normalized(_ name: String) -> String {
+    name.lowercased().filter { !$0.isWhitespace }
+}
+
 /// Every layer-0 (ordinary, non-panel) on-screen window owned by `ownerName`.
 ///
 /// Layer 0 is what excludes menu-bar extras, tooltips, the Dock and the app's own panels, so
 /// what comes back is the set of windows a person would call "the app's windows".
-func windows(ownedBy ownerName: String) -> [WindowRecord] {
+///
+/// Returns the records and the owner name they were actually matched under, so a caller can
+/// say which application it found when the match was not the literal argument.
+func windows(ownedBy ownerName: String) -> (records: [WindowRecord], matchedOwner: String) {
     let options: CGWindowListOption = [.optionOnScreenOnly, .excludeDesktopElements]
     guard
         let raw = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]]
     else {
-        return []
+        return ([], ownerName)
     }
 
     let ownerKey = kCGWindowOwnerName as String
@@ -57,9 +71,11 @@ func windows(ownedBy ownerName: String) -> [WindowRecord] {
     let numberKey = kCGWindowNumber as String
     let boundsKey = kCGWindowBounds as String
 
-    return raw.compactMap { entry -> WindowRecord? in
+    /// Every candidate window, paired with its owner, so both matching passes read the same
+    /// list rather than copying the window list twice and risking two different worlds.
+    let candidates: [(owner: String, record: WindowRecord)] = raw.compactMap { entry in
         guard
-            let owner = entry[ownerKey] as? String, owner == ownerName,
+            let owner = entry[ownerKey] as? String,
             let layer = entry[layerKey] as? Int, layer == 0,
             let number = entry[numberKey] as? Int,
             let boundsDictionary = entry[boundsKey],
@@ -70,8 +86,18 @@ func windows(ownedBy ownerName: String) -> [WindowRecord] {
         // A zero-sized window is an artefact of a window being torn down while the list was
         // being copied; capturing it would produce an empty PNG.
         guard bounds.width > 1, bounds.height > 1 else { return nil }
-        return WindowRecord(number: number, bounds: bounds)
+        return (owner, WindowRecord(number: number, bounds: bounds))
     }
+
+    let exact = candidates.filter { $0.owner == ownerName }
+    if !exact.isEmpty {
+        return (exact.map(\.record), ownerName)
+    }
+
+    let wanted = normalized(ownerName)
+    let loose = candidates.filter { normalized($0.owner) == wanted }
+    guard let first = loose.first else { return ([], ownerName) }
+    return (loose.map(\.record), first.owner)
 }
 
 /// Whether this process can drive the live lane.
@@ -99,6 +125,10 @@ func usage() -> Never {
             Prints "<windowNumber> <x> <y> <w> <h>" for each layer-0 on-screen window owned by
             the named application. Window *names* are never requested (standing condition 1).
 
+            The owner name is the application's display name — "Focus Sentinel". An exact
+            match is tried first; failing that, whitespace and case are ignored, so
+            "FocusSentinel" finds the same windows and says so on stderr.
+
             """.utf8
         )
     )
@@ -114,12 +144,17 @@ case "--grants":
 case "-h", "--help":
     usage()
 default:
-    let found = windows(ownedBy: first)
+    let (found, matchedOwner) = windows(ownedBy: first)
     guard !found.isEmpty else {
         FileHandle.standardError.write(
             Data("windowid: no layer-0 on-screen window owned by \"\(first)\"\n".utf8)
         )
         exit(1)
+    }
+    if matchedOwner != first {
+        FileHandle.standardError.write(
+            Data("windowid: matched owner \"\(matchedOwner)\" for \"\(first)\"\n".utf8)
+        )
     }
     for record in found {
         print(record.line)
