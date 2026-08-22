@@ -4,6 +4,20 @@ import Testing
 
 @testable import FocusCore
 
+/// A migration plan that stops at v1.
+///
+/// Recording the v1 fixture needs a container that is *actually* v1 — `FocusStore` builds v2
+/// and would migrate the store on the way out, writing a v2 file into `Resources/SchemaV1`
+/// and quietly destroying the only genuine v1 artefact in the repository. This plan exists so
+/// that the recording path can open v1 as v1, and for nothing else.
+///
+/// It still goes through `ModelContainer(for:migrationPlan:configurations:)`, so R-05's rule
+/// — no plan-less container, anywhere — is not weakened by its existence.
+enum SchemaV1OnlyPlan: SchemaMigrationPlan {
+    static var schemas: [any VersionedSchema.Type] { [FocusSchemaV1.self] }
+    static var stages: [MigrationStage] { [] }
+}
+
 /// The known contents of the committed v1 store fixture.
 ///
 /// Fixed identifiers and a fixed instant, so the assertions are about *these rows* rather
@@ -50,6 +64,51 @@ enum SchemaV1Fixture {
             .appending(path: subdirectory, directoryHint: .isDirectory)
     }
 
+    /// The fixture as it sits inside the built test bundle.
+    ///
+    /// Resolved with an explicit `subdirectory:` because the resource is declared
+    /// `.copy("Resources")` on the test target, which preserves the directory structure.
+    /// A repo-root `Fixtures/` directory is not usable here: SwiftPM bundles only resources
+    /// declared inside a package, so such a file is simply absent from the built product in
+    /// both lanes.
+    static func url() throws -> URL {
+        try #require(
+            Bundle.module.url(
+                forResource: storeName,
+                withExtension: nil,
+                subdirectory: subdirectory
+            ),
+            "the committed v1 store fixture is not in the test bundle"
+        )
+    }
+
+    /// Copy the store and both sidecars somewhere writable, and return the copy's URL.
+    ///
+    /// All three files matter. A store copied without its write-ahead log opens fine and is
+    /// missing whatever had not been checkpointed — a silent, intermittent way to lose test
+    /// data.
+    static func copyToTemporaryDirectory() throws -> URL {
+        let source = try url()
+        let sourceDirectory = source.deletingLastPathComponent()
+        let destinationDirectory = FileManager.default.temporaryDirectory
+            .appending(path: "focus-fixture-\(UUID().uuidString)", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(
+            at: destinationDirectory,
+            withIntermediateDirectories: true
+        )
+
+        for name in FocusStore.storeFileNames(for: storeName) {
+            let from = sourceDirectory.appending(path: name, directoryHint: .notDirectory)
+            guard FileManager.default.fileExists(atPath: from.path) else { continue }
+            try FileManager.default.copyItem(
+                at: from,
+                to: destinationDirectory.appending(path: name, directoryHint: .notDirectory)
+            )
+        }
+
+        return destinationDirectory.appending(path: storeName, directoryHint: .notDirectory)
+    }
+
     /// Insert the known rows into a context. Used only when re-recording.
     @MainActor
     static func populate(_ context: ModelContext) throws {
@@ -82,80 +141,42 @@ enum SchemaV1Fixture {
         )
         try context.save()
     }
+
+    /// A container pinned to v1, for recording only. See `SchemaV1OnlyPlan`.
+    static func makeVersionOneContainer(at url: URL) throws -> ModelContainer {
+        let schema = Schema(versionedSchema: FocusSchemaV1.self)
+        let configuration = ModelConfiguration(schema: schema, url: url)
+        return try ModelContainer(for: schema, migrationPlan: SchemaV1OnlyPlan.self, configurations: configuration)
+    }
 }
 
-/// Proves that a store written by schema v1 still opens, through the migration plan, with
-/// its rows unmodified.
+/// Proves that a store written by schema v1 still opens, through the migration plan, with its
+/// rows unmodified.
 ///
-/// This is what turns "no data loss on upgrade" from an intention into a fact. From e02
-/// onwards, when `FocusSchemaV2` and its migration stage arrive, this same fixture — an
-/// actual v1 store, byte-for-byte as v1 wrote it — is what proves the stage works. A test
-/// that writes v1 data with today's code and reads it back with today's code would prove
-/// nothing of the kind.
+/// This is what turns "no data loss on upgrade" from an intention into a fact. Since e02 the
+/// same fixture — an actual v1 store, byte-for-byte as v1 wrote it — is read back through the
+/// **v2** schema, because that is what the app now opens. A test that wrote v1 data with
+/// today's code and read it back with today's code would prove nothing of the kind.
+///
+/// The assertions below are the e01 assertions, moved behind v2's namespace. The
+/// migration-specific claims — the pointer row, the retired column, the stage not re-running —
+/// live in `MigrationV2Tests`.
 @Suite("Schema v1 store fixture")
 struct MigrationFixtureTests {
-    /// The fixture as it sits inside the built test bundle.
-    ///
-    /// Resolved with an explicit `subdirectory:` because the resource is declared
-    /// `.copy("Resources")` on the test target, which preserves the directory structure.
-    /// A repo-root `Fixtures/` directory is not usable here: SwiftPM bundles only resources
-    /// declared inside a package, so such a file is simply absent from the built product in
-    /// both lanes.
-    private func fixtureURL() throws -> URL {
-        try #require(
-            Bundle.module.url(
-                forResource: SchemaV1Fixture.storeName,
-                withExtension: nil,
-                subdirectory: SchemaV1Fixture.subdirectory
-            ),
-            "the committed v1 store fixture is not in the test bundle"
-        )
-    }
-
-    /// Copy the store and both sidecars somewhere writable, and return the copy's URL.
-    ///
-    /// All three files matter. A store copied without its write-ahead log opens fine and is
-    /// missing whatever had not been checkpointed — a silent, intermittent way to lose test
-    /// data.
-    private func copyFixtureToTemporaryDirectory() throws -> URL {
-        let source = try fixtureURL()
-        let sourceDirectory = source.deletingLastPathComponent()
-        let destinationDirectory = FileManager.default.temporaryDirectory
-            .appending(path: "focus-fixture-\(UUID().uuidString)", directoryHint: .isDirectory)
-        try FileManager.default.createDirectory(
-            at: destinationDirectory,
-            withIntermediateDirectories: true
-        )
-
-        for name in FocusStore.storeFileNames(for: SchemaV1Fixture.storeName) {
-            let from = sourceDirectory.appending(path: name, directoryHint: .notDirectory)
-            guard FileManager.default.fileExists(atPath: from.path) else { continue }
-            try FileManager.default.copyItem(
-                at: from,
-                to: destinationDirectory.appending(path: name, directoryHint: .notDirectory)
-            )
-        }
-
-        return destinationDirectory.appending(
-            path: SchemaV1Fixture.storeName,
-            directoryHint: .notDirectory
-        )
-    }
-
     @Test(
         "the committed v1 store opens through the migration plan with its rows intact",
         .enabled(if: !SchemaV1Fixture.isRecording)
     )
     @MainActor
     func fixtureOpensWithRowsIntact() throws {
-        let url = try copyFixtureToTemporaryDirectory()
+        let url = try SchemaV1Fixture.copyToTemporaryDirectory()
         defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
 
         // Through `FocusStore.makeContainer`, therefore through `FocusMigrationPlan`.
         let container = try FocusStore.makeContainer(kind: .temporary(url))
         let context = container.mainContext
 
-        let tasks = try context.fetch(FetchDescriptor<FocusSchemaV1.PriorityTask>())
+        let tasks = try context.fetch(FetchDescriptor<FocusSchemaV2.PriorityTask>())
         #expect(tasks.count == 1)
         let task = try #require(tasks.first)
         #expect(task.id == SchemaV1Fixture.taskID)
@@ -166,7 +187,7 @@ struct MigrationFixtureTests {
         #expect(task.revision == SchemaV1Fixture.taskRevision)
         #expect(task.createdAt == SchemaV1Fixture.timestamp)
 
-        let rules = try context.fetch(FetchDescriptor<FocusSchemaV1.RelevanceRule>())
+        let rules = try context.fetch(FetchDescriptor<FocusSchemaV2.RelevanceRule>())
         #expect(rules.count == 1)
         let rule = try #require(rules.first)
         #expect(rule.id == SchemaV1Fixture.ruleID)
@@ -174,8 +195,10 @@ struct MigrationFixtureTests {
         #expect(rule.subject == SchemaV1Fixture.ruleSubject)
         #expect(rule.verdictRaw == SchemaV1Fixture.ruleVerdictRaw)
         #expect(rule.createdAt == SchemaV1Fixture.timestamp)
+        // A v1 rule is a global rule: v1 had no way to scope one to a task.
+        #expect(rule.task == nil)
 
-        let settings = try context.fetch(FetchDescriptor<FocusSchemaV1.AppSettingsRecord>())
+        let settings = try context.fetch(FetchDescriptor<FocusSchemaV2.AppSettingsRecord>())
         #expect(settings.count == 1)
         let row = try #require(settings.first)
         #expect(row.id == SchemaV1Fixture.settingsID)
@@ -183,10 +206,11 @@ struct MigrationFixtureTests {
         #expect(row.appearancePreference == .dark)
         #expect(row.schemaTouchedAt == SchemaV1Fixture.timestamp)
 
-        // Tables declared in v1 but not written by the fixture are present and empty —
-        // not missing, which is what a dropped table would look like.
-        #expect(try context.fetch(FetchDescriptor<FocusSchemaV1.FocusSessionRecord>()).isEmpty)
-        #expect(try context.fetch(FetchDescriptor<FocusSchemaV1.ActivityEvent>()).isEmpty)
+        // Tables declared but not written by the fixture are present and empty — not missing,
+        // which is what a dropped table would look like.
+        #expect(try context.fetch(FetchDescriptor<FocusSchemaV2.FocusSessionRecord>()).isEmpty)
+        #expect(try context.fetch(FetchDescriptor<FocusSchemaV2.ActivityEvent>()).isEmpty)
+        #expect(try context.fetch(FetchDescriptor<FocusSchemaV2.ContextItem>()).isEmpty)
     }
 
     @Test(
@@ -195,21 +219,22 @@ struct MigrationFixtureTests {
     )
     @MainActor
     func openingTheCopyDoesNotMutateTheFixture() throws {
-        let source = try fixtureURL()
+        let source = try SchemaV1Fixture.url()
         let before = try Data(contentsOf: source)
 
-        let url = try copyFixtureToTemporaryDirectory()
+        let url = try SchemaV1Fixture.copyToTemporaryDirectory()
         defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
 
         let container = try FocusStore.makeContainer(kind: .temporary(url))
-        _ = try container.mainContext.fetch(FetchDescriptor<FocusSchemaV1.PriorityTask>())
+        _ = try container.mainContext.fetch(FetchDescriptor<FocusSchemaV2.PriorityTask>())
 
         let after = try Data(contentsOf: source)
         #expect(before == after, "the migration test mutated its own fixture")
     }
 
-    /// Re-records the fixture in the source tree. Runs only under
-    /// `FOCUS_FIXTURE_RECORD=1`, so the committed bytes never change by accident.
+    /// Re-records the fixture in the source tree. Runs only under `FOCUS_FIXTURE_RECORD=1`,
+    /// so the committed bytes never change by accident — and writes through a **v1-only**
+    /// container, so re-recording cannot turn the v1 migration source into a v2 file.
     @Test(
         "re-record the committed v1 fixture",
         .enabled(if: SchemaV1Fixture.isRecording)
@@ -227,7 +252,7 @@ struct MigrationFixtureTests {
         )
 
         do {
-            let container = try FocusStore.makeContainer(kind: .temporary(stagedStore))
+            let container = try SchemaV1Fixture.makeVersionOneContainer(at: stagedStore)
             try SchemaV1Fixture.populate(container.mainContext)
         }
         // Container released: the store is closed and its sidecars are on disk.

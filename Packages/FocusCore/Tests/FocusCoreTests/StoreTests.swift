@@ -22,12 +22,13 @@ struct StoreTests {
         )
     }
 
-    @Test("the migration plan is declared with the v1 schema and no stages")
-    func migrationPlanIsDeclared() {
-        #expect(FocusMigrationPlan.schemas.count == 1)
-        #expect(FocusMigrationPlan.schemas[0] is FocusSchemaV1.Type)
-        #expect(FocusMigrationPlan.schemas[0].versionIdentifier == Schema.Version(1, 0, 0))
-        #expect(FocusMigrationPlan.stages.isEmpty)
+    @Test("the current schema the store opens is v2")
+    func currentSchemaIsVersionTwo() {
+        // The plan's own shape — two schemas, one custom stage — is asserted in
+        // MigrationV2Tests. This is the narrower claim that FocusStore names v2 as the
+        // version this build understands, which is what every caller inherits.
+        #expect(FocusStore.schema.entities.count == 7)
+        #expect(FocusMigrationPlan.schemas.last is FocusSchemaV2.Type)
     }
 
     @Test("in-memory: insert, save and fetch round-trip")
@@ -36,20 +37,20 @@ struct StoreTests {
         let container = try FocusStore.makeContainer(kind: .inMemory)
         let context = container.mainContext
 
-        let task = FocusSchemaV1.PriorityTask(
+        let task = FocusSchemaV2.PriorityTask(
             intent: "Ship the native shell",
             doneWhen: "The gate is green",
-            isActive: true,
             createdAt: clock.now
         )
         context.insert(task)
         try context.save()
 
-        let fetched = try context.fetch(FetchDescriptor<FocusSchemaV1.PriorityTask>())
+        let fetched = try context.fetch(FetchDescriptor<FocusSchemaV2.PriorityTask>())
         #expect(fetched.count == 1)
         #expect(fetched.first?.intent == "Ship the native shell")
         #expect(fetched.first?.doneWhen == "The gate is green")
-        #expect(fetched.first?.isActive == true)
+        // A freshly inserted task is not active: activation is a pointer row, not a column.
+        #expect(fetched.first?.isActive == false)
         #expect(fetched.first?.revision == 1)
         #expect(fetched.first?.completedAt == nil)
     }
@@ -69,7 +70,7 @@ struct StoreTests {
             let container = try FocusStore.makeContainer(kind: .temporary(url))
             let context = container.mainContext
             context.insert(
-                FocusSchemaV1.AppSettingsRecord(
+                FocusSchemaV2.AppSettingsRecord(
                     id: knownID,
                     appearancePreferenceRaw: AppearancePreference.dark.rawValue,
                     schemaTouchedAt: clock.now
@@ -83,7 +84,7 @@ struct StoreTests {
 
         let reopened = try FocusStore.makeContainer(kind: .temporary(url))
         let rows = try reopened.mainContext.fetch(
-            FetchDescriptor<FocusSchemaV1.AppSettingsRecord>()
+            FetchDescriptor<FocusSchemaV2.AppSettingsRecord>()
         )
         #expect(rows.count == 1)
         #expect(rows.first?.id == knownID)
@@ -98,7 +99,7 @@ struct StoreTests {
         let second = try FocusStore.makeContainer(kind: .inMemory)
 
         #expect(first.schema.entities.count == second.schema.entities.count)
-        #expect(first.schema.entities.count == 5)
+        #expect(first.schema.entities.count == 7)
     }
 
     @Test("every enum-backed field persists as its string raw value")
@@ -108,20 +109,20 @@ struct StoreTests {
         let context = container.mainContext
 
         context.insert(
-            FocusSchemaV1.FocusSessionRecord(
+            FocusSchemaV2.FocusSessionRecord(
                 startedAt: clock.now,
                 phaseRaw: SessionPhase.onBreak.rawValue
             )
         )
         context.insert(
-            FocusSchemaV1.ActivityEvent(
+            FocusSchemaV2.ActivityEvent(
                 at: clock.now,
                 kindRaw: "frontmostApplicationChanged",
                 bundleID: "com.apple.dt.Xcode"
             )
         )
         context.insert(
-            FocusSchemaV1.RelevanceRule(
+            FocusSchemaV2.RelevanceRule(
                 scopeRaw: "domain",
                 subject: "news.example",
                 verdictRaw: "unrelated",
@@ -129,7 +130,7 @@ struct StoreTests {
             )
         )
         context.insert(
-            FocusSchemaV1.AppSettingsRecord(
+            FocusSchemaV2.AppSettingsRecord(
                 appearancePreferenceRaw: AppearancePreference.matchSystem.rawValue,
                 schemaTouchedAt: clock.now
             )
@@ -137,37 +138,37 @@ struct StoreTests {
         try context.save()
 
         let session = try #require(
-            try context.fetch(FetchDescriptor<FocusSchemaV1.FocusSessionRecord>()).first
+            try context.fetch(FetchDescriptor<FocusSchemaV2.FocusSessionRecord>()).first
         )
         #expect(session.phaseRaw == "onBreak")
         #expect(session.phase == .onBreak)
 
         let event = try #require(
-            try context.fetch(FetchDescriptor<FocusSchemaV1.ActivityEvent>()).first
+            try context.fetch(FetchDescriptor<FocusSchemaV2.ActivityEvent>()).first
         )
         #expect(event.kindRaw == "frontmostApplicationChanged")
 
         let rule = try #require(
-            try context.fetch(FetchDescriptor<FocusSchemaV1.RelevanceRule>()).first
+            try context.fetch(FetchDescriptor<FocusSchemaV2.RelevanceRule>()).first
         )
         #expect(rule.scopeRaw == "domain")
         #expect(rule.verdictRaw == "unrelated")
 
         let settings = try #require(
-            try context.fetch(FetchDescriptor<FocusSchemaV1.AppSettingsRecord>()).first
+            try context.fetch(FetchDescriptor<FocusSchemaV2.AppSettingsRecord>()).first
         )
         #expect(settings.appearancePreferenceRaw == "matchSystem")
     }
 
     @Test("an unrecognised stored raw value decodes to a safe default rather than crashing")
     func unknownRawValuesDecodeSafely() {
-        let settings = FocusSchemaV1.AppSettingsRecord(
+        let settings = FocusSchemaV2.AppSettingsRecord(
             appearancePreferenceRaw: "solarizedFromTheFuture",
             schemaTouchedAt: clock.now
         )
         #expect(settings.appearancePreference == .matchSystem)
 
-        let session = FocusSchemaV1.FocusSessionRecord(
+        let session = FocusSchemaV2.FocusSessionRecord(
             startedAt: clock.now,
             phaseRaw: "hyperfocus"
         )
