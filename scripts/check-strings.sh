@@ -20,7 +20,7 @@
 #
 # ## The key convention this lint depends on
 #
-# A catalog key begins `shell.`, `settings.` or `status.` **and** has at least three
+# A catalog key begins with one of the namespaces in NAMESPACES **and** has at least three
 # dot-separated components: `<namespace>.<surface>.<element>`. That is what makes check 2
 # decidable — without it a lint cannot tell the key `shell.help.heading` from the SF Symbol
 # name `cup.and.saucer.fill`, nor from the action identifier `shell.closeWindow`, and would
@@ -90,7 +90,7 @@ import sys
 
 root = sys.argv[1]
 
-NAMESPACES = ("shell.", "settings.", "status.")
+NAMESPACES = ("shell.", "settings.", "status.", "priority.", "capture.", "context.", "handoff.", "undo.")
 
 # module name -> (catalog path, source directory)
 MODULES = {

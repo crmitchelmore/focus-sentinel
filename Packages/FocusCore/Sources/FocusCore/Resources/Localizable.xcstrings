@@ -60,6 +60,174 @@
           }
         }
       }
+    },
+    "undo.context.add" : {
+      "comment" : "Undo action name: a context item was added to the priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add Context"
+          }
+        }
+      }
+    },
+    "undo.context.remove" : {
+      "comment" : "Undo action name: a context item was removed from the priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove Context"
+          }
+        }
+      }
+    },
+    "undo.doneWhen.edit" : {
+      "comment" : "Undo action name: the definition of done was edited.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit Definition of Done"
+          }
+        }
+      }
+    },
+    "undo.intent.edit" : {
+      "comment" : "Undo action name: the priority's wording was edited.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit Intent"
+          }
+        }
+      }
+    },
+    "undo.priority.change" : {
+      "comment" : "Undo action name: a different task became the active priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Change Priority"
+          }
+        }
+      }
+    },
+    "undo.priority.clear" : {
+      "comment" : "Undo action name: the active priority was cleared.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear Priority"
+          }
+        }
+      }
+    },
+    "undo.priority.complete" : {
+      "comment" : "Undo action name: the priority was completed.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Complete Priority"
+          }
+        }
+      }
+    },
+    "undo.priority.create" : {
+      "comment" : "Undo action name: a task was created without being activated.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add Priority"
+          }
+        }
+      }
+    },
+    "undo.priority.delete" : {
+      "comment" : "Undo action name: a task and everything attached to it was deleted.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete Priority"
+          }
+        }
+      }
+    },
+    "undo.priority.set" : {
+      "comment" : "Undo action name: a new priority was captured and made active.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set Priority"
+          }
+        }
+      }
+    },
+    "undo.rule.add" : {
+      "comment" : "Undo action name: a relevance rule was added.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add Rule"
+          }
+        }
+      }
+    },
+    "undo.rule.change" : {
+      "comment" : "Undo action name: a relevance rule's verdict was changed.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Change Rule"
+          }
+        }
+      }
+    },
+    "undo.rule.remove" : {
+      "comment" : "Undo action name: a relevance rule was removed.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove Rule"
+          }
+        }
+      }
+    },
+    "undo.timebox.set" : {
+      "comment" : "Undo action name: the priority's timebox was set or cleared.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set Timebox"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"
