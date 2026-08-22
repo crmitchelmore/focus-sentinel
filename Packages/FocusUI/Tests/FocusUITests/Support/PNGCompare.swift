@@ -159,6 +159,27 @@ enum PNGCompare {
         )
     }
 
+    /// How much of a render is ink rather than background.
+    ///
+    /// The background is taken from the top-left pixel, which every render in this lane
+    /// paints deliberately. Counting ink is how "the text really reached the view" and "the
+    /// text was not silently dropped" are measured on a layout that has slack in it: a
+    /// component with room to spare keeps its frame when its strings grow, but it cannot
+    /// keep the same amount of ink.
+    static func inkPixels(_ buffer: PixelBuffer) -> Int {
+        guard !buffer.isEmpty else { return 0 }
+        let background = (buffer.bytes[0], buffer.bytes[1], buffer.bytes[2])
+        var ink = 0
+        for pixel in 0..<(buffer.width * buffer.height) {
+            let index = pixel * 4
+            let dr = abs(Int(buffer.bytes[index]) - Int(background.0))
+            let dg = abs(Int(buffer.bytes[index + 1]) - Int(background.1))
+            let db = abs(Int(buffer.bytes[index + 2]) - Int(background.2))
+            if max(dr, max(dg, db)) > Int(PixelComparison.channelThreshold) { ink += 1 }
+        }
+        return ink
+    }
+
     /// Whether two renders are different pictures rather than the same one twice.
     ///
     /// Used by the cross-variant assertions: a component that claims to honour dark mode and

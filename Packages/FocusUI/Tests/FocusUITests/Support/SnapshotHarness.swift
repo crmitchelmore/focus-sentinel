@@ -111,9 +111,16 @@ enum SnapshotHarness {
         return snapshot
     }
 
-    /// The canonical file name for a render: `<component>.<variant>.<size>.png`.
-    static func name(component: String, variant: String, textScale: String) -> String {
-        "\(component).\(variant).\(textScale)"
+    /// The canonical file name for a render: `<component>.<variant>.<scale>[.<suffix>].png`.
+    static func name(
+        component: String,
+        variant: String,
+        textScale: String,
+        suffix: String? = nil
+    ) -> String {
+        let base = "\(component).\(variant).\(textScale)"
+        guard let suffix else { return base }
+        return "\(base).\(suffix)"
     }
 
     // MARK: - Verification
@@ -169,7 +176,8 @@ enum SnapshotHarness {
         variant: String,
         textScale: ShellTextScale = .standard,
         width: CGFloat? = 520,
-        transform: ShellStringTransform = .identity
+        transform: ShellStringTransform = .identity,
+        baselineSuffix: String? = nil
     ) throws -> Snapshot {
         let snapshot = try render(
             content,
@@ -177,7 +185,12 @@ enum SnapshotHarness {
             textScale: textScale,
             width: width,
             transform: transform,
-            name: name(component: component, variant: variant, textScale: textScale.rawValue)
+            name: name(
+                component: component,
+                variant: variant,
+                textScale: textScale.rawValue,
+                suffix: baselineSuffix
+            )
         )
         try verify(snapshot)
         return snapshot
