@@ -120,9 +120,17 @@ check(
     report.get("menuBarTitles"),
 )
 
-# File: our one real action, then AppKit's own two. AppKit's un-shortcutted `Close` is a
-# system-injected sibling, not a duplicate to delete.
-expected_file = ["Close Window", "<separator>", "Close", "Close All"]
+# File: the registry's four actions in registry order, then AppKit's own two. AppKit's
+# un-shortcutted `Close` is a system-injected sibling, not a duplicate to delete.
+expected_file = [
+    "New Priority",
+    "Add Files to Context…",
+    "Complete Priority",
+    "Close Window",
+    "<separator>",
+    "Close",
+    "Close All",
+]
 check(
     item_titles("File") == expected_file,
     f"File menu is exactly {expected_file}",
