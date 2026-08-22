@@ -104,7 +104,7 @@ public struct StatusBadge: View {
             .accessibilityHidden(true)
 
             if Self.showsLabel(requested: labelRequested, traits: traits) {
-                ShellText(status.shortLabelResource)
+                ShellText(resource: status.shortLabelResource)
                     .font(.body)
                     .foregroundStyle(DesignTokens.Palette.primaryText)
                     .lineLimit(nil)

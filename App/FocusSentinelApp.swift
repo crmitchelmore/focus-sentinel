@@ -43,125 +43,52 @@ struct FocusSentinelApp: App {
         }
 
         Settings {
-            ShellSettingsScreen(appearance: appearance)
+            SettingsHost(appearance: appearance, dateProvider: composition.dateProvider)
                 .appearanceTraits(appearance.traits)
         }
         .modelContainer(composition.modelContainer)
     }
 }
 
-/// Settings: two tabs, both real.
-private struct ShellSettingsScreen: View {
+/// Persists the appearance preference the Settings window edits.
+///
+/// This is glue, not a screen: it holds the `ModelContext` the Settings scene was given,
+/// hands `FocusUI` a plain `Binding<AppearancePreference>`, and writes every change through
+/// `FocusStore` — the same call the round-trip test exercises. Keeping it here rather than
+/// in `FocusUI` is what lets the UI package stay to SwiftUI, AppKit and `FocusCore`, with no
+/// knowledge of SwiftData at all.
+private struct SettingsHost: View {
     let appearance: AppearanceObserver
-
-    var body: some View {
-        TabView {
-            GeneralSettingsPane(appearance: appearance)
-                .tabItem {
-                    Label {
-                        Text(LocalizedStringResource("settings.general.title"))
-                    } icon: {
-                        Image(systemName: "gearshape")
-                    }
-                }
-            PrivacySettingsPane()
-                .tabItem {
-                    Label {
-                        Text(LocalizedStringResource("settings.privacy.title"))
-                    } icon: {
-                        Image(systemName: "hand.raised")
-                    }
-                }
-        }
-        .frame(minWidth: 420)
-    }
-}
-
-private struct GeneralSettingsPane: View {
-    let appearance: AppearanceObserver
+    let dateProvider: any DateProvider
 
     @Environment(\.modelContext) private var modelContext
-    @Query private var settingsRows: [FocusSchemaV1.AppSettingsRecord]
-    @ScaledMetric(relativeTo: .body) private var spacing: CGFloat = 12
 
     var body: some View {
-        Form {
-            Picker(selection: preferenceBinding) {
-                Text(LocalizedStringResource("settings.appearance.matchSystem"))
-                    .tag(AppearancePreference.matchSystem)
-                Text(LocalizedStringResource("settings.appearance.light"))
-                    .tag(AppearancePreference.light)
-                Text(LocalizedStringResource("settings.appearance.dark"))
-                    .tag(AppearancePreference.dark)
-            } label: {
-                Text(LocalizedStringResource("settings.appearance.label"))
-            }
-            .pickerStyle(.inline)
-
-            Text(LocalizedStringResource("settings.appearance.note"))
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .lineLimit(nil)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .formStyle(.grouped)
-        .padding(spacing)
+        ShellSettingsView(
+            preference: preferenceBinding,
+            storeURL: FocusStore.applicationSupportURL
+        )
         .task {
-            appearance.preference = storedPreference
+            // The window may be opened long after launch, so the stored value is read here
+            // rather than assumed to still match what the observer was built with.
+            appearance.preference = FocusStore.appearancePreference(in: modelContext)
         }
-    }
-
-    private var storedPreference: AppearancePreference {
-        settingsRows.first?.appearancePreference ?? .matchSystem
     }
 
     private var preferenceBinding: Binding<AppearancePreference> {
         Binding(
-            get: { storedPreference },
+            get: { appearance.preference },
             set: { newValue in
-                if let row = settingsRows.first {
-                    row.appearancePreference = newValue
-                    row.schemaTouchedAt = Date()
-                } else {
-                    modelContext.insert(
-                        FocusSchemaV1.AppSettingsRecord(
-                            appearancePreferenceRaw: newValue.rawValue,
-                            schemaTouchedAt: Date()
-                        )
-                    )
-                }
-                try? modelContext.save()
+                // The observer is updated first so the shell re-renders immediately even if
+                // the write fails; a store that cannot be written is a reason to tell the
+                // user, never a reason to ignore what they just chose.
                 appearance.preference = newValue
+                try? FocusStore.setAppearancePreference(
+                    newValue,
+                    in: modelContext,
+                    now: dateProvider.now
+                )
             }
         )
-    }
-}
-
-private struct PrivacySettingsPane: View {
-    @ScaledMetric(relativeTo: .body) private var spacing: CGFloat = 12
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: spacing) {
-            Text(LocalizedStringResource("settings.privacy.statement"))
-                .lineLimit(nil)
-                .fixedSize(horizontal: false, vertical: true)
-
-            Text(verbatim: FocusStore.applicationSupportURL.path(percentEncoded: false))
-                .font(.footnote)
-                .monospaced()
-                .textSelection(.enabled)
-                .lineLimit(nil)
-                .fixedSize(horizontal: false, vertical: true)
-
-            Button {
-                NSWorkspace.shared.activateFileViewerSelecting([FocusStore.applicationSupportURL])
-            } label: {
-                Text(LocalizedStringResource("settings.privacy.reveal"))
-            }
-
-            Spacer(minLength: 0)
-        }
-        .padding(spacing * 2)
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }

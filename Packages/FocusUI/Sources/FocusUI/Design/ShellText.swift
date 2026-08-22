@@ -130,7 +130,13 @@ public struct ShellText: View {
 
     /// A string from some other package's catalog — the status labels, which `FocusCore`
     /// owns, are the e01 case.
-    public init(_ resource: LocalizedStringResource) {
+    ///
+    /// Labelled `resource:` deliberately. Xcode generates a typed
+    /// `LocalizedStringResource` symbol for every catalog entry, so an unlabelled overload
+    /// makes `ShellText(.settingsAppearanceLabel)` ambiguous between this initialiser and
+    /// the key one — under `xcodebuild` only, where those symbols exist. The label is what
+    /// keeps the two lanes compiling the same source.
+    public init(resource: LocalizedStringResource) {
         self.resource = resource
     }
 

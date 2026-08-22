@@ -1,6 +1,126 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "settings.appearance.dark" : {
+      "comment" : "Appearance preference: always dark.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dark"
+          }
+        }
+      }
+    },
+    "settings.appearance.label" : {
+      "comment" : "Label for the appearance preference control in General settings.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Appearance"
+          }
+        }
+      }
+    },
+    "settings.appearance.light" : {
+      "comment" : "Appearance preference: always light.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Light"
+          }
+        }
+      }
+    },
+    "settings.appearance.matchSystem" : {
+      "comment" : "Appearance preference: follow the Mac's own setting.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Match System"
+          }
+        }
+      }
+    },
+    "settings.appearance.note" : {
+      "comment" : "Explains that the app follows the system accent colour and accessibility settings.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus Sentinel follows your Mac's accent colour and your Accessibility display settings — Increase Contrast, Reduce Transparency, Reduce Motion and Differentiate Without Colour — automatically."
+          }
+        }
+      }
+    },
+    "settings.general.title" : {
+      "comment" : "Title of the General settings tab.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "General"
+          }
+        }
+      }
+    },
+    "settings.privacy.reveal" : {
+      "comment" : "Button that reveals the local data store in the Finder.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reveal Data Store in Finder"
+          }
+        }
+      }
+    },
+    "settings.privacy.statement" : {
+      "comment" : "The local-only privacy statement shown in the Privacy settings tab.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Everything Focus Sentinel knows about you stays on this Mac. There is no account, no sync, no telemetry and no analytics, and the app ships with no network entitlement at all. Your priorities, sessions and rules live in one local file:"
+          }
+        }
+      }
+    },
+    "settings.privacy.storeLabel" : {
+      "comment" : "Caption above the file-system path of the local data store in the Privacy settings tab.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Data store"
+          }
+        }
+      }
+    },
+    "settings.privacy.title" : {
+      "comment" : "Title of the Privacy settings tab.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Privacy"
+          }
+        }
+      }
+    },
     "shell.cockpit.heading" : {
       "comment" : "Heading of the main cockpit window.",
       "extractionState" : "manual",

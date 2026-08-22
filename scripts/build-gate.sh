@@ -76,17 +76,9 @@ run_stage() {
     # 3 — forbidden symbols (standing conditions 1, 2, 8 and the migration-plan rule)
     run_stage "forbidden" "$LOG_DIR/focus-forbidden.log" scripts/check-forbidden.sh
 
-    # 4 — string externalisation.
-    # The lint lands with the Settings scene, which is the first surface with enough
-    # user-visible text for it to have anything to say. Until then the stage reports its
-    # own absence rather than pretending to be a pass.
-    if [[ -x scripts/check-strings.sh ]]; then
-        run_stage "strings" "$LOG_DIR/focus-strings.log" scripts/check-strings.sh
-    else
-        print "scripts/check-strings.sh does not exist yet — the string lint lands with the Settings scene." \
-            > "$LOG_DIR/focus-strings.log"
-        record "strings(pending)" 0 "$LOG_DIR/focus-strings.log"
-    fi
+    # 4 — string externalisation: no hardcoded user-visible text, and the catalogs and the
+    # code agree in both directions.
+    run_stage "strings" "$LOG_DIR/focus-strings.log" scripts/check-strings.sh
 
     # 5 — Debug build
     run_stage "build-debug" "$LOG_DIR/focus-build.log" \

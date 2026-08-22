@@ -104,7 +104,7 @@ public struct ShortcutsHelpView: View {
 
                             ForEach(group.rows) { row in
                                 GridRow {
-                                    ShellText(ShellStrings.resource(row.titleKey))
+                                    ShellText(row.titleKey)
                                         .lineLimit(nil)
                                         .fixedSize(horizontal: false, vertical: true)
                                     // The glyph string is the shortcut itself, not prose:
