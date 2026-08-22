@@ -1,5 +1,6 @@
 import AppKit
 import FocusCore
+import FocusUI
 import Foundation
 
 /// The zero-grant shell self-check.
@@ -46,7 +47,7 @@ enum SelfCheck {
         // very state the survey is describing.
         let menu = menuTree()
         let windows = windowReports()
-        let cockpit = windows.first { ($0["titled"] as? Bool) == true }
+        let cockpit = cockpitWindow(in: windows)
         let claims = keyEquivalentClaims()
 
         var root: [String: Any] = [:]
@@ -61,6 +62,30 @@ enum SelfCheck {
         root["statusTokens"] = statusTokens()
         root["localizationCatalogsCompiled"] = LocalizationLane.catalogsAreCompiled
         return root
+    }
+
+    /// The cockpit, among the windows this process owns.
+    ///
+    /// Found by the scene's own identifier rather than by "the first titled window", because
+    /// from e02 the app owns a **second** titled window from the moment it launches: the
+    /// quick-capture panel, which is a titled utility `NSPanel` built at launch so that the
+    /// hot key can show it in tens of milliseconds (P-57). It is titled and closable but
+    /// neither resizable nor miniaturizable, so the old heuristic would have described the
+    /// panel and then failed the cockpit's standard-window assertions.
+    ///
+    /// The `ShellWindow.cockpit.id` string is what SwiftUI stamps on the window as its
+    /// identifier; the shape check is kept as a fallback so a future SwiftUI that stops
+    /// stamping it degrades to the old behaviour rather than reporting no cockpit at all.
+    @MainActor
+    static func cockpitWindow(in windows: [[String: Any]]) -> [String: Any]? {
+        if let identified = windows.first(
+            where: { ($0["identifier"] as? String) == ShellWindow.cockpit.id }
+        ) {
+            return identified
+        }
+        return windows.first {
+            ($0["titled"] as? Bool) == true && ($0["resizable"] as? Bool) == true
+        }
     }
 
     /// The whole of `NSApp.mainMenu`, one level deep.
