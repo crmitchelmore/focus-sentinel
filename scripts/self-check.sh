@@ -137,6 +137,30 @@ check(
     item_titles("File"),
 )
 
+CONTROL = 1 << 18
+
+
+def check_shortcut(menu_title, item_title, key, mask):
+    item = find(menu_title, item_title)
+    check(item is not None, f"{menu_title} has a {item_title!r} item", item_titles(menu_title))
+    if not item:
+        return
+    check(
+        item["keyEquivalent"] == key and (item["modifierMask"] & 0xFFFF0000) == mask,
+        f"{item_title} is bound to the expected key equivalent",
+        (item["keyEquivalent"], item["modifierMask"]),
+    )
+    check(item["isEnabled"], f"{item_title} is enabled")
+    check(item["hasAction"], f"{item_title} has an action")
+
+
+# The three e02 priority commands, each with the key equivalent the registry declares.
+# `\r` is Return: Complete Priority is Ctrl-Cmd-Return, deliberately not the plain Return that
+# belongs to whichever field the user is actually typing in.
+check_shortcut("File", "New Priority", "n", CMD)
+check_shortcut("File", "Add Files to Context…", "o", CMD)
+check_shortcut("File", "Complete Priority", "\r", CMD | CONTROL)
+
 close_window = find("File", "Close Window")
 check(close_window is not None, "File has a Close Window item")
 if close_window:
@@ -233,7 +257,7 @@ for title, items in menus.items():
 # Cmd-Q is never probed: performing it terminates the app before the report can be written.
 
 claims = report.get("keyEquivalentClaims", {})
-for key in ("cmd-w", "cmd-comma", "cmd-question"):
+for key in ("cmd-n", "cmd-o", "cmd-w", "cmd-comma", "cmd-question"):
     check(claims.get(key) is True, f"the menu bar claims {key}", claims.get(key))
 
 # --- the cockpit window ------------------------------------------------------------------
@@ -285,6 +309,122 @@ check(
     report.get("localizationCatalogsCompiled") is True,
     "the running app has compiled String Catalogs",
     report.get("localizationCatalogsCompiled"),
+)
+
+# --- e02 · the URL type (F-142) -------------------------------------------------------------
+#
+# Read from the *built product*, which is the only witness that can say whether the partial
+# `Config/FocusSentinel-Info.plist` really merged with the generated one (R-15, P-66b).
+
+check(
+    report.get("urlSchemes") == ["focus"],
+    "the product declares exactly one URL scheme, 'focus'",
+    report.get("urlSchemes"),
+)
+
+# --- e02 · the global hot key (F-06) ---------------------------------------------------------
+#
+# Every assertion here is grant-free. `RegisterEventHotKey` is a public Carbon call whose
+# return value no TCC permission influences (P-55, P-56), which is precisely why it is the
+# gateable half of F-06 and `AXIsProcessTrusted` is not.
+
+hot_key = report.get("hotKey") or {}
+check(hot_key.get("available") is True, "a hot-key registrar is available", hot_key.get("available"))
+check(
+    hot_key.get("status") == 0,
+    "registering the quick-capture hot key returned noErr",
+    (hot_key.get("status"), hot_key.get("outcome")),
+)
+check(
+    hot_key.get("registeredSpecMatches") is True,
+    "the registrar holds the combination the app asked for",
+    hot_key.get("registeredSpecMatches"),
+)
+
+# ⌃⌥⌘Space. Not ⌘Space, and the reason is measured rather than tasteful: P-55 registered
+# Spotlight's combination successfully and quietly took the key, so the app must not be able to
+# ship a system shortcut as its default.
+spec = hot_key.get("spec") or {}
+check(spec.get("keyCode") == 49, "the default hot key is Space (key code 49)", spec.get("keyCode"))
+check(
+    spec.get("modifierFlags") == (CONTROL | OPTION | CMD),
+    "the default hot key carries Control, Option and Command",
+    spec.get("modifierFlags"),
+)
+check(
+    spec.get("glyphs") == "⌃⌥⌘Space",
+    "the default hot key draws as ⌃⌥⌘Space",
+    spec.get("glyphs"),
+)
+
+# A self-collision stays detectable, which is what makes the settings tab's conflict path real
+# rather than decorative. -9878 is `eventHotKeyExistsErr` (P-55).
+check(
+    hot_key.get("duplicateStatus") == -9878,
+    "registering the same combination twice reports eventHotKeyExistsErr (-9878)",
+    (hot_key.get("duplicateStatus"), hot_key.get("duplicateOutcome")),
+)
+
+# `axIsProcessTrusted` is RECORDED, never asserted. Probe P-56: a binary `exec`'d from a shell
+# that holds Accessibility inherits that shell's TCC responsibility and reports `true` — and
+# this script `exec`s the binary exactly that way. Requiring `false` would fail on a granted
+# developer machine for a reason that has nothing to do with the code. The honest grant-free
+# proof is scripts/live-capture-drive.sh's `open -a` launch after a `tccutil reset`.
+print(f"note axIsProcessTrusted = {report.get('axIsProcessTrusted')!r} (recorded, never asserted — P-56)")
+
+# --- e02 · undo through the system Edit menu (F-93) -------------------------------------------
+#
+# The title is read from the item AppKit built and validated, not from the UndoManager's own
+# `undoMenuItemTitle`: F-93's claim is that the domain journal reaches the standard Edit menu
+# with no menu code of our own, and only the menu can witness that.
+
+undo = report.get("undo") or {}
+check(undo.get("available") is True, "the cockpit window has an undo manager", undo)
+check(
+    undo.get("menuItemTitle") == "Undo Change Priority",
+    "the Edit menu reads 'Undo Change Priority' after one scripted mutation",
+    undo.get("menuItemTitle"),
+)
+check(
+    undo.get("enabled") is True,
+    "the Edit menu's Undo item is enabled after that mutation",
+    undo.get("enabled"),
+)
+check(
+    undo.get("menuItemTitleAfterUndo") == "Undo",
+    "the Edit menu reads plain 'Undo' again after taking it",
+    undo.get("menuItemTitleAfterUndo"),
+)
+check(
+    undo.get("enabledAfterUndo") is False,
+    "the Edit menu's Undo item is disabled again after taking it",
+    undo.get("enabledAfterUndo"),
+)
+
+# --- e02 · the quick-capture panel (F-06) -----------------------------------------------------
+
+panel = report.get("capturePanel") or {}
+check(panel.get("prebuilt") is True, "the quick-capture panel was built at launch", panel.get("prebuilt"))
+check(panel.get("visibleAfterShow") is True, "showing the panel makes it visible", panel.get("visibleAfterShow"))
+# 250 ms is a regression guard with two orders of magnitude of slack, not a restatement of the
+# claim: P-57 measured 34 ms from the hot key to a visible, focused panel. What it catches is
+# somebody moving the panel's construction into `show()`.
+shown_ms = panel.get("showMilliseconds")
+check(
+    isinstance(shown_ms, (int, float)) and shown_ms < 250,
+    "the panel is on screen in under 250 ms",
+    shown_ms,
+)
+
+# --- e02 · the priority is the hero, structurally (F-02, F-147) --------------------------------
+
+hero = report.get("priorityHero") or {}
+check(
+    isinstance(hero.get("pointSize"), (int, float))
+    and isinstance(hero.get("largestOtherPointSize"), (int, float))
+    and hero["pointSize"] > hero["largestOtherPointSize"],
+    "the priority hero is larger than every other type role in the running app",
+    (hero.get("pointSize"), hero.get("largestOtherRole"), hero.get("largestOtherPointSize")),
 )
 
 # ------------------------------------------------------------------------------------------
