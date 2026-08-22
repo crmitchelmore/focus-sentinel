@@ -83,7 +83,13 @@ scripts/build-gate.sh
 ```
 
 Runs every stage, redirecting each one unpiped to its own log, and exits non-zero if any stage
-failed. It never short-circuits: a failing early stage does not hide a later one. The stages:
+failed. It never short-circuits: a failing early stage does not hide a later one.
+
+**Every invocation owns its paths.** The derived-data tree, the log directory (and so the gate
+log, every stage log and both self-check reports) and the result bundle are all derived from a
+per-run token, so two gate runs at once cannot braid their output into one file that describes
+neither of them. The cost is that a default run builds cold; set `FOCUS_DERIVED_DATA` to reuse
+a warm tree when you are the only run. The stages:
 
 | # | stage | what it proves |
 |---|---|---|
@@ -153,11 +159,12 @@ Never pipe any of it. Redirect unpiped to a log and gate on the explicit exit st
 
 | variable | used by | meaning |
 |---|---|---|
-| `FOCUS_DERIVED_DATA` | the gate, the live lane | build location. Default `/tmp/focus-dd` |
-| `FOCUS_LOG_DIR` | the gate | where the stage logs are written. Default `/tmp` |
-| `FOCUS_RESULT_BUNDLE` | the gate | the unit lane's `-resultBundlePath`. Default is unique per run; either way it is `rm -rf`'d immediately before the run |
-| `FOCUS_EVIDENCE_DIR` | the gate, `self-check.sh`, the live lane | where the evidence set is assembled. Default for the live lane: `.agents/evidence/e01`. **Never committed** |
-| `FOCUS_SNAPSHOT_OUT` | the snapshot lane, the gate | where snapshot renders are written. Default `$TMPDIR/focus-snapshots`. Note that `xcodebuild` does not forward its environment to a SwiftPM test process, so under the gate this names where to *look*, not where to write |
+| `FOCUS_RUN_TOKEN` | the gate | the per-run suffix every default path is derived from. Default `<UTC timestamp>-<pid>` |
+| `FOCUS_DERIVED_DATA` | the gate, `check-boundaries.sh`, the live lane | build location. Gate default `/tmp/focus-dd-$FOCUS_RUN_TOKEN`; the live lane's own default is `/tmp/focus-dd`. Pin it to reuse a warm tree |
+| `FOCUS_LOG_DIR` | the gate | where the gate log, every stage log and both self-check reports are written. Default `/tmp/focus-gate-$FOCUS_RUN_TOKEN` |
+| `FOCUS_RESULT_BUNDLE` | the gate | the unit lane's `-resultBundlePath`. Default `$FOCUS_LOG_DIR/focus-e01-$FOCUS_RUN_TOKEN.xcresult`; either way it is `rm -rf`'d immediately before the run |
+| `FOCUS_EVIDENCE_DIR` | the gate, `self-check.sh`, the live lane | where the evidence set is assembled, under the canonical names below. Default for the live lane: `.agents/evidence/e01`. **Never committed** |
+| `FOCUS_SNAPSHOT_OUT` | the snapshot lane, the gate | where snapshot renders are written. Default `$TMPDIR/focus-snapshots`. `xcodebuild` carries no value into a SwiftPM test target's environment — measured both by inheriting the shell's environment and by a scheme `<EnvironmentVariable>` expanding a command-line build setting, and neither reaches the test — so under the gate this names where to *look*, not where to write. The gate copies from it into `$FOCUS_LOG_DIR/snapshots` and collects evidence from the copy |
 | `FOCUS_SNAPSHOT_RECORD=1` | the snapshot lane | re-record the committed baselines instead of comparing. `swift test` only, for the same reason. Recorded PNGs are read by eye before being committed |
 | `FOCUS_FIXTURE_RECORD=1` | `MigrationFixtureTests` | rewrite the committed v1 store fixture instead of asserting against it |
 | `FOCUS_SELFCHECK_JSON` | `self-check.sh` | where the app's self-check report is written |

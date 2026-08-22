@@ -20,29 +20,60 @@
 #
 #   scripts/live-shell-drive.sh
 #
+# ## Every run owns its own paths
+#
+# Two gate runs at once used to contaminate each other's evidence: the derived-data tree, the
+# gate log and every stage log were fixed, shared paths, and `gate > "$GATE_LOG"` truncates.
+# The observable symptom was a single gate log whose header named one result bundle and whose
+# footer named another — two runs' output braided into one file that neither of them
+# describes. Evidence that can be produced by a run other than the one you are reading is not
+# evidence.
+#
+# So every default path below is derived from a per-run token: the derived data, the log
+# directory (and therefore the gate log, every stage log and both self-check JSONs), the
+# result bundle, and the run's copy of the snapshot renders. Two runs share nothing.
+# Pinning any of the FOCUS_* variables opts back into a shared path deliberately — that is
+# what they are for, and it is then the caller's problem to serialise.
+#
+# The cost is that a default run builds cold. `FOCUS_DERIVED_DATA=/tmp/focus-dd` restores a
+# warm tree for a single-run inner loop. Per-run directories accumulate under /tmp; the
+# summary prints exactly which ones this run made.
+#
 # ## Environment
 #
-#   FOCUS_DERIVED_DATA     default /tmp/focus-dd
-#   FOCUS_LOG_DIR          default /tmp
-#   FOCUS_RESULT_BUNDLE    default a unique timestamped path under $FOCUS_LOG_DIR
+#   FOCUS_RUN_TOKEN        the per-run suffix. Default <UTC timestamp>-<pid>
+#   FOCUS_DERIVED_DATA     default /tmp/focus-dd-$FOCUS_RUN_TOKEN
+#   FOCUS_LOG_DIR          default /tmp/focus-gate-$FOCUS_RUN_TOKEN
+#   FOCUS_RESULT_BUNDLE    default $FOCUS_LOG_DIR/focus-e01-$FOCUS_RUN_TOKEN.xcresult
 #   FOCUS_EVIDENCE_DIR     if set, the whole evidence set is assembled there under the names
 #                          the epic's validation section asks for
-#   FOCUS_SNAPSHOT_OUT     where the snapshot lane wrote its renders; defaults to the
-#                          harness's own default, $TMPDIR/focus-snapshots
+#   FOCUS_SNAPSHOT_OUT     the directory the snapshot lane writes its renders into. See the
+#                          note at SNAPSHOT_STAGING below: this names where to *look*, not
+#                          where to write, and it is the one path the gate cannot make unique
 set -u
 
 REPO_ROOT="${0:A:h}/.."
 cd "$REPO_ROOT" || exit 1
 
-DD="${FOCUS_DERIVED_DATA:-/tmp/focus-dd}"
-LOG_DIR="${FOCUS_LOG_DIR:-/tmp}"
+RUN_TOKEN="${FOCUS_RUN_TOKEN:-$(date -u +%Y%m%dT%H%M%SZ)-$$}"
+
+DD="${FOCUS_DERIVED_DATA:-/tmp/focus-dd-$RUN_TOKEN}"
+LOG_DIR="${FOCUS_LOG_DIR:-/tmp/focus-gate-$RUN_TOKEN}"
+LOG_DIR="${LOG_DIR%/}"
 mkdir -p -- "$LOG_DIR"
+
+# The stage scripts find the build products through FOCUS_DERIVED_DATA — check-boundaries.sh
+# reads `FocusClassify.o` out of it for the binary half of the zero-networking assertion.
+# With a per-run derived-data tree this export is load-bearing: without it the stage would
+# fall back to its own default and read whatever object some *other* run left at
+# /tmp/focus-dd, which is the same contamination in a different costume.
+export FOCUS_DERIVED_DATA="$DD"
 
 # xcodebuild refuses to write over an existing result bundle and exits 64 *before running a
 # single test*. A fixed path would therefore make every second gate run fail for a reason
 # that has nothing to do with the code. The gate owns the path: unique by default, and
 # removed first either way, so an explicitly pinned FOCUS_RESULT_BUNDLE is re-runnable too.
-RB="${FOCUS_RESULT_BUNDLE:-$LOG_DIR/focus-e01-$(date -u +%Y%m%dT%H%M%SZ)-$$.xcresult}"
+RB="${FOCUS_RESULT_BUNDLE:-$LOG_DIR/focus-e01-$RUN_TOKEN.xcresult}"
 rm -rf -- "$RB"
 
 GATE_LOG="$LOG_DIR/focus-gate.log"
@@ -55,12 +86,25 @@ SELFCHECK_JSON_RELEASE="$LOG_DIR/focus-selfcheck-release.json"
 
 # The snapshot lane writes every render — matching or not — to a plain directory, which is
 # what makes evidence collection a `cp -R` rather than a dependence on `xcresulttool`'s
-# shifting subcommand surface. Measured: `xcodebuild` does not forward its own environment to
-# a SwiftPM test target's process, so setting this here cannot *redirect* the renders; it
-# names where to look for them, and the default is the harness's own default.
+# shifting subcommand surface.
+#
+# This is the one path the gate cannot own, and it is worth being exact about why. The
+# directory is chosen inside the *test* process, and `xcodebuild` will not carry a value into
+# a SwiftPM test target's environment. Measured on this machine (Xcode 26.2), twice:
+# `FOCUS_SNAPSHOT_OUT=<dir> xcodebuild … test` leaves <dir> empty, and so does declaring
+# `FOCUS_SNAPSHOT_OUT = $(FOCUS_SNAPSHOT_OUT)` in the scheme's <EnvironmentVariables> and
+# passing `FOCUS_SNAPSHOT_OUT=<dir>` as a command-line build setting. Both runs wrote to the
+# harness's own default instead.
+#
+# What the gate does therefore is copy *out* of that shared staging directory into a per-run
+# directory of its own, immediately after the unit stage, and treat the copy as this run's
+# renders. The staging directory stays shared between concurrent runs; the renders are a
+# deterministic function of the committed code, so two runs of the same tree write identical
+# bytes there, and the evidence each run collects is its own snapshot of it.
 TMP_ROOT="${TMPDIR:-/tmp}"
-SNAPSHOT_OUT="${FOCUS_SNAPSHOT_OUT:-${TMP_ROOT%/}/focus-snapshots}"
-SNAPSHOT_OUT="${SNAPSHOT_OUT%/}"
+SNAPSHOT_STAGING="${FOCUS_SNAPSHOT_OUT:-${TMP_ROOT%/}/focus-snapshots}"
+SNAPSHOT_STAGING="${SNAPSHOT_STAGING%/}"
+SNAPSHOT_OUT="$LOG_DIR/snapshots"
 
 typeset -a STAGE_NAMES STAGE_CODES STAGE_LOGS
 
@@ -86,7 +130,9 @@ run_stage() {
 gate() {
     print "FOCUS BUILD GATE"
     print "repo:           $REPO_ROOT"
+    print "run token:      $RUN_TOKEN"
     print "derived data:   $DD"
+    print "log directory:  $LOG_DIR"
     print "result bundle:  $RB"
     print "started:        $(date -u +%Y-%m-%dT%H:%M:%SZ)"
     print
@@ -119,6 +165,17 @@ gate() {
     run_stage "unit" "$LOG_DIR/focus-test.log" \
         xcodebuild -workspace Focus.xcworkspace -scheme FocusUnitTests \
         -destination "$DESTINATION" -derivedDataPath "$DD" -resultBundlePath "$RB" test
+
+    # 7a — take this run's own copy of the snapshot renders out of the shared staging
+    # directory the test process chose. See the SNAPSHOT_STAGING note above for why the gate
+    # copies rather than owns.
+    if [[ -d "$SNAPSHOT_STAGING" ]]; then
+        rm -rf -- "$SNAPSHOT_OUT"
+        cp -R -- "$SNAPSHOT_STAGING" "$SNAPSHOT_OUT" \
+            && print "GATE snapshots copied from $SNAPSHOT_STAGING to $SNAPSHOT_OUT"
+    else
+        print -u2 "GATE snapshots MISSING at $SNAPSHOT_STAGING"
+    fi
 
     # 7b — the binary half of the zero-networking assertion.
     # Stage 2 runs before anything is built, so on a cold checkout `nm -u FocusClassify.o`
@@ -163,9 +220,11 @@ gate() {
         (( STAGE_CODES[$i] != 0 )) && failed=1
     done
     print "--------------------------------------------------------------"
+    print "run token:      $RUN_TOKEN"
+    print "derived data:   $DD"
     print "result bundle:  $RB"
     print "self-check:     $SELFCHECK_JSON"
-    print "snapshots:      $SNAPSHOT_OUT"
+    print "snapshots:      $SNAPSHOT_OUT (staged in $SNAPSHOT_STAGING)"
     print "finished:       $(date -u +%Y-%m-%dT%H:%M:%SZ)"
     print
     print "The live osascript/screencapture lane is deliberately NOT a stage: it needs"
