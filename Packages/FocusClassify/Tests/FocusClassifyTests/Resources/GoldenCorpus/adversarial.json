@@ -1,0 +1,1963 @@
+{
+  "file": "adversarial",
+  "note": "The eleven ambiguity families of F-153. Ten of them put a plausible distraction in front of the engine and ask it to decline; the eleventh puts the person's actual work in front of it and asks the same, because a suite that cannot fail on THAT is a suite that certifies the engine's most dangerous output. Every family names the code path that produces its answer, so a fixture cannot pass for the wrong reason the day the engine changes, and every family carries at least one negative control — a near-identical case that DOES resolve — so the suite proves the engine is discriminating rather than merely timid. Family 11 carries three obligations no other family does: dwell triples on both sides of sustainedDriftThreshold, negative controls in both directions, and one case per negativeBasisKinds member plus the two excluded kinds.",
+  "cases": [
+    {
+      "id": "gc-0301",
+      "note": "THE case R-56.1 exists for, and minimumNegativeBasisItems' committed mutation witness. A person writing the Q3 proposal opens Excel to build the numbers that go in it. Overlap is empty — microsoft and excel share nothing with write, proposal, acme, send, dana — similarity may never say unrelated and never sees identifier tokens anyway, and the pack names no identity. Set minimumNegativeBasisItems to 0 and this case becomes unrelated at band medium, which is exactly the intervention floor, and the app accuses somebody of slacking off for doing the work. At 1 it stays quiet.",
+      "families": [
+        "productiveLexicallySilent"
+      ],
+      "priority": {
+        "intent": "Write the Q3 proposal for Acme",
+        "doneWhen": "sent to Dana",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "com.microsoft.Excel",
+        "titleTokens": []
+      },
+      "dwellSeconds": 91,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "uncertain",
+        "source": "heuristic",
+        "stage": "heuristic",
+        "band": null,
+        "eligibility": "suppressed:verdictUncertain",
+        "clauses": [
+          "noNegativeBasis",
+          "insufficientEvidence"
+        ],
+        "uncertaintyReason": "noNegativeBasis"
+      }
+    },
+    {
+      "id": "gc-0302",
+      "note": "The same case one second below the sustained-drift threshold. Dwell alone must not be able to walk a family-11 case across the line, and the only way to prove that is to put one on each side of it.",
+      "families": [
+        "productiveLexicallySilent"
+      ],
+      "priority": {
+        "intent": "Write the Q3 proposal for Acme",
+        "doneWhen": "sent to Dana",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "com.microsoft.Excel",
+        "titleTokens": []
+      },
+      "dwellSeconds": 89,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "uncertain",
+        "source": "heuristic",
+        "stage": "heuristic",
+        "band": null,
+        "eligibility": "suppressed:verdictUncertain",
+        "clauses": [
+          "noNegativeBasis",
+          "insufficientEvidence"
+        ],
+        "uncertaintyReason": "noNegativeBasis"
+      }
+    },
+    {
+      "id": "gc-0303",
+      "note": "And exactly on the threshold. Ninety seconds is the number every temporal boundary in this engine turns on, and here it changes nothing at all.",
+      "families": [
+        "productiveLexicallySilent"
+      ],
+      "priority": {
+        "intent": "Write the Q3 proposal for Acme",
+        "doneWhen": "sent to Dana",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "com.microsoft.Excel",
+        "titleTokens": []
+      },
+      "dwellSeconds": 90,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "uncertain",
+        "source": "heuristic",
+        "stage": "heuristic",
+        "band": null,
+        "eligibility": "suppressed:verdictUncertain",
+        "clauses": [
+          "noNegativeBasis",
+          "insufficientEvidence"
+        ],
+        "uncertaintyReason": "noNegativeBasis"
+      }
+    },
+    {
+      "id": "gc-0304",
+      "note": "Numbers against an audit, one second below the threshold. The identifier decomposes to apple, work and numbers; the priority says close, bergman and audit; the two say nothing about each other, and that is a fact about vocabulary rather than about relevance.",
+      "families": [
+        "productiveLexicallySilent"
+      ],
+      "priority": {
+        "intent": "close the Bergman audit",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "com.apple.iWork.Numbers",
+        "titleTokens": []
+      },
+      "dwellSeconds": 89,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "uncertain",
+        "source": "heuristic",
+        "stage": "heuristic",
+        "band": null,
+        "eligibility": "suppressed:verdictUncertain",
+        "clauses": [
+          "noNegativeBasis",
+          "insufficientEvidence"
+        ],
+        "uncertaintyReason": "noNegativeBasis"
+      }
+    },
+    {
+      "id": "gc-0305",
+      "note": "Numbers, exactly on the threshold.",
+      "families": [
+        "productiveLexicallySilent"
+      ],
+      "priority": {
+        "intent": "close the Bergman audit",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "com.apple.iWork.Numbers",
+        "titleTokens": []
+      },
+      "dwellSeconds": 90,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "uncertain",
+        "source": "heuristic",
+        "stage": "heuristic",
+        "band": null,
+        "eligibility": "suppressed:verdictUncertain",
+        "clauses": [
+          "noNegativeBasis",
+          "insufficientEvidence"
+        ],
+        "uncertaintyReason": "noNegativeBasis"
+      }
+    },
+    {
+      "id": "gc-0306",
+      "note": "Numbers, one second past it — and still uncertain, because time is only evidence once there is something for the absence to be an absence of.",
+      "families": [
+        "productiveLexicallySilent"
+      ],
+      "priority": {
+        "intent": "close the Bergman audit",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "com.apple.iWork.Numbers",
+        "titleTokens": []
+      },
+      "dwellSeconds": 91,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "uncertain",
+        "source": "heuristic",
+        "stage": "heuristic",
+        "band": null,
+        "eligibility": "suppressed:verdictUncertain",
+        "clauses": [
+          "noNegativeBasis",
+          "insufficientEvidence"
+        ],
+        "uncertaintyReason": "noNegativeBasis"
+      }
+    },
+    {
+      "id": "gc-0307",
+      "note": "Preview against release notes, below the threshold. Reading the PDF you are about to ship is the work, and the bundle identifier cannot tell anybody that.",
+      "families": [
+        "productiveLexicallySilent"
+      ],
+      "priority": {
+        "intent": "ship the release notes",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "com.apple.Preview",
+        "titleTokens": []
+      },
+      "dwellSeconds": 89,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "uncertain",
+        "source": "heuristic",
+        "stage": "heuristic",
+        "band": null,
+        "eligibility": "suppressed:verdictUncertain",
+        "clauses": [
+          "noNegativeBasis",
+          "insufficientEvidence"
+        ],
+        "uncertaintyReason": "noNegativeBasis"
+      }
+    },
+    {
+      "id": "gc-0308",
+      "note": "Preview, exactly on the threshold.",
+      "families": [
+        "productiveLexicallySilent"
+      ],
+      "priority": {
+        "intent": "ship the release notes",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "com.apple.Preview",
+        "titleTokens": []
+      },
+      "dwellSeconds": 90,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "uncertain",
+        "source": "heuristic",
+        "stage": "heuristic",
+        "band": null,
+        "eligibility": "suppressed:verdictUncertain",
+        "clauses": [
+          "noNegativeBasis",
+          "insufficientEvidence"
+        ],
+        "uncertaintyReason": "noNegativeBasis"
+      }
+    },
+    {
+      "id": "gc-0309",
+      "note": "Preview, one second past it.",
+      "families": [
+        "productiveLexicallySilent"
+      ],
+      "priority": {
+        "intent": "ship the release notes",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "com.apple.Preview",
+        "titleTokens": []
+      },
+      "dwellSeconds": 91,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "uncertain",
+        "source": "heuristic",
+        "stage": "heuristic",
+        "band": null,
+        "eligibility": "suppressed:verdictUncertain",
+        "clauses": [
+          "noNegativeBasis",
+          "insufficientEvidence"
+        ],
+        "uncertaintyReason": "noNegativeBasis"
+      }
+    },
+    {
+      "id": "gc-0310",
+      "note": "Xcode against an audit, eight minutes in. Past escalationDwell the band would have risen to high — if there were a verdict to band. There is not.",
+      "families": [
+        "productiveLexicallySilent"
+      ],
+      "priority": {
+        "intent": "close the Bergman audit",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "com.apple.dt.Xcode",
+        "titleTokens": []
+      },
+      "dwellSeconds": 480,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "uncertain",
+        "source": "heuristic",
+        "stage": "heuristic",
+        "band": null,
+        "eligibility": "suppressed:verdictUncertain",
+        "clauses": [
+          "noNegativeBasis",
+          "insufficientEvidence"
+        ],
+        "uncertaintyReason": "noNegativeBasis"
+      }
+    },
+    {
+      "id": "gc-0311",
+      "note": "Figma against a proposal, eight minutes in. Every domain tool anybody has ever installed lives in this gap between 'no lexical overlap' and 'unrelated to the work'.",
+      "families": [
+        "productiveLexicallySilent"
+      ],
+      "priority": {
+        "intent": "Write the Q3 proposal for Acme",
+        "doneWhen": "sent to Dana",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "com.figma.Desktop",
+        "titleTokens": []
+      },
+      "dwellSeconds": 480,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "uncertain",
+        "source": "heuristic",
+        "stage": "heuristic",
+        "band": null,
+        "eligibility": "suppressed:verdictUncertain",
+        "clauses": [
+          "noNegativeBasis",
+          "insufficientEvidence"
+        ],
+        "uncertaintyReason": "noNegativeBasis"
+      }
+    },
+    {
+      "id": "gc-0312",
+      "note": "OmniGraffle against release notes, eight minutes in. The identifier decomposes to omnigroup, omni and graffle — three tokens that say nothing about anything.",
+      "families": [
+        "productiveLexicallySilent"
+      ],
+      "priority": {
+        "intent": "ship the release notes",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "com.omnigroup.OmniGraffle",
+        "titleTokens": []
+      },
+      "dwellSeconds": 480,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "uncertain",
+        "source": "heuristic",
+        "stage": "heuristic",
+        "band": null,
+        "eligibility": "suppressed:verdictUncertain",
+        "clauses": [
+          "noNegativeBasis",
+          "insufficientEvidence"
+        ],
+        "uncertaintyReason": "noNegativeBasis"
+      }
+    },
+    {
+      "id": "gc-0313",
+      "note": "A keyword-only pack is one of the two excluded kinds. A keyword can only ever match POSITIVELY, so its absence is the same absence the overlap stage already declined to conclude from — and R-56.1 excludes it from the basis for exactly that reason.",
+      "families": [
+        "productiveLexicallySilent"
+      ],
+      "priority": {
+        "intent": "Write the Q3 proposal for Acme",
+        "doneWhen": "sent to Dana",
+        "revision": 1
+      },
+      "contextPack": [
+        {
+          "kind": "keyword",
+          "value": "quarterly"
+        }
+      ],
+      "evidence": {
+        "bundleID": "com.microsoft.Excel",
+        "titleTokens": []
+      },
+      "dwellSeconds": 480,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "uncertain",
+        "source": "heuristic",
+        "stage": "heuristic",
+        "band": null,
+        "eligibility": "suppressed:verdictUncertain",
+        "clauses": [
+          "noNegativeBasis",
+          "insufficientEvidence"
+        ],
+        "uncertaintyReason": "noNegativeBasis"
+      }
+    },
+    {
+      "id": "gc-0314",
+      "note": "A file-only pack is the other excluded kind. At zero grants the engine cannot see which file is open, so a file item can neither match nor fail to match an observation, and an item that can never be absent cannot make an absence informative.",
+      "families": [
+        "productiveLexicallySilent"
+      ],
+      "priority": {
+        "intent": "Write the Q3 proposal for Acme",
+        "doneWhen": "sent to Dana",
+        "revision": 1
+      },
+      "contextPack": [
+        {
+          "kind": "file",
+          "value": "/Users/example/Documents/Q3 proposal.pages"
+        }
+      ],
+      "evidence": {
+        "bundleID": "com.microsoft.Excel",
+        "titleTokens": []
+      },
+      "dwellSeconds": 480,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "uncertain",
+        "source": "heuristic",
+        "stage": "heuristic",
+        "band": null,
+        "eligibility": "suppressed:verdictUncertain",
+        "clauses": [
+          "noNegativeBasis",
+          "insufficientEvidence"
+        ],
+        "uncertaintyReason": "noNegativeBasis"
+      }
+    },
+    {
+      "id": "gc-0315",
+      "note": "The app half of negativeBasisKinds, as a resolving control. One application identity in the pack and the same Excel case one second past the threshold now resolves unrelated and mandates. The gate cannot pass by accident on a single kind, and this is the kind that proves it.",
+      "families": [
+        "productiveLexicallySilent"
+      ],
+      "negativeControl": true,
+      "priority": {
+        "intent": "Write the Q3 proposal for Acme",
+        "doneWhen": "sent to Dana",
+        "revision": 1
+      },
+      "contextPack": [
+        {
+          "kind": "app",
+          "value": "com.apple.Pages"
+        }
+      ],
+      "evidence": {
+        "bundleID": "com.microsoft.Excel",
+        "titleTokens": []
+      },
+      "dwellSeconds": 91,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "unrelated",
+        "source": "heuristic",
+        "stage": "heuristic",
+        "band": "medium",
+        "eligibility": "mandated",
+        "clauses": [
+          "sustainedDwell"
+        ]
+      }
+    },
+    {
+      "id": "gc-0316",
+      "note": "The domain half of negativeBasisKinds. An origin is an identity too, and a pack holding only one still constitutes a basis.",
+      "families": [
+        "productiveLexicallySilent"
+      ],
+      "negativeControl": true,
+      "priority": {
+        "intent": "Write the Q3 proposal for Acme",
+        "doneWhen": "sent to Dana",
+        "revision": 1
+      },
+      "contextPack": [
+        {
+          "kind": "domain",
+          "value": "https://proposal.acme.co.uk"
+        }
+      ],
+      "evidence": {
+        "bundleID": "com.microsoft.Excel",
+        "titleTokens": []
+      },
+      "dwellSeconds": 91,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "unrelated",
+        "source": "heuristic",
+        "stage": "heuristic",
+        "band": "medium",
+        "eligibility": "mandated",
+        "clauses": [
+          "sustainedDwell"
+        ]
+      }
+    },
+    {
+      "id": "gc-0317",
+      "note": "The resolving control in the RELEVANT direction: the person put Excel in the pack, so the very same activation is the work rather than a distraction, at band high and rung 3. Ninety-one seconds is past returnAnchorDwell, so the transition window has also recognised Excel as somewhere the person WAS and the explanation says so.",
+      "families": [
+        "productiveLexicallySilent"
+      ],
+      "negativeControl": true,
+      "priority": {
+        "intent": "Write the Q3 proposal for Acme",
+        "doneWhen": "sent to Dana",
+        "revision": 1
+      },
+      "contextPack": [
+        {
+          "kind": "app",
+          "value": "com.microsoft.Excel"
+        }
+      ],
+      "evidence": {
+        "bundleID": "com.microsoft.Excel",
+        "titleTokens": []
+      },
+      "dwellSeconds": 91,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "relevant",
+        "source": "userRule",
+        "stage": "contextPack",
+        "band": "high",
+        "eligibility": "suppressed:verdictRelevant",
+        "clauses": [
+          "contextItem",
+          "returnedToAnchor"
+        ]
+      }
+    },
+    {
+      "id": "gc-0318",
+      "note": "The resolving control in the UNRELATED direction, and the more important of the two: a user rule about Excel produces the accusation at band high and mandates. The engine is CAPABLE of saying this and is declining to say it in gc-0301 for a reason, rather than being structurally unable to say it at all.",
+      "families": [
+        "productiveLexicallySilent"
+      ],
+      "negativeControl": true,
+      "priority": {
+        "intent": "Write the Q3 proposal for Acme",
+        "doneWhen": "sent to Dana",
+        "revision": 1
+      },
+      "rules": [
+        {
+          "authority": "global",
+          "subjectKind": "app",
+          "subject": "com.microsoft.Excel",
+          "verdict": "unrelated"
+        }
+      ],
+      "evidence": {
+        "bundleID": "com.microsoft.Excel",
+        "titleTokens": []
+      },
+      "dwellSeconds": 91,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "unrelated",
+        "source": "userRule",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "mandated",
+        "clauses": [
+          "userRule",
+          "sustainedDwell"
+        ]
+      }
+    },
+    {
+      "id": "gc-0401",
+      "note": "Safari frontmost at zero grant: no origin, no title, and nothing about 'a browser' is evidence about this priority. The bundled askEachTime seed answers at rung 7 and the answer is to say nothing.",
+      "families": [
+        "mixedUse"
+      ],
+      "priority": {
+        "intent": "Write the Q3 proposal for Acme",
+        "doneWhen": "sent to Dana",
+        "revision": 1
+      },
+      "contextPack": [
+        {
+          "kind": "app",
+          "value": "com.apple.Pages"
+        }
+      ],
+      "evidence": {
+        "bundleID": "com.apple.Safari",
+        "titleTokens": []
+      },
+      "dwellSeconds": 400,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "uncertain",
+        "source": "heuristic",
+        "stage": "seedFallback",
+        "band": null,
+        "eligibility": "suppressed:verdictUncertain",
+        "clauses": [
+          "seedFallbackMixedUse",
+          "insufficientEvidence"
+        ],
+        "uncertaintyReason": "mixedUseApplication"
+      }
+    },
+    {
+      "id": "gc-0402",
+      "note": "Discord, which is a game chat and a work chat in the same window. The app ships no opinion about which one this is.",
+      "families": [
+        "mixedUse"
+      ],
+      "priority": {
+        "intent": "Write the Q3 proposal for Acme",
+        "doneWhen": "sent to Dana",
+        "revision": 1
+      },
+      "contextPack": [
+        {
+          "kind": "app",
+          "value": "com.apple.Pages"
+        }
+      ],
+      "evidence": {
+        "bundleID": "com.hnc.Discord",
+        "titleTokens": []
+      },
+      "dwellSeconds": 400,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "uncertain",
+        "source": "heuristic",
+        "stage": "seedFallback",
+        "band": null,
+        "eligibility": "suppressed:verdictUncertain",
+        "clauses": [
+          "seedFallbackMixedUse",
+          "insufficientEvidence"
+        ],
+        "uncertaintyReason": "mixedUseApplication"
+      }
+    },
+    {
+      "id": "gc-0403",
+      "note": "Slack. Six minutes in a chat client is either the whole job or none of it, and a bundle identifier cannot tell the difference.",
+      "families": [
+        "mixedUse"
+      ],
+      "priority": {
+        "intent": "Write the Q3 proposal for Acme",
+        "doneWhen": "sent to Dana",
+        "revision": 1
+      },
+      "contextPack": [
+        {
+          "kind": "app",
+          "value": "com.apple.Pages"
+        }
+      ],
+      "evidence": {
+        "bundleID": "com.tinyspeck.slackmacgap",
+        "titleTokens": []
+      },
+      "dwellSeconds": 400,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "uncertain",
+        "source": "heuristic",
+        "stage": "seedFallback",
+        "band": null,
+        "eligibility": "suppressed:verdictUncertain",
+        "clauses": [
+          "seedFallbackMixedUse",
+          "insufficientEvidence"
+        ],
+        "uncertaintyReason": "mixedUseApplication"
+      }
+    },
+    {
+      "id": "gc-0404",
+      "note": "The negative control: the same browser, with an origin the person attached to this priority. Give the engine one identity it can match and it resolves immediately — so its silence above is about the absent evidence rather than about browsers.",
+      "families": [
+        "mixedUse"
+      ],
+      "negativeControl": true,
+      "priority": {
+        "intent": "Write the Q3 proposal for Acme",
+        "doneWhen": "sent to Dana",
+        "revision": 1
+      },
+      "contextPack": [
+        {
+          "kind": "domain",
+          "value": "https://docs.google.com"
+        }
+      ],
+      "evidence": {
+        "bundleID": "com.apple.Safari",
+        "origin": "https://docs.google.com",
+        "titleTokens": []
+      },
+      "dwellSeconds": 20,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "relevant",
+        "source": "userRule",
+        "stage": "contextPack",
+        "band": "high",
+        "eligibility": "suppressed:verdictRelevant",
+        "clauses": [
+          "contextItem"
+        ]
+      }
+    },
+    {
+      "id": "gc-0405",
+      "note": "'Review the Notion proposal' with Notes frontmost. Identifier tokens never reach a similarity function (R-57), so notes never matches notion semantically — and P-112 measured why that ban exists: half of common application names are outside the embedding vocabulary and the half inside carry their English meanings.",
+      "families": [
+        "misleadingNames"
+      ],
+      "priority": {
+        "intent": "review the Notion proposal",
+        "revision": 1
+      },
+      "contextPack": [
+        {
+          "kind": "app",
+          "value": "com.apple.Pages"
+        }
+      ],
+      "evidence": {
+        "bundleID": "com.apple.Notes",
+        "titleTokens": []
+      },
+      "dwellSeconds": 400,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "uncertain",
+        "source": "heuristic",
+        "stage": "seedFallback",
+        "band": null,
+        "eligibility": "suppressed:verdictUncertain",
+        "clauses": [
+          "seedFallbackMixedUse",
+          "insufficientEvidence"
+        ],
+        "uncertaintyReason": "mixedUseApplication"
+      }
+    },
+    {
+      "id": "gc-0407",
+      "note": "The same misleading pair with no context pack at all. A different decline for a different reason, one rung earlier — and pinning which one fires is what stops a rung reordering passing unnoticed.",
+      "families": [
+        "misleadingNames"
+      ],
+      "priority": {
+        "intent": "review the Notion proposal",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "com.apple.Notes",
+        "titleTokens": []
+      },
+      "dwellSeconds": 400,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "uncertain",
+        "source": "heuristic",
+        "stage": "heuristic",
+        "band": null,
+        "eligibility": "suppressed:verdictUncertain",
+        "clauses": [
+          "noNegativeBasis",
+          "insufficientEvidence"
+        ],
+        "uncertaintyReason": "noNegativeBasis"
+      }
+    },
+    {
+      "id": "gc-0408",
+      "note": "'Book the venue for the team offsite' with Books frontmost. Book and ibooks are not the same token and the engine will not pretend otherwise.",
+      "families": [
+        "misleadingNames"
+      ],
+      "priority": {
+        "intent": "book the venue for the team offsite",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "com.apple.iBooks",
+        "titleTokens": []
+      },
+      "dwellSeconds": 400,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "uncertain",
+        "source": "heuristic",
+        "stage": "heuristic",
+        "band": null,
+        "eligibility": "suppressed:verdictUncertain",
+        "clauses": [
+          "noNegativeBasis",
+          "insufficientEvidence"
+        ],
+        "uncertaintyReason": "noNegativeBasis"
+      }
+    },
+    {
+      "id": "gc-0406",
+      "note": "The negative control, and the one case in this family that resolves: 'write the Chess strategy article' with Chess frontmost. The person's own words contain chess, so an exact five-character overlap decides relevant at band medium. A misleading name is only misleading when the priority does not name it.",
+      "families": [
+        "misleadingNames"
+      ],
+      "negativeControl": true,
+      "priority": {
+        "intent": "write the Chess strategy article",
+        "revision": 1
+      },
+      "contextPack": [
+        {
+          "kind": "app",
+          "value": "com.apple.Pages"
+        }
+      ],
+      "evidence": {
+        "bundleID": "com.apple.Chess",
+        "titleTokens": []
+      },
+      "dwellSeconds": 20,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "relevant",
+        "source": "heuristic",
+        "stage": "heuristic",
+        "band": "medium",
+        "eligibility": "suppressed:verdictRelevant",
+        "clauses": [
+          "tokenOverlap"
+        ]
+      }
+    },
+    {
+      "id": "gc-0409",
+      "note": "The Court's own worked example. iPhone Mirroring is the single alwaysDistracting row this app ships, and the priority says 'record the iPhone Mirroring demo' — so the seed-override guard downgrades the app's opinion to uncertain. A bundled default may never accuse somebody of being distracted by the exact thing they wrote down.",
+      "families": [
+        "gamesUsedForWork"
+      ],
+      "priority": {
+        "intent": "record the iPhone Mirroring demo",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "com.apple.ScreenContinuity",
+        "titleTokens": []
+      },
+      "dwellSeconds": 91,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "uncertain",
+        "source": "heuristic",
+        "stage": "seedRule",
+        "band": null,
+        "eligibility": "suppressed:verdictUncertain",
+        "clauses": [
+          "seedDefault",
+          "insufficientEvidence"
+        ],
+        "uncertaintyReason": "mixedUseApplication"
+      }
+    },
+    {
+      "id": "gc-0410",
+      "note": "The same guard on a differently worded priority, eight minutes in. The guard is about the words, not about the sentence, and it fires at any dwell.",
+      "families": [
+        "gamesUsedForWork"
+      ],
+      "priority": {
+        "intent": "demo iPhone Mirroring to the team",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "com.apple.ScreenContinuity",
+        "titleTokens": []
+      },
+      "dwellSeconds": 480,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "uncertain",
+        "source": "heuristic",
+        "stage": "seedRule",
+        "band": null,
+        "eligibility": "suppressed:verdictUncertain",
+        "clauses": [
+          "seedDefault",
+          "insufficientEvidence"
+        ],
+        "uncertaintyReason": "mixedUseApplication"
+      }
+    },
+    {
+      "id": "gc-0411",
+      "note": "The paired case R-68 requires: the person has put the application in the context pack instead of naming it in the priority. Rung 3 sits above rung 4, so it resolves relevant at band high and the seed never speaks.",
+      "families": [
+        "gamesUsedForWork"
+      ],
+      "negativeControl": true,
+      "priority": {
+        "intent": "Write the Q3 proposal for Acme",
+        "doneWhen": "sent to Dana",
+        "revision": 1
+      },
+      "contextPack": [
+        {
+          "kind": "app",
+          "value": "com.apple.ScreenContinuity"
+        }
+      ],
+      "evidence": {
+        "bundleID": "com.apple.ScreenContinuity",
+        "titleTokens": []
+      },
+      "dwellSeconds": 20,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "relevant",
+        "source": "userRule",
+        "stage": "contextPack",
+        "band": "high",
+        "eligibility": "suppressed:verdictRelevant",
+        "clauses": [
+          "contextItem"
+        ]
+      }
+    },
+    {
+      "id": "gc-0412",
+      "note": "And the control in the other direction: a priority that names nothing to do with it, held past the threshold. The seed decides, bands medium and mandates — which is what F-171 is FOR, and what makes the two cases above a deliberate decline rather than an inability.",
+      "families": [
+        "gamesUsedForWork"
+      ],
+      "negativeControl": true,
+      "priority": {
+        "intent": "Write the Q3 proposal for Acme",
+        "doneWhen": "sent to Dana",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "com.apple.ScreenContinuity",
+        "titleTokens": []
+      },
+      "dwellSeconds": 120,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "unrelated",
+        "source": "heuristic",
+        "stage": "seedRule",
+        "band": "medium",
+        "eligibility": "mandated",
+        "clauses": [
+          "seedDefault",
+          "sustainedDwell"
+        ]
+      }
+    },
+    {
+      "id": "gc-0413",
+      "note": "A French priority. P-111 measured NLEmbedding returning nil for fr, de, ja, zh-Hans and es — word and sentence, every one — so there is no similarity to consult at any confidence, and the engine says which instrument it is missing rather than blaming the person for writing in their own language.",
+      "families": [
+        "multilingual"
+      ],
+      "priority": {
+        "intent": "rédiger la proposition trimestrielle pour acme",
+        "revision": 1
+      },
+      "contextPack": [
+        {
+          "kind": "app",
+          "value": "com.apple.Pages"
+        }
+      ],
+      "evidence": {
+        "bundleID": "com.microsoft.Excel",
+        "titleTokens": []
+      },
+      "dwellSeconds": 400,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "uncertain",
+        "source": "heuristic",
+        "stage": "heuristic",
+        "band": null,
+        "eligibility": "suppressed:verdictUncertain",
+        "clauses": [
+          "languageNotSupported",
+          "insufficientEvidence"
+        ],
+        "uncertaintyReason": "languageNotSupported"
+      }
+    },
+    {
+      "id": "gc-0414",
+      "note": "A Japanese priority, which this normaliser cannot even tokenise into content words. Reporting that as 'too vague' would be the wrong answer twice over; the language gate is checked first precisely so it is not.",
+      "families": [
+        "multilingual"
+      ],
+      "priority": {
+        "intent": "四半期の提案書を書く",
+        "revision": 1
+      },
+      "contextPack": [
+        {
+          "kind": "app",
+          "value": "com.apple.Pages"
+        }
+      ],
+      "evidence": {
+        "bundleID": "com.microsoft.Excel",
+        "titleTokens": []
+      },
+      "dwellSeconds": 400,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "uncertain",
+        "source": "heuristic",
+        "stage": "heuristic",
+        "band": null,
+        "eligibility": "suppressed:verdictUncertain",
+        "clauses": [
+          "languageNotSupported",
+          "insufficientEvidence"
+        ],
+        "uncertaintyReason": "languageNotSupported"
+      }
+    },
+    {
+      "id": "gc-0415",
+      "note": "A German priority. Six minutes of dwell and a full negative basis, and the answer is still that there is no instrument for this input.",
+      "families": [
+        "multilingual"
+      ],
+      "priority": {
+        "intent": "Quartalsbericht für die Kanzlei schreiben",
+        "revision": 1
+      },
+      "contextPack": [
+        {
+          "kind": "app",
+          "value": "com.apple.Pages"
+        }
+      ],
+      "evidence": {
+        "bundleID": "com.microsoft.Excel",
+        "titleTokens": []
+      },
+      "dwellSeconds": 400,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "uncertain",
+        "source": "heuristic",
+        "stage": "heuristic",
+        "band": null,
+        "eligibility": "suppressed:verdictUncertain",
+        "clauses": [
+          "languageNotSupported",
+          "insufficientEvidence"
+        ],
+        "uncertaintyReason": "languageNotSupported"
+      }
+    },
+    {
+      "id": "gc-0416",
+      "note": "The negative control: an English priority with French words in the window title. Exact overlap does not need an embedding — acme and proposal come off the application's own identifier — so the engine resolves relevant even though the similarity signal is unavailable. Multilingual input costs recall, never correctness.",
+      "families": [
+        "multilingual"
+      ],
+      "negativeControl": true,
+      "priority": {
+        "intent": "Write the Q3 proposal for Acme",
+        "doneWhen": "sent to Dana",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "com.acme.ProposalBuilder",
+        "titleTokens": [
+          "rédiger",
+          "la",
+          "proposition"
+        ]
+      },
+      "dwellSeconds": 20,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "relevant",
+        "source": "heuristic",
+        "stage": "heuristic",
+        "band": "medium",
+        "eligibility": "suppressed:verdictRelevant",
+        "clauses": [
+          "tokenOverlap"
+        ]
+      }
+    },
+    {
+      "id": "gc-0417",
+      "note": "A private window: the browser is frontmost, there is no origin and there is no title. Its identity is the only evidence there is, and this app's own seed says a browser's identity is uninformative — so rung 7 answers and nothing is said. The binary half of this family is check-boundaries.sh's assertion that FocusClassify.o names no window-list, Accessibility or capture symbol: a test can only observe that the engine did not try another route, and the symbol table proves it could not.",
+      "families": [
+        "privateBrowsing"
+      ],
+      "priority": {
+        "intent": "Write the Q3 proposal for Acme",
+        "doneWhen": "sent to Dana",
+        "revision": 1
+      },
+      "contextPack": [
+        {
+          "kind": "app",
+          "value": "com.apple.Pages"
+        }
+      ],
+      "evidence": {
+        "bundleID": "com.apple.Safari",
+        "titleTokens": []
+      },
+      "dwellSeconds": 400,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "uncertain",
+        "source": "heuristic",
+        "stage": "seedFallback",
+        "band": null,
+        "eligibility": "suppressed:verdictUncertain",
+        "clauses": [
+          "seedFallbackMixedUse",
+          "insufficientEvidence"
+        ],
+        "uncertaintyReason": "mixedUseApplication"
+      }
+    },
+    {
+      "id": "gc-0418",
+      "note": "A browser this app ships no opinion about, one minute into a private window. The absence of evidence is named as such — noEvidence, not noNegativeBasis and not unrelated — because the basis is present and it is time that is missing.",
+      "families": [
+        "privateBrowsing"
+      ],
+      "priority": {
+        "intent": "Write the Q3 proposal for Acme",
+        "doneWhen": "sent to Dana",
+        "revision": 1
+      },
+      "contextPack": [
+        {
+          "kind": "app",
+          "value": "com.apple.Pages"
+        }
+      ],
+      "evidence": {
+        "bundleID": "company.thebrowser.Browser",
+        "titleTokens": []
+      },
+      "dwellSeconds": 60,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "uncertain",
+        "source": "heuristic",
+        "stage": "heuristic",
+        "band": null,
+        "eligibility": "suppressed:verdictUncertain",
+        "clauses": [
+          "insufficientEvidence"
+        ],
+        "uncertaintyReason": "noEvidence"
+      }
+    },
+    {
+      "id": "gc-0419",
+      "note": "A private window with nothing readable at all, six minutes in. The terminal rung names the absence; no rung above it guessed from it.",
+      "families": [
+        "privateBrowsing"
+      ],
+      "priority": {
+        "intent": "Write the Q3 proposal for Acme",
+        "doneWhen": "sent to Dana",
+        "revision": 1
+      },
+      "contextPack": [
+        {
+          "kind": "app",
+          "value": "com.apple.Pages"
+        }
+      ],
+      "evidence": {
+        "titleTokens": []
+      },
+      "dwellSeconds": 400,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "uncertain",
+        "source": "undecided",
+        "stage": "unresolved",
+        "band": null,
+        "eligibility": "suppressed:verdictUncertain",
+        "clauses": [
+          "insufficientEvidence"
+        ],
+        "uncertaintyReason": "noIdentifiableSubject"
+      }
+    },
+    {
+      "id": "gc-0420",
+      "note": "The negative control: the same browser with an origin, matching a domain the person attached. When there is evidence the engine uses it, which is what makes the three cases above statements about the evidence rather than about the browser.",
+      "families": [
+        "privateBrowsing"
+      ],
+      "negativeControl": true,
+      "priority": {
+        "intent": "Write the Q3 proposal for Acme",
+        "doneWhen": "sent to Dana",
+        "revision": 1
+      },
+      "contextPack": [
+        {
+          "kind": "domain",
+          "value": "https://docs.google.com"
+        }
+      ],
+      "evidence": {
+        "bundleID": "company.thebrowser.Browser",
+        "origin": "https://docs.google.com",
+        "titleTokens": []
+      },
+      "dwellSeconds": 20,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "relevant",
+        "source": "userRule",
+        "stage": "contextPack",
+        "band": "high",
+        "eligibility": "suppressed:verdictRelevant",
+        "clauses": [
+          "contextItem"
+        ]
+      }
+    },
+    {
+      "id": "gc-0421",
+      "note": "An activation e03's SensitivityGate suppressed reaches the engine evidence-free, and fifteen minutes of it changes nothing. 'We did not look' must never become 'you are distracted' — the failure that would turn a privacy feature into an accusation.",
+      "families": [
+        "sensitiveApplications"
+      ],
+      "priority": {
+        "intent": "Write the Q3 proposal for Acme",
+        "doneWhen": "sent to Dana",
+        "revision": 1
+      },
+      "contextPack": [
+        {
+          "kind": "app",
+          "value": "com.apple.Pages"
+        }
+      ],
+      "evidence": {
+        "titleTokens": []
+      },
+      "dwellSeconds": 900,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "uncertain",
+        "source": "undecided",
+        "stage": "unresolved",
+        "band": null,
+        "eligibility": "suppressed:verdictUncertain",
+        "clauses": [
+          "insufficientEvidence"
+        ],
+        "uncertaintyReason": "noIdentifiableSubject"
+      }
+    },
+    {
+      "id": "gc-0422",
+      "note": "The same suppression twenty seconds in. Dwell is not a lever on this route at all, which is the property that makes the privacy guarantee unconditional.",
+      "families": [
+        "sensitiveApplications"
+      ],
+      "priority": {
+        "intent": "Write the Q3 proposal for Acme",
+        "doneWhen": "sent to Dana",
+        "revision": 1
+      },
+      "contextPack": [
+        {
+          "kind": "app",
+          "value": "com.apple.Pages"
+        }
+      ],
+      "evidence": {
+        "titleTokens": []
+      },
+      "dwellSeconds": 20,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "uncertain",
+        "source": "undecided",
+        "stage": "unresolved",
+        "band": null,
+        "eligibility": "suppressed:verdictUncertain",
+        "clauses": [
+          "insufficientEvidence"
+        ],
+        "uncertaintyReason": "noIdentifiableSubject"
+      }
+    },
+    {
+      "id": "gc-0423",
+      "note": "A suppressed activation with no context pack either. Two independent reasons to stay quiet, and the engine reports the one that fired first rather than the one that sounds most conclusive.",
+      "families": [
+        "sensitiveApplications"
+      ],
+      "priority": {
+        "intent": "Write the Q3 proposal for Acme",
+        "doneWhen": "sent to Dana",
+        "revision": 1
+      },
+      "evidence": {
+        "titleTokens": []
+      },
+      "dwellSeconds": 900,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "uncertain",
+        "source": "undecided",
+        "stage": "unresolved",
+        "band": null,
+        "eligibility": "suppressed:verdictUncertain",
+        "clauses": [
+          "insufficientEvidence"
+        ],
+        "uncertaintyReason": "noIdentifiableSubject"
+      }
+    },
+    {
+      "id": "gc-0424",
+      "note": "The negative control: the very next activation, in an application the pack names. The session is not muted; the suppressed activation was.",
+      "families": [
+        "sensitiveApplications"
+      ],
+      "negativeControl": true,
+      "priority": {
+        "intent": "Write the Q3 proposal for Acme",
+        "doneWhen": "sent to Dana",
+        "revision": 1
+      },
+      "contextPack": [
+        {
+          "kind": "app",
+          "value": "com.apple.Pages"
+        }
+      ],
+      "evidence": {
+        "bundleID": "com.apple.Pages",
+        "titleTokens": []
+      },
+      "dwellSeconds": 20,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "relevant",
+        "source": "userRule",
+        "stage": "contextPack",
+        "band": "high",
+        "eligibility": "suppressed:verdictRelevant",
+        "clauses": [
+          "contextItem"
+        ]
+      }
+    },
+    {
+      "id": "gc-0425",
+      "note": "An unbundled process: e03's P-83 measured six of ninety-two frontmost processes with no bundle identifier. There is nothing to write a rule ABOUT one, so there is nothing to conclude about it either. It reaches the same terminal rung as a suppressed activation, and honestly so — both are 'nothing observed', and the engine does not invent a distinction it cannot see.",
+      "families": [
+        "unbundledProcesses"
+      ],
+      "priority": {
+        "intent": "Write the Q3 proposal for Acme",
+        "doneWhen": "sent to Dana",
+        "revision": 1
+      },
+      "contextPack": [
+        {
+          "kind": "app",
+          "value": "com.apple.Pages"
+        }
+      ],
+      "evidence": {
+        "titleTokens": []
+      },
+      "dwellSeconds": 400,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "uncertain",
+        "source": "undecided",
+        "stage": "unresolved",
+        "band": null,
+        "eligibility": "suppressed:verdictUncertain",
+        "clauses": [
+          "insufficientEvidence"
+        ],
+        "uncertaintyReason": "noIdentifiableSubject"
+      }
+    },
+    {
+      "id": "gc-0426",
+      "note": "The same, with no priority context at all and twenty seconds of dwell.",
+      "families": [
+        "unbundledProcesses"
+      ],
+      "priority": {
+        "intent": "Write the Q3 proposal for Acme",
+        "doneWhen": "sent to Dana",
+        "revision": 1
+      },
+      "evidence": {
+        "titleTokens": []
+      },
+      "dwellSeconds": 20,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "uncertain",
+        "source": "undecided",
+        "stage": "unresolved",
+        "band": null,
+        "eligibility": "suppressed:verdictUncertain",
+        "clauses": [
+          "insufficientEvidence"
+        ],
+        "uncertaintyReason": "noIdentifiableSubject"
+      }
+    },
+    {
+      "id": "gc-0427",
+      "note": "The negative control: once there IS something to identify — here a normalised origin rather than a bundle identifier — the same shape resolves. A subject is a subject whichever field carries it.",
+      "families": [
+        "unbundledProcesses"
+      ],
+      "negativeControl": true,
+      "priority": {
+        "intent": "Write the Q3 proposal for Acme",
+        "doneWhen": "sent to Dana",
+        "revision": 1
+      },
+      "contextPack": [
+        {
+          "kind": "domain",
+          "value": "https://proposal.acme.co.uk"
+        }
+      ],
+      "evidence": {
+        "origin": "https://proposal.acme.co.uk",
+        "titleTokens": []
+      },
+      "dwellSeconds": 20,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "relevant",
+        "source": "userRule",
+        "stage": "contextPack",
+        "band": "high",
+        "eligibility": "suppressed:verdictRelevant",
+        "clauses": [
+          "contextItem"
+        ]
+      }
+    },
+    {
+      "id": "gc-0428",
+      "note": "'stuff'. No content token survives normalisation, so R-56.1's first condition fails and the answer is uncertain at every dwell — six minutes of it here.",
+      "families": [
+        "vaguePriorities"
+      ],
+      "priority": {
+        "intent": "stuff",
+        "revision": 1
+      },
+      "contextPack": [
+        {
+          "kind": "app",
+          "value": "com.apple.Pages"
+        }
+      ],
+      "evidence": {
+        "bundleID": "com.microsoft.Excel",
+        "titleTokens": []
+      },
+      "dwellSeconds": 400,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "uncertain",
+        "source": "heuristic",
+        "stage": "heuristic",
+        "band": null,
+        "eligibility": "suppressed:verdictUncertain",
+        "clauses": [
+          "insufficientEvidence"
+        ],
+        "uncertaintyReason": "insufficientPriorityEvidence"
+      }
+    },
+    {
+      "id": "gc-0429",
+      "note": "'work'. P-115 and P-124 corroborate from the other side: it scores 0.8832 on English confidence, above the language floor, and still carries nothing to judge against. The two guards are complementary and this is the one that catches it.",
+      "families": [
+        "vaguePriorities"
+      ],
+      "priority": {
+        "intent": "work",
+        "revision": 1
+      },
+      "contextPack": [
+        {
+          "kind": "app",
+          "value": "com.apple.Pages"
+        }
+      ],
+      "evidence": {
+        "bundleID": "com.microsoft.Excel",
+        "titleTokens": []
+      },
+      "dwellSeconds": 400,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "uncertain",
+        "source": "heuristic",
+        "stage": "heuristic",
+        "band": null,
+        "eligibility": "suppressed:verdictUncertain",
+        "clauses": [
+          "insufficientEvidence"
+        ],
+        "uncertaintyReason": "insufficientPriorityEvidence"
+      }
+    },
+    {
+      "id": "gc-0430",
+      "note": "'catch up'. One surviving content token, which is below the floor. A priority has to say what the work IS before an absence of it can mean anything.",
+      "families": [
+        "vaguePriorities"
+      ],
+      "priority": {
+        "intent": "catch up",
+        "revision": 1
+      },
+      "contextPack": [
+        {
+          "kind": "app",
+          "value": "com.apple.Pages"
+        }
+      ],
+      "evidence": {
+        "bundleID": "com.microsoft.Excel",
+        "titleTokens": []
+      },
+      "dwellSeconds": 400,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "uncertain",
+        "source": "heuristic",
+        "stage": "heuristic",
+        "band": null,
+        "eligibility": "suppressed:verdictUncertain",
+        "clauses": [
+          "insufficientEvidence"
+        ],
+        "uncertaintyReason": "insufficientPriorityEvidence"
+      }
+    },
+    {
+      "id": "gc-0431",
+      "note": "No priority at all, with a full context pack and eight minutes of dwell. There is nothing to be off-task from, and the engine declines on that rather than falling back on the pack.",
+      "families": [
+        "vaguePriorities"
+      ],
+      "contextPack": [
+        {
+          "kind": "app",
+          "value": "com.apple.Pages"
+        }
+      ],
+      "evidence": {
+        "bundleID": "com.microsoft.Excel",
+        "titleTokens": []
+      },
+      "dwellSeconds": 480,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "uncertain",
+        "source": "heuristic",
+        "stage": "heuristic",
+        "band": null,
+        "eligibility": "suppressed:verdictUncertain",
+        "clauses": [
+          "insufficientEvidence"
+        ],
+        "uncertaintyReason": "insufficientPriorityEvidence"
+      }
+    },
+    {
+      "id": "gc-0432",
+      "note": "The negative control: the same application, the same pack, the same dwell, and a priority that actually says something. The vagueness was the whole difference.",
+      "families": [
+        "vaguePriorities"
+      ],
+      "negativeControl": true,
+      "priority": {
+        "intent": "Write the Q3 proposal for Acme",
+        "doneWhen": "sent to Dana",
+        "revision": 1
+      },
+      "contextPack": [
+        {
+          "kind": "app",
+          "value": "com.apple.Pages"
+        }
+      ],
+      "evidence": {
+        "bundleID": "com.microsoft.Excel",
+        "titleTokens": []
+      },
+      "dwellSeconds": 400,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "unrelated",
+        "source": "heuristic",
+        "stage": "heuristic",
+        "band": "high",
+        "eligibility": "mandated",
+        "clauses": [
+          "sustainedDwell"
+        ]
+      }
+    },
+    {
+      "id": "gc-0433",
+      "note": "Two rules at the same authority AND the same subject kind, disagreeing about a window that matches both. This resolves to uncertain and never to a winner: not by recency, and above all not to unrelated. A nudger that fires on contradictory evidence is the failure this whole epic exists to prevent.",
+      "families": [
+        "contradictoryRules"
+      ],
+      "priority": {
+        "intent": "Write the Q3 proposal for Acme",
+        "doneWhen": "sent to Dana",
+        "revision": 1
+      },
+      "rules": [
+        {
+          "authority": "global",
+          "subjectKind": "titleToken",
+          "subject": "budget",
+          "verdict": "relevant"
+        },
+        {
+          "authority": "global",
+          "subjectKind": "titleToken",
+          "subject": "lisbon",
+          "verdict": "unrelated"
+        }
+      ],
+      "evidence": {
+        "bundleID": "com.apple.Safari",
+        "titleTokens": [
+          "budget",
+          "lisbon"
+        ]
+      },
+      "dwellSeconds": 400,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "uncertain",
+        "source": "userRule",
+        "stage": "globalRule",
+        "band": null,
+        "eligibility": "suppressed:verdictUncertain",
+        "clauses": [
+          "conflictingRules",
+          "insufficientEvidence"
+        ],
+        "uncertaintyReason": "conflictingRules"
+      }
+    },
+    {
+      "id": "gc-0434",
+      "note": "The same contradiction at session authority, which is the rung e05's one-click affordance writes into. Two decisions taken minutes apart still produce silence rather than a coin toss.",
+      "families": [
+        "contradictoryRules"
+      ],
+      "priority": {
+        "intent": "Write the Q3 proposal for Acme",
+        "doneWhen": "sent to Dana",
+        "revision": 1
+      },
+      "rules": [
+        {
+          "authority": "session",
+          "subjectKind": "titleToken",
+          "subject": "sprint",
+          "verdict": "relevant"
+        },
+        {
+          "authority": "session",
+          "subjectKind": "titleToken",
+          "subject": "snooker",
+          "verdict": "unrelated"
+        }
+      ],
+      "evidence": {
+        "bundleID": "com.apple.Safari",
+        "titleTokens": [
+          "sprint",
+          "snooker"
+        ]
+      },
+      "dwellSeconds": 400,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "uncertain",
+        "source": "userRule",
+        "stage": "sessionRule",
+        "band": null,
+        "eligibility": "suppressed:verdictUncertain",
+        "clauses": [
+          "conflictingRules",
+          "insufficientEvidence"
+        ],
+        "uncertaintyReason": "conflictingRules"
+      }
+    },
+    {
+      "id": "gc-0435",
+      "note": "The negative control: the identical pair of rules, agreeing. Multiplicity is not conflict, and the engine only declines when the cell actually contradicts itself.",
+      "families": [
+        "contradictoryRules"
+      ],
+      "negativeControl": true,
+      "priority": {
+        "intent": "Write the Q3 proposal for Acme",
+        "doneWhen": "sent to Dana",
+        "revision": 1
+      },
+      "rules": [
+        {
+          "authority": "global",
+          "subjectKind": "titleToken",
+          "subject": "budget",
+          "verdict": "relevant"
+        },
+        {
+          "authority": "global",
+          "subjectKind": "titleToken",
+          "subject": "lisbon",
+          "verdict": "relevant"
+        }
+      ],
+      "evidence": {
+        "bundleID": "com.apple.Safari",
+        "titleTokens": [
+          "budget",
+          "lisbon"
+        ]
+      },
+      "dwellSeconds": 20,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "relevant",
+        "source": "userRule",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:verdictRelevant",
+        "clauses": [
+          "userRule"
+        ]
+      }
+    },
+    {
+      "id": "gc-0436",
+      "note": "The snapshot was built for revision 3 and the evidence was captured against revision 4. An edited priority is a different priority, so every judgement about the old wording is stale — the corpus half of F-53's cache-key contract, which is what e06's verdict cache will key on.",
+      "families": [
+        "staleRevisions"
+      ],
+      "priority": {
+        "intent": "Write the Q3 proposal for Acme",
+        "revision": 3,
+        "doneWhen": "sent to Dana"
+      },
+      "contextPack": [
+        {
+          "kind": "app",
+          "value": "com.apple.Pages"
+        }
+      ],
+      "evidence": {
+        "bundleID": "com.microsoft.Excel",
+        "titleTokens": []
+      },
+      "evidenceRevision": 4,
+      "dwellSeconds": 400,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "uncertain",
+        "source": "undecided",
+        "stage": "unresolved",
+        "band": null,
+        "eligibility": "suppressed:verdictUncertain",
+        "clauses": [
+          "insufficientEvidence"
+        ],
+        "uncertaintyReason": "staleSnapshot"
+      }
+    },
+    {
+      "id": "gc-0437",
+      "note": "A stale snapshot that ALSO carries a rule which would have decided unrelated and mandated. The refusal comes before any rung is consulted, so the rule never speaks — which is the assertion that a verdict-only expectation could not make.",
+      "families": [
+        "staleRevisions"
+      ],
+      "priority": {
+        "intent": "Write the Q3 proposal for Acme",
+        "revision": 1,
+        "doneWhen": "sent to Dana"
+      },
+      "contextPack": [
+        {
+          "kind": "app",
+          "value": "com.apple.Pages"
+        }
+      ],
+      "rules": [
+        {
+          "authority": "global",
+          "subjectKind": "app",
+          "subject": "com.microsoft.Excel",
+          "verdict": "unrelated"
+        }
+      ],
+      "evidence": {
+        "bundleID": "com.microsoft.Excel",
+        "titleTokens": []
+      },
+      "evidenceRevision": 2,
+      "dwellSeconds": 400,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "uncertain",
+        "source": "undecided",
+        "stage": "unresolved",
+        "band": null,
+        "eligibility": "suppressed:verdictUncertain",
+        "clauses": [
+          "insufficientEvidence"
+        ],
+        "uncertaintyReason": "staleSnapshot"
+      }
+    },
+    {
+      "id": "gc-0438",
+      "note": "The negative control: the same snapshot and the same rule with the revisions in agreement. The refusal is about staleness alone.",
+      "families": [
+        "staleRevisions"
+      ],
+      "negativeControl": true,
+      "priority": {
+        "intent": "Write the Q3 proposal for Acme",
+        "revision": 3,
+        "doneWhen": "sent to Dana"
+      },
+      "contextPack": [
+        {
+          "kind": "app",
+          "value": "com.apple.Pages"
+        }
+      ],
+      "rules": [
+        {
+          "authority": "global",
+          "subjectKind": "app",
+          "subject": "com.microsoft.Excel",
+          "verdict": "unrelated"
+        }
+      ],
+      "evidence": {
+        "bundleID": "com.microsoft.Excel",
+        "titleTokens": []
+      },
+      "evidenceRevision": 3,
+      "dwellSeconds": 120,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "unrelated",
+        "source": "userRule",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "mandated",
+        "clauses": [
+          "userRule",
+          "sustainedDwell"
+        ]
+      }
+    }
+  ]
+}
