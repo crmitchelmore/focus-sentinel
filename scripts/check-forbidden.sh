@@ -264,10 +264,46 @@ check "R-33" "no API that can raise a TCC prompt" \
 check "R-45" "SessionPhase is decoded through decode(_:), never init(rawValue:)" \
     '(SessionPhase|ResumablePhase)\(rawValue:'
 
-# R-41: ActivityEvent.detail may only ever hold a NormalisedDetail. The type has no String
-# initialiser, so this check catches the one route left — assigning through the model directly.
-check "R-41" "ActivityEvent.detail is only ever assigned a NormalisedDetail" \
-    '\.detail[[:space:]]*=[[:space:]]*("|[a-z][A-Za-z0-9_]*\.(title|name|url|absoluteString|path))'
+# R-41: ActivityEvent.detail may only ever hold a NormalisedDetail.
+#
+# `NormalisedDetail` has no `String` initialiser, so captured content cannot *become* a
+# detail. The route this check closes is the other one: assigning to the model's column
+# directly, which is a plain `String?` because that is what a column is.
+#
+# **This bans the shape, not a list of spellings.** The first form of the check matched a
+# literal or one of five property names (`.title`, `.name`, `.url`, `.absoluteString`,
+# `.path`), which meant `row.detail = capturedText` and `row.detail = makeDetail()` both
+# passed while the green line claimed the property was "only ever assigned a
+# NormalisedDetail". A lint that enumerates five spellings of the mistake catches the careless
+# and misses everyone else, and an overstated green line is worse than no line at all. So
+# every assignment to `.detail` is a violation except one sanctioned form:
+#
+#     self.detail = detail
+#
+# a model initialiser forwarding its own parameter — and that parameter reaches it only from
+# `ActivityEventStore.append`, whose signature takes a `NormalisedDetail` and whose only
+# expression for the column is `detail.storedValue`.
+#
+# Belt and braces, because a lint is a rule and a type is a fact:
+# `FocusSchemaV3.ActivityEvent.detail` is declared `public internal(set)`, so no package
+# outside `FocusCore` can perform the assignment this check forbids — it does not compile.
+# This check covers what is left, which is `FocusCore` itself.
+print
+print "== R-41: every assignment to ActivityEvent.detail"
+detail_hits=$(grep -rnE '\.detail[[:space:]]*=[^=]' "${SEARCH_PATHS[@]}" \
+    --include='*.swift' 2>/dev/null \
+    | strip_comments \
+    | grep -vE '^[^:]+:[0-9]+:[[:space:]]*self\.detail[[:space:]]*=[[:space:]]*detail[[:space:]]*$')
+if [[ -n "$detail_hits" ]]; then
+    print -u2 "FAIL [R-41] ActivityEvent.detail is assigned something that is not a NormalisedDetail:"
+    print -u2 "$detail_hits" | sed 's/^/    /'
+    print -u2 "    Write through ActivityEventStore.append, whose parameter is a"
+    print -u2 "    NormalisedDetail — a closed token vocabulary or a typed measurement, and"
+    print -u2 "    nothing a window title, a URL or a document name can be turned into (R-41)."
+    rc=1
+else
+    print "ok   [R-41] ActivityEvent.detail is only ever assigned a NormalisedDetail"
+fi
 
 # --- Carbon.HIToolbox: allowed in exactly one file, and only while that file needs it -----
 

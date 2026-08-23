@@ -400,7 +400,14 @@ public enum FocusSchemaV3: VersionedSchema {
         /// The observation kind's raw value.
         public var kindRaw: String
         public var bundleID: String?
-        public var detail: String?
+        /// **`internal(set)` on purpose.** A column is a `String?`, and a public setter on
+        /// one is a public route for raw captured content to enter the timeline from any
+        /// package. Narrowing the setter to this module leaves exactly one writer —
+        /// `ActivityEventStore.append`, whose parameter is a `NormalisedDetail` — so a
+        /// producer in `App`, `FocusUI`, `FocusSensing` or `FocusRules` cannot assign a
+        /// window title here even by mistake. It does not compile. The R-41 lint covers the
+        /// remaining route, inside this module.
+        public internal(set) var detail: String?
         /// The session this observation belongs to, if there was one.
         public var sessionID: UUID?
         /// How long the previous application had been frontmost, in seconds.

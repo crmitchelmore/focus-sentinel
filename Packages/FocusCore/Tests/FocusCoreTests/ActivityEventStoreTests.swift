@@ -189,10 +189,11 @@ struct ActivityEventStoreTests {
         let harness = try ActivityEventStoreHarness()
 
         // A row as a **later build** would have written it, carrying a token this one has never
-        // heard of. It is constructed rather than assigned: `.detail =` is banned outright by
-        // the lint, with no allowlist and no exempted call site, and the ban is what makes the
-        // store's own `append` the only way in. What is under test here is the *reader* — a row
-        // from the future must be inert, not printed.
+        // heard of. It is constructed rather than assigned, and it has to be: the column's
+        // setter is `internal(set)`, and inside this module the R-41 lint fails every
+        // assignment to `.detail` except a model initialiser forwarding its own parameter. The
+        // two together make the store's own `append` the only way in. What is under test here
+        // is the *reader* — a row from the future must be inert, not printed.
         let foreign = FocusSchemaV3.ActivityEvent(
             at: harness.clock.now,
             kindRaw: ActivityEventKind.userIdle.rawValue,
