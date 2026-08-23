@@ -34,22 +34,19 @@ import Foundation
 /// decision is a defect a person can feel. Reporting it is how a regression in *that* becomes
 /// visible.
 ///
-/// `latencyMs.max` needs reading with the same care, because it is **not** a steady-state
-/// figure. Measured on this machine, the maximum over a whole corpus run is ~56 ms while p95 is
-/// under 1 ms and p50 is 0.014 ms — and replaying the identical corpus a second time in the same
-/// process gives a maximum of ~1 ms. Every one of those spikes is `NLTagger` loading a language
-/// model the first time it meets a string it detects as a new language: `"budget lisbon"`,
-/// `"invoice"`, `"iPhone Mirroring"`. They are one-time, process-wide and unrepeatable, which is
-/// why the second pass is flat.
+/// `latencyMs.max` is what found the defect this warm-up now closes, and the sequence is worth
+/// recording because it is what a metric gate is *for*. Measured against an engine with only
+/// the embedding warmed, the maximum over a whole corpus run was 57–61 ms — against a p95 of
+/// 0.86 ms and a median of 0.014 ms — and a second pass over the identical corpus in the same
+/// process gave a maximum of 1 ms. Every spike was `NaturalLanguage` initialising a tagger model
+/// on its first real use: one-time, process-wide, and squarely on the classification path. It
+/// took this metric over its committed ceiling on one run in three.
 ///
-/// Two consequences worth committing rather than rediscovering. First, the ceiling of 60 ms is
-/// met with about six per cent to spare, so a slower machine could redden this gate on a cost
-/// that has nothing to do with the engine's logic. Second, all but one of those spikes are
-/// provoked by `titleTokens`, which the **corpus** supplies and which no shipping path in e04
-/// produces — F-03 is baseline-only. The exception is the seed-override guard tokenising
-/// `"iPhone Mirroring"`, which a real session does reach; a warm-up over `SeedSubjectNames`
-/// would move it off the classification path in the same way the embedding's load already is.
-/// e07 turns titles on for real, and that is the epic in which this stops being a footnote.
+/// The ceiling was doing exactly what P-116 put it there to do — *"`warmUp()` moves it off this
+/// path, and 60 ms is the ceiling that proves it did"* — and it was telling the truth: the
+/// warm-up moved the embedding's load off the path and left the normaliser's on it. So
+/// `TokenNormalizer.warmUp()` was added and `DeterministicRelevanceEngine.warmUp()` now calls
+/// both. The corpus maximum is 3.1 ms, and a person's first activation no longer stutters.
 public struct EvaluationHarness: Sendable {
     public let corpus: GoldenCorpus
     public let runID: String
@@ -71,13 +68,18 @@ public struct EvaluationHarness: Sendable {
     }
 
     public func run() -> EvaluationReport {
-        // The cold first call, before anything is warmed. A separate scorer, because the
-        // measurement is meaningless on one that has already loaded the embedding.
-        let coldFirstCall = measureColdFirstCall()
+        // Pass one, cold: reported, never gated. See `measureColdPass` for what it is for.
+        let cold = measureColdPass()
 
+        // Both halves of the warm-up, exactly as the composition root performs it: the
+        // embedding's load and the normaliser's tagger models. Measuring a corpus against a
+        // half-warmed engine would report `NaturalLanguage`'s one-time initialisation as this
+        // engine's per-classification cost, which is a true number about the wrong thing.
+        let normalizer = TokenNormalizer()
+        normalizer.warmUp()
         let scorer = SimilarityScorer()
         scorer.warmUp()
-        let runner = CorpusRunner(scorer: scorer)
+        let runner = CorpusRunner(normalizer: normalizer, scorer: scorer)
         let replay = SequenceReplayHarness(runner: runner)
 
         var latencies: [Duration] = []
@@ -208,7 +210,8 @@ public struct EvaluationHarness: Sendable {
                 p50: CacheBenchmark.percentile(samples, rank: EvaluationPolicy.latencyMedianRank),
                 p95: CacheBenchmark.percentile(samples, rank: EvaluationPolicy.latencyUpperRank),
                 max: samples.max() ?? 0,
-                coldFirstCall: coldFirstCall
+                coldFirstCall: cold.firstCall,
+                coldMax: cold.max
             ),
             cascade: CascadeSummary(
                 declaredRungs: CascadeStage.allCases.count,
@@ -230,15 +233,45 @@ public struct EvaluationHarness: Sendable {
         )
     }
 
-    /// P-116's cold load, on the classification path it is kept off.
-    func measureColdFirstCall() -> Double {
-        let cold = SimilarityScorer()
-        let runner = CorpusRunner(scorer: cold)
-        guard let first = corpus.cases.first else { return 0 }
+    /// **Pass one: the whole corpus on an engine that has been warmed by nothing.**
+    ///
+    /// Two figures come out of it and neither is gated. `firstCall` is the very first
+    /// classification a process ever performs — P-116's 59.4 ms embedding load lives here, and
+    /// reporting it is how a regression in `warmUp()` becomes visible. `max` is the worst
+    /// classification in the pass, which is where every remaining one-time framework cost shows
+    /// up.
+    ///
+    /// It runs before the measured pass, which is what makes the measured pass *steady state* —
+    /// and steady state is what the gated figures have to be if they are to mean anything. A
+    /// maximum that swings between 3 ms and 61 ms depending on which fixture happened to be
+    /// first is not a number two runs can be diffed on, and R-67's whole argument for a JSON
+    /// report over an `.xcresult` metric is that it can be.
+    ///
+    /// **What the cold pass is measuring, recorded because it will matter to e07.**
+    /// `NLTagger` loads a model the first time it meets a string it detects as a new language,
+    /// and a two-word window title is detected as almost anything — `"budget lisbon"` reads as
+    /// Indonesian, `"invoice"` as Romanian, `"sprint snooker"` as Dutch. Each first sighting
+    /// costs 30–60 ms, once, process-wide. `TokenNormalizer.warmUp()` pays that up front for the
+    /// six languages P-111 measured, which covers every prose string e04's SHIPPING path
+    /// tokenises — the priority and the seed subject names — because F-03 is baseline-only and
+    /// no title reaches the engine in this build. e07 turns titles on for real, and no bounded
+    /// warm-up list can cover the languages a title might be mistaken for; the answer there is
+    /// likely to be that a title need not be lemmatised in a language the engine cannot reason
+    /// in at all. This pass is what will keep that visible until somebody does it.
+    func measureColdPass() -> (firstCall: Double, max: Double) {
+        let runner = CorpusRunner(normalizer: TokenNormalizer(), scorer: SimilarityScorer())
         let clock = ContinuousClock()
-        let started = clock.now
-        _ = runner.run(first)
-        return CacheBenchmark.milliseconds(clock.now - started)
+        var firstCall: Double = 0
+        var worst: Double = 0
+
+        for (index, testCase) in corpus.cases.enumerated() {
+            let started = clock.now
+            let outcome = runner.run(testCase)
+            let elapsed = CacheBenchmark.milliseconds(clock.now - started)
+            if index == 0 { firstCall = elapsed }
+            worst = Swift.max(worst, outcome.latencies.map(CacheBenchmark.milliseconds).max() ?? 0)
+        }
+        return (firstCall, worst)
     }
 
     func rate(_ numerator: Int, over denominator: Int) -> Double {

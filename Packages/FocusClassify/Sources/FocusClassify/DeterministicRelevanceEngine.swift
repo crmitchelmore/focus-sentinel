@@ -92,8 +92,17 @@ public final class DeterministicRelevanceEngine: RelevanceClassifier, @unchecked
         )
     }
 
-    /// Load the embedding, off the classification path. Idempotent.
+    /// Pay every cold cost at construction, off the classification path. Idempotent.
+    ///
+    /// Two of them, and the second was found by measurement rather than reasoning. The
+    /// embedding's load is P-116's 59.4 ms and was always the point of this method. The
+    /// normaliser's is `NaturalLanguage` initialising its tagger models the first time it is
+    /// asked to work — one-time, process-wide, and worth 57 ms on a classification that happens
+    /// to be the first of its kind. The golden corpus's maximum classification latency falls
+    /// from 61 ms to 3.1 ms when both are warmed here instead of one, which is the difference
+    /// between a stutter a person feels on their first activation and one that never happens.
     public func warmUp() {
+        normalizer.warmUp()
         scorer.warmUp()
     }
 

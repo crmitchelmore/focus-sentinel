@@ -51,10 +51,14 @@ public struct LatencySummary: Sendable, Equatable {
     public let p50: Double
     public let p95: Double
     public let max: Double
-    /// Measured once, before `warmUp()`, and reported but **not** gated: P-116 measured the
-    /// embedding's cold load at 59.4 ms and the whole point of `warmUp()` is that a person never
-    /// pays it inside a nudge decision.
+    /// The very first classification a process ever performs, before anything is warmed.
+    /// Reported but **not** gated: P-116 measured the embedding's cold load at 59.4 ms and the
+    /// whole point of `warmUp()` is that a person never pays it inside a nudge decision.
     public let coldFirstCall: Double
+    /// The worst classification in the cold pass. Also reported and not gated, and it is the
+    /// figure to read when `coldFirstCall` looks fine and something still stutters: every
+    /// remaining one-time framework load lands here rather than hiding inside a percentile.
+    public let coldMax: Double
 }
 
 public struct CascadeSummary: Sendable, Equatable {
@@ -176,7 +180,8 @@ public struct EvaluationReport: Sendable, Equatable {
             "  \"latencyMs\": { \"p50\": \(Self.number(latencyMs.p50)), "
                 + "\"p95\": \(Self.number(latencyMs.p95)), "
                 + "\"max\": \(Self.number(latencyMs.max)), "
-                + "\"coldFirstCall\": \(Self.number(latencyMs.coldFirstCall)) },"
+                + "\"coldFirstCall\": \(Self.number(latencyMs.coldFirstCall)), "
+                + "\"coldMax\": \(Self.number(latencyMs.coldMax)) },"
         )
         lines.append(
             "  \"cascade\": { \"declaredRungs\": \(cascade.declaredRungs), "

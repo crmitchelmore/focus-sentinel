@@ -235,6 +235,46 @@ public struct TokenNormalizer: Sendable {
         return origin
     }
 
+    // MARK: - Warm-up
+
+    /// Pay `NaturalLanguage`'s lazy initialisation at construction rather than inside a
+    /// judgement (R-58's warm-up ruling, applied to the normaliser as well as the embedding).
+    ///
+    /// **Measured, and the measurement is why this exists.** Running the whole golden corpus
+    /// with only the embedding warmed gives a maximum classification latency of 57–61 ms
+    /// against a p95 of 0.86 ms and a median of 0.014 ms; replaying the identical corpus a
+    /// second time in the same process gives a maximum of 1 ms. Every one of those spikes is
+    /// this framework loading a tagger model the first time it is asked to work — one-time,
+    /// process-wide, and squarely on the classification path. It took the evaluation harness's
+    /// `latencyMs.max` over its committed 60 ms ceiling on one run in three.
+    ///
+    /// Exercising the three entry points once over one sentence per language P-111 measured
+    /// takes that maximum to **3.1 ms** and costs 132 ms at construction, where the composition
+    /// root pays it and nobody is waiting. The set is P-111's own — the six languages that probe
+    /// scored `NLEmbedding` for — rather than a list fitted to the corpus: the cost turned out
+    /// to be a small number of framework-wide loads that any varied input triggers, not a
+    /// per-language toll, so warming the languages this engine already reasons about is enough.
+    /// The sentences say nothing and decide nothing; they are exercise, not lexicon, which is
+    /// why they live here rather than in `StopLists` beside the versioned lists.
+    public func warmUp() {
+        for sentence in Self.warmUpSentences { _ = tokens(fromProse: sentence) }
+        _ = tokens(fromIdentifier: Self.warmUpIdentifier)
+        _ = tokens(fromOrigin: Self.warmUpOrigin)
+    }
+
+    static let warmUpSentences = [
+        "write the quarterly proposal and send it to the team",
+        "rédiger la proposition trimestrielle pour l equipe",
+        "den Quartalsbericht für das Team schreiben",
+        "四半期の提案書をチームに送る",
+        "撰写第三季度的提案并发送给团队",
+        "redactar la propuesta trimestral para el equipo"
+    ]
+
+    static let warmUpIdentifier = "com.example.WarmUpApplication"
+
+    static let warmUpOrigin = "https://www.example.com"
+
     // MARK: - Determinism
 
     /// FNV-1a over the normalised forms of a list of inputs, in order.
