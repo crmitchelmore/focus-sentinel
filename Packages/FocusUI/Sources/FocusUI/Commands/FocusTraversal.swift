@@ -122,7 +122,15 @@ public enum FocusTraversal {
                 .cockpitComplete,
                 .cockpitOpenSettings
             ],
-            defaultField: .cockpitComplete,
+            // **No default action, deliberately.** The cockpit is a non-modal window full of
+            // text fields, and Return is the key that commits the field you are in. A window
+            // default button collects every Return that no field claimed — so making Complete
+            // the default put finishing the work one stray keystroke away from typing, which
+            // is the exact rule `CommandRegistry` gives for binding Complete Priority to ⌃⌘⏎
+            // instead of ⌘⏎. Completion is reachable by click, by that key equivalent and by
+            // the File menu; a modal sheet, which the user opened on purpose, is where a
+            // default button belongs.
+            defaultField: nil,
             cancel: .none
         ),
         SurfaceFocus(

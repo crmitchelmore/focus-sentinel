@@ -143,9 +143,12 @@ struct KeyboardReachabilityTests {
 
     @Test("Return activates the primary action wherever a surface has one")
     func defaultActionsAreBound() {
-        // The cockpit's primary action is finishing the priority — the one thing a person
-        // does *to* a commitment that ends it. Opening Settings is a route, not an action.
-        #expect(FocusTraversal.contract(for: .cockpit).defaultField == .cockpitComplete)
+        // The cockpit declares **no** default action. It is a non-modal window full of text
+        // fields, and a window default button collects every Return no field claimed — so
+        // "Return finishes the priority" is one stray keystroke away from typing. That is the
+        // same rule `CommandRegistry` states when it binds Complete Priority to ⌃⌘⏎ rather
+        // than ⌘⏎, and the cockpit now keeps it too.
+        #expect(FocusTraversal.contract(for: .cockpit).defaultField == nil)
         #expect(FocusTraversal.contract(for: .settingsPrivacy).defaultField == .privacyRevealStore)
         // General settings has no primary action — a picker is not something Return
         // "confirms" — so it declares none rather than inventing one.

@@ -437,18 +437,29 @@ public struct CockpitView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// Finish the priority. The primary action, and the window's default one whenever the
-    /// capture field is not open.
+    /// Finish the priority. The most important thing a person does *to* a commitment — and
+    /// deliberately **not** the cockpit's default button.
+    ///
+    /// Return is the key that commits whatever sentence is in whatever field has focus, and
+    /// this window is full of fields: the capture field, the definition of done, the keyword
+    /// field, the rule subject. Making Complete the window's default action put finishing the
+    /// work one stray Return away from typing — and it was not hypothetical. The evidence lane
+    /// drove capture with two Returns; the first committed the sentence, the second closed the
+    /// capture field, promoted this button to default and opened the completion sheet, which is
+    /// the sheet that `cockpit-priority.png` and `context-chips.png` were both pictures of.
+    /// One more Return there would have completed the priority with two empty fields.
+    ///
+    /// `CommandRegistry` already stated the rule this restores — "finishing the thing you are
+    /// working on must not be one modifier away from typing", which is why Complete Priority is
+    /// ⌃⌘⏎ rather than ⌘⏎ — and binding plain Return here contradicted it outright. So
+    /// completion is reachable by click, by ⌃⌘⏎, and by the File menu item; by no bare
+    /// keystroke at all. `DefaultActionContractTests` holds the whole package to that.
     private var completeButton: some View {
         Button {
             isCompleting = true
         } label: {
             ShellText(.priorityActionComplete)
         }
-        // Return belongs to whichever surface the user is actually in: while the capture
-        // field is open, its own submit is the primary gesture, and two default actions
-        // in one window is a coin toss the user has to lose to find out about.
-        .keyboardShortcut(showsCapture ? nil : .defaultAction)
         .focused($focus, equals: .cockpitComplete)
         .disabled(actions == nil)
     }
