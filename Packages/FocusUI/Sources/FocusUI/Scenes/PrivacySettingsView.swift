@@ -53,12 +53,16 @@ public struct PrivacySettingsView: View {
     ]
 
     public var body: some View {
-        ScrollView {
-            content
-        }
-        .defaultFocus($focus, .privacyRevealStore)
+        content
+            .defaultFocus($focus, .privacyRevealStore)
     }
 
+    /// Laid out as one column with no scroll view, and that is a rendering decision with a
+    /// measurement behind it: a `ScrollView` reports no intrinsic height, so under
+    /// `ImageRenderer` this pane rasterised as a blank 1040×2699 rectangle with 1 040 ink pixels
+    /// — the committed baseline would have been a picture of nothing. Measured here, on this
+    /// machine, the first time the capability table was put inside one. The Settings window
+    /// sizes itself to the tab's content instead.
     private var content: some View {
         VStack(alignment: .leading, spacing: spacing) {
             ShellText(.settingsPrivacyStatement)

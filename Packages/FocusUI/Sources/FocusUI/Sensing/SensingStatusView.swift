@@ -42,6 +42,27 @@ public struct SensingStatusView: View {
     /// the status line deserves to know what is missing from it.
     public let capabilities: CapabilityMatrix
 
+    /// The eight capabilities the *watching* depends on, and therefore the only ones a status
+    /// line about watching should name.
+    ///
+    /// The other four belong to epics that have not landed — Accessibility depth, screenshots,
+    /// notifications and the on-device model — and every one of them is permanently
+    /// `.notRequested` or `.unavailable` here. Listing them beside the sensing status would put
+    /// four standing lines under a window whose whole point is one sentence, and would say
+    /// nothing about what the app is doing now. They are drawn in full, all twelve, by
+    /// `CapabilityMatrixView` in Privacy settings, which is the surface that exists to be
+    /// complete.
+    nonisolated public static let sensingCapabilities: [Capability] = [
+        .frontmostApplication,
+        .windowMetadata,
+        .idle,
+        .systemLifecycle,
+        .displayGeometry,
+        .presentation,
+        .microphoneActivity,
+        .cameraActivity
+    ]
+
     /// Whether to list the capabilities that are not `.available`.
     public let showsReducedCapabilities: Bool
 
@@ -73,7 +94,11 @@ public struct SensingStatusView: View {
                 detail
             }
 
-            if showsReducedCapabilities {
+            // Only while something is actually attached. A graph that is switched off has one
+            // thing to say and the headline says it; following that with eight lines of "never
+            // asked for" would bury the sentence that matters under a list of facts about a
+            // machine nobody is currently reading.
+            if showsReducedCapabilities, summary.isWatching {
                 reduced
             }
         }
@@ -185,7 +210,9 @@ public struct SensingStatusView: View {
     /// prompting API is banned from the shipping graph by lint.
     @ViewBuilder
     private var reduced: some View {
-        let rows = capabilities.allStates.filter { !$0.state.isUsable }
+        let rows = capabilities.allStates.filter {
+            !$0.state.isUsable && Self.sensingCapabilities.contains($0.capability)
+        }
         if !rows.isEmpty {
             VStack(alignment: .leading, spacing: spacing / 3) {
                 ForEach(rows, id: \.capability) { entry in

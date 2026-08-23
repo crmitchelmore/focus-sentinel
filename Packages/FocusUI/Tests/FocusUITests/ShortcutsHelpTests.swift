@@ -28,11 +28,15 @@ struct ShortcutsHelpTests {
     func rowsAreTheShippedActions() {
         let rows = ShortcutsHelpView.groups(for: registry).flatMap(\.rows)
 
-        #expect(rows.map(\.glyphs) == ["⌘N", "⌘O", "⌃⌘↩", "⌘W", "⌘?"])
+        #expect(rows.map(\.glyphs) == ["⌘N", "⌘O", "⌃⌘↩", "⌃⌘S", "⌃⌘P", "⌃⌘E", "⇧⌘W", "⌘W", "⌘?"])
         #expect(rows.map(\.titleKey) == [
             .commandNewPriority,
             .commandAddFilesToContext,
             .priorityActionComplete,
+            .sessionActionStart,
+            .sessionActionPause,
+            .sessionActionComplete,
+            .commandPauseSensing,
             .commandCloseWindow,
             .commandHelp
         ])
@@ -82,6 +86,10 @@ struct ShortcutsHelpTests {
             "priority.new",
             "context.addFiles",
             "priority.complete",
+            "session.start",
+            "session.pause",
+            "session.complete",
+            "sensing.pause",
             "shell.closeWindow",
             "shell.test.unbound",
             "shell.help"

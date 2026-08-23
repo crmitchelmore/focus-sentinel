@@ -181,6 +181,85 @@ struct PseudoLocalizationTests {
 
     // MARK: - The committed pseudo-localised pass
 
+    /// The same assertion over e03's surfaces.
+    ///
+    /// Every one of them draws catalog prose and nothing else — a phase badge is a glyph and a
+    /// translated label, and the capability matrix is entirely authored sentences — so there is
+    /// no `drawsLocalisedProse` exemption to make here. The priority hero needed one because it
+    /// draws the user's own words; nothing in this set does.
+    @Test(
+        "the session surfaces draw more ink when pseudo-localised",
+        arguments: SessionComponent.allCases
+    )
+    func sessionComponentsExpand(component: SessionComponent) throws {
+        try assertExpands(
+            component.view,
+            named: component.rawValue,
+            width: component.width,
+            widensWhenSelfSizing: component.width == nil
+        )
+    }
+
+    @Test(
+        "the capability matrix draws more ink when pseudo-localised",
+        arguments: CapabilityComponent.allCases
+    )
+    func capabilityComponentsExpand(component: CapabilityComponent) throws {
+        try assertExpands(
+            component.view,
+            named: component.rawValue,
+            width: component.width,
+            widensWhenSelfSizing: component.width == nil
+        )
+    }
+
+    /// One component, at both text scales, plain against pseudo-localised.
+    ///
+    /// **Ink, not frame** — the same reasoning e01 wrote down: a layout with slack in it can
+    /// absorb two extra wrapped lines without growing, and did. What cannot stay the same is how
+    /// much ink is on the page, because a view that dropped or truncated its strings would draw
+    /// fewer glyphs rather than more.
+    private func assertExpands(
+        _ view: some View,
+        named name: String,
+        width: CGFloat?,
+        widensWhenSelfSizing: Bool
+    ) throws {
+        for size in SnapshotTypeSize.allCases {
+            let plain = try SnapshotHarness.render(
+                view,
+                traits: .light,
+                textScale: size.textScale,
+                width: width,
+                name: "\(name).plain.\(size.rawValue)"
+            )
+            let pseudo = try SnapshotHarness.render(
+                view,
+                traits: .light,
+                textScale: size.textScale,
+                width: width,
+                transform: PseudoLocale.transform,
+                name: "\(name).pseudo.\(size.rawValue)"
+            )
+
+            let plainInk = PNGCompare.inkPixels(plain.pixels)
+            let pseudoInk = PNGCompare.inkPixels(pseudo.pixels)
+            #expect(
+                pseudoInk > plainInk,
+                "\(name) drew no extra text when pseudo-localised (\(plainInk) → \(pseudoInk)): the strings never reached the view"
+            )
+            #expect(pseudo.height >= plain.height)
+            #expect(pseudo.width >= plain.width)
+
+            if widensWhenSelfSizing {
+                #expect(
+                    pseudo.width > plain.width,
+                    "\(name) did not widen (\(plain.width) → \(pseudo.width))"
+                )
+            }
+        }
+    }
+
     @Test(
         "the pseudo-localised pass matches its baseline",
         arguments: SnapshotComponent.allCases
@@ -204,6 +283,36 @@ struct PseudoLocalizationTests {
         arguments: PriorityComponent.allCases.filter(\.drawsLocalisedProse)
     )
     func priorityPseudoLocalisedPassMatchesBaseline(component: PriorityComponent) throws {
+        try SnapshotHarness.assertSnapshot(
+            component.view,
+            component: component.rawValue,
+            variant: "light",
+            width: component.width,
+            transform: PseudoLocale.transform,
+            baselineSuffix: "pseudo"
+        )
+    }
+
+    @Test(
+        "the session surfaces' pseudo-localised pass matches its baseline",
+        arguments: SessionComponent.allCases
+    )
+    func sessionPseudoLocalisedPassMatchesBaseline(component: SessionComponent) throws {
+        try SnapshotHarness.assertSnapshot(
+            component.view,
+            component: component.rawValue,
+            variant: "light",
+            width: component.width,
+            transform: PseudoLocale.transform,
+            baselineSuffix: "pseudo"
+        )
+    }
+
+    @Test(
+        "the capability matrix's pseudo-localised pass matches its baseline",
+        arguments: CapabilityComponent.allCases
+    )
+    func capabilityPseudoLocalisedPassMatchesBaseline(component: CapabilityComponent) throws {
         try SnapshotHarness.assertSnapshot(
             component.view,
             component: component.rawValue,

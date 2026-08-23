@@ -595,13 +595,19 @@ public struct CockpitView: View {
                 showsReducedCapabilities: true
             )
 
-            PauseSwitch(
-                isWatching: !state.sensing.isPausedByUser,
-                setWatching: sessionActions.map { host in
-                    { watching in host.setSensingPaused(!watching) }
-                },
-                focus: $focus
-            )
+            // Shown only where a host can act on it, for the same measured reason the capture
+            // field is: an AppKit-backed control does not rasterise under `ImageRenderer` — a
+            // switch draws SwiftUI's yellow "unrenderable view" placeholder whatever appearance
+            // is injected — so a read-only render would commit a picture of a broken control
+            // and call it a baseline. A disabled switch would be worse than none in the app
+            // too: the status line above already says whether anything is being watched.
+            if let host = sessionActions {
+                PauseSwitch(
+                    isWatching: !state.sensing.isPausedByUser,
+                    setWatching: { watching in host.setSensingPaused(!watching) },
+                    focus: $focus
+                )
+            }
 
             Button {
                 openSettings()

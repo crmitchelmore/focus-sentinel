@@ -47,7 +47,9 @@ struct DefaultActionContractTests {
         "HandoffConfirmationSheet.swift":
             "the default is Cancel, never Replace — Return must not give away the current priority",
         "PrivacySettingsView.swift":
-            "a settings pane whose one action reveals a folder in Finder and changes nothing"
+            "a settings pane whose one action reveals a folder in Finder and changes nothing",
+        "InterruptionSheet.swift":
+            "a modal sheet the user opened by pressing Stop; Escape keeps the session going, and Stop is enabled with every field empty because reflection is offered rather than extracted"
     ]
 
     /// The surface the whole defect ran through. Named separately from the allowlist so the
