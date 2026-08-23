@@ -1,6 +1,294 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "cascade.precedence.footnote" : {
+      "comment" : "Footnote under the precedence ladder.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your own rules always win. Focus never overrules something you told it."
+          }
+        }
+      }
+    },
+    "cascade.precedence.heading" : {
+      "comment" : "Heading of the Settings pane that lists the precedence ladder in order.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How Focus decides"
+          }
+        }
+      }
+    },
+    "cascade.rung.contextPack" : {
+      "comment" : "Precedence pane row: an app, site, keyword or file attached to this priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Context you attached"
+          }
+        }
+      }
+    },
+    "cascade.rung.globalRule" : {
+      "comment" : "Precedence pane row: a rule the user scoped to no particular priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rule for everything"
+          }
+        }
+      }
+    },
+    "cascade.rung.heuristic" : {
+      "comment" : "Precedence pane row: the on-device deterministic heuristic — tokens, similarity and dwell.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "What the words have in common"
+          }
+        }
+      }
+    },
+    "cascade.rung.onDeviceModel" : {
+      "comment" : "Precedence pane row: the on-device model. Declared here so its placement below every rule is visible; it is not part of this version.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On-device model"
+          }
+        }
+      }
+    },
+    "cascade.rung.seedFallback" : {
+      "comment" : "Precedence pane row: a bundled default for a mixed-use app, which always declines to decide.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Built-in ‘ask each time’"
+          }
+        }
+      }
+    },
+    "cascade.rung.seedRule" : {
+      "comment" : "Precedence pane row: a decisive default this app ships, overridable in one click.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Built-in default"
+          }
+        }
+      }
+    },
+    "cascade.rung.sessionRule" : {
+      "comment" : "Precedence pane row: a rule that lasts until the current focus session ends.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rule for this session"
+          }
+        }
+      }
+    },
+    "cascade.rung.taskRule" : {
+      "comment" : "Precedence pane row: a rule the user scoped to the current priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rule for this priority"
+          }
+        }
+      }
+    },
+    "cascade.rung.unavailable" : {
+      "comment" : "Caption drawn beside a precedence row this build cannot consult.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not in this version"
+          }
+        }
+      }
+    },
+    "cascade.rung.unresolved" : {
+      "comment" : "Precedence pane row: the last rung, where the app has nothing to go on and says so.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing matched"
+          }
+        }
+      }
+    },
+    "explanation.stage.contextPack" : {
+      "comment" : "Explanation phrase naming the rung that decided.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "context you attached to this priority"
+          }
+        }
+      }
+    },
+    "explanation.stage.globalRule" : {
+      "comment" : "Explanation phrase naming the rung that decided.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "a rule you set"
+          }
+        }
+      }
+    },
+    "explanation.stage.heuristic" : {
+      "comment" : "Explanation phrase naming the rung that decided.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "what this has in common with your priority"
+          }
+        }
+      }
+    },
+    "explanation.stage.onDeviceModel" : {
+      "comment" : "Explanation phrase naming the rung that decided. Unreachable in this version; declared so the vocabulary is total.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "the on-device model"
+          }
+        }
+      }
+    },
+    "explanation.stage.seedFallback" : {
+      "comment" : "Explanation phrase naming the rung that decided.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "a built-in ‘ask each time’ default"
+          }
+        }
+      }
+    },
+    "explanation.stage.seedRule" : {
+      "comment" : "Explanation phrase naming the rung that decided.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "a built-in default"
+          }
+        }
+      }
+    },
+    "explanation.stage.sessionRule" : {
+      "comment" : "Explanation phrase naming the rung that decided.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "a rule you set for this session"
+          }
+        }
+      }
+    },
+    "explanation.stage.taskRule" : {
+      "comment" : "Explanation phrase naming the rung that decided.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "a rule you set for this priority"
+          }
+        }
+      }
+    },
+    "explanation.stage.unresolved" : {
+      "comment" : "Explanation phrase naming the rung that decided.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nothing that could decide"
+          }
+        }
+      }
+    },
+    "rule.authority.global" : {
+      "comment" : "Label for a rule scoped to no particular priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Everything"
+          }
+        }
+      }
+    },
+    "rule.authority.session" : {
+      "comment" : "Label for a rule that lasts until the current focus session ends.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This session"
+          }
+        }
+      }
+    },
+    "rule.authority.task" : {
+      "comment" : "Label for a rule scoped to the current priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This priority"
+          }
+        }
+      }
+    },
     "status.break.short" : {
       "comment" : "Short status label: the user is on a deliberate break.",
       "extractionState" : "manual",
