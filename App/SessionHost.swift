@@ -267,8 +267,16 @@ final class SessionHost: SessionActing {
     ///
     /// Empty when no session is open, which is the honest answer: a rule scoped to "this focus
     /// session" has nothing to be scoped to when there is not one.
+    ///
+    /// The priority is *declared* here before it is used, which is the second half of R-72.2's
+    /// lifetime contract: this is the only path on which the box is read, the snapshot is rebuilt
+    /// on exactly the four events that change the priority, so noting it here is what turns "the
+    /// rule dies when the priority changes" into a clear rather than a hide. A rule the person
+    /// wrote under an earlier priority must not come back when they switch back to it — the
+    /// *"not now"* it recorded answered a question they have since left.
     func sessionRules(forPriority priorityID: UUID?) -> [ScopedRuleValue] {
         guard let sessionID = snapshot?.sessionID else { return [] }
+        sessionRuleBox.setActivePriority(priorityID, forSession: sessionID)
         return sessionRuleBox.rules(forSession: sessionID, priorityID: priorityID)
     }
 
@@ -277,9 +285,9 @@ final class SessionHost: SessionActing {
     ///
     /// Called from `refresh()`, which is the transition handler every verb on this host already
     /// funnels through, so there is no phase change that can happen without passing here. The
-    /// other two halves of the lifetime contract need no hook at all: the box's key carries the
-    /// priority, so a priority change hides the rule structurally, and a process exit takes an
-    /// in-memory store with it by definition.
+    /// other two halves of the lifetime contract are owned elsewhere: a **priority** change is
+    /// cleared on the read path above, where the change is observable, and a process exit takes
+    /// an in-memory store with it by definition.
     private func expireSessionRules(previouslyOpen: UUID?) {
         guard let previouslyOpen, previouslyOpen != snapshot?.sessionID else { return }
         sessionRuleBox.clear(sessionID: previouslyOpen)
