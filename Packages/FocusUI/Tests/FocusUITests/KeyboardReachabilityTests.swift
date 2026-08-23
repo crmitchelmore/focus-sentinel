@@ -155,11 +155,16 @@ struct KeyboardReachabilityTests {
     @Test("the cockpit and both Settings tabs each have a focusable element")
     func everyShellSurfaceIsReachable() {
         // The ritual banner sits above everything else while it is shown, so it comes first
-        // in the order; the capture field is next, and is where focus lands on an ordinary
-        // day when the banner is absent.
+        // in the order. The hero is the top of the column under it, so correcting the
+        // priority's own wording in place comes next; the capture field — which starts a
+        // *new* commitment rather than fixing the current one — follows, and is where focus
+        // lands on an ordinary day when neither the banner nor the editor is up.
         #expect(FocusTraversal.firstField(in: .cockpit) == .cockpitRitualDismiss)
         #expect(
-            FocusTraversal.next(after: .cockpitRitualDismiss, in: .cockpit) == .cockpitCaptureField
+            FocusTraversal.next(after: .cockpitRitualDismiss, in: .cockpit) == .cockpitEditIntent
+        )
+        #expect(
+            FocusTraversal.next(after: .cockpitEditIntent, in: .cockpit) == .cockpitCaptureField
         )
         #expect(FocusTraversal.firstField(in: .quickCapture) == .quickCaptureField)
         #expect(FocusTraversal.firstField(in: .completionSheet) == .completionShipped)

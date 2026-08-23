@@ -52,6 +52,17 @@ public struct CockpitView: View {
     /// worth recording, so it gets a sheet rather than happening under the pointer.
     @State private var isCompleting: Bool = false
 
+    /// Whether the priority's own sentence is being corrected in place.
+    ///
+    /// A different act from capture, and a different verb: this keeps the task, its context
+    /// pack and its rules and bumps the revision, where committing the capture field starts a
+    /// new commitment and pushes this one into history.
+    @State private var isEditingIntent: Bool = false
+
+    /// The sentence while it is being corrected. Seeded from the stored intent when the editor
+    /// opens, discarded on Escape.
+    @State private var intentDraft: String = ""
+
     /// Bumped when the File menu's ⌘O arrives, which is how a menu item reaches a sheet that
     /// belongs to a subview.
     @State private var fileImportToken: Int = 0
@@ -69,16 +80,24 @@ public struct CockpitView: View {
         self.commandCenter = commandCenter
     }
 
+    /// Every verb this window can perform, built from the host and the current priority.
+    ///
+    /// The view draws these and `CockpitActionsTests` drives them, so "reachable from the
+    /// cockpit" is a checked property rather than a claim — see `CockpitWiring`.
+    private var wiring: CockpitWiring {
+        CockpitWiring(actions: actions, priority: state.priority)
+    }
+
     public var body: some View {
         VStack(alignment: .leading, spacing: sectionSpacing) {
-            if state.showsRitualPrompt, actions != nil {
+            if state.showsRitualPrompt, let dismissRitual = wiring.dismissRitual {
                 RitualBanner(
                     answer: {
-                        actions?.dismissRitual()
+                        dismissRitual()
                         isCapturing = true
                         focus = .cockpitCaptureField
                     },
-                    dismiss: { actions?.dismissRitual() },
+                    dismiss: dismissRitual,
                     focus: $focus
                 )
             }
@@ -100,10 +119,7 @@ public struct CockpitView: View {
                 primaryActions(priority)
             }
 
-            RecentPrioritiesView(
-                rows: state.recent,
-                activate: actions.map { host in { id in host.activate(taskID: id) } }
-            )
+            RecentPrioritiesView(rows: state.recent, activate: wiring.activate)
 
             footer
 
@@ -122,7 +138,11 @@ public struct CockpitView: View {
             commandCenter.register(perform(_:))
         }
         .onDisappear { commandCenter.unregister() }
-        .onChange(of: state.priority?.id) { doneWhenDraft = state.priority?.doneWhen ?? "" }
+        .onChange(of: state.priority?.id) {
+            doneWhenDraft = state.priority?.doneWhen ?? ""
+            // A different commitment is not the one that was being re-worded.
+            isEditingIntent = false
+        }
         .onChange(of: state.priority?.doneWhen) { doneWhenDraft = state.priority?.doneWhen ?? "" }
         // The one and only surface an incoming `focus://` URL can reach. There is no path from
         // here to a store mutation that does not go through a person pressing Replace.
@@ -131,8 +151,8 @@ public struct CockpitView: View {
                 HandoffConfirmationSheet(
                     request: request,
                     current: state.priority,
-                    replace: { actions?.acceptHandoff(request) },
-                    cancel: { actions?.cancelHandoff() }
+                    replace: { wiring.acceptHandoff?(request) },
+                    cancel: { wiring.cancelHandoff?() }
                 )
             }
         }
@@ -141,11 +161,7 @@ public struct CockpitView: View {
                 CompletionSheet(
                     intent: priority.intent,
                     complete: { shipped, restartPoint in
-                        actions?.complete(
-                            taskID: priority.id,
-                            shipped: shipped,
-                            restartPoint: restartPoint
-                        )
+                        wiring.complete?(shipped, restartPoint)
                         isCompleting = false
                     },
                     cancel: { isCompleting = false }
@@ -191,7 +207,7 @@ public struct CockpitView: View {
         Binding(
             get: { state.pendingHandoff != nil },
             set: { presented in
-                if !presented { actions?.cancelHandoff() }
+                if !presented { wiring.cancelHandoff?() }
             }
         )
     }
@@ -217,8 +233,45 @@ public struct CockpitView: View {
         }
     }
 
+    /// The priority itself — read as a hero, or corrected in place at the same size.
+    ///
+    /// The editor replaces the hero rather than sitting beside it: the sentence must not move
+    /// or change size when someone starts fixing a typo in it, because the thing they are
+    /// editing is the largest object on the screen and it should stay exactly where it is.
+    @ViewBuilder
     private var hero: some View {
-        PriorityHeroView(intent: state.priority?.intent)
+        if isEditingIntent, let priority = state.priority, wiring.editIntent != nil {
+            PriorityIntentEditor(
+                draft: $intentDraft,
+                commit: { commitIntent(priority) },
+                cancel: { isEditingIntent = false },
+                focus: $focus
+            )
+        } else {
+            PriorityHeroView(intent: state.priority?.intent)
+        }
+    }
+
+    /// Open the in-place editor on the sentence that is there now.
+    private func beginEditingIntent(_ priority: PrioritySnapshot) {
+        intentDraft = priority.intent
+        isEditingIntent = true
+        focus = .cockpitEditIntent
+    }
+
+    /// Commit the corrected sentence.
+    ///
+    /// An emptied field is not a command to erase the commitment — it is a slip — so it closes
+    /// the editor and changes nothing. An unchanged sentence writes nothing either, because an
+    /// undo step that undoes nothing is a step the user has to take twice.
+    private func commitIntent(_ priority: PrioritySnapshot) {
+        isEditingIntent = false
+        guard
+            let corrected = CockpitWiring.correction(intentDraft, replacing: priority.intent)
+        else {
+            return
+        }
+        wiring.editIntent?(corrected)
     }
 
     // MARK: - Definition of done (F-08)
@@ -265,7 +318,7 @@ public struct CockpitView: View {
         let trimmed = doneWhenDraft.trimmingCharacters(in: .whitespacesAndNewlines)
         let stored = trimmed.isEmpty ? nil : trimmed
         guard stored != priority.doneWhen else { return }
-        actions?.editDoneWhen(taskID: priority.id, to: stored)
+        wiring.editDoneWhen?(stored)
     }
 
     // MARK: - Actions
@@ -282,9 +335,7 @@ public struct CockpitView: View {
         TimeboxControl(
             timeboxSeconds: priority.timeboxSeconds,
             state: priority.timebox,
-            choose: actions.map { host in
-                { seconds in host.setTimebox(taskID: priority.id, seconds: seconds) }
-            },
+            choose: wiring.setTimebox,
             focus: $focus
         )
     }
@@ -294,18 +345,9 @@ public struct CockpitView: View {
     private func rulesSection(_ priority: PrioritySnapshot) -> some View {
         TaskRulesView(
             rules: priority.rules,
-            add: actions.map { host in
-                { scope, subject, verdict in
-                    host.addRule(
-                        taskID: priority.id,
-                        scope: scope,
-                        subject: subject,
-                        verdict: verdict
-                    )
-                }
-            },
-            change: actions.map { host in { id, verdict in host.changeRule(id: id, verdict: verdict) } },
-            remove: actions.map { host in { id in host.removeRule(id: id) } },
+            add: wiring.addRule,
+            change: wiring.changeRule,
+            remove: wiring.removeRule,
             focus: $focus
         )
     }
@@ -319,12 +361,8 @@ public struct CockpitView: View {
     private func contextSection(_ priority: PrioritySnapshot) -> some View {
         ContextChipRow(
             items: priority.contextItems,
-            add: actions.map { host in
-                { drafts in
-                    for draft in drafts { host.addContext(taskID: priority.id, item: draft) }
-                }
-            },
-            remove: actions.map { host in { id in host.removeContext(id: id) } },
+            add: wiring.addContext,
+            remove: wiring.removeContext,
             importFilesToken: fileImportToken,
             focus: $focus
         )
@@ -351,7 +389,7 @@ public struct CockpitView: View {
     private var capture: some View {
         CaptureFieldView(
             commit: { intent, doneWhen in
-                actions?.setPriority(intent: intent, doneWhen: doneWhen)
+                wiring.setPriority?(intent, doneWhen)
                 isCapturing = false
             },
             isEnabled: actions != nil,
@@ -362,38 +400,98 @@ public struct CockpitView: View {
     }
 
     private func primaryActions(_ priority: PrioritySnapshot) -> some View {
-        HStack(spacing: rowSpacing) {
-            Button {
-                isCompleting = true
-            } label: {
-                ShellText(.priorityActionComplete)
+        // The row wraps rather than shrinking its labels. A fourth verb does not fit beside
+        // the other three at the default window width — measured, in the committed baseline —
+        // and a button reading "Complete Pri…" is a control the user has to guess at, which is
+        // the same failure F-147 forbids for the priority itself. So the layout is offered
+        // three ways and takes the widest one that fits whole: one line, two, or one verb per
+        // line at the largest text sizes.
+        //
+        // No `Spacer` inside the candidates: a spacer that can compress to zero makes the
+        // first candidate "fit" at every width, and the row then truncates instead of
+        // wrapping. The alignment is done by the frame around the choice.
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: rowSpacing) {
+                completeButton
+                changeButton
+                fixWordingButton(priority)
+                clearButton
             }
-            // Return belongs to whichever surface the user is actually in: while the capture
-            // field is open, its own submit is the primary gesture, and two default actions
-            // in one window is a coin toss the user has to lose to find out about.
-            .keyboardShortcut(showsCapture ? nil : .defaultAction)
-            .focused($focus, equals: .cockpitComplete)
-            .disabled(actions == nil)
-
-            if !showsCapture {
-                Button {
-                    isCapturing = true
-                    focus = .cockpitCaptureField
-                } label: {
-                    ShellText(.priorityActionChange)
+            VStack(alignment: .leading, spacing: rowSpacing) {
+                HStack(spacing: rowSpacing) {
+                    completeButton
+                    changeButton
                 }
-                .disabled(actions == nil)
+                HStack(spacing: rowSpacing) {
+                    fixWordingButton(priority)
+                    clearButton
+                }
             }
+            VStack(alignment: .leading, spacing: rowSpacing) {
+                completeButton
+                changeButton
+                fixWordingButton(priority)
+                clearButton
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
 
+    /// Finish the priority. The primary action, and the window's default one whenever the
+    /// capture field is not open.
+    private var completeButton: some View {
+        Button {
+            isCompleting = true
+        } label: {
+            ShellText(.priorityActionComplete)
+        }
+        // Return belongs to whichever surface the user is actually in: while the capture
+        // field is open, its own submit is the primary gesture, and two default actions
+        // in one window is a coin toss the user has to lose to find out about.
+        .keyboardShortcut(showsCapture ? nil : .defaultAction)
+        .focused($focus, equals: .cockpitComplete)
+        .disabled(actions == nil)
+    }
+
+    /// Replace the commitment with a new one, through the capture field.
+    @ViewBuilder
+    private var changeButton: some View {
+        if !showsCapture {
             Button {
-                actions?.clear()
+                isCapturing = true
+                focus = .cockpitCaptureField
             } label: {
-                ShellText(.priorityActionClear)
+                ShellText(.priorityActionChange)
             }
             .disabled(actions == nil)
-
-            Spacer(minLength: 0)
         }
+    }
+
+    /// Correct the wording of the commitment that is already there.
+    ///
+    /// Not the same act as replacing it, and the store has two verbs for that reason: this one
+    /// keeps the task and its whole context pack and bumps the revision, where Change Priority
+    /// starts a new commitment and pushes this one into history.
+    @ViewBuilder
+    private func fixWordingButton(_ priority: PrioritySnapshot) -> some View {
+        if !isEditingIntent {
+            Button {
+                beginEditingIntent(priority)
+            } label: {
+                ShellText(.priorityActionEditIntent)
+            }
+            .disabled(wiring.editIntent == nil)
+        }
+    }
+
+    /// Put the priority down without completing or deleting anything.
+    private var clearButton: some View {
+        Button {
+            wiring.clear?()
+        } label: {
+            ShellText(.priorityActionClear)
+        }
+        .disabled(actions == nil)
     }
 
     // MARK: - What the app can honestly say about itself

@@ -28,6 +28,9 @@ public enum FocusSurface: String, Sendable, CaseIterable, Hashable, Identifiable
 public enum FocusField: String, Sendable, CaseIterable, Hashable, Identifiable {
     /// The daily ritual banner's dismissal, above everything else while it is shown.
     case cockpitRitualDismiss
+    /// The priority's own sentence, being fixed in place. Distinct from the capture field:
+    /// that one starts a new commitment, this one corrects the wording of the current.
+    case cockpitEditIntent
     /// The cockpit's capture field, where the one thing is typed.
     case cockpitCaptureField
     /// The cockpit's Set Priority button.
@@ -106,6 +109,9 @@ public enum FocusTraversal {
             // under the hero, the primary action under that, and the route to Settings last.
             order: [
                 .cockpitRitualDismiss,
+                // The hero is the top of the column, so editing it in place is the first
+                // field under the banner and above the capture field.
+                .cockpitEditIntent,
                 .cockpitCaptureField,
                 .cockpitSetPriority,
                 .cockpitDoneWhen,

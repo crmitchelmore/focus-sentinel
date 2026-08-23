@@ -6,8 +6,10 @@ import SwiftUI
 /// This view is the whole of F-02's visual promise and the whole of F-147's. Three properties
 /// make it a promise rather than a preference:
 ///
-/// * **It is the only use of `DesignTokens.FontRole.priorityHero` in the package**, asserted
-///   by `TypeHierarchyTests`. A type role used twice is a heading style, not a hero.
+/// * **This file is the only place `DesignTokens.FontRole.priorityHero` is named**, asserted
+///   by `TypeHierarchyTests`. A type role used twice is a heading style, not a hero — so the
+///   sentence, the empty-state invitation and the in-place editor all draw through the one
+///   `HeroType` modifier below.
 /// * **It never truncates.** `lineLimit(nil)` plus `fixedSize(horizontal: false, vertical:
 ///   true)` means the text takes whatever width it is offered and grows *downward*. At the
 ///   largest text scale a long priority renders strictly taller rather than clipped, which is
@@ -51,20 +53,77 @@ public struct PriorityHeroView: View {
     }
 }
 
-/// Text at the hero role, and the **one** place in `FocusUI` that names that role.
+/// Fixing the wording of the commitment you are already making.
+///
+/// Deliberately **not** the same act as capturing a new priority. Setting a priority starts a
+/// new commitment and pushes the old one into history; this keeps the task — its context pack,
+/// its rules, its timebox — and changes only the sentence, one revision later. Both are
+/// undoable, and the Edit menu names which of the two you took.
+///
+/// It is drawn at the hero role because it edits the hero in place: a sentence that shrinks
+/// the moment you start typing in it is a different sentence to the eye, and the person is
+/// correcting the largest thing on the screen, not filling in a form field.
+struct PriorityIntentEditor: View {
+    @Binding var draft: String
+    /// Return, or leaving the field. Commits whatever is there.
+    let commit: () -> Void
+    /// Escape. Leaves the stored sentence exactly as it was.
+    let cancel: () -> Void
+    /// The surrounding surface's focus state, so the editor keeps its place in the Tab order.
+    let focus: FocusState<FocusField?>.Binding
+
+    var body: some View {
+        TextField(
+            text: $draft,
+            prompt: Text(ShellStrings.resource(.priorityIntentEditPrompt))
+        ) {
+            ShellText(.priorityIntentEditLabel)
+        }
+        .labelsHidden()
+        .heroType()
+        .textFieldStyle(.plain)
+        // One line, and Return commits it. A vertical-axis field would take Return for a
+        // newline, and a priority is one sentence — the place to write more than that is the
+        // definition of done, which is right underneath.
+        .focused(focus, equals: .cockpitEditIntent)
+        .onSubmit(commit)
+        .onExitCommand(perform: cancel)
+        .accessibilityLabel(Text(ShellStrings.resource(.priorityIntentEditLabel)))
+    }
+}
+
+/// Text at the hero role.
 ///
 /// It exists so that the empty-state prompt and the user's own sentence — which have to be
-/// drawn by different mechanisms, one through the catalog seam and one verbatim — still share
-/// a single reference to `DesignTokens.FontRole.priorityHero`. Without it the hero role would
-/// appear twice in this file and the "used exactly once" assertion would have to be weakened
-/// to something that no longer means anything.
+/// drawn by different mechanisms, one through the catalog seam and one verbatim — share a
+/// single way of asking for the hero role.
 private struct HeroText: View {
     let string: String
 
-    @Environment(\.shellTextScale) private var textScale
-
     var body: some View {
         Text(verbatim: string)
-            .font(DesignTokens.font(.priorityHero, scale: textScale))
+            .heroType()
+    }
+}
+
+/// The **one** place in `FocusUI` that names `DesignTokens.FontRole.priorityHero`.
+///
+/// Three things are drawn at hero size — the user's sentence, the empty-state invitation and
+/// the in-place editor — and they must be the same size or the hero is not one thing. Routing
+/// all three through a single modifier is what keeps the "used exactly once" assertion in
+/// `TypeHierarchyTests` meaningful instead of something that had to be weakened the first time
+/// a second hero-sized element shipped.
+private struct HeroType: ViewModifier {
+    @Environment(\.shellTextScale) private var textScale
+
+    func body(content: Content) -> some View {
+        content.font(DesignTokens.font(.priorityHero, scale: textScale))
+    }
+}
+
+extension View {
+    /// Draw this at the priority-hero role.
+    fileprivate func heroType() -> some View {
+        modifier(HeroType())
     }
 }

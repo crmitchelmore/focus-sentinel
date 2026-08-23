@@ -565,6 +565,18 @@
         }
       }
     },
+    "priority.action.editIntent" : {
+      "comment" : "Cockpit button that puts the current priority's own sentence into an editable field, in place, without starting a new commitment.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fix Wording…"
+          }
+        }
+      }
+    },
     "priority.complete.action.cancel" : {
       "comment" : "Button that closes the completion sheet without finishing anything.",
       "extractionState" : "manual",
@@ -693,6 +705,30 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "What is the one thing?"
+          }
+        }
+      }
+    },
+    "priority.intent.edit.label" : {
+      "comment" : "Accessibility label and field label for the in-place editor of the current priority's sentence.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Priority wording"
+          }
+        }
+      }
+    },
+    "priority.intent.edit.prompt" : {
+      "comment" : "Placeholder shown in the in-place editor when the priority's sentence has been emptied.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fix the wording of the one thing"
           }
         }
       }

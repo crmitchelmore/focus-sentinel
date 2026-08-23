@@ -77,12 +77,18 @@ public struct CompletionSheet: View {
                 .keyboardShortcut(.cancelAction)
 
                 Button {
-                    complete(trimmed(shipped), trimmed(restartPoint))
+                    let reflection = Self.reflection(shipped: shipped, restartPoint: restartPoint)
+                    complete(reflection.shipped, reflection.restartPoint)
                 } label: {
                     ShellText(.priorityCompleteActionConfirm)
                 }
                 .keyboardShortcut(.defaultAction)
                 .focused($focus, equals: .completionConfirm)
+                // The promise, made structural. The button consults one function, that
+                // function is always true, and `CockpitActionsTests` holds it to that — so a
+                // later "just require what shipped" has to change a documented rule and fail a
+                // test, rather than adding a condition here that nobody notices.
+                .disabled(!Self.isCompleteEnabled(shipped: shipped, restartPoint: restartPoint))
             }
         }
         .padding(spacing * 2)
@@ -111,10 +117,32 @@ public struct CompletionSheet: View {
         }
     }
 
+    // MARK: - The two rules this sheet keeps
+
+    /// Whether Complete may be pressed. **Always.**
+    ///
+    /// Both fields are reflection, and reflection is offered rather than extracted (F-22,
+    /// acceptance criterion 21): finishing is a fact about the work, not a payment the app
+    /// collects for letting you finish. The parameters are here so that a future condition
+    /// would have to be written against the actual field contents — and would fail the test
+    /// that asserts this is true for every combination of empty, blank and filled.
+    static func isCompleteEnabled(shipped: String, restartPoint: String) -> Bool {
+        true
+    }
+
+    /// What the two fields mean to the store.
+    ///
     /// An empty field is an absent answer, not an empty string. Storing `""` would make a row
     /// that says "the user answered nothing" indistinguishable from one that says "the user
     /// answered with nothing".
-    private func trimmed(_ text: String) -> String? {
+    static func reflection(
+        shipped: String,
+        restartPoint: String
+    ) -> (shipped: String?, restartPoint: String?) {
+        (trimmed(shipped), trimmed(restartPoint))
+    }
+
+    private static func trimmed(_ text: String) -> String? {
         let value = text.trimmingCharacters(in: .whitespacesAndNewlines)
         return value.isEmpty ? nil : value
     }
