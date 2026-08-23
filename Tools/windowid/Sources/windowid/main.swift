@@ -2,7 +2,24 @@
 //
 //   windowid <owner name>   print "<windowNumber> <x> <y> <w> <h>" for each layer-0 window
 //                           belonging to that application; exit 1 if it has none
+//   windowid <owner name> --include-panels
+//                           the same, for windows at *every* layer — panels included
 //   windowid --grants       report whether this process can drive the live lane at all
+//
+// ## Why `--include-panels` exists
+//
+// Layer 0 is the right default: it is what excludes menu-bar extras, tooltips and the Dock,
+// so what comes back is the set a person would call "the app's windows". But the quick-capture
+// panel is an `NSPanel` at `.floating`, which is **layer 3** — measured on this machine:
+//
+//     owner=Focus Sentinel layer=3 number=4629 bounds=680,241,560,121   ← the panel
+//     owner=Focus Sentinel layer=0 number=4634 bounds=495,58,900,704    ← the cockpit
+//
+// A driver asking for the panel and being handed a layer-0-only list gets the cockpit, and if
+// it falls back to "the front-most entry" it captures the cockpit and files it as a picture of
+// the panel. That is exactly how `capture-panel.png` came to be a 900×704 shot of the main
+// window. The tool now has an answer for the question the lane was really asking, so the
+// driver can require a bounds match instead of guessing.
 //
 // ## Standing condition 1
 //
@@ -51,14 +68,19 @@ func normalized(_ name: String) -> String {
     name.lowercased().filter { !$0.isWhitespace }
 }
 
-/// Every layer-0 (ordinary, non-panel) on-screen window owned by `ownerName`.
+/// Every on-screen window owned by `ownerName`, in front-to-back order.
 ///
-/// Layer 0 is what excludes menu-bar extras, tooltips, the Dock and the app's own panels, so
-/// what comes back is the set of windows a person would call "the app's windows".
+/// By default only layer 0 — which is what excludes menu-bar extras, tooltips, the Dock and
+/// the app's own panels, so what comes back is the set of windows a person would call "the
+/// app's windows". With `includingPanels` the layer filter is dropped entirely, because the
+/// quick-capture panel is a floating `NSPanel` and therefore lives at layer 3.
 ///
 /// Returns the records and the owner name they were actually matched under, so a caller can
 /// say which application it found when the match was not the literal argument.
-func windows(ownedBy ownerName: String) -> (records: [WindowRecord], matchedOwner: String) {
+func windows(
+    ownedBy ownerName: String,
+    includingPanels: Bool = false
+) -> (records: [WindowRecord], matchedOwner: String) {
     let options: CGWindowListOption = [.optionOnScreenOnly, .excludeDesktopElements]
     guard
         let raw = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]]
@@ -76,7 +98,7 @@ func windows(ownedBy ownerName: String) -> (records: [WindowRecord], matchedOwne
     let candidates: [(owner: String, record: WindowRecord)] = raw.compactMap { entry in
         guard
             let owner = entry[ownerKey] as? String,
-            let layer = entry[layerKey] as? Int, layer == 0,
+            let layer = entry[layerKey] as? Int, includingPanels || layer == 0,
             let number = entry[numberKey] as? Int,
             let boundsDictionary = entry[boundsKey],
             let bounds = CGRect(dictionaryRepresentation: boundsDictionary as! CFDictionary)
@@ -119,11 +141,16 @@ func usage() -> Never {
     FileHandle.standardError.write(
         Data(
             """
-            usage: windowid <owner name>
+            usage: windowid <owner name> [--include-panels]
                    windowid --grants
 
-            Prints "<windowNumber> <x> <y> <w> <h>" for each layer-0 on-screen window owned by
-            the named application. Window *names* are never requested (standing condition 1).
+            Prints "<windowNumber> <x> <y> <w> <h>" for each on-screen window owned by the
+            named application, front to back. Window *names* are never requested (standing
+            condition 1).
+
+            Only layer 0 is listed by default — ordinary windows, no menu-bar extras and no
+            panels. Pass --include-panels to list every layer: the quick-capture panel is a
+            floating NSPanel at layer 3, so a driver looking for it must ask for it.
 
             The owner name is the application's display name — "Focus Sentinel". An exact
             match is tried first; failing that, whitespace and case are ignored, so
@@ -136,18 +163,23 @@ func usage() -> Never {
 }
 
 let arguments = Array(CommandLine.arguments.dropFirst())
-guard let first = arguments.first, arguments.count == 1 else { usage() }
+guard let first = arguments.first, arguments.count <= 2 else { usage() }
+
+let includePanels = arguments.dropFirst().contains("--include-panels")
+guard arguments.count == 1 || includePanels else { usage() }
 
 switch first {
 case "--grants":
+    guard arguments.count == 1 else { usage() }
     exit(reportGrants())
 case "-h", "--help":
     usage()
 default:
-    let (found, matchedOwner) = windows(ownedBy: first)
+    let (found, matchedOwner) = windows(ownedBy: first, includingPanels: includePanels)
     guard !found.isEmpty else {
+        let scope = includePanels ? "on-screen window" : "layer-0 on-screen window"
         FileHandle.standardError.write(
-            Data("windowid: no layer-0 on-screen window owned by \"\(first)\"\n".utf8)
+            Data("windowid: no \(scope) owned by \"\(first)\"\n".utf8)
         )
         exit(1)
     }

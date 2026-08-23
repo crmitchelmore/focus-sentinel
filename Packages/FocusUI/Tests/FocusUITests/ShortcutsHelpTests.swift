@@ -16,7 +16,7 @@ struct ShortcutsHelpTests {
         let rows = ShortcutsHelpView.groups(for: registry).flatMap(\.rows)
 
         #expect(rows.map(\.id) == registry.actions.map(\.id))
-        #expect(rows.count == 2)
+        #expect(rows.count == registry.actions.count)
 
         for (row, action) in zip(rows, registry.actions) {
             #expect(row.titleKey == action.titleKey)
@@ -24,12 +24,18 @@ struct ShortcutsHelpTests {
         }
     }
 
-    @Test("e01's reference is exactly Close Window ⌘W and Focus Sentinel Help ⌘?")
-    func e01RowsAreTheTwoRealActions() {
+    @Test("the reference lists every shipped action with the glyphs a Mac user expects")
+    func rowsAreTheShippedActions() {
         let rows = ShortcutsHelpView.groups(for: registry).flatMap(\.rows)
 
-        #expect(rows.map(\.glyphs) == ["⌘W", "⌘?"])
-        #expect(rows.map(\.titleKey) == [.commandCloseWindow, .commandHelp])
+        #expect(rows.map(\.glyphs) == ["⌘N", "⌘O", "⌃⌘↩", "⌘W", "⌘?"])
+        #expect(rows.map(\.titleKey) == [
+            .commandNewPriority,
+            .commandAddFilesToContext,
+            .priorityActionComplete,
+            .commandCloseWindow,
+            .commandHelp
+        ])
     }
 
     @Test("rows are grouped by menu, in menu-bar order, with no empty group")
@@ -69,9 +75,17 @@ struct ShortcutsHelpTests {
         let extended = CommandRegistry(actions: registry.actions + [unbound])
         let rows = ShortcutsHelpView.groups(for: extended).flatMap(\.rows)
 
-        #expect(rows.count == 3)
-        // Grouped by menu, so the new File action sits under Close Window, not at the end.
-        #expect(rows.map(\.id) == ["shell.closeWindow", "shell.test.unbound", "shell.help"])
+        #expect(rows.count == registry.actions.count + 1)
+        // Grouped by menu, so the new File action sits with the other File actions rather
+        // than at the end of the whole reference.
+        #expect(rows.map(\.id) == [
+            "priority.new",
+            "context.addFiles",
+            "priority.complete",
+            "shell.closeWindow",
+            "shell.test.unbound",
+            "shell.help"
+        ])
         #expect(rows.first { $0.id == "shell.test.unbound" }?.glyphs == nil)
     }
 

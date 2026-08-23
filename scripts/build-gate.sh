@@ -36,15 +36,19 @@
 # what they are for, and it is then the caller's problem to serialise.
 #
 # The cost is that a default run builds cold. `FOCUS_DERIVED_DATA=/tmp/focus-dd` restores a
-# warm tree for a single-run inner loop. Per-run directories accumulate under /tmp; the
-# summary prints exactly which ones this run made.
+# warm tree for a single-run inner loop.
+#
+# A green run then **gives its derived data and result bundle back** — see `release_scratch`
+# below for why that is a correctness matter and not tidiness. The logs always survive.
 #
 # ## Environment
 #
 #   FOCUS_RUN_TOKEN        the per-run suffix. Default <UTC timestamp>-<pid>
-#   FOCUS_DERIVED_DATA     default /tmp/focus-dd-$FOCUS_RUN_TOKEN
-#   FOCUS_LOG_DIR          default /tmp/focus-gate-$FOCUS_RUN_TOKEN
+#   FOCUS_DERIVED_DATA     default /tmp/focus-dd-$FOCUS_RUN_TOKEN. Pinning it also means the
+#                          gate will not delete it: a pinned path is the caller's
+#   FOCUS_LOG_DIR          default /tmp/focus-gate-$FOCUS_RUN_TOKEN. Never deleted
 #   FOCUS_RESULT_BUNDLE    default $FOCUS_LOG_DIR/focus-e01-$FOCUS_RUN_TOKEN.xcresult
+#   FOCUS_KEEP_DERIVED_DATA  set to keep a green run's derived data and result bundle too
 #   FOCUS_EVIDENCE_DIR     if set, the whole evidence set is assembled there under the names
 #                          the epic's validation section asks for
 #   FOCUS_SNAPSHOT_OUT     the directory the snapshot lane writes its renders into. See the
@@ -56,6 +60,11 @@ REPO_ROOT="${0:A:h}/.."
 cd "$REPO_ROOT" || exit 1
 
 RUN_TOKEN="${FOCUS_RUN_TOKEN:-$(date -u +%Y%m%dT%H%M%SZ)-$$}"
+
+# Whether the gate derived these paths itself, decided *here* — before the export below
+# overwrites the caller's view of FOCUS_DERIVED_DATA, and before `release_scratch` has to
+# answer "is this mine to delete?". A pinned path belongs to whoever pinned it.
+if [[ -n "${FOCUS_DERIVED_DATA:-}" ]]; then DD_IS_OURS=0; else DD_IS_OURS=1; fi
 
 DD="${FOCUS_DERIVED_DATA:-/tmp/focus-dd-$RUN_TOKEN}"
 LOG_DIR="${FOCUS_LOG_DIR:-/tmp/focus-gate-$RUN_TOKEN}"
@@ -73,6 +82,8 @@ export FOCUS_DERIVED_DATA="$DD"
 # single test*. A fixed path would therefore make every second gate run fail for a reason
 # that has nothing to do with the code. The gate owns the path: unique by default, and
 # removed first either way, so an explicitly pinned FOCUS_RESULT_BUNDLE is re-runnable too.
+if [[ -n "${FOCUS_RESULT_BUNDLE:-}" ]]; then RB_IS_OURS=0; else RB_IS_OURS=1; fi
+
 RB="${FOCUS_RESULT_BUNDLE:-$LOG_DIR/focus-e01-$RUN_TOKEN.xcresult}"
 rm -rf -- "$RB"
 
@@ -122,6 +133,128 @@ run_stage() {
     record "$name" "$?" "$log"
 }
 
+# Give this run's scratch back to the volume.
+#
+# Incident inc-01: the disk hit ENOSPC mid-epic and Bash could not create so much as a tool
+# output file. The gate's contribution to that was structural rather than incidental. Giving
+# every invocation its own derived-data tree is what stops two runs braiding their evidence
+# together — but it also meant every invocation left three quarters of a gigabyte behind for
+# ever, and nine green runs is seven gigabytes. The failure mode that buys is the worst one a
+# gate has: a build that dies on a full volume does not fail a check, it produces no exit
+# status at all, so the run reports no failing stage and no verdict rather than a red one.
+#
+# So a run that owns its scratch frees it, under three bounds:
+#
+#   * only paths the gate derived from the run token. A caller who pinned FOCUS_DERIVED_DATA
+#     or FOCUS_RESULT_BUNDLE asked for that path deliberately and gets it back untouched —
+#     deleting a warm tree somebody else is using is the same contamination in reverse.
+#   * never the log directory. The stage logs *are* the evidence, they are kilobytes, and
+#     they are what a human reads afterwards. Only the derived data and the result bundle go,
+#     and both are regenerable by construction.
+#   * only after a green run. A red one keeps everything, because the inside of a failed
+#     build is exactly the thing you then need to look at.
+#
+# FOCUS_KEEP_DERIVED_DATA=1 keeps it either way, for an inner loop that wants a warm tree
+# without pinning a path two runs could then share.
+release_scratch() {
+    local verdict="$1"
+
+    if [[ -n "${FOCUS_KEEP_DERIVED_DATA:-}" ]]; then
+        print "GATE scratch kept (FOCUS_KEEP_DERIVED_DATA is set): $DD"
+        return 0
+    fi
+    if [[ "$verdict" == "fail" ]]; then
+        print "GATE scratch kept for the failure: $DD"
+        return 0
+    fi
+
+    if (( DD_IS_OURS )) && [[ -d "$DD" ]]; then
+        rm -rf -- "$DD" && print "GATE freed this run's derived data: $DD"
+    elif (( ! DD_IS_OURS )); then
+        print "GATE derived data was pinned by the caller and is left alone: $DD"
+    fi
+    if (( RB_IS_OURS )) && [[ -e "$RB" ]]; then
+        rm -rf -- "$RB" && print "GATE freed this run's result bundle: $RB"
+    fi
+    print "GATE logs kept: $LOG_DIR"
+    return 0
+}
+
+# Packaging — the assertions exit status cannot make (e02 R-15, probes P-66a/P-66b).
+#
+# `CFBundleURLTypes` is an array of dictionaries, which no `INFOPLIST_KEY_*` build setting can
+# express, so it ships as a partial `Config/FocusSentinel-Info.plist` merged with the generated
+# one. Measured: putting that partial file in `App/` instead builds **green** and still gets it
+# wrong — `App/` is a `PBXFileSystemSynchronizedRootGroup`, so the plist joins Copy Bundle
+# Resources, the log gains `warning: The Copy Bundle Resources build phase contains this
+# target's Info.plist file …`, and the product ships a second, misleading `Info.plist` inside
+# `Contents/Resources/`. `EXCLUDED_SOURCE_FILE_NAMES` does not suppress it.
+#
+# A green build is therefore not evidence that the packaging is right. These three reads are:
+# the warning is absent from both build logs, neither product has a stray resource plist, and
+# the merged plist still carries the scheme on both configurations.
+check_packaging() {
+    local rc=0 config log app warnings key
+    for config in Debug Release; do
+        if [[ "$config" == "Debug" ]]; then
+            log="$LOG_DIR/focus-build.log"
+        else
+            log="$LOG_DIR/focus-build-release.log"
+        fi
+        app="$DD/Build/Products/$config/FocusSentinel.app"
+
+        if [[ ! -f "$log" ]]; then
+            print -u2 "FAIL [$config] no build log at $log"
+            rc=1
+            continue
+        fi
+
+        warnings=$(grep -c "Copy Bundle Resources build phase contains" "$log" 2>/dev/null)
+        if [[ "$warnings" != "0" ]]; then
+            print -u2 "FAIL [$config] $warnings Copy-Bundle-Resources Info.plist warning(s) in $log"
+            print -u2 "    The partial plist has drifted back inside the synchronized App/ group."
+            print -u2 "    It belongs at Config/FocusSentinel-Info.plist (plan R-15, probe P-66b)."
+            rc=1
+        else
+            print "ok   [$config] no Copy-Bundle-Resources Info.plist warning"
+        fi
+
+        if [[ ! -d "$app" ]]; then
+            print -u2 "FAIL [$config] no app bundle at $app"
+            rc=1
+            continue
+        fi
+
+        if [[ -e "$app/Contents/Resources/Info.plist" ]]; then
+            print -u2 "FAIL [$config] the product ships a stray Contents/Resources/Info.plist"
+            rc=1
+        else
+            print "ok   [$config] Contents/Resources holds no Info.plist"
+            print "     $(ls -1 -- "$app/Contents/Resources" | tr '\n' ' ')"
+        fi
+
+        if /usr/libexec/PlistBuddy -c 'Print :CFBundleURLTypes:0:CFBundleURLSchemes:0' \
+            "$app/Contents/Info.plist" 2>/dev/null | grep -qx 'focus'; then
+            print "ok   [$config] the merged Info.plist declares the focus scheme"
+        else
+            print -u2 "FAIL [$config] the merged Info.plist does not declare the focus scheme"
+            rc=1
+        fi
+
+        # The generated keys have to survive the merge too — that is the half P-66 measured and
+        # the half a hand-written plist would silently take away.
+        for key in CFBundleDisplayName LSMinimumSystemVersion NSPrincipalClass CFBundleIdentifier; do
+            if /usr/libexec/PlistBuddy -c "Print :$key" "$app/Contents/Info.plist" > /dev/null 2>&1; then
+                print "ok   [$config] the merged Info.plist still carries $key"
+            else
+                print -u2 "FAIL [$config] the merged Info.plist lost the generated key $key"
+                rc=1
+            fi
+        done
+    done
+    return $rc
+}
+
 # The whole gate is a function rather than a `{ … }` block. A `{ … } > log` group is not a
 # subshell, so an `exit` inside it terminates the script outright — which is what used to
 # happen here, and it meant the summary table was written to the log and then never echoed:
@@ -159,6 +292,10 @@ gate() {
     run_stage "build-release" "$LOG_DIR/focus-build-release.log" \
         xcodebuild -workspace Focus.xcworkspace -scheme FocusSentinel \
         -configuration Release -destination "$DESTINATION" -derivedDataPath "$DD" build
+
+    # 6a — packaging, read from the two logs and the two products stages 5 and 6 just made.
+    # Zero grants, and it catches the one failure a green build cannot (see check_packaging).
+    run_stage "packaging" "$LOG_DIR/focus-packaging.log" check_packaging
 
     # 7 — the headless unit lane, the only lane that compiles String Catalogs
     rm -rf -- "$RB"
@@ -261,6 +398,7 @@ collect_evidence() {
         "focus-strings.log:strings.log"
         "focus-build.log:build-debug.log"
         "focus-build-release.log:build-release.log"
+        "focus-packaging.log:packaging.log"
         "focus-test.log:test.log"
         "focus-entitlements.log:entitlements.txt"
         "focus-entitlements-release.log:entitlements-release.txt"
@@ -298,6 +436,12 @@ collect_evidence() {
     print "absent when they do not. That absence never blocks the epic."
 }
 
+# An interrupted run has no verdict and no reader, and the interruption is quite likely to
+# have been the full volume itself. Free its scratch on the way out rather than leaving the
+# largest object of the run behind at the worst possible moment.
+trap 'release_scratch aborted; exit 130' INT
+trap 'release_scratch aborted; exit 143' TERM
+
 gate > "$GATE_LOG" 2>&1
 gate_rc=$?
 
@@ -310,6 +454,15 @@ cat -- "$GATE_LOG"
 # gate.log is copied last, because until now it was still being written.
 if [[ -n "${FOCUS_EVIDENCE_DIR:-}" ]]; then
     cp -- "$GATE_LOG" "$FOCUS_EVIDENCE_DIR/gate.log"
+fi
+
+# Last of all, and only now: every stage, the packaging reads, the entitlement checks and both
+# self-checks have finished with the build products, and the evidence set has been copied out
+# of the log directory, which this never touches.
+if (( gate_rc == 0 )); then
+    release_scratch pass
+else
+    release_scratch fail
 fi
 
 exit $gate_rc

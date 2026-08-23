@@ -6,6 +6,12 @@ import SwiftUI
 /// makes sense in the cockpit has nothing to say about the order inside a Settings tab.
 public enum FocusSurface: String, Sendable, CaseIterable, Hashable, Identifiable {
     case cockpit
+    /// The global quick-capture panel, summoned by the hot key from anywhere on the Mac.
+    case quickCapture
+    /// The sheet that finishes a priority.
+    case completionSheet
+    /// The sheet an incoming focus:// handoff lands on.
+    case handoffConfirm
     case settingsGeneral
     case settingsPrivacy
 
@@ -20,12 +26,45 @@ public enum FocusSurface: String, Sendable, CaseIterable, Hashable, Identifiable
 /// declared here appears in exactly one surface's order — so a field that is added and never
 /// placed is a failure, not an invisible dead end.
 public enum FocusField: String, Sendable, CaseIterable, Hashable, Identifiable {
-    /// The cockpit's primary button.
+    /// The daily ritual banner's dismissal, above everything else while it is shown.
+    case cockpitRitualDismiss
+    /// The priority's own sentence, being fixed in place. Distinct from the capture field:
+    /// that one starts a new commitment, this one corrects the wording of the current.
+    case cockpitEditIntent
+    /// The cockpit's capture field, where the one thing is typed.
+    case cockpitCaptureField
+    /// The cockpit's Set Priority button.
+    case cockpitSetPriority
+    /// The definition-of-done field, directly under the priority hero.
+    case cockpitDoneWhen
+    /// The timebox control. One identity for the control, not one per preset button.
+    case cockpitTimebox
+    /// The field that adds a keyword to the context pack.
+    case cockpitContextKeyword
+    /// The button that opens the file importer for the context pack.
+    case cockpitContextAddFiles
+    /// The field that names what a new per-task rule is about.
+    case cockpitRuleSubject
+    /// The cockpit's primary action: finish the current priority.
+    case cockpitComplete
+    /// The cockpit's route to Settings.
     case cockpitOpenSettings
     /// The appearance preference picker in General settings.
     case generalAppearancePicker
     /// The "Reveal Data Store in Finder" button in Privacy settings.
     case privacyRevealStore
+    /// The quick-capture panel's field and its Set Priority button. Separate cases from the
+    /// cockpit's, because the panel is its own surface with its own Tab order and its own
+    /// Escape behaviour.
+    case quickCaptureField
+    case quickCaptureSet
+    /// The completion sheet's two optional reflection fields and its Complete button.
+    case completionShipped
+    case completionRestartPoint
+    case completionConfirm
+    /// The handoff sheet's two buttons — and there are only ever two.
+    case handoffReplace
+    case handoffCancel
 
     public var id: String { rawValue }
 }
@@ -66,9 +105,55 @@ public enum FocusTraversal {
     public static let surfaces: [SurfaceFocus] = [
         SurfaceFocus(
             surface: .cockpit,
-            order: [.cockpitOpenSettings],
-            defaultField: .cockpitOpenSettings,
+            // Top to bottom, in the order the column reads: the definition of done sits
+            // under the hero, the primary action under that, and the route to Settings last.
+            order: [
+                .cockpitRitualDismiss,
+                // The hero is the top of the column, so editing it in place is the first
+                // field under the banner and above the capture field.
+                .cockpitEditIntent,
+                .cockpitCaptureField,
+                .cockpitSetPriority,
+                .cockpitDoneWhen,
+                .cockpitTimebox,
+                .cockpitContextKeyword,
+                .cockpitContextAddFiles,
+                .cockpitRuleSubject,
+                .cockpitComplete,
+                .cockpitOpenSettings
+            ],
+            // **No default action, deliberately.** The cockpit is a non-modal window full of
+            // text fields, and Return is the key that commits the field you are in. A window
+            // default button collects every Return that no field claimed — so making Complete
+            // the default put finishing the work one stray keystroke away from typing, which
+            // is the exact rule `CommandRegistry` gives for binding Complete Priority to ⌃⌘⏎
+            // instead of ⌘⏎. Completion is reachable by click, by that key equivalent and by
+            // the File menu; a modal sheet, which the user opened on purpose, is where a
+            // default button belongs.
+            defaultField: nil,
             cancel: .none
+        ),
+        SurfaceFocus(
+            surface: .quickCapture,
+            order: [.quickCaptureField, .quickCaptureSet],
+            defaultField: .quickCaptureSet,
+            // Escape closes the panel without saving. It is a transient surface summoned over
+            // someone else's work, so backing out of it must be free.
+            cancel: .dismissWindow
+        ),
+        SurfaceFocus(
+            surface: .completionSheet,
+            order: [.completionShipped, .completionRestartPoint, .completionConfirm],
+            defaultField: .completionConfirm,
+            cancel: .dismissWindow
+        ),
+        SurfaceFocus(
+            surface: .handoffConfirm,
+            // Cancel first and Cancel by default: Return must never be the key that gives
+            // away the priority the user was already working on.
+            order: [.handoffCancel, .handoffReplace],
+            defaultField: .handoffCancel,
+            cancel: .dismissWindow
         ),
         SurfaceFocus(
             surface: .settingsGeneral,

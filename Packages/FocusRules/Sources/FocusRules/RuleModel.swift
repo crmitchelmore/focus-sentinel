@@ -34,7 +34,7 @@ public enum RuleVerdict: String, Sendable, CaseIterable, Codable, Hashable {
 
 /// A single stored rule, as a value.
 ///
-/// The persistent representation lives in `FocusSchemaV1.RelevanceRule`; this is the
+/// The persistent representation lives in `FocusSchemaV2.RelevanceRule`; this is the
 /// in-memory shape that rules are read and written as, so that rule logic never has to
 /// touch a `@Model` class or a `ModelContext`.
 public struct RelevanceRuleValue: Sendable, Equatable, Hashable, Codable, Identifiable {

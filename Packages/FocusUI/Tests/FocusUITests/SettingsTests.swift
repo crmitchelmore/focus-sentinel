@@ -66,7 +66,7 @@ struct SettingsTests {
         // A second write reuses the same row rather than accumulating settings rows.
         let later = stamp.addingTimeInterval(60)
         try FocusStore.setAppearancePreference(.light, in: context, now: later)
-        let rows = try context.fetch(FetchDescriptor<FocusSchemaV1.AppSettingsRecord>())
+        let rows = try context.fetch(FetchDescriptor<FocusSchemaV2.AppSettingsRecord>())
         #expect(rows.count == 1)
         #expect(FocusStore.appearancePreference(in: context) == .light)
         #expect(rows[0].schemaTouchedAt == later)

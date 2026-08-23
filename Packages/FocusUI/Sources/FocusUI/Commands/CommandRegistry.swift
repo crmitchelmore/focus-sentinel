@@ -64,6 +64,9 @@ public enum ShellActionEffect: Sendable, Equatable, Hashable {
     case closeKeyWindow
     /// Open one of the app's declared scenes.
     case openWindow(ShellWindow)
+    /// Ask the cockpit to do something. The cockpit window is brought forward first, so a
+    /// command is never a key press that appears to do nothing because the window was closed.
+    case priority(PriorityCommand)
 }
 
 /// A key equivalent, as a value the tests can compare and the help window can draw.
@@ -151,20 +154,49 @@ public struct CommandRegistry: Sendable, Equatable {
         self.actions = actions
     }
 
-    /// The actions e01 ships. Exactly two, and both are real:
+    /// Every action the shell ships, in menu order. All five are real:
     ///
+    /// * **New Priority ⌘N.** The app's primary act. It brings the cockpit forward and puts
+    ///   the cursor in the capture field.
+    /// * **Add Files to Context… ⌘O.** ⌘O is the Mac's "open something" key, and in an app
+    ///   with no documents the thing being opened is an attachment for the current priority.
+    /// * **Complete Priority ⌃⌘⏎.** Deliberately *not* ⌘⏎: plain Return commits the sentence
+    ///   in whatever field has focus, and finishing the thing you are working on must not be
+    ///   one modifier away from typing.
     /// * **Close Window ⌘W.** Not decoration. A `Window`-scene app that replaces `.newItem`
     ///   with nothing gets no File menu at all and leaves ⌘W unbound — a closable window
-    ///   with no keyboard close, which is a HIG defect. Registering this one action
+    ///   with no keyboard close, which is a HIG defect. Registering a File action
     ///   materialises the File menu; AppKit then adds its own `Close` and `Close All ⌥⌘W`
     ///   beneath it.
     /// * **Focus Sentinel Help ⌘?.** Replaces SwiftUI's default Help item, which points at a
     ///   help book that does not exist. A menu item that leads nowhere is a defect; this one
     ///   opens the in-app shortcut reference.
     ///
-    /// Nothing else is here, because nothing else has behaviour today. e02 adds
-    /// "New Priority… ⌘N" to the same `file` group.
+    /// `Complete Priority` reuses the cockpit button's own title key rather than declaring a
+    /// second one: the menu item and the button are the same action, and two keys reading
+    /// "Complete Priority" would be two things to keep in step for no gain.
     public static let shell = CommandRegistry(actions: [
+        ShellAction(
+            id: "priority.new",
+            titleKey: .commandNewPriority,
+            shortcut: Shortcut("n", modifiers: .command),
+            placement: .file,
+            effect: .priority(.newPriority)
+        ),
+        ShellAction(
+            id: "context.addFiles",
+            titleKey: .commandAddFilesToContext,
+            shortcut: Shortcut("o", modifiers: .command),
+            placement: .file,
+            effect: .priority(.addFilesToContext)
+        ),
+        ShellAction(
+            id: "priority.complete",
+            titleKey: .priorityActionComplete,
+            shortcut: Shortcut("\r", modifiers: [.control, .command]),
+            placement: .file,
+            effect: .priority(.completePriority)
+        ),
         ShellAction(
             id: "shell.closeWindow",
             titleKey: .commandCloseWindow,

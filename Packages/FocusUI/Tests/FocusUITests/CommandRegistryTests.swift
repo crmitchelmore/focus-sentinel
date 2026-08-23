@@ -16,10 +16,19 @@ import Testing
 struct CommandRegistryTests {
     private let registry = CommandRegistry.shell
 
-    @Test("e01 registers exactly the two actions that have real behaviour")
-    func registryHoldsTheTwoRealActions() {
-        #expect(registry.actions.count == 2)
-        #expect(registry.actions.map(\.id) == ["shell.closeWindow", "shell.help"])
+    @Test("the registry holds exactly the actions that have real behaviour, in menu order")
+    func registryHoldsTheRealActions() {
+        // Five, and every one of them does something: three priority commands, the window
+        // close the Court's HIG review required, and the Help item that replaces SwiftUI's
+        // link to a help book this app does not ship.
+        #expect(registry.actions.count == 5)
+        #expect(registry.actions.map(\.id) == [
+            "priority.new",
+            "context.addFiles",
+            "priority.complete",
+            "shell.closeWindow",
+            "shell.help"
+        ])
     }
 
     @Test("every action has a menu placement")
@@ -27,7 +36,12 @@ struct CommandRegistryTests {
         for action in registry.actions {
             #expect(MenuPlacement.allCases.contains(action.placement))
         }
-        #expect(registry.actions(in: .file).map(\.id) == ["shell.closeWindow"])
+        #expect(registry.actions(in: .file).map(\.id) == [
+            "priority.new",
+            "context.addFiles",
+            "priority.complete",
+            "shell.closeWindow"
+        ])
         #expect(registry.actions(in: .help).map(\.id) == ["shell.help"])
     }
 
@@ -82,6 +96,65 @@ struct CommandRegistryTests {
         #expect(window.id == "help")
     }
 
+    @Test("the priority commands are bound where a Mac user would look for them")
+    func priorityCommandsAreBound() {
+        // ⌘N is the app's primary act; ⌘O is the Mac's "open something" key, and in an app
+        // with no documents the thing being opened is an attachment.
+        #expect(registry.action(id: "priority.new")?.shortcut == Shortcut("n", modifiers: .command))
+        #expect(registry.action(id: "priority.new")?.effect == .priority(.newPriority))
+        #expect(registry.action(id: "context.addFiles")?.shortcut == Shortcut("o", modifiers: .command))
+        #expect(registry.action(id: "context.addFiles")?.effect == .priority(.addFilesToContext))
+
+        // Deliberately ⌃⌘⏎ and not ⌘⏎: plain Return commits whatever field has focus, and
+        // finishing the thing you are working on must not be one modifier away from typing.
+        let complete = registry.action(id: "priority.complete")
+        #expect(complete?.shortcut == Shortcut("\r", modifiers: [.control, .command]))
+        #expect(complete?.effect == .priority(.completePriority))
+        #expect(complete?.shortcut?.glyphs == "⌃⌘↩")
+
+        // The menu item and the cockpit button are the same action, so they share one title
+        // key rather than two keys that have to be kept in step.
+        #expect(complete?.titleKey == .priorityActionComplete)
+    }
+
+    @Test("every priority command is reachable from the menu bar")
+    func everyPriorityCommandIsBound() {
+        let commanded = registry.actions.compactMap { action -> PriorityCommand? in
+            guard case .priority(let command) = action.effect else { return nil }
+            return command
+        }
+        #expect(Set(commanded) == Set(PriorityCommand.allCases))
+    }
+
+    @Test("a command sent while nothing is listening is delivered when something is")
+    @MainActor
+    func commandCentreBuffersUntilTheCockpitExists() {
+        // ⌘N with the cockpit closed opens the window and *then* wants the capture field. The
+        // window takes a run-loop turn to exist, so the command waits for it rather than being
+        // dropped on the floor.
+        let centre = FocusCommandCenter()
+        #expect(!centre.isConnected)
+
+        centre.send(.newPriority)
+        var received: [PriorityCommand] = []
+        centre.register { received.append($0) }
+
+        #expect(centre.isConnected)
+        #expect(received == [.newPriority])
+
+        centre.send(.completePriority)
+        #expect(received == [.newPriority, .completePriority])
+
+        // Only the most recent unheard command is kept: someone who presses ⌘N and then ⌘O
+        // before the window appears meant the second one.
+        centre.unregister()
+        centre.send(.newPriority)
+        centre.send(.addFilesToContext)
+        var later: [PriorityCommand] = []
+        centre.register { later.append($0) }
+        #expect(later == [.addFilesToContext])
+    }
+
     @Test("shortcut glyphs are drawn the way the Mac draws them")
     func shortcutGlyphsAreCorrect() {
         #expect(Shortcut("w", modifiers: .command).glyphs == "⌘W")
@@ -112,6 +185,9 @@ struct CommandRegistryTests {
         }
         #expect(ShellStrings.string(.commandCloseWindow) == "Close Window")
         #expect(ShellStrings.string(.commandHelp) == "Focus Sentinel Help")
+        #expect(ShellStrings.string(.commandNewPriority) == "New Priority")
+        #expect(ShellStrings.string(.commandAddFilesToContext) == "Add Files to Context…")
+        #expect(ShellStrings.string(.priorityActionComplete) == "Complete Priority")
     }
 
     @Test("every window the shell can open has a title key")

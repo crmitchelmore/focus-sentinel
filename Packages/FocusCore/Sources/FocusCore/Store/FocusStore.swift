@@ -43,8 +43,12 @@ public enum FocusStore {
     }
 
     /// The schema this build understands.
+    ///
+    /// v2 since e02. A store written by v1 is brought forward by `FocusMigrationPlan`'s one
+    /// custom stage on the way in, so this is the only place the current version is named and
+    /// every caller gets the migration for free.
     public static var schema: Schema {
-        Schema(versionedSchema: FocusSchemaV1.self)
+        Schema(versionedSchema: FocusSchemaV2.self)
     }
 
     /// Build a container for the given kind of storage.

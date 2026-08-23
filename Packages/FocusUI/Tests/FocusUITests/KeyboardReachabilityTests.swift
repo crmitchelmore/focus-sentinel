@@ -33,11 +33,23 @@ struct KeyboardReachabilityTests {
         }
     }
 
-    @Test("every action carries a discoverable key equivalent in e01")
+    @Test("every action carries a discoverable key equivalent")
     func everyActionIsBound() {
-        // Per the Court's ruling not every action needs a shortcut — but both of e01's do,
-        // and losing one would be a regression rather than a design change.
+        // Per the Court's ruling not every action needs a shortcut — but every one the shell
+        // ships today does, and losing one would be a regression rather than a design change.
         #expect(registry.actions.allSatisfy { $0.shortcut != nil })
+    }
+
+    @Test("a priority command reaches a surface that answers it")
+    func priorityCommandsHaveASurface() {
+        // The other half of "reachable": a key equivalent that arrives somewhere nothing is
+        // listening is a shortcut in the reference and a dead end in the app. Every priority
+        // command is answered by the cockpit, whose focus contract names the field each one
+        // lands in.
+        let cockpit = FocusTraversal.contract(for: .cockpit)
+        #expect(cockpit.order.contains(.cockpitCaptureField))
+        #expect(cockpit.order.contains(.cockpitComplete))
+        #expect(cockpit.order.contains(.cockpitContextAddFiles))
     }
 
     // MARK: - The traversal model
@@ -122,11 +134,21 @@ struct KeyboardReachabilityTests {
         #expect(FocusTraversal.contract(for: .cockpit).cancel == .none)
         #expect(FocusTraversal.contract(for: .settingsGeneral).cancel == .dismissWindow)
         #expect(FocusTraversal.contract(for: .settingsPrivacy).cancel == .dismissWindow)
+        // The quick-capture panel is summoned over someone else's work: backing out of it
+        // without saving anything must always be one key away.
+        #expect(FocusTraversal.contract(for: .quickCapture).cancel == .dismissWindow)
+        // A sheet always has a way out that changes nothing.
+        #expect(FocusTraversal.contract(for: .completionSheet).cancel == .dismissWindow)
     }
 
     @Test("Return activates the primary action wherever a surface has one")
     func defaultActionsAreBound() {
-        #expect(FocusTraversal.contract(for: .cockpit).defaultField == .cockpitOpenSettings)
+        // The cockpit declares **no** default action. It is a non-modal window full of text
+        // fields, and a window default button collects every Return no field claimed — so
+        // "Return finishes the priority" is one stray keystroke away from typing. That is the
+        // same rule `CommandRegistry` states when it binds Complete Priority to ⌃⌘⏎ rather
+        // than ⌘⏎, and the cockpit now keeps it too.
+        #expect(FocusTraversal.contract(for: .cockpit).defaultField == nil)
         #expect(FocusTraversal.contract(for: .settingsPrivacy).defaultField == .privacyRevealStore)
         // General settings has no primary action — a picker is not something Return
         // "confirms" — so it declares none rather than inventing one.
@@ -135,7 +157,20 @@ struct KeyboardReachabilityTests {
 
     @Test("the cockpit and both Settings tabs each have a focusable element")
     func everyShellSurfaceIsReachable() {
-        #expect(FocusTraversal.firstField(in: .cockpit) == .cockpitOpenSettings)
+        // The ritual banner sits above everything else while it is shown, so it comes first
+        // in the order. The hero is the top of the column under it, so correcting the
+        // priority's own wording in place comes next; the capture field — which starts a
+        // *new* commitment rather than fixing the current one — follows, and is where focus
+        // lands on an ordinary day when neither the banner nor the editor is up.
+        #expect(FocusTraversal.firstField(in: .cockpit) == .cockpitRitualDismiss)
+        #expect(
+            FocusTraversal.next(after: .cockpitRitualDismiss, in: .cockpit) == .cockpitEditIntent
+        )
+        #expect(
+            FocusTraversal.next(after: .cockpitEditIntent, in: .cockpit) == .cockpitCaptureField
+        )
+        #expect(FocusTraversal.firstField(in: .quickCapture) == .quickCaptureField)
+        #expect(FocusTraversal.firstField(in: .completionSheet) == .completionShipped)
         #expect(FocusTraversal.firstField(in: .settingsGeneral) == .generalAppearancePicker)
         #expect(FocusTraversal.firstField(in: .settingsPrivacy) == .privacyRevealStore)
     }

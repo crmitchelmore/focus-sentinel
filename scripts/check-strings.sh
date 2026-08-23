@@ -20,7 +20,7 @@
 #
 # ## The key convention this lint depends on
 #
-# A catalog key begins `shell.`, `settings.` or `status.` **and** has at least three
+# A catalog key begins with one of the namespaces in NAMESPACES **and** has at least three
 # dot-separated components: `<namespace>.<surface>.<element>`. That is what makes check 2
 # decidable — without it a lint cannot tell the key `shell.help.heading` from the SF Symbol
 # name `cup.and.saucer.fill`, nor from the action identifier `shell.closeWindow`, and would
@@ -65,7 +65,14 @@ SOURCE_ROOTS=(App Packages/FocusCore/Sources Packages/FocusRules/Sources
 
 # `Text(` is matched only when the literal follows immediately, so `Text(verbatim: "…")` and
 # `Text(someResource)` are untouched.
-LITERAL_PATTERN='(Text|Label|Button|Picker|Toggle|TextField|Stepper)\("|\.(navigationTitle|help|accessibilityLabel|accessibilityHint|accessibilityValue|windowTitle)\("'
+#
+# Two of these are not SwiftUI at all, and e02 is why (R-29). `setActionName("…")` is the
+# string the **system Edit menu** draws after "Undo"; it is the most user-visible text in the
+# undo journal and it is set from `FocusCore`, where nobody would think to look for prose.
+# `placeholderString = "…"` is an AppKit text field's prompt — the capture panel is an
+# `NSPanel`, so its placeholder can bypass every SwiftUI-shaped pattern above. Both are drawn
+# to a person, so both must be String Catalog keys.
+LITERAL_PATTERN='(Text|Label|Button|Picker|Toggle|TextField|Stepper)\("|\.(navigationTitle|help|accessibilityLabel|accessibilityHint|accessibilityValue|windowTitle)\("|setActionName\("|placeholderString[[:space:]]*=[[:space:]]*"'
 
 hits=$(grep -rnE "$LITERAL_PATTERN" "${SOURCE_ROOTS[@]}" --include='*.swift' 2>/dev/null \
     | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|///|\*|/\*)')
@@ -90,7 +97,7 @@ import sys
 
 root = sys.argv[1]
 
-NAMESPACES = ("shell.", "settings.", "status.")
+NAMESPACES = ("shell.", "settings.", "status.", "priority.", "capture.", "context.", "handoff.", "undo.")
 
 # module name -> (catalog path, source directory)
 MODULES = {

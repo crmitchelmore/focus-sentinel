@@ -8,13 +8,31 @@
 #   package        may import                                  must never import
 #   ------------   -----------------------------------------   -------------------------------------------------
 #   FocusCore      Foundation, SwiftData, os                    AppKit, SwiftUI, networking, any sibling
-#   FocusRules     Foundation, FocusCore                        AppKit, SwiftUI, networking, Classify/Sensing/UI
+#   FocusRules     Foundation, SwiftData, FocusCore             AppKit, SwiftUI, networking, Classify/Sensing/UI
 #   FocusClassify  Foundation, NaturalLanguage, Core, Rules     ANY networking, AppKit, SwiftUI, Sensing, UI
 #   FocusSensing   Foundation, AppKit, CoreGraphics, IOKit,     SwiftUI, networking, Classify, Rules, UI
-#                  FocusCore
-#   FocusUI        SwiftUI, AppKit, FocusCore                   networking, Sensing, Classify, Rules
+#                  Carbon.HIToolbox, FocusCore
+#   FocusUI        SwiftUI, AppKit, Observation, QuickLook,     SwiftData, networking, Sensing, Classify, Rules
+#                  UniformTypeIdentifiers, FocusCore
 #
-# Three further assertions:
+# The three e02 additions are rulings, not conveniences (plan R-14):
+#
+#   * **`SwiftData` for `FocusRules`.** The `RuleStore` protocol e01 shipped needed a durable
+#     implementation, and putting it anywhere else would mean a second package knowing the rule
+#     vocabulary.
+#   * **`Carbon.HIToolbox` for `FocusSensing`**, in exactly one file. A global hot key is a
+#     platform input adapter, which is what this package is for; the file-level allowlist and
+#     its self-limiting assertion live in `check-forbidden.sh` (R-13).
+#   * **`QuickLook` and `UniformTypeIdentifiers` for `FocusUI`.** `.quickLookPreview(_:in:)` is
+#     the `_QuickLook_SwiftUI` cross-import overlay and appears only with `import QuickLook`
+#     (P-62) — a boundary fact, not an implementation detail.
+#
+# And one **subtraction**, which is the point of R-24: `FocusUI` may not import `SwiftData`.
+# e01 left that unstated because nothing yet tempted the UI to open a store; e02 gives it a
+# cockpit full of persisted values and a `PriorityActing` protocol to reach them through, so
+# the rule stops being aspirational and becomes a lint.
+#
+# Four further assertions:
 #
 #   * **Zero third-party code.** Every declared package dependency must be a local
 #     `fileSystem` path to a sibling inside `Packages/`. A remote dependency — a URL or a
@@ -24,6 +42,9 @@
 #     permitted set, not merely be a subset of it.
 #   * **FocusClassify cannot reach the network at the binary level.** When a build product
 #     exists, `nm -u FocusClassify.o` must contain no networking symbol at all.
+#   * **No package imports a framework its row does not name.** The forbidden list catches the
+#     imports somebody thought of; this catches the ones nobody did. A new framework in a
+#     package is a boundary decision, so it fails the gate until the table above says so.
 set -u
 
 REPO_ROOT="${0:A:h}/.."
@@ -51,7 +72,21 @@ FORBIDDEN_IMPORTS[FocusCore]="AppKit SwiftUI Cocoa Network CFNetwork NetworkExte
 FORBIDDEN_IMPORTS[FocusRules]="AppKit SwiftUI Cocoa Network CFNetwork NetworkExtension FocusClassify FocusSensing FocusUI"
 FORBIDDEN_IMPORTS[FocusClassify]="AppKit SwiftUI Cocoa Network CFNetwork NetworkExtension FocusSensing FocusUI"
 FORBIDDEN_IMPORTS[FocusSensing]="SwiftUI Network CFNetwork NetworkExtension FocusClassify FocusRules FocusUI"
-FORBIDDEN_IMPORTS[FocusUI]="Network CFNetwork NetworkExtension FocusSensing FocusClassify FocusRules"
+# SwiftData is on FocusUI's forbidden list from e02, and it is the enforcement point for R-24:
+# the cockpit renders a `CockpitState` value and calls a `PriorityActing` protocol, both
+# declared in `FocusCore`, and `App/PriorityHost.swift` is the only type that opens a store.
+# That is what keeps every surface in this package snapshot-testable with no container.
+FORBIDDEN_IMPORTS[FocusUI]="SwiftData Network CFNetwork NetworkExtension FocusSensing FocusClassify FocusRules"
+
+# The positive half of the matrix: every platform framework each package is permitted to
+# import. Sibling packages are handled by ALLOWED_PRODUCTS above and are added to this set per
+# package below, so a row here names frameworks only.
+typeset -A ALLOWED_FRAMEWORKS
+ALLOWED_FRAMEWORKS[FocusCore]="Foundation SwiftData os"
+ALLOWED_FRAMEWORKS[FocusRules]="Foundation SwiftData os"
+ALLOWED_FRAMEWORKS[FocusClassify]="Foundation NaturalLanguage os"
+ALLOWED_FRAMEWORKS[FocusSensing]="Foundation AppKit CoreGraphics IOKit Carbon.HIToolbox os"
+ALLOWED_FRAMEWORKS[FocusUI]="Foundation SwiftUI AppKit Observation QuickLook UniformTypeIdentifiers os"
 
 PACKAGES=(FocusCore FocusRules FocusClassify FocusSensing FocusUI)
 
@@ -138,6 +173,27 @@ else:
     done
     if [[ -n "$forbidden_hits" ]]; then
         print -u2 "$forbidden_hits"
+    fi
+
+    # The positive half: everything this package actually imports must be named by its row.
+    # `import Carbon.HIToolbox` is kept whole rather than truncated at the dot, because
+    # `Carbon` and `Carbon.HIToolbox` are exactly the distinction R-13 turns on.
+    imported=$(grep -rhE '^[[:space:]]*(@[A-Za-z_]+[[:space:]]+)?(public[[:space:]]+|internal[[:space:]]+|@_exported[[:space:]]+)?import[[:space:]]+[A-Za-z_]' \
+        "$dir/Sources" --include='*.swift' 2>/dev/null \
+        | sed -E 's/.*import[[:space:]]+//; s/[[:space:]].*//' | sort -u)
+
+    permitted_modules=(${=ALLOWED_FRAMEWORKS[$package]} ${=ALLOWED_PRODUCTS[$package]} "$package")
+    unlisted=()
+    for module in ${(f)imported}; do
+        [[ -z "$module" ]] && continue
+        (( ${permitted_modules[(Ie)$module]} )) || unlisted+=("$module")
+    done
+
+    printf '%-16s %-28s %s\n' "  frameworks" "${ALLOWED_FRAMEWORKS[$package]}" "$(print -r -- ${(j:, :)${(f)imported}})"
+
+    if (( ${#unlisted} )); then
+        fail "$package imports ${(j:, :)unlisted}, which the R-14 matrix does not permit"
+        print -u2 "    Add the framework to ALLOWED_FRAMEWORKS[$package] deliberately, or remove the import."
     fi
 done
 
