@@ -1,0 +1,61 @@
+{
+  "id": "seq-0006",
+  "note": "escalationDwell, on the heuristic route where the band actually depends on dwell. At two hundred and ninety-nine seconds the evidence bands medium; two seconds later it bands high. Neither speaks, because the drift accumulator has only just started counting — which is the point worth seeing: the band is a statement about the strength of the evidence and the eligibility is a separate question with its own seven guards.",
+  "snapshot": {
+    "priority": {
+      "intent": "Write the Q3 proposal for Acme",
+      "doneWhen": "sent to Dana",
+      "revision": 1
+    },
+    "contextPack": [
+      {
+        "kind": "app",
+        "value": "com.apple.Pages"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "advanceSeconds": 0,
+      "bundleID": "com.microsoft.Excel",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "stage": "heuristic",
+        "eligibility": "suppressed:verdictUncertain",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 299,
+      "bundleID": "com.microsoft.Excel",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "heuristic",
+        "band": "medium",
+        "eligibility": "suppressed:withinGracePeriod",
+        "clauses": [
+          "sustainedDwell"
+        ],
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 2,
+      "bundleID": "com.microsoft.Excel",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "heuristic",
+        "band": "high",
+        "eligibility": "suppressed:withinGracePeriod",
+        "clauses": [
+          "sustainedDwell"
+        ],
+        "accumulatedSeconds": 2
+      }
+    }
+  ],
+  "expectMandates": 0
+}

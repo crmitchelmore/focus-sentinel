@@ -1,0 +1,70 @@
+{
+  "id": "seq-0012",
+  "note": "D-05's second case: docs for forty seconds, then short-form video for a hundred. The preceding subject was never judged relevant, so there is no return anchor, the threshold stays at ninety, and one mandate is issued at the first observation past it. Comparing this with seq-0010 is the whole of F-49: the same hundred seconds of detour, and the difference is whether there was somewhere to be detouring FROM.",
+  "snapshot": {
+    "priority": {
+      "intent": "Write the Q3 proposal for Acme",
+      "doneWhen": "sent to Dana",
+      "revision": 1
+    },
+    "contextPack": [
+      {
+        "kind": "app",
+        "value": "com.apple.Pages"
+      }
+    ],
+    "rules": [
+      {
+        "authority": "global",
+        "subjectKind": "app",
+        "subject": "com.example.ShortClips",
+        "verdict": "unrelated"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "advanceSeconds": 0,
+      "bundleID": "com.apple.Safari",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "stage": "seedFallback",
+        "eligibility": "suppressed:verdictUncertain",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 40,
+      "bundleID": "com.example.ShortClips",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:withinGracePeriod",
+        "clauses": [
+          "userRule"
+        ],
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 100,
+      "bundleID": "com.example.ShortClips",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "sustained",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "mandated",
+        "clauses": [
+          "userRule",
+          "sustainedDwell"
+        ],
+        "accumulatedSeconds": 100
+      }
+    }
+  ],
+  "expectMandates": 1
+}

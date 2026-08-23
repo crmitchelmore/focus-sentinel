@@ -12,6 +12,9 @@ public struct CorpusFile: Sendable, Equatable {
 /// The whole golden corpus: the four single-shot files, and the sequence fixtures beside them.
 public struct GoldenCorpus: Sendable, Equatable {
     public let files: [CorpusFile]
+    /// The replayable event streams beside the single-shot files. F-151's fixtures cannot
+    /// express time; these are what does (R-69).
+    public let sequences: [SequenceFixture]
     /// Committed files this directory did not hold.
     ///
     /// Recorded rather than thrown, because the corpus was committed **file by file** — the
@@ -27,6 +30,11 @@ public struct GoldenCorpus: Sendable, Equatable {
     public let digest: UInt64
 
     public var cases: [CorpusCase] { files.flatMap(\.cases) }
+
+    /// Single-shot cases plus sequence fixtures. The committed floor of 132 is over **both**,
+    /// because a corpus that could meet its total by dropping every sequence would not be able
+    /// to express time at all — and time is what F-48 and F-49 are made of.
+    public var caseCount: Int { cases.count + sequences.count }
 
     public var adversarial: [CorpusCase] { cases.filter { !$0.families.isEmpty } }
 
@@ -53,6 +61,20 @@ public struct GoldenCorpus: Sendable, Equatable {
                 reason: "holds \(file.cases.count) cases but its committed floor is \(file.floor)"
             )
         }
+        guard sequences.count >= EvaluationPolicy.sequenceFloor else {
+            throw CorpusDecodingError(
+                path: CorpusLoader.sequencesDirectoryName,
+                reason: "holds \(sequences.count) fixtures but the committed floor is "
+                    + "\(EvaluationPolicy.sequenceFloor)"
+            )
+        }
+        guard caseCount >= EvaluationPolicy.corpusFloor else {
+            throw CorpusDecodingError(
+                path: CorpusLoader.goldenCorpusDirectoryName,
+                reason: "holds \(caseCount) cases and sequences but the committed floor is "
+                    + "\(EvaluationPolicy.corpusFloor)"
+            )
+        }
     }
 }
 
@@ -67,6 +89,7 @@ public struct GoldenCorpus: Sendable, Equatable {
 /// tree, so the two digests agree by construction rather than by luck.
 public enum CorpusLoader {
     public static let goldenCorpusDirectoryName = "GoldenCorpus"
+    public static let sequencesDirectoryName = "sequences"
 
     /// Load and decode strictly.
     ///
@@ -105,13 +128,39 @@ public enum CorpusLoader {
             )
         }
 
+        var sequences: [SequenceFixture] = []
+        for (name, data) in try sequenceFiles(in: directory) {
+            hashed.append((name, data))
+            sequences.append(
+                try SequenceFixture.decode(try StrictObject.parse(data: data, path: name))
+            )
+        }
+
         let corpus = GoldenCorpus(
             files: files,
+            sequences: sequences,
             missingFiles: missing,
             digest: digest(over: hashed)
         )
         try validateIdentity(corpus)
         return corpus
+    }
+
+    /// Every sequence fixture, in sorted filename order so two loads agree.
+    static func sequenceFiles(in directory: URL) throws -> [(String, Data)] {
+        let sequenceDirectory = directory.appendingPathComponent(sequencesDirectoryName)
+        guard let contents = try? FileManager.default.contentsOfDirectory(
+            at: sequenceDirectory, includingPropertiesForKeys: nil
+        ) else {
+            return []
+        }
+        var loaded: [(String, Data)] = []
+        for url in contents.filter({ $0.pathExtension == "json" })
+            .sorted(by: { $0.lastPathComponent < $1.lastPathComponent }) {
+            guard let data = try optionalRead(url) else { continue }
+            loaded.append(("\(sequencesDirectoryName)/\(url.lastPathComponent)", data))
+        }
+        return loaded
     }
 
     /// The digest, in the one canonical order.
@@ -139,6 +188,9 @@ public enum CorpusLoader {
                 hashed.append((name, data))
             }
         }
+        for (name, data) in try sequenceFiles(in: directory) {
+            hashed.append((name, data))
+        }
         return digest(over: hashed)
     }
 
@@ -163,6 +215,14 @@ public enum CorpusLoader {
                 throw CorpusDecodingError(
                     path: testCase.file,
                     reason: "\(testCase.id) is used twice — ids are unique and stable forever"
+                )
+            }
+        }
+        for sequence in corpus.sequences {
+            guard seen.insert(sequence.id).inserted else {
+                throw CorpusDecodingError(
+                    path: sequencesDirectoryName,
+                    reason: "\(sequence.id) is used twice — ids are unique and stable forever"
                 )
             }
         }

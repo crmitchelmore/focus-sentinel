@@ -8,12 +8,23 @@ public struct CorpusPriority: Sendable, Equatable, Hashable {
     public let doneWhen: String?
     /// `FocusSchemaV3.PriorityTask.revision`. An edited priority is a different priority.
     public let revision: Int
+
+    public init(intent: String, doneWhen: String? = nil, revision: Int) {
+        self.intent = intent
+        self.doneWhen = doneWhen
+        self.revision = revision
+    }
 }
 
 /// One context-pack item, in the four kinds `ContextItemKind` knows.
 public struct CorpusContextItem: Sendable, Equatable, Hashable {
     public let kind: ContextItemKind
     public let value: String
+
+    public init(kind: ContextItemKind, value: String) {
+        self.kind = kind
+        self.value = value
+    }
 }
 
 /// One rule, on **two independent axes** exactly as `ScopedRuleValue` carries them (R-72).
@@ -27,6 +38,18 @@ public struct CorpusRule: Sendable, Equatable, Hashable {
     public let subjectKind: RuleSubjectKind
     public let subject: String
     public let verdict: PriorityRuleVerdict
+
+    public init(
+        authority: RuleAuthority,
+        subjectKind: RuleSubjectKind,
+        subject: String,
+        verdict: PriorityRuleVerdict
+    ) {
+        self.authority = authority
+        self.subjectKind = subjectKind
+        self.subject = subject
+        self.verdict = verdict
+    }
 }
 
 /// A persisted row carrying `scopeRaw == "session"`, planted to prove the builder **skips** it

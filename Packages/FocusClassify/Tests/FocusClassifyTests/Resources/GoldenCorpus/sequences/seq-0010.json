@@ -1,0 +1,104 @@
+{
+  "id": "seq-0010",
+  "note": "D-05's own worked example, and detourExtension's witness: IDE, then the documentation for a hundred seconds, then back to the IDE. An anchored detour gets a second grace period — an effective threshold of a hundred and eighty seconds — so the app says nothing at any step, and the return is recognised with a returnedToAnchor clause. Remove the extension and the hundred-second step mandates, which is precisely the false nudge D-05 ruled against.",
+  "snapshot": {
+    "priority": {
+      "intent": "Write the Q3 proposal for Acme",
+      "doneWhen": "sent to Dana",
+      "revision": 1
+    },
+    "contextPack": [
+      {
+        "kind": "app",
+        "value": "com.apple.dt.Xcode"
+      }
+    ],
+    "rules": [
+      {
+        "authority": "global",
+        "subjectKind": "app",
+        "subject": "com.apple.Safari",
+        "verdict": "unrelated"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "advanceSeconds": 0,
+      "bundleID": "com.apple.dt.Xcode",
+      "expect": {
+        "verdict": "relevant",
+        "drift": "aligned",
+        "stage": "contextPack",
+        "band": "high",
+        "eligibility": "suppressed:verdictRelevant",
+        "clauses": [
+          "contextItem"
+        ],
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 40,
+      "bundleID": "com.apple.Safari",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:withinGracePeriod",
+        "clauses": [
+          "userRule"
+        ],
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 100,
+      "bundleID": "com.apple.Safari",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:withinGracePeriod",
+        "clauses": [
+          "userRule"
+        ],
+        "accumulatedSeconds": 100
+      }
+    },
+    {
+      "advanceSeconds": 30,
+      "bundleID": "com.apple.dt.Xcode",
+      "expect": {
+        "verdict": "relevant",
+        "drift": "grace",
+        "stage": "contextPack",
+        "band": "high",
+        "eligibility": "suppressed:verdictRelevant",
+        "clauses": [
+          "contextItem"
+        ],
+        "accumulatedSeconds": 130
+      }
+    },
+    {
+      "advanceSeconds": 30,
+      "bundleID": "com.apple.dt.Xcode",
+      "expect": {
+        "verdict": "relevant",
+        "drift": "aligned",
+        "stage": "contextPack",
+        "band": "high",
+        "eligibility": "suppressed:verdictRelevant",
+        "clauses": [
+          "contextItem",
+          "returnedToAnchor"
+        ],
+        "accumulatedSeconds": 0
+      }
+    }
+  ],
+  "expectMandates": 0
+}

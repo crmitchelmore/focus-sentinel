@@ -1,0 +1,67 @@
+{
+  "id": "seq-0001",
+  "note": "The quiet case, and the one a drift detector has to get right before any other: a person working in the application they named, for two minutes, with the engine saying nothing at all. Drift never leaves aligned and the accumulator never leaves zero. Past returnAnchorDwell the transition window recognises the subject as somewhere they ARE, and the explanation gains a returnedToAnchor clause without the verdict moving — an anchor may only ever extend a grace period, never create one.",
+  "snapshot": {
+    "priority": {
+      "intent": "Write the Q3 proposal for Acme",
+      "doneWhen": "sent to Dana",
+      "revision": 1
+    },
+    "contextPack": [
+      {
+        "kind": "app",
+        "value": "com.apple.Pages"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "advanceSeconds": 0,
+      "bundleID": "com.apple.Pages",
+      "expect": {
+        "verdict": "relevant",
+        "drift": "aligned",
+        "stage": "contextPack",
+        "band": "high",
+        "eligibility": "suppressed:verdictRelevant",
+        "clauses": [
+          "contextItem"
+        ],
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 60,
+      "bundleID": "com.apple.Pages",
+      "expect": {
+        "verdict": "relevant",
+        "drift": "aligned",
+        "stage": "contextPack",
+        "band": "high",
+        "eligibility": "suppressed:verdictRelevant",
+        "clauses": [
+          "contextItem",
+          "returnedToAnchor"
+        ],
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 60,
+      "bundleID": "com.apple.Pages",
+      "expect": {
+        "verdict": "relevant",
+        "drift": "aligned",
+        "stage": "contextPack",
+        "band": "high",
+        "eligibility": "suppressed:verdictRelevant",
+        "clauses": [
+          "contextItem",
+          "returnedToAnchor"
+        ],
+        "accumulatedSeconds": 0
+      }
+    }
+  ],
+  "expectMandates": 0
+}

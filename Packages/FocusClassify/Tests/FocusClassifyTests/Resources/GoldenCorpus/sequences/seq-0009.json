@@ -1,0 +1,74 @@
+{
+  "id": "seq-0009",
+  "note": "returnAnchorDwell, below. Twenty-nine seconds in the work is not yet somewhere the person WAS, so the transition window finds no anchor, the effective threshold stays at ninety, and ninety-one seconds of detour mandates. Set the constant to fifteen and this case goes silent, which is what makes it the constant's witness.",
+  "snapshot": {
+    "priority": {
+      "intent": "Write the Q3 proposal for Acme",
+      "doneWhen": "sent to Dana",
+      "revision": 1
+    },
+    "contextPack": [
+      {
+        "kind": "app",
+        "value": "com.apple.dt.Xcode"
+      }
+    ],
+    "rules": [
+      {
+        "authority": "global",
+        "subjectKind": "app",
+        "subject": "com.valvesoftware.steam",
+        "verdict": "unrelated"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "advanceSeconds": 0,
+      "bundleID": "com.apple.dt.Xcode",
+      "expect": {
+        "verdict": "relevant",
+        "drift": "aligned",
+        "stage": "contextPack",
+        "band": "high",
+        "eligibility": "suppressed:verdictRelevant",
+        "clauses": [
+          "contextItem"
+        ],
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 29,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:withinGracePeriod",
+        "clauses": [
+          "userRule"
+        ],
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 91,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "sustained",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "mandated",
+        "clauses": [
+          "userRule",
+          "sustainedDwell"
+        ],
+        "accumulatedSeconds": 91
+      }
+    }
+  ],
+  "expectMandates": 1
+}
