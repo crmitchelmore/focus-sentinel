@@ -165,8 +165,8 @@ final class SensingHost {
         activity.onActivation = { [weak self] activation in
             self?.receive(activation)
         }
-        lifecycle.onChange = { [weak self] _, to in
-            self?.lifecycleChanged(to: to)
+        lifecycle.onChange = { [weak self] from, to in
+            self?.lifecycleChanged(from: from.conditions, to: to.conditions)
         }
         media.onChange = { [weak self] activity in
             self?.mediaChanged(to: activity)
@@ -572,18 +572,40 @@ final class SensingHost {
         }
     }
 
-    private func lifecycleChanged(to state: SystemLifecycle) {
-        let previous = lifecycleState
+    /// Carry the session's lifecycle-owned pause causes from one condition set to the next.
+    ///
+    /// The reconciliation is a **set difference**, computed by a pure function in `FocusCore`,
+    /// and it is deliberately not driven by the collapsed `SystemLifecycle`. A Mac can hold
+    /// several conditions at once — locked *and* asleep — and the collapse reports only the
+    /// most severe of them, so a handler fed states alone acquires two causes and lifts one,
+    /// stranding the other on a Mac that has since woken and unlocked. A stranded cause is not
+    /// a cosmetic defect: `resumed(cause:)` is authorised by the cause that paused (R-45), and
+    /// nothing in the app owns `.systemAsleep`, so the session would stay paused for good.
+    ///
+    /// Causes belonging to the user, the global switch and the sensitivity gate are outside
+    /// the condition→cause mapping entirely, so no event produced here can touch one.
+    private func lifecycleChanged(
+        from previousConditions: Set<LifecycleCondition>,
+        to conditions: Set<LifecycleCondition>
+    ) {
+        let previousState = lifecycleState
+        let state = LifecycleReduction(conditions: conditions).state
         lifecycleState = state
-        record(kind: .displayInactive, detail: .tokens([.forLifecycle(state)]))
 
-        // Every non-active state pauses with **its own** cause, and the return to active
-        // resumes with that same value and no other — so an unlock lifts the lock's pause and
-        // leaves every other pause standing.
-        if let cause = state.pauseCause {
-            applyToSession(.paused(cause: cause))
-        } else if let lifted = previous.pauseCause {
-            applyToSession(.resumed(cause: lifted))
+        // One row per transition of the typed state. A condition change the collapse hides —
+        // the displays sleeping behind an already-locked screen — still moves the causes
+        // below; it just does not add a second row saying the same word twice.
+        if state != previousState {
+            record(kind: .displayInactive, detail: .tokens([.forLifecycle(state)]))
+        }
+
+        for event in LifecycleReducer.sessionEvents(from: previousConditions, to: conditions) {
+            applyToSession(event)
+        }
+
+        // R-50: the matrix is refreshed on wake and on resume from the global pause, never on
+        // a timer and never by asking.
+        if state.isActive, !previousState.isActive {
             refreshCapabilities()
         }
         onSensingChanged?()

@@ -428,7 +428,7 @@ struct LifecycleObserverTests {
         let distributed = RecordingNotificationCentre()
         let observer = Self.makeObserver(workspace: workspace, distributed: distributed)
         var changes: [SystemLifecycle] = []
-        observer.onChange = { _, to in changes.append(to) }
+        observer.onChange = { _, to in changes.append(to.state) }
         observer.start()
 
         workspace.post(
@@ -451,7 +451,7 @@ struct LifecycleObserverTests {
         let distributed = RecordingNotificationCentre()
         let observer = Self.makeObserver(workspace: workspace, distributed: distributed)
         var changes: [SystemLifecycle] = []
-        observer.onChange = { _, to in changes.append(to) }
+        observer.onChange = { _, to in changes.append(to.state) }
         observer.start()
 
         distributed.post(LifecycleObserver.screenIsLockedName)

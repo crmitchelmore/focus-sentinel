@@ -46,12 +46,21 @@ public final class LifecycleObserver {
     /// notifications.
     public var state: SystemLifecycle { reduction.state }
 
-    /// Called when — and only when — the typed state actually changes.
+    /// Called when — and only when — the **condition set** actually changes.
     ///
-    /// `SensingHost` turns this into `SessionEvent.paused(cause:)` and `resumed(cause:)`
-    /// carrying **that state's own** cause, so an unlock lifts the lock's pause and leaves
-    /// every other pause standing (R-45).
-    public var onChange: ((_ from: SystemLifecycle, _ to: SystemLifecycle) -> Void)?
+    /// It reports the two whole reductions rather than the two collapsed states, because
+    /// `SensingHost` turns them into `SessionEvent.paused(cause:)` and `resumed(cause:)`
+    /// through `LifecycleReducer.sessionEvents(from:to:)`, and that arithmetic is a set
+    /// difference. A collapsed `SystemLifecycle` cannot say what changed: a Mac that is both
+    /// locked and asleep reports only `systemAsleep`, so a handler fed states alone pauses
+    /// twice and resumes once and strands a cause on a Mac that has woken up (R-45).
+    ///
+    /// Firing on the *condition* set rather than on the collapsed state also means a change
+    /// that the collapse hides — the displays sleeping while the screen is already locked —
+    /// is delivered rather than swallowed. The two undocumented distributed inputs change no
+    /// condition, so they still fire nothing at all, which is what makes deleting them from
+    /// any input list leave behaviour identical.
+    public var onChange: ((_ from: LifecycleReduction, _ to: LifecycleReduction) -> Void)?
 
     public init(
         workspaceCentre: any NotificationObserving,
@@ -134,11 +143,14 @@ public final class LifecycleObserver {
     /// Fold one typed input in. The whole table is reachable from here with no notification
     /// centre at all, which is what makes `LifecycleReducerTests` headless.
     public func apply(_ input: LifecycleInput) {
-        let before = reduction.state
+        let before = reduction
         reduction = LifecycleReducer.step(input, into: reduction)
-        let after = reduction.state
-        guard before != after else { return }
-        onChange?(before, after)
+        // The condition set, not the collapsed state: `screensDidSleep` arriving while the
+        // screen is already locked moves no state (lock is the more severe of the two) but it
+        // is a pause cause the session must acquire, and its wake must lift that cause and no
+        // other.
+        guard before.conditions != reduction.conditions else { return }
+        onChange?(before, reduction)
     }
 
     /// Which input a delivered notification is, or `nil` if it is not one this observer reads.

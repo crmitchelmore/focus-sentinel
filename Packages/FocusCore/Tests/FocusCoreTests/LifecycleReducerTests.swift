@@ -269,3 +269,218 @@ struct LifecycleReducerTests {
         }
     }
 }
+
+/// Driving the **session** from the lifecycle, which is where a stranded pause cause would
+/// leave a person unable to resume their own work.
+///
+/// These are the tests the defect they cover did not have. `SensingHost` used to reconcile the
+/// session against the *collapsed* `SystemLifecycle` — the most severe condition — which
+/// cannot say what changed when a Mac holds two conditions at once. Locking a Mac and letting
+/// it sleep is exactly that: the collapse hides `.screenLocked` behind `.systemAsleep`, so the
+/// handler acquired both causes and lifted only the one the collapse last showed it, and the
+/// session stayed `.paused` for `.screenLocked` on a Mac that was awake and unlocked. Nothing
+/// in the app owns that cause, and `resumed(cause:)` rejects a cause its caller does not own
+/// (R-45), so there was no control anywhere that could have released it.
+///
+/// The host now calls `LifecycleReducer.sessionEvents(from:to:)`, so the assertion below is on
+/// the pure function the host uses rather than on a sequence somebody thought to try.
+@Suite("The lifecycle drives session pause causes without stranding one")
+struct LifecycleSessionCauseTests {
+    private static let start = Date(timeIntervalSince1970: 1_800_000_000)
+
+    /// Replay a list of inputs the way `SensingHost` does: fold each one, and on every change
+    /// of the **condition set** offer the resulting events to the real `SessionMachine`.
+    private static func driveSession(
+        through inputs: [LifecycleInput],
+        from phase: SessionPhase = .focus,
+        holding causes: Set<PauseReason> = []
+    ) -> (state: SessionState, conditions: Set<LifecycleCondition>, rejections: [SessionRejection]) {
+        var session = SessionState(
+            phase: phase,
+            pauseCauses: causes,
+            resumeTo: phase == .paused ? .focus : nil,
+            phaseChangedAt: start,
+            endedAt: nil
+        )
+        var instant = start
+        var rejections: [SessionRejection] = []
+        var reduction = LifecycleReduction()
+
+        for input in inputs {
+            let before = reduction
+            reduction = LifecycleReducer.step(input, into: reduction)
+            guard before.conditions != reduction.conditions else { continue }
+
+            for event in LifecycleReducer.sessionEvents(
+                from: before.conditions,
+                to: reduction.conditions
+            ) {
+                instant += 1
+                switch SessionMachine.apply(event, to: session, at: instant) {
+                case .accepted(let next, _), .causeChanged(let next, _):
+                    session = next
+                case .rejected(let why):
+                    rejections.append(why)
+                }
+            }
+        }
+        return (session, reduction.conditions, rejections)
+    }
+
+    /// The sequence that stranded a cause: an ordinary night at a Mac that sleeps.
+    @Test("lock, sleep, wake and unlock leaves the session in focus and holding nothing")
+    func nestedLifecycleConditionsDoNotStrandAPause() {
+        let result = Self.driveSession(through: [
+            .applicationActivated(bundleIdentifier: loginWindow),   // lock
+            .willSleep,                                             // the Mac sleeps too
+            .didWake,                                               // it wakes, still locked
+            .applicationActivated(bundleIdentifier: "com.apple.finder") // unlock
+        ])
+
+        #expect(result.conditions.isEmpty, "the Mac is awake and unlocked")
+        #expect(result.state.pauseCauses.isEmpty, "a lifecycle cause outlived its condition")
+        #expect(result.state.phase == .focus)
+        #expect(result.state.resumeTo == nil)
+    }
+
+    /// The same defect reached the other way round: the displays sleeping *behind* an already
+    /// locked screen changes no collapsed state at all, so a state-driven handler never even
+    /// heard about it — and then the unlock lifted the lock while `.displaysAsleep` was never
+    /// acquired or was acquired and never lifted, depending on the order.
+    @Test("a condition the collapsed state hides is still acquired and still lifted")
+    func aHiddenConditionIsStillReconciled() {
+        // Locked, then the displays sleep: `.screenLocked` outranks `.displaysAsleep`, so
+        // `SystemLifecycle` reads `.screenLocked` throughout.
+        let midway = LifecycleReducer.reduce([
+            .applicationActivated(bundleIdentifier: loginWindow),
+            .screensDidSleep
+        ])
+        #expect(midway.state == .screenLocked, "the collapse hides the second condition")
+        #expect(midway.conditions == [.screenLocked, .displaysAsleep])
+
+        let result = Self.driveSession(through: [
+            .applicationActivated(bundleIdentifier: loginWindow),
+            .screensDidSleep,
+            .screensDidWake,
+            .applicationActivated(bundleIdentifier: "com.apple.finder")
+        ])
+
+        #expect(result.conditions.isEmpty)
+        #expect(result.state.pauseCauses.isEmpty)
+        #expect(result.state.phase == .focus)
+    }
+
+    /// Every ordering of every pair, and every ordering of all five, fully reversed. The claim
+    /// is not "these sequences work" but "the causes always equal the conditions", which is a
+    /// property of the set difference rather than of the sequences a test author imagined.
+    @Test("for every sequence, the held causes equal the conditions that remain")
+    func causesAlwaysMirrorConditions() {
+        let on: [LifecycleCondition: LifecycleInput] = [
+            .screenLocked: .applicationActivated(bundleIdentifier: loginWindow),
+            .displaysAsleep: .screensDidSleep,
+            .systemAsleep: .willSleep,
+            .sessionInactive: .sessionDidResignActive
+        ]
+        let off: [LifecycleCondition: LifecycleInput] = [
+            .screenLocked: .applicationActivated(bundleIdentifier: "com.apple.finder"),
+            .displaysAsleep: .screensDidWake,
+            .systemAsleep: .didWake,
+            .sessionInactive: .sessionDidBecomeActive
+        ]
+        // `.poweringOff` is deliberately excluded: it is sticky by design, because there is no
+        // signal that takes it back and no coming back to take it.
+        let conditions: [LifecycleCondition] = [
+            .screenLocked, .displaysAsleep, .systemAsleep, .sessionInactive
+        ]
+
+        for a in conditions {
+            for b in conditions where b != a {
+                for c in conditions where c != a && c != b {
+                    // Acquire three in one order, release them in another.
+                    let inputs = [on[a]!, on[b]!, on[c]!, off[b]!, off[a]!, off[c]!]
+                    let result = Self.driveSession(through: inputs)
+                    #expect(
+                        result.state.pauseCauses == Set(result.conditions.map(\.pauseCause)),
+                        "causes \(result.state.pauseCauses) ≠ conditions \(result.conditions)"
+                    )
+                    #expect(result.state.pauseCauses.isEmpty)
+                    #expect(result.state.phase == .focus)
+                    #expect(result.rejections.isEmpty, "\(result.rejections)")
+                }
+            }
+        }
+    }
+
+    /// The authority rule, from the lifecycle's side: waking a Mac must never lift a pause the
+    /// person set. The lifecycle's causes are the image of an injective condition mapping, and
+    /// `.user` is not in it.
+    @Test("no lifecycle transition can lift a pause the user owns")
+    func aWakeNeverResumesAUserPause() {
+        let result = Self.driveSession(
+            through: [
+                .applicationActivated(bundleIdentifier: loginWindow),
+                .willSleep,
+                .didWake,
+                .applicationActivated(bundleIdentifier: "com.apple.finder")
+            ],
+            from: .paused,
+            holding: [.user]
+        )
+
+        #expect(result.conditions.isEmpty)
+        #expect(result.state.pauseCauses == [.user], "the lifecycle cleared a pause it did not set")
+        #expect(result.state.phase == .paused)
+    }
+
+    /// Pauses go out before resumes, so a set that empties and refills moves the phase at most
+    /// once and never briefly re-permits intervention.
+    @Test("a condition swap adds before it removes, so the phase never leaves paused")
+    func aSwapEmitsPausesBeforeResumes() {
+        let events = LifecycleReducer.sessionEvents(from: [.screenLocked], to: [.systemAsleep])
+        #expect(events == [.paused(cause: .systemAsleep), .resumed(cause: .screenLocked)])
+
+        var session = SessionState(
+            phase: .paused,
+            pauseCauses: [.screenLocked],
+            resumeTo: .onBreak,
+            phaseChangedAt: Self.start,
+            endedAt: nil
+        )
+        var instant = Self.start
+        var phases: [SessionPhase] = []
+        for event in events {
+            instant += 1
+            if case .accepted(let next, _) = SessionMachine.apply(event, to: session, at: instant) {
+                session = next
+            } else if case .causeChanged(let next, _) = SessionMachine.apply(event, to: session, at: instant) {
+                session = next
+            }
+            phases.append(session.phase)
+        }
+
+        #expect(phases == [.paused, .paused], "the session left paused mid-swap")
+        #expect(session.pauseCauses == [.systemAsleep])
+        #expect(session.resumeTo == .onBreak, "resumeTo was overwritten by a swap")
+    }
+
+    /// The empty transition is empty: a fold that changes no condition writes no row.
+    @Test("an unchanged condition set produces no events at all")
+    func nothingChangedProducesNothing() {
+        #expect(LifecycleReducer.sessionEvents(from: [], to: []).isEmpty)
+        #expect(LifecycleReducer.sessionEvents(from: [.screenLocked], to: [.screenLocked]).isEmpty)
+    }
+
+    /// The condition→cause mapping must stay injective, or "remove the cause this condition
+    /// owns" stops being well defined and the set difference stops being a reconciliation.
+    @Test("every condition owns a distinct cause, and it agrees with the collapsed state's")
+    func theCauseMappingIsInjectiveAndAgrees() {
+        let causes = LifecycleCondition.allCases.map(\.pauseCause)
+        #expect(Set(causes).count == LifecycleCondition.allCases.count, "two conditions share a cause")
+
+        for condition in LifecycleCondition.allCases {
+            #expect(condition.pauseCause == condition.lifecycle.pauseCause)
+        }
+        // And none of them is a cause somebody else owns.
+        #expect(Set(causes).isDisjoint(with: [.user, .globalPause, .sensitiveApp, .relaunch]))
+    }
+}

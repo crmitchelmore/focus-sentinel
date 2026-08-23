@@ -82,6 +82,31 @@ public enum LifecycleCondition: String, Sendable, CaseIterable, Codable, Hashabl
         case .sessionInactive: 0
         }
     }
+
+    /// The session pause cause this condition owns — **and the only cause that can lift the
+    /// pause it caused** (R-45).
+    ///
+    /// The mapping is deliberately **injective**: five conditions, five distinct causes, so
+    /// the session's `pauseCauses` set can mirror the lifecycle's `conditions` set exactly and
+    /// `sessionEvents(from:to:)` can be a plain set difference. Two conditions sharing a cause
+    /// would make "remove the cause this condition owns" ambiguous, and the ambiguity would
+    /// resolve into a stranded pause.
+    ///
+    /// This duplicates `lifecycle.pauseCause` on purpose rather than reading through it: that
+    /// property is `Optional` because `SystemLifecycle` has an `.active` case, and a condition
+    /// never does. `LifecycleReducerTests` asserts the two agree for every case, so the pair
+    /// is kept in step by a test rather than by an unreachable `??` branch.
+    public var pauseCause: PauseReason {
+        switch self {
+        case .screenLocked: .screenLocked
+        case .displaysAsleep: .displaysAsleep
+        case .systemAsleep: .systemAsleep
+        case .sessionInactive: .sessionInactive
+        // Powering off is the end of the session as far as the machine is concerned; the
+        // system-restart cause is the one a later launch will find and reconcile against.
+        case .poweringOff: .systemRestart
+        }
+    }
 }
 
 /// The result of reducing a list of inputs.
@@ -207,5 +232,50 @@ public enum LifecycleReducer {
         from initial: LifecycleReduction = LifecycleReduction()
     ) -> SystemLifecycle {
         reduce(inputs, from: initial).state
+    }
+
+    /// The session events that carry the lifecycle's pause causes from one condition set to
+    /// the next: one `paused(cause:)` per condition that arrived, one `resumed(cause:)` per
+    /// condition that left, and nothing for the ones that stayed.
+    ///
+    /// ## Why this takes two *sets* rather than two states
+    ///
+    /// `LifecycleReduction.state` collapses the condition set to its most severe member, and
+    /// a collapsed state cannot say what changed. Driving pauses from it strands causes, and
+    /// the sequence that does it is an ordinary night: lock the Mac, let it sleep, wake it,
+    /// unlock it. The collapse reports `screenLocked → systemAsleep → screenLocked → active`,
+    /// so a state-driven handler pauses for `.screenLocked`, pauses for `.systemAsleep`, then
+    /// resumes only the last state it saw — leaving `.systemAsleep` held on a Mac that is
+    /// demonstrably awake, and a session **permanently paused** with no control that can lift
+    /// it, because `resumed(cause:)` rejects any cause the caller does not own (R-45).
+    ///
+    /// Reconciling the whole set removes the failure mode rather than patching the sequence
+    /// that exposed it: for **any** pair of condition sets, the events returned here leave the
+    /// session's lifecycle-owned causes exactly equal to `current`.
+    ///
+    /// ## Pauses are emitted before resumes
+    ///
+    /// If the resumes went first, a set that empties and refills would take the session out of
+    /// `.paused` and back in — overwriting `resumeTo`, writing two phase changes into the
+    /// timeline for one lifecycle event, and briefly telling the nudge ladder that
+    /// intervention was permitted. Adding first means the phase moves at most once, and only
+    /// when the last cause really is gone.
+    ///
+    /// ## What it never touches
+    ///
+    /// Only the causes in this injective condition→cause mapping. A `.user`, `.globalPause` or
+    /// `.sensitiveApp` pause is owned by somebody else and is not in the image of the mapping,
+    /// so no wake, unlock or power-off can produce an event that clears one.
+    public static func sessionEvents(
+        from previous: Set<LifecycleCondition>,
+        to current: Set<LifecycleCondition>
+    ) -> [SessionEvent] {
+        // Sorted most-severe-first so the order is a decision rather than a hash seed: two
+        // runs of the same transition must produce the same rows in the same timeline.
+        let arrived = current.subtracting(previous).sorted { $0.severity > $1.severity }
+        let departed = previous.subtracting(current).sorted { $0.severity > $1.severity }
+
+        return arrived.map { SessionEvent.paused(cause: $0.pauseCause) }
+            + departed.map { SessionEvent.resumed(cause: $0.pauseCause) }
     }
 }
