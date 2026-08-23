@@ -413,9 +413,21 @@ public enum RelevancePolicy {
             kind: .behavioural,
             encoded: languageConfidenceFloor.encoded,
             justification: "P-124",
-            // A one-word English priority, below the floor, and a full sentence above it.
+            // A priority scoring 0.8678 on English, just above the floor, whose sentence vector
+            // is therefore taken and whose similarity corroborates. Its sibling at 0.7618 —
+            // identical evidence, a distance well inside the ceiling — does not.
+            //
+            // **The mutation values are ±0.06 rather than ±0.01, and that is a measurement
+            // rather than a preference.** P-124 found nothing at all between 0.7618 and 0.9090:
+            // the derivation rule placed this floor at the midpoint of an empty interval, so
+            // every string in the corpus is more than a hundredth away from it and a ±0.01
+            // mutation cannot flip a single fixture. A mutation value no witness responds to is
+            // not evidence that the constant is tested — it is the appearance of evidence,
+            // which is the thing R-74 exists to remove. So the committed alternatives are the
+            // two a maintainer would actually reach for: P-115's original `0.60`, which admits
+            // the sibling, and a round `0.90`, which excludes the witness.
             witnesses: ["gc-0207"],
-            mutations: ["0.83", "0.85"]
+            mutations: ["0.60", "0.90"]
         ),
         PolicyConstant(
             name: "similarityCacheCapacity",
