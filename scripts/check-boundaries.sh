@@ -68,6 +68,20 @@
 #   * **No package imports a framework its row does not name.** The forbidden list catches the
 #     imports somebody thought of; this catches the ones nobody did. A new framework in a
 #     package is a boundary decision, so it fails the gate until the table above says so.
+#
+# e04 adds two more, both about the same object and both proved on the binary rather than in
+# the source (plan R-70i/j):
+#
+#   * **`FocusClassify` probes no privacy boundary.** `nm -u FocusClassify.o` must name no
+#     window-list, Accessibility or screen-capture symbol at all. The adversarial
+#     private-browsing fixtures assert that an absent origin yields `uncertain`; a test can
+#     only observe that the engine did not try another route, and the symbol table proves it
+#     could not. Promoted from skip to failure by `FOCUS_REQUIRE_BINARY_CHECK=1`, exactly like
+#     the zero-networking half above.
+#   * **The `FocusClassify` framework row is unchanged from e01.** It is listed here *because
+#     it needs no edit*: e04 puts a whole classification engine in that package and adds no
+#     framework to it, and pinning the row is what turns "no new dependency" from a claim into
+#     a check.
 set -u
 
 REPO_ROOT="${0:A:h}/.."
@@ -253,6 +267,58 @@ else
     # pass — the gate runs this script a second time after building, with
     # FOCUS_REQUIRE_BINARY_CHECK=1, and that run is the one that proves it.
     print "binary: SKIPPED — no build product at $CLASSIFY_OBJECT (the gate re-runs this after the build)"
+fi
+
+# --- FocusClassify probes no privacy boundary, proven on the object (e04 R-70i) -----------
+#
+# The adversarial private-browsing fixtures assert that an absent origin yields `uncertain`
+# and that the engine makes no attempt to obtain one another way. A test can only observe
+# that it did not; the symbol table proves it COULD not. `CGWindowListCopyWindowInfo`,
+# the AXUIElement family and the ScreenCaptureKit stream classes all leave undefined symbols
+# in an object that references them, and none of them may appear in this one.
+#
+# Note also what this stage does NOT need to check. P-120 measured an object that imports
+# NaturalLanguage and calls NLEmbedding.distance and NLTagger.enumerateTags: its undefined
+# symbols are seven NL names and nothing else — zero matches for nw_, CFNetwork, URLSession,
+# CFURLConnection, SecureTransport or socket. Importing NaturalLanguage costs the
+# zero-networking guarantee nothing at all.
+print
+print "== FocusClassify probes no privacy boundary"
+
+PRIVACY_SYMBOL_PATTERN='CGWindowList|kCGWindow|AXUIElement|AXIsProcess|SCStream|SCShareableContent|CGDisplayStream|CGRequestScreenCapture|CGPreflightScreenCapture'
+
+if [[ -f "$CLASSIFY_OBJECT" ]]; then
+    probing=$(nm -u "$CLASSIFY_OBJECT" 2>/dev/null | grep -E "$PRIVACY_SYMBOL_PATTERN")
+    if [[ -n "$probing" ]]; then
+        fail "FocusClassify.o names a window-list, Accessibility or capture symbol:"
+        print -u2 "$probing"
+    else
+        print "binary: nm -u $CLASSIFY_OBJECT — 0 window-list/AX/capture symbols"
+    fi
+elif [[ "${FOCUS_REQUIRE_BINARY_CHECK:-0}" == "1" ]]; then
+    fail "FOCUS_REQUIRE_BINARY_CHECK=1 but there is no build product at $CLASSIFY_OBJECT"
+else
+    print "binary: SKIPPED — no build product (the gate re-runs this after the build)"
+fi
+
+# --- e04 R-70j: the FocusClassify framework row is asserted UNCHANGED ----------------------
+#
+# The positive half of the matrix above already fails the gate on any framework a row does not
+# name, so a drive-by `import CoreGraphics` in the engine is caught by machinery that already
+# exists. What that machinery cannot catch is the row itself being widened — which is the edit
+# somebody would make *in order to* add the import. e04 adds an engine to this package and
+# needs exactly the frameworks e01 gave it, so the row is pinned to a literal here and a change
+# to it becomes a deliberate, reviewed act rather than a quiet one (P-120).
+print
+print "== the FocusClassify framework row is unchanged from e01"
+EXPECTED_CLASSIFY_FRAMEWORKS="Foundation NaturalLanguage os"
+if [[ "${ALLOWED_FRAMEWORKS[FocusClassify]}" == "$EXPECTED_CLASSIFY_FRAMEWORKS" ]]; then
+    print "ok   FocusClassify may import exactly: $EXPECTED_CLASSIFY_FRAMEWORKS"
+else
+    fail "the FocusClassify framework row has changed"
+    print -u2 "    expected: $EXPECTED_CLASSIFY_FRAMEWORKS"
+    print -u2 "    found:    ${ALLOWED_FRAMEWORKS[FocusClassify]}"
+    print -u2 "    e04 adds an engine to this package and needs no new framework (R-70j, P-120)."
 fi
 
 # --- every package: no networking symbols anywhere in the shipping graph ----------------
