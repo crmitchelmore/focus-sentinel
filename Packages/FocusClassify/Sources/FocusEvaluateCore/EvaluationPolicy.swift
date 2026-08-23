@@ -172,4 +172,79 @@ public enum EvaluationPolicy {
     /// R-68's own count, asserted rather than derived from the array's length, so a family
     /// deleted from the array fails rather than quietly lowering the requirement.
     public static let declaredFamilyCount = 11
+
+    // MARK: - The committed metric thresholds (R-67, §4.4)
+
+    /// **Zero, not "small".** Every corpus case is one a person wrote deliberately with an
+    /// expectation; a single false nudge on a case somebody thought about is a product defect,
+    /// and a non-zero budget is how a defect becomes a habit.
+    public static let falseNudgeRateCeiling: Double = 0
+
+    /// Misses are cheap: a miss falls to `uncertain`, which suppresses. P-124 predicts roughly
+    /// half of similarity-reachable relevance is missed by design, and that is the side of the
+    /// trade this engine deliberately takes.
+    public static let missRateCeiling = 0.25
+
+    /// An engine that says "I don't know" to everything is safe and useless. This is the
+    /// ceiling that keeps it honest.
+    public static let uncertaintyRateCeiling = 0.45
+
+    /// The adversarial suite exists to be declined. Computed over
+    /// `caseCount − negativeControlCount`, so a declared control cannot dilute it.
+    public static let adversarialUncertaintyFloor = 0.90
+
+    /// P-116: the worst realistic warm path is about ten milliseconds — two language detections,
+    /// one evidence vector, one distance and normalisation. Two and a half times that.
+    public static let latencyP95CeilingMilliseconds = 25.0
+
+    /// P-116 measured a 59.4 ms cold embedding load; `warmUp()` moves it off the classification
+    /// path, and sixty milliseconds is the ceiling that proves it did.
+    public static let latencyMaxCeilingMilliseconds = 60.0
+
+    /// The **executable** ladder length (R-54). The declared ladder is nine; `onDeviceModel` is
+    /// not in the sequence `RuleCascade` walks, so no classification in this build can consult
+    /// it, and `byStage.onDeviceModel` must be zero.
+    public static let executableRungCeiling = 8
+
+    /// The declared ladder length, including the rung e06 fills.
+    public static let declaredRungCount = 9
+
+    /// R-56.1's route must be **exercised**, not merely present: if this ever falls to zero,
+    /// family 11 has stopped testing anything.
+    public static let noNegativeBasisFloor = 1
+
+    /// The cache hit rate the committed workload achieves, rounded down with a margin. Measured
+    /// at 0.8466 over 205 lookups of 47 distinct sentences; the floor is set below that so a
+    /// re-ordered corpus does not redden the gate, and far enough above zero that a real
+    /// regression — a corpus rewritten so every case carries a unique priority, or a scorer that
+    /// stopped memoising — shows up here rather than being inferred.
+    public static let cacheHitRateFloor = 0.70
+
+    // MARK: - How the report is measured and written
+
+    /// The two percentiles §4.4 gates on. Nearest-rank, which is the definition that does not
+    /// interpolate between two measurements that were never taken.
+    public static let latencyMedianRank = 0.50
+    public static let latencyUpperRank = 0.95
+
+    /// R-74.4's sweep. A capacity constant owes a workload benchmark rather than a per-call
+    /// figure, and these are the four points the ruling names.
+    public static let cacheSweepCapacities = [64, 128, 256, 512]
+
+    /// The committed derivation rule for `similarityCacheCapacity`: the smallest capacity whose
+    /// p95 is within ten per cent of the best measured.
+    public static let cacheP95Tolerance = 0.10
+
+    /// How many real vector computations the benchmark times before modelling the sweep. Enough
+    /// that one scheduling hiccup does not become the reported cost.
+    public static let cacheCostSampleCount = 8
+
+    /// Fixed decimal places in the emitted report, so two runs of one tree produce two diffable
+    /// files rather than two files that differ in the seventeenth digit of a Double.
+    public static let reportDecimalPlaces = 4
+
+    /// Unit conversions, here rather than inline, because R-70f is right that a bare number in
+    /// the middle of an expression is a number nobody reviews.
+    public static let millisecondsPerSecond = 1_000.0
+    public static let attosecondsPerMillisecond = 1_000_000_000_000_000.0
 }

@@ -14,6 +14,16 @@ public struct CorpusPriority: Sendable, Equatable, Hashable {
         self.doneWhen = doneWhen
         self.revision = revision
     }
+
+    /// The prose the normaliser and the sentence embedding both see — the same join
+    /// `PriorityInput.prose` performs, because "sent to Dana" is as much a description of the
+    /// work as "write the proposal", and the cache benchmark has to key on the same string the
+    /// scorer will.
+    public var prose: String {
+        guard let doneWhen, !doneWhen.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        else { return intent }
+        return "\(intent) \(doneWhen)"
+    }
 }
 
 /// One context-pack item, in the four kinds `ContextItemKind` knows.
