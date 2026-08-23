@@ -83,11 +83,11 @@ manual_required() {
         print "host:   $(sw_vers -productVersion) ($(uname -m))"
         print
         print "why this run did not produce it"
-        print "-------------------------------"
+        print -r -- "-------------------------------"
         print "$reason"
         print
         print "how to reproduce it"
-        print "-------------------"
+        print -r -- "-------------------"
         print "$steps"
     } > "$EVIDENCE_DIR/${artefact}.MANUAL_REQUIRED.txt"
 }
@@ -283,7 +283,7 @@ print
 print "=============================================================="
 print "LIVE SESSION DRIVE — evidence, never a gate"
 print "evidence: $EVIDENCE_DIR"
-print "--------------------------------------------------------------"
+print -r -- "--------------------------------------------------------------"
 for artefact in $PRODUCED; do
     print "  PRODUCED  $artefact"
 done
@@ -293,7 +293,7 @@ done
 for artefact in $FAILED; do
     print "  FAILED    $artefact"
 done
-print "--------------------------------------------------------------"
+print -r -- "--------------------------------------------------------------"
 print "Receipts never affect the exit status, and none of this is a close condition."
 print "=============================================================="
 
