@@ -309,6 +309,7 @@ regression and the gate script does not restate a single number:
 | `caseCount` | `≥ 132` | **and every per-file floor separately.** The easiest way to make a false-nudge rate go to zero is to delete the case that produced one; the second easiest is to replace thirty adversarial cases with thirty baseline ones |
 | `byUncertaintyReason.noNegativeBasis` | `> 0` | the rule above must be *exercised*, not merely present, or the family guarding it has stopped testing anything |
 | `cache.hitRate` | `≥` its committed floor | so a workload regression is visible rather than inferred |
+| `cache.capacity` | `== cache.recommendedCapacity` | `similarityCacheCapacity` is class **C** and its derivation rule was committed before the sweep was run — the smallest capacity whose p95 is within ten per cent of the best measured. A hit rate alone does not enforce that: a capacity nobody derived would pass it every time |
 | `failures` | empty | a metric that fails without naming the case that failed it is a metric that costs an hour |
 
 ---
