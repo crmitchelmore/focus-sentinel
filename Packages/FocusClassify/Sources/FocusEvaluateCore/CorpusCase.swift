@@ -135,6 +135,13 @@ public struct CorpusCase: Sendable, Equatable {
     public let focusStatus: FocusStatus?
     public let isUserIdle: Bool
     public let expect: CorpusExpectation
+    /// How many `NormalisedToken`s the whole explanation may carry.
+    ///
+    /// The clause *kinds* alone cannot express `maximumExplanationTokens`: a four-token overlap
+    /// and a three-token overlap produce the same single `tokenOverlap` clause, so a corpus that
+    /// asserted only kinds would leave that constant with no witness at all — and R-74.1 says a
+    /// B constant with no witness fails the suite. This field is what gives it one.
+    public let expectExplanationTokens: Int?
 
     /// The file this case was loaded from, filled in by the loader. Not a JSON field.
     public let file: String
@@ -232,6 +239,7 @@ public struct CorpusCase: Sendable, Equatable {
         try expectObject.finish()
 
         let expectSkipped = try object.optionalInt("expectSkippedRuleCount") ?? legacy.count
+        let expectExplanationTokens = try object.optionalInt("expectExplanationTokens")
         let evidenceRevision = try object.optionalInt("evidenceRevision")
         let dwellSeconds = try object.int("dwellSeconds")
         // `SessionPhase.allCases` rather than `SessionPhase.decode`, deliberately: `decode`
@@ -280,6 +288,7 @@ public struct CorpusCase: Sendable, Equatable {
             focusStatus: focusStatus,
             isUserIdle: isUserIdle,
             expect: expect,
+            expectExplanationTokens: expectExplanationTokens,
             file: file
         )
     }

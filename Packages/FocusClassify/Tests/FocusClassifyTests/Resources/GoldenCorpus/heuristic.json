@@ -1,0 +1,500 @@
+{
+  "file": "heuristic",
+  "note": "Rung 5, route by route, and the committed boundary triples that make R-74.1 more than an adjective. Overlap is the precision instrument and similarity is the recall instrument (P-114, P-124), so overlap decides and similarity only corroborates; neither may ever produce unrelated. Eleven of the fifteen behavioural constants are bounded here with a case on each side of the line and one on it; the other four are temporal and need a sequence, so they are bounded in sequences/. Several cases replay P-124's measured pairs verbatim, with the priority and the title tokens spelling the exact strings the probe scored, so the committed distances and the corpus agree by construction rather than by memory.",
+  "cases": [
+    {
+      "id": "gc-0200",
+      "note": "minimumTokenLength, below. The only string the priority and the application share is 'qa', two characters long, and the normaliser drops it on both sides — so there is no overlap to find. A token that short matches everything, which is the failure mode the length filter exists for.",
+      "priority": { "intent": "check the qa lane", "revision": 1 },
+      "evidence": { "bundleID": "com.acme.qa", "titleTokens": [] },
+      "dwellSeconds": 20,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "uncertain", "source": "heuristic", "stage": "heuristic", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["noNegativeBasis", "insufficientEvidence"], "uncertaintyReason": "noNegativeBasis" }
+    },
+    {
+      "id": "gc-0201",
+      "note": "minimumTokenLength, at. Three characters survive normalisation on both sides and the overlap fires. P-119 measured the cost of a length-4 filter — it loses bug, fix, app and iOS from real priorities — and this is the case that would go dark if the constant moved to 4. It is also minimumStrongTokenLength's BELOW leg: three characters is an overlap, but not a strong one, so the band is low and low can never mandate.",
+      "priority": { "intent": "check the bug lane", "revision": 1 },
+      "evidence": { "bundleID": "com.acme.bug", "titleTokens": [] },
+      "dwellSeconds": 20,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "low", "eligibility": "suppressed:verdictRelevant", "clauses": ["tokenOverlap"] }
+    },
+    {
+      "id": "gc-0202",
+      "note": "minimumStrongTokenLength, at. Four characters is the shortest overlap this engine will call strong, and strong means band medium, which is exactly the intervention floor. At 5 this case bands low and can no longer support anything; at 3 a three-character coincidence would.",
+      "priority": { "intent": "check the raid lane", "revision": 1 },
+      "evidence": { "bundleID": "com.acme.raid", "titleTokens": [] },
+      "dwellSeconds": 20,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "medium", "eligibility": "suppressed:verdictRelevant", "clauses": ["tokenOverlap"] }
+    },
+    {
+      "id": "gc-0203",
+      "note": "minimumOverlapTokens, at. Exactly one strong overlap token, and it is enough: P-114 measured unrelated Jaccard at 0.000 on all eight pairs, so one strong overlap is already a zero-false-positive signal and requiring two would only add misses.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "evidence": { "bundleID": "com.example.proposal", "titleTokens": [] },
+      "dwellSeconds": 20,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "medium", "eligibility": "suppressed:verdictRelevant", "clauses": ["tokenOverlap"] }
+    },
+    {
+      "id": "gc-0204",
+      "note": "minimumPriorityContentTokens, at. Exactly two content tokens survive — ship and release — which is the floor below which a priority is not judgeable at all. At 3 this priority stops being judgeable and the answer becomes insufficientPriorityEvidence.",
+      "priority": { "intent": "ship the release notes", "revision": 1 },
+      "evidence": { "bundleID": "com.example.tracker", "titleTokens": [] },
+      "dwellSeconds": 20,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "uncertain", "source": "heuristic", "stage": "heuristic", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["noNegativeBasis", "insufficientEvidence"], "uncertaintyReason": "noNegativeBasis" }
+    },
+    {
+      "id": "gc-0205",
+      "note": "maximumExplanationTokens, above. Four tokens overlap and exactly three reach the explanation: an explanation is evidence, not a transcript, and three words a person can check at a glance beat twelve they will not read. The clause KIND is the same whatever the cap, so this constant is witnessed by the token count and could not be witnessed any other way.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "evidence": { "bundleID": "com.example.tracker", "titleTokens": ["proposal", "acme", "dana", "write"] },
+      "dwellSeconds": 20,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expectExplanationTokens": 3,
+      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "medium", "eligibility": "suppressed:verdictRelevant", "clauses": ["tokenOverlap"] }
+    },
+    {
+      "id": "gc-0206",
+      "note": "similarityRelevantCeiling, at — as near as a measured float can be put. P-124 scored this pair at 0.9672, the closest measurement below the derived ceiling of 0.97, and there is no measured point between them. Similarity corroborates and bands LOW, which is below the intervention floor: the signal is structurally incapable of causing a nudge on its own, which is the design conclusion P-113 forces.",
+      "priority": { "intent": "fix the login bug in the ios app", "revision": 1 },
+      "evidence": { "bundleID": "com.apple.dt.Xcode", "titleTokens": ["sign", "in", "screen", "keychain", "crash", "log"] },
+      "dwellSeconds": 20,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "low", "eligibility": "suppressed:verdictRelevant", "clauses": ["similarityCorroborated"] }
+    },
+    {
+      "id": "gc-0207",
+      "note": "languageConfidenceFloor, at. The priority scores 0.8678 on English, just above the derived floor of 0.84, so a sentence vector is taken and the similarity signal runs; the distance to the title is 0.9024, inside the ceiling, and it corroborates. Hold the evidence still and drop the priority's confidence and this case goes dark — which gc-0218 is.",
+      "priority": { "intent": "close the bergman audit", "revision": 1 },
+      "evidence": { "bundleID": "com.apple.dt.Xcode", "titleTokens": ["materiality", "assessment", "worksheet"] },
+      "dwellSeconds": 20,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "low", "eligibility": "suppressed:verdictRelevant", "clauses": ["similarityCorroborated"] }
+    },
+    {
+      "id": "gc-0208",
+      "note": "minimumTokenLength, above. Five characters, comfortably past the filter, and the overlap is strong as well as present.",
+      "priority": { "intent": "check the board lane", "revision": 1 },
+      "evidence": { "bundleID": "com.acme.board", "titleTokens": [] },
+      "dwellSeconds": 20,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "medium", "eligibility": "suppressed:verdictRelevant", "clauses": ["tokenOverlap"] }
+    },
+    {
+      "id": "gc-0209",
+      "note": "minimumStrongTokenLength, above. P-114's shortest measured true overlap token was five characters (board); everything at or above four bands medium, and this is the case that says the band does not keep climbing with length.",
+      "priority": { "intent": "check the sprint lane", "revision": 1 },
+      "evidence": { "bundleID": "com.acme.sprint", "titleTokens": [] },
+      "dwellSeconds": 20,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "medium", "eligibility": "suppressed:verdictRelevant", "clauses": ["tokenOverlap"] }
+    },
+    {
+      "id": "gc-0210",
+      "note": "minimumOverlapTokens, below. Zero shared tokens, so the precision instrument has nothing to say and the rung falls through to everything after it.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "evidence": { "bundleID": "com.example.tracker", "titleTokens": [] },
+      "dwellSeconds": 20,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "uncertain", "source": "heuristic", "stage": "heuristic", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["noNegativeBasis", "insufficientEvidence"], "uncertaintyReason": "noNegativeBasis" }
+    },
+    {
+      "id": "gc-0211",
+      "note": "minimumOverlapTokens, above. Two strong overlaps rather than one; the answer is the same, which is the point — the constant is a floor and not a target.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "evidence": { "bundleID": "com.acme.proposal", "titleTokens": [] },
+      "dwellSeconds": 20,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "medium", "eligibility": "suppressed:verdictRelevant", "clauses": ["tokenOverlap"] }
+    },
+    {
+      "id": "gc-0212",
+      "note": "minimumPriorityContentTokens, below. One content token is not a description of work, and the engine says so by name rather than by shrugging. P-115 corroborates from the other side: the single word 'proposal' scores 0.41 on English confidence.",
+      "priority": { "intent": "the proposal", "revision": 1 },
+      "evidence": { "bundleID": "com.example.tracker", "titleTokens": [] },
+      "dwellSeconds": 400,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "uncertain", "source": "heuristic", "stage": "heuristic", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["insufficientEvidence"], "uncertaintyReason": "insufficientPriorityEvidence" }
+    },
+    {
+      "id": "gc-0213",
+      "note": "minimumPriorityContentTokens, above. Three content tokens, judgeable, and the decline moves one step further down the rung — from 'I cannot read this priority' to 'you have not told me what to expect'. Two different silences, and the corpus distinguishes them.",
+      "priority": { "intent": "close the bergman audit", "revision": 1 },
+      "evidence": { "bundleID": "com.example.tracker", "titleTokens": [] },
+      "dwellSeconds": 400,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "uncertain", "source": "heuristic", "stage": "heuristic", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["noNegativeBasis", "insufficientEvidence"], "uncertaintyReason": "noNegativeBasis" }
+    },
+    {
+      "id": "gc-0214",
+      "note": "maximumExplanationTokens, below. Two overlapping tokens and two in the explanation: the cap is a ceiling, not a quota.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "evidence": { "bundleID": "com.example.tracker", "titleTokens": ["proposal", "acme"] },
+      "dwellSeconds": 20,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expectExplanationTokens": 2,
+      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "medium", "eligibility": "suppressed:verdictRelevant", "clauses": ["tokenOverlap"] }
+    },
+    {
+      "id": "gc-0215",
+      "note": "maximumExplanationTokens, at. Three overlapping tokens and all three survive.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "evidence": { "bundleID": "com.example.tracker", "titleTokens": ["proposal", "acme", "dana"] },
+      "dwellSeconds": 20,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expectExplanationTokens": 3,
+      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "medium", "eligibility": "suppressed:verdictRelevant", "clauses": ["tokenOverlap"] }
+    },
+    {
+      "id": "gc-0216",
+      "note": "similarityRelevantCeiling, below. P-124 scored this pair at 0.9631 — comfortably inside the ceiling, and still only band low, because corroboration is all this signal is ever permitted to do.",
+      "priority": { "intent": "review the pull request for the payments service", "revision": 1 },
+      "evidence": { "bundleID": "com.apple.dt.Xcode", "titleTokens": ["refund", "api", "docs"] },
+      "dwellSeconds": 20,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "low", "eligibility": "suppressed:verdictRelevant", "clauses": ["similarityCorroborated"] }
+    },
+    {
+      "id": "gc-0217",
+      "note": "similarityRelevantCeiling, above. P-124 scored this pair at 0.9752 — a genuinely RELATED pair, and the ceiling misses it. That is the trade the derivation rule was chosen for: rounding down costs misses rather than false positives, and a miss falls to uncertain, which suppresses. The engine goes quiet rather than guessing.",
+      "priority": { "intent": "draft the hiring plan for the design team", "revision": 1 },
+      "evidence": { "bundleID": "com.apple.dt.Xcode", "titleTokens": ["job", "description", "senior", "product", "designer"] },
+      "dwellSeconds": 20,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "uncertain", "source": "heuristic", "stage": "heuristic", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["noNegativeBasis", "insufficientEvidence"], "uncertaintyReason": "noNegativeBasis" }
+    },
+    {
+      "id": "gc-0218",
+      "note": "languageConfidenceFloor, below. Identical evidence to gc-0207 and a distance of 0.7150 — well inside the ceiling — and the signal still does not run, because the priority scores 0.7618 on English and no sentence vector is taken. The two cases differ in one measurement and nothing else, which is what makes this a boundary rather than an anecdote.",
+      "priority": { "intent": "bergman audit findings spreadsheet", "revision": 1 },
+      "evidence": { "bundleID": "com.apple.dt.Xcode", "titleTokens": ["materiality", "assessment", "worksheet"] },
+      "dwellSeconds": 20,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "uncertain", "source": "heuristic", "stage": "heuristic", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["noNegativeBasis", "insufficientEvidence"], "uncertaintyReason": "noNegativeBasis" }
+    },
+    {
+      "id": "gc-0219",
+      "note": "languageConfidenceFloor, above. The same evidence again, with a priority scoring 0.9616. Everything the floor gates is switched on and the corroboration lands.",
+      "priority": { "intent": "bergman quarterly ledger review", "revision": 1 },
+      "evidence": { "bundleID": "com.apple.dt.Xcode", "titleTokens": ["materiality", "assessment", "worksheet"] },
+      "dwellSeconds": 20,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "low", "eligibility": "suppressed:verdictRelevant", "clauses": ["similarityCorroborated"] }
+    },
+    {
+      "id": "gc-0220",
+      "note": "sustainedDriftThreshold, below. Eighty-nine seconds away from everything the person named, and the app says nothing at all: D-05's own figure, and 4 000 times the 22 ms activation storm e03 measured, so debounce noise cannot traverse it.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "contextPack": [ { "kind": "app", "value": "com.apple.Pages" } ],
+      "evidence": { "bundleID": "com.microsoft.Excel", "titleTokens": [] },
+      "dwellSeconds": 89,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "uncertain", "source": "heuristic", "stage": "heuristic", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["insufficientEvidence"], "uncertaintyReason": "noEvidence" }
+    },
+    {
+      "id": "gc-0221",
+      "note": "sustainedDriftThreshold, at. Ninety seconds exactly is still silence: the mandate is issued at the first observation AFTER the threshold, strictly after, and this fixture is what makes that word load-bearing rather than decorative.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "contextPack": [ { "kind": "app", "value": "com.apple.Pages" } ],
+      "evidence": { "bundleID": "com.microsoft.Excel", "titleTokens": [] },
+      "dwellSeconds": 90,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "uncertain", "source": "heuristic", "stage": "heuristic", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["insufficientEvidence"], "uncertaintyReason": "noEvidence" }
+    },
+    {
+      "id": "gc-0222",
+      "note": "sustainedDriftThreshold, above. One second later the verdict turns and the mandate is issued. Both halves move together — the heuristic's own dwell gate and the drift accumulator read the same number — which is why a single-shot fixture can express this boundary at all.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "contextPack": [ { "kind": "app", "value": "com.apple.Pages" } ],
+      "evidence": { "bundleID": "com.microsoft.Excel", "titleTokens": [] },
+      "dwellSeconds": 91,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "unrelated", "source": "heuristic", "stage": "heuristic", "band": "medium", "eligibility": "mandated", "clauses": ["sustainedDwell"] }
+    },
+    {
+      "id": "gc-0223",
+      "note": "escalationDwell, below. Two hundred and ninety-nine seconds is still a glance, and the band stays medium.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "contextPack": [ { "kind": "app", "value": "com.apple.Pages" } ],
+      "evidence": { "bundleID": "com.microsoft.Excel", "titleTokens": [] },
+      "dwellSeconds": 299,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "unrelated", "source": "heuristic", "stage": "heuristic", "band": "medium", "eligibility": "mandated", "clauses": ["sustainedDwell"] }
+    },
+    {
+      "id": "gc-0224",
+      "note": "escalationDwell, at. Five minutes exactly, and the band has not moved: strictly after, here as everywhere else in this engine.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "contextPack": [ { "kind": "app", "value": "com.apple.Pages" } ],
+      "evidence": { "bundleID": "com.microsoft.Excel", "titleTokens": [] },
+      "dwellSeconds": 300,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "unrelated", "source": "heuristic", "stage": "heuristic", "band": "medium", "eligibility": "mandated", "clauses": ["sustainedDwell"] }
+    },
+    {
+      "id": "gc-0225",
+      "note": "escalationDwell, above. Past five minutes a person is not glancing, and the band rises to high. Nothing else about the answer changes — a band is a statement about the strength of the evidence, not about how loudly to say it.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "contextPack": [ { "kind": "app", "value": "com.apple.Pages" } ],
+      "evidence": { "bundleID": "com.microsoft.Excel", "titleTokens": [] },
+      "dwellSeconds": 301,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "unrelated", "source": "heuristic", "stage": "heuristic", "band": "high", "eligibility": "mandated", "clauses": ["sustainedDwell"] }
+    },
+    {
+      "id": "gc-0226",
+      "note": "returnAnchorDwell, below. Twenty-nine seconds in a relevant subject is not yet somewhere the person WAS, so the transition window finds no anchor and the explanation carries no returnedToAnchor clause.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "contextPack": [ { "kind": "app", "value": "com.apple.Pages" } ],
+      "evidence": { "bundleID": "com.apple.Pages", "titleTokens": [] },
+      "dwellSeconds": 29,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "relevant", "source": "userRule", "stage": "contextPack", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["contextItem"] }
+    },
+    {
+      "id": "gc-0227",
+      "note": "returnAnchorDwell, at. Thirty seconds exactly is enough — this comparison is inclusive, unlike the drift threshold, and the difference between the two is committed here rather than left to be inferred from the code.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "contextPack": [ { "kind": "app", "value": "com.apple.Pages" } ],
+      "evidence": { "bundleID": "com.apple.Pages", "titleTokens": [] },
+      "dwellSeconds": 30,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "relevant", "source": "userRule", "stage": "contextPack", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["contextItem", "returnedToAnchor"] }
+    },
+    {
+      "id": "gc-0228",
+      "note": "returnAnchorDwell, above. Thirty-one seconds, and the anchor holds. The window may only ever EXTEND a grace period, so an anchor can never make the app more likely to speak — which is why a look-back this cheap is safe to trust.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "contextPack": [ { "kind": "app", "value": "com.apple.Pages" } ],
+      "evidence": { "bundleID": "com.apple.Pages", "titleTokens": [] },
+      "dwellSeconds": 31,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "relevant", "source": "userRule", "stage": "contextPack", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["contextItem", "returnedToAnchor"] }
+    },
+    {
+      "id": "gc-0229",
+      "note": "minimumNegativeBasisItems, below. Zero app-or-domain identities in the pack, eight minutes of dwell, and the answer is still uncertain. Absence of lexical evidence may never alone produce unrelated (R-56.1) — this is that ruling as a single line of JSON.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "evidence": { "bundleID": "com.microsoft.Excel", "titleTokens": [] },
+      "dwellSeconds": 480,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "uncertain", "source": "heuristic", "stage": "heuristic", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["noNegativeBasis", "insufficientEvidence"], "uncertaintyReason": "noNegativeBasis" }
+    },
+    {
+      "id": "gc-0230",
+      "note": "minimumNegativeBasisItems, at. One identity is all it takes: now there is something for the absence to be an absence OF, and the engine will say so. Everything else about this case is identical to gc-0229.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "contextPack": [ { "kind": "app", "value": "com.apple.Pages" } ],
+      "evidence": { "bundleID": "com.microsoft.Excel", "titleTokens": [] },
+      "dwellSeconds": 480,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "unrelated", "source": "heuristic", "stage": "heuristic", "band": "high", "eligibility": "mandated", "clauses": ["sustainedDwell"] }
+    },
+    {
+      "id": "gc-0231",
+      "note": "minimumNegativeBasisItems, above. Two identities rather than one; the answer is unchanged, because the constant is a floor. The observed subject matches neither, which is R-56.1's third condition.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "contextPack": [
+        { "kind": "app", "value": "com.apple.Pages" },
+        { "kind": "domain", "value": "https://docs.google.com" }
+      ],
+      "evidence": { "bundleID": "com.microsoft.Excel", "titleTokens": [] },
+      "dwellSeconds": 480,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "unrelated", "source": "heuristic", "stage": "heuristic", "band": "high", "eligibility": "mandated", "clauses": ["sustainedDwell"] }
+    },
+    {
+      "id": "gc-0232",
+      "note": "The band table's keyword row. A word the person chose, matched by lemma against the application's decomposed identifier: strong, but not exact, so band medium rather than high. Both the item and the matched token reach the explanation.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "contextPack": [ { "kind": "keyword", "value": "proposal" } ],
+      "evidence": { "bundleID": "com.example.ProposalTracker", "titleTokens": [] },
+      "dwellSeconds": 20,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "relevant", "source": "userRule", "stage": "contextPack", "band": "medium", "eligibility": "suppressed:verdictRelevant", "clauses": ["contextItem", "tokenOverlap"] }
+    },
+    {
+      "id": "gc-0233",
+      "note": "A file-only context pack is NOT a negative basis. At zero grants the engine cannot see which file is open, so a file item can neither match nor fail to match an observation — and an item that can never be absent cannot make an absence informative. Eight minutes of dwell does not change that.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "contextPack": [ { "kind": "file", "value": "/Users/example/Documents/Q3 proposal.pages" } ],
+      "evidence": { "bundleID": "com.microsoft.Excel", "titleTokens": [] },
+      "dwellSeconds": 480,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "uncertain", "source": "heuristic", "stage": "heuristic", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["noNegativeBasis", "insufficientEvidence"], "uncertaintyReason": "noNegativeBasis" }
+    },
+    {
+      "id": "gc-0234",
+      "note": "A keyword-only context pack is not a negative basis either, and for a different reason: a keyword can only ever match POSITIVELY, so its absence is the same absence the overlap stage already declined to conclude from. The keyword here matches nothing, and the engine still declines rather than accusing.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "contextPack": [ { "kind": "keyword", "value": "proposal" } ],
+      "evidence": { "bundleID": "com.microsoft.Excel", "titleTokens": [] },
+      "dwellSeconds": 480,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "uncertain", "source": "heuristic", "stage": "heuristic", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["noNegativeBasis", "insufficientEvidence"], "uncertaintyReason": "noNegativeBasis" }
+    },
+    {
+      "id": "gc-0235",
+      "note": "A domain-only context pack IS a negative basis: an origin is an identity, and an identity can be absent in a way that means something. The mechanism is per-kind rather than per-item count, and this is the domain half of it.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "contextPack": [ { "kind": "domain", "value": "https://docs.google.com" } ],
+      "evidence": { "bundleID": "com.microsoft.Excel", "titleTokens": [] },
+      "dwellSeconds": 480,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "unrelated", "source": "heuristic", "stage": "heuristic", "band": "high", "eligibility": "mandated", "clauses": ["sustainedDwell"] }
+    },
+    {
+      "id": "gc-0236",
+      "note": "P-124's most distant measured pair, at 1.1255 — as far apart as anything the probe scored. The similarity signal still says NOTHING, because it has no case that could mean unrelated: SimilarityCorroboration ships with one case and it supports relevance. Distance is not an accusation at any value.",
+      "priority": { "intent": "write the q3 proposal for acme", "revision": 1 },
+      "evidence": { "bundleID": "com.apple.dt.Xcode", "titleTokens": ["chess", "opening", "traps"] },
+      "dwellSeconds": 480,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "uncertain", "source": "heuristic", "stage": "heuristic", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["noNegativeBasis", "insufficientEvidence"], "uncertaintyReason": "noNegativeBasis" }
+    },
+    {
+      "id": "gc-0237",
+      "note": "The same distant pair with one app identity in the pack. NOW it resolves unrelated — and the explanation names sustained dwell and nothing else, because the accusation came from the absence and the clock rather than from the distance. Comparing this with gc-0236 is what shows where the evidence actually came from.",
+      "priority": { "intent": "write the q3 proposal for acme", "revision": 1 },
+      "contextPack": [ { "kind": "app", "value": "com.apple.Pages" } ],
+      "evidence": { "bundleID": "com.apple.dt.Xcode", "titleTokens": ["chess", "opening", "traps"] },
+      "dwellSeconds": 480,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "unrelated", "source": "heuristic", "stage": "heuristic", "band": "high", "eligibility": "mandated", "clauses": ["sustainedDwell"] }
+    },
+    {
+      "id": "gc-0238",
+      "note": "P-124 pair sp-45, measured at 0.8227: a genuinely related pair, comfortably inside the ceiling, corroborated at band low. The recall instrument doing the job it is for.",
+      "priority": { "intent": "review the pull request for the payments service", "revision": 1 },
+      "evidence": { "bundleID": "com.apple.dt.Xcode", "titleTokens": ["refund", "flow", "api", "documentation"] },
+      "dwellSeconds": 20,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "low", "eligibility": "suppressed:verdictRelevant", "clauses": ["similarityCorroborated"] }
+    },
+    {
+      "id": "gc-0239",
+      "note": "P-124 pair sp-08, measured at 1.0039: also genuinely related, and missed. Sixteen of the thirty related pairs fall outside the ceiling and every one of them lands here — uncertain, which suppresses. That is what the committed missRate ceiling of 0.25 is buying, and it is the cheap half of the trade.",
+      "priority": { "intent": "fix the login bug in the ios app", "revision": 1 },
+      "evidence": { "bundleID": "com.apple.dt.Xcode", "titleTokens": ["authentication", "token", "expiry", "stack", "overflow"] },
+      "dwellSeconds": 20,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "uncertain", "source": "heuristic", "stage": "heuristic", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["noNegativeBasis", "insufficientEvidence"], "uncertaintyReason": "noNegativeBasis" }
+    },
+    {
+      "id": "gc-0240",
+      "note": "A non-English priority reaches the language gate before anything else, and stops there. P-111 measured NLEmbedding returning nil for fr, de, ja, zh-Hans and es — word and sentence, every one — so there is no instrument to consult, and an engine with no instrument must not proceed to an accusation. The clause carries the BCP-47 tag and nothing else.",
+      "priority": { "intent": "rédiger la proposition trimestrielle pour acme", "revision": 1 },
+      "contextPack": [ { "kind": "app", "value": "com.apple.Pages" } ],
+      "evidence": { "bundleID": "com.microsoft.Excel", "titleTokens": [] },
+      "dwellSeconds": 400,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "uncertain", "source": "heuristic", "stage": "heuristic", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["languageNotSupported", "insufficientEvidence"], "uncertaintyReason": "languageNotSupported" }
+    },
+    {
+      "id": "gc-0241",
+      "note": "The origin decomposer, and P-119's co.uk rule: proposal.acme.co.uk yields proposal and acme, with the two-letter tail and the label before it both dropped. Two strong overlaps, band medium, and no bundle identifier in play at all.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "evidence": { "origin": "https://proposal.acme.co.uk", "titleTokens": [] },
+      "dwellSeconds": 20,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "medium", "eligibility": "suppressed:verdictRelevant", "clauses": ["tokenOverlap"] }
+    },
+    {
+      "id": "gc-0242",
+      "note": "Title tokens as prose. The identifier says nothing, the title says everything, and the overlap is found on the title side alone — which is the shape e07 will produce for real and this corpus already exercises.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "evidence": { "bundleID": "com.example.tracker", "titleTokens": ["acme", "proposal", "draft"] },
+      "dwellSeconds": 20,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "medium", "eligibility": "suppressed:verdictRelevant", "clauses": ["tokenOverlap"] }
+    },
+    {
+      "id": "gc-0243",
+      "note": "The generic stop list, earning its place. The priority and the application share the string 'friday', and it is dropped from the prose side before any comparison happens: a date word matching a date word is not evidence of relevance, and P-119's run over twelve real priorities produced friday, last and month as surviving content tokens before the list existed.",
+      "priority": { "intent": "send the budget summary on Friday", "revision": 1 },
+      "evidence": { "bundleID": "com.example.friday", "titleTokens": [] },
+      "dwellSeconds": 20,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "uncertain", "source": "heuristic", "stage": "heuristic", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["noNegativeBasis", "insufficientEvidence"], "uncertaintyReason": "noNegativeBasis" }
+    },
+    {
+      "id": "gc-0244",
+      "note": "Lemmatisation, both ways. The priority says 'invoices' and the title says 'invoice'; P-114 measured the tagger reducing one to the other, and the overlap is only found because it does.",
+      "priority": { "intent": "reconcile the october invoices", "revision": 1 },
+      "evidence": { "bundleID": "com.example.tracker", "titleTokens": ["invoice", "register", "october"] },
+      "dwellSeconds": 20,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "medium", "eligibility": "suppressed:verdictRelevant", "clauses": ["tokenOverlap"] }
+    },
+    {
+      "id": "gc-0245",
+      "note": "The hand-written camelCase decomposer, which P-119 proved necessary: NLTokenizer leaves BugTracker whole, and without splitting it there is no 'bug' to match. Three characters, so band low — the overlap is real and the engine says so quietly.",
+      "priority": { "intent": "fix the login bug in the ios app", "revision": 1 },
+      "evidence": { "bundleID": "com.example.BugTracker", "titleTokens": [] },
+      "dwellSeconds": 20,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "low", "eligibility": "suppressed:verdictRelevant", "clauses": ["tokenOverlap"] }
+    },
+    {
+      "id": "gc-0246",
+      "note": "An application whose identifier the priority itself names, dwelt on for nine minutes. Overlap decides first and decides relevant, so the dwell never reaches the accusation route at all — the order of the routes inside rung 5 is the assertion here.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "contextPack": [ { "kind": "app", "value": "com.apple.Pages" } ],
+      "evidence": { "bundleID": "com.acme.ProposalBuilder", "titleTokens": [] },
+      "dwellSeconds": 540,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "medium", "eligibility": "suppressed:verdictRelevant", "clauses": ["tokenOverlap", "returnedToAnchor"] }
+    }
+  ]
+}

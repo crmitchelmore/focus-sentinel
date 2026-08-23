@@ -17,6 +17,9 @@ public struct CorpusOutcome: Sendable, Equatable {
     /// Executable rungs consulted before a decision, `1…8` (R-54).
     public let consultedDepth: Int
     public let drift: DriftState
+    /// Every `NormalisedToken` the explanation carries, across all its clauses — the only
+    /// observable that `maximumExplanationTokens` moves.
+    public let explanationTokenCount: Int
     /// One sample per `judge` call, in call order. Fixture loading and snapshot construction
     /// are excluded: R-65 pays the priority-side sentence vector once per revision, not per
     /// activation, and charging it to a classification would measure the wrong thing.
@@ -267,6 +270,7 @@ public struct CorpusRunner: Sendable {
             skippedRuleCount: snapshot.skippedRuleCount,
             consultedDepth: judgement.consultedDepth,
             drift: judgement.drift,
+            explanationTokenCount: judgement.explanation.tokens.count,
             latencies: latencies
         )
     }
@@ -312,6 +316,12 @@ public struct CorpusRunner: Sendable {
         if outcome.skippedRuleCount != testCase.expectSkippedRuleCount {
             differences.append(
                 "skippedRuleCount \(outcome.skippedRuleCount) ≠ \(testCase.expectSkippedRuleCount)"
+            )
+        }
+        if let expected = testCase.expectExplanationTokens,
+           outcome.explanationTokenCount != expected {
+            differences.append(
+                "explanationTokens \(outcome.explanationTokenCount) ≠ \(expected)"
             )
         }
 
