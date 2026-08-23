@@ -92,6 +92,16 @@ final class SensingHost {
     /// Whether the graph is attached right now.
     private(set) var isRunning = false
 
+    /// Called after this graph has driven a session transition — a lifecycle pause, a
+    /// sensitive-application stand-down, or the global switch.
+    ///
+    /// It exists because the observer graph and the session projection are two objects: this
+    /// one changes the stored session, and `SessionHost` is what the cockpit draws. Without the
+    /// hook, locking the screen would pause the session and the window would keep saying
+    /// *Focus* until the person happened to press something — which is a visible defect, not a
+    /// refresh policy. The composition root wires it; nothing else may.
+    var onSessionChanged: (() -> Void)?
+
     /// The corroboration tick, held so that `pause()` can invalidate it. Nothing else in this
     /// programme owns a repeating timer.
     private var tick: Timer?
@@ -591,6 +601,7 @@ final class SensingHost {
             let transition = try sessions.apply(event)
             guard transition.value != nil else { return }
             record(kind: .sessionPhaseChanged, detail: .tokens([sessionToken(for: event)]))
+            onSessionChanged?()
         } catch SessionStoreError.noOpenSession {
             // Nothing to pause. Sensing runs whether or not a session does.
         } catch {

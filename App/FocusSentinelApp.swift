@@ -29,12 +29,18 @@ struct FocusSentinelApp: App {
     @State private var composition = AppComposition.shared
     @State private var appearance = AppearanceObserver()
 
-    /// Builds the quick-capture panel and registers the global hot key, at launch.
+    /// Builds the quick-capture panel, registers the global hot key, **reconciles whatever
+    /// session was running**, and attaches the observer graph — at launch.
     ///
-    /// Here rather than in a scene's `.task` because "built at launch" is a *measured* claim
-    /// the app has to keep: probe P-57 timed 34 ms from the hot key to a visible, focused
-    /// panel, and building it on first use is the only way to lose that. `start()` is
-    /// idempotent, so a re-created `App` value cannot offer the same combination twice.
+    /// Here rather than in a scene's `.task` for two measured reasons. "Built at launch" is a
+    /// claim the app has to keep: probe P-57 timed 34 ms from the hot key to a visible, focused
+    /// panel, and building it on first use is the only way to lose that. And restoration has to
+    /// happen **before the first frame**, or the cockpit's first paint would show a session
+    /// that had not yet been reconciled — a number the app knows is wrong, drawn once and then
+    /// corrected, which is worse than drawing it right.
+    ///
+    /// `start()` is idempotent, so a re-created `App` value cannot offer the same shortcut to
+    /// the platform twice or attach the observer graph twice.
     init() {
         AppComposition.shared.start()
     }
@@ -85,10 +91,15 @@ private struct CockpitHost: View {
         )
         .onAppear {
             composition.priorityHost.adoptUndoManager(undoManager)
+            // The session journal drives the same Edit menu. Only the operations a *person*
+            // performed reach it: an auto-pause for a screen lock is not something they meant
+            // to do, and offering to undo it would be offering to undo the world.
+            composition.sessionHost.adoptUndoManager(undoManager)
             composition.quickCapturePanel.update(traits: appearance.traits)
         }
         .onChange(of: undoManager) { _, manager in
             composition.priorityHost.adoptUndoManager(manager)
+            composition.sessionHost.adoptUndoManager(manager)
         }
         .onChange(of: appearance.traits) { _, traits in
             composition.quickCapturePanel.update(traits: traits)
