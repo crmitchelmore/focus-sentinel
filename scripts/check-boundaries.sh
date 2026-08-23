@@ -11,7 +11,8 @@
 #   FocusRules     Foundation, SwiftData, FocusCore             AppKit, SwiftUI, networking, Classify/Sensing/UI
 #   FocusClassify  Foundation, NaturalLanguage, Core, Rules     ANY networking, AppKit, SwiftUI, Sensing, UI
 #   FocusSensing   Foundation, AppKit, CoreGraphics, IOKit,     SwiftUI, networking, Classify, Rules, UI
-#                  Carbon.HIToolbox, FocusCore
+#                  Carbon.HIToolbox, CoreAudio, CoreMediaIO,
+#                  FocusCore
 #   FocusUI        SwiftUI, AppKit, Observation, QuickLook,     SwiftData, networking, Sensing, Classify, Rules
 #                  UniformTypeIdentifiers, FocusCore
 #
@@ -26,6 +27,28 @@
 #   * **`QuickLook` and `UniformTypeIdentifiers` for `FocusUI`.** `.quickLookPreview(_:in:)` is
 #     the `_QuickLook_SwiftUI` cross-import overlay and appears only with `import QuickLook`
 #     (P-62) — a boundary fact, not an implementation detail.
+#
+# The two e03 additions are the same kind of ruling (plan R-31), and both are measured rather
+# than assumed:
+#
+#   * **`CoreAudio` for `FocusSensing`.** Whether a microphone is running somewhere is a
+#     platform fact, and this package is where platform facts are read. Observing it was
+#     measured prompt-free from an ad-hoc-signed bundle holding no TCC row: five devices
+#     enumerated, `IsRunningSomewhere` read on every one, a property listener installed and
+#     removed on every one, all at status `0`, with both TCC databases byte-identical
+#     afterwards (probes P-94/P-95/P-104). Only devices reporting **input** channels are read —
+#     an output device running is a person listening to music (P-96).
+#   * **`CoreMediaIO` for `FocusSensing`.** The camera enumeration alone, which is the one call
+#     that *was* measured prompt-free (P-97). The deeper camera path is compiled but held off
+#     behind a flag set nowhere, because the rig has no camera and an unanswered question is not
+#     a pass (P-104, R-40).
+#
+# `mach_continuous_time` and `sysctl kern.boottime` need no row of their own: both are reachable
+# through `Foundation` on macOS, so the restoration anchor costs the matrix nothing.
+#
+# Note what is **not** added: `ScreenCaptureKit`, `AVFoundation`, `CoreMedia`,
+# `ApplicationServices`, `Accessibility`. Every one of those is either a prompt or a grant, and
+# this epic is the zero-grant half of sensing.
 #
 # And one **subtraction**, which is the point of R-24: `FocusUI` may not import `SwiftData`.
 # e01 left that unstated because nothing yet tempted the UI to open a store; e02 gives it a
@@ -85,7 +108,7 @@ typeset -A ALLOWED_FRAMEWORKS
 ALLOWED_FRAMEWORKS[FocusCore]="Foundation SwiftData os"
 ALLOWED_FRAMEWORKS[FocusRules]="Foundation SwiftData os"
 ALLOWED_FRAMEWORKS[FocusClassify]="Foundation NaturalLanguage os"
-ALLOWED_FRAMEWORKS[FocusSensing]="Foundation AppKit CoreGraphics IOKit Carbon.HIToolbox os"
+ALLOWED_FRAMEWORKS[FocusSensing]="Foundation AppKit CoreGraphics IOKit Carbon.HIToolbox CoreAudio CoreMediaIO os"
 ALLOWED_FRAMEWORKS[FocusUI]="Foundation SwiftUI AppKit Observation QuickLook UniformTypeIdentifiers os"
 
 PACKAGES=(FocusCore FocusRules FocusClassify FocusSensing FocusUI)

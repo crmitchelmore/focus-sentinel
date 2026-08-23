@@ -97,7 +97,13 @@ import sys
 
 root = sys.argv[1]
 
-NAMESPACES = ("shell.", "settings.", "status.", "priority.", "capture.", "context.", "handoff.", "undo.")
+# e03 adds three namespaces (plan R-52). `session.` and `capability.` are `FocusUI`'s, for the
+# session surfaces and the capability matrix; `sensing.` is `FocusUI`'s too, for the pause
+# switch and the sensing status line. `FocusCore` keeps only the `undo.` and `status.` keys it
+# already owns — the session machine returns typed values, and the labels for them live in the
+# UI package where every other user-visible string does.
+NAMESPACES = ("shell.", "settings.", "status.", "priority.", "capture.", "context.",
+              "handoff.", "undo.", "session.", "sensing.", "capability.")
 
 # module name -> (catalog path, source directory)
 MODULES = {
