@@ -73,6 +73,9 @@ OPERATOR_TIMEOUT="${FOCUS_OPERATOR_TIMEOUT:-45}"
 # `pkill -x` matches is "FocusSentinel".
 WINDOW_OWNER='Focus Sentinel'
 PROCESS_NAME='FocusSentinel'
+# The TCC client identifier, which is what a row in either database is keyed on. It is stable
+# for the whole programme (FocusStore.bundleIdentifier).
+BUNDLE_ID='com.chrismitchelmore.FocusSentinel'
 APP="$DD/Build/Products/Debug/FocusSentinel.app"
 
 # The decoys. Both are stock system applications, both open with `open -a`, and both are
@@ -612,7 +615,44 @@ else
             print "(empty — the databases are identical)"
         fi
         print
-        print "== com.apple.TCC log lines naming FocusSentinel, over the last 10 minutes"
+        print "== TCC rows held for $BUNDLE_ID, in either database"
+        print "   A prompt that was answered leaves a row here with auth_value 2 (allowed)"
+        print "   or 1 (denied by the person). Read the auth_value, not the row count."
+        print
+        print "   A row reading auth_value 0 is NOT evidence of a prompt. macOS records a"
+        print "   denied Accessibility entry for any process that merely READS its own trust"
+        print "   state with AXIsProcessTrusted(), which is a read this programme performs on"
+        print "   purpose and which R-33 permits by name — reading trust is not requesting it."
+        print "   It is what puts an app in the Accessibility list unchecked, and no dialog is"
+        print "   involved. Check last_modified against the drive: a row older than this run is"
+        print "   not something this run did."
+        tcc_rows=$(
+            for db in "$USER_TCC" "$SYSTEM_TCC"; do
+                sqlite3 "$db" \
+                    "SELECT service, client, 'auth_value=' || auth_value,
+                            datetime(last_modified, 'unixepoch') || ' UTC'
+                     FROM access WHERE client = '$BUNDLE_ID';" \
+                    2>/dev/null
+            done
+        )
+        print -r -- "${tcc_rows:-(none — TCC holds no row of any kind for this bundle)}"
+        print
+        print "== com.apple.TCC log lines that would mean the app ASKED, over the last 10 minutes"
+        print "   Read this section, not the next one."
+        log show --last 10m --predicate 'subsystem == "com.apple.TCC"' --style compact 2>/dev/null \
+            | grep -i 'FocusSentinel' \
+            | grep -iE 'prompt|will (display|show)|user (granted|denied|responded)|AUTHREQ_(CTX|RESULT)' \
+            || print "(none)"
+        print
+        print "== every com.apple.TCC log line naming FocusSentinel — CONTEXT, NOT A VERDICT"
+        print "   A line here is NOT evidence of a prompt. tccd writes attribution and"
+        print "   preflight bookkeeping — AUTHREQ_ATTRIBUTION, and 'WindowServer/coreaudiod is"
+        print "   checking access' — whenever any process in a responsibility chain is"
+        print "   evaluated, prompt or no prompt. Measured on this rig: an ad-hoc-signed launch"
+        print "   after a TCC reset produced 34 such lines while TCC held no row for the bundle"
+        print "   and no authorisation window appeared. So 'zero lines naming the process' is"
+        print "   not the test; the two sections above and the grant-free"
+        print "   authorisationSurfaces == [] scan in scripts/self-check.sh are."
         log show --last 10m --predicate 'subsystem == "com.apple.TCC"' --style compact 2>/dev/null \
             | grep -i 'FocusSentinel' || print "(none)"
     } > "$EVIDENCE_DIR/tcc-diff.txt"
