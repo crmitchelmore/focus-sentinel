@@ -23,12 +23,21 @@ public protocol RelevanceClassifier: Sendable {
     func classify(_ input: ClassificationInput) -> ClassificationOutcome
 }
 
-/// The classifier e01 ships: it has no rule engine and no model, so it declines to decide.
+/// The classifier e01 shipped: it has no rule engine and no model, so it declines to decide.
 ///
 /// This is not a stub standing in for a real implementation — it is the honest answer for a
 /// build that has no evidence source yet, and it is the behaviour every later engine must
 /// fall back to. Because `uncertain` suppresses intervention, an app running on this
 /// classifier is guaranteed never to nudge, which is exactly the right failure mode.
+///
+/// ## From e04 this is the *degraded* answer rather than the only one
+///
+/// `DeterministicRelevanceEngine` now satisfies the same seam and is what the composition root
+/// builds. This type stays for three reasons rather than out of sentiment: it is what a build
+/// with no priority, no rules and no context pack correctly answers; it is what e01's shipped
+/// tests are written against, and those tests are the record that the fallback was always
+/// present; and it is the shape any later engine must degrade *to* when its own evidence source
+/// is unavailable, which e06 will need on the first Mac whose model assets have not downloaded.
 public struct UndecidedClassifier: RelevanceClassifier {
     public init() {}
 
