@@ -1,29 +1,24 @@
-import FocusRules
+import FocusCore
 import Foundation
 import Testing
 
 @testable import FocusClassify
 
+/// The seam itself: the protocol, the classifier e01 ships, and the encoded shape of an
+/// input. The *vocabulary* assertions moved to `FocusCoreTests.VerdictTests` with the types
+/// they are about (R-53), and the rule-verdict mapping moved to `FocusRulesTests`.
+///
+/// What is asserted here that is not asserted there: that the aliases still resolve, so a
+/// call site written against `FocusClassify.Verdict` in e01 still compiles and still means
+/// the same type.
 @Suite("Classification seam")
 struct SeamTests {
-    @Test("the Verdict enum has exactly three cases")
-    func verdictHasThreeCases() {
-        #expect(Verdict.allCases.count == 3)
-        #expect(Set(Verdict.allCases) == [.relevant, .unrelated, .uncertain])
-    }
-
-    /// Standing condition 6, asserted rather than documented: `uncertain` always suppresses
-    /// intervention. If a later epic ever "helpfully" makes a low-confidence uncertain
-    /// verdict nudge the user, this test fails.
-    @Test("uncertain suppresses intervention, and only unrelated permits it")
-    func uncertainSuppressesIntervention() {
-        #expect(Verdict.uncertain.permitsIntervention == false)
-        #expect(Verdict.relevant.permitsIntervention == false)
-        #expect(Verdict.unrelated.permitsIntervention == true)
-
-        for verdict in Verdict.allCases where verdict != .unrelated {
-            #expect(verdict.permitsIntervention == false)
-        }
+    @Test("the aliases resolve to the vocabulary FocusCore now owns")
+    func aliasesResolveToTheRelocatedTypes() {
+        #expect(FocusClassify.Verdict.self == FocusCore.Verdict.self)
+        #expect(FocusClassify.VerdictSource.self == FocusCore.VerdictSource.self)
+        #expect(FocusClassify.ClassificationOutcome.self == FocusCore.ClassificationOutcome.self)
+        #expect(FocusClassify.ClassificationInput.self == FocusCore.ClassificationInput.self)
     }
 
     @Test("an empty ClassificationInput yields uncertain")
@@ -63,25 +58,6 @@ struct SeamTests {
     func usableThroughTheProtocol() {
         let classifier: any RelevanceClassifier = UndecidedClassifier()
         #expect(classifier.classify(.empty).verdict == .uncertain)
-    }
-
-    @Test("confidence is clamped to 0...1")
-    func confidenceIsClamped() {
-        #expect(
-            ClassificationOutcome(verdict: .relevant, source: .heuristic, confidence: 4.2)
-                .confidence == 1
-        )
-        #expect(
-            ClassificationOutcome(verdict: .relevant, source: .heuristic, confidence: -1)
-                .confidence == 0
-        )
-    }
-
-    @Test("a user's explicit uncertain rule stays uncertain")
-    func userUncertaintyIsPreserved() {
-        #expect(RuleVerdict.relevant.classificationVerdict == .relevant)
-        #expect(RuleVerdict.unrelated.classificationVerdict == .unrelated)
-        #expect(RuleVerdict.uncertain.classificationVerdict == .uncertain)
     }
 
     @Test("ClassificationInput carries only normalised evidence")
