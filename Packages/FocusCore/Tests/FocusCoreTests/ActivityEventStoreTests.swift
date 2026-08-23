@@ -299,6 +299,126 @@ struct ActivityEventStoreTests {
         #expect(decoded[0].dwellSeconds == nil)
     }
 
+    // MARK: - The physical column, on disk, after a reopen (F-40, SC-3, criterion 32)
+
+    /// **The hostile corpus, through the real store, read out of the file it was written to.**
+    ///
+    /// The two tests above are about representability: they prove that no expression turns a
+    /// window title into the argument `append` demands. That is the right guarantee, but on
+    /// its own it is not a test of *this store* — it constructs `NormalisedDetail` values and
+    /// searches those, and the export it reads re-derives every field through
+    /// `NormalisedDetail.inspect(_:)`, which sanitises on the way out. So a `detail` column
+    /// holding raw captured content would be invisible to both: the export would report the
+    /// row as carrying nothing, and the corpus test would never open a store at all.
+    ///
+    /// Measured, before this test existed: with `append` changed to persist a full bank URL
+    /// with an account number and a query string on every `.userActive` row, the entire
+    /// 419-test FocusCore suite passed. Private data on disk, and nothing red.
+    ///
+    /// This test closes that. It writes through the production entry point on a **real
+    /// SQLite-backed container**, drops it, reopens it from the same URL, and then reads the
+    /// **physical `detail` column** of every row — plus every byte of every file the store
+    /// wrote, which catches a leak into any column rather than only the one named here.
+    ///
+    /// The byte scan carries a **positive control**: a marker that is deliberately stored is
+    /// asserted to be findable in the same bytes. Without it, a scan that had stopped reading
+    /// the data at all would pass silently, and this test would become the theatre it exists
+    /// to replace.
+    @Test("Nothing from the hostile corpus is on disk after a real store round-trip")
+    func hostileCorpusReachesNoStoredColumn() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appending(path: "focus-hostile-\(UUID().uuidString)", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appending(path: "hostile.store")
+
+        // A bundle identifier is the one free-form string the row legitimately carries, and it
+        // is the positive control: it must be findable on disk, or the scan below proves
+        // nothing at all.
+        let marker = "com.example.PositiveControlMarker"
+        let sessionID = UUID()
+
+        try autoreleasepool {
+            let container = try FocusStore.makeContainer(kind: .temporary(url))
+            let clock = MovingDateProvider()
+            let store = ActivityEventStore(context: container.mainContext, dateProvider: clock)
+
+            // Every kind, every token and every measurement, written the only way the
+            // production graph can write them.
+            for kind in ActivityEventKind.allCases {
+                try store.append(kind: kind, bundleID: marker, sessionID: sessionID)
+                clock.advance(by: 1)
+            }
+            for token in DetailToken.allCases {
+                try store.append(kind: .contextChanged, bundleID: marker, detail: .tokens([token]))
+                clock.advance(by: 1)
+            }
+            for (index, measurement) in MeasurementKind.allCases.enumerated() {
+                try store.append(
+                    kind: .contextChanged,
+                    bundleID: marker,
+                    detail: .measurement(measurement, index)
+                )
+                clock.advance(by: 1)
+            }
+            // And the whole corpus offered at every producer's shoulder: each hostile string
+            // is the value a careless caller would have had in hand at the moment it wrote a
+            // row, so a row is written for each one. `append` accepts only the two normalised
+            // shapes, which is the point — the string has nowhere to go.
+            for (index, _) in Self.hostileCorpus.enumerated() {
+                try store.append(
+                    kind: .frontmostApplicationChanged,
+                    bundleID: marker,
+                    detail: .measurement(.dwellSeconds, index),
+                    dwellSeconds: Double(index)
+                )
+                clock.advance(by: 1)
+            }
+        }
+
+        // Reopen from the same URL: everything below is read out of the file, not out of a
+        // context that still remembers what it inserted.
+        let reopened = try FocusStore.makeContainer(kind: .temporary(url))
+        let rows = try ActivityEventStore(context: reopened.mainContext).all()
+        #expect(rows.count > 40, "the store did not persist across the reopen")
+
+        for row in rows {
+            for hostile in Self.hostileCorpus {
+                #expect(
+                    row.detail?.contains(hostile) != true,
+                    "a corpus entry is in the stored detail column: \(row.detail ?? "")"
+                )
+                #expect(row.bundleID?.contains(hostile) != true)
+            }
+            // Whatever is in the column is one of the two normalised shapes and nothing else.
+            if let detail = row.detail {
+                if case .unreadable = NormalisedDetail.inspect(detail) {
+                    Issue.record("the stored column holds something this build cannot read: \(detail)")
+                }
+            }
+        }
+
+        // Every byte the store wrote, across the SQLite file and its journals.
+        let files = try FileManager.default.contentsOfDirectory(
+            at: directory,
+            includingPropertiesForKeys: nil
+        )
+        var bytes = Data()
+        for file in files { bytes.append(try Data(contentsOf: file)) }
+        let text = String(decoding: bytes, as: UTF8.self)
+
+        #expect(
+            text.contains(marker),
+            "the positive control is not in these bytes, so the scan below proves nothing"
+        )
+        for hostile in Self.hostileCorpus {
+            #expect(!text.contains(hostile), "'\(hostile)' was written to disk")
+        }
+        for needle in ["compose=new", "divorce-settlement", "Salary review", "confidential.docx"] {
+            #expect(!text.contains(needle), "'\(needle)' was written to disk")
+        }
+    }
+
     @Test("Every one of the fourteen kinds can be appended and read back")
     func everyKindRoundTrips() throws {
         let harness = try ActivityEventStoreHarness()
