@@ -112,6 +112,73 @@ struct PseudoLocalizationTests {
         }
     }
 
+    /// The same assertion over e02's surfaces.
+    ///
+    /// `drawsLocalisedProse` is what keeps this honest. The committed priority hero draws the
+    /// user's own sentence through `Text(verbatim:)` — it is data, not prose, and it must
+    /// **not** move when the locale changes. Asserting "more ink" over it would be asserting
+    /// that the hero is translated, which is the opposite of what F-149 wants and the opposite
+    /// of what the app does. Every other e02 surface draws catalog strings and is here.
+    @Test(
+        "the priority surfaces draw more ink when pseudo-localised",
+        arguments: PriorityComponent.allCases.filter(\.drawsLocalisedProse)
+    )
+    func priorityComponentsExpand(component: PriorityComponent) throws {
+        for size in SnapshotTypeSize.allCases {
+            let plain = try SnapshotHarness.render(
+                component.view,
+                traits: .light,
+                textScale: size.textScale,
+                width: component.width,
+                name: "\(component.rawValue).plain.\(size.rawValue)"
+            )
+            let pseudo = try SnapshotHarness.render(
+                component.view,
+                traits: .light,
+                textScale: size.textScale,
+                width: component.width,
+                transform: PseudoLocale.transform,
+                name: "\(component.rawValue).pseudo.\(size.rawValue)"
+            )
+
+            let plainInk = PNGCompare.inkPixels(plain.pixels)
+            let pseudoInk = PNGCompare.inkPixels(pseudo.pixels)
+            #expect(
+                pseudoInk > plainInk,
+                "\(component.rawValue) drew no extra text when pseudo-localised (\(plainInk) → \(pseudoInk)): the strings never reached the view"
+            )
+            #expect(pseudo.height >= plain.height)
+            #expect(pseudo.width >= plain.width)
+        }
+    }
+
+    /// The hero's other half: the user's sentence is *not* translated.
+    ///
+    /// Its empty state is prose and does move — `priorityHeroEmpty` is in the expansion
+    /// argument list above and proves it — so this is not "the hero ignores the seam", it is
+    /// "the hero tells data and prose apart".
+    @Test("the committed priority is drawn verbatim and never pseudo-localised")
+    func theCommittedPriorityIsNeverTranslated() throws {
+        let plain = try SnapshotHarness.render(
+            PriorityComponent.priorityHero.view,
+            traits: .light,
+            width: PriorityComponent.priorityHero.width,
+            name: "priorityHero.verbatim.plain"
+        )
+        let pseudo = try SnapshotHarness.render(
+            PriorityComponent.priorityHero.view,
+            traits: .light,
+            width: PriorityComponent.priorityHero.width,
+            transform: PseudoLocale.transform,
+            name: "priorityHero.verbatim.pseudo"
+        )
+
+        #expect(
+            !PNGCompare.areDistinct(plain.pixels, pseudo.pixels),
+            "the user's own priority went through the string catalog seam"
+        )
+    }
+
     // MARK: - The committed pseudo-localised pass
 
     @Test(
@@ -122,6 +189,21 @@ struct PseudoLocalizationTests {
         // One committed pass, at the default text size in light appearance, so a change in
         // how expansion lands in the layout is visible as a diff rather than only as a
         // number.
+        try SnapshotHarness.assertSnapshot(
+            component.view,
+            component: component.rawValue,
+            variant: "light",
+            width: component.width,
+            transform: PseudoLocale.transform,
+            baselineSuffix: "pseudo"
+        )
+    }
+
+    @Test(
+        "the priority surfaces' pseudo-localised pass matches its baseline",
+        arguments: PriorityComponent.allCases.filter(\.drawsLocalisedProse)
+    )
+    func priorityPseudoLocalisedPassMatchesBaseline(component: PriorityComponent) throws {
         try SnapshotHarness.assertSnapshot(
             component.view,
             component: component.rawValue,
