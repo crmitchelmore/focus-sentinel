@@ -181,6 +181,162 @@
         }
       }
     },
+    "explanation.clause.conflictingRules" : {
+      "comment" : "Explanation clause: two rules of equal authority and narrowness contradict each other.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "two of your rules disagree"
+          }
+        }
+      }
+    },
+    "explanation.clause.contextItem" : {
+      "comment" : "Explanation clause: the answer came from the priority's context pack.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "something you attached to this priority"
+          }
+        }
+      }
+    },
+    "explanation.clause.insufficientEvidence" : {
+      "comment" : "Explanation clause: the engine declined, and the named reason says which route it took.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "not enough to go on"
+          }
+        }
+      }
+    },
+    "explanation.clause.languageNotSupported" : {
+      "comment" : "Explanation clause: no embedding exists for this language on this Mac.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus can only compare wording in English"
+          }
+        }
+      }
+    },
+    "explanation.clause.mixedSubjects" : {
+      "comment" : "Explanation clause: drift accumulated across more than one subject, so none is named.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "several unrelated apps"
+          }
+        }
+      }
+    },
+    "explanation.clause.noNegativeBasis" : {
+      "comment" : "Explanation clause: the priority names no app or site, so an absence means nothing. The only clause whose copy carries an ask.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tell Focus one app or site you expect to be in, and it can tell this apart from your work."
+          }
+        }
+      }
+    },
+    "explanation.clause.returnedToAnchor" : {
+      "comment" : "Explanation clause: the person returned to the subject they were working in.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "you went back to it"
+          }
+        }
+      }
+    },
+    "explanation.clause.seedDefault" : {
+      "comment" : "Explanation clause: the answer came from a bundled default, overridable in one click.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "a default Focus ships"
+          }
+        }
+      }
+    },
+    "explanation.clause.seedFallbackMixedUse" : {
+      "comment" : "Explanation clause: a bundled ‘ask each time’ default for a mixed-use application.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "this app is used for all sorts of things"
+          }
+        }
+      }
+    },
+    "explanation.clause.similarityCorroborated" : {
+      "comment" : "Explanation clause: the on-device sentence-similarity signal agreed. No number is ever shown.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "the wording lines up"
+          }
+        }
+      }
+    },
+    "explanation.clause.sustainedDwell" : {
+      "comment" : "Explanation clause: drift has been sustained past the threshold.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "you have been here a while"
+          }
+        }
+      }
+    },
+    "explanation.clause.tokenOverlap" : {
+      "comment" : "Explanation clause: the priority and what is on screen share these words.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "words in common with your priority"
+          }
+        }
+      }
+    },
+    "explanation.clause.userRule" : {
+      "comment" : "Explanation clause: the answer came from a rule the user authored.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "a rule you wrote"
+          }
+        }
+      }
+    },
     "explanation.stage.contextPack" : {
       "comment" : "Explanation phrase naming the rung that decided.",
       "extractionState" : "manual",
