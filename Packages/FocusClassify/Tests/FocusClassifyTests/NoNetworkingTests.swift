@@ -60,9 +60,16 @@ struct NoNetworkingTests {
             "expected FocusClassify sources at \(directory.path)"
         )
 
+        // **Recursive from e04.** The engine's sources live in `Normalisation/`, `Heuristic/`,
+        // `Snapshot/`, `Cascade/`, `Time/` and `Explanation/`, and a non-recursive listing
+        // would have quietly stopped covering every one of them the moment the first
+        // subdirectory appeared — a check that keeps passing while it stops looking is worse
+        // than one that fails. `check-boundaries.sh` already greps this tree recursively; this
+        // is the in-package half catching up with it.
         let files = try FileManager.default
-            .contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
-            .filter { $0.pathExtension == "swift" }
+            .subpathsOfDirectory(atPath: directory.path)
+            .filter { $0.hasSuffix(".swift") }
+            .map { directory.appending(path: $0) }
         #expect(!files.isEmpty, "found no Swift sources to scan — the check would be vacuous")
 
         for file in files {
