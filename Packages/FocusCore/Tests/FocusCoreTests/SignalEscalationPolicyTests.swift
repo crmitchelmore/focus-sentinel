@@ -27,7 +27,7 @@ struct SignalEscalationPolicyTests {
     /// Rule 1. Only "I found nothing" justifies looking harder.
     @Test("escalation happens only on .undecided")
     func escalatesOnlyOnUndecided() {
-        for outcome in ClassificationOutcome.allCases {
+        for outcome in SignalOutcome.allCases {
             let next = policy.nextSignal(
                 after: .frontmostApplication,
                 given: outcome,
@@ -45,14 +45,14 @@ struct SignalEscalationPolicyTests {
     /// become a reason to read more of somebody's screen. This is the assertion that says so.
     @Test("uncertain terminates the cascade exactly like relevant and unrelated")
     func uncertainTerminatesTheCascade() {
-        #expect(ClassificationOutcome.uncertain.isDecision)
+        #expect(SignalOutcome.uncertain.isDecision)
         for tier in SignalTier.allCases {
             #expect(
                 policy.nextSignal(after: tier, given: .uncertain, capabilities: allTiersAvailable) == nil,
                 "uncertain escalated from \(tier)"
             )
         }
-        #expect(!ClassificationOutcome.undecided.isDecision)
+        #expect(!SignalOutcome.undecided.isDecision)
     }
 
     /// Rule 2. A tier the app may not use is stepped over in silence — and in this programme
