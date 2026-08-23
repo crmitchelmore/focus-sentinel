@@ -130,6 +130,38 @@ else
     fi
 fi
 
+# --- e03: two usage-description keys that must be ABSENT --------------------------------------
+#
+# `NSMicrophoneUsageDescription` and `NSCameraUsageDescription` are the strings macOS shows in a
+# permission dialog when an app *opens* a capture device. This app never opens one. It reads a
+# property **about** a device — `kAudioDevicePropertyDeviceIsRunningSomewhere`, measured
+# prompt-free from a bundle holding no TCC row of any kind (probes P-94/P-95) — and the camera
+# path is switched off entirely on every Mac in v1.
+#
+# Declaring a usage string for a capture the app never performs would be a claim it cannot
+# honour: the key is a promise about what the app will do with a microphone, and the honest
+# answer is that it will never have one. So both are asserted absent from the **merged**
+# Info.plist, on both configurations — the merged one, because only the built product can say
+# whether the partial plist and the generated keys came together the way they were meant to.
+print
+print "== usage descriptions (must be absent)"
+MERGED_PLIST="$APP/Contents/Info.plist"
+if [[ ! -f "$MERGED_PLIST" ]]; then
+    print -u2 "FAIL: no merged Info.plist at $MERGED_PLIST"
+    rc=1
+else
+    for key in NSMicrophoneUsageDescription NSCameraUsageDescription; do
+        if /usr/libexec/PlistBuddy -c "Print :$key" "$MERGED_PLIST" > /dev/null 2>&1; then
+            print -u2 "FAIL: $key is declared in the merged Info.plist"
+            print -u2 "      This app never opens a capture device — it reads a property about one."
+            print -u2 "      A usage string for a capture it never performs is a claim it cannot honour."
+            rc=1
+        else
+            print "ok   absent: $key"
+        fi
+    done
+fi
+
 print
 if (( rc == 0 )); then
     print "ENTITLEMENTS OK ($CONFIGURATION)"
