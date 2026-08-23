@@ -255,6 +255,15 @@ check_packaging() {
     return $rc
 }
 
+# SC-1's binary half needs one product the workspace scheme does not build: `Tools/windowid`
+# is a standalone SwiftPM package outside `Packages/`, so nothing in stages 5–7 produces it.
+# Building it here is what lets the check treat a missing product as a failure rather than a
+# skipped line — an absent binary must never be the reason a symbol check passes.
+forbidden_binary_stage() {
+    swift build -c release --package-path Tools/windowid || return $?
+    FOCUS_REQUIRE_BINARY_CHECK=1 scripts/check-forbidden.sh
+}
+
 # The whole gate is a function rather than a `{ … }` block. A `{ … } > log` group is not a
 # subshell, so an `exit` inside it terminates the script outright — which is what used to
 # happen here, and it meant the summary table was written to the log and then never echoed:
@@ -322,6 +331,20 @@ gate() {
     FOCUS_REQUIRE_BINARY_CHECK=1 \
         run_stage "boundaries-binary" "$LOG_DIR/focus-boundaries-binary.log" \
         scripts/check-boundaries.sh
+
+    # 7c — the binary half of SC-1, for the same reason and in the same shape (e03 R-32).
+    # `kCGWindowName` is an exported CFStringRef, so a reference to it leaves
+    # `_kCGWindowName` among an object's undefined symbols; a grep can be defeated by
+    # building the string at runtime, and the symbol cannot. Stage 3 runs before anything is
+    # built and reports a skip; this run promotes that skip to a failure, over seven products
+    # named one by one — the app binary, the five package objects and `Tools/windowid`.
+    #
+    # `windowid` is built here rather than assumed, because it lives outside the workspace
+    # scheme and stages 5 and 6 therefore never touch it. The check also asserts the four
+    # sanctioned window-list symbols are still *present* in it, so the tool cannot pass by
+    # having been gutted.
+    run_stage "forbidden-binary" "$LOG_DIR/focus-forbidden-binary.log" \
+        forbidden_binary_stage
 
     # 8 — entitlements, on both configurations. The configuration is passed explicitly
     # because the assertion differs: get-task-allow belongs in Debug and must be absent from
@@ -395,6 +418,7 @@ collect_evidence() {
         "focus-boundaries.log:boundaries.log"
         "focus-boundaries-binary.log:boundaries-binary.log"
         "focus-forbidden.log:forbidden.log"
+        "focus-forbidden-binary.log:forbidden-binary.log"
         "focus-strings.log:strings.log"
         "focus-build.log:build-debug.log"
         "focus-build-release.log:build-release.log"
