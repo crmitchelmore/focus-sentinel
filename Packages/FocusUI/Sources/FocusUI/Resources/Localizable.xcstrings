@@ -1,6 +1,294 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "capability.fallback.degraded" : {
+      "comment" : "What happens instead. %@ is the name of the cheaper capability it falls back to.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Falls back to “%@” and keeps working."
+          }
+        }
+      }
+    },
+    "capability.fallback.featureAbsent" : {
+      "comment" : "What happens instead.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "That part of the app does not run."
+          }
+        }
+      }
+    },
+    "capability.fallback.fullFunction" : {
+      "comment" : "What happens instead when a capability is missing.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing depends on it."
+          }
+        }
+      }
+    },
+    "capability.fallback.showUnavailable" : {
+      "comment" : "What happens instead.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "There is nothing to fall back to, so the app says so."
+          }
+        }
+      }
+    },
+    "capability.fallback.suppressOnly" : {
+      "comment" : "What happens instead. The safe direction for every suppression rule.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The app does less, never more."
+          }
+        }
+      }
+    },
+    "capability.name.accessibilityWindowContext" : {
+      "comment" : "Capability name. A later version's, with consent.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Window titles and browser context"
+          }
+        }
+      }
+    },
+    "capability.name.cameraActivity" : {
+      "comment" : "Capability name. Held off in this version on every Mac.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Whether a camera is running"
+          }
+        }
+      }
+    },
+    "capability.name.displayGeometry" : {
+      "comment" : "Capability name.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Which display a window is on"
+          }
+        }
+      }
+    },
+    "capability.name.frontmostApplication" : {
+      "comment" : "Capability name.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Which app is in front"
+          }
+        }
+      }
+    },
+    "capability.name.idle" : {
+      "comment" : "Capability name.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Whether you are at the keyboard"
+          }
+        }
+      }
+    },
+    "capability.name.microphoneActivity" : {
+      "comment" : "Capability name.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Whether a microphone is running"
+          }
+        }
+      }
+    },
+    "capability.name.notifications" : {
+      "comment" : "Capability name. A later version's.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notifications"
+          }
+        }
+      }
+    },
+    "capability.name.onDeviceModel" : {
+      "comment" : "Capability name. A later version's.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The on-device model"
+          }
+        }
+      }
+    },
+    "capability.name.presentation" : {
+      "comment" : "Capability name.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Full screen and presentations"
+          }
+        }
+      }
+    },
+    "capability.name.screenCapture" : {
+      "comment" : "Capability name. Parked.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Screenshots"
+          }
+        }
+      }
+    },
+    "capability.name.systemLifecycle" : {
+      "comment" : "Capability name.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lock and sleep"
+          }
+        }
+      }
+    },
+    "capability.name.windowMetadata" : {
+      "comment" : "Capability name. Never a window title.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Where windows sit on screen"
+          }
+        }
+      }
+    },
+    "capability.pane.explanation" : {
+      "comment" : "Subtitle of the matrix. There is no call to action anywhere in this surface.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing on this page asks you for anything. The app reads what it already may, and says plainly what it cannot."
+          }
+        }
+      }
+    },
+    "capability.pane.heading" : {
+      "comment" : "Heading of the graceful-degradation matrix.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "What this Mac lets the app do"
+          }
+        }
+      }
+    },
+    "capability.state.available" : {
+      "comment" : "Capability state.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Working"
+          }
+        }
+      }
+    },
+    "capability.state.denied" : {
+      "comment" : "Capability state. An answer to respect, never a problem to invite the person to solve.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You said no"
+          }
+        }
+      }
+    },
+    "capability.state.notRequested" : {
+      "comment" : "Capability state. In this version the app never will.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Never asked for"
+          }
+        }
+      }
+    },
+    "capability.state.restricted" : {
+      "comment" : "Capability state: a managed device or Screen Time.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not yours to change"
+          }
+        }
+      }
+    },
+    "capability.state.unavailable" : {
+      "comment" : "Capability state: the hardware or the platform does not have it. Not a refusal.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not offered here"
+          }
+        }
+      }
+    },
     "capture.action.refine" : {
       "comment" : "Button that opens the suggestion strip on demand, before Set Priority has been pressed.",
       "extractionState" : "manual",
@@ -1021,6 +1309,858 @@
         }
       }
     },
+    "sensing.camera.held" : {
+      "comment" : "Camera detail line where cameras exist. The deeper path has never been observed for prompts, so it is held off.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Camera activity is not used in this version."
+          }
+        }
+      }
+    },
+    "sensing.camera.noDevices" : {
+      "comment" : "Camera detail line where the hardware is absent. Not a denial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "There is no camera on this Mac."
+          }
+        }
+      }
+    },
+    "sensing.detail.observers" : {
+      "comment" : "Label for the live observer count.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Observers attached"
+          }
+        }
+      }
+    },
+    "sensing.detail.redundant" : {
+      "comment" : "Label for the count of activations naming the app that was already in front.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repeat activations ignored"
+          }
+        }
+      }
+    },
+    "sensing.display.primary" : {
+      "comment" : "Display detail line.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On the main display"
+          }
+        }
+      }
+    },
+    "sensing.display.secondary" : {
+      "comment" : "Display detail line. Recorded in this version and acted on by nothing.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On a second display"
+          }
+        }
+      }
+    },
+    "sensing.idle.away" : {
+      "comment" : "Idle detail line.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Away from the keyboard"
+          }
+        }
+      }
+    },
+    "sensing.idle.present" : {
+      "comment" : "Idle detail line.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "At the keyboard"
+          }
+        }
+      }
+    },
+    "sensing.lifecycle.active" : {
+      "comment" : "Lifecycle detail line. No copy may claim exact detection.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This Mac is awake and unlocked, as far as macOS tells us."
+          }
+        }
+      }
+    },
+    "sensing.lifecycle.displaysAsleep" : {
+      "comment" : "Lifecycle detail line. No copy may claim exact detection.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The display looks asleep, as far as macOS tells us."
+          }
+        }
+      }
+    },
+    "sensing.lifecycle.poweringOff" : {
+      "comment" : "Lifecycle detail line.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This Mac is shutting down."
+          }
+        }
+      }
+    },
+    "sensing.lifecycle.screenLocked" : {
+      "comment" : "Lifecycle detail line. No copy may claim exact detection.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The screen looks locked, as far as macOS tells us."
+          }
+        }
+      }
+    },
+    "sensing.lifecycle.sessionInactive" : {
+      "comment" : "Lifecycle detail line: fast user switching.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Someone else appears to be signed in."
+          }
+        }
+      }
+    },
+    "sensing.lifecycle.systemAsleep" : {
+      "comment" : "Lifecycle detail line. No copy may claim exact detection.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This Mac looks asleep, as far as macOS tells us."
+          }
+        }
+      }
+    },
+    "sensing.limitation.screenSharing" : {
+      "comment" : "The known limitation of the hardware idle source, stated rather than hidden.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Working over Screen Sharing produces no hardware input, so this app will treat you as away and will not interrupt you."
+          }
+        }
+      }
+    },
+    "sensing.mic.idle" : {
+      "comment" : "Media detail line.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No microphone is running"
+          }
+        }
+      }
+    },
+    "sensing.mic.running" : {
+      "comment" : "Media detail line. It may suppress an interruption and can never assert that a meeting is occurring.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A microphone is running somewhere"
+          }
+        }
+      }
+    },
+    "sensing.pane.heading" : {
+      "comment" : "Heading for the sensing status surface.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watching"
+          }
+        }
+      }
+    },
+    "sensing.pause.explanation" : {
+      "comment" : "What the switch actually does, which is the whole of what is being promised.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Switching this off detaches every observer rather than merely ignoring them."
+          }
+        }
+      }
+    },
+    "sensing.pause.label" : {
+      "comment" : "The global switch, read positively so that on means watching.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watch what I am working on"
+          }
+        }
+      }
+    },
+    "sensing.presentation.off" : {
+      "comment" : "Presentation detail line.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The app in front is in a window"
+          }
+        }
+      }
+    },
+    "sensing.presentation.on" : {
+      "comment" : "Presentation detail line.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The app in front has taken over the screen"
+          }
+        }
+      }
+    },
+    "sensing.status.detached" : {
+      "comment" : "The status line when the graph holds no observers and the person did not ask for that.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not watching. Nothing is attached to observe with."
+          }
+        }
+      }
+    },
+    "sensing.status.paused" : {
+      "comment" : "The status line while the person has the global switch off.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not watching. You switched this off, so every observer is detached."
+          }
+        }
+      }
+    },
+    "sensing.status.watching" : {
+      "comment" : "The status line while the observer graph is attached.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watching which app is in front. No window titles, no screenshots, nothing you type."
+          }
+        }
+      }
+    },
+    "session.action.breakEnd" : {
+      "comment" : "Ends the break and returns to focus.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Back to Work"
+          }
+        }
+      }
+    },
+    "session.action.breakStart" : {
+      "comment" : "A break may be started only from focus; the surface ends a detour first.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Take a Break"
+          }
+        }
+      }
+    },
+    "session.action.complete" : {
+      "comment" : "Completes the session. Also the menu item, sharing this key rather than declaring a second.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Finish Session"
+          }
+        }
+      }
+    },
+    "session.action.detourEnd" : {
+      "comment" : "Returns to focus.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "End the Detour"
+          }
+        }
+      }
+    },
+    "session.action.detourStart" : {
+      "comment" : "Declares the current deviation deliberate.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start a Detour"
+          }
+        }
+      }
+    },
+    "session.action.interrupt" : {
+      "comment" : "Opens the interruption sheet. Terminal once confirmed.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stop and Say Why…"
+          }
+        }
+      }
+    },
+    "session.action.pause" : {
+      "comment" : "The person's own pause. Also the menu item.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pause Session"
+          }
+        }
+      }
+    },
+    "session.action.resume" : {
+      "comment" : "Lifts the person's own pause, and only that one.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Resume Session"
+          }
+        }
+      }
+    },
+    "session.action.start" : {
+      "comment" : "Begins a session on the active priority. Also the menu item.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start Session"
+          }
+        }
+      }
+    },
+    "session.badge.break" : {
+      "comment" : "Session phase badge.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On a break"
+          }
+        }
+      }
+    },
+    "session.badge.complete" : {
+      "comment" : "Session phase badge. Terminal.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Finished"
+          }
+        }
+      }
+    },
+    "session.badge.detour" : {
+      "comment" : "Session phase badge: the person declared this deviation deliberate.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Detour"
+          }
+        }
+      }
+    },
+    "session.badge.focus" : {
+      "comment" : "Session phase badge: working on the one thing. The only phase that permits an interruption.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus"
+          }
+        }
+      }
+    },
+    "session.badge.interrupted" : {
+      "comment" : "Session phase badge. Terminal.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Interrupted"
+          }
+        }
+      }
+    },
+    "session.badge.paused" : {
+      "comment" : "Session phase badge. The causes are listed separately, because only the cause that paused can lift it.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paused"
+          }
+        }
+      }
+    },
+    "session.cause.displaysAsleep" : {
+      "comment" : "One pause cause. No copy may claim exact detection.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "the display went to sleep, as far as macOS tells us"
+          }
+        }
+      }
+    },
+    "session.cause.globalPause" : {
+      "comment" : "One pause cause.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "watching is switched off"
+          }
+        }
+      }
+    },
+    "session.cause.heading" : {
+      "comment" : "Caption above the list of reasons a paused session is paused.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paused because"
+          }
+        }
+      }
+    },
+    "session.cause.relaunch" : {
+      "comment" : "One pause cause: more than fifteen minutes since the last phase change.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "the app was away for a while"
+          }
+        }
+      }
+    },
+    "session.cause.screenLocked" : {
+      "comment" : "One pause cause. No copy may claim exact screen-lock detection.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "the screen locked, as far as macOS tells us"
+          }
+        }
+      }
+    },
+    "session.cause.sensitiveApp" : {
+      "comment" : "One pause cause. Answered by a bundle identifier being on a list, never by looking at a screen.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "a private app came to the front"
+          }
+        }
+      }
+    },
+    "session.cause.sessionInactive" : {
+      "comment" : "One pause cause: fast user switching.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "someone else signed in"
+          }
+        }
+      }
+    },
+    "session.cause.systemAsleep" : {
+      "comment" : "One pause cause. No copy may claim exact detection.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "this Mac went to sleep, as far as macOS tells us"
+          }
+        }
+      }
+    },
+    "session.cause.systemRestart" : {
+      "comment" : "One pause cause: the boot identity differs, so the uptime anchor was discarded.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "this Mac restarted"
+          }
+        }
+      }
+    },
+    "session.cause.user" : {
+      "comment" : "One pause cause, phrased to finish the sentence 'Paused because …'.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "you pressed Pause"
+          }
+        }
+      }
+    },
+    "session.interrupt.action.cancel" : {
+      "comment" : "Closes the interruption sheet and changes nothing.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep Going"
+          }
+        }
+      }
+    },
+    "session.interrupt.action.confirm" : {
+      "comment" : "Confirms the interruption. Enabled with every field empty.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stop Session"
+          }
+        }
+      }
+    },
+    "session.interrupt.explanation" : {
+      "comment" : "Sheet subtitle. Reflection is offered, never extracted.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Say what pulled you away, if you want to. None of it is required."
+          }
+        }
+      }
+    },
+    "session.interrupt.heading" : {
+      "comment" : "Title of the interruption sheet.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stopping this session"
+          }
+        }
+      }
+    },
+    "session.interrupt.lastActiveLabel" : {
+      "comment" : "Label for the last-active context: a bundle identifier and nothing else.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last app in front"
+          }
+        }
+      }
+    },
+    "session.interrupt.lastActiveNone" : {
+      "comment" : "Shown when no application activation has been observed.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing was recorded."
+          }
+        }
+      }
+    },
+    "session.interrupt.noteLabel" : {
+      "comment" : "Label for the optional restart-point field.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Where to pick it up"
+          }
+        }
+      }
+    },
+    "session.interrupt.notePrompt" : {
+      "comment" : "Placeholder in the restart-point field.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The next thing you would have done"
+          }
+        }
+      }
+    },
+    "session.interrupt.reason.appQuit" : {
+      "comment" : "One interruption reason.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The app quit"
+          }
+        }
+      }
+    },
+    "session.interrupt.reason.priorityChanged" : {
+      "comment" : "One interruption reason.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The priority changed"
+          }
+        }
+      }
+    },
+    "session.interrupt.reason.systemRestart" : {
+      "comment" : "One interruption reason.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This Mac restarted"
+          }
+        }
+      }
+    },
+    "session.interrupt.reason.timeboxAbandoned" : {
+      "comment" : "One interruption reason.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I let the timebox go"
+          }
+        }
+      }
+    },
+    "session.interrupt.reason.user" : {
+      "comment" : "One interruption reason.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I chose to stop"
+          }
+        }
+      }
+    },
+    "session.interrupt.reasonLabel" : {
+      "comment" : "Label for the interruption reason picker.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "What happened"
+          }
+        }
+      }
+    },
+    "session.note.clockAnomaly" : {
+      "comment" : "What restoration had to say. The wall-clock figure is still shown; the person is told rather than misled.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The clock changed while this ran, so the elapsed figure may be off."
+          }
+        }
+      }
+    },
+    "session.note.rebooted" : {
+      "comment" : "What restoration had to say about the session.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This Mac restarted while the session was running."
+          }
+        }
+      }
+    },
+    "session.note.stale" : {
+      "comment" : "What restoration had to say about the session.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The app was away for more than fifteen minutes, so the session came back paused."
+          }
+        }
+      }
+    },
+    "session.pane.elapsed" : {
+      "comment" : "How long the session has been going on the wall clock. %@ is a formatted duration.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Running for %@"
+          }
+        }
+      }
+    },
+    "session.pane.heading" : {
+      "comment" : "Caption above the session controls in the cockpit.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This session"
+          }
+        }
+      }
+    },
+    "session.pane.none" : {
+      "comment" : "Shown where a session would be, when there is none. Sensing runs whether or not a session does.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No session is running."
+          }
+        }
+      }
+    },
+    "session.resume.blocked" : {
+      "comment" : "Why the Resume control is disabled. A button that says why is better than one that does nothing.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Resume becomes available once every reason above has cleared."
+          }
+        }
+      }
+    },
     "settings.appearance.dark" : {
       "comment" : "Appearance preference: always dark.",
       "extractionState" : "manual",
@@ -1165,18 +2305,6 @@
         }
       }
     },
-    "shell.cockpit.sensing.unavailable" : {
-      "comment" : "Cockpit line: no activity source is running yet.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No activity source is running, so nothing on screen is being judged."
-          }
-        }
-      }
-    },
     "shell.cockpit.store.ready" : {
       "comment" : "Cockpit line: the local store opened successfully.",
       "extractionState" : "manual",
@@ -1245,6 +2373,18 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "New Priority"
+          }
+        }
+      }
+    },
+    "shell.command.pauseSensing" : {
+      "comment" : "Menu verb for F-119's global switch. The cockpit's control reads positively; a menu item has to name the act.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pause Watching"
           }
         }
       }

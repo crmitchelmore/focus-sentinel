@@ -21,19 +21,19 @@ struct RuleStoreHarness {
 
     @discardableResult
     func makeTask(_ intent: String) throws -> UUID {
-        let task = FocusSchemaV2.PriorityTask(intent: intent, createdAt: clock.now)
+        let task = FocusSchemaV3.PriorityTask(intent: intent, createdAt: clock.now)
         context.insert(task)
         try context.save()
         return task.id
     }
 
-    func task(id: UUID) throws -> FocusSchemaV2.PriorityTask? {
-        try context.fetch(FetchDescriptor<FocusSchemaV2.PriorityTask>())
+    func task(id: UUID) throws -> FocusSchemaV3.PriorityTask? {
+        try context.fetch(FetchDescriptor<FocusSchemaV3.PriorityTask>())
             .first { $0.id == id }
     }
 
     func storedRuleCount() throws -> Int {
-        try context.fetchCount(FetchDescriptor<FocusSchemaV2.RelevanceRule>())
+        try context.fetchCount(FetchDescriptor<FocusSchemaV3.RelevanceRule>())
     }
 
     func rule(
@@ -249,7 +249,7 @@ struct SwiftDataRuleStoreTests {
         try await harness.store.upsert(harness.rule(.domain, "news.example", .unrelated))
 
         harness.context.insert(
-            FocusSchemaV2.RelevanceRule(
+            FocusSchemaV3.RelevanceRule(
                 scopeRaw: "personFromTheFuture",
                 subject: "someone",
                 verdictRaw: "relevant",
@@ -257,7 +257,7 @@ struct SwiftDataRuleStoreTests {
             )
         )
         harness.context.insert(
-            FocusSchemaV2.RelevanceRule(
+            FocusSchemaV3.RelevanceRule(
                 scopeRaw: "domain",
                 subject: "example.com",
                 verdictRaw: "gloriouslyUndecided",
@@ -289,7 +289,7 @@ struct SwiftDataRuleStoreTests {
             let container = try FocusStore.makeContainer(kind: .temporary(url))
             let context = container.mainContext
             context.insert(
-                FocusSchemaV2.PriorityTask(id: taskID, intent: "Persist me", createdAt: clock.now)
+                FocusSchemaV3.PriorityTask(id: taskID, intent: "Persist me", createdAt: clock.now)
             )
             try context.save()
 

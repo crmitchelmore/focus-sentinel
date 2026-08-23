@@ -176,13 +176,35 @@ enum PriorityFixture {
         ]
     )
 
+    /// The committed cockpit, drawn as the app really looks once it is running.
+    ///
+    /// From e03 the fixture is **watching**, with the capability matrix the rig actually
+    /// measured at zero grants (`CapabilityFixture.asMeasured`) and a session in `.focus`. That
+    /// matters for the baseline's value as evidence: an unobserved matrix would draw eight
+    /// standing lines of "never asked for" under a window whose whole point is one sentence, and
+    /// a picture of that would be a picture of a state the app is only ever in for the instant
+    /// before its first probe.
     static func cockpit(intent: String = PriorityFixture.intent) -> CockpitState {
         CockpitState(
-            status: .paused,
+            status: .uncertain,
             storeIsReady: true,
-            isObservingActivity: false,
+            isObservingActivity: true,
             priority: priority(intent: intent),
-            recent: recent
+            recent: recent,
+            session: SessionFixture.session(phase: .focus),
+            sensing: SensingSummary(
+                isObserving: true,
+                isPausedByUser: false,
+                liveObserverCount: 12,
+                redundantActivations: 3,
+                lifecycle: .active,
+                isUserIdle: false,
+                media: .idle,
+                cameraReason: .noDevices,
+                presentation: .notPresenting,
+                isOnSecondaryDisplay: false
+            ),
+            capabilities: CapabilityFixture.asMeasured
         )
     }
 }
@@ -251,7 +273,15 @@ enum PriorityComponent: String, CaseIterable, Sendable {
         case .priorityHeroEmpty:
             AnyView(PriorityHeroView(intent: nil))
         case .cockpitWithPriority:
-            AnyView(CockpitView(state: PriorityFixture.cockpit()))
+            // The elapsed figure is passed in, as it is in the app: there is no clock in this
+            // view and no timer anywhere in the programme, so the baseline is a picture at a
+            // fixed instant rather than a race with the machine that renders it.
+            AnyView(
+                CockpitView(
+                    state: PriorityFixture.cockpit(),
+                    sessionElapsedSeconds: SessionFixture.elapsedSeconds
+                )
+            )
         case .contextPack:
             AnyView(
                 FocusHost { focus in

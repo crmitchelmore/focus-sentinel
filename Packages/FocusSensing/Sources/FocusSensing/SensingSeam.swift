@@ -3,20 +3,15 @@ import Foundation
 
 /// What kind of thing happened.
 ///
-/// Raw values are strings and are persisted as strings (`ActivityEvent.kindRaw`), so
-/// reordering this enum can never reinterpret stored history.
-public enum ActivityEventKind: String, Sendable, CaseIterable, Codable, Hashable {
-    /// The frontmost application changed.
-    case frontmostApplicationChanged
-    /// The frontmost window's context changed (a different document, tab or origin).
-    case contextChanged
-    /// The user stopped interacting with the machine.
-    case userIdle
-    /// The user started interacting again.
-    case userActive
-    /// The display went to sleep or the screen was locked.
-    case displayInactive
-}
+/// **Declared in `FocusCore` since e03**, and re-exported here under its original name so that
+/// every call site in this package is untouched.
+///
+/// It moved because it stopped being only the observation seam's vocabulary and became the
+/// vocabulary of a **persisted column** as well: `ActivityEventStore` owns `ActivityEvent
+/// .kindRaw`, it lives in `FocusCore`, and `FocusCore` may not import this package. One enum on
+/// the domain side is the alternative to two that could drift apart, and the raw values of the
+/// five e01 shipped are unchanged forever either way.
+public typealias ActivityEventKind = FocusCore.ActivityEventKind
 
 /// One observation, already normalised.
 ///

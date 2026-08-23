@@ -28,11 +28,15 @@ struct ShortcutsHelpTests {
     func rowsAreTheShippedActions() {
         let rows = ShortcutsHelpView.groups(for: registry).flatMap(\.rows)
 
-        #expect(rows.map(\.glyphs) == ["⌘N", "⌘O", "⌃⌘↩", "⌘W", "⌘?"])
+        #expect(rows.map(\.glyphs) == ["⌘N", "⌘O", "⌃⌘↩", "⌃⌘S", "⌃⌘P", "⌃⌘F", "⌃⌘E", "⌘W", "⌘?"])
         #expect(rows.map(\.titleKey) == [
             .commandNewPriority,
             .commandAddFilesToContext,
             .priorityActionComplete,
+            .sessionActionStart,
+            .sessionActionPause,
+            .sessionActionComplete,
+            .commandPauseSensing,
             .commandCloseWindow,
             .commandHelp
         ])
@@ -82,6 +86,10 @@ struct ShortcutsHelpTests {
             "priority.new",
             "context.addFiles",
             "priority.complete",
+            "session.start",
+            "session.pause",
+            "session.complete",
+            "sensing.pause",
             "shell.closeWindow",
             "shell.test.unbound",
             "shell.help"
@@ -112,7 +120,7 @@ struct ShortcutsHelpTests {
     func cockpitStringsResolve() {
         let keys: [ShellStringKey] = [
             .cockpitWindowTitle, .helpWindowTitle, .cockpitHeading, .cockpitStoreReady,
-            .cockpitStoreUnavailable, .cockpitSensingUnavailable, .cockpitOpenSettings
+            .cockpitStoreUnavailable, .cockpitOpenSettings
         ]
         for key in keys {
             let resolved = ShellStrings.string(key)

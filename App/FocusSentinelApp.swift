@@ -29,12 +29,18 @@ struct FocusSentinelApp: App {
     @State private var composition = AppComposition.shared
     @State private var appearance = AppearanceObserver()
 
-    /// Builds the quick-capture panel and registers the global hot key, at launch.
+    /// Builds the quick-capture panel, registers the global hot key, **reconciles whatever
+    /// session was running**, and attaches the observer graph — at launch.
     ///
-    /// Here rather than in a scene's `.task` because "built at launch" is a *measured* claim
-    /// the app has to keep: probe P-57 timed 34 ms from the hot key to a visible, focused
-    /// panel, and building it on first use is the only way to lose that. `start()` is
-    /// idempotent, so a re-created `App` value cannot offer the same combination twice.
+    /// Here rather than in a scene's `.task` for two measured reasons. "Built at launch" is a
+    /// claim the app has to keep: probe P-57 timed 34 ms from the hot key to a visible, focused
+    /// panel, and building it on first use is the only way to lose that. And restoration has to
+    /// happen **before the first frame**, or the cockpit's first paint would show a session
+    /// that had not yet been reconciled — a number the app knows is wrong, drawn once and then
+    /// corrected, which is worse than drawing it right.
+    ///
+    /// `start()` is idempotent, so a re-created `App` value cannot offer the same shortcut to
+    /// the platform twice or attach the observer graph twice.
     init() {
         AppComposition.shared.start()
     }
@@ -45,6 +51,11 @@ struct FocusSentinelApp: App {
                 .appearanceTraits(appearance.traits)
         }
         .commands { ShellCommands() }
+        // Tall enough for the whole column at the default text size, measured against the real
+        // window: with e03's session controls and sensing status added, the cockpit outgrew the
+        // 704-point window e02 shipped and the footer was clipped below the fold. A window whose
+        // last two lines are unreachable is a defect however good the lines are.
+        .defaultSize(width: 560, height: 900)
         .modelContainer(composition.modelContainer)
 
         Window(Text(ShellStrings.resource(ShellWindow.help.titleKey)), id: ShellWindow.help.id) {
@@ -53,7 +64,11 @@ struct FocusSentinelApp: App {
         }
 
         Settings {
-            SettingsHost(appearance: appearance, dateProvider: composition.dateProvider)
+            SettingsHost(
+                appearance: appearance,
+                dateProvider: composition.dateProvider,
+                sensing: composition.sensingHost
+            )
                 .appearanceTraits(appearance.traits)
         }
         .modelContainer(composition.modelContainer)
@@ -78,17 +93,48 @@ private struct CockpitHost: View {
 
     @Environment(\.undoManager) private var undoManager
 
+    /// The cockpit, in a scroll view.
+    ///
+    /// **The wrapper is here rather than inside `CockpitView`, and that is deliberate.** Measured
+    /// on this machine: a `ScrollView` reports no intrinsic height, so under `ImageRenderer` a
+    /// view inside one rasterises as a blank rectangle — the Privacy pane did exactly that the
+    /// first time the capability table was put in one, 1 040 ink pixels in a 1040×2699 frame. Put
+    /// the wrapper in the view and every committed cockpit baseline becomes a picture of nothing.
+    ///
+    /// So the view stays a plain column that renders whole, and the *scene* gives it somewhere to
+    /// scroll. The person gets a window whose content is always reachable; the snapshot lane gets
+    /// a picture of the whole column. Neither is traded for the other.
     var body: some View {
+        ScrollView {
+            cockpit
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(DesignTokens.Palette.windowBackground)
+    }
+
+    private var cockpit: some View {
         CockpitView(
             state: composition.priorityHost.state,
-            actions: composition.priorityHost
+            actions: composition.priorityHost,
+            // The session host is the app's only `SessionActing`, and it is what the cockpit's
+            // session controls and the four e03 menu commands both call — one code path for a
+            // click and for a key equivalent.
+            sessionActions: composition.sessionHost,
+            sessionElapsedSeconds: composition.priorityHost.state.session
+                .map { $0.elapsedWallSeconds(now: composition.dateProvider.now) },
+            lastActiveBundleID: composition.sensingHost.lastForeignBundleIdentifier
         )
         .onAppear {
             composition.priorityHost.adoptUndoManager(undoManager)
+            // The session journal drives the same Edit menu. Only the operations a *person*
+            // performed reach it: an auto-pause for a screen lock is not something they meant
+            // to do, and offering to undo it would be offering to undo the world.
+            composition.sessionHost.adoptUndoManager(undoManager)
             composition.quickCapturePanel.update(traits: appearance.traits)
         }
         .onChange(of: undoManager) { _, manager in
             composition.priorityHost.adoptUndoManager(manager)
+            composition.sessionHost.adoptUndoManager(manager)
         }
         .onChange(of: appearance.traits) { _, traits in
             composition.quickCapturePanel.update(traits: traits)
@@ -109,13 +155,20 @@ private struct CockpitHost: View {
 private struct SettingsHost: View {
     let appearance: AppearanceObserver
     let dateProvider: any DateProvider
+    /// The live observer graph, so the Privacy pane draws what is actually attached.
+    let sensing: SensingHost
 
     @Environment(\.modelContext) private var modelContext
 
     var body: some View {
         ShellSettingsView(
             preference: preferenceBinding,
-            storeURL: FocusStore.applicationSupportURL
+            storeURL: FocusStore.applicationSupportURL,
+            // What is being watched, and what this Mac lets the app do — read from the graph
+            // rather than probed again here, so the Privacy pane and the cockpit's status line
+            // are one answer rather than two opinions.
+            summary: sensing.summary,
+            capabilities: sensing.capabilities
         )
         .task {
             // The window may be opened long after launch, so the stored value is read here

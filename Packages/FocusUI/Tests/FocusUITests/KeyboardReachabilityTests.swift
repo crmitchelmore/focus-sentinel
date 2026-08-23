@@ -155,6 +155,43 @@ struct KeyboardReachabilityTests {
         #expect(FocusTraversal.contract(for: .settingsGeneral).defaultField == nil)
     }
 
+    @Test("the e03 surfaces are reachable, in the order their columns read")
+    func sessionAndSensingAreReachable() {
+        let cockpit = FocusTraversal.contract(for: .cockpit)
+
+        // The session sits directly under the timebox: both are about how the time is being
+        // spent, and a person who has just chosen a box is one Tab from starting the session
+        // that runs inside it.
+        #expect(FocusTraversal.next(after: .cockpitTimebox, in: .cockpit) == .cockpitSessionPrimary)
+        #expect(cockpit.order.contains(.cockpitSessionPrimary))
+
+        // The footer, in the order it reads: what is being watched, then the way out.
+        #expect(
+            FocusTraversal.next(after: .cockpitSensingPause, in: .cockpit) == .cockpitOpenSettings
+        )
+        #expect(FocusTraversal.previous(before: .cockpitOpenSettings, in: .cockpit) == .cockpitSensingPause)
+
+        // One identity for the session control, not one per verb — the same rule the timebox
+        // follows with its four presets. Which button carries it depends on the phase.
+        #expect(cockpit.order.filter { $0 == .cockpitSessionPrimary }.count == 1)
+    }
+
+    @Test("the interruption sheet reaches the harmless button before the destructive one")
+    func interruptionSheetOrderIsSafe() {
+        let sheet = FocusTraversal.contract(for: .interruptionSheet)
+
+        #expect(sheet.order == [.interruptReason, .interruptNote, .interruptCancel, .interruptConfirm])
+        #expect(FocusTraversal.firstField(in: .interruptionSheet) == .interruptReason)
+        // Cancel before Stop, so Tab reaches the one that changes nothing first.
+        #expect(
+            FocusTraversal.next(after: .interruptNote, in: .interruptionSheet) == .interruptCancel
+        )
+        // A modal sheet the person opened on purpose is exactly where a default button belongs —
+        // unlike the cockpit, which declares none because Return there commits a field.
+        #expect(sheet.defaultField == .interruptConfirm)
+        #expect(sheet.cancel == .dismissWindow)
+    }
+
     @Test("the cockpit and both Settings tabs each have a focusable element")
     func everyShellSurfaceIsReachable() {
         // The ritual banner sits above everything else while it is shown, so it comes first

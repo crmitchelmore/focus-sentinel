@@ -1,7 +1,8 @@
 import Foundation
 import SwiftData
 
-/// The store's migration plan: v1 → v2, through one **custom** stage.
+/// The store's migration plan: v1 → v2 through one **custom** stage, then v2 → v3 through a
+/// **lightweight** one.
 ///
 /// This is the whole of F-139's insurance policy, and it was declared in e01 with no stages
 /// precisely so that this change would be *adding a stage to an existing plan* rather than
@@ -26,13 +27,33 @@ import SwiftData
 /// two. The stage takes the **most recently created** such row and leaves the rest as
 /// ordinary history. That is a decision, recorded here so it cannot later be mistaken for an
 /// accident.
+///
+/// ## Why v2 → v3 is lightweight, and how that is kept true
+///
+/// e03 adds a great deal to the store — the session runtime, a transition log, the capability
+/// table, the sensitive-app list — but it **removes nothing and renames nothing**, and every
+/// new attribute is either optional or carries a property default. e02's probe P-51 measured
+/// that to be exactly the condition SwiftData needs to migrate without a custom stage. A
+/// lightweight stage with no closures is therefore not laziness; it is the shape the schema
+/// was deliberately given so that the stage could carry no code and have nothing to get wrong.
+///
+/// The v1 fixture now migrates through **both** stages. That chain is what makes "no data
+/// loss on upgrade" a fact rather than an intention, and it is asserted directly.
 public enum FocusMigrationPlan: SchemaMigrationPlan {
     public static var schemas: [any VersionedSchema.Type] {
-        [FocusSchemaV1.self, FocusSchemaV2.self]
+        [FocusSchemaV1.self, FocusSchemaV2.self, FocusSchemaV3.self]
     }
 
     public static var stages: [MigrationStage] {
-        [v1ToV2]
+        [v1ToV2, v2ToV3]
+    }
+
+    /// v2 → v3: every addition is optional or defaulted, so nothing has to be carried by hand.
+    static var v2ToV3: MigrationStage {
+        MigrationStage.lightweight(
+            fromVersion: FocusSchemaV2.self,
+            toVersion: FocusSchemaV3.self
+        )
     }
 
     /// State carried from `willMigrate` to `didMigrate`.

@@ -22,7 +22,7 @@ and `tuist` is not used.
 | `Packages/FocusSensing` | macOS observation adapters |
 | `Packages/FocusUI` | every SwiftUI view, scene, command and design token |
 | `Config/` | build inputs that are neither app source nor scripts. Exactly one file: `FocusSentinel-Info.plist`, the partial plist carrying `CFBundleURLTypes`. It lives here and **not** in `App/` — see "The project file" below |
-| `scripts/` | the build gate and its stages, plus the three live evidence lanes |
+| `scripts/` | the build gate and its fifteen stages, plus the five live evidence lanes |
 | `Tools/windowid` | a test driver: window ids for `screencapture -l`, read from the public window list without ever asking for a window *name*. Not part of the shipping app's package graph |
 
 ---
@@ -113,9 +113,50 @@ the stage logs are the evidence, and they are kilobytes. A pinned `FOCUS_DERIVED
 | 6a | packaging | read from the two logs and the two products stages 5 and 6 just made: neither log contains `Copy Bundle Resources build phase contains`, neither product ships a `Contents/Resources/Info.plist`, and the merged `Contents/Info.plist` carries both the `focus` scheme and every generated key. See "The project file" |
 | 7 | the unit lane | every package test target, headless |
 | 7b | `check-boundaries.sh` again | `nm -u FocusClassify.o` has no networking symbol — the binary-level form of the assertion, which needs a build product to exist |
+| 7c | `check-forbidden.sh` again | the binary half of SC-1: `nm -u` finds no `_kCGWindowName` in **seven products named one by one** — the app binary, `FocusCore.o`, `FocusSensing.o`, `FocusRules.o`, `FocusClassify.o`, `FocusUI.o` and `Tools/windowid` — while the four sanctioned window-list symbols are asserted **present** in `windowid`, so the check cannot pass by the tool being gutted. Under `FOCUS_REQUIRE_BINARY_CHECK=1` a *missing* product is a failure, not a skipped line. `windowid` is built by the stage itself, because it lives outside the workspace scheme |
 | 8 | `entitlement-check.sh` ×2 | no network entitlement, Debug **and** Release; and `get-task-allow` present in Debug, **absent** in Release |
-| 9 | `self-check.sh` ×2 | the app's own zero-grant report of its menu bar, window and key equivalents — and, from e02, its declared URL schemes, its hot-key registration status, the Edit menu's undo title after one scripted in-process mutation, the pre-built capture panel's show latency, and the priority hero's point size against every other type role |
+| 9 | `self-check.sh` ×2 | the app's own zero-grant report of its menu bar, window and key equivalents — and, from e02, its declared URL schemes, its hot-key registration status, the Edit menu's undo title after one scripted in-process mutation, the pre-built capture panel's show latency, and the priority hero's point size against every other type role. From e03 it is **three launches**: the shell report, plus a session seeded back-dated ninety minutes into a store of its own and a **separate** launch that restores it. See "What the self-check adds in e03" below |
 | 10 | `verify-project.sh` again | the build did not rewrite the project |
+
+**Fifteen stages.** The count matters because the epic's close condition names it: `project`,
+`boundaries`, `forbidden`, `strings`, `build-debug`, `build-release`, `packaging`, `unit`,
+`boundaries-binary`, `forbidden-binary`, `entitlements-debug`, `entitlements-release`,
+`selfcheck-debug`, `selfcheck-release`, `project-post`.
+
+### What the self-check adds in e03
+
+Every one of these is asserted with **no TCC grant**, for the app or for the shell, which is why
+they are part of the pass/fail contract rather than evidence:
+
+* **The global switch detaches.** `SensingHost.pause()` removes every notification observer token,
+  invalidates the corroboration tick and removes every CoreAudio property listener; the report
+  carries the live observer count before, after and after resuming, and the checker asserts
+  `n > 0 → 0 → n`. The graph is attached first where the person had the switch off, so the probe
+  proves something whatever their setting is, and the stored setting itself is never touched.
+* **Nothing named a window.** The seven decoded window-list keys, verbatim, with `kCGWindowName`
+  asserted absent and no decoded key naming a window rather than its owning application.
+* **Both idle sources.** `.hidSystemState` and `.combinedSessionState`, with the hardware figure
+  asserted no smaller. The two are read microseconds apart, session first, so the elapsed time
+  between them lands on the side the invariant wants it on.
+* **The camera path was never entered.** `cameraState` is `unavailable` unconditionally,
+  `cameraRunning` is `false`, and `cameraListenersInstalled` is `0` — on every rig, camera or not.
+  That is the assertion, rather than an assertion about this Mac happening to have no camera.
+* **No authorisation surface on screen.** The grant-free scan of every on-screen window owner
+  finds none of `UserNotificationCenter`, `SecurityAgent`, `universalAccessAuthWarn`, `tccd`,
+  `TCCAgent` or `CoreAuthUI` while the app runs. This is the gateable form of "the app never
+  triggers a permission prompt".
+* **The relaunch-mid-session proof, across two processes.** `--focus-session-seed` writes a
+  session back-dated ninety minutes into a temporary store and exits; `--focus-session-restore`
+  opens it in a **separate** launch and reports. Asserted: `startedAt` byte-identical, elapsed
+  within two seconds of 5 400, `phase == paused`, `pauseCauses == ["relaunch"]`,
+  `resumeTo == "focus"`, the same non-empty boot identity in both, and — the one thing no unit
+  test can reach, because it cannot span a process boundary — the uptime anchor's difference
+  between the two launches matching their wall-clock difference to within a second.
+* **The key-equivalent probes changed nothing they do not own.** The stored watching switch is
+  read before and after and asserted equal. That assertion is not decorative: it is what caught
+  `Pause Watching` on ⇧⌘W being reached by a synthesised plain ⌘W and flipping the switch on
+  three consecutive runs. The shortcut moved to ⌃⌘E, and no two shell actions now share a base
+  character.
 
 ---
 
@@ -152,6 +193,35 @@ is incomplete — never that a gate failed, because they are not one.
 | `scripts/live-shell-drive.sh` | the shell: window, menu bar, settings, appearance variants | `menus.txt` and the shell frames |
 | `scripts/live-capture-drive.sh` | the **real global hot key** with another app frontmost, a vague intent answered constructively, the context pack, Quick Look, and the Edit menu's undo action name | `hotkey-untrusted.txt`, `capture-panel.png`, `capture-vague.png`, `cockpit-priority.png`, `context-chips.png`, `quicklook.png`, `undo.png` |
 | `scripts/live-handoff-drive.sh` | `open 'focus://start?task=…'` against a **registered** copy of the product, then cancelling it | `handoff-confirm.png`, `handoff-transcript.txt` |
+| `scripts/live-sensing-drive.sh` | two real decoy applications opened with `open -a`, a real screen lock (`pmset displaysleepnow` + `caffeinate -u`), the exported event stream, and both TCC databases before and after | `sensing-report.txt`, `activation-timeline.json`, `cockpit.png`, `idle-transition.json`, `lock-transition.json`, `tcc-diff.txt`, `no-prompt-frames/` — plus receipts for `pause-resume.png`, `fullscreen.*`, `space-change.json`, `media-transition-mic.json`, `media-transition-camera.json` and `sleep-wake.txt` |
+| `scripts/live-session-drive.sh` | two separate process launches that seed and restore a session, then a `pkill` mid-session and a relaunch | `session-reconciliation.json`, `relaunch-mid-session.png` |
+
+**The e03 lanes are not uniformly automated, and they say which parts are which.** Every artefact
+carries one of three labels, and the scripts behave accordingly rather than implying unattended
+generation:
+
+| label | meaning | what the script does |
+|---|---|---|
+| **AUTOMATED** | produced unattended, given the grants | runs it, writes the artefact |
+| **OPERATOR-ASSISTED** | a human must perform **one physical action** at a prompt — switch Space, enter full screen, open a microphone, press Start Session | prints the instruction, waits with a timeout, then captures; on timeout writes `<artefact>.MANUAL_REQUIRED.txt` naming the action that was not performed, and continues |
+| **UNAVAILABLE ON THIS RIG** | this machine physically cannot produce it | **does not pretend to try**: writes the receipt immediately, stating the hardware or configuration fact, the exact steps to reproduce it elsewhere, and what the reader should confirm |
+
+Two artefacts are permanently in the third category, and both receipts say so at length. A real
+system **sleep** is not drivable here — this Mac is configured never to sleep, has not slept in
+8.55 days, and forcing one would suspend the process running the lane — so the screen lock is
+driven instead and the sleep is documented. A real **camera** transition cannot happen at all:
+this Mac has no camera, CoreMediaIO enumerates zero devices, and the camera path is switched off
+in this version on *every* Mac regardless, with the gate asserting the held path was never
+entered. Turning it on needs a re-probe on camera hardware against a written checklist, and that
+re-probe is explicitly **not** a close condition of this epic.
+
+**Neither e03 lane uses `osascript`, and that is a rule rather than a preference.** Measured:
+`osascript -e 'quit app "TextEdit"'` blocks on Automation consent and has to be killed. Decoys are
+opened with `open -a` (LaunchServices, no TCC) and terminated with `pkill` (POSIX, no TCC). The
+consequence is stated rather than worked around: with no Apple Events and no Accessibility, these
+lanes cannot send a click or a keystroke, so an artefact that needs one is labelled
+OPERATOR-ASSISTED instead of being faked. What is never lost by that is an *assertion* — every
+claim those frames illustrate is already proved at zero grants by `scripts/self-check.sh`.
 
 Two things about those lanes are not decoration.
 
@@ -204,6 +274,8 @@ scripts/self-check.sh        /tmp/focus-dd/Build/Products/Release/FocusSentinel.
 scripts/live-shell-drive.sh
 scripts/live-capture-drive.sh
 scripts/live-handoff-drive.sh
+scripts/live-sensing-drive.sh
+scripts/live-session-drive.sh
 ```
 
 Never pipe any of it. Redirect unpiped to a log and gate on the explicit exit status.
@@ -222,6 +294,7 @@ Never pipe any of it. Redirect unpiped to a log and gate on the explicit exit st
 | `FOCUS_SNAPSHOT_RECORD=1` | the snapshot lane | re-record the committed baselines instead of comparing. `swift test` only, for the same reason. Recorded PNGs are read by eye before being committed |
 | `FOCUS_FIXTURE_RECORD=1` | `MigrationFixtureTests` | rewrite the committed v1 store fixture instead of asserting against it |
 | `FOCUS_SELFCHECK_JSON` | `self-check.sh` | where the app's self-check report is written |
+| `FOCUS_OPERATOR_TIMEOUT` | `live-sensing-drive.sh`, `live-session-drive.sh` | seconds to wait at each operator prompt before writing a `MANUAL_REQUIRED` receipt and continuing. Default 45. An unattended run has no terminal to read from and reaches the timeout at once, which is what should happen — the alternative is a lane that hangs a nightly run for ever |
 | `FOCUS_LIVE_TEXT_SIZE=raised` | the live lanes | capture `main-accessibility.png` (shell lane) and `cockpit-accessibility.png` (capture lane) — only meaningful once the system-wide Text Size has been raised by hand, because macOS has no injectable Dynamic Type. The zero-grant equivalent is the snapshot lane's `ShellTextScale` matrix plus `DynamicTextResilienceTests` |
 
 ### Evidence

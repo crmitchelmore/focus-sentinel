@@ -18,14 +18,18 @@ struct CommandRegistryTests {
 
     @Test("the registry holds exactly the actions that have real behaviour, in menu order")
     func registryHoldsTheRealActions() {
-        // Five, and every one of them does something: three priority commands, the window
-        // close the Court's HIG review required, and the Help item that replaces SwiftUI's
-        // link to a help book this app does not ship.
-        #expect(registry.actions.count == 5)
+        // Nine, and every one of them does something: three priority commands, three session
+        // verbs, F-119's watching switch, the window close the Court's HIG review required, and
+        // the Help item that replaces SwiftUI's link to a help book this app does not ship.
+        #expect(registry.actions.count == 9)
         #expect(registry.actions.map(\.id) == [
             "priority.new",
             "context.addFiles",
             "priority.complete",
+            "session.start",
+            "session.pause",
+            "session.complete",
+            "sensing.pause",
             "shell.closeWindow",
             "shell.help"
         ])
@@ -40,6 +44,10 @@ struct CommandRegistryTests {
             "priority.new",
             "context.addFiles",
             "priority.complete",
+            "session.start",
+            "session.pause",
+            "session.complete",
+            "sensing.pause",
             "shell.closeWindow"
         ])
         #expect(registry.actions(in: .help).map(\.id) == ["shell.help"])
@@ -188,6 +196,48 @@ struct CommandRegistryTests {
         #expect(ShellStrings.string(.commandNewPriority) == "New Priority")
         #expect(ShellStrings.string(.commandAddFilesToContext) == "Add Files to Context…")
         #expect(ShellStrings.string(.priorityActionComplete) == "Complete Priority")
+        #expect(ShellStrings.string(.sessionActionStart) == "Start Session")
+        #expect(ShellStrings.string(.sessionActionPause) == "Pause Session")
+        #expect(ShellStrings.string(.sessionActionComplete) == "Finish Session")
+        #expect(ShellStrings.string(.commandPauseSensing) == "Pause Watching")
+    }
+
+    @Test("the e03 verbs are bound where a stray Return cannot reach them")
+    func sessionCommandsAreBound() {
+        // All three session verbs are ⌃⌘ combinations for the reason `priority.complete`
+        // already gives: this window is full of text fields, plain Return commits whichever one
+        // has focus, and a session verb one modifier away from typing is one somebody triggers
+        // by accident.
+        #expect(registry.action(id: "session.start")?.shortcut == Shortcut("s", modifiers: [.control, .command]))
+        #expect(registry.action(id: "session.start")?.effect == .priority(.startSession))
+        #expect(registry.action(id: "session.pause")?.shortcut == Shortcut("p", modifiers: [.control, .command]))
+        #expect(registry.action(id: "session.pause")?.effect == .priority(.pauseSession))
+        #expect(registry.action(id: "session.complete")?.shortcut == Shortcut("f", modifiers: [.control, .command]))
+        #expect(registry.action(id: "session.complete")?.effect == .priority(.completeSession))
+
+        // The watching switch is ⌃⌘E and **not** ⇧⌘W, which is what it was first bound to: the
+        // app's own self-check measured a plain ⌘W reaching that item and flipping the stored
+        // switch on three consecutive runs. An app that takes ⌘W away from a person because it
+        // wanted a nearby shortcut is a defect, so the base character moved off `w` entirely.
+        let sensing = registry.action(id: "sensing.pause")
+        #expect(sensing?.shortcut == Shortcut("e", modifiers: [.control, .command]))
+        #expect(sensing?.effect == .priority(.pauseSensing))
+        #expect(sensing?.shortcut?.glyphs == "⌃⌘E")
+        #expect(sensing?.shortcut != Shortcut("w", modifiers: [.shift, .command]))
+
+        // …and no two actions share a base character at all, whatever their modifiers, because
+        // that pairing is the one the measurement caught colliding.
+        let characters = registry.actions.compactMap(\.shortcut?.character)
+        #expect(
+            Set(characters).count == characters.count,
+            "two actions share a base character: \(characters)"
+        )
+
+        // The three session items reuse the cockpit controls' own title keys — one action, one
+        // key — exactly as Complete Priority already does.
+        #expect(registry.action(id: "session.start")?.titleKey == .sessionActionStart)
+        #expect(registry.action(id: "session.pause")?.titleKey == .sessionActionPause)
+        #expect(registry.action(id: "session.complete")?.titleKey == .sessionActionComplete)
     }
 
     @Test("every window the shell can open has a title key")

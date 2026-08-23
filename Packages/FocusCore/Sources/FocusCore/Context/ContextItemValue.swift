@@ -16,7 +16,7 @@ public enum ContextItemAvailability: Sendable, Equatable, Hashable {
 
 /// One item of a task's context pack, as a value.
 ///
-/// The persistent representation is `FocusSchemaV2.ContextItem`; this is what the cockpit
+/// The persistent representation is `FocusSchemaV3.ContextItem`; this is what the cockpit
 /// renders and what `PriorityActing` passes around, so that `FocusUI` never has to touch a
 /// `@Model` class or a `ModelContext` (R-24).
 public struct ContextItemValue: Sendable, Equatable, Hashable, Identifiable {
@@ -56,7 +56,7 @@ public struct ContextItemValue: Sendable, Equatable, Hashable, Identifiable {
     /// disk, and a projection that did I/O per chip would make drawing the cockpit a
     /// file-system operation. The caller resolves and passes the answer in.
     public init(
-        _ item: FocusSchemaV2.ContextItem,
+        _ item: FocusSchemaV3.ContextItem,
         availability: ContextItemAvailability? = nil
     ) {
         let kind = item.kind

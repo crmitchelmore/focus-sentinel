@@ -77,7 +77,7 @@ struct TimeboxStateTests {
     func stateForAStoredTask() throws {
         let container = try FocusStore.makeContainer(kind: .inMemory)
         let context = container.mainContext
-        let task = FocusSchemaV2.PriorityTask(intent: "Timebox me", createdAt: start)
+        let task = FocusSchemaV3.PriorityTask(intent: "Timebox me", createdAt: start)
         context.insert(task)
         try context.save()
 

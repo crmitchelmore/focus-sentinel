@@ -27,11 +27,11 @@ struct ActivePriorityInvariantTests {
     /// `PriorityStore.activate(_:)` is this, with an undo journal around it.
     @MainActor
     private func setActivePriority(
-        _ task: FocusSchemaV2.PriorityTask?,
+        _ task: FocusSchemaV3.PriorityTask?,
         in context: ModelContext,
         at date: Date
     ) throws {
-        let pointers = try context.fetch(FetchDescriptor<FocusSchemaV2.ActivePriority>())
+        let pointers = try context.fetch(FetchDescriptor<FocusSchemaV3.ActivePriority>())
 
         guard let task else {
             for pointer in pointers { context.delete(pointer) }
@@ -46,7 +46,7 @@ struct ActivePriorityInvariantTests {
             pointer.task = task
             pointer.activatedAt = date
         } else {
-            context.insert(FocusSchemaV2.ActivePriority(task: task, activatedAt: date))
+            context.insert(FocusSchemaV3.ActivePriority(task: task, activatedAt: date))
         }
         try context.save()
     }
@@ -56,8 +56,8 @@ struct ActivePriorityInvariantTests {
         _ intent: String,
         in context: ModelContext,
         offset: TimeInterval = 0
-    ) -> FocusSchemaV2.PriorityTask {
-        let task = FocusSchemaV2.PriorityTask(
+    ) -> FocusSchemaV3.PriorityTask {
+        let task = FocusSchemaV3.PriorityTask(
             intent: intent,
             createdAt: clock.now.addingTimeInterval(offset)
         )
@@ -74,7 +74,7 @@ struct ActivePriorityInvariantTests {
         let first = makeTask("Ship the native shell", in: context)
         let second = makeTask("Ship the one thing", in: context, offset: 60)
         context.insert(
-            FocusSchemaV2.ContextItem(
+            FocusSchemaV3.ContextItem(
                 kindRaw: "app",
                 value: "com.apple.dt.Xcode",
                 displayName: "Xcode",
@@ -85,16 +85,16 @@ struct ActivePriorityInvariantTests {
         try context.save()
 
         try setActivePriority(first, in: context, at: clock.now)
-        #expect(try context.fetch(FetchDescriptor<FocusSchemaV2.ActivePriority>()).count == 1)
+        #expect(try context.fetch(FetchDescriptor<FocusSchemaV3.ActivePriority>()).count == 1)
 
         try setActivePriority(second, in: context, at: clock.now.addingTimeInterval(120))
 
-        let pointers = try context.fetch(FetchDescriptor<FocusSchemaV2.ActivePriority>())
+        let pointers = try context.fetch(FetchDescriptor<FocusSchemaV3.ActivePriority>())
         #expect(pointers.count == 1, "activation must replace, never queue")
         #expect(pointers.first?.task?.id == second.id)
 
         // The whole point of the pointer design: the replaced task keeps every word it had.
-        let tasks = try context.fetch(FetchDescriptor<FocusSchemaV2.PriorityTask>())
+        let tasks = try context.fetch(FetchDescriptor<FocusSchemaV3.PriorityTask>())
         #expect(tasks.count == 2, "the replaced task was destroyed by the swap")
         #expect(first.intent == "Ship the native shell")
         #expect(first.contextItems.count == 1)
@@ -115,7 +115,7 @@ struct ActivePriorityInvariantTests {
         try setActivePriority(task, in: context, at: clock.now.addingTimeInterval(30))
         try setActivePriority(task, in: context, at: clock.now.addingTimeInterval(60))
 
-        let pointers = try context.fetch(FetchDescriptor<FocusSchemaV2.ActivePriority>())
+        let pointers = try context.fetch(FetchDescriptor<FocusSchemaV3.ActivePriority>())
         #expect(pointers.count == 1)
         #expect(pointers.first?.task?.id == task.id)
         #expect(pointers.first?.activatedAt == clock.now.addingTimeInterval(60))
@@ -133,8 +133,8 @@ struct ActivePriorityInvariantTests {
 
         try setActivePriority(nil, in: context, at: clock.now)
 
-        #expect(try context.fetch(FetchDescriptor<FocusSchemaV2.ActivePriority>()).isEmpty)
-        let tasks = try context.fetch(FetchDescriptor<FocusSchemaV2.PriorityTask>())
+        #expect(try context.fetch(FetchDescriptor<FocusSchemaV3.ActivePriority>()).isEmpty)
+        let tasks = try context.fetch(FetchDescriptor<FocusSchemaV3.PriorityTask>())
         #expect(tasks.count == 1)
         #expect(tasks.first?.isActive == false)
         #expect(tasks.first?.activePointer == nil)
@@ -148,7 +148,7 @@ struct ActivePriorityInvariantTests {
 
         let task = makeTask("Delete me", in: context)
         context.insert(
-            FocusSchemaV2.ContextItem(
+            FocusSchemaV3.ContextItem(
                 kindRaw: "keyword",
                 value: "migration",
                 displayName: "migration",
@@ -157,7 +157,7 @@ struct ActivePriorityInvariantTests {
             )
         )
         context.insert(
-            FocusSchemaV2.RelevanceRule(
+            FocusSchemaV3.RelevanceRule(
                 scopeRaw: "app",
                 subject: "com.apple.dt.Xcode",
                 verdictRaw: "relevant",
@@ -171,10 +171,10 @@ struct ActivePriorityInvariantTests {
         context.delete(task)
         try context.save()
 
-        #expect(try context.fetch(FetchDescriptor<FocusSchemaV2.ActivePriority>()).isEmpty)
-        #expect(try context.fetch(FetchDescriptor<FocusSchemaV2.PriorityTask>()).isEmpty)
-        #expect(try context.fetch(FetchDescriptor<FocusSchemaV2.ContextItem>()).isEmpty)
-        #expect(try context.fetch(FetchDescriptor<FocusSchemaV2.RelevanceRule>()).isEmpty)
+        #expect(try context.fetch(FetchDescriptor<FocusSchemaV3.ActivePriority>()).isEmpty)
+        #expect(try context.fetch(FetchDescriptor<FocusSchemaV3.PriorityTask>()).isEmpty)
+        #expect(try context.fetch(FetchDescriptor<FocusSchemaV3.ContextItem>()).isEmpty)
+        #expect(try context.fetch(FetchDescriptor<FocusSchemaV3.RelevanceRule>()).isEmpty)
     }
 
     /// The backstop. The app never does this — but a bug might, and the store is what makes
@@ -190,16 +190,16 @@ struct ActivePriorityInvariantTests {
         let second = makeTask("Second", in: context, offset: 60)
         try context.save()
 
-        context.insert(FocusSchemaV2.ActivePriority(task: first, activatedAt: clock.now))
+        context.insert(FocusSchemaV3.ActivePriority(task: first, activatedAt: clock.now))
         context.insert(
-            FocusSchemaV2.ActivePriority(task: second, activatedAt: clock.now.addingTimeInterval(1))
+            FocusSchemaV3.ActivePriority(task: second, activatedAt: clock.now.addingTimeInterval(1))
         )
         try context.save()
 
-        let pointers = try context.fetch(FetchDescriptor<FocusSchemaV2.ActivePriority>())
+        let pointers = try context.fetch(FetchDescriptor<FocusSchemaV3.ActivePriority>())
         #expect(pointers.count == 1, "the store must never hold two active priorities")
 
-        let tasks = try context.fetch(FetchDescriptor<FocusSchemaV2.PriorityTask>())
+        let tasks = try context.fetch(FetchDescriptor<FocusSchemaV3.PriorityTask>())
         #expect(tasks.count == 2, "a pointer collision must never destroy a user's words")
         #expect(Set(tasks.map(\.intent)) == ["First", "Second"])
     }
@@ -219,7 +219,7 @@ struct ActivePriorityInvariantTests {
             let container = try FocusStore.makeContainer(kind: .temporary(url))
             let context = container.mainContext
             let first = makeTask("First", in: context)
-            let second = FocusSchemaV2.PriorityTask(
+            let second = FocusSchemaV3.PriorityTask(
                 id: secondID,
                 intent: "Second",
                 createdAt: clock.now.addingTimeInterval(60)
@@ -234,11 +234,11 @@ struct ActivePriorityInvariantTests {
         let reopened = try FocusStore.makeContainer(kind: .temporary(url))
         let context = reopened.mainContext
 
-        let pointers = try context.fetch(FetchDescriptor<FocusSchemaV2.ActivePriority>())
+        let pointers = try context.fetch(FetchDescriptor<FocusSchemaV3.ActivePriority>())
         #expect(pointers.count == 1)
-        #expect(pointers.first?.slot == FocusSchemaV2.ActivePriority.singletonSlot)
+        #expect(pointers.first?.slot == FocusSchemaV3.ActivePriority.singletonSlot)
         #expect(pointers.first?.task?.id == secondID)
-        #expect(try context.fetch(FetchDescriptor<FocusSchemaV2.PriorityTask>()).count == 2)
+        #expect(try context.fetch(FetchDescriptor<FocusSchemaV3.PriorityTask>()).count == 2)
     }
 
     @Test("isActive is a projection of the pointer and nothing else")

@@ -63,10 +63,34 @@ final class AppComposition {
     /// returns `notAssessable` and the capture surface says **nothing** (R-20).
     let locale: Locale
 
-    /// The activity source. In e02 this is still the null observer: it reports itself
-    /// unavailable and finishes its stream immediately, which is the honest answer for a
-    /// build with no sensing adapters. e03 replaces it without any consumer changing.
-    let activityObserver: any ActivityObserving
+    /// Seconds since this boot, from `mach_continuous_time()` scaled by the machine's own
+    /// timebase. **Not** `MonotonicClock`, whose origin is taken in `init` and therefore moves
+    /// on every launch: a restoration anchor has to be comparable across two processes, and
+    /// measurement showed that neither `ContinuousClock.Instant` nor `MonotonicClock.elapsed`
+    /// can be (probes P-105/P-106).
+    let uptimeClock: any UptimeClock
+
+    /// `"<kern.boottime.sec>.<usec>"`, read once at launch. It is what says whether a persisted
+    /// uptime anchor belongs to this machine-lifetime or to one that ended in a restart.
+    let bootIdentity: String
+
+    /// The local timeline. Normalised evidence only — its `append` takes a `NormalisedDetail`,
+    /// which has no `String` initialiser.
+    let eventStore: ActivityEventStore
+
+    /// Reads the state of all twelve capabilities, and **never asks for any of them**. In this
+    /// epic it could not ask even by accident: every prompting API is banned from the shipping
+    /// graph by lint.
+    let capabilityProbe: PlatformCapabilityProbe
+
+    /// The session runtime, and the only `SessionActing`-shaped implementation.
+    let sessionHost: SessionHost
+
+    /// The observer graph. e01 and e02 shipped `NullActivityObserver` here — an honest source
+    /// for a build with no adapters, which reported itself unavailable and finished its stream
+    /// immediately. e03 replaces it with the real thing, and every consumer above the seam is
+    /// unchanged: they read availability and a `CockpitState`, not an implementation.
+    let sensingHost: SensingHost
 
     /// The relevance classifier. In e02 this is still the undecided classifier: it answers
     /// `uncertain` to everything, and `uncertain` suppresses intervention, so an app built
@@ -104,7 +128,7 @@ final class AppComposition {
         monotonicClock: any MonotonicClock = SystemMonotonicClock(),
         calendar: Calendar = .autoupdatingCurrent,
         locale: Locale = .autoupdatingCurrent,
-        activityObserver: any ActivityObserving = NullActivityObserver(),
+        uptimeClock: any UptimeClock = SystemUptimeClock(),
         classifier: any RelevanceClassifier = UndecidedClassifier(),
         hotKeyRegistrar: any HotKeyRegistering = CarbonHotKeyRegistrar(),
         ruleStoreOverride: (any RuleStore)? = nil
@@ -113,9 +137,13 @@ final class AppComposition {
         self.monotonicClock = monotonicClock
         self.calendar = calendar
         self.locale = locale
-        self.activityObserver = activityObserver
+        self.uptimeClock = uptimeClock
         self.classifier = classifier
         self.hotKeyRegistrar = hotKeyRegistrar
+        // Read once, at launch. It cannot change while the process lives — a machine that
+        // restarts takes the process with it — so re-reading it would be re-asking a question
+        // whose answer is fixed.
+        self.bootIdentity = BootIdentity.current()
 
         // Every container in this programme is built through `FocusStore.makeContainer`,
         // which always goes through the migration plan. If the on-disk store cannot be
@@ -142,28 +170,108 @@ final class AppComposition {
 
         let context = container.mainContext
         self.ruleStore = ruleStoreOverride ?? SwiftDataRuleStore(context: context)
+
+        // The seed runs before the gate is built, and it is idempotent across launches: a
+        // built-in the person removed is a tombstone row, and the seed refuses to insert a
+        // built-in for which any row exists. An app that put a setting back after you changed
+        // it is an app that is arguing with you.
+        let events = ActivityEventStore(context: context, dateProvider: dateProvider)
+        let settings = FocusStore.sensingSettings(in: context)
+
+        let (gate, exclusions) = Self.sensitivityLists(in: context, now: dateProvider.now)
+
+        let probe = PlatformCapabilityProbe()
+        let sessions = SessionHost(
+            context: context,
+            events: events,
+            dateProvider: dateProvider,
+            uptimeClock: uptimeClock,
+            bootIdentity: bootIdentity
+        )
+        let sensing = SensingHost(
+            events: events,
+            // The **same** store instance the session host projects from, so a lifecycle pause
+            // and the value the cockpit draws can never be two different opinions about one row.
+            sessions: sessions.sessionStore,
+            settings: settings,
+            gate: gate,
+            presentationExclusions: exclusions,
+            dateProvider: dateProvider,
+            monotonicClock: monotonicClock,
+            capabilityProbe: probe
+        )
+
+        self.eventStore = events
+        self.capabilityProbe = probe
+        self.sessionHost = sessions
+        self.sensingHost = sensing
+
         self.priorityHost = PriorityHost(
             context: context,
             dateProvider: dateProvider,
             calendar: calendar,
             locale: locale,
             environment: PriorityHost.Environment(
-                status: activityObserver.availability.isAvailable ? .uncertain : .paused,
+                // Sensing is live from e03, so the honest status is `uncertain` — the app is
+                // observing and the classifier is still `UndecidedClassifier`, which answers
+                // `uncertain` to everything. It is `paused` when the person has the switch off.
+                status: settings.sensingPaused ? .paused : .uncertain,
                 storeIsReady: status.isReady,
-                isObservingActivity: activityObserver.availability.isAvailable
+                isObservingActivity: !settings.sensingPaused,
+                session: sessions.snapshot,
+                sessionElapsedSeconds: sessions.snapshot?.elapsedWallSeconds(now: dateProvider.now),
+                lastActiveBundleID: sensing.lastForeignBundleIdentifier,
+                sensing: sensing.summary,
+                capabilities: sensing.capabilities
             )
         )
+
+        // The two hosts are one feature seen from two sides: the graph changes the stored
+        // session, and the host is what the cockpit draws. Wiring them here is what keeps
+        // either of them from having to know about the other's lifetime.
+        sessions.sensing = sensing
+        sensing.onSessionChanged = { [weak sessions] in sessions?.refresh() }
+
+        // …and the cockpit value follows both of them. Assigned after `self` is fully
+        // initialised, in `start()`, because the closure captures the composition root.
 
         // Built now, with the panel's SwiftUI content and its hosting view, so that `show()`
         // later is nothing but state changes on objects that already exist (P-57).
         self.quickCapturePanel = QuickCapturePanelController()
     }
 
-    /// Register the hot key and connect the panel to the store.
+    /// Seed the sensitive-application list and read both lists back.
+    ///
+    /// The compiled list is the fallback rather than a silent absence: a store that will not
+    /// seed must not become a store that stops standing down for password managers. The
+    /// presentation-exclusion list has no compiled fallback because it has no compiled
+    /// content — it seeds empty, and seeding it with guesses would be a claim about
+    /// applications this programme has not measured.
+    private static func sensitivityLists(
+        in context: ModelContext,
+        now: Date
+    ) -> (gate: SensitivityGate, presentationExclusions: Set<String>) {
+        do {
+            try SensitiveAppSeed.seed(in: context, now: now)
+            return (
+                try SensitiveAppSeed.gate(in: context),
+                try SensitiveAppSeed.activeBundleIDs(.presentationExcluded, in: context)
+            )
+        } catch {
+            return (SensitivityGate(), [])
+        }
+    }
+
+    /// Register the hot key, restore the session, and start observing.
     ///
     /// Separate from `init` and idempotent, because it is the half that touches AppKit and
     /// the Carbon event target: it must run once the application object exists, and running
-    /// it twice would offer the same combination to the platform twice.
+    /// it twice would offer the same combination to the platform twice — or, now, attach the
+    /// observer graph twice and double every dwell figure.
+    ///
+    /// `FocusSentinelApp.init()` calls this, which is **before the first frame**: the session
+    /// is reconciled and the graph is attached before any surface draws, so the cockpit's first
+    /// paint already shows the corrected elapsed time rather than a restarted one.
     func start() {
         guard !hasStarted else { return }
         hasStarted = true
@@ -173,7 +281,42 @@ final class AppComposition {
             self.priorityHost.setPriority(intent: result.intent, doneWhen: result.doneWhen)
         }
 
+        // The three hosts, joined. Assigned here rather than in `init` because each closure
+        // captures the composition root, which does not exist until `init` has returned.
+        //
+        // The chain is one-way and terminates: the graph changes the stored session, the session
+        // host re-projects it, and the projection is pushed into the value the cockpit draws —
+        // which is assigned only when it actually differs, so nothing here can oscillate.
+        sensingHost.onSessionChanged = { [weak self] in
+            self?.sessionHost.refresh()
+        }
+        sensingHost.onSensingChanged = { [weak self] in
+            self?.refreshCockpit()
+        }
+        sessionHost.onChange = { [weak self] in
+            self?.refreshCockpit()
+        }
+
         registerHotKey(storedHotKeySpec())
+
+        // Restoration first, so that the graph's first activation is written against the
+        // session the person was actually in. `startedAt` is not rewritten here or anywhere,
+        // and no timer is started, because there is none to start.
+        sessionHost.restore()
+        sensingHost.start()
+
+        // One last projection, so the cockpit's first paint already shows the reconciled
+        // session, the live observer count and the capability matrix as the probe just read it —
+        // rather than the placeholder values `init` could build before any of them existed.
+        refreshCockpit()
+    }
+
+    /// Detach the observer graph without pausing the session.
+    ///
+    /// Quitting is not a pause the person took: a `sensingPaused` row at termination would be a
+    /// fact about the app closing rather than about their day.
+    func stop() {
+        sensingHost.stop()
     }
 
     /// Offer a shortcut to the platform, recording what it said.
@@ -209,16 +352,31 @@ final class AppComposition {
 
     /// The status the cockpit displays.
     ///
-    /// `paused` is the truthful answer while no activity source is running: the app has
-    /// observed nothing and therefore judged nothing. Showing `relevant` or `unrelated`
-    /// here would be inventing a verdict.
+    /// `paused` is the truthful answer while nothing is being observed: the app has observed
+    /// nothing and therefore judged nothing. `uncertain` is the truthful answer while it *is* —
+    /// `UndecidedClassifier` is still wired, and it answers `uncertain` to everything, so at
+    /// the end of this epic the app observes everything and judges nothing. Showing `relevant`
+    /// or `unrelated` here would be inventing a verdict.
     var currentStatus: FocusStatus {
-        activityObserver.availability.isAvailable ? .uncertain : .paused
+        sensingHost.isRunning ? .uncertain : .paused
     }
 
-    /// Why the app is not observing anything yet, when it is not.
+    /// Whether the platform can supply activation events at all.
+    ///
+    /// Read off the capability matrix the probe produced, so this is the same answer the
+    /// Privacy surface shows rather than a second opinion computed here. It is deliberately
+    /// **not** the global pause switch: "the person turned observation off" and "this Mac
+    /// cannot observe" are different facts and the app must be able to say which one it means.
+    /// The switch is `sensingHost.isRunning`, which is what `currentStatus` reads.
     var observationAvailability: ObservationAvailability {
-        activityObserver.availability
+        switch sensingHost.capabilities.state(of: .frontmostApplication) {
+        case .available: .available
+        case .denied, .restricted: .unavailable(reason: .permissionNotGranted)
+        case .unavailable: .unavailable(reason: .unsupportedOnThisMac)
+        // Before the first probe. In this epic it never survives launch, because `start()`
+        // probes before any surface draws.
+        case .notRequested: .unavailable(reason: .notImplemented)
+        }
     }
 
     /// Everything the cockpit draws, as one value.
@@ -229,5 +387,32 @@ final class AppComposition {
     /// was handed, only what that observer currently reports.
     var cockpitState: CockpitState {
         priorityHost.state
+    }
+
+    /// Re-read everything the store knows nothing about and push it into the cockpit value.
+    ///
+    /// Called whenever the session or the graph changes — a lifecycle pause, a stand-down for a
+    /// sensitive application, the global switch, the corroboration tick. **This is the only
+    /// place the elapsed figure is read**, from the injected wall clock, at the moment somebody
+    /// asked: there is no timer anywhere in this programme, so the number on the screen is the
+    /// number as of the last real change rather than a subscription that has to be cancelled.
+    ///
+    /// Without this the app would have a visible defect rather than a stale one: locking the
+    /// screen pauses the session in the store, and the window would keep saying *Focus* until
+    /// the person happened to press something.
+    func refreshCockpit() {
+        let snapshot = sessionHost.snapshot
+        priorityHost.update(
+            environment: PriorityHost.Environment(
+                status: currentStatus,
+                storeIsReady: storeStatus.isReady,
+                isObservingActivity: sensingHost.isRunning,
+                session: snapshot,
+                sessionElapsedSeconds: snapshot?.elapsedWallSeconds(now: dateProvider.now),
+                lastActiveBundleID: sensingHost.lastForeignBundleIdentifier,
+                sensing: sensingHost.summary,
+                capabilities: sensingHost.capabilities
+            )
+        )
     }
 }

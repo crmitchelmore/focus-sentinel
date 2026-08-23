@@ -144,3 +144,62 @@ public protocol PriorityActing: AnyObject {
     /// Record that today's ritual has been answered or dismissed, so it asks once (F-19).
     func dismissRitual()
 }
+
+/// Everything the session surfaces can *do*, as a sibling protocol.
+///
+/// Deliberately a **second** protocol rather than ten more verbs on `PriorityActing`. A
+/// priority and a session are different objects with different lifetimes — a task can span many
+/// sessions and a session can outlive the priority it was started on — and the two hosts that
+/// implement these are two objects for the same reason. A cockpit handed one and not the other
+/// renders the half it can drive and disables the half it cannot, which is what the snapshot
+/// lane does.
+///
+/// Same three rules as `PriorityActing`, and they matter more here rather than less:
+///
+/// * **Nothing throws.** A store failure is a fact the person has to be told, not an exception
+///   a button's action can meaningfully catch.
+/// * **Nothing returns.** The result of every verb is the next `CockpitState`, so a surface
+///   cannot come to depend on a value the store might not have written.
+/// * **A rejected transition is silent.** `SessionMachine` returns rejections as values, and a
+///   rejection means what the person asked for was already true. The one rejection worth
+///   surfacing — `notPausedForThatCause` — is surfaced *before* it happens rather than after:
+///   `SessionSnapshot.userMayResume` is false while a cause the person cannot clear is still
+///   held, so Resume is disabled with a named explanation instead of doing nothing when
+///   pressed.
+///
+/// `setSensingPaused` lives here rather than on a third protocol because F-119's switch is one
+/// stored value driving one detachment, and pausing sensing also drives a session pause with
+/// cause `.globalPause`. Two surfaces for it would be two opinions about one row.
+@MainActor
+public protocol SessionActing: AnyObject {
+    /// Begin a session on the active priority. Starting is not an event on an existing state —
+    /// it creates one, in `.focus`.
+    func startSession(kind: SessionKind, plannedSeconds: Int?, deadlineAt: Date?)
+
+    /// The person's own pause. Sends `paused(cause: .user)`, and only a `.user` resume lifts it.
+    func pauseSession()
+
+    /// The person's own resume. Sends `resumed(cause: .user)` — which the machine rejects
+    /// `notPausedForThatCause` if the pause belongs to the screen lock or the global switch.
+    func resumeSession()
+
+    func startDetour(reason: DetourReason)
+
+    func endDetour()
+
+    /// Take a break. A break may be started **only from focus**, so a surface that offers it
+    /// during a detour ends the detour first and the machine records two transitions — which is
+    /// what keeps the timeline honest about what actually happened.
+    func startBreak(reason: BreakReason)
+
+    func endBreak()
+
+    /// Stop the session and capture why (F-101). Every field is optional and Complete is
+    /// enabled with all of them empty: reflection is offered, never extracted.
+    func interruptSession(reason: InterruptionReason, note: String?)
+
+    func completeSession()
+
+    /// F-119's one global switch, bound identically to every surface that shows it.
+    func setSensingPaused(_ paused: Bool)
+}

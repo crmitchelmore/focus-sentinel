@@ -39,6 +39,18 @@ final class PriorityHost: PriorityActing {
         var status: FocusStatus
         var storeIsReady: Bool
         var isObservingActivity: Bool
+        /// The session the person is in, projected by `SessionHost`. `nil` when there is none.
+        var session: SessionSnapshot?
+        /// How long that session has been running on the wall clock, read at the moment the
+        /// environment was built. There is no timer here or anywhere: the figure is a value,
+        /// not a subscription.
+        var sessionElapsedSeconds: Double?
+        /// The last application in front that was not this one, as a bundle identifier (F-101).
+        var lastActiveBundleID: String?
+        /// What the observer graph is doing, including when the answer is "nothing".
+        var sensing: SensingSummary = .inactive
+        /// What this Mac lets the app do, as the probe last read it.
+        var capabilities: CapabilityMatrix = CapabilityMatrix()
     }
 
     private let context: ModelContext
@@ -83,7 +95,10 @@ final class PriorityHost: PriorityActing {
         self.state = CockpitState(
             status: environment.status,
             storeIsReady: environment.storeIsReady,
-            isObservingActivity: environment.isObservingActivity
+            isObservingActivity: environment.isObservingActivity,
+            session: environment.session,
+            sensing: environment.sensing,
+            capabilities: environment.capabilities
         )
         refresh()
     }
@@ -318,22 +333,32 @@ final class PriorityHost: PriorityActing {
             record(error)
         }
 
-        state = CockpitState(
+        let next = CockpitState(
             status: environment.status,
             storeIsReady: environment.storeIsReady && writeFailure == nil,
             isObservingActivity: environment.isObservingActivity,
             priority: priority,
             recent: recent,
             pendingHandoff: pendingHandoff,
-            showsRitualPrompt: shouldPromptRitual()
+            showsRitualPrompt: shouldPromptRitual(),
+            session: environment.session,
+            sensing: environment.sensing,
+            capabilities: environment.capabilities
         )
+
+        // Assigned only when it actually changed. From e03 this projection is rebuilt on the
+        // five-second corroboration tick as well as on every mutation, and `@Observable` reports
+        // a write rather than a difference — so an unconditional assignment would redraw the
+        // window twelve times a minute to show the same picture.
+        guard next != state else { return }
+        state = next
     }
 
     /// How many previous commitments the history offers. F-15 is a recent list, not a backlog:
     /// a scrolling archive would be the second commitment F-02 exists to refuse.
     static let historyLimit = 8
 
-    private func contextValues(for task: FocusSchemaV2.PriorityTask) -> [ContextItemValue] {
+    private func contextValues(for task: FocusSchemaV3.PriorityTask) -> [ContextItemValue] {
         task.contextItems
             .sorted { $0.addedAt < $1.addedAt }
             .map(resolvedValue(for:))
@@ -345,7 +370,7 @@ final class PriorityHost: PriorityActing {
     /// should not have to care. A missing one leaves the chip in its *missing* state with a
     /// Locate… action — it is **never** removed, because deleting somebody's context when a
     /// disk is unplugged is a bug, not tidiness.
-    private func resolvedValue(for item: FocusSchemaV2.ContextItem) -> ContextItemValue {
+    private func resolvedValue(for item: FocusSchemaV3.ContextItem) -> ContextItemValue {
         guard item.kind == .file else { return ContextItemValue(item) }
         guard let bookmark = item.bookmark else {
             return ContextItemValue(item, availability: .missing)
@@ -363,7 +388,7 @@ final class PriorityHost: PriorityActing {
         }
     }
 
-    private func refreshBookmark(on item: FocusSchemaV2.ContextItem, at url: URL) {
+    private func refreshBookmark(on item: FocusSchemaV3.ContextItem, at url: URL) {
         guard let fresh = try? SecurityScopedBookmark.create(for: url) else { return }
         item.bookmark = fresh
         item.value = url.path(percentEncoded: false)
@@ -376,7 +401,7 @@ final class PriorityHost: PriorityActing {
     /// The rules the pane can draw. A rule written by a later version — an unknown scope or
     /// verdict — is skipped rather than guessed at, and is never rewritten or deleted, so it
     /// survives the round trip intact.
-    private func ruleValues(for task: FocusSchemaV2.PriorityTask) -> [PriorityRuleValue] {
+    private func ruleValues(for task: FocusSchemaV3.PriorityTask) -> [PriorityRuleValue] {
         task.rules
             .sorted { $0.createdAt < $1.createdAt }
             .compactMap(PriorityRuleValue.init)

@@ -68,7 +68,7 @@ public enum ContextItemKind: Sendable, Equatable, Hashable {
     }
 }
 
-extension FocusSchemaV2.ContextItem {
+extension FocusSchemaV3.ContextItem {
     /// The stored kind, decoded. An unrecognised string becomes `.unknown` carrying itself —
     /// a forward-compatible read, never a crash and never a silent drop.
     public var kind: ContextItemKind {

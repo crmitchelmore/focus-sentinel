@@ -38,14 +38,25 @@ struct SensingSeamTests {
         #expect(idle.idleDuration() == .zero)
     }
 
-    @Test("event kinds have stable string raw values")
+    @Test("the five kinds e01 shipped keep their raw values, forever")
     func eventKindsHaveStableRawValues() {
-        #expect(ActivityEventKind.allCases.count == 5)
+        // The assertion that matters is *these five strings*, not how many cases there are:
+        // they are persisted in `ActivityEvent.kindRaw`, so changing one would reinterpret
+        // every stored row. e03 added nine more (R-41) and renamed none.
         #expect(ActivityEventKind.frontmostApplicationChanged.rawValue == "frontmostApplicationChanged")
         #expect(ActivityEventKind.contextChanged.rawValue == "contextChanged")
         #expect(ActivityEventKind.userIdle.rawValue == "userIdle")
         #expect(ActivityEventKind.userActive.rawValue == "userActive")
         #expect(ActivityEventKind.displayInactive.rawValue == "displayInactive")
+    }
+
+    @Test("the seam's kind is FocusCore's, so there is one vocabulary rather than two")
+    func eventKindIsTheDomainOne() {
+        // Since e03 the enum is declared in `FocusCore`, because it is also the vocabulary of a
+        // persisted column and the store that owns that column cannot import this package.
+        // This package re-exports it under its original name, so both spellings are one type.
+        #expect(ActivityEventKind.self == FocusCore.ActivityEventKind.self)
+        #expect(ActivityEventKind.allCases.count == 14)
     }
 
     @Test("an event stamped from an injected clock carries that clock's instant")

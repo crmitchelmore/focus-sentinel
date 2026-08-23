@@ -4,6 +4,21 @@ import Testing
 
 @testable import FocusCore
 
+/// A migration plan that stops at v2.
+///
+/// Recording the v2 fixture needs a container that is *actually* v2. Since e03 `FocusStore`
+/// builds v3 and would migrate the store on the way out, writing a v3 file into
+/// `Resources/SchemaV2` and quietly destroying the only genuine v2 artefact in the repository
+/// — the exact trap `SchemaV1OnlyPlan` exists to avoid one version down.
+///
+/// It still goes through `ModelContainer(for:migrationPlan:configurations:)`, so R-05's rule
+/// — no plan-less container, anywhere — is not weakened by its existence. It carries the real
+/// v1 → v2 stage, so a re-record from a v1 file would still be migrated correctly.
+enum SchemaV2OnlyPlan: SchemaMigrationPlan {
+    static var schemas: [any VersionedSchema.Type] { [FocusSchemaV1.self, FocusSchemaV2.self] }
+    static var stages: [MigrationStage] { [FocusMigrationPlan.v1ToV2] }
+}
+
 /// The known contents of the committed **v2** store fixture.
 ///
 /// Recorded with the same `FOCUS_FIXTURE_RECORD=1` mechanism the v1 fixture uses, so that
@@ -83,6 +98,13 @@ enum SchemaV2Fixture {
         return destinationDirectory.appending(path: storeName, directoryHint: .notDirectory)
     }
 
+    /// A container pinned to v2, for recording only. See `SchemaV2OnlyPlan`.
+    static func makeVersionTwoContainer(at url: URL) throws -> ModelContainer {
+        let schema = Schema(versionedSchema: FocusSchemaV2.self)
+        let configuration = ModelConfiguration(schema: schema, url: url)
+        return try ModelContainer(for: schema, migrationPlan: SchemaV2OnlyPlan.self, configurations: configuration)
+    }
+
     /// Insert the known rows into a v2 context. Used when re-recording, and by the
     /// round-trip assertion below.
     @MainActor
@@ -139,15 +161,19 @@ enum SchemaV2Fixture {
 /// bytes a v1 build actually wrote — and not about a v1 store synthesised by today's code.
 @Suite("Schema v2 migration")
 struct MigrationV2Tests {
-    @Test("the plan declares both schemas and exactly one custom stage")
+    /// v2's own half of the plan's shape. The full three-schema, two-stage claim lives in
+    /// `MigrationV3Tests`; what is asserted here is that v2 is still in the chain, still at
+    /// version 2.0.0, and still declares exactly the seven models it shipped with — because a
+    /// migration *source* that today's code has quietly edited proves nothing about tomorrow.
+    @Test("v2 is still the plan's second schema, unchanged")
     func planShape() {
         #expect(FocusSchemaV2.versionIdentifier == Schema.Version(2, 0, 0))
-        #expect(FocusMigrationPlan.schemas.count == 2)
+        #expect(FocusMigrationPlan.schemas.count == 3)
         #expect(FocusMigrationPlan.schemas[0] is FocusSchemaV1.Type)
         #expect(FocusMigrationPlan.schemas[1] is FocusSchemaV2.Type)
         #expect(FocusMigrationPlan.schemas[0].versionIdentifier == Schema.Version(1, 0, 0))
         #expect(FocusMigrationPlan.schemas[1].versionIdentifier == Schema.Version(2, 0, 0))
-        #expect(FocusMigrationPlan.stages.count == 1)
+        #expect(FocusMigrationPlan.stages.count == 2)
 
         #expect(FocusSchemaV2.models.count == 7)
         let names = Set(FocusSchemaV2.models.map { String(describing: $0) })
@@ -168,11 +194,11 @@ struct MigrationV2Tests {
         let container = try FocusStore.makeContainer(kind: .temporary(url))
         let context = container.mainContext
 
-        let pointers = try context.fetch(FetchDescriptor<FocusSchemaV2.ActivePriority>())
+        let pointers = try context.fetch(FetchDescriptor<FocusSchemaV3.ActivePriority>())
         #expect(pointers.count == 1, "a lightweight stage would have dropped the active priority")
 
         let pointer = try #require(pointers.first)
-        #expect(pointer.slot == FocusSchemaV2.ActivePriority.singletonSlot)
+        #expect(pointer.slot == FocusSchemaV3.ActivePriority.singletonSlot)
         #expect(pointer.task?.id == SchemaV1Fixture.taskID)
         // R-17: the carried pointer is stamped with the task's own creation instant, because
         // there is no honest record of when v1 activated it.
@@ -180,7 +206,7 @@ struct MigrationV2Tests {
 
         let task = try #require(pointer.task)
         #expect(task.isActive == true)
-        #expect(task.activePointer?.slot == FocusSchemaV2.ActivePriority.singletonSlot)
+        #expect(task.activePointer?.slot == FocusSchemaV3.ActivePriority.singletonSlot)
     }
 
     @Test("isActive is a projection: there is no stored column behind it")
@@ -212,7 +238,7 @@ struct MigrationV2Tests {
         let context = container.mainContext
 
         let task = try #require(
-            try context.fetch(FetchDescriptor<FocusSchemaV2.PriorityTask>()).first
+            try context.fetch(FetchDescriptor<FocusSchemaV3.PriorityTask>()).first
         )
         #expect(task.timeboxSeconds == nil)
         #expect(task.startedAt == nil)
@@ -223,12 +249,12 @@ struct MigrationV2Tests {
         #expect(task.rules.isEmpty)
 
         let settings = try #require(
-            try context.fetch(FetchDescriptor<FocusSchemaV2.AppSettingsRecord>()).first
+            try context.fetch(FetchDescriptor<FocusSchemaV3.AppSettingsRecord>()).first
         )
         #expect(settings.lastRitualLocalDay == nil)
         #expect(settings.ritualEnabled == true)
-        #expect(settings.hotKeyKeyCode == FocusSchemaV2.defaultHotKeyKeyCode)
-        #expect(settings.hotKeyModifierFlags == FocusSchemaV2.defaultHotKeyModifierFlags)
+        #expect(settings.hotKeyKeyCode == FocusSchemaV3.defaultHotKeyKeyCode)
+        #expect(settings.hotKeyModifierFlags == FocusSchemaV3.defaultHotKeyModifierFlags)
         // control | option | command, as NSEvent.ModifierFlags raw values.
         #expect(FocusSchemaV2.defaultHotKeyModifierFlags == 1_835_008)
     }
@@ -244,7 +270,7 @@ struct MigrationV2Tests {
         do {
             let container = try FocusStore.makeContainer(kind: .temporary(url))
             let context = container.mainContext
-            let pointers = try context.fetch(FetchDescriptor<FocusSchemaV2.ActivePriority>())
+            let pointers = try context.fetch(FetchDescriptor<FocusSchemaV3.ActivePriority>())
             #expect(pointers.count == 1)
             // Clear the priority, exactly as a user would.
             for pointer in pointers { context.delete(pointer) }
@@ -253,11 +279,11 @@ struct MigrationV2Tests {
 
         let reopened = try FocusStore.makeContainer(kind: .temporary(url))
         let pointers = try reopened.mainContext
-            .fetch(FetchDescriptor<FocusSchemaV2.ActivePriority>())
+            .fetch(FetchDescriptor<FocusSchemaV3.ActivePriority>())
         #expect(pointers.isEmpty, "the stage ran a second time and resurrected a cleared priority")
 
         // And the task itself is still there: clearing a priority is not deleting it.
-        let tasks = try reopened.mainContext.fetch(FetchDescriptor<FocusSchemaV2.PriorityTask>())
+        let tasks = try reopened.mainContext.fetch(FetchDescriptor<FocusSchemaV3.PriorityTask>())
         #expect(tasks.count == 1)
         #expect(tasks.first?.isActive == false)
     }
@@ -275,7 +301,7 @@ struct MigrationV2Tests {
         let context = container.mainContext
 
         let task = try #require(
-            try context.fetch(FetchDescriptor<FocusSchemaV2.PriorityTask>()).first
+            try context.fetch(FetchDescriptor<FocusSchemaV3.PriorityTask>()).first
         )
         #expect(task.id == SchemaV2Fixture.taskID)
         #expect(task.intent == SchemaV2Fixture.taskIntent)
@@ -303,13 +329,13 @@ struct MigrationV2Tests {
         #expect(rule.task?.id == SchemaV2Fixture.taskID)
 
         let settings = try #require(
-            try context.fetch(FetchDescriptor<FocusSchemaV2.AppSettingsRecord>()).first
+            try context.fetch(FetchDescriptor<FocusSchemaV3.AppSettingsRecord>()).first
         )
         #expect(settings.id == SchemaV2Fixture.settingsID)
         #expect(settings.appearancePreference == .dark)
         #expect(settings.lastRitualLocalDay == SchemaV2Fixture.lastRitualLocalDay)
 
-        let pointers = try context.fetch(FetchDescriptor<FocusSchemaV2.ActivePriority>())
+        let pointers = try context.fetch(FetchDescriptor<FocusSchemaV3.ActivePriority>())
         #expect(pointers.count == 1)
         #expect(pointers.first?.task?.id == SchemaV2Fixture.taskID)
     }
@@ -327,7 +353,7 @@ struct MigrationV2Tests {
         defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
 
         let container = try FocusStore.makeContainer(kind: .temporary(url))
-        _ = try container.mainContext.fetch(FetchDescriptor<FocusSchemaV2.PriorityTask>())
+        _ = try container.mainContext.fetch(FetchDescriptor<FocusSchemaV3.PriorityTask>())
 
         let after = try Data(contentsOf: source)
         #expect(before == after, "the v2 fixture test mutated its own fixture")
@@ -352,7 +378,10 @@ struct MigrationV2Tests {
         )
 
         do {
-            let container = try FocusStore.makeContainer(kind: .temporary(stagedStore))
+            // Through a **v2-pinned** container, not `FocusStore` — which since e03 opens v3
+            // and would write a v3 file into `Resources/SchemaV2`, destroying the migration
+            // source this suite exists to read.
+            let container = try SchemaV2Fixture.makeVersionTwoContainer(at: stagedStore)
             try SchemaV2Fixture.populate(container.mainContext)
         }
         // Container released: the store is closed and its sidecars are on disk.

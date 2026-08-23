@@ -254,6 +254,38 @@ public enum DesignTokens {
         case .onBreak: Color(nsColor: .systemTeal)
         }
     }
+
+    /// The tint for a session phase.
+    ///
+    /// Read this together with `SessionPhaseBadge.symbolName(for:)` and the badge's label, which
+    /// is never hidden: the tint is the third channel here too, and never the first. `.focus`
+    /// takes the user's own accent colour because it is the state the app exists to protect;
+    /// every other phase takes a system colour rather than a shade of it, so the six are told
+    /// apart by hue as well as by glyph for anyone who does use colour.
+    public static func tint(for phase: SessionPhase) -> Color {
+        switch phase {
+        case .focus: Palette.accent
+        case .intentionalDetour: Color(nsColor: .systemOrange)
+        case .onBreak: Color(nsColor: .systemTeal)
+        case .paused: Color(nsColor: .systemGray)
+        case .interrupted: Color(nsColor: .systemRed)
+        case .complete: Color(nsColor: .systemGreen)
+        }
+    }
+
+    /// The tint for a capability state.
+    ///
+    /// Four of the five are drawn in supporting grey on purpose. Only `.available` is coloured,
+    /// because the Privacy surface must not turn "you said no" into a red warning the person is
+    /// invited to fix — a coloured alarm beside a denial is a call to action in disguise, which
+    /// F-126 forbids outright. `.denied`, `.restricted`, `.unavailable` and `.notRequested` are
+    /// facts stated plainly, and the surface offers nothing to press.
+    public static func tint(for state: CapabilityState) -> Color {
+        switch state {
+        case .available: Color(nsColor: .systemGreen)
+        case .denied, .restricted, .unavailable, .notRequested: Palette.secondaryText
+        }
+    }
 }
 
 extension View {

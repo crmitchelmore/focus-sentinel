@@ -59,12 +59,14 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case commandHelp = "shell.command.help"
     case commandNewPriority = "shell.command.newPriority"
     case commandAddFilesToContext = "shell.command.addFilesToContext"
+    /// F-119's switch, as a menu verb. The cockpit's control reads positively ("Watch what I
+    /// am working on"); a menu item has to name the *act*, so this one does.
+    case commandPauseSensing = "shell.command.pauseSensing"
 
     // Cockpit
     case cockpitHeading = "shell.cockpit.heading"
     case cockpitStoreReady = "shell.cockpit.store.ready"
     case cockpitStoreUnavailable = "shell.cockpit.store.unavailable"
-    case cockpitSensingUnavailable = "shell.cockpit.sensing.unavailable"
     case cockpitOpenSettings = "shell.cockpit.openSettings"
 
     // The priority itself
@@ -179,6 +181,116 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case settingsPrivacyStatement = "settings.privacy.statement"
     case settingsPrivacyStoreLabel = "settings.privacy.storeLabel"
     case settingsPrivacyReveal = "settings.privacy.reveal"
+
+    // The session runtime (F-98, F-99, F-101).
+    //
+    // `FocusCore` owns the machine and returns typed values; every word for those values lives
+    // here, which is what keeps the session reducer free of user-visible strings (plan R-52).
+    case sessionHeading = "session.pane.heading"
+    case sessionNone = "session.pane.none"
+    case sessionElapsed = "session.pane.elapsed"
+    case sessionBadgeFocus = "session.badge.focus"
+    case sessionBadgeDetour = "session.badge.detour"
+    case sessionBadgeBreak = "session.badge.break"
+    case sessionBadgePaused = "session.badge.paused"
+    case sessionBadgeInterrupted = "session.badge.interrupted"
+    case sessionBadgeComplete = "session.badge.complete"
+    case sessionActionStart = "session.action.start"
+    case sessionActionPause = "session.action.pause"
+    case sessionActionResume = "session.action.resume"
+    case sessionActionDetourStart = "session.action.detourStart"
+    case sessionActionDetourEnd = "session.action.detourEnd"
+    case sessionActionBreakStart = "session.action.breakStart"
+    case sessionActionBreakEnd = "session.action.breakEnd"
+    case sessionActionInterrupt = "session.action.interrupt"
+    case sessionActionComplete = "session.action.complete"
+    // Every pause carries the cause that made it, and only that cause can lift it — so the
+    // surface names them one by one rather than saying "paused".
+    case sessionCauseHeading = "session.cause.heading"
+    case sessionCauseUser = "session.cause.user"
+    case sessionCauseSensitiveApp = "session.cause.sensitiveApp"
+    case sessionCauseGlobalPause = "session.cause.globalPause"
+    case sessionCauseScreenLocked = "session.cause.screenLocked"
+    case sessionCauseDisplaysAsleep = "session.cause.displaysAsleep"
+    case sessionCauseSystemAsleep = "session.cause.systemAsleep"
+    case sessionCauseSessionInactive = "session.cause.sessionInactive"
+    case sessionCauseRelaunch = "session.cause.relaunch"
+    case sessionCauseSystemRestart = "session.cause.systemRestart"
+    case sessionResumeBlocked = "session.resume.blocked"
+    case sessionNoteRebooted = "session.note.rebooted"
+    case sessionNoteStale = "session.note.stale"
+    case sessionNoteClockAnomaly = "session.note.clockAnomaly"
+    case sessionInterruptHeading = "session.interrupt.heading"
+    case sessionInterruptExplanation = "session.interrupt.explanation"
+    case sessionInterruptReasonLabel = "session.interrupt.reasonLabel"
+    case sessionInterruptReasonUser = "session.interrupt.reason.user"
+    case sessionInterruptReasonPriorityChanged = "session.interrupt.reason.priorityChanged"
+    case sessionInterruptReasonAppQuit = "session.interrupt.reason.appQuit"
+    case sessionInterruptReasonSystemRestart = "session.interrupt.reason.systemRestart"
+    case sessionInterruptReasonTimeboxAbandoned = "session.interrupt.reason.timeboxAbandoned"
+    case sessionInterruptNoteLabel = "session.interrupt.noteLabel"
+    case sessionInterruptNotePrompt = "session.interrupt.notePrompt"
+    case sessionInterruptLastActiveLabel = "session.interrupt.lastActiveLabel"
+    case sessionInterruptLastActiveNone = "session.interrupt.lastActiveNone"
+    case sessionInterruptConfirm = "session.interrupt.action.confirm"
+    case sessionInterruptCancel = "session.interrupt.action.cancel"
+
+    // What the app is watching (F-119) — and what it is not.
+    case sensingHeading = "sensing.pane.heading"
+    case sensingStatusWatching = "sensing.status.watching"
+    case sensingStatusPaused = "sensing.status.paused"
+    case sensingStatusDetached = "sensing.status.detached"
+    case sensingObserversLabel = "sensing.detail.observers"
+    case sensingRedundantLabel = "sensing.detail.redundant"
+    case sensingPauseLabel = "sensing.pause.label"
+    case sensingPauseExplanation = "sensing.pause.explanation"
+    case sensingIdleAway = "sensing.idle.away"
+    case sensingIdlePresent = "sensing.idle.present"
+    case sensingMicRunning = "sensing.mic.running"
+    case sensingMicIdle = "sensing.mic.idle"
+    case sensingCameraNoDevices = "sensing.camera.noDevices"
+    case sensingCameraHeld = "sensing.camera.held"
+    case sensingPresentationOn = "sensing.presentation.on"
+    case sensingPresentationOff = "sensing.presentation.off"
+    case sensingDisplaySecondary = "sensing.display.secondary"
+    case sensingDisplayPrimary = "sensing.display.primary"
+    // Every lifecycle line ends "as far as macOS tells us". That is a Court condition, not a
+    // hedge: no copy anywhere may claim exact screen-lock detection.
+    case sensingLifecycleActive = "sensing.lifecycle.active"
+    case sensingLifecycleScreenLocked = "sensing.lifecycle.screenLocked"
+    case sensingLifecycleDisplaysAsleep = "sensing.lifecycle.displaysAsleep"
+    case sensingLifecycleSystemAsleep = "sensing.lifecycle.systemAsleep"
+    case sensingLifecycleSessionInactive = "sensing.lifecycle.sessionInactive"
+    case sensingLifecyclePoweringOff = "sensing.lifecycle.poweringOff"
+    /// The known limitation, stated in Settings rather than hidden: Screen Sharing produces
+    /// only synthetic events, so this app will consider such a person idle (plan R-36).
+    case sensingLimitationScreenSharing = "sensing.limitation.screenSharing"
+
+    // The graceful-degradation matrix (F-126, F-127).
+    case capabilityHeading = "capability.pane.heading"
+    case capabilityExplanation = "capability.pane.explanation"
+    case capabilityNameFrontmostApplication = "capability.name.frontmostApplication"
+    case capabilityNameWindowMetadata = "capability.name.windowMetadata"
+    case capabilityNameIdle = "capability.name.idle"
+    case capabilityNameSystemLifecycle = "capability.name.systemLifecycle"
+    case capabilityNameDisplayGeometry = "capability.name.displayGeometry"
+    case capabilityNamePresentation = "capability.name.presentation"
+    case capabilityNameMicrophoneActivity = "capability.name.microphoneActivity"
+    case capabilityNameCameraActivity = "capability.name.cameraActivity"
+    case capabilityNameAccessibilityWindowContext = "capability.name.accessibilityWindowContext"
+    case capabilityNameScreenCapture = "capability.name.screenCapture"
+    case capabilityNameNotifications = "capability.name.notifications"
+    case capabilityNameOnDeviceModel = "capability.name.onDeviceModel"
+    case capabilityStateAvailable = "capability.state.available"
+    case capabilityStateDenied = "capability.state.denied"
+    case capabilityStateRestricted = "capability.state.restricted"
+    case capabilityStateUnavailable = "capability.state.unavailable"
+    case capabilityStateNotRequested = "capability.state.notRequested"
+    case capabilityFallbackFullFunction = "capability.fallback.fullFunction"
+    case capabilityFallbackDegraded = "capability.fallback.degraded"
+    case capabilityFallbackFeatureAbsent = "capability.fallback.featureAbsent"
+    case capabilityFallbackSuppressOnly = "capability.fallback.suppressOnly"
+    case capabilityFallbackShowUnavailable = "capability.fallback.showUnavailable"
 }
 
 /// A transform applied to a resolved string immediately before it is drawn.

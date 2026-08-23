@@ -94,23 +94,23 @@ public final class PriorityStore {
     /// The active priority, or `nil` if there is none.
     ///
     /// One fetch of the pointer row, whose relationship resolves the task.
-    public func activeTask() throws -> FocusSchemaV2.PriorityTask? {
+    public func activeTask() throws -> FocusSchemaV3.PriorityTask? {
         try activePointer()?.task
     }
 
     /// The single `ActivePriority` row, if one exists.
-    public func activePointer() throws -> FocusSchemaV2.ActivePriority? {
-        try context.fetch(FetchDescriptor<FocusSchemaV2.ActivePriority>()).first
+    public func activePointer() throws -> FocusSchemaV3.ActivePriority? {
+        try context.fetch(FetchDescriptor<FocusSchemaV3.ActivePriority>()).first
     }
 
     /// How many pointer rows the store currently holds. Should only ever be `0` or `1`; a
     /// test asserts exactly that, rather than trusting it.
     public func activePointerCount() throws -> Int {
-        try context.fetchCount(FetchDescriptor<FocusSchemaV2.ActivePriority>())
+        try context.fetchCount(FetchDescriptor<FocusSchemaV3.ActivePriority>())
     }
 
-    public func task(id: UUID) throws -> FocusSchemaV2.PriorityTask? {
-        let descriptor = FetchDescriptor<FocusSchemaV2.PriorityTask>(
+    public func task(id: UUID) throws -> FocusSchemaV3.PriorityTask? {
+        let descriptor = FetchDescriptor<FocusSchemaV3.PriorityTask>(
             predicate: #Predicate { $0.id == id }
         )
         return try context.fetch(descriptor).first
@@ -122,8 +122,8 @@ public final class PriorityStore {
     /// activated ones and `createdAt` breaking every tie. Sorted in Swift rather than by the
     /// store so that the ordering of `nil` is a decision rather than whatever SQLite felt
     /// like.
-    public func recentTasks(limit: Int? = nil) throws -> [FocusSchemaV2.PriorityTask] {
-        let all = try context.fetch(FetchDescriptor<FocusSchemaV2.PriorityTask>())
+    public func recentTasks(limit: Int? = nil) throws -> [FocusSchemaV3.PriorityTask] {
+        let all = try context.fetch(FetchDescriptor<FocusSchemaV3.PriorityTask>())
         let sorted = all.sorted { lhs, rhs in
             switch (lhs.lastActivatedAt, rhs.lastActivatedAt) {
             case let (left?, right?) where left != right:
@@ -141,15 +141,15 @@ public final class PriorityStore {
         return Array(sorted.prefix(limit))
     }
 
-    public func contextItem(id: UUID) throws -> FocusSchemaV2.ContextItem? {
-        let descriptor = FetchDescriptor<FocusSchemaV2.ContextItem>(
+    public func contextItem(id: UUID) throws -> FocusSchemaV3.ContextItem? {
+        let descriptor = FetchDescriptor<FocusSchemaV3.ContextItem>(
             predicate: #Predicate { $0.id == id }
         )
         return try context.fetch(descriptor).first
     }
 
-    public func rule(id: UUID) throws -> FocusSchemaV2.RelevanceRule? {
-        let descriptor = FetchDescriptor<FocusSchemaV2.RelevanceRule>(
+    public func rule(id: UUID) throws -> FocusSchemaV3.RelevanceRule? {
+        let descriptor = FetchDescriptor<FocusSchemaV3.RelevanceRule>(
             predicate: #Predicate { $0.id == id }
         )
         return try context.fetch(descriptor).first
@@ -182,7 +182,7 @@ public final class PriorityStore {
         return result
     }
 
-    private func requireTask(_ id: UUID) throws -> FocusSchemaV2.PriorityTask {
+    private func requireTask(_ id: UUID) throws -> FocusSchemaV3.PriorityTask {
         guard let task = try task(id: id) else { throw PriorityStoreError.taskNotFound(id) }
         return task
     }
@@ -220,7 +220,7 @@ public final class PriorityStore {
             actionName,
             undo: undo,
             mutate: {
-                let task = FocusSchemaV2.PriorityTask(
+                let task = FocusSchemaV3.PriorityTask(
                     id: newID,
                     intent: trimmed,
                     doneWhen: doneWhen,
@@ -296,7 +296,7 @@ public final class PriorityStore {
             undo: undo,
             mutate: {
                 context.insert(
-                    FocusSchemaV2.PriorityTask(
+                    FocusSchemaV3.PriorityTask(
                         id: newID,
                         intent: trimmed,
                         doneWhen: doneWhen,
@@ -791,7 +791,7 @@ public final class PriorityStore {
             actionName,
             undo: undo,
             mutate: {
-                let task = FocusSchemaV2.PriorityTask(
+                let task = FocusSchemaV3.PriorityTask(
                     id: snapshot.id,
                     intent: snapshot.intent,
                     doneWhen: snapshot.doneWhen,
@@ -824,8 +824,8 @@ public final class PriorityStore {
     /// `nil` clears the priority by deleting the row. Any stray extra rows are removed rather
     /// than left for the unique constraint to merge: the app survives collision resolution, it
     /// never depends on it.
-    private func rePoint(to task: FocusSchemaV2.PriorityTask?, at date: Date) throws {
-        let pointers = try context.fetch(FetchDescriptor<FocusSchemaV2.ActivePriority>())
+    private func rePoint(to task: FocusSchemaV3.PriorityTask?, at date: Date) throws {
+        let pointers = try context.fetch(FetchDescriptor<FocusSchemaV3.ActivePriority>())
 
         guard let task else {
             for pointer in pointers { context.delete(pointer) }
@@ -837,7 +837,7 @@ public final class PriorityStore {
             pointer.task = task
             pointer.activatedAt = date
         } else {
-            context.insert(FocusSchemaV2.ActivePriority(task: task, activatedAt: date))
+            context.insert(FocusSchemaV3.ActivePriority(task: task, activatedAt: date))
         }
     }
 
@@ -895,7 +895,7 @@ public final class PriorityStore {
             self.taskID = taskID
         }
 
-        init(item: FocusSchemaV2.ContextItem) {
+        init(item: FocusSchemaV3.ContextItem) {
             id = item.id
             kindRaw = item.kindRaw
             value = item.value
@@ -930,7 +930,7 @@ public final class PriorityStore {
             self.taskID = taskID
         }
 
-        init(rule: FocusSchemaV2.RelevanceRule) {
+        init(rule: FocusSchemaV3.RelevanceRule) {
             id = rule.id
             scopeRaw = rule.scopeRaw
             subject = rule.subject
@@ -957,7 +957,7 @@ public final class PriorityStore {
         let wasActive: Bool
         let activatedAt: Date?
 
-        init(task: FocusSchemaV2.PriorityTask, wasActive: Bool) {
+        init(task: FocusSchemaV3.PriorityTask, wasActive: Bool) {
             id = task.id
             intent = task.intent
             doneWhen = task.doneWhen
@@ -977,7 +977,7 @@ public final class PriorityStore {
     }
 
     private func insert(_ snapshot: ContextItemSnapshot) throws {
-        let item = FocusSchemaV2.ContextItem(
+        let item = FocusSchemaV3.ContextItem(
             id: snapshot.id,
             kindRaw: snapshot.kindRaw,
             value: snapshot.value,
@@ -990,7 +990,7 @@ public final class PriorityStore {
     }
 
     private func insert(_ snapshot: RuleSnapshot) throws {
-        let rule = FocusSchemaV2.RelevanceRule(
+        let rule = FocusSchemaV3.RelevanceRule(
             id: snapshot.id,
             scopeRaw: snapshot.scopeRaw,
             subject: snapshot.subject,
@@ -1001,9 +1001,9 @@ public final class PriorityStore {
         context.insert(rule)
     }
 
-    private func sessionRules() throws -> [FocusSchemaV2.RelevanceRule] {
+    private func sessionRules() throws -> [FocusSchemaV3.RelevanceRule] {
         let scope = Self.sessionRuleScopeRaw
-        let descriptor = FetchDescriptor<FocusSchemaV2.RelevanceRule>(
+        let descriptor = FetchDescriptor<FocusSchemaV3.RelevanceRule>(
             predicate: #Predicate { $0.scopeRaw == scope }
         )
         return try context.fetch(descriptor)

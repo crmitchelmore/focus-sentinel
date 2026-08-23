@@ -37,13 +37,13 @@ struct ContextItemValueTests {
         let container = try FocusStore.makeContainer(kind: .inMemory)
         let context = container.mainContext
 
-        let task = FocusSchemaV2.PriorityTask(intent: "Hold some context", createdAt: clock.now)
+        let task = FocusSchemaV3.PriorityTask(intent: "Hold some context", createdAt: clock.now)
         context.insert(task)
 
         let raws = ["app", "domain", "keyword", "file", "personFromTheFuture"]
         for raw in raws {
             context.insert(
-                FocusSchemaV2.ContextItem(
+                FocusSchemaV3.ContextItem(
                     kindRaw: raw,
                     value: "value-\(raw)",
                     displayName: "name-\(raw)",
@@ -54,7 +54,7 @@ struct ContextItemValueTests {
         }
         try context.save()
 
-        let items = try context.fetch(FetchDescriptor<FocusSchemaV2.ContextItem>())
+        let items = try context.fetch(FetchDescriptor<FocusSchemaV3.ContextItem>())
         #expect(items.count == 5, "a row was dropped rather than kept")
         #expect(Set(items.map(\.kindRaw)) == Set(raws))
 
