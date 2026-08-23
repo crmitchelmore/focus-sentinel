@@ -481,6 +481,54 @@
         }
       }
     },
+    "rule.disposition.alwaysDistracting" : {
+      "comment" : "Per-app disposition: this app never supports the priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Always distracting"
+          }
+        }
+      }
+    },
+    "rule.disposition.alwaysRelevant" : {
+      "comment" : "Per-app disposition: this app always supports the priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Always relevant"
+          }
+        }
+      }
+    },
+    "rule.disposition.askEachTime" : {
+      "comment" : "Per-app disposition: Focus declines to decide and offers a one-click rule instead.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ask each time"
+          }
+        }
+      }
+    },
+    "rule.disposition.interpretByContext" : {
+      "comment" : "Per-app disposition: no rule at all, so Focus works it out from the priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Judge by context"
+          }
+        }
+      }
+    },
     "status.break.short" : {
       "comment" : "Short status label: the user is on a deliberate break.",
       "extractionState" : "manual",
