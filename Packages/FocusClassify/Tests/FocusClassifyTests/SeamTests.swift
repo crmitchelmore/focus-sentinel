@@ -30,11 +30,14 @@ struct SeamTests {
         #expect(outcome.verdict == .uncertain)
         #expect(outcome.source == .undecided)
         #expect(outcome.confidence == 0)
-        #expect(outcome.verdict.permitsIntervention == false)
+        #expect(Self.eligibility(for: outcome) == .suppressed(.verdictUncertain))
     }
 
+    /// The e01 assertion, rewritten for the route that replaced the `Bool` (R-55): the
+    /// classifier that declines to decide cannot produce a mandate through the only function
+    /// that makes one — whatever the drift, the phase, the status or the band beside it.
     @Test("the e01 classifier declines to decide about anything, so the app cannot nudge")
-    func undecidedClassifierNeverPermitsIntervention() {
+    func undecidedClassifierNeverProducesAMandate() {
         let classifier = UndecidedClassifier()
         let inputs = [
             ClassificationInput.empty,
@@ -50,8 +53,30 @@ struct SeamTests {
         for input in inputs {
             let outcome = classifier.classify(input)
             #expect(outcome.verdict == .uncertain)
-            #expect(outcome.verdict.permitsIntervention == false)
+            #expect(Self.eligibility(for: outcome).mandate == nil)
+            #expect(Self.eligibility(for: outcome) == .suppressed(.verdictUncertain))
         }
+    }
+
+    /// The most favourable circumstances an interruption could ever have: sustained drift at
+    /// the highest band, in focus, not idle, with a priority set. Everything except a verdict
+    /// that permits one.
+    private static func eligibility(for outcome: ClassificationOutcome) -> InterventionEligibility {
+        InterventionEligibility.decide(
+            outcome: ClassificationOutcome(
+                verdict: outcome.verdict,
+                source: outcome.source,
+                confidence: outcome.confidence,
+                band: .high
+            ),
+            drift: .sustained(subject: .single("com.apple.Safari"), accumulated: .seconds(600), isMixed: false),
+            phase: .focus,
+            status: .unrelated,
+            isUserIdle: false,
+            hasActivePriority: true,
+            explanation: Explanation.make(stage: .unresolved, band: .high, clauses: [], stamp: .current),
+            stamp: .current
+        )
     }
 
     @Test("the seam is usable purely through the RelevanceClassifier protocol")

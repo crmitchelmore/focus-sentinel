@@ -23,17 +23,17 @@ struct VerdictTests {
         #expect(Verdict.uncertain.rawValue == "uncertain")
     }
 
-    /// Standing condition 6 as e01 shipped it. T82 replaces this `Bool` with a type whose
-    /// wrong use does not compile, and deletes the member; until then the shipped guarantee
-    /// stays asserted rather than being unguarded for one commit.
-    @Test("uncertain suppresses intervention, and only unrelated permits it")
-    func uncertainSuppressesIntervention() {
-        #expect(Verdict.uncertain.permitsIntervention == false)
-        #expect(Verdict.relevant.permitsIntervention == false)
-        #expect(Verdict.unrelated.permitsIntervention == true)
-
-        for verdict in Verdict.allCases where verdict != .unrelated {
-            #expect(verdict.permitsIntervention == false)
+    /// Standing condition 6, now that the `Bool` is gone (T82): the verdict enum offers no
+    /// projection at all, and the only route to an intervention is a function that returns
+    /// before it reads anything else. `InterventionInvariantTests` proves the behaviour over
+    /// all 4 320 combinations; this asserts the *shape* — that there is nothing on a `Verdict`
+    /// a call site could collapse into a `Bool`.
+    @Test("a Verdict offers no boolean projection to collapse")
+    func verdictHasNoBooleanProjection() {
+        for verdict in Verdict.allCases {
+            let mirror = Mirror(reflecting: verdict)
+            #expect(mirror.children.isEmpty)
+            #expect(!(verdict.rawValue.isEmpty))
         }
     }
 
@@ -45,7 +45,7 @@ struct VerdictTests {
         for verdict in Verdict.allCases {
             let status = FocusStatus(rawValue: verdict.rawValue)
             #expect(status != nil, "no FocusStatus for \(verdict.rawValue)")
-            #expect(status?.permitsIntervention == verdict.permitsIntervention)
+            #expect(status?.permitsIntervention == (verdict == .unrelated))
         }
 
         // The superset is proper: `paused` and `onBreak` are states of the *session*, not
