@@ -25,20 +25,24 @@ public struct CacheBenchmarkResult: Sendable, Equatable {
     public let recommendedCapacity: Int
     /// Whether the workload can tell the four capacities apart at all.
     ///
-    /// **The honest half of this benchmark, and the reason it is reported rather than silently
-    /// obeyed.** R-74.4's rule says the committed capacity is the smallest whose p95 is within
-    /// ten per cent of the best. Over this corpus no capacity evicts anything — the workload
-    /// holds fewer distinct sentences than the smallest capacity in the sweep — so all four
-    /// points are identical and the rule's answer is 64 for a reason that has nothing to do with
-    /// 64 being sufficient. A benchmark that cannot distinguish its candidates is not evidence
-    /// for choosing between them, and lowering a shipped constant on the strength of one would
-    /// be exactly the "narrative dressed as measurement" R-74 exists to stop.
+    /// **The honest half of this benchmark, and the reason it is reported rather than left
+    /// implicit.** Over this corpus no capacity evicts anything — the workload holds 47 distinct
+    /// sentences and the smallest candidate is 64 — so all four points are identical. That is a
+    /// real fact about this workload and it is published rather than smoothed over.
     ///
-    /// So the sweep is committed, the recommendation is computed and reported, and this flag
-    /// says whether it means anything. It will: e07 turns window titles on, at which point the
-    /// evidence-side sentence stream becomes the distinct titles of a working day and this
-    /// benchmark starts discriminating. When it does, the flag flips and the recommendation
-    /// becomes actionable — against a workload that can support it.
+    /// It is **not** a reason to keep a larger number. R-74.4 committed the derivation rule
+    /// before the sweep was run precisely so the answer would not be a judgement: the smallest
+    /// capacity whose p95 is within ten per cent of the best. A flat sweep is evidence that 64
+    /// suffices for this workload even though it is not evidence against 512, and the number the
+    /// alternative preserves — 256 — is the un-evidenced value R-74.4 was written to replace,
+    /// justified by a per-call latency figure that does not bear on capacity at all. So
+    /// `EvaluationGate` requires `RelevancePolicy.similarityCacheCapacity` to equal
+    /// `recommendedCapacity`, and this flag records what that recommendation rests on.
+    ///
+    /// The flag will flip: e07 turns window titles on, at which point the evidence-side sentence
+    /// stream becomes the distinct titles of a working day, the sweep starts discriminating, the
+    /// recommendation moves and the gate goes red until the constant is re-derived — which is
+    /// R-74.4's own remedy, and the reason the assertion is worth having while it is quiet.
     public let isDiscriminating: Bool
 }
 

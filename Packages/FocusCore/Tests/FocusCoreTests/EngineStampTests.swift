@@ -8,12 +8,12 @@ import Testing
 struct EngineStampTests {
     /// The committed literal. Re-record it **only** together with the version component that
     /// moved — and, for `policyVersion`, together with `RelevancePolicyTests.committedDigest`.
-    static let committedCacheKey = "s1.p2.l1.e0.m0"
+    static let committedCacheKey = "s1.p3.l1.e0.m0"
 
     /// What the running engine stamps once `FocusClassify` has read
     /// `NLEmbedding.currentSentenceEmbeddingRevision(for: .english)`, measured `1` on this Mac
     /// (P-117). This is the value `evaluation.json` and both self-check JSONs carry.
-    static let committedRuntimeCacheKey = "s1.p2.l1.e1.m0"
+    static let committedRuntimeCacheKey = "s1.p3.l1.e1.m0"
 
     @Test("the stamp's cache key equals its committed literal")
     func cacheKeyIsCommitted() {
@@ -53,7 +53,7 @@ struct EngineStampTests {
         let base = EngineStamp.current
         let variants = [
             EngineStamp(schemaVersion: 2, policyVersion: 1, lexiconVersion: 1, embeddingRevision: 0, promptVersion: 0),
-            EngineStamp(schemaVersion: 1, policyVersion: 3, lexiconVersion: 1, embeddingRevision: 0, promptVersion: 0),
+            EngineStamp(schemaVersion: 1, policyVersion: 4, lexiconVersion: 1, embeddingRevision: 0, promptVersion: 0),
             EngineStamp(schemaVersion: 1, policyVersion: 1, lexiconVersion: 2, embeddingRevision: 0, promptVersion: 0),
             EngineStamp(schemaVersion: 1, policyVersion: 1, lexiconVersion: 1, embeddingRevision: 2, promptVersion: 0),
             EngineStamp(schemaVersion: 1, policyVersion: 1, lexiconVersion: 1, embeddingRevision: 0, promptVersion: 2)
@@ -79,7 +79,7 @@ struct EngineStampTests {
         )
 
         #expect(third != fourth)
-        #expect(third == "s1.p2.l1.e1.m0|3F2504E0-4F89-11D3-9A0C-0305E82C3301|3|com.apple.Safari")
+        #expect(third == "s1.p3.l1.e1.m0|3F2504E0-4F89-11D3-9A0C-0305E82C3301|3|com.apple.Safari")
 
         // And so do a different priority and a different piece of evidence.
         #expect(
@@ -106,7 +106,7 @@ struct EngineStampTests {
     /// that no longer describes the constants.
     @Test("the policy version and the policy digest are re-recorded together")
     func policyVersionTracksTheDigest() {
-        #expect(EngineStamp.current.policyVersion == 2)
+        #expect(EngineStamp.current.policyVersion == 3)
         #expect(EngineStamp.current.policyVersion == EngineStamp.policyRevisions.count)
         for revision in EngineStamp.policyRevisions {
             #expect(!revision.isEmpty, "a policy revision with no reason is a version churning")

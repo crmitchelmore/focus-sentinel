@@ -31,8 +31,8 @@ struct EvaluationGateTests {
     /// place per lane: `RelevancePolicyTests` and `EngineStampTests` assert them of the test
     /// process, this suite asserts them of the report, and the two self-check stages assert them
     /// of the running application.
-    static let committedPolicyDigest = "0xdfff9accb6fd410f"
-    static let committedStampPrefix = "s1.p2.l1."
+    static let committedPolicyDigest = "0xefaabdb6f21aaa50"
+    static let committedStampPrefix = "s1.p3.l1."
 
     /// The run, performed **once** for the whole suite. Sixteen assertions over one report is
     /// sixteen readings of one measurement; sixteen runs would be sixteen measurements, and the

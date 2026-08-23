@@ -42,7 +42,7 @@ struct VerdictSnapshotTests {
 
         #expect(state.verdict?.status == .unrelated)
         #expect(state.verdict?.stage == .heuristic)
-        #expect(state.verdict?.stampKey == "s1.p2.l1.e0.m0")
+        #expect(state.verdict?.stampKey == "s1.p3.l1.e0.m0")
         #expect(state.storeIsReady)
         #expect(state != CockpitState.ready, "the verdict is part of the value's identity")
     }

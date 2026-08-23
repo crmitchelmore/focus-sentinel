@@ -128,6 +128,21 @@ public enum EvaluationGate {
             number(report.cache.hitRate),
             report.cache.hitRate >= EvaluationPolicy.cacheHitRateFloor
         )
+        // R-74.4: `similarityCacheCapacity` is class **C** and owes a workload benchmark, and
+        // the derivation rule was committed *before* the sweep was run — the smallest capacity
+        // whose p95 is within ten per cent of the best measured. A hit rate alone does not
+        // enforce that: a capacity nobody derived would pass it every time, which is how 256
+        // survived the ruling that was written to replace it. So the shipped constant is
+        // compared to the recommendation the sweep produces on this run. When e07 turns window
+        // titles on and the evidence-side stream grows past the smallest candidate, the sweep
+        // starts discriminating, the recommendation moves, and this goes red until the constant
+        // is re-derived — which is R-74.4's own remedy rather than a quiet raise.
+        check(
+            "cache.capacity",
+            "== cache.recommendedCapacity (\(report.cache.recommendedCapacity))",
+            "\(report.cache.capacity)",
+            report.cache.capacity == report.cache.recommendedCapacity
+        )
         check(
             "failures",
             "empty",

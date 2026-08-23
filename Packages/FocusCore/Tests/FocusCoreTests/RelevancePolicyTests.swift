@@ -15,7 +15,7 @@ struct RelevancePolicyTests {
     /// The committed digest. **Re-record this only together with a bump to
     /// `EngineStamp.policyVersion`**, and only after the constant that moved has a boundary
     /// triple and a witness that flips.
-    static let committedDigest: UInt64 = 0xdfff_9acc_b6fd_410f
+    static let committedDigest: UInt64 = 0xefaa_bdb6_f21a_aa50
 
     @Test("the policy digest equals its committed literal")
     func digestIsCommitted() {

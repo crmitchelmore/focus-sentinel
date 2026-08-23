@@ -257,9 +257,25 @@ public enum RelevancePolicy {
     /// **C.** The bounded LRU of evidence-side sentence vectors. P-116's 3.48 ms is a
     /// *per-call* figure and does not justify a capacity, so R-74.4 requires a committed
     /// 64/128/256/512 sweep over the corpus's real evidence-sentence distribution, reporting
-    /// hit rate, evictions and p95; the committed value is the smallest capacity whose p95 is
-    /// within 10% of the best measured. The sweep lands with the evaluation harness (T103).
-    public static let similarityCacheCapacity = 256
+    /// hit rate, evictions and p95; **the committed value is the smallest capacity whose p95 is
+    /// within 10% of the best measured.** That rule was committed before the sweep was run,
+    /// precisely so this number would be derived rather than chosen.
+    ///
+    /// **Measured (T103's sweep, 205 lookups over 47 distinct sentences):** every capacity in
+    /// the sweep returns p95 `1.7447 ms` and **zero** evictions, because the workload holds
+    /// fewer distinct sentences than the smallest candidate. The rule's answer is therefore
+    /// **64**, and `evaluation.json` carries the whole sweep plus an `isDiscriminating` flag
+    /// saying, honestly, that this workload cannot tell the four candidates apart.
+    ///
+    /// The flag is reported; it is not a licence to keep a larger number. A capacity the
+    /// benchmark cannot justify is exactly the un-evidenced 256 that R-74.4 exists to replace,
+    /// and a sweep that says *"64 is enough"* is evidence for 64 even when it is not evidence
+    /// against 512. `EvaluationGate` fails the run unless this constant equals the sweep's
+    /// recommendation, so when e07 turns window titles on and the evidence-side stream becomes
+    /// the distinct titles of a working day, the benchmark starts discriminating, the
+    /// recommendation moves, and the gate goes red until the constant is re-derived — rather
+    /// than the number being quietly left where somebody once put it.
+    public static let similarityCacheCapacity = 64
 
     // MARK: - The intervention floor (R-56)
 

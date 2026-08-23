@@ -72,7 +72,9 @@ public struct EngineStamp: Sendable, Equatable, Hashable, Codable {
     public static let policyRevisions: [String] = [
         "T83 — the twenty constants of R-59's table, digested and classed B/C/S",
         "T90a — probe P-124 derived similarityRelevantCeiling (0.97) and "
-            + "languageConfidenceFloor (0.84) from committed measurement tables (R-74.2)"
+            + "languageConfidenceFloor (0.84) from committed measurement tables (R-74.2)",
+        "T103 — similarityCacheCapacity derived from the committed cache sweep (R-74.4): "
+            + "the smallest capacity whose p95 is within 10% of the best measured is 64"
     ]
 
     /// The same stamp with the OS-supplied sentence-embedding revision filled in.
