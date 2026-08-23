@@ -189,6 +189,52 @@ struct TransitionWindowTests {
         #expect(window.observations.last?.now == .milliseconds(RelevancePolicy.maximumLookBackEvents * 2))
     }
 
+    /// **The count bound may not shorten the threshold, and this is the ordinary stream on
+    /// which it used to.**
+    ///
+    /// The host judges on every accepted activation *and* on e03's five-second corroboration
+    /// tick, so a 180-second `lookBackSpan` holds around thirty-six observations whenever
+    /// somebody stays anywhere for three minutes. Under a plain drop-the-oldest bound, the
+    /// observation lost first is the `relevant` one the detour began from — so D-05's own
+    /// example inverts: the effective threshold collapses from 180 seconds to 90, the
+    /// accumulator is already past 90, and the app nudges a person for a detour it had already
+    /// accepted as a detour. R-61 says this window may only ever *extend*.
+    @Test("an anchor survives the count bound, so a long detour keeps its extension")
+    func theCountBoundNeverDiscardsTheAnchor() {
+        var driver = Driver()
+        driver.observe(.relevant, Self.ide)
+        driver.observe(.unrelated, Self.docs, after: 35)
+        // …then one tick every four seconds, well past the count bound and still inside the
+        // span, which is the situation a three-minute detour produces on the live stream.
+        for _ in 0..<(RelevancePolicy.maximumLookBackEvents + 1) {
+            driver.observe(.unrelated, Self.docs, after: 4)
+        }
+
+        #expect(
+            driver.window.observations.count > RelevancePolicy.maximumLookBackEvents,
+            "the bound did not bite, so this test is not testing what it says it is"
+        )
+        #expect(driver.anchor == Self.ide, "the count bound discarded the return anchor")
+        #expect(driver.threshold == Self.extended)
+    }
+
+    /// The anchor is retained **with the observation that dates it**. Keeping the first without
+    /// the second would measure the hold against whatever survived instead — which overstates
+    /// it, and an overstated hold invents anchors rather than losing them.
+    @Test("an anchor too short to qualify is not promoted by the count bound")
+    func theCountBoundDoesNotInventAnAnchor() {
+        var driver = Driver()
+        driver.observe(.relevant, Self.ide)
+        // The IDE held for five seconds, far short of returnAnchorDwell.
+        driver.observe(.unrelated, Self.docs, after: 5)
+        for _ in 0..<(RelevancePolicy.maximumLookBackEvents + 1) {
+            driver.observe(.unrelated, Self.docs, after: 4)
+        }
+
+        #expect(driver.anchor == nil, "a five-second visit was promoted into an anchor")
+        #expect(driver.threshold == Self.base)
+    }
+
     /// Truncating a window to the committed bound changes no answer it gives, which is the
     /// shape R-74.4's sufficiency benchmark takes over the sequence fixtures.
     @Test("truncating to the committed bound changes no answer")

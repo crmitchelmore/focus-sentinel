@@ -29,10 +29,16 @@ import Foundation
 /// *sufficiency* of `maximumLookBackEvents` a benchmark: truncating to it must produce a
 /// transcript identical to an untruncated replay over every sequence fixture, which is what
 /// makes 32 a bound somebody measured rather than a round number.
-
+///
+/// **The count bound retains the anchor.** A bound that simply dropped the oldest observations
+/// would be a bound that can *shorten* the threshold — see `prune(now:)` for the ordinary route
+/// by which that happens and the harm it does — so the window holds at most `capacity + 2`
+/// observations rather than `capacity`, and the two extra slots are the anchor and the
+/// observation that dates it.
 public struct TransitionWindow: Sendable, Equatable {
-    /// The retained observations, oldest first. Never longer than `capacity`, and never
-    /// spanning more than `lookBackSpan`.
+    /// The retained observations, oldest first. Never spanning more than `lookBackSpan`, and
+    /// never longer than `capacity` — plus the two slots `prune(now:)` reserves for an anchor
+    /// the count bound would otherwise discard.
     public private(set) var observations: [DriftObservation] = []
 
     /// How many observations the window keeps. `RelevancePolicy.maximumLookBackEvents` in every
@@ -54,12 +60,45 @@ public struct TransitionWindow: Sendable, Equatable {
         prune(now: observation.now)
     }
 
+    /// Prune by span, then by count — **without ever discarding the anchor.**
+    ///
+    /// The count bound used to drop the oldest observations outright, and that is a way for this
+    /// window to *shorten* the effective threshold, which R-61 says it may never do. The route
+    /// is not exotic, it is the ordinary one: the host judges on every accepted activation **and
+    /// on e03's five-second corroboration tick**, so a `lookBackSpan` of 180 seconds holds
+    /// around thirty-six observations whenever somebody stays anywhere for three minutes. Past
+    /// that point the oldest observation is the `relevant` one the detour began from — and
+    /// losing it turns D-05's own worked example inside out: the effective threshold collapses
+    /// from 180 seconds back to 90, the accumulator is already past 90, and the app nudges a
+    /// person for a detour it had already agreed was a detour.
+    ///
+    /// So the most recent `relevant` observation is retained past the bound, **together with the
+    /// one immediately after it**, because those two are exactly the pair `returnAnchor` reads
+    /// to decide how long the anchor held. Retaining the first without the second would measure
+    /// the hold against whatever survived instead, which would *overstate* it and invent anchors
+    /// rather than lose them. The window therefore holds at most `capacity + 2` observations,
+    /// which is still a constant, and truncating it is answer-preserving — which is the property
+    /// R-74.4 asks `SequenceReplayTests` to demonstrate.
     mutating func prune(now: Duration) {
         let horizon = now - RelevancePolicy.lookBackSpan
         observations.removeAll { $0.now < horizon }
-        if observations.count > capacity {
-            observations.removeFirst(observations.count - capacity)
+        guard observations.count > capacity else { return }
+
+        let firstRetained = observations.count - capacity
+        guard let anchor = observations.lastIndex(where: { $0.verdict == .relevant }),
+              anchor < firstRetained
+        else {
+            observations.removeFirst(firstRetained)
+            return
         }
+
+        var kept = [observations[anchor]]
+        let successor = observations.index(after: anchor)
+        if successor < firstRetained {
+            kept.append(observations[successor])
+        }
+        kept.append(contentsOf: observations[firstRetained...])
+        observations = kept
     }
 
     /// The anchor, if there is one: the subject the person was working in before this drift
