@@ -135,10 +135,22 @@ criterion may depend on a permission grant, so what these lanes produce is quali
 human reads. When a grant is missing each one prints `LIVE-LANE SKIPPED: <grant>` and exits
 `0`, and `build-gate.sh` never invokes any of them.
 
+**Not a gate is not the same as not honest.** Once the grants are present and a drive begins,
+`live-capture-drive.sh` and `live-handoff-drive.sh` check each frame's *semantic* precondition
+before taking it — the frontmost window really is the surface the frame is named for, its
+Accessibility frame really matches a window-list entry (there is no "use the front-most window"
+fallback), no sheet is in front of a cockpit frame, the expected context chips are present and
+the link chip shows an **origin**, Quick Look really opened, and the priority behind a cancelled
+handoff really is unchanged. Every frame is deleted before the drive starts, so a stale PNG can
+never stand in for one this run failed to take. A required frame that cannot be produced prints
+`LIVE-FRAME FAILED` and the run **exits non-zero**; an optional one writes an explicit
+`<frame>.SKIPPED.txt` marker saying why. A non-zero exit from these lanes means the evidence set
+is incomplete — never that a gate failed, because they are not one.
+
 | lane | what it drives | what it leaves to read |
 |---|---|---|
 | `scripts/live-shell-drive.sh` | the shell: window, menu bar, settings, appearance variants | `menus.txt` and the shell frames |
-| `scripts/live-capture-drive.sh` | the **real global hot key** with another app frontmost, a vague intent answered constructively, the context pack, Quick Look, and the Edit menu's undo title | `hotkey-untrusted.txt`, `capture-panel.png`, `capture-vague.png`, `cockpit-priority.png`, `context-chips.png`, `quicklook.png`, `undo.png` |
+| `scripts/live-capture-drive.sh` | the **real global hot key** with another app frontmost, a vague intent answered constructively, the context pack, Quick Look, and the Edit menu's undo action name | `hotkey-untrusted.txt`, `capture-panel.png`, `capture-vague.png`, `cockpit-priority.png`, `context-chips.png`, `quicklook.png`, `undo.png` |
 | `scripts/live-handoff-drive.sh` | `open 'focus://start?task=…'` against a **registered** copy of the product, then cancelling it | `handoff-confirm.png`, `handoff-transcript.txt` |
 
 Two things about those lanes are not decoration.

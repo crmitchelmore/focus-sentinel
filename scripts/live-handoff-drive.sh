@@ -71,13 +71,42 @@ HANDOFF_URL='focus://start?task=Draft%20the%20migration%20note%20for%20the%20sto
 # store has something the handoff must not be able to take.
 EXISTING_PRIORITY='Finish and submit the Q3 partnership proposal'
 
+# What the cockpit's priority hero exposes to the Accessibility API.
+#
+# Measured on this machine: the hero is an `AXHeading` whose `AXValue` is `missing value` and
+# whose sentence lives in `AXDescription`. Reading it the other way — which this lane used to
+# do, through `value of static text 1 of scroll area 1 of group 1 of window 1` — produced an
+# empty string, and the transcript recorded `priority before the handoff: (unread)` for both
+# readings. F-142's binding condition was therefore never actually checked by the lane that
+# exists to check it.
+
 mkdir -p -- "$EVIDENCE_DIR" "$LOG_DIR" || exit 1
 
-typeset -a CAPTURED NOTES
+typeset -a REQUIRED_FRAMES
+REQUIRED_FRAMES=(handoff-confirm.png handoff-transcript.txt)
+
+typeset -a CAPTURED FAILED NOTES
 CAPTURED=()
+FAILED=()
 NOTES=()
 
 note() { print "== $*" }
+
+# A frame that should have been produced and was not. The run exits non-zero.
+#
+# This lane is still never a gate (standing condition 5) and `build-gate.sh` never invokes it.
+# But a driver that captures the wrong window, or writes a transcript whose every reading says
+# `(unread)`, and then exits 0 is worse than one that does nothing: it manufactures evidence.
+fail_frame() {
+    FAILED+=("$1")
+    NOTES+=("$1 — $2")
+    print -u2 "LIVE-FRAME FAILED: $1 — $2"
+}
+
+# Nothing from a previous run may survive into this one.
+for frame in $REQUIRED_FRAMES; do
+    rm -f -- "$EVIDENCE_DIR/$frame"
+done
 
 cleanup_app() {
     pkill -x "$PROCESS_NAME" 2>/dev/null
@@ -187,18 +216,36 @@ ax_has_sheet() {
     [[ "$found" != "" && "$found" != "0" ]]
 }
 
-front_window_id() {
-    local frame entries entry
-    frame="$(ax_front_frame)"
-    entries="$("$WINDOWID" "$WINDOW_OWNER" 2>/dev/null)"
+# The window-list id of the window whose Accessibility frame is exactly `$1`.
+#
+# **No fallback.** The previous version returned "the front-most entry in the list" when nothing
+# matched, which in the capture lane meant a request for the quick-capture panel came back with
+# the cockpit's id and a picture of the wrong window was filed under the right name. If the
+# frame cannot be matched, the honest answer is that this script does not know which window it
+# is looking at.
+window_id_for_frame() {
+    local frame="$1" entries entry
+    [[ -n "$frame" ]] || return 1
+    entries="$("$WINDOWID" "$WINDOW_OWNER" --include-panels 2>/dev/null)"
     [[ -n "$entries" ]] || return 1
-    if [[ -n "$frame" ]]; then
-        while IFS= read -r entry; do
-            [[ "${entry#* }" == "$frame" ]] && { print -r -- "${entry%% *}"; return 0 }
-        done <<< "$entries"
-    fi
-    print -u2 "    (no window-list bounds match for AX frame '$frame'; using the front-most entry)"
-    print -r -- "${${entries%%$'\n'*}%% *}"
+    while IFS= read -r entry; do
+        [[ "${entry#* }" == "$frame" ]] && { print -r -- "${entry%% *}"; return 0 }
+    done <<< "$entries"
+    return 1
+}
+
+# The priority sentence the cockpit is showing right now, read from the hero's `AXDescription`.
+ax_hero_text() {
+    ax '    set ec to entire contents of window 1
+    repeat with i from 1 to (count of ec)
+        set e to item i of ec
+        try
+            if (role of e) as text is "AXHeading" then
+                return (value of attribute "AXDescription" of e) as text
+            end if
+        end try
+    end repeat
+    return ""'
 }
 
 settle() {
@@ -222,19 +269,35 @@ await_window() {
     return 1
 }
 
-capture_front() {
-    local name="$1" id title outfile="$EVIDENCE_DIR/$1"
+# Capture the frontmost window — but only if it is the window this frame is named for, and only
+# by an id a real window-list entry matched. Anything else writes no file at all.
+capture_window() {
+    local name="$1" expected_title="$2"
+    local outfile="$EVIDENCE_DIR/$name" title frame id rc
+
     title="$(ax_front_title)"
-    id="$(front_window_id)" || { print -u2 "    (no window to capture for $name)"; return 1 }
-    "$SCREENCAPTURE" -x -o -l "$id" "$outfile"
-    local rc=$?
-    if (( rc == 0 )) && [[ -s "$outfile" ]]; then
-        print "    captured $outfile  (window $id, title '$title')"
-        CAPTURED+=("$name")
-        return 0
+    if [[ "$title" != "$expected_title" ]]; then
+        print -u2 "    frontmost window is '$title', expected '$expected_title'"
+        return 1
     fi
-    print -u2 "    (screencapture EXIT=$rc for $name)"
-    return 1
+
+    frame="$(ax_front_frame)"
+    if ! id="$(window_id_for_frame "$frame")"; then
+        print -u2 "    no window-list entry matches the frame '$frame' of '$title'"
+        return 1
+    fi
+
+    "$SCREENCAPTURE" -x -o -l "$id" "$outfile"
+    rc=$?
+    if (( rc != 0 )) || [[ ! -s "$outfile" ]]; then
+        print -u2 "    (screencapture EXIT=$rc for $name)"
+        rm -f -- "$outfile"
+        return 1
+    fi
+
+    print "    captured $outfile  (window $id, '$title', frame $frame)"
+    CAPTURED+=("$name")
+    return 0
 }
 
 type_text()    { ax "    keystroke \"${1//\"/\\\"}\"" > /dev/null }
@@ -296,12 +359,23 @@ ax '    keystroke "n" using command down' > /dev/null
 sleep 0.8
 type_text "$EXISTING_PRIORITY"
 sleep 0.4
+# **One Return.** The second press used to be unconditional here, and while the cockpit's
+# Complete button was the window's default action it opened the completion sheet — so every
+# frame taken afterwards was a picture of that sheet rather than of the surface it was named
+# for. Driving a surface with more keystrokes than a person would send is how a driver invents
+# its own bug reports.
 press_return
-sleep 1.2
-press_return
-sleep 1.2
-before_hero="$(ax '    return value of static text 1 of scroll area 1 of group 1 of window 1')"
+sleep 1.5
+
+before_hero="$(ax_hero_text)"
 print "    the cockpit now reads: ${before_hero:-(could not read the hero)}"
+if [[ -z "$before_hero" ]]; then
+    fail_frame "handoff-transcript.txt" \
+        "the cockpit's priority could not be read, so the binding condition cannot be checked"
+elif [[ "$before_hero" != "$EXISTING_PRIORITY" ]]; then
+    fail_frame "handoff-transcript.txt" \
+        "the cockpit reads '$before_hero', not the priority this lane set ('$EXISTING_PRIORITY')"
+fi
 
 # --- 4 · the handoff arrives -------------------------------------------------------------------------
 
@@ -319,9 +393,11 @@ print "    confirmation sheet present: $sheet_arrived"
 
 if [[ "$sheet_arrived" == "yes" ]]; then
     sleep 0.6
-    capture_front "handoff-confirm.png" || NOTES+=("handoff-confirm.png was not captured")
+    capture_window "handoff-confirm.png" "$COCKPIT_TITLE" \
+        || fail_frame "handoff-confirm.png" \
+            "the confirmation sheet was up but the cockpit window could not be captured"
 else
-    NOTES+=("no confirmation sheet appeared after the focus:// open")
+    fail_frame "handoff-confirm.png" "no confirmation sheet appeared after the focus:// open"
 fi
 
 # --- 5 · the binding condition, read rather than asserted ------------------------------------------------
@@ -330,11 +406,15 @@ fi
 # person pressing the button. Escape cancels; what the cockpit says afterwards is the evidence.
 
 press_escape
-sleep 1.0
-after_hero="$(ax '    return value of static text 1 of scroll area 1 of group 1 of window 1')"
+sleep 1.2
+after_hero="$(ax_hero_text)"
 print "    after cancelling, the cockpit reads: ${after_hero:-(could not read the hero)}"
 if [[ -n "$before_hero" && "$after_hero" != "$before_hero" ]]; then
-    NOTES+=("the priority CHANGED across a cancelled handoff: '$before_hero' -> '$after_hero'")
+    # Not a note. F-142's binding condition is that nothing outside the app may change what
+    # the user is working on without a person pressing the button, and this is the only place
+    # in the programme where that is checked against the real LaunchServices delivery path.
+    fail_frame "handoff-transcript.txt" \
+        "THE PRIORITY CHANGED ACROSS A CANCELLED HANDOFF: '$before_hero' -> '$after_hero'"
 fi
 
 {
@@ -358,8 +438,16 @@ fi
     print "first — and why it is evidence rather than a gate step, since that copy is a change to"
     print "the user's machine. The copy is unregistered and deleted on exit, including on failure."
 } > "$EVIDENCE_DIR/handoff-transcript.txt"
-CAPTURED+=("handoff-transcript.txt")
-print "    wrote $EVIDENCE_DIR/handoff-transcript.txt"
+
+# The transcript is only evidence if its readings are readings. A file whose every line says
+# "(unread)" looks like a record and is not one — which is exactly what this lane produced
+# before, while exiting 0.
+if (( ${FAILED[(Ie)handoff-transcript.txt]} )); then
+    print -u2 "    wrote $EVIDENCE_DIR/handoff-transcript.txt, but its readings are not evidence"
+else
+    CAPTURED+=("handoff-transcript.txt")
+    print "    wrote $EVIDENCE_DIR/handoff-transcript.txt"
+fi
 
 # --- 6 · leave the machine as it was found -----------------------------------------------------------------
 
@@ -377,8 +465,13 @@ print "evidence: $EVIDENCE_DIR"
 for artefact in $CAPTURED; do
     print "  captured  $artefact"
 done
-for expected in handoff-confirm.png handoff-transcript.txt; do
-    (( ${CAPTURED[(Ie)$expected]} )) || print "  MISSING   $expected"
+for expected in $REQUIRED_FRAMES; do
+    (( ${CAPTURED[(Ie)$expected]} )) && continue
+    (( ${FAILED[(Ie)$expected]} ))   && continue
+    fail_frame "$expected" "never produced, and the drive did not say why"
+done
+for artefact in $FAILED; do
+    print "  FAILED    $artefact"
 done
 print
 print "installed copy: $INSTALLED_APP"
@@ -405,4 +498,13 @@ print "                        cockpit behind it must still be showing the old p
 print "                        outside the app may change what you are working on without a"
 print "                        person pressing the button."
 print "=============================================================="
+
+if (( ${#FAILED} )); then
+    print "RESULT: FAILED — ${#FAILED} required artefact(s) could not be produced honestly."
+    print "This lane is not a gate (standing condition 5) and build-gate.sh never invokes it."
+    print "A non-zero exit here means the evidence set is incomplete, not that the app is broken."
+    exit 1
+fi
+
+print "RESULT: OK — every required artefact was produced and passed its own precondition."
 exit 0
