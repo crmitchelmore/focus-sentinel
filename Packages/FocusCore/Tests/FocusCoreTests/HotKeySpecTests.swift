@@ -21,10 +21,10 @@ struct HotKeySpecTests {
     /// re-register a different combination from the one the schema advertises.
     @Test("the default matches the stored schema default exactly")
     func theDefaultMatchesTheSchema() {
-        #expect(HotKeySpec.quickCaptureDefault.keyCode == FocusSchemaV2.defaultHotKeyKeyCode)
+        #expect(HotKeySpec.quickCaptureDefault.keyCode == FocusSchemaV3.defaultHotKeyKeyCode)
         #expect(
             HotKeySpec.quickCaptureDefault.modifierFlags
-                == FocusSchemaV2.defaultHotKeyModifierFlags
+                == FocusSchemaV3.defaultHotKeyModifierFlags
         )
     }
 

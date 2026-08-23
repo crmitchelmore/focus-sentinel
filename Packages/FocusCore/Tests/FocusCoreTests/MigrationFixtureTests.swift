@@ -153,14 +153,15 @@ enum SchemaV1Fixture {
 /// Proves that a store written by schema v1 still opens, through the migration plan, with its
 /// rows unmodified.
 ///
-/// This is what turns "no data loss on upgrade" from an intention into a fact. Since e02 the
+/// This is what turns "no data loss on upgrade" from an intention into a fact. Since e03 the
 /// same fixture — an actual v1 store, byte-for-byte as v1 wrote it — is read back through the
-/// **v2** schema, because that is what the app now opens. A test that wrote v1 data with
-/// today's code and read it back with today's code would prove nothing of the kind.
+/// **v3** schema, having crossed **both** stages on the way, because that is what the app now
+/// opens. A test that wrote v1 data with today's code and read it back with today's code
+/// would prove nothing of the kind.
 ///
-/// The assertions below are the e01 assertions, moved behind v2's namespace. The
+/// The assertions below are the e01 assertions, moved behind v3's namespace. The
 /// migration-specific claims — the pointer row, the retired column, the stage not re-running —
-/// live in `MigrationV2Tests`.
+/// live in `MigrationV2Tests`, and the chain claim in `MigrationV3Tests`.
 @Suite("Schema v1 store fixture")
 struct MigrationFixtureTests {
     @Test(
@@ -176,7 +177,7 @@ struct MigrationFixtureTests {
         let container = try FocusStore.makeContainer(kind: .temporary(url))
         let context = container.mainContext
 
-        let tasks = try context.fetch(FetchDescriptor<FocusSchemaV2.PriorityTask>())
+        let tasks = try context.fetch(FetchDescriptor<FocusSchemaV3.PriorityTask>())
         #expect(tasks.count == 1)
         let task = try #require(tasks.first)
         #expect(task.id == SchemaV1Fixture.taskID)
@@ -187,7 +188,7 @@ struct MigrationFixtureTests {
         #expect(task.revision == SchemaV1Fixture.taskRevision)
         #expect(task.createdAt == SchemaV1Fixture.timestamp)
 
-        let rules = try context.fetch(FetchDescriptor<FocusSchemaV2.RelevanceRule>())
+        let rules = try context.fetch(FetchDescriptor<FocusSchemaV3.RelevanceRule>())
         #expect(rules.count == 1)
         let rule = try #require(rules.first)
         #expect(rule.id == SchemaV1Fixture.ruleID)
@@ -198,7 +199,7 @@ struct MigrationFixtureTests {
         // A v1 rule is a global rule: v1 had no way to scope one to a task.
         #expect(rule.task == nil)
 
-        let settings = try context.fetch(FetchDescriptor<FocusSchemaV2.AppSettingsRecord>())
+        let settings = try context.fetch(FetchDescriptor<FocusSchemaV3.AppSettingsRecord>())
         #expect(settings.count == 1)
         let row = try #require(settings.first)
         #expect(row.id == SchemaV1Fixture.settingsID)
@@ -208,9 +209,9 @@ struct MigrationFixtureTests {
 
         // Tables declared but not written by the fixture are present and empty — not missing,
         // which is what a dropped table would look like.
-        #expect(try context.fetch(FetchDescriptor<FocusSchemaV2.FocusSessionRecord>()).isEmpty)
-        #expect(try context.fetch(FetchDescriptor<FocusSchemaV2.ActivityEvent>()).isEmpty)
-        #expect(try context.fetch(FetchDescriptor<FocusSchemaV2.ContextItem>()).isEmpty)
+        #expect(try context.fetch(FetchDescriptor<FocusSchemaV3.FocusSessionRecord>()).isEmpty)
+        #expect(try context.fetch(FetchDescriptor<FocusSchemaV3.ActivityEvent>()).isEmpty)
+        #expect(try context.fetch(FetchDescriptor<FocusSchemaV3.ContextItem>()).isEmpty)
     }
 
     @Test(
@@ -226,7 +227,7 @@ struct MigrationFixtureTests {
         defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
 
         let container = try FocusStore.makeContainer(kind: .temporary(url))
-        _ = try container.mainContext.fetch(FetchDescriptor<FocusSchemaV2.PriorityTask>())
+        _ = try container.mainContext.fetch(FetchDescriptor<FocusSchemaV3.PriorityTask>())
 
         let after = try Data(contentsOf: source)
         #expect(before == after, "the migration test mutated its own fixture")

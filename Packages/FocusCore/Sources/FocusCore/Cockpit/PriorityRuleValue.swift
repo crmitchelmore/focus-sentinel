@@ -2,7 +2,7 @@ import Foundation
 
 /// What a relevance rule is *about* — the vocabulary the cockpit's rules pane offers.
 ///
-/// The raw values are the strings `FocusSchemaV2.RelevanceRule.scopeRaw` stores, which are
+/// The raw values are the strings `FocusSchemaV3.RelevanceRule.scopeRaw` stores, which are
 /// also `FocusRules.RuleScope`'s raw values. The vocabulary is declared **here**, in the
 /// package both sides depend on, for a boundary reason: `FocusUI` may not import `FocusRules`
 /// (R-14), and a rules pane that cannot name a scope is a pane that cannot author a rule.
@@ -60,7 +60,7 @@ public enum PriorityRuleVerdict: String, Sendable, CaseIterable, Hashable, Ident
 
 /// One rule, as the cockpit draws it.
 ///
-/// The persistent representation is `FocusSchemaV2.RelevanceRule`; this is the value the
+/// The persistent representation is `FocusSchemaV3.RelevanceRule`; this is the value the
 /// cockpit renders and `PriorityActing` names, so `FocusUI` never touches a `@Model` class.
 public struct PriorityRuleValue: Sendable, Equatable, Hashable, Identifiable {
     public let id: UUID
@@ -89,7 +89,7 @@ public struct PriorityRuleValue: Sendable, Equatable, Hashable, Identifiable {
     /// Fails — rather than guessing — when the stored scope or verdict is a string this build
     /// does not know. A rule written by a later version is then *not shown* in the pane, which
     /// is honest; it is never rewritten and never deleted, so it survives the round trip.
-    public init?(_ rule: FocusSchemaV2.RelevanceRule) {
+    public init?(_ rule: FocusSchemaV3.RelevanceRule) {
         guard let scope = PriorityRuleScope(rawValue: rule.scopeRaw),
               let verdict = PriorityRuleVerdict(rawValue: rule.verdictRaw)
         else { return nil }

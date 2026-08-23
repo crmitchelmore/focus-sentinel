@@ -46,7 +46,7 @@ public enum TimeboxState: Sendable, Equatable, Hashable {
     }
 
     /// The state of a stored task's timebox.
-    public static func state(for task: FocusSchemaV2.PriorityTask, now: Date) -> TimeboxState {
+    public static func state(for task: FocusSchemaV3.PriorityTask, now: Date) -> TimeboxState {
         state(timeboxSeconds: task.timeboxSeconds, startedAt: task.startedAt, now: now)
     }
 

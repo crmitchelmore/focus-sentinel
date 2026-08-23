@@ -23,20 +23,20 @@ struct PriorityStoreHarness {
 
     var context: ModelContext { container.mainContext }
 
-    func pointers() throws -> [FocusSchemaV2.ActivePriority] {
-        try context.fetch(FetchDescriptor<FocusSchemaV2.ActivePriority>())
+    func pointers() throws -> [FocusSchemaV3.ActivePriority] {
+        try context.fetch(FetchDescriptor<FocusSchemaV3.ActivePriority>())
     }
 
-    func tasks() throws -> [FocusSchemaV2.PriorityTask] {
-        try context.fetch(FetchDescriptor<FocusSchemaV2.PriorityTask>())
+    func tasks() throws -> [FocusSchemaV3.PriorityTask] {
+        try context.fetch(FetchDescriptor<FocusSchemaV3.PriorityTask>())
     }
 
-    func contextItems() throws -> [FocusSchemaV2.ContextItem] {
-        try context.fetch(FetchDescriptor<FocusSchemaV2.ContextItem>())
+    func contextItems() throws -> [FocusSchemaV3.ContextItem] {
+        try context.fetch(FetchDescriptor<FocusSchemaV3.ContextItem>())
     }
 
-    func rules() throws -> [FocusSchemaV2.RelevanceRule] {
-        try context.fetch(FetchDescriptor<FocusSchemaV2.RelevanceRule>())
+    func rules() throws -> [FocusSchemaV3.RelevanceRule] {
+        try context.fetch(FetchDescriptor<FocusSchemaV3.RelevanceRule>())
     }
 }
 

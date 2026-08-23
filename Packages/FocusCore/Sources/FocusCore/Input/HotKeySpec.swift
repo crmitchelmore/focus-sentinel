@@ -109,8 +109,8 @@ public struct HotKeySpec: Sendable, Equatable, Hashable, Codable {
     /// would steal a system shortcut on first launch from every user who never opened
     /// Settings.
     public static let quickCaptureDefault = HotKeySpec(
-        keyCode: FocusSchemaV2.defaultHotKeyKeyCode,
-        modifierFlags: FocusSchemaV2.defaultHotKeyModifierFlags
+        keyCode: FocusSchemaV3.defaultHotKeyKeyCode,
+        modifierFlags: FocusSchemaV3.defaultHotKeyModifierFlags
     )
 
     // MARK: - The refusal list

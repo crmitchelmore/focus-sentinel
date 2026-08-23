@@ -333,7 +333,7 @@ final class PriorityHost: PriorityActing {
     /// a scrolling archive would be the second commitment F-02 exists to refuse.
     static let historyLimit = 8
 
-    private func contextValues(for task: FocusSchemaV2.PriorityTask) -> [ContextItemValue] {
+    private func contextValues(for task: FocusSchemaV3.PriorityTask) -> [ContextItemValue] {
         task.contextItems
             .sorted { $0.addedAt < $1.addedAt }
             .map(resolvedValue(for:))
@@ -345,7 +345,7 @@ final class PriorityHost: PriorityActing {
     /// should not have to care. A missing one leaves the chip in its *missing* state with a
     /// Locate… action — it is **never** removed, because deleting somebody's context when a
     /// disk is unplugged is a bug, not tidiness.
-    private func resolvedValue(for item: FocusSchemaV2.ContextItem) -> ContextItemValue {
+    private func resolvedValue(for item: FocusSchemaV3.ContextItem) -> ContextItemValue {
         guard item.kind == .file else { return ContextItemValue(item) }
         guard let bookmark = item.bookmark else {
             return ContextItemValue(item, availability: .missing)
@@ -363,7 +363,7 @@ final class PriorityHost: PriorityActing {
         }
     }
 
-    private func refreshBookmark(on item: FocusSchemaV2.ContextItem, at url: URL) {
+    private func refreshBookmark(on item: FocusSchemaV3.ContextItem, at url: URL) {
         guard let fresh = try? SecurityScopedBookmark.create(for: url) else { return }
         item.bookmark = fresh
         item.value = url.path(percentEncoded: false)
@@ -376,7 +376,7 @@ final class PriorityHost: PriorityActing {
     /// The rules the pane can draw. A rule written by a later version — an unknown scope or
     /// verdict — is skipped rather than guessed at, and is never rewritten or deleted, so it
     /// survives the round trip intact.
-    private func ruleValues(for task: FocusSchemaV2.PriorityTask) -> [PriorityRuleValue] {
+    private func ruleValues(for task: FocusSchemaV3.PriorityTask) -> [PriorityRuleValue] {
         task.rules
             .sorted { $0.createdAt < $1.createdAt }
             .compactMap(PriorityRuleValue.init)

@@ -59,7 +59,7 @@ public struct PrioritySnapshot: Sendable, Equatable, Hashable, Identifiable {
     /// per chip inside a projection would make drawing the cockpit a file-system operation.
     /// The caller resolves; this assembles.
     public init(
-        _ task: FocusSchemaV2.PriorityTask,
+        _ task: FocusSchemaV3.PriorityTask,
         now: Date,
         contextItems: [ContextItemValue],
         rules: [PriorityRuleValue],
@@ -123,7 +123,7 @@ public struct RecentPriority: Sendable, Equatable, Hashable, Identifiable {
 
     /// Project a stored task. `isActive` is read from the pointer, which is the single source
     /// of truth — `PriorityTask` has no `isActive` column (R-18).
-    public init(_ task: FocusSchemaV2.PriorityTask) {
+    public init(_ task: FocusSchemaV3.PriorityTask) {
         self.init(
             id: task.id,
             intent: task.intent,

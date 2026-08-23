@@ -67,7 +67,7 @@ public final class SwiftDataRuleStore: RuleStore {
     /// not a reason to forget that the user thinks a news site is unrelated.
     public func clearSessionRules() async throws {
         let scope = RuleScope.session.rawValue
-        let descriptor = FetchDescriptor<FocusSchemaV2.RelevanceRule>(
+        let descriptor = FetchDescriptor<FocusSchemaV3.RelevanceRule>(
             predicate: #Predicate { $0.scopeRaw == scope }
         )
         for stored in try context.fetch(descriptor) {
@@ -113,7 +113,7 @@ public final class SwiftDataRuleStore: RuleStore {
             stored.task = task
         } else {
             context.insert(
-                FocusSchemaV2.RelevanceRule(
+                FocusSchemaV3.RelevanceRule(
                     id: rule.id,
                     scopeRaw: rule.scope.rawValue,
                     subject: rule.subject,
@@ -143,8 +143,8 @@ public final class SwiftDataRuleStore: RuleStore {
 
     // MARK: - Storage
 
-    private func storedRules() throws -> [FocusSchemaV2.RelevanceRule] {
-        let rules = try context.fetch(FetchDescriptor<FocusSchemaV2.RelevanceRule>())
+    private func storedRules() throws -> [FocusSchemaV3.RelevanceRule] {
+        let rules = try context.fetch(FetchDescriptor<FocusSchemaV3.RelevanceRule>())
         // Sorted in Swift so that the tie-break is a decision rather than whatever order the
         // store felt like returning — the same ordering `InMemoryRuleStore` promises.
         return rules.sorted { lhs, rhs in
@@ -153,15 +153,15 @@ public final class SwiftDataRuleStore: RuleStore {
         }
     }
 
-    private func storedRule(id: UUID) throws -> FocusSchemaV2.RelevanceRule? {
-        let descriptor = FetchDescriptor<FocusSchemaV2.RelevanceRule>(
+    private func storedRule(id: UUID) throws -> FocusSchemaV3.RelevanceRule? {
+        let descriptor = FetchDescriptor<FocusSchemaV3.RelevanceRule>(
             predicate: #Predicate { $0.id == id }
         )
         return try context.fetch(descriptor).first
     }
 
-    private func storedTask(id: UUID) throws -> FocusSchemaV2.PriorityTask? {
-        let descriptor = FetchDescriptor<FocusSchemaV2.PriorityTask>(
+    private func storedTask(id: UUID) throws -> FocusSchemaV3.PriorityTask? {
+        let descriptor = FetchDescriptor<FocusSchemaV3.PriorityTask>(
             predicate: #Predicate { $0.id == id }
         )
         return try context.fetch(descriptor).first
@@ -169,7 +169,7 @@ public final class SwiftDataRuleStore: RuleStore {
 
     /// Decode a stored row. `nil` means this build does not know one of its vocabularies —
     /// which is a reason to skip the row, never a reason to delete it.
-    private static func value(of stored: FocusSchemaV2.RelevanceRule) -> RelevanceRuleValue? {
+    private static func value(of stored: FocusSchemaV3.RelevanceRule) -> RelevanceRuleValue? {
         guard let scope = RuleScope(rawValue: stored.scopeRaw),
               let verdict = RuleVerdict(rawValue: stored.verdictRaw)
         else { return nil }

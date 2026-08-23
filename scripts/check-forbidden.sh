@@ -96,8 +96,14 @@ DATE_ALLOWED_FILE="Packages/FocusCore/Sources/FocusCore/Time/DateProvider.swift"
 # The one directory permitted to read the current calendar or timezone (R-26).
 CALENDAR_ALLOWED_DIR="Packages/FocusCore/Sources/FocusCore/Time/"
 
-# The declaration that carries the single-active-priority invariant (R-18).
-UNIQUE_SLOT_FILE="Packages/FocusCore/Sources/FocusCore/Store/FocusSchemaV2.swift"
+# The declarations that carry the single-active-priority invariant (R-18).
+#
+# One per versioned schema, and no others: every schema version that has an `ActivePriority`
+# row must keep the constraint on it, and a version that quietly dropped it would be a
+# migration target where two priorities could coexist. The pattern is therefore the family of
+# schema files rather than one named file — which is what stopped it going stale when v3
+# landed and would have made a lint failure the only way to notice.
+UNIQUE_SLOT_FILE="Packages/FocusCore/Sources/FocusCore/Store/FocusSchemaV[0-9]+\.swift"
 
 # Where the gate's build products live. Only SC-1's binary half reads this.
 DERIVED_DATA="${FOCUS_DERIVED_DATA:-/tmp/focus-dd}"
