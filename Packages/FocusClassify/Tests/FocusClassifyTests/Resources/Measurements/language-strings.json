@@ -1,0 +1,350 @@
+{
+  "probe": "P-124",
+  "measuredOn": "macOS 26.5.2 - arm64 - Xcode 26.2 - NLLanguageRecognizer",
+  "rig": "The same zero-grant FocusNLProbe.app; two launches produced identical confidences to every printed digit, and identical to the CLI's.",
+  "note": "42 labelled strings: 16 judgeable English sentences (real priorities and real window titles), 12 sub-judgeable English fragments and 14 non-English strings. Confidence is read for ENGLISH specifically rather than for the dominant language, by asking NLLanguageRecognizer for as many hypotheses as there are languages P-111 measured NLEmbedding over. MEASURED NEGATIVE RESULT, recorded rather than smoothed: the two classes OVERLAP. The lowest judgeable sentence scores 0.7618 while the fragments 'work' (0.8832), 'the thing' (0.8435) and 'catch up' (0.9090) score higher, so P-115's suggestion that this signal also separates short input from long does not generalise from its single measured point. The non-English class does separate cleanly: every one of the fourteen scores English at or below 0.0001. All three fragments above the derived floor carry fewer than minimumPriorityContentTokens content tokens, so they are declined by R-56.1's first condition instead - the two guards are complementary, which is why the overlap costs nothing.",
+  "labels": {
+    "judgeable": "a multi-word English sentence the sentence embedding has something to work with",
+    "fragment": "an English fragment too short to be judged - P-115's measured 0.41 case and its neighbours",
+    "nonEnglish": "a string for which P-111 measured NLEmbedding returning nil, so there is nothing to consult at any confidence"
+  },
+  "derivation": "languageConfidenceFloor = the midpoint between the LOWEST scoring judgeable English string and the HIGHEST scoring non-judgeable one (fragments and non-English together), rounded UP to two decimals (R-58, R-74.2).",
+  "strings": [
+    {
+      "id": "ls-01",
+      "text": "write the q3 proposal for acme",
+      "label": "judgeable",
+      "note": "a real priority",
+      "dominantLanguage": "en",
+      "englishConfidence": 0.9857723116874695
+    },
+    {
+      "id": "ls-02",
+      "text": "fix the login bug in the ios app",
+      "label": "judgeable",
+      "note": "a real priority",
+      "dominantLanguage": "en",
+      "englishConfidence": 0.9481589794158936
+    },
+    {
+      "id": "ls-03",
+      "text": "close the bergman audit",
+      "label": "judgeable",
+      "note": "a real priority",
+      "dominantLanguage": "en",
+      "englishConfidence": 0.8677892684936523
+    },
+    {
+      "id": "ls-04",
+      "text": "ship the release notes for the 2.4 update",
+      "label": "judgeable",
+      "note": "a real priority",
+      "dominantLanguage": "en",
+      "englishConfidence": 0.9855333566665649
+    },
+    {
+      "id": "ls-05",
+      "text": "prepare the sprint board for monday planning",
+      "label": "judgeable",
+      "note": "a real priority",
+      "dominantLanguage": "en",
+      "englishConfidence": 0.9892339706420898
+    },
+    {
+      "id": "ls-06",
+      "text": "reconcile the october invoices",
+      "label": "judgeable",
+      "note": "a real priority",
+      "dominantLanguage": "en",
+      "englishConfidence": 0.9342701435089111
+    },
+    {
+      "id": "ls-07",
+      "text": "draft the hiring plan for the design team",
+      "label": "judgeable",
+      "note": "a real priority",
+      "dominantLanguage": "en",
+      "englishConfidence": 0.9728512167930603
+    },
+    {
+      "id": "ls-08",
+      "text": "review the pull request for the payments service",
+      "label": "judgeable",
+      "note": "a real priority",
+      "dominantLanguage": "en",
+      "englishConfidence": 0.9574645161628723
+    },
+    {
+      "id": "ls-09",
+      "text": "book the venue for the team offsite",
+      "label": "judgeable",
+      "note": "a real priority",
+      "dominantLanguage": "en",
+      "englishConfidence": 0.9787116646766663
+    },
+    {
+      "id": "ls-10",
+      "text": "write the incident report for the outage",
+      "label": "judgeable",
+      "note": "a real priority",
+      "dominantLanguage": "en",
+      "englishConfidence": 0.9951920509338379
+    },
+    {
+      "id": "ls-11",
+      "text": "authentication token expiry stack overflow",
+      "label": "judgeable",
+      "note": "a real window title",
+      "dominantLanguage": "en",
+      "englishConfidence": 0.9087970852851868
+    },
+    {
+      "id": "ls-12",
+      "text": "bergman audit findings spreadsheet",
+      "label": "judgeable",
+      "note": "a real window title",
+      "dominantLanguage": "en",
+      "englishConfidence": 0.7618396878242493
+    },
+    {
+      "id": "ls-13",
+      "text": "best noise cancelling headphones review",
+      "label": "judgeable",
+      "note": "a real window title",
+      "dominantLanguage": "en",
+      "englishConfidence": 0.9555167555809021
+    },
+    {
+      "id": "ls-14",
+      "text": "conference venue availability november",
+      "label": "judgeable",
+      "note": "a real window title",
+      "dominantLanguage": "en",
+      "englishConfidence": 0.9394906759262085
+    },
+    {
+      "id": "ls-15",
+      "text": "error rate dashboard during outage",
+      "label": "judgeable",
+      "note": "a real window title",
+      "dominantLanguage": "en",
+      "englishConfidence": 0.9782443642616272
+    },
+    {
+      "id": "ls-16",
+      "text": "pull request diff payments service",
+      "label": "judgeable",
+      "note": "a real window title",
+      "dominantLanguage": "en",
+      "englishConfidence": 0.9343103766441345
+    },
+    {
+      "id": "ls-17",
+      "text": "proposal",
+      "label": "fragment",
+      "note": "P-115's measured single word",
+      "dominantLanguage": "en",
+      "englishConfidence": 0.41386279463768005
+    },
+    {
+      "id": "ls-18",
+      "text": "stuff",
+      "label": "fragment",
+      "note": "a vague priority",
+      "dominantLanguage": "en",
+      "englishConfidence": 0.5437290668487549
+    },
+    {
+      "id": "ls-19",
+      "text": "work",
+      "label": "fragment",
+      "note": "a vague priority",
+      "dominantLanguage": "en",
+      "englishConfidence": 0.8832335472106934
+    },
+    {
+      "id": "ls-20",
+      "text": "admin",
+      "label": "fragment",
+      "note": "a vague priority",
+      "dominantLanguage": "hu",
+      "englishConfidence": 0.010924135334789753
+    },
+    {
+      "id": "ls-21",
+      "text": "email",
+      "label": "fragment",
+      "note": "a vague priority",
+      "dominantLanguage": "da",
+      "englishConfidence": 0.06919576972723007
+    },
+    {
+      "id": "ls-22",
+      "text": "catch up",
+      "label": "fragment",
+      "note": "a vague two-word priority",
+      "dominantLanguage": "en",
+      "englishConfidence": 0.9090406894683838
+    },
+    {
+      "id": "ls-23",
+      "text": "the thing",
+      "label": "fragment",
+      "note": "a vague two-word priority",
+      "dominantLanguage": "en",
+      "englishConfidence": 0.8434984683990479
+    },
+    {
+      "id": "ls-24",
+      "text": "audit",
+      "label": "fragment",
+      "note": "one real word, no sentence",
+      "dominantLanguage": "fr",
+      "englishConfidence": 0.10635724663734436
+    },
+    {
+      "id": "ls-25",
+      "text": "invoices",
+      "label": "fragment",
+      "note": "one real word, no sentence",
+      "dominantLanguage": "en",
+      "englishConfidence": 0.6312015056610107
+    },
+    {
+      "id": "ls-26",
+      "text": "sprint",
+      "label": "fragment",
+      "note": "one real word, no sentence",
+      "dominantLanguage": "nl",
+      "englishConfidence": 0.10814519971609116
+    },
+    {
+      "id": "ls-27",
+      "text": "xcode",
+      "label": "fragment",
+      "note": "a product name alone",
+      "dominantLanguage": "en",
+      "englishConfidence": 0.17550383508205414
+    },
+    {
+      "id": "ls-28",
+      "text": "figma",
+      "label": "fragment",
+      "note": "a product name alone",
+      "dominantLanguage": "hu",
+      "englishConfidence": 0
+    },
+    {
+      "id": "ls-29",
+      "text": "rédiger la proposition trimestrielle pour acme",
+      "label": "nonEnglish",
+      "note": "fr, the same priority",
+      "dominantLanguage": "fr",
+      "englishConfidence": 0
+    },
+    {
+      "id": "ls-30",
+      "text": "corriger le bogue de connexion dans l application ios",
+      "label": "nonEnglish",
+      "note": "fr",
+      "dominantLanguage": "fr",
+      "englishConfidence": 6.753580237273127e-05
+    },
+    {
+      "id": "ls-31",
+      "text": "Quartalsbericht für Acme schreiben",
+      "label": "nonEnglish",
+      "note": "de, the same priority",
+      "dominantLanguage": "de",
+      "englishConfidence": 0
+    },
+    {
+      "id": "ls-32",
+      "text": "den Anmeldefehler in der iOS App beheben",
+      "label": "nonEnglish",
+      "note": "de",
+      "dominantLanguage": "de",
+      "englishConfidence": 0
+    },
+    {
+      "id": "ls-33",
+      "text": "四半期の提案書を書く",
+      "label": "nonEnglish",
+      "note": "ja, the same priority",
+      "dominantLanguage": "ja",
+      "englishConfidence": 0
+    },
+    {
+      "id": "ls-34",
+      "text": "ログインの不具合を修正する",
+      "label": "nonEnglish",
+      "note": "ja",
+      "dominantLanguage": "ja",
+      "englishConfidence": 0
+    },
+    {
+      "id": "ls-35",
+      "text": "撰写第三季度的提案",
+      "label": "nonEnglish",
+      "note": "zh-Hans, the same priority",
+      "dominantLanguage": "zh-Hans",
+      "englishConfidence": 0
+    },
+    {
+      "id": "ls-36",
+      "text": "修复登录错误",
+      "label": "nonEnglish",
+      "note": "zh-Hans",
+      "dominantLanguage": "zh-Hans",
+      "englishConfidence": 0
+    },
+    {
+      "id": "ls-37",
+      "text": "redactar la propuesta del tercer trimestre",
+      "label": "nonEnglish",
+      "note": "es, the same priority",
+      "dominantLanguage": "es",
+      "englishConfidence": 0
+    },
+    {
+      "id": "ls-38",
+      "text": "corregir el error de inicio de sesión",
+      "label": "nonEnglish",
+      "note": "es",
+      "dominantLanguage": "es",
+      "englishConfidence": 0
+    },
+    {
+      "id": "ls-39",
+      "text": "preparare il consuntivo trimestrale",
+      "label": "nonEnglish",
+      "note": "it",
+      "dominantLanguage": "it",
+      "englishConfidence": 0
+    },
+    {
+      "id": "ls-40",
+      "text": "escrever o relatório trimestral",
+      "label": "nonEnglish",
+      "note": "pt",
+      "dominantLanguage": "pt",
+      "englishConfidence": 0
+    },
+    {
+      "id": "ls-41",
+      "text": "voorbereiden van het kwartaalverslag",
+      "label": "nonEnglish",
+      "note": "nl",
+      "dominantLanguage": "nl",
+      "englishConfidence": 0
+    },
+    {
+      "id": "ls-42",
+      "text": "написать квартальный отчёт",
+      "label": "nonEnglish",
+      "note": "ru",
+      "dominantLanguage": "ru",
+      "englishConfidence": 0
+    }
+  ]
+}

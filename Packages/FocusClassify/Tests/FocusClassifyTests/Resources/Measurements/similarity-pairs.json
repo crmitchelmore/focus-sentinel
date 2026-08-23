@@ -1,0 +1,506 @@
+{
+  "probe": "P-124",
+  "measuredOn": "macOS 26.5.2 - arm64 - Xcode 26.2 - NLEmbedding sentence revision 1, dimension 512",
+  "rig": "FocusNLProbe.app, bundle id com.chrismitchelmore.FocusNLProbe, LSBackgroundOnly, ad-hoc signed, launched only with `open -a ... --args <out.json>`. Every report recorded AXIsProcessTrusted() == false. Two launches produced byte-identical output and an identical FNV-1a of 0xc314a5d02e6dfd7d over all 62 pairs' concatenated little-endian vector components; the same run from a plain CLI produced the identical digest.",
+  "note": "The raw table, committed so a later epic re-derives rather than re-trusts (R-74.2). P-113's sixteen pairs were too few to fix a float on: one additional unrelated pair below the drafted 1.00 ceiling would have falsified its whole justification, and this table has four of them. 62 pairs, 30 related and 32 unrelated, drawn from ten realistic priorities with three plausible on-task evidence titles and three plausible distractions each. The labels were written before any distance was computed.",
+  "distanceRule": "The Euclidean distance between the two L2-normalised sentence vectors, i.e. sqrt(2 * (1 - cosine)). Measured identical to NLEmbedding.distance(between:and:distanceType:.cosine) to 1.03e-6 on every pair, which is what lets the engine cache one vector per priority revision (R-65) and still land on the number P-113 measured through the framework call.",
+  "derivation": "similarityRelevantCeiling = the measured unrelated MINIMUM, minus one population standard deviation of the unrelated class, rounded DOWN to two decimals. Rounding down costs misses rather than false positives, which is the direction this whole engine leans (R-58, R-74.2).",
+  "pairs": [
+    {
+      "id": "sp-01",
+      "priority": "write the q3 proposal for acme",
+      "evidence": "q3 proposal acme draft",
+      "label": "related",
+      "note": "the draft document itself",
+      "distance": 0.8122001624405936
+    },
+    {
+      "id": "sp-02",
+      "priority": "write the q3 proposal for acme",
+      "evidence": "acme pricing sheet quarterly",
+      "label": "related",
+      "note": "the pricing input the proposal needs",
+      "distance": 0.985875319938977
+    },
+    {
+      "id": "sp-03",
+      "priority": "write the q3 proposal for acme",
+      "evidence": "proposal template company boilerplate",
+      "label": "related",
+      "note": "the template being copied from",
+      "distance": 0.9678970405936256
+    },
+    {
+      "id": "sp-04",
+      "priority": "write the q3 proposal for acme",
+      "evidence": "premier league highlights",
+      "label": "unrelated",
+      "note": "sport while writing",
+      "distance": 1.1755328704610957
+    },
+    {
+      "id": "sp-05",
+      "priority": "write the q3 proposal for acme",
+      "evidence": "cheap flights to lisbon",
+      "label": "unrelated",
+      "note": "holiday shopping",
+      "distance": 1.0437460176320708
+    },
+    {
+      "id": "sp-06",
+      "priority": "write the q3 proposal for acme",
+      "evidence": "minecraft survival series episode",
+      "label": "unrelated",
+      "note": "a game video",
+      "distance": 1.2240593593430362
+    },
+    {
+      "id": "sp-07",
+      "priority": "fix the login bug in the ios app",
+      "evidence": "xcode build succeeded",
+      "label": "related",
+      "note": "P-113's inverting pair, kept verbatim",
+      "distance": 1.222962105432836
+    },
+    {
+      "id": "sp-08",
+      "priority": "fix the login bug in the ios app",
+      "evidence": "authentication token expiry stack overflow",
+      "label": "related",
+      "note": "the error being researched",
+      "distance": 1.0038752836158724
+    },
+    {
+      "id": "sp-09",
+      "priority": "fix the login bug in the ios app",
+      "evidence": "sign in screen keychain crash log",
+      "label": "related",
+      "note": "the crash report",
+      "distance": 0.967212812068796
+    },
+    {
+      "id": "sp-10",
+      "priority": "fix the login bug in the ios app",
+      "evidence": "youtube recommended videos",
+      "label": "unrelated",
+      "note": "P-113's inverting pair, kept verbatim",
+      "distance": 1.0577630619345921
+    },
+    {
+      "id": "sp-11",
+      "priority": "fix the login bug in the ios app",
+      "evidence": "best noise cancelling headphones review",
+      "label": "unrelated",
+      "note": "shopping",
+      "distance": 1.1403964607534258
+    },
+    {
+      "id": "sp-12",
+      "priority": "fix the login bug in the ios app",
+      "evidence": "funny cat compilation",
+      "label": "unrelated",
+      "note": "the archetypal distraction",
+      "distance": 1.1580621502398238
+    },
+    {
+      "id": "sp-13",
+      "priority": "close the bergman audit",
+      "evidence": "bergman audit findings spreadsheet",
+      "label": "related",
+      "note": "the audit workbook",
+      "distance": 0.8580509893284486
+    },
+    {
+      "id": "sp-14",
+      "priority": "close the bergman audit",
+      "evidence": "audit sign off checklist",
+      "label": "related",
+      "note": "the closing checklist",
+      "distance": 0.8933108645652853
+    },
+    {
+      "id": "sp-15",
+      "priority": "close the bergman audit",
+      "evidence": "ledger reconciliation bergman",
+      "label": "related",
+      "note": "the reconciliation the audit rests on",
+      "distance": 0.8795676027340291
+    },
+    {
+      "id": "sp-16",
+      "priority": "close the bergman audit",
+      "evidence": "new album release stream",
+      "label": "unrelated",
+      "note": "music discovery",
+      "distance": 1.119044477616999
+    },
+    {
+      "id": "sp-17",
+      "priority": "close the bergman audit",
+      "evidence": "used car listings near me",
+      "label": "unrelated",
+      "note": "personal shopping",
+      "distance": 1.2017273060863751
+    },
+    {
+      "id": "sp-18",
+      "priority": "close the bergman audit",
+      "evidence": "celebrity gossip breaking news",
+      "label": "unrelated",
+      "note": "a news rabbit hole",
+      "distance": 1.0887472654812063
+    },
+    {
+      "id": "sp-19",
+      "priority": "ship the release notes for the 2.4 update",
+      "evidence": "release notes draft 2.4",
+      "label": "related",
+      "note": "the notes themselves",
+      "distance": 0.7588992564101094
+    },
+    {
+      "id": "sp-20",
+      "priority": "ship the release notes for the 2.4 update",
+      "evidence": "changelog since last tag",
+      "label": "related",
+      "note": "the changelog being summarised",
+      "distance": 1.1914964618527382
+    },
+    {
+      "id": "sp-21",
+      "priority": "ship the release notes for the 2.4 update",
+      "evidence": "app store connect version submission",
+      "label": "related",
+      "note": "where the notes are pasted",
+      "distance": 1.0694673436754294
+    },
+    {
+      "id": "sp-22",
+      "priority": "ship the release notes for the 2.4 update",
+      "evidence": "fantasy football waiver wire",
+      "label": "unrelated",
+      "note": "a hobby",
+      "distance": 1.244042315566143
+    },
+    {
+      "id": "sp-23",
+      "priority": "ship the release notes for the 2.4 update",
+      "evidence": "recipe slow roast lamb shoulder",
+      "label": "unrelated",
+      "note": "cooking",
+      "distance": 1.2848232111508724
+    },
+    {
+      "id": "sp-24",
+      "priority": "ship the release notes for the 2.4 update",
+      "evidence": "mortgage rates comparison",
+      "label": "unrelated",
+      "note": "personal finance",
+      "distance": 1.1393058862944603
+    },
+    {
+      "id": "sp-25",
+      "priority": "prepare the sprint board for monday planning",
+      "evidence": "sprint board backlog tickets",
+      "label": "related",
+      "note": "the board",
+      "distance": 1.0177694376960857
+    },
+    {
+      "id": "sp-26",
+      "priority": "prepare the sprint board for monday planning",
+      "evidence": "estimation poker story points",
+      "label": "related",
+      "note": "the estimation step",
+      "distance": 1.1399080122530982
+    },
+    {
+      "id": "sp-27",
+      "priority": "prepare the sprint board for monday planning",
+      "evidence": "team capacity planning sheet",
+      "label": "related",
+      "note": "capacity input",
+      "distance": 1.0484756429463258
+    },
+    {
+      "id": "sp-28",
+      "priority": "prepare the sprint board for monday planning",
+      "evidence": "world championship snooker final",
+      "label": "unrelated",
+      "note": "sport",
+      "distance": 1.089289490167375
+    },
+    {
+      "id": "sp-29",
+      "priority": "prepare the sprint board for monday planning",
+      "evidence": "cheapest broadband deals",
+      "label": "unrelated",
+      "note": "shopping",
+      "distance": 1.2707235051723436
+    },
+    {
+      "id": "sp-30",
+      "priority": "prepare the sprint board for monday planning",
+      "evidence": "guitar tutorial for beginners",
+      "label": "unrelated",
+      "note": "an unrelated hobby",
+      "distance": 1.2247883815667113
+    },
+    {
+      "id": "sp-31",
+      "priority": "reconcile the october invoices",
+      "evidence": "october invoice register",
+      "label": "related",
+      "note": "the register",
+      "distance": 0.8961055845933453
+    },
+    {
+      "id": "sp-32",
+      "priority": "reconcile the october invoices",
+      "evidence": "supplier statement outstanding balance",
+      "label": "related",
+      "note": "the counterparty statement",
+      "distance": 1.201357179291073
+    },
+    {
+      "id": "sp-33",
+      "priority": "reconcile the october invoices",
+      "evidence": "bank transactions export csv",
+      "label": "related",
+      "note": "the bank side",
+      "distance": 1.2663789783881494
+    },
+    {
+      "id": "sp-34",
+      "priority": "reconcile the october invoices",
+      "evidence": "trailer for the new science fiction film",
+      "label": "unrelated",
+      "note": "entertainment",
+      "distance": 1.2843823347721006
+    },
+    {
+      "id": "sp-35",
+      "priority": "reconcile the october invoices",
+      "evidence": "marathon training plan sixteen weeks",
+      "label": "unrelated",
+      "note": "personal fitness",
+      "distance": 1.1703766049491844
+    },
+    {
+      "id": "sp-36",
+      "priority": "reconcile the october invoices",
+      "evidence": "group chat weekend plans",
+      "label": "unrelated",
+      "note": "social chat",
+      "distance": 1.0942801250004548
+    },
+    {
+      "id": "sp-37",
+      "priority": "draft the hiring plan for the design team",
+      "evidence": "design team headcount plan",
+      "label": "related",
+      "note": "the plan",
+      "distance": 0.687281388147852
+    },
+    {
+      "id": "sp-38",
+      "priority": "draft the hiring plan for the design team",
+      "evidence": "job description senior product designer",
+      "label": "related",
+      "note": "the role being written",
+      "distance": 0.9752154587536144
+    },
+    {
+      "id": "sp-39",
+      "priority": "draft the hiring plan for the design team",
+      "evidence": "salary benchmark data designers",
+      "label": "related",
+      "note": "the benchmark input",
+      "distance": 1.0811781930688642
+    },
+    {
+      "id": "sp-40",
+      "priority": "draft the hiring plan for the design team",
+      "evidence": "live football scores",
+      "label": "unrelated",
+      "note": "sport",
+      "distance": 1.3045614999145825
+    },
+    {
+      "id": "sp-41",
+      "priority": "draft the hiring plan for the design team",
+      "evidence": "puppy training first week",
+      "label": "unrelated",
+      "note": "domestic life",
+      "distance": 1.1919496760536774
+    },
+    {
+      "id": "sp-42",
+      "priority": "draft the hiring plan for the design team",
+      "evidence": "flight status arrivals board",
+      "label": "unrelated",
+      "note": "travel",
+      "distance": 1.0658093127103248
+    },
+    {
+      "id": "sp-43",
+      "priority": "review the pull request for the payments service",
+      "evidence": "pull request diff payments service",
+      "label": "related",
+      "note": "the diff",
+      "distance": 0.5796108368673494
+    },
+    {
+      "id": "sp-44",
+      "priority": "review the pull request for the payments service",
+      "evidence": "unit test failures continuous integration",
+      "label": "related",
+      "note": "the CI result",
+      "distance": 0.8990204182742465
+    },
+    {
+      "id": "sp-45",
+      "priority": "review the pull request for the payments service",
+      "evidence": "refund flow api documentation",
+      "label": "related",
+      "note": "the API being reviewed",
+      "distance": 0.8226968438347168
+    },
+    {
+      "id": "sp-46",
+      "priority": "review the pull request for the payments service",
+      "evidence": "streaming series season finale",
+      "label": "unrelated",
+      "note": "television",
+      "distance": 1.0442433360652932
+    },
+    {
+      "id": "sp-47",
+      "priority": "review the pull request for the payments service",
+      "evidence": "holiday cottage availability",
+      "label": "unrelated",
+      "note": "travel",
+      "distance": 1.050966117710864
+    },
+    {
+      "id": "sp-48",
+      "priority": "review the pull request for the payments service",
+      "evidence": "which laptop should i buy",
+      "label": "unrelated",
+      "note": "shopping",
+      "distance": 1.1369380174120345
+    },
+    {
+      "id": "sp-49",
+      "priority": "book the venue for the team offsite",
+      "evidence": "conference venue availability november",
+      "label": "related",
+      "note": "the venue search",
+      "distance": 1.0322397191236914
+    },
+    {
+      "id": "sp-50",
+      "priority": "book the venue for the team offsite",
+      "evidence": "offsite agenda draft",
+      "label": "related",
+      "note": "the agenda",
+      "distance": 1.0582329118628215
+    },
+    {
+      "id": "sp-51",
+      "priority": "book the venue for the team offsite",
+      "evidence": "catering quote twenty people",
+      "label": "related",
+      "note": "catering",
+      "distance": 1.2277786898561693
+    },
+    {
+      "id": "sp-52",
+      "priority": "book the venue for the team offsite",
+      "evidence": "console game review scores",
+      "label": "unrelated",
+      "note": "gaming",
+      "distance": 1.1226331828667095
+    },
+    {
+      "id": "sp-53",
+      "priority": "book the venue for the team offsite",
+      "evidence": "stock market closing prices",
+      "label": "unrelated",
+      "note": "personal finance",
+      "distance": 1.214700221582475
+    },
+    {
+      "id": "sp-54",
+      "priority": "book the venue for the team offsite",
+      "evidence": "how to prune apple trees",
+      "label": "unrelated",
+      "note": "gardening",
+      "distance": 1.2228135781542253
+    },
+    {
+      "id": "sp-55",
+      "priority": "write the incident report for the outage",
+      "evidence": "incident timeline postmortem",
+      "label": "related",
+      "note": "the postmortem",
+      "distance": 0.9284754687495554
+    },
+    {
+      "id": "sp-56",
+      "priority": "write the incident report for the outage",
+      "evidence": "error rate dashboard during outage",
+      "label": "related",
+      "note": "the metrics",
+      "distance": 0.957002501525915
+    },
+    {
+      "id": "sp-57",
+      "priority": "write the incident report for the outage",
+      "evidence": "database failover runbook",
+      "label": "related",
+      "note": "the runbook",
+      "distance": 1.158785766605649
+    },
+    {
+      "id": "sp-58",
+      "priority": "write the incident report for the outage",
+      "evidence": "photography lens comparison",
+      "label": "unrelated",
+      "note": "a hobby",
+      "distance": 1.1778672944115427
+    },
+    {
+      "id": "sp-59",
+      "priority": "write the incident report for the outage",
+      "evidence": "quiz which city should you live in",
+      "label": "unrelated",
+      "note": "clickbait",
+      "distance": 1.2135111616969094
+    },
+    {
+      "id": "sp-60",
+      "priority": "write the incident report for the outage",
+      "evidence": "wedding gift ideas",
+      "label": "unrelated",
+      "note": "personal shopping",
+      "distance": 1.1780886742251104
+    },
+    {
+      "id": "sp-61",
+      "priority": "write the q3 proposal for acme",
+      "evidence": "chess opening traps",
+      "label": "unrelated",
+      "note": "a game",
+      "distance": 1.1255207612758331
+    },
+    {
+      "id": "sp-62",
+      "priority": "close the bergman audit",
+      "evidence": "meme of the week thread",
+      "label": "unrelated",
+      "note": "social feed",
+      "distance": 1.134365839302129
+    }
+  ]
+}

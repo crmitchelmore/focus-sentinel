@@ -15,7 +15,7 @@ struct RelevancePolicyTests {
     /// The committed digest. **Re-record this only together with a bump to
     /// `EngineStamp.policyVersion`**, and only after the constant that moved has a boundary
     /// triple and a witness that flips.
-    static let committedDigest: UInt64 = 0x6325_d5a9_4aa6_9a2f
+    static let committedDigest: UInt64 = 0xdfff_9acc_b6fd_410f
 
     @Test("the policy digest equals its committed literal")
     func digestIsCommitted() {
@@ -94,7 +94,7 @@ struct RelevancePolicyTests {
         #expect(Set(capacity) == ["similarityCacheCapacity", "maximumLookBackEvents"])
     }
 
-    /// **This test fails until T90a (probe P-124) supplies the measurement, by design.**
+    /// **Green since T90a (probe P-124) supplied the measurement.**
     ///
     /// R-74.2: `similarityRelevantCeiling` and `languageConfidenceFloor` are *derived, not
     /// chosen*. P-113's sixteen pairs and P-115's four strings cannot fix a float — one
@@ -102,8 +102,11 @@ struct RelevancePolicyTests {
     /// justification — so the plan commits the derivation **rule** here and defers the value
     /// to a corpus wide enough to fix it. A constant measured after the code that reads it was
     /// written is a constant chosen to keep that code green, and this red gate is what stops
-    /// that happening. It clears when T90a lands the tables and the values, and
-    /// `SimilarityCorpusTests` then recomputes both from the committed tables.
+    /// that happening. It cleared when T90a landed the tables and the values —
+    /// `similarityRelevantCeiling = 0.97` from 62 labelled pairs, `languageConfidenceFloor =
+    /// 0.84` from 42 labelled strings — and `SimilarityCorpusTests` now recomputes both from
+    /// the committed tables, so a hand-edited constant against an unchanged table is a red
+    /// gate rather than a silent one.
     @Test("the two derived constants are measured, not chosen")
     func derivedConstantsAreMeasured() {
         let pending = [

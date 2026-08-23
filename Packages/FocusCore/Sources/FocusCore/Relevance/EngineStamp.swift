@@ -49,13 +49,31 @@ public struct EngineStamp: Sendable, Equatable, Hashable, Codable {
     /// `policyVersion` moves with `RelevancePolicy.digest`: re-recording that digest without
     /// bumping this is the change `RelevancePolicyTests` and `EngineStampTests` exist to
     /// refuse.
+    ///
+    /// `policyVersion` is the **count of `policyRevisions`**, not a digit somebody edits: a
+    /// bump is therefore appending a line that says *why* the constant set moved, and a
+    /// version that changed without a reason is unrepresentable. It also means no numeric
+    /// literal appears in this file, which R-70f requires of everything in
+    /// `FocusCore/Relevance/` except `RelevancePolicy.swift` itself.
     public static let current = EngineStamp(
         schemaVersion: 1,
-        policyVersion: 1,
+        policyVersion: policyRevisions.count,
         lexiconVersion: 1,
         embeddingRevision: 0,
         promptVersion: 0
     )
+
+    /// Every revision of the constant set this engine has shipped, oldest first.
+    ///
+    /// The list *is* the version. Adding a row is the deliberate act that re-records
+    /// `RelevancePolicyTests.committedDigest` and `EngineStampTests.committedCacheKey`
+    /// alongside it, and the row says what moved — which is the thing a reader of a cache key
+    /// six months from now actually needs.
+    public static let policyRevisions: [String] = [
+        "T83 — the twenty constants of R-59's table, digested and classed B/C/S",
+        "T90a — probe P-124 derived similarityRelevantCeiling (0.97) and "
+            + "languageConfidenceFloor (0.84) from committed measurement tables (R-74.2)"
+    ]
 
     /// The same stamp with the OS-supplied sentence-embedding revision filled in.
     ///

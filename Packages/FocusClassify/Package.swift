@@ -34,7 +34,13 @@ let package = Package(
         ),
         .testTarget(
             name: "FocusClassifyTests",
-            dependencies: ["FocusClassify"]
+            dependencies: ["FocusClassify"],
+            // `.copy`, never `.process` — the same ruling e02 made for the schema fixtures and
+            // for the same reason: a directory of fixtures must reach the bundle with its
+            // subdirectory structure intact, so that
+            // `url(forResource:withExtension:subdirectory:)` resolves identically under
+            // `swift test` and under `xcodebuild test` (R-66).
+            resources: [.copy("Resources")]
         )
     ]
 )

@@ -206,7 +206,23 @@ public enum RelevancePolicy {
     /// decimals. Rounding down costs misses rather than false positives, which is the
     /// direction this whole engine leans. Supplied by P-124 at T90a and asserted by
     /// recomputation from the committed table.
-    public static let similarityRelevantCeiling: DerivedThreshold = .pendingMeasurement
+    ///
+    /// **Measured (P-124, 62 labelled pairs, 30 related and 32 unrelated):** related
+    /// `min 0.5796 · mean 0.9863 · max 1.2664`; unrelated
+    /// `min 1.0437 · mean 1.1623 · max 1.3046`, population σ `0.0733`. The rule gives
+    /// `1.0437 − 0.0733 = 0.9705`, rounded down to **`0.97`** — at which the corpus shows
+    /// **0 false positives**, 14 true positives and 16 misses, and every miss falls to
+    /// `uncertain`, which suppresses.
+    ///
+    /// The classes still overlap heavily, exactly as P-113 found at sixteen pairs: **28 of the
+    /// 32 unrelated pairs sit inside the related range**, and 11 of the 30 related pairs sit
+    /// above the unrelated minimum. Four unrelated pairs do sit above the related *sample*
+    /// maximum — and that region is not a licence to accuse, because one new related pair above
+    /// 1.2664 erases it, which is R-74.2's own argument pointed at the outcome that would cost
+    /// a false accusation rather than a miss. So **similarity may never produce `unrelated` at
+    /// any distance** (R-58): a ruling about the shape of the evidence rather than about this
+    /// number, and one that stands whatever the number turns out to be.
+    public static let similarityRelevantCeiling: DerivedThreshold = .measured(0.97)
 
     /// **B, derived.** The `NLLanguageRecognizer` confidence both sides must reach, in English,
     /// before similarity is consulted at all. P-111 measured `NLEmbedding` returning `nil` for
@@ -218,7 +234,25 @@ public enum RelevancePolicy {
     /// **Derivation rule (committed in advance, R-58):** the midpoint between the lowest
     /// scoring judgeable English string and the highest scoring non-judgeable one, rounded
     /// **up** to two decimals. Supplied by P-124 at T90a.
-    public static let languageConfidenceFloor: DerivedThreshold = .pendingMeasurement
+    ///
+    /// **Measured (P-124, 42 labelled strings):** judgeable English `min 0.7618`, and the
+    /// highest non-judgeable is the two-word fragment *"catch up"* at `0.9090`. The rule gives
+    /// `(0.7618 + 0.9090) / 2 = 0.8354`, rounded up to **`0.84`**.
+    ///
+    /// **The measurement returned a negative result and it is recorded rather than smoothed.**
+    /// The two classes *overlap*: three English fragments — `work` (0.8832), `the thing`
+    /// (0.8435) and `catch up` (0.9090) — score above the lowest real English sentence
+    /// (`bergman audit findings spreadsheet`, 0.7618). So P-115's suggestion that this signal
+    /// also separates short input from long does **not** generalise from its single measured
+    /// point, and this constant is an English gate rather than a vagueness gate. The
+    /// vagueness gate is `minimumPriorityContentTokens`, and all three of those fragments
+    /// carry fewer content tokens than it requires — the two guards are complementary, which
+    /// is why the overlap costs nothing.
+    ///
+    /// What the floor *does* separate cleanly is the thing P-111 forces it to: all fourteen
+    /// non-English strings score English at or below `0.0001`, so a non-English priority
+    /// reaches the similarity signal at no confidence at all.
+    public static let languageConfidenceFloor: DerivedThreshold = .measured(0.84)
 
     /// **C.** The bounded LRU of evidence-side sentence vectors. P-116's 3.48 ms is a
     /// *per-call* figure and does not justify a capacity, so R-74.4 requires a committed
@@ -372,7 +406,7 @@ public enum RelevancePolicy {
             // A measured pair whose distance sits just inside the derived ceiling and
             // corroborates, and its neighbour just outside, which does not.
             witnesses: ["gc-0206"],
-            mutations: ["derived-minus-one-sigma", "derived-plus-one-sigma"]
+            mutations: ["0.96", "0.98"]
         ),
         PolicyConstant(
             name: "languageConfidenceFloor",
@@ -381,7 +415,7 @@ public enum RelevancePolicy {
             justification: "P-124",
             // A one-word English priority, below the floor, and a full sentence above it.
             witnesses: ["gc-0207"],
-            mutations: ["derived-minus-0.01", "derived-plus-0.01"]
+            mutations: ["0.83", "0.85"]
         ),
         PolicyConstant(
             name: "similarityCacheCapacity",
