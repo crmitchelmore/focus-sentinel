@@ -1,0 +1,288 @@
+import FocusCore
+import FocusSensing
+import Foundation
+import Observation
+import SwiftData
+import os
+
+/// The one bridge between the session runtime and the surfaces that drive it.
+///
+/// The same shape as `PriorityHost`, and for the same reasons (R-24): this owns the
+/// `ModelContext`, calls `SessionStore` — and therefore registers every *user-initiated*
+/// mutation on the undo journal — and projects the result into a plain `SessionSnapshot` that
+/// `FocusUI` renders. The UI never sees a `@Model` class, never opens a store, and never learns
+/// which implementation it was handed.
+///
+/// ## Why every verb is non-throwing
+///
+/// A store failure is a fact the person has to be **told** about, not an exception a view can
+/// meaningfully catch: a `try?` inside a button's action is a swallowed failure with a green
+/// checkmark on top. So every call here catches, records the failure, and the next projection
+/// reports it.
+///
+/// ## Why a rejected transition is silent
+///
+/// `SessionMachine` returns rejections as values rather than throwing them, and a rejection
+/// means what the person asked for was already true — pressing Resume on a session that is not
+/// paused, or Break on one that is already on one. The host records the rejection for the
+/// self-check to report and the UI does nothing, because there is nothing to tell them.
+///
+/// The one rejection that *is* worth surfacing is `notPausedForThatCause`, and it is surfaced
+/// before it happens rather than after: `SessionSnapshot.userMayResume` is false while a cause
+/// the person cannot clear is still held, so the Resume control is disabled with a named
+/// explanation instead of doing nothing when pressed.
+@Observable
+@MainActor
+final class SessionHost {
+    /// The session as the cockpit draws it. `nil` when there is none.
+    private(set) var snapshot: SessionSnapshot?
+
+    /// The last rejection the machine returned, for the self-check and the Privacy surface.
+    /// Not drawn: a rejected transition means the person's intent was already satisfied.
+    private(set) var lastRejection: SessionRejection?
+
+    /// Whether the store refused a write since the last successful one.
+    private(set) var writeFailure: String?
+
+    private let context: ModelContext
+    private let store: SessionStore
+    private let priorities: PriorityStore
+    private let events: ActivityEventStore
+    private let launcher: SessionLauncher
+    private let dateProvider: any DateProvider
+    private let logger = Logger(subsystem: FocusStore.bundleIdentifier, category: "SessionHost")
+
+    /// The observer graph, so that the one pause switch drives one stored value and one
+    /// detachment. Held weakly: the composition root owns both, and a cycle between two objects
+    /// that live for the whole process is a leak nobody would ever notice.
+    weak var sensing: SensingHost?
+
+    /// The window's undo manager, once a window exists to have one.
+    private var undo: UndoManager?
+
+    init(
+        context: ModelContext,
+        events: ActivityEventStore,
+        dateProvider: any DateProvider,
+        uptimeClock: any UptimeClock,
+        bootIdentity: String,
+        launcher: SessionLauncher = SessionLauncher()
+    ) {
+        self.context = context
+        self.events = events
+        self.dateProvider = dateProvider
+        self.launcher = launcher
+        self.store = SessionStore(
+            context: context,
+            dateProvider: dateProvider,
+            uptimeClock: uptimeClock,
+            bootIdentity: bootIdentity
+        )
+        self.priorities = PriorityStore(context: context, dateProvider: dateProvider)
+        refresh()
+    }
+
+    // MARK: - Wiring
+
+    /// Adopt the window's undo manager, so ⌘Z drives the journal for the operations a person
+    /// actually performed. System-driven pauses never reach it.
+    func adoptUndoManager(_ manager: UndoManager?) {
+        undo = manager
+    }
+
+    /// The store, for the self-check's two-launch reconciliation proof.
+    var sessionStore: SessionStore { store }
+
+    // MARK: - Restoration (F-97)
+
+    /// Reconcile whatever was running when the app last stopped, **before the first frame**.
+    ///
+    /// `startedAt` is never rewritten — not here, not anywhere — and no timer is started,
+    /// because there is none to start. What may change is the phase, and only in the two cases
+    /// the reconciler names: a different boot identity, and more than fifteen minutes since the
+    /// last phase change.
+    @discardableResult
+    func restore() -> RestoredSession? {
+        var restored: RestoredSession?
+        do {
+            restored = try store.restore()
+            writeFailure = nil
+        } catch {
+            record(error)
+        }
+        refresh()
+        return restored
+    }
+
+    // MARK: - The verbs
+
+    /// Begin a session on the active priority, and — if the person switched it on — open its
+    /// context pack.
+    func startSession(kind: SessionKind = .openEnded, plannedSeconds: Int? = nil, deadlineAt: Date? = nil) {
+        perform {
+            let task = try priorities.activeTask()
+            try store.start(
+                taskID: task?.id,
+                kind: kind,
+                plannedSeconds: plannedSeconds,
+                deadlineAt: deadlineAt,
+                undo: undo
+            )
+            launchContext(for: task)
+        }
+    }
+
+    func pauseSession() {
+        apply(.paused(cause: .user))
+    }
+
+    func resumeSession() {
+        apply(.resumed(cause: .user))
+    }
+
+    func startDetour(reason: DetourReason = .user) {
+        apply(.detourStarted(reason: reason))
+    }
+
+    func endDetour() {
+        apply(.detourEnded)
+    }
+
+    /// Take a break.
+    ///
+    /// A break may be started **only from focus** (R-45). The UI does the two steps in one
+    /// click and the machine records two transitions, which is what makes the timeline honest
+    /// about what happened: you ended a detour, then you took a break.
+    func startBreak(reason: BreakReason = .user) {
+        if snapshot?.phase == .intentionalDetour {
+            apply(.detourEnded)
+        }
+        apply(.breakStarted(reason: reason))
+    }
+
+    func endBreak() {
+        apply(.breakEnded)
+    }
+
+    /// Stop the session and capture why (F-101).
+    ///
+    /// Every field is optional and Complete is enabled with all of them empty: reflection is
+    /// offered, never extracted. The last-active context is the frontmost application's bundle
+    /// identifier and **nothing else** — never a window title, never a document.
+    func interruptSession(reason: InterruptionReason = .user, note: String? = nil) {
+        perform {
+            // The frontmost application's bundle identifier, read straight off `NSWorkspace` —
+            // no window read, no Accessibility call, no grant (probe P-79). A bundle identifier
+            // and nothing else: the sheet resolves it to a name and an icon for the eye, and
+            // the store keeps only the identifier.
+            let transition = try store.interrupt(
+                reason: reason,
+                note: note,
+                lastActiveBundleID: WorkspaceActivityObserver.frontmostPayload()?.bundleIdentifier,
+                undo: undo
+            )
+            lastRejection = transition.rejection
+        }
+    }
+
+    func completeSession() {
+        perform {
+            lastRejection = try store.complete(undo: undo).rejection
+        }
+    }
+
+    /// F-119's one switch, bound identically to the menu bar, the cockpit and (in e09) the
+    /// notch — because it is one stored value and one detachment, not a boolean each surface
+    /// keeps its own copy of.
+    func setSensingPaused(_ paused: Bool) {
+        perform {
+            try FocusStore.setSensingPaused(paused, in: context, now: dateProvider.now)
+            guard let sensing else { return }
+            sensing.update(settings: FocusStore.sensingSettings(in: context))
+            if paused { sensing.pause() } else { sensing.resume() }
+        }
+    }
+
+    // MARK: - Applying, once
+
+    private func apply(_ event: SessionEvent) {
+        perform {
+            lastRejection = try store.apply(event, undo: undo).rejection
+        }
+    }
+
+    /// Every verb funnels through here: run it, remember what went wrong if anything did, and
+    /// rebuild the value the cockpit draws.
+    private func perform(_ body: () throws -> Void) {
+        do {
+            try body()
+            writeFailure = nil
+        } catch SessionStoreError.noOpenSession {
+            // Not a failure: the person pressed a session control while no session was open,
+            // which the surfaces already prevent and which is nothing to tell them about.
+            lastRejection = nil
+        } catch {
+            record(error)
+        }
+        refresh()
+    }
+
+    private func record(_ error: any Error) {
+        writeFailure = error.localizedDescription
+        logger.error("the session store refused a write: \(error.localizedDescription, privacy: .public)")
+    }
+
+    /// Rebuild the projection from the store.
+    func refresh() {
+        do {
+            snapshot = try store.openSnapshot()
+        } catch {
+            record(error)
+        }
+    }
+
+    // MARK: - The launcher (F-169)
+
+    /// Open the priority's context pack, if the person switched it on.
+    ///
+    /// **Off by default**, open-only, and one event per attempt so they can see what it did. It
+    /// never hides and never quits another application: the seam it talks through has no such
+    /// member.
+    private func launchContext(for task: FocusSchemaV3.PriorityTask?) {
+        guard let task else { return }
+        let settings = FocusStore.sensingSettings(in: context)
+        guard settings.launchContextOnSessionStart else { return }
+
+        let items = task.contextItems
+            .sorted { $0.addedAt < $1.addedAt }
+            .map { ContextItemValue($0) }
+
+        for attempt in launcher.launch(items, isEnabled: true) {
+            record(attempt)
+        }
+    }
+
+    /// One event per launch attempt, so the person can see exactly what the app opened — and
+    /// what it declined to.
+    ///
+    /// The row carries a bundle identifier where the item had one and a closed-vocabulary token
+    /// for the outcome. A `.file` item's *path* is deliberately not on it: only normalised
+    /// evidence reaches the store, and there is no way to put a path in a `NormalisedDetail`.
+    private func record(_ attempt: LaunchAttempt) {
+        do {
+            try events.append(
+                kind: .contextChanged,
+                bundleID: attempt.kind == .app ? bundleID(of: attempt) : nil,
+                detail: .tokens([attempt.outcome == .opened ? .launchAttempted : .launchSkipped]),
+                sessionID: snapshot?.sessionID
+            )
+        } catch {
+            logger.error("the event store refused a launch row: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    private func bundleID(of attempt: LaunchAttempt) -> String? {
+        guard let task = try? priorities.activeTask() else { return nil }
+        return task.contextItems.first { $0.id == attempt.itemID }?.value
+    }
+}
