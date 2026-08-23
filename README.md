@@ -18,11 +18,11 @@ and `tuist` is not used.
 | `App/` | the thin app target — composition root, scenes, entitlements, and a deliberately empty string catalog (see "Strings" below) |
 | `Packages/FocusCore` | domain types, SwiftData schema, status tokens, clocks, appearance traits |
 | `Packages/FocusRules` | the deterministic rule model |
-| `Packages/FocusClassify` | the classification seam — no networking, ever |
+| `Packages/FocusClassify` | the deterministic relevance engine and the classification seam — no networking, ever. It also holds `FocusEvaluateCore` and the `FocusEvaluate` product, which are test-lane only and which no application target links |
 | `Packages/FocusSensing` | macOS observation adapters |
 | `Packages/FocusUI` | every SwiftUI view, scene, command and design token |
 | `Config/` | build inputs that are neither app source nor scripts. Exactly one file: `FocusSentinel-Info.plist`, the partial plist carrying `CFBundleURLTypes`. It lives here and **not** in `App/` — see "The project file" below |
-| `scripts/` | the build gate and its fifteen stages, plus the five live evidence lanes |
+| `scripts/` | the build gate and its seventeen stages, plus the six live evidence lanes |
 | `Tools/windowid` | a test driver: window ids for `screencapture -l`, read from the public window list without ever asking for a window *name*. Not part of the shipping app's package graph |
 
 ---
@@ -111,17 +111,20 @@ the stage logs are the evidence, and they are kilobytes. A pinned `FOCUS_DERIVED
 | 5 | Debug build | `EXIT=0` |
 | 6 | Release build | `EXIT=0` |
 | 6a | packaging | read from the two logs and the two products stages 5 and 6 just made: neither log contains `Copy Bundle Resources build phase contains`, neither product ships a `Contents/Resources/Info.plist`, and the merged `Contents/Info.plist` carries both the `focus` scheme and every generated key. See "The project file" |
+| 6b | `eval-clean` | **the only cleanup stage in the gate.** It removes `$FOCUS_EVAL_OUT` (default `$TMPDIR/focus-eval`) in its entirety and touches an mtime marker, immediately before `unit`. A missing directory is a pass; a failure to remove is a hard fail. See "The evaluation lane" below for why a gate needs one |
 | 7 | the unit lane | every package test target, headless |
+| 7d | `evaluation` | runs the `FocusEvaluate` **product**, copies its report into this run's log directory *before* anything parses it, applies five binding checks to that copy, and only then reports the metric verdict. See "The evaluation lane" |
 | 7b | `check-boundaries.sh` again | `nm -u FocusClassify.o` has no networking symbol — the binary-level form of the assertion, which needs a build product to exist |
 | 7c | `check-forbidden.sh` again | the binary half of SC-1: `nm -u` finds no `_kCGWindowName` in **seven products named one by one** — the app binary, `FocusCore.o`, `FocusSensing.o`, `FocusRules.o`, `FocusClassify.o`, `FocusUI.o` and `Tools/windowid` — while the four sanctioned window-list symbols are asserted **present** in `windowid`, so the check cannot pass by the tool being gutted. Under `FOCUS_REQUIRE_BINARY_CHECK=1` a *missing* product is a failure, not a skipped line. `windowid` is built by the stage itself, because it lives outside the workspace scheme |
 | 8 | `entitlement-check.sh` ×2 | no network entitlement, Debug **and** Release; and `get-task-allow` present in Debug, **absent** in Release |
 | 9 | `self-check.sh` ×2 | the app's own zero-grant report of its menu bar, window and key equivalents — and, from e02, its declared URL schemes, its hot-key registration status, the Edit menu's undo title after one scripted in-process mutation, the pre-built capture panel's show latency, and the priority hero's point size against every other type role. From e03 it is **three launches**: the shell report, plus a session seeded back-dated ninety minutes into a store of its own and a **separate** launch that restores it. See "What the self-check adds in e03" below |
 | 10 | `verify-project.sh` again | the build did not rewrite the project |
 
-**Fifteen stages.** The count matters because the epic's close condition names it: `project`,
-`boundaries`, `forbidden`, `strings`, `build-debug`, `build-release`, `packaging`, `unit`,
-`boundaries-binary`, `forbidden-binary`, `entitlements-debug`, `entitlements-release`,
-`selfcheck-debug`, `selfcheck-release`, `project-post`.
+**Seventeen stages.** The count matters because the epic's close condition names it: `project`,
+`boundaries`, `forbidden`, `strings`, `build-debug`, `build-release`, `packaging`,
+`eval-clean`, `unit`, `evaluation`, `boundaries-binary`, `forbidden-binary`,
+`entitlements-debug`, `entitlements-release`, `selfcheck-debug`, `selfcheck-release`,
+`project-post`.
 
 ### What the self-check adds in e03
 
@@ -157,6 +160,156 @@ they are part of the pass/fail contract rather than evidence:
   `Pause Watching` on ⇧⌘W being reached by a synthesised plain ⌘W and flipping the switch on
   three consecutive runs. The shortcut moved to ⌃⌘E, and no two shell actions now share a base
   character.
+
+### What the self-check adds in e04
+
+Two fields, and they are the third leg of a three-way agreement rather than a report:
+
+* **`engineStamp`** — `EngineStamp.cacheKey`, read from the **live engine** so that its
+  `embeddingRevision` component is the one the OS supplied at runtime. If Apple ships a new
+  sentence-embedding asset in a point release, every distance the engine computes changes; a
+  stamp that counted only our own edits would not say so, and the verdict cache e06 keys on it
+  would serve stale answers for ever.
+* **`policyDigest`** — the FNV-1a over the whole committed constant set.
+
+Both are compared against the literals in `EngineStampTests` and `RelevancePolicyTests` — the
+one place they are written down. The unit lane asserts them of the **test process**, gate stage
+7d asserts them of the **evaluation report**, and `self-check.sh` asserts them of the **running
+application** on both configurations. A report generated against a different policy version
+therefore cannot certify this build, and neither can a product built against one.
+
+Beside them the report carries what the engine actually did in that process, at zero grants: the
+classifier the composition root published **is** the engine object (not a second one), the rule
+snapshot was built and was built under the running policy, at least one judgement was made, the
+session-rule box is empty because nothing in this epic writes to it — and **nothing is
+mandated**, because there is nothing in this build to consume a mandate.
+
+---
+
+## The relevance engine
+
+The app has a judgement, and it is **deterministic**. There is no model: `FoundationModels` is
+not imported, not linked, not probed and not availability-gated anywhere, and a lint fails the
+gate on the mere mention of it. The heuristic layer is the *whole* engine, which is what makes
+the charter's "fallback always present and independently tested" clause temporally true rather
+than a promise about a later release.
+
+**The nudge does not exist yet.** The engine emits `InterventionMandate` values and nothing
+consumes them; what ships is the verdict stream and the restrained explanation beside it, in
+Settings ▸ Privacy. A frame in which the engine has authorised an interruption and the screen is
+unchanged is the correct result, not a missing feature.
+
+### Three properties worth knowing before reading the code
+
+**An `uncertain` verdict cannot reach an intervention, and that is a type rather than a test.**
+`Verdict.permitsIntervention` does not exist. The only route from a judgement to an
+authorisation is `InterventionEligibility.decide(…)`, whose `.mandated` case carries an
+`InterventionMandate` with no public and no internal initialiser — its memberwise initialiser is
+`fileprivate` and the file that declares it contains the sole producer. Every surface that can
+interrupt takes one of those, so an unsuppressed `uncertain` is *unrepresentable*. A
+4 320-combination cross-product test checks the guarantee; it is not the guarantee.
+
+**Absence of lexical evidence may never, on its own, produce `unrelated`.** This is the most
+consequential rule in the engine and it is the one a reader is most likely to mistake for a bug.
+Take the priority *"Write the Q3 proposal for Acme"* and `com.microsoft.Excel` in front of it for
+two minutes. The identifier tokens are `microsoft` and `excel`; overlap is empty; the similarity
+signal may never say `unrelated` and never sees identifier tokens anyway. A naïve engine reaches
+absence-plus-dwell and accuses somebody of slacking off *for doing the work*. So the heuristic
+may produce `unrelated` only behind a **negative basis**: the priority must carry at least
+`minimumPriorityContentTokens` content tokens **and** at least one context item whose kind is an
+`app` or a `domain` identity, the observed subject must match none of them, and the dwell must
+have passed `sustainedDriftThreshold`. A `keyword`-only or `file`-only context pack is *not* a
+negative basis — a keyword can only ever match positively, and at zero grants the engine cannot
+see which file is open. Any failure yields `uncertain`, whatever the dwell.
+
+What that costs: the app stays quiet for a person who set a priority and named no context. What
+it buys: **every `unrelated` the heuristic ever produces is grounded in something the user
+themselves typed.** When Focus says nothing while you are clearly off task, look at the context
+pack first — the inspector's explanation says so in as many words, and it is the only place in
+the app whose copy carries an ask.
+
+**The similarity signal is asymmetric.** It may corroborate `relevant` below a measured ceiling;
+it may **never** produce `unrelated` at any distance. That is a measurement, not caution: over 62
+labelled pairs the related and unrelated classes overlap, 28 of 32 unrelated pairs sit inside the
+related range, and one pair inverts outright. There is no upper region the unrelated class
+occupies alone, so there is nothing to accuse from. `NLEmbedding.wordEmbedding` is banned from
+the shipping graph outright — its cross-domain separation measured **0.017** and it ranked a
+distraction closer than a colleague — and bundle-identifier tokens never reach any similarity
+function, enforced by a type split rather than a convention.
+
+### How it decides
+
+One ordered ladder, `CascadePrecedence.rungs`, and there is no second one anywhere in the
+repository. Nine stages at integer ranks 0…8, of which **eight are executable in this build**:
+
+| rank | rung | decisive? | in this build? |
+|---|---|---|---|
+| 0 | rule for this session | yes | yes |
+| 1 | rule for this priority | yes | yes |
+| 2 | rule for everything | yes | yes |
+| 3 | context you attached | yes | yes |
+| 4 | built-in default | yes | yes |
+| 5 | what the words have in common | yes | yes |
+| 6 | on-device model | from a later release | **no** |
+| 7 | built-in "ask each time" | `uncertain` only | yes |
+| 8 | nothing matched | `uncertain` only | yes |
+
+Four readers, three of them mechanically checked: the runtime iterates `executableRungs` (the
+unavailable rung is *not in the sequence*, rather than skipped by a special case); the
+explanation builder switches exhaustively over the stages; the Settings precedence pane renders
+the list in rank order against a committed snapshot baseline; and `check-strings.sh` asserts a
+bijection between the stages and the `cascade.rung.*` catalog keys. Two rules that match at the
+same authority **and** the same subject kind and disagree resolve to `uncertain` — never by
+recency, and never to `unrelated`.
+
+### The evaluation lane
+
+`FocusEvaluate` is a **product**, not a test side effect, and stage 7d runs it. A report emitted
+as a side effect of a test run is a report whose existence depends on a test having been
+scheduled — and whose destination depends on an environment value `xcodebuild` does not carry
+into a SwiftPM test target's process, which is the same constraint the snapshot lane documents.
+A plain process does carry its environment, which is the whole reason the target exists. It is a
+test-lane product: no application target links it, and `check-boundaries.sh` asserts that rather
+than assuming it.
+
+It writes `evaluation.json` — every rate, every latency percentile, the cascade depth
+distribution, the per-rung and per-uncertainty-reason counts, the cache profile, the run token
+and the corpus digest — and the gate archives it, so a closed epic is audited from an artefact
+rather than from an assertion about one.
+
+**The report is bound to the run that produced it.** The staging path is shared between runs, so
+without this a report left behind by an earlier green tree would be parsed as today's evidence,
+and a gate whose central number can be satisfied by a file nobody wrote today is not a gate.
+Five binding checks run **before** any metric — a stale or foreign report is not a failing
+number, it is no evidence at all:
+
+| # | check | what it catches |
+|---|---|---|
+| B1 | `runID` equals this run's token | a report from any other run, even if the deletion silently no-ops |
+| B2 | the report is newer than the `eval-clean` marker | a report that predates this run's `unit` stage |
+| B3 | `stamp` and `policyDigest` equal the committed literals | a report produced by a different engine or a different policy version |
+| B4 | `corpusDigest` equals one recomputed from the working tree | a report describing a corpus other than the one on disk |
+| B5 | the parsed bytes are the per-run copy | asserting on the shared staging file instead of the archived one |
+
+Then the committed metric thresholds. They live in exactly one place —
+`FocusEvaluateCore.EvaluationGate` — which the product decides its exit status from and which
+`EvaluationGateTests` asserts in the unit lane, so `swift test` alone still catches a metric
+regression and the gate script does not restate a single number:
+
+| metric | requirement | why this number |
+|---|---|---|
+| `overall.falseNudgeRate` | **`== 0.0`** | not "small". Every corpus case is one somebody wrote deliberately with an expectation; a single false nudge on a case somebody thought about is a product defect, and a non-zero budget is how a defect becomes a habit |
+| `overall.missRate` | `≤ 0.25` | misses are cheap: a miss falls to `uncertain`, which suppresses |
+| `overall.uncertaintyRate` | `≤ 0.45` | an engine that says "I don't know" to everything is safe and useless |
+| `adversarial.uncertaintyRate` | **`≥ 0.90`** | the adversarial suite exists to be declined, computed over `caseCount − negativeControlCount` so a declared control cannot dilute it |
+| `adversarial.familyCount` | `== 11` | with every per-family floor met |
+| `latencyMs.p95` / `.max` | `≤ 25 ms` / `≤ 60 ms` | the worst realistic warm path is about 10 ms; the 60 ms ceiling is what proves `warmUp()` moved the 59 ms cold embedding load off the classification path |
+| `cascade.maxDepth` | `≤ 8` | the executable ladder length |
+| `cascade.declaredRungs` / `executableRungs` | `== 9` / `== 8` | with `byStage.onDeviceModel == 0`, so the three lengths stay distinguishable in the evidence and not only in the code |
+| `caseCount` | `≥ 132` | **and every per-file floor separately.** The easiest way to make a false-nudge rate go to zero is to delete the case that produced one; the second easiest is to replace thirty adversarial cases with thirty baseline ones |
+| `byUncertaintyReason.noNegativeBasis` | `> 0` | the rule above must be *exercised*, not merely present, or the family guarding it has stopped testing anything |
+| `cache.hitRate` | `≥` its committed floor | so a workload regression is visible rather than inferred |
+| `failures` | empty | a metric that fails without naming the case that failed it is a metric that costs an hour |
 
 ---
 
@@ -195,6 +348,19 @@ is incomplete — never that a gate failed, because they are not one.
 | `scripts/live-handoff-drive.sh` | `open 'focus://start?task=…'` against a **registered** copy of the product, then cancelling it | `handoff-confirm.png`, `handoff-transcript.txt` |
 | `scripts/live-sensing-drive.sh` | two real decoy applications opened with `open -a`, a real screen lock (`pmset displaysleepnow` + `caffeinate -u`), the exported event stream, and both TCC databases before and after | `sensing-report.txt`, `activation-timeline.json`, `cockpit.png`, `idle-transition.json`, `lock-transition.json`, `tcc-diff.txt`, `no-prompt-frames/` — plus receipts for `pause-resume.png`, `fullscreen.*`, `space-change.json`, `media-transition-mic.json`, `media-transition-camera.json` and `sleep-wake.txt` |
 | `scripts/live-session-drive.sh` | two separate process launches that seed and restore a session, then a `pkill` mid-session and a relaunch | `session-reconciliation.json`, `relaunch-mid-session.png` |
+| `scripts/live-verdict-drive.sh` | a real decoy application opened with `open -a` in front of a real priority, captured at three settle points across the grace period, once past `sustainedDriftThreshold`, and once after returning to the anchor | `verdict-timeline.txt`, `verdict-report.json`, `01-priority-set.png` … `06-returned-to-anchor.png`, plus a receipt for `07-context-removed.png` when nobody was at the keyboard |
+
+**What is being read in the verdict frames is not "did it draw".** It is *is the explanation
+restrained*: no window title, no URL, no file path, no similarity number, no accusation — the
+clause list and nothing else. Frame 05 is the one to look at hardest, because it is the frame in
+which the engine has authorised an interruption and **nothing appears on screen**; and the frame
+after the context chip is removed is the one that shows the app falling silent when it has
+nothing to judge against, which is the behaviour a reader will otherwise mistake for a bug.
+
+This lane opens and closes applications with `open -a` and `pkill` rather than with `osascript`,
+for the reason the e03 lanes do: `osascript -e 'quit app …'` blocks on Automation consent and
+has to be killed, so following the plan's letter would make the lane hang on a Mac that has not
+granted Automation — precisely the dependency that must never reach a criterion.
 
 **The e03 lanes are not uniformly automated, and they say which parts are which.** Every artefact
 carries one of three labels, and the scripts behave accordingly rather than implying unattended
@@ -291,10 +457,13 @@ Never pipe any of it. Redirect unpiped to a log and gate on the explicit exit st
 | `FOCUS_KEEP_DERIVED_DATA` | the gate | set to any value to keep a **green** run's derived data and result bundle. A failing run always keeps them |
 | `FOCUS_EVIDENCE_DIR` | the gate, `self-check.sh`, the live lanes | where the evidence set is assembled, under the canonical names below. Default for `live-shell-drive.sh`: `.agents/evidence/e01`; for `live-capture-drive.sh` and `live-handoff-drive.sh`: `.agents/evidence/e02`. **Never committed** |
 | `FOCUS_SNAPSHOT_OUT` | the snapshot lane, the gate | where snapshot renders are written. Default `$TMPDIR/focus-snapshots`. `xcodebuild` carries no value into a SwiftPM test target's environment — measured both by inheriting the shell's environment and by a scheme `<EnvironmentVariable>` expanding a command-line build setting, and neither reaches the test — so under the gate this names where to *look*, not where to write. The gate copies from it into `$FOCUS_LOG_DIR/snapshots` and collects evidence from the copy |
+| `FOCUS_EVAL_OUT` | `FocusEvaluate`, the gate | where `evaluation.json` is written. Default `$TMPDIR/focus-eval`. Shared between runs, which is exactly why stage 6b deletes it and stage 7d refuses a report that is not this run's — see "The evaluation lane" |
+| `FOCUS_GATE_RUN_ID` | the gate → `FocusEvaluate` | the run token stamped into the report. Minted from the per-run log directory's basename, so there is nothing new to collide. A run without one says `local-<pid>`, which can never be mistaken for gate evidence |
+| `FOCUS_CORPUS_DIR` | `FocusEvaluate` | the golden corpus to evaluate. Defaults to the working tree's own copy, because the gate recomputes the digest from that tree and a bundled copy could diverge from it |
 | `FOCUS_SNAPSHOT_RECORD=1` | the snapshot lane | re-record the committed baselines instead of comparing. `swift test` only, for the same reason. Recorded PNGs are read by eye before being committed |
 | `FOCUS_FIXTURE_RECORD=1` | `MigrationFixtureTests` | rewrite the committed v1 store fixture instead of asserting against it |
 | `FOCUS_SELFCHECK_JSON` | `self-check.sh` | where the app's self-check report is written |
-| `FOCUS_OPERATOR_TIMEOUT` | `live-sensing-drive.sh`, `live-session-drive.sh` | seconds to wait at each operator prompt before writing a `MANUAL_REQUIRED` receipt and continuing. Default 45. An unattended run has no terminal to read from and reaches the timeout at once, which is what should happen — the alternative is a lane that hangs a nightly run for ever |
+| `FOCUS_OPERATOR_TIMEOUT` | `live-sensing-drive.sh`, `live-session-drive.sh`, `live-verdict-drive.sh` | seconds to wait at each operator prompt before writing a `MANUAL_REQUIRED` receipt and continuing. Default 45. An unattended run has no terminal to read from and reaches the timeout at once, which is what should happen — the alternative is a lane that hangs a nightly run for ever |
 | `FOCUS_LIVE_TEXT_SIZE=raised` | the live lanes | capture `main-accessibility.png` (shell lane) and `cockpit-accessibility.png` (capture lane) — only meaningful once the system-wide Text Size has been raised by hand, because macOS has no injectable Dynamic Type. The zero-grant equivalent is the snapshot lane's `ShellTextScale` matrix plus `DynamicTextResilienceTests` |
 
 ### Evidence
@@ -302,7 +471,8 @@ Never pipe any of it. Redirect unpiped to a log and gate on the explicit exit st
 With `FOCUS_EVIDENCE_DIR` set, the gate assembles `gate.log`, `build-debug.log`,
 `build-release.log`, `test.log`, `project.log`, `boundaries.log`, `forbidden.log`,
 `strings.log`, `packaging.log`, `entitlements.txt`, `selfcheck.json`, `selfcheck.log`, their
-Release counterparts, and a `snapshots/` copy of every render. The live lanes add `menus.txt`,
+Release counterparts, `eval-clean.log`, `evaluation.log`, `focus-evaluate.log`,
+**`evaluation.json`**, and a `snapshots/` copy of every render. The live lanes add `menus.txt`,
 the shell frames, the capture and handoff frames and their two transcripts to the same
 directory when the grants exist. That directory is evidence, not source: it is never
 committed.
@@ -321,8 +491,8 @@ checked separately:
 
 | catalog | keys | who reads it |
 |---|---|---|
-| `Packages/FocusUI/Sources/FocusUI/Resources/Localizable.xcstrings` | `shell.`, `settings.`, `priority.`, `capture.`, `context.`, `handoff.` | `FocusUI`, and the app target through `ShellStrings` |
-| `Packages/FocusCore/Sources/FocusCore/Resources/Localizable.xcstrings` | `status.` (the `FocusStatus` short labels) and `undo.` (the action names the system Edit menu draws after "Undo") | `FocusCore` |
+| `Packages/FocusUI/Sources/FocusUI/Resources/Localizable.xcstrings` | `shell.`, `settings.`, `priority.`, `capture.`, `context.`, `handoff.`, `session.`, `sensing.`, `capability.` | `FocusUI`, and the app target through `ShellStrings` |
+| `Packages/FocusCore/Sources/FocusCore/Resources/Localizable.xcstrings` | `status.` (the `FocusStatus` short labels), `undo.` (the action names the system Edit menu draws after "Undo"), and the relevance vocabulary — `cascade.`, `explanation.`, `suppression.`, `evidence.`, `rule.` | `FocusCore`, and `FocusUI` through the `…Resource` accessors each vocabulary exposes |
 | `App/Localizable.xcstrings` | **none, by design** | nothing yet |
 
 The app target's catalog is empty because the app target is a composition root: it declares
@@ -385,3 +555,18 @@ No accounts, no telemetry, no analytics, no third-party packages: every `Package
 repository declares an empty `dependencies` array, and the check that asserts it is a gate
 stage. The app ships with no network entitlement, and `FocusClassify` carries a
 zero-networking assertion that fails closed.
+
+That assertion now has a fourth form and a companion. `nm -u FocusClassify.o` names no
+networking symbol — and no window-list, Accessibility or screen-capture symbol either, which is
+the **binary** proof that the private-browsing fixtures could not have cheated: a test can only
+observe that the engine did not try another route, and the symbol table proves it could not.
+`NLContextualEmbedding` is banned outright alongside it, not because it misbehaved but because
+its API surface includes an asset *request*, and a package whose whole guarantee is that it
+cannot reach the network may not name a type that can ask for a download.
+
+Nothing the engine concludes can carry raw captured content. Every textual payload an
+explanation can hold is a `NormalisedToken`, which has no public `String` initialiser and
+rejects whitespace, control characters and every ASCII punctuation mark but `.`, `-` and `_` —
+so a window title, a full URL, a document name or an absolute path is *unrepresentable* in an
+explanation rather than forbidden. `ClassificationInput.origin` and `.titleTokens` exist, are
+exercised by the golden corpus, and are **empty in every shipping code path in this version**.
