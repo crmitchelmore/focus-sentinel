@@ -51,7 +51,43 @@ final class PriorityHost: PriorityActing {
         var sensing: SensingSummary = .inactive
         /// What this Mac lets the app do, as the probe last read it.
         var capabilities: CapabilityMatrix = CapabilityMatrix()
+        /// What the relevance engine last concluded, or `nil` when it has concluded nothing.
+        ///
+        /// Carried through the environment rather than read by a view, for the same reason
+        /// everything else here is: `FocusUI` renders values and never learns which
+        /// implementation produced them.
+        var verdict: VerdictSnapshot?
     }
+
+    /// Everything a rule snapshot is built from, as one comparable value (R-65).
+    ///
+    /// The engine's snapshot must be rebuilt when — and **only** when — the active priority
+    /// changes, its `revision` changes, a rule is written, or a context item is added or
+    /// removed. Those four facts are exactly the four fields below, so comparing this value is
+    /// what keeps the store read on the four things a person did rather than on the
+    /// five-second corroboration tick — which is the whole point of pre-fetching in the first
+    /// place, and the thing `SwiftDataRuleStore`'s own doc comment worries about.
+    ///
+    /// `revision` is here and not on `PrioritySnapshot` because the cockpit has no use for it:
+    /// it is the staleness component of e06's verdict-cache key (F-53) and the thing that makes
+    /// an edited sentence invalidate every judgement about the old wording.
+    struct SnapshotKey: Sendable, Equatable {
+        var priorityID: UUID?
+        var revision: Int = 0
+        var contextItems: [ContextItemValue] = []
+        var rules: [PriorityRuleValue] = []
+    }
+
+    /// The four facts as they last stood.
+    private(set) var snapshotKey = SnapshotKey()
+
+    /// Called when — and only when — `snapshotKey` actually moved.
+    ///
+    /// The composition root wires it to `RelevanceHost.invalidateSnapshot()`. It is deliberately
+    /// not called from `update(environment:)`: the environment carries the status, the session
+    /// and the capability matrix, none of which a judgement is built from, and firing on those
+    /// would put a SwiftData fetch on every tick.
+    var onSnapshotInvalidated: (() -> Void)?
 
     private let context: ModelContext
     private let store: PriorityStore
@@ -316,18 +352,30 @@ final class PriorityHost: PriorityActing {
         // `storeIsReady`, rather than to blank the window.
         var priority: PrioritySnapshot? = state.priority
         var recent: [RecentPriority] = state.recent
+        // Seeded with what it already is, so a fetch that throws cannot be read as "the person
+        // cleared their priority" — which would invalidate the engine's snapshot for a reason
+        // that never happened.
+        var nextKey = snapshotKey
 
         do {
             let activeTask = try store.activeTask()
+            let items = activeTask.map(contextValues(for:)) ?? []
+            let rules = activeTask.map(ruleValues(for:)) ?? []
             priority = activeTask.map { task in
                 PrioritySnapshot(
                     task,
                     now: now,
-                    contextItems: contextValues(for: task),
-                    rules: ruleValues(for: task),
+                    contextItems: items,
+                    rules: rules,
                     assessment: IntentValidator.assess(task.intent, locale: locale)
                 )
             }
+            nextKey = SnapshotKey(
+                priorityID: activeTask?.id,
+                revision: activeTask?.revision ?? 0,
+                contextItems: items,
+                rules: rules
+            )
             recent = try store.recentTasks(limit: Self.historyLimit).map(RecentPriority.init)
         } catch {
             record(error)
@@ -343,8 +391,17 @@ final class PriorityHost: PriorityActing {
             showsRitualPrompt: shouldPromptRitual(),
             session: environment.session,
             sensing: environment.sensing,
+            verdict: environment.verdict,
             capabilities: environment.capabilities
         )
+
+        // The engine's snapshot is invalidated here rather than by each verb, so there is no
+        // mutation that can change one of the four facts without passing this comparison —
+        // including an undo, which does not go through a verb at all.
+        if nextKey != snapshotKey {
+            snapshotKey = nextKey
+            onSnapshotInvalidated?()
+        }
 
         // Assigned only when it actually changed. From e03 this projection is rebuilt on the
         // five-second corroboration tick as well as on every mutation, and `@Observable` reports
