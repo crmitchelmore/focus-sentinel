@@ -99,6 +99,17 @@ public struct TransitionWindow: Sendable, Equatable {
         return NormalisedToken.normalised(TokenNormalizer.host(of: anchor).lowercased())
     }
 
+    /// How many **distinct** unrelated subjects the window has seen.
+    ///
+    /// What `ExplanationClause.mixedSubjects` reports. Counted from the window rather than
+    /// carried on `DriftSubject`, which deliberately holds no list: three unrelated
+    /// applications in ninety seconds is one fact about somebody's afternoon, not three names
+    /// to read back to them, and a mandate that named the last of them would be the app
+    /// misdescribing what they did.
+    public var distinctUnrelatedSubjects: Int {
+        Set(observations.filter { $0.verdict == .unrelated }.compactMap(\.subject)).count
+    }
+
     /// Forget everything. Used when the session ends or the priority changes, both of which
     /// make every earlier observation evidence about a different question.
     public mutating func reset() {
