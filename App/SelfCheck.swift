@@ -8,9 +8,10 @@ import SwiftData
 
 /// The zero-grant shell self-check.
 ///
-/// Run the built binary with `--focus-self-check <path>` and it launches normally, waits
-/// one run-loop second for AppKit to finish installing the menu bar and ordering its
-/// window in, writes a JSON report describing its own shell, and terminates.
+/// Run the built binary with `--focus-self-check <path>` and it launches normally, brings
+/// itself to the front and **waits until it is really there**, gives AppKit one run-loop
+/// second to finish installing the menu bar and ordering its window in, writes a JSON report
+/// describing its own shell, and terminates.
 ///
 /// Why this exists: every interesting claim about a Mac shell — the menu bar is exactly
 /// these six menus, Help has exactly one item and it is not the broken default, ⌘W is
@@ -28,9 +29,23 @@ enum SelfCheck {
     /// path, so the Release product answers exactly the same questions as the Debug one.
     static let argument = "--focus-self-check"
 
-    /// How long to let the run loop turn before reading the shell. Measured, not guessed:
-    /// with no delay the submenus read as empty because AppKit has not populated them yet.
+    /// How long to let the run loop turn *after* the app is frontmost, before reading the
+    /// shell. Measured, not guessed: with no delay the submenus read as empty because AppKit
+    /// has not populated them yet.
     static let settleDelay: TimeInterval = 1.0
+
+    /// How long to keep asking to come forward before reading the shell anyway.
+    ///
+    /// Reaching this deadline is a *reported failure*, not a fallback: `self-check.sh` asserts
+    /// that the app was active with a key window when the shell was read, so a machine that
+    /// never lets the app forward fails loudly and by name instead of failing later, in the
+    /// undo assertion, for a reason that looks like a defect in the journal.
+    static let activationDeadline: TimeInterval = 15.0
+
+    /// How often to re-ask. Measured over eight consecutive runs on this machine, the
+    /// activation lands on the **second** poll — the first issues it, the next observes it —
+    /// about 73 ms after launch. The interval costs nothing on a machine that takes longer.
+    static let activationPollInterval: TimeInterval = 0.05
 
     /// The output path, if this process was asked for a self-check.
     static var requestedOutputPath: String? {
@@ -41,10 +56,97 @@ enum SelfCheck {
         return arguments[next]
     }
 
+    // MARK: - Coming to the front, deterministically
+
+    /// How the app got to the front, and how long it took.
+    ///
+    /// This is a precondition of most of what the report claims, not a curiosity. AppKit
+    /// validates a menu item by walking the **key window's** responder chain, and an
+    /// application that is not active has no key window at all — so a self-check that reads
+    /// the Edit menu while the app is in the background reads `Undo`, disabled, however many
+    /// operations the journal holds. Recording the activation makes that failure legible.
+    struct Activation {
+        var isActive: Bool
+        var hasKeyWindow: Bool
+        var cockpitIsKey: Bool
+        var attempts: Int
+        var waitedMilliseconds: Double
+
+        var dictionary: [String: Any] {
+            [
+                "isActive": isActive,
+                "hasKeyWindow": hasKeyWindow,
+                "cockpitIsKey": cockpitIsKey,
+                "attempts": attempts,
+                "waitedMilliseconds": waitedMilliseconds
+            ]
+        }
+    }
+
+    /// Bring the app forward and **wait until it really is forward**, then continue.
+    ///
+    /// Measured on this machine, with a plain `exec`'d binary and a poll every 100 ms for four
+    /// seconds: `NSApp.activate()` — the cooperative macOS 14+ API — never activates
+    /// (`isActive == false`, `keyWindow == nil`, 41 attempts), and neither does
+    /// `NSRunningApplication.current.activate(options:)`. `activate(ignoringOtherApps: true)`
+    /// activates immediately, every time — the app is frontmost with the cockpit key about
+    /// 73 ms after launch. Cooperative activation is a request another app has to yield to,
+    /// and a process launched from a shell has nobody to yield to it, which is why the old
+    /// fixed one-second delay passed or failed depending on what happened to be frontmost.
+    ///
+    /// So: ask the un-cooperative way, poll until it is true, and time out loudly rather than
+    /// reading a background app's menu bar and reporting the answer as though it meant
+    /// something. Nothing here runs in the ordinary app — `requestedOutputPath` is `nil`
+    /// unless `--focus-self-check` was passed.
+    @MainActor
+    static func comeForward(then continuation: @escaping @MainActor (Activation) -> Void) {
+        let started = ProcessInfo.processInfo.systemUptime
+        var attempts = 0
+
+        func attempt() {
+            attempts += 1
+            NSApp.activate(ignoringOtherApps: true)
+            liveCockpitWindow()?.makeKeyAndOrderFront(nil)
+
+            let elapsed = ProcessInfo.processInfo.systemUptime - started
+            let state = Activation(
+                isActive: NSApp.isActive,
+                hasKeyWindow: NSApp.keyWindow != nil,
+                cockpitIsKey: NSApp.keyWindow != nil && NSApp.keyWindow === liveCockpitWindow(),
+                attempts: attempts,
+                waitedMilliseconds: elapsed * 1_000
+            )
+
+            // The cockpit is the window whose `UndoManager` the journal was registered on, so
+            // "some window is key" is not enough when the cockpit exists: the quick-capture
+            // panel is also a titled window, built at launch, and its manager is a different
+            // object with nothing registered on it.
+            let ready = state.isActive
+                && state.hasKeyWindow
+                && (liveCockpitWindow() == nil || state.cockpitIsKey)
+
+            if ready || elapsed >= activationDeadline {
+                continuation(state)
+                return
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + activationPollInterval) {
+                MainActor.assumeIsolated { attempt() }
+            }
+        }
+
+        attempt()
+    }
+
+    /// The cockpit window itself, by the identifier SwiftUI stamps on its scene.
+    @MainActor
+    static func liveCockpitWindow() -> NSWindow? {
+        NSApp.windows.first { $0.identifier?.rawValue == ShellWindow.cockpit.id }
+    }
+
     // MARK: - Report
 
     @MainActor
-    static func report() -> [String: Any] {
+    static func report(activation: Activation) -> [String: Any] {
         // Order matters. The window survey must happen *before* the key-equivalent probes,
         // because performing ⌘W closes a window and ⌘, opens one — the probes change the
         // very state the survey is describing.
@@ -67,6 +169,8 @@ enum SelfCheck {
         root["keyEquivalentClaims"] = claims
         root["statusTokens"] = statusTokens()
         root["localizationCatalogsCompiled"] = LocalizationLane.catalogsAreCompiled
+        // Recorded *and* asserted: everything the menu survey says is conditional on this.
+        root["activation"] = activation.dictionary
 
         // --- e02 -------------------------------------------------------------------------
         root["urlSchemes"] = urlSchemes()
@@ -437,7 +541,7 @@ enum SelfCheck {
     // MARK: - Running it
 
     @MainActor
-    static func runAndTerminate(writingTo path: String) {
+    static func runAndTerminate(writingTo path: String, activation: Activation) {
         // The key-equivalent probes perform real commands, and one of them can open a file
         // importer. A sheet still up when `NSApp.terminate` runs is how a self-check turns into
         // a hung gate stage, so every attached sheet is dismissed first.
@@ -447,7 +551,7 @@ enum SelfCheck {
 
         do {
             let data = try JSONSerialization.data(
-                withJSONObject: report(),
+                withJSONObject: report(activation: activation),
                 options: [.prettyPrinted, .sortedKeys]
             )
             try data.write(to: URL(fileURLWithPath: path), options: .atomic)
@@ -470,7 +574,8 @@ final class FocusAppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         guard let path = SelfCheck.requestedOutputPath else { return }
 
-        // Bring the app forward, for the length of the check and only in this mode.
+        // Bring the app forward, for the length of the check and only in this mode, and do not
+        // read a single thing about the shell until it really is forward.
         //
         // Menu validation walks the **key window's** responder chain, and a background
         // application has no key window at all — measured here: with the app left inactive the
@@ -478,16 +583,17 @@ final class FocusAppDelegate: NSObject, NSApplicationDelegate {
         // has registered. F-93's claim is about the item a person sees, so the item has to be
         // validated the way a person's Mac would validate it. The ordinary app never runs this
         // path: `requestedOutputPath` is `nil` unless `--focus-self-check` was passed.
-        NSApp.activate()
-        NSApp.windows
-            .first { $0.identifier?.rawValue == ShellWindow.cockpit.id }?
-            .makeKeyAndOrderFront(nil)
-
-        // One turn of the run loop, then read the shell. Reading it inside
-        // `applicationDidFinishLaunching` reports empty submenus and no windows.
-        DispatchQueue.main.asyncAfter(deadline: .now() + SelfCheck.settleDelay) {
-            MainActor.assumeIsolated {
-                SelfCheck.runAndTerminate(writingTo: path)
+        //
+        // Waiting for the activation to *land* is the load-bearing half. A fixed delay after
+        // requesting it made the report a race against whatever else the machine was doing,
+        // and the race was lost often enough to fail the gate on a green tree.
+        SelfCheck.comeForward { activation in
+            // One more turn of the run loop, then read the shell. Reading it inside
+            // `applicationDidFinishLaunching` reports empty submenus and no windows.
+            DispatchQueue.main.asyncAfter(deadline: .now() + SelfCheck.settleDelay) {
+                MainActor.assumeIsolated {
+                    SelfCheck.runAndTerminate(writingTo: path, activation: activation)
+                }
             }
         }
     }

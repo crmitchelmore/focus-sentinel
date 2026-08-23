@@ -111,6 +111,36 @@ check(
     report.get("bundleIdentifier"),
 )
 
+# --- the precondition every menu claim rests on -------------------------------------------
+#
+# AppKit validates a menu item by walking the **key window's** responder chain, and an
+# application that is not active has no key window at all. A report written from the
+# background therefore describes a menu bar nobody validated: the Edit menu's Undo item reads
+# `Undo`, disabled, however many operations the journal holds. That is asserted here, first
+# and by name, so a machine that will not let the app forward fails as an activation failure
+# rather than as a phantom defect in the undo journal.
+
+activation = report.get("activation") or {}
+check(
+    activation.get("isActive") is True,
+    "the app was frontmost when its shell was read",
+    activation,
+)
+check(
+    activation.get("hasKeyWindow") is True,
+    "the app had a key window when its shell was read",
+    activation,
+)
+check(
+    activation.get("cockpitIsKey") is True,
+    "the cockpit — not the quick-capture panel — was the key window",
+    activation,
+)
+print(
+    f"note activation took {activation.get('waitedMilliseconds')}ms "
+    f"over {activation.get('attempts')} attempt(s)"
+)
+
 # --- the menu bar -----------------------------------------------------------------------
 
 expected_bar = ["Focus Sentinel", "File", "Edit", "View", "Window", "Help"]
