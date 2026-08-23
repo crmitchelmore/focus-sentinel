@@ -33,7 +33,7 @@ import os
 /// explanation instead of doing nothing when pressed.
 @Observable
 @MainActor
-final class SessionHost {
+final class SessionHost: SessionActing {
     /// The session as the cockpit draws it. `nil` when there is none.
     private(set) var snapshot: SessionSnapshot?
 

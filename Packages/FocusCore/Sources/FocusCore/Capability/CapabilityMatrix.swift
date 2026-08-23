@@ -30,7 +30,7 @@ public struct CapabilityObservation: Sendable, Equatable, Hashable {
 /// is not a prompt to try again. `.denied` may become `.available` — the user changed their
 /// mind in System Settings, and live TCC state is authoritative — but it may never quietly
 /// become a question again.
-public struct CapabilityMatrix: Sendable, Equatable {
+public struct CapabilityMatrix: Sendable, Equatable, Hashable {
     private var observations: [Capability: CapabilityObservation]
 
     public init(observations: [Capability: CapabilityObservation] = [:]) {
