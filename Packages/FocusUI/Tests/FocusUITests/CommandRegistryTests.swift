@@ -212,17 +212,26 @@ struct CommandRegistryTests {
         #expect(registry.action(id: "session.start")?.effect == .priority(.startSession))
         #expect(registry.action(id: "session.pause")?.shortcut == Shortcut("p", modifiers: [.control, .command]))
         #expect(registry.action(id: "session.pause")?.effect == .priority(.pauseSession))
-        #expect(registry.action(id: "session.complete")?.shortcut == Shortcut("e", modifiers: [.control, .command]))
+        #expect(registry.action(id: "session.complete")?.shortcut == Shortcut("f", modifiers: [.control, .command]))
         #expect(registry.action(id: "session.complete")?.effect == .priority(.completeSession))
 
-        // The watching switch is deliberately outside the ⌃⌘ family: pausing the session and
-        // pausing the watching are different acts, and ⌃⌘P beside a near-identical shortcut
-        // would be two things a person could not keep apart.
+        // The watching switch is ⌃⌘E and **not** ⇧⌘W, which is what it was first bound to: the
+        // app's own self-check measured a plain ⌘W reaching that item and flipping the stored
+        // switch on three consecutive runs. An app that takes ⌘W away from a person because it
+        // wanted a nearby shortcut is a defect, so the base character moved off `w` entirely.
         let sensing = registry.action(id: "sensing.pause")
-        #expect(sensing?.shortcut == Shortcut("w", modifiers: [.shift, .command]))
+        #expect(sensing?.shortcut == Shortcut("e", modifiers: [.control, .command]))
         #expect(sensing?.effect == .priority(.pauseSensing))
-        #expect(sensing?.shortcut?.glyphs == "⇧⌘W")
-        #expect(sensing?.shortcut != Shortcut("w", modifiers: .command))
+        #expect(sensing?.shortcut?.glyphs == "⌃⌘E")
+        #expect(sensing?.shortcut != Shortcut("w", modifiers: [.shift, .command]))
+
+        // …and no two actions share a base character at all, whatever their modifiers, because
+        // that pairing is the one the measurement caught colliding.
+        let characters = registry.actions.compactMap(\.shortcut?.character)
+        #expect(
+            Set(characters).count == characters.count,
+            "two actions share a base character: \(characters)"
+        )
 
         // The three session items reuse the cockpit controls' own title keys — one action, one
         // key — exactly as Complete Priority already does.

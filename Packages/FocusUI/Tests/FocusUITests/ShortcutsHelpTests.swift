@@ -28,7 +28,7 @@ struct ShortcutsHelpTests {
     func rowsAreTheShippedActions() {
         let rows = ShortcutsHelpView.groups(for: registry).flatMap(\.rows)
 
-        #expect(rows.map(\.glyphs) == ["⌘N", "⌘O", "⌃⌘↩", "⌃⌘S", "⌃⌘P", "⌃⌘E", "⇧⌘W", "⌘W", "⌘?"])
+        #expect(rows.map(\.glyphs) == ["⌘N", "⌘O", "⌃⌘↩", "⌃⌘S", "⌃⌘P", "⌃⌘F", "⌃⌘E", "⌘W", "⌘?"])
         #expect(rows.map(\.titleKey) == [
             .commandNewPriority,
             .commandAddFilesToContext,

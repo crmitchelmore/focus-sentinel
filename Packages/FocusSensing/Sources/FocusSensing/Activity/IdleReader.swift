@@ -180,10 +180,27 @@ public final class IdleReader: IdleObserving {
     /// rather than a coincidence. A reading that violates it means the sources were swapped,
     /// which would silently invert the safe direction — so the self-check asserts it on live
     /// readings and the suite asserts it on every fixture.
+    ///
+    /// **The session figure is read first, and the order is load-bearing.** Both counters are
+    /// "seconds since the last event of their kind", so both grow with the passage of time, and
+    /// the two reads cannot happen at the same instant. Whichever is read *second* is therefore
+    /// measured a little later and comes back a little larger. Reading hardware first inverted
+    /// the invariant on live readings by the width of one syscall — measured on this machine
+    /// through `--focus-self-check`: `hardware 1671.844242084` against
+    /// `session 1671.844242125`, a 41-nanosecond violation of a property the whole design rests
+    /// on. Reading session first puts the elapsed time on the hardware side, which is the side
+    /// the invariant wants it on.
+    ///
+    /// The one thing this cannot rule out is a real input event landing between the two reads,
+    /// which resets the hardware counter to nearly zero while the session figure it already took
+    /// stays large. That is a genuine race rather than a swapped source, and it is why the
+    /// self-check's assertion carries a small tolerance instead of demanding the invariant to
+    /// the nanosecond.
     public func read() -> IdleReading {
-        IdleReading(
+        let sessionSeconds = source.sessionSeconds
+        return IdleReading(
             hardwareSeconds: source.hardwareSeconds,
-            sessionSeconds: source.sessionSeconds
+            sessionSeconds: sessionSeconds
         )
     }
 

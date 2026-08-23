@@ -47,14 +47,40 @@ enum SelfCheck {
     /// about 73 ms after launch. The interval costs nothing on a machine that takes longer.
     static let activationPollInterval: TimeInterval = 0.05
 
-    /// The output path, if this process was asked for a self-check.
-    static var requestedOutputPath: String? {
+    /// Seed a session into a store of its own and exit (R-46).
+    static let seedArgument = "--focus-session-seed"
+
+    /// Open a store somebody else seeded, reconcile it, and report what came back (R-46).
+    static let restoreArgument = "--focus-session-restore"
+
+    /// Export the local event stream, for the live evidence lane to read.
+    static let exportArgument = "--focus-export-events"
+
+    /// How far back the seeded session's `startedAt` is dated. Ninety minutes, which is what
+    /// §4.6 asserts the restoring launch reports to within two seconds.
+    static let seedBackdateSeconds: Double = 5_400
+
+    /// The value that follows a flag on the command line, or `nil` when the flag is absent or
+    /// carries nothing after it.
+    static func value(after flag: String) -> String? {
         let arguments = CommandLine.arguments
-        guard let index = arguments.firstIndex(of: argument) else { return nil }
+        guard let index = arguments.firstIndex(of: flag) else { return nil }
         let next = arguments.index(after: index)
         guard next < arguments.endIndex else { return nil }
         return arguments[next]
     }
+
+    /// The output path, if this process was asked for a self-check.
+    static var requestedOutputPath: String? { value(after: argument) }
+
+    /// The store to seed, if this process was asked to seed one.
+    static var requestedSeedStorePath: String? { value(after: seedArgument) }
+
+    /// The store to restore from, if this process was asked to restore one.
+    static var requestedRestoreStorePath: String? { value(after: restoreArgument) }
+
+    /// Where to write the exported event stream, if this process was asked for one.
+    static var requestedEventExportPath: String? { value(after: exportArgument) }
 
     // MARK: - Coming to the front, deterministically
 
@@ -156,6 +182,11 @@ enum SelfCheck {
         // The undo probe reads the *system* Edit menu, so it has to run while the cockpit is
         // still the key window — before the key-equivalent probes close it.
         let undo = undoReport()
+        // …and the e03 block reads the on-screen window list, so it runs before ⌘, opens a
+        // Settings window and ⌘W closes the cockpit. Every read in it is grant-free.
+        let sensing = sensingReport()
+        let capabilities = capabilityReport()
+        let surfaces = authorisationSurfaceReport()
         let claims = keyEquivalentClaims()
 
         var root: [String: Any] = [:]
@@ -185,8 +216,207 @@ enum SelfCheck {
         root["undo"] = undo
         root["capturePanel"] = capturePanelReport()
         root["priorityHero"] = priorityHeroReport()
+
+        // --- e03 -------------------------------------------------------------------------
+        root["sensing"] = sensing
+        root["capabilities"] = capabilities
+        root["authorisationSurfaces"] = surfaces.suspects
+        root["onScreenWindowOwners"] = surfaces.owners
+        // Read **after** the key-equivalent probes, and asserted equal to the value the sensing
+        // block read before them.
+        //
+        // This is the assertion that caught the shortcut defect rather than a person noticing
+        // it: with Pause Watching bound to ⇧⌘W, a synthesised plain ⌘W reached that item as well
+        // as Close Window, and three consecutive self-checks reported the stored switch flipped
+        // — `true`, `false`, `true`. A shortcut that quietly changes a stored setting somebody
+        // else owns is exactly the kind of thing a menu bar can do without anyone seeing it, so
+        // the check stays even though the collision is gone.
+        root["settingSensingPausedAfterKeyProbes"] =
+            AppComposition.shared.sensingHost.settings.sensingPaused
+        root["bootIdentity"] = AppComposition.shared.bootIdentity
+        root["uptimeSeconds"] = AppComposition.shared.uptimeClock.uptimeSeconds
         return root
     }
+
+    // MARK: - e03 · the observer graph (F-119, F-23, F-29, F-32, F-35, F-36)
+
+    /// Everything about the graph that can be checked with no grant at all — including the one
+    /// claim that can only be made from *inside* the process.
+    ///
+    /// ## The pause is exercised for real
+    ///
+    /// F-119's promise is that the switch **detaches every observer** rather than setting a flag
+    /// each handler consults, and the only way to check that is to pause the live graph and
+    /// count what is left: `n > 0 → 0 → n`. So this really pauses and really resumes it.
+    ///
+    /// Two things keep that honest rather than destructive. The **stored** switch is never
+    /// touched — `SensingHost.pause()` is called directly rather than through
+    /// `setSensingPaused`, so whatever the person chose is still what they chose after this
+    /// runs. And the pause and the resume are a matched pair carrying the same cause, so the
+    /// session ends where it began: `paused(cause: .globalPause)` followed by
+    /// `resumed(cause: .globalPause)` nets to nothing, which is precisely the property the
+    /// cause mechanism exists to give. Two rows land in the local timeline saying it happened,
+    /// which is the honest record of a thing that did happen.
+    @MainActor
+    static func sensingReport() -> [String: Any] {
+        let host = AppComposition.shared.sensingHost
+        var report: [String: Any] = [:]
+
+        report["isRunning"] = host.isRunning
+        report["settingSensingPaused"] = host.settings.sensingPaused
+        report["redundantActivations"] = host.redundantActivations
+        report["cascade"] = host.cascade.map(\.rawValue)
+        report["lifecycle"] = host.lifecycleState.rawValue
+
+        // --- everything that describes the world, read while the graph is as the person left it
+
+        // The seven decoded keys, and the assertion that none of them names a *window*.
+        // `kCGWindowOwnerName` is the application's name, is public, and was present on 100 % of
+        // rows at zero grants (probe P-74) — it is not a title, and it is excluded from the
+        // fragment test by name rather than by weakening the test.
+        report["windowMetadata"] = [
+            "decodedKeys": host.windowDecodedKeys,
+            "decodedKeysAreTitleFree": host.windowDecodedKeysAreTitleFree,
+            "count": host.currentWindowCount() ?? -1
+        ]
+
+        // Both idle sources on every sample. `hardwareSeconds >= sessionSeconds` is a property
+        // rather than a coincidence — `.combinedSessionState` counts a superset of the events
+        // `.hidSystemState` does — so a violation means the reader swapped its sources (P-85).
+        // The two are read microseconds apart, session first, so the elapsed time between them
+        // lands on the side the invariant wants it on; see `IdleReader.read()`.
+        let idle = host.idleReading
+        report["idle"] = [
+            "hardwareSeconds": idle.hardwareSeconds,
+            "sessionSeconds": idle.sessionSeconds,
+            // The gap itself, rather than a verdict computed against a tolerance the checker
+            // cannot see. A 21-minute divergence was measured on this machine at one instant
+            // (probe P-85), and the number is what makes that legible in a report.
+            "hardwareMinusSessionSeconds": idle.hardwareSeconds - idle.sessionSeconds,
+            "thresholdSeconds": host.settings.idleThresholdInterval,
+            "isIdle": host.isIdle
+        ]
+
+        // The quorum's three inputs, recorded whatever the verdict — a surface that only showed
+        // its working when it said yes would be showing half of it. `nil` where the frontmost
+        // application is one the gate stood down from, which is the honest answer rather than a
+        // zero.
+        if let signals = host.currentPresentationSignals() {
+            let state = PresentationQuorum.evaluate(signals: signals, isUserExcluded: false)
+            report["presentation"] = [
+                "frontmostWindowFillsAScreen": signals.frontmostWindowFillsAScreen,
+                "presentationOptionsSayFullScreen": signals.presentationOptionsSayFullScreen,
+                "menuBarHidden": signals.menuBarHidden,
+                "agreementCount": signals.agreementCount,
+                "isPresenting": state.isPresenting
+            ]
+        } else {
+            report["presentation"] = ["suppressed": true]
+        }
+
+        // --- the pause probe, last, because it moves what everything above describes
+        //
+        // n → 0 → n, in-process, at zero grants.
+        //
+        // The graph is attached first where it was not already, because the person may have the
+        // switch off and a probe reporting `0 → 0 → 0` would have proved nothing about
+        // detaching. The **stored** switch is never touched — `pause()` is called directly
+        // rather than through `setSensingPaused`, so whatever they chose is still what they
+        // chose. The attachment state is put back exactly as it was found, through `stop()`,
+        // which detaches without a session event: a self-check finishing is not a pause anybody
+        // took.
+        //
+        // The pause and the resume are a matched pair carrying the same cause, so the session
+        // ends where it began — `paused(cause: .globalPause)` followed by
+        // `resumed(cause: .globalPause)` nets to nothing, which is precisely the property the
+        // cause mechanism exists to give.
+        let wasRunning = host.isRunning
+        if !wasRunning { host.resume() }
+
+        let before = host.liveObserverCount
+        let audioBefore = host.audioListenerCount
+        host.pause()
+        let afterPause = host.liveObserverCount
+        let audioAfterPause = host.audioListenerCount
+        let cameraAfterPause = host.cameraListenersInstalled
+        host.resume()
+        let afterResume = host.liveObserverCount
+
+        report["wasRunningBeforeProbe"] = wasRunning
+        report["liveObserverCount"] = before
+        report["liveObserverCountAfterPause"] = afterPause
+        report["liveObserverCountAfterResume"] = afterResume
+        report["audioListenerCountBeforePause"] = audioBefore
+        report["audioListenerCountAfterPause"] = audioAfterPause
+        report["cameraListenersInstalledAfterPause"] = cameraAfterPause
+
+        // Input and output counted separately, because the microphone verdict is computed from
+        // inputs alone: an *output* device flipped to running merely because `say` was speaking
+        // (probe P-96), and treating that as a call would be the false positive the Court warned
+        // about.
+        report["media"] = [
+            "inputDeviceCount": host.audioInputDeviceCount,
+            "outputDeviceCount": host.audioOutputDeviceCount,
+            "microphoneRunning": host.mediaActivity.microphoneRunning,
+            "audioListenerCount": host.audioListenerCount,
+            // Pinned, on every rig, camera or not. What is asserted is that the held path was
+            // never *entered* — not an accident of this Mac having no camera (P-97/P-104).
+            "cameraRunning": host.mediaActivity.cameraRunning,
+            "cameraState": CapabilityState.unavailable.rawValue,
+            "cameraReason": host.cameraUnavailableReason.rawValue,
+            "cameraDeviceCount": host.cameraDeviceCount,
+            "cameraListenersInstalled": host.cameraListenersInstalled
+        ]
+
+        if !wasRunning { host.stop() }
+
+        return report
+    }
+
+    /// All twelve capabilities with the state the app itself computed — not a second probe run
+    /// for the occasion, which would describe something the person never gets.
+    @MainActor
+    static func capabilityReport() -> [[String: Any]] {
+        AppComposition.shared.sensingHost.capabilities.allStates.map { entry in
+            [
+                "capability": entry.capability.rawValue,
+                "state": entry.state.rawValue
+            ]
+        }
+    }
+
+    /// **The gateable form of "the app never triggers a permission prompt".**
+    ///
+    /// Probe P-95's technique (c), run on the shipped build: enumerate the owners of every
+    /// on-screen window — which needs no grant, and which is measured to need none — and look
+    /// for the processes macOS puts an authorisation dialog on the screen through. The list is
+    /// asserted **empty** while the app runs.
+    ///
+    /// It goes through `SystemWindowList` and `WindowMetadataReader.decode`, which are the only
+    /// route in this programme to `CGWindowListCopyWindowInfo` and which decode seven keys, none
+    /// of them a window name. There is no way to reach a title from here even by accident.
+    @MainActor
+    static func authorisationSurfaceReport() -> (suspects: [String], owners: [String]) {
+        let rows = WindowMetadataReader.decode(SystemWindowList().copyWindowInfo())
+        let owners = Array(Set(rows.map(\.ownerName))).sorted()
+        let suspects = owners.filter { owner in
+            authorisationSurfaceOwners.contains { owner.localizedCaseInsensitiveContains($0) }
+        }
+        return (suspects, owners)
+    }
+
+    /// The processes an authorisation dialog belongs to, named one by one.
+    ///
+    /// Straight from probe P-95(c): the same six the zero-grant instrument watched for while the
+    /// media path was exercised, and found none of, before or after.
+    static let authorisationSurfaceOwners: [String] = [
+        "UserNotificationCenter",
+        "SecurityAgent",
+        "universalAccessAuthWarn",
+        "tccd",
+        "TCCAgent",
+        "CoreAuthUI"
+    ]
 
     // MARK: - e02 · the URL type (F-142)
 
@@ -538,6 +768,154 @@ enum SelfCheck {
         }
     }
 
+    // MARK: - e03 · the two-launch reconciliation proof (F-97, R-46)
+
+    /// Write a session back-dated ninety minutes into a store of its own, and say what the
+    /// world looked like while doing it.
+    ///
+    /// ## Why the anchor is back-dated too, and by exactly the same amount
+    ///
+    /// The persisted anchor is `mach_continuous_time` seconds since boot, and the reconciler
+    /// compares wall-clock elapsed against uptime elapsed for the current phase. A session whose
+    /// wall clock says ninety minutes and whose anchor says *now* would differ by 5 400 s and
+    /// would raise `.clockAnomaly` — an anomaly this fixture manufactured rather than one the
+    /// world produced. Moving both by the same amount models what actually happened on a Mac
+    /// that was up ninety minutes ago: wall and uptime advance **together**, the drift is zero,
+    /// and the only note the restoring launch raises is the one it is supposed to
+    /// (`restoredStale`).
+    ///
+    /// A separate container at a path the caller chose, so this can never touch the person's own
+    /// store. `SessionStore.start` is called through injected clocks rather than the system
+    /// ones, which is the same seam every unit test uses.
+    @MainActor
+    static func seedSessionReport(storePath: String) throws -> [String: Any] {
+        let container = try FocusStore.makeContainer(kind: .temporary(URL(fileURLWithPath: storePath)))
+        let context = ModelContext(container)
+
+        let uptimeClock = SystemUptimeClock()
+        let bootIdentity = BootIdentity.current()
+        let wallNow = Date()
+        let uptimeNow = uptimeClock.uptimeSeconds
+        let startedAt = wallNow.addingTimeInterval(-seedBackdateSeconds)
+
+        let store = SessionStore(
+            context: context,
+            dateProvider: FixedDateProvider(now: startedAt),
+            uptimeClock: TestUptimeClock(uptimeSeconds: uptimeNow - seedBackdateSeconds),
+            bootIdentity: bootIdentity
+        )
+        let sessionID = try store.start(kind: .openEnded)
+
+        return [
+            "mode": "seed",
+            "store": storePath,
+            "sessionID": sessionID.uuidString,
+            // ISO-8601 with fractional seconds, so "byte-identical `startedAt`" is a string
+            // comparison the checker can make rather than a float it has to round.
+            "startedAt": iso8601(startedAt),
+            "backdatedSeconds": seedBackdateSeconds,
+            "phase": SessionPhase.focus.rawValue,
+            "bootIdentity": bootIdentity,
+            "uptimeSeconds": uptimeNow,
+            "wallSeconds": wallNow.timeIntervalSince1970
+        ]
+    }
+
+    /// Open the store the seeding launch wrote, reconcile it, and report every figure §4.6
+    /// asserts on.
+    ///
+    /// This is the **only** place the anchor's cross-process comparability can be proved: a unit
+    /// test cannot span two processes, and a value that reset per process — which
+    /// `MonotonicClock.elapsed` and `ContinuousClock.Instant` both do — would sail through one
+    /// and fail here (probes P-105/P-106).
+    ///
+    /// No timer is started by any of this, because there is none to start.
+    @MainActor
+    static func restoreSessionReport(storePath: String) throws -> [String: Any] {
+        let container = try FocusStore.makeContainer(kind: .temporary(URL(fileURLWithPath: storePath)))
+        let context = ModelContext(container)
+
+        let uptimeClock = SystemUptimeClock()
+        let bootIdentity = BootIdentity.current()
+        let wallNow = Date()
+        let uptimeNow = uptimeClock.uptimeSeconds
+
+        let store = SessionStore(
+            context: context,
+            dateProvider: SystemDateProvider(),
+            uptimeClock: uptimeClock,
+            bootIdentity: bootIdentity
+        )
+
+        var report: [String: Any] = [
+            "mode": "restore",
+            "store": storePath,
+            "bootIdentity": bootIdentity,
+            "uptimeSeconds": uptimeNow,
+            "wallSeconds": wallNow.timeIntervalSince1970
+        ]
+
+        guard let restored = try store.restore() else {
+            report["restored"] = false
+            return report
+        }
+
+        report["restored"] = true
+        report["sessionID"] = restored.sessionID.uuidString
+        report["startedAt"] = iso8601(restored.startedAt)
+        report["elapsedWallSeconds"] = restored.elapsedWallSeconds
+        report["phase"] = restored.phase.rawValue
+        report["pauseCauses"] = restored.pauseCauses.sorted().map(\.rawValue)
+        report["resumeTo"] = restored.resumeTo?.rawValue ?? ""
+        report["notes"] = restored.notes.map(\.rawValue).sorted()
+        report["driftSeconds"] = restored.driftSeconds ?? -1
+        return report
+    }
+
+    /// The local timeline, exported as JSON for the live evidence lane to read.
+    ///
+    /// It carries only what a `NormalisedDetail` can hold — closed-vocabulary tokens, numbers,
+    /// bundle identifiers and timestamps — because there is no `NormalisedDetail(String)` and
+    /// therefore no route by which a window title, a URL or a document name could be in it.
+    @MainActor
+    static func exportEvents(to path: String) throws {
+        let data = try AppComposition.shared.eventStore.exportJSON()
+        try data.write(to: URL(fileURLWithPath: path), options: .atomic)
+    }
+
+    /// One format, fixed, for every timestamp this report carries.
+    ///
+    /// Built per call rather than held as a shared instance: `ISO8601DateFormatter` is a class
+    /// with mutable options and is not `Sendable`, and a static one would be a shared mutable
+    /// object under Swift 6's checking. Formatting a handful of dates costs nothing.
+    static func iso8601(_ date: Date) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter.string(from: date)
+    }
+
+    /// Run one of the headless modes and exit.
+    ///
+    /// Headless in the sense that matters: nothing here waits for the app to come forward, reads
+    /// a menu or touches a window, because none of these claims is about the shell. That is also
+    /// what makes the two-launch proof cheap enough to be a gate step.
+    @MainActor
+    static func runModeAndTerminate(writingTo path: String, body: () throws -> [String: Any]) {
+        do {
+            let data = try JSONSerialization.data(
+                withJSONObject: body(),
+                options: [.prettyPrinted, .sortedKeys]
+            )
+            try data.write(to: URL(fileURLWithPath: path), options: .atomic)
+            print("SELF-CHECK WROTE \(path)")
+            fflush(stdout)
+            NSApp.terminate(nil)
+        } catch {
+            FileHandle.standardError.write(Data("SELF-CHECK FAILED: \(error)\n".utf8))
+            exit(70)
+        }
+    }
+
     // MARK: - Running it
 
     @MainActor
@@ -573,6 +951,29 @@ enum SelfCheck {
 final class FocusAppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         guard let path = SelfCheck.requestedOutputPath else { return }
+
+        // The headless modes first. None of them has anything to say about the shell, so none of
+        // them waits to come forward — which is what makes the two-launch reconciliation proof
+        // cheap enough to be a gate step rather than an evidence lane.
+        if let store = SelfCheck.requestedSeedStorePath {
+            SelfCheck.runModeAndTerminate(writingTo: path) {
+                try SelfCheck.seedSessionReport(storePath: store)
+            }
+            return
+        }
+        if let store = SelfCheck.requestedRestoreStorePath {
+            SelfCheck.runModeAndTerminate(writingTo: path) {
+                try SelfCheck.restoreSessionReport(storePath: store)
+            }
+            return
+        }
+        if let export = SelfCheck.requestedEventExportPath {
+            SelfCheck.runModeAndTerminate(writingTo: path) {
+                try SelfCheck.exportEvents(to: export)
+                return ["mode": "export", "events": export]
+            }
+            return
+        }
 
         // Bring the app forward, for the length of the check and only in this mode, and do not
         // read a single thing about the shell until it really is forward.

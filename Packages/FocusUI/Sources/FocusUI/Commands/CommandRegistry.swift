@@ -174,11 +174,12 @@ public struct CommandRegistry: Sendable, Equatable {
     ///
     /// e03 adds four more, all real:
     ///
-    /// * **Start Session ⌃⌘S**, **Pause Session ⌃⌘P** and **Finish Session ⌃⌘E.** Session verbs
+    /// * **Start Session ⌃⌘S**, **Pause Session ⌃⌘P** and **Finish Session ⌃⌘F.** Session verbs
     ///   the cockpit's own controls also offer, reached from anywhere.
-    /// * **Pause Watching ⇧⌘W.** F-119's global switch. Deliberately outside the ⌃⌘ family the
-    ///   session verbs use: pausing the session and pausing the watching are different acts, and
-    ///   ⌃⌘P beside ⌃⌘⇧P would have been two shortcuts a person could not keep apart.
+    /// * **Pause Watching ⌃⌘E.** F-119's global switch. It is *not* ⇧⌘W, which is what it was
+    ///   first bound to: the self-check measured a plain ⌘W reaching that item and flipping the
+    ///   stored switch on three consecutive runs, so the app would have been quietly taking
+    ///   ⌘W away from the person.
     ///
     /// `Complete Priority` reuses the cockpit button's own title key rather than declaring a
     /// second one: the menu item and the button are the same action, and two keys reading
@@ -206,12 +207,19 @@ public struct CommandRegistry: Sendable, Equatable {
             placement: .file,
             effect: .priority(.completePriority)
         ),
-        // The four e03 verbs. All four are ⌃⌘ combinations rather than plain ⌘ ones, for the
-        // reason `priority.complete` already gives: this window is full of text fields, and a
-        // session verb one modifier away from typing is a session verb somebody will trigger by
-        // accident. ⇧⌘W for the watching switch keeps it out of the session family entirely,
-        // because pausing the session and pausing the watching are different acts and a person
-        // must never confuse the two shortcuts.
+        // The four e03 verbs, all ⌃⌘ combinations rather than plain ⌘ ones, for the reason
+        // `priority.complete` already gives: this window is full of text fields, and a session
+        // verb one modifier away from typing is a session verb somebody will trigger by
+        // accident.
+        //
+        // **Pause Watching was ⇧⌘W and is not, and the reason is measured.** The app's own
+        // `--focus-self-check` hands `NSApp.mainMenu` a synthesised ⌘W and reports what the menu
+        // bar claimed. With Pause Watching on ⇧⌘W, three consecutive runs came back with the
+        // stored watching switch flipped every time — a plain ⌘W was reaching the shifted item
+        // as well as Close Window. An app that takes ⌘W away from a person because it wanted a
+        // nearby shortcut is exactly the HIG defect the Court's review of the File menu was
+        // about, so the base character moved off `w` entirely rather than the modifier being
+        // adjusted. No two actions in this registry now share a base character.
         ShellAction(
             id: "session.start",
             titleKey: .sessionActionStart,
@@ -229,14 +237,14 @@ public struct CommandRegistry: Sendable, Equatable {
         ShellAction(
             id: "session.complete",
             titleKey: .sessionActionComplete,
-            shortcut: Shortcut("e", modifiers: [.control, .command]),
+            shortcut: Shortcut("f", modifiers: [.control, .command]),
             placement: .file,
             effect: .priority(.completeSession)
         ),
         ShellAction(
             id: "sensing.pause",
             titleKey: .commandPauseSensing,
-            shortcut: Shortcut("w", modifiers: [.shift, .command]),
+            shortcut: Shortcut("e", modifiers: [.control, .command]),
             placement: .file,
             effect: .priority(.pauseSensing)
         ),
