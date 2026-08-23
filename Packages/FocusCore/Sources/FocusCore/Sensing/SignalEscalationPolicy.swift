@@ -40,10 +40,20 @@ public enum SignalTier: String, Sendable, CaseIterable, Codable, Hashable, Compa
 
 /// What one tier's evidence produced.
 ///
-/// `FocusClassify` owns the real `Verdict`; `FocusCore` may not import it, and does not need
-/// to. What the policy needs is the distinction between **a decision** and **no decision**,
-/// and that is what this carries.
-public enum ClassificationOutcome: String, Sendable, CaseIterable, Codable, Hashable {
+/// This is the outcome of **consulting one signal tier**, which is what the name says and
+/// what the policy needs: the distinction between *a decision* and *no decision*. It is not
+/// the classifier's conclusion — that is `ClassificationOutcome`, which carries a `Verdict`,
+/// a source and an evidence band, and which lives beside it in `FocusCore/Relevance/` from
+/// e04 onward.
+///
+/// ## Why it was renamed
+///
+/// e03 shipped this type as `ClassificationOutcome`, and e01 had already shipped a *different*
+/// public `ClassificationOutcome` in `FocusClassify`. Two public types with one name in two
+/// packages that `App/` imports together is a resolution hazard that nothing had tripped
+/// because no file had yet needed both vocabularies (probe P-123). e04 is the first epic in
+/// which one does, so the rename lands before any new code is written (R-53).
+public enum SignalOutcome: String, Sendable, CaseIterable, Codable, Hashable {
     case relevant
     case unrelated
     /// There is not enough evidence to say. **This is a decision** — the decision to say
@@ -92,7 +102,7 @@ public struct SignalEscalationPolicy: Sendable {
     ///   compile.
     public func nextSignal(
         after tier: SignalTier,
-        given outcome: ClassificationOutcome,
+        given outcome: SignalOutcome,
         capabilities: CapabilityMatrix
     ) -> SignalTier? {
         guard !outcome.isDecision else { return nil }

@@ -347,6 +347,38 @@ final class SensingHost {
         )
     }
 
+    /// What the relevance engine is allowed to be told about right now (F-03, e04).
+    ///
+    /// Read **through the gate**, like every other deeper answer this host gives, so a sensitive
+    /// application reaches the engine as an activation carrying no subject at all. That is
+    /// adversarial family 6 in the shipping path rather than only in the corpus: *"we did not
+    /// look"* must never become *"you are distracted"*, and the way to guarantee it is to hand
+    /// the engine nothing rather than to remember to ignore something.
+    ///
+    /// An unbundled process is suppressed by the gate for its own reason (`SensitiveReason
+    /// .unbundled`) and is reported separately here, because a stand-down and an unidentifiable
+    /// helper are different facts about the person's screen even though the engine's answer to
+    /// both is `uncertain`.
+    ///
+    /// Nothing deeper is read. There is no origin and no title in this value because there is
+    /// none in this epic: `ClassificationInput.origin` and `.titleTokens` are exercised by the
+    /// golden corpus and empty in every shipping path here, and e07 is what turns them on.
+    var judgeableSubject: JudgeableSubject {
+        guard let current = activity.current else { return .none }
+        switch gate.evaluate(current) {
+        case .suppressed(let reason):
+            return JudgeableSubject(
+                bundleIdentifier: nil,
+                isSuppressed: reason != .unbundled
+            )
+        case .cleared(let cleared):
+            return JudgeableSubject(
+                bundleIdentifier: cleared.bundleIdentifier,
+                isSuppressed: false
+            )
+        }
+    }
+
     /// The frontmost application, if the gate cleared it. `nil` is the honest answer for a
     /// sensitive application: there is nothing deeper to say about it, on purpose.
     private func clearedFrontmost() -> ClearedActivation? {

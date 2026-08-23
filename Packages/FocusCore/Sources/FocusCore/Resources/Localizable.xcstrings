@@ -1,6 +1,534 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "cascade.precedence.footnote" : {
+      "comment" : "Footnote under the precedence ladder.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your own rules always win. Focus never overrules something you told it."
+          }
+        }
+      }
+    },
+    "cascade.precedence.heading" : {
+      "comment" : "Heading of the Settings pane that lists the precedence ladder in order.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How Focus decides"
+          }
+        }
+      }
+    },
+    "cascade.rung.contextPack" : {
+      "comment" : "Precedence pane row: an app, site, keyword or file attached to this priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Context you attached"
+          }
+        }
+      }
+    },
+    "cascade.rung.globalRule" : {
+      "comment" : "Precedence pane row: a rule the user scoped to no particular priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rule for everything"
+          }
+        }
+      }
+    },
+    "cascade.rung.heuristic" : {
+      "comment" : "Precedence pane row: the on-device deterministic heuristic — tokens, similarity and dwell.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "What the words have in common"
+          }
+        }
+      }
+    },
+    "cascade.rung.onDeviceModel" : {
+      "comment" : "Precedence pane row: the on-device model. Declared here so its placement below every rule is visible; it is not part of this version.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On-device model"
+          }
+        }
+      }
+    },
+    "cascade.rung.seedFallback" : {
+      "comment" : "Precedence pane row: a bundled default for a mixed-use app, which always declines to decide.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Built-in ‘ask each time’"
+          }
+        }
+      }
+    },
+    "cascade.rung.seedRule" : {
+      "comment" : "Precedence pane row: a decisive default this app ships, overridable in one click.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Built-in default"
+          }
+        }
+      }
+    },
+    "cascade.rung.sessionRule" : {
+      "comment" : "Precedence pane row: a rule that lasts until the current focus session ends.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rule for this session"
+          }
+        }
+      }
+    },
+    "cascade.rung.taskRule" : {
+      "comment" : "Precedence pane row: a rule the user scoped to the current priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rule for this priority"
+          }
+        }
+      }
+    },
+    "cascade.rung.unavailable" : {
+      "comment" : "Caption drawn beside a precedence row this build cannot consult.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not in this version"
+          }
+        }
+      }
+    },
+    "cascade.rung.unresolved" : {
+      "comment" : "Precedence pane row: the last rung, where the app has nothing to go on and says so.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing matched"
+          }
+        }
+      }
+    },
+    "evidence.band.high" : {
+      "comment" : "Label for the highest evidence band: you said so, or something you attached matched exactly.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Strong"
+          }
+        }
+      }
+    },
+    "evidence.band.low" : {
+      "comment" : "Label for the lowest evidence band. A band this weak can never cause an interruption.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Weak"
+          }
+        }
+      }
+    },
+    "evidence.band.medium" : {
+      "comment" : "Label for the middle evidence band.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fair"
+          }
+        }
+      }
+    },
+    "explanation.clause.conflictingRules" : {
+      "comment" : "Explanation clause: two rules of equal authority and narrowness contradict each other.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "two of your rules disagree"
+          }
+        }
+      }
+    },
+    "explanation.clause.contextItem" : {
+      "comment" : "Explanation clause: the answer came from the priority's context pack.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "something you attached to this priority"
+          }
+        }
+      }
+    },
+    "explanation.clause.insufficientEvidence" : {
+      "comment" : "Explanation clause: the engine declined, and the named reason says which route it took.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "not enough to go on"
+          }
+        }
+      }
+    },
+    "explanation.clause.languageNotSupported" : {
+      "comment" : "Explanation clause: no embedding exists for this language on this Mac.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus can only compare wording in English"
+          }
+        }
+      }
+    },
+    "explanation.clause.mixedSubjects" : {
+      "comment" : "Explanation clause: drift accumulated across more than one subject, so none is named.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "several unrelated apps"
+          }
+        }
+      }
+    },
+    "explanation.clause.noNegativeBasis" : {
+      "comment" : "Explanation clause: the priority names no app or site, so an absence means nothing. The only clause whose copy carries an ask.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tell Focus one app or site you expect to be in, and it can tell this apart from your work."
+          }
+        }
+      }
+    },
+    "explanation.clause.returnedToAnchor" : {
+      "comment" : "Explanation clause: the person returned to the subject they were working in.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "you went back to it"
+          }
+        }
+      }
+    },
+    "explanation.clause.seedDefault" : {
+      "comment" : "Explanation clause: the answer came from a bundled default, overridable in one click.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "a default Focus ships"
+          }
+        }
+      }
+    },
+    "explanation.clause.seedFallbackMixedUse" : {
+      "comment" : "Explanation clause: a bundled ‘ask each time’ default for a mixed-use application.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "this app is used for all sorts of things"
+          }
+        }
+      }
+    },
+    "explanation.clause.similarityCorroborated" : {
+      "comment" : "Explanation clause: the on-device sentence-similarity signal agreed. No number is ever shown.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "the wording lines up"
+          }
+        }
+      }
+    },
+    "explanation.clause.sustainedDwell" : {
+      "comment" : "Explanation clause: drift has been sustained past the threshold.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "you have been here a while"
+          }
+        }
+      }
+    },
+    "explanation.clause.tokenOverlap" : {
+      "comment" : "Explanation clause: the priority and what is on screen share these words.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "words in common with your priority"
+          }
+        }
+      }
+    },
+    "explanation.clause.userRule" : {
+      "comment" : "Explanation clause: the answer came from a rule the user authored.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "a rule you wrote"
+          }
+        }
+      }
+    },
+    "explanation.stage.contextPack" : {
+      "comment" : "Explanation phrase naming the rung that decided.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "context you attached to this priority"
+          }
+        }
+      }
+    },
+    "explanation.stage.globalRule" : {
+      "comment" : "Explanation phrase naming the rung that decided.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "a rule you set"
+          }
+        }
+      }
+    },
+    "explanation.stage.heuristic" : {
+      "comment" : "Explanation phrase naming the rung that decided.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "what this has in common with your priority"
+          }
+        }
+      }
+    },
+    "explanation.stage.onDeviceModel" : {
+      "comment" : "Explanation phrase naming the rung that decided. Unreachable in this version; declared so the vocabulary is total.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "the on-device model"
+          }
+        }
+      }
+    },
+    "explanation.stage.seedFallback" : {
+      "comment" : "Explanation phrase naming the rung that decided.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "a built-in ‘ask each time’ default"
+          }
+        }
+      }
+    },
+    "explanation.stage.seedRule" : {
+      "comment" : "Explanation phrase naming the rung that decided.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "a built-in default"
+          }
+        }
+      }
+    },
+    "explanation.stage.sessionRule" : {
+      "comment" : "Explanation phrase naming the rung that decided.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "a rule you set for this session"
+          }
+        }
+      }
+    },
+    "explanation.stage.taskRule" : {
+      "comment" : "Explanation phrase naming the rung that decided.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "a rule you set for this priority"
+          }
+        }
+      }
+    },
+    "explanation.stage.unresolved" : {
+      "comment" : "Explanation phrase naming the rung that decided.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nothing that could decide"
+          }
+        }
+      }
+    },
+    "rule.authority.global" : {
+      "comment" : "Label for a rule scoped to no particular priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Everything"
+          }
+        }
+      }
+    },
+    "rule.authority.session" : {
+      "comment" : "Label for a rule that lasts until the current focus session ends.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This session"
+          }
+        }
+      }
+    },
+    "rule.authority.task" : {
+      "comment" : "Label for a rule scoped to the current priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This priority"
+          }
+        }
+      }
+    },
+    "rule.disposition.alwaysDistracting" : {
+      "comment" : "Per-app disposition: this app never supports the priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Always distracting"
+          }
+        }
+      }
+    },
+    "rule.disposition.alwaysRelevant" : {
+      "comment" : "Per-app disposition: this app always supports the priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Always relevant"
+          }
+        }
+      }
+    },
+    "rule.disposition.askEachTime" : {
+      "comment" : "Per-app disposition: Focus declines to decide and offers a one-click rule instead.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ask each time"
+          }
+        }
+      }
+    },
+    "rule.disposition.interpretByContext" : {
+      "comment" : "Per-app disposition: no rule at all, so Focus works it out from the priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Judge by context"
+          }
+        }
+      }
+    },
     "status.break.short" : {
       "comment" : "Short status label: the user is on a deliberate break.",
       "extractionState" : "manual",
@@ -57,6 +585,114 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Unrelated"
+          }
+        }
+      }
+    },
+    "suppression.reason.evidenceBandTooLow" : {
+      "comment" : "Shown in the verdict inspector: the evidence was below the band an interruption needs.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "There isn’t enough to go on."
+          }
+        }
+      }
+    },
+    "suppression.reason.noActivePriority" : {
+      "comment" : "Shown in the verdict inspector: nothing has been committed to.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "There’s no priority to be away from."
+          }
+        }
+      }
+    },
+    "suppression.reason.sessionPhaseForbids" : {
+      "comment" : "Shown in the verdict inspector: the session is not in its focus phase.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You’re on a break."
+          }
+        }
+      }
+    },
+    "suppression.reason.statusForbids" : {
+      "comment" : "Shown in the verdict inspector: the overall status does not permit an interruption.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing is off track."
+          }
+        }
+      }
+    },
+    "suppression.reason.userIdle" : {
+      "comment" : "Shown in the verdict inspector: the hardware idle source says nobody is there.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You’re away from the keyboard."
+          }
+        }
+      }
+    },
+    "suppression.reason.verdictRelevant" : {
+      "comment" : "Shown in the verdict inspector: the app stayed silent because the context supports the priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This looks like the work."
+          }
+        }
+      }
+    },
+    "suppression.reason.verdictUncertain" : {
+      "comment" : "Shown in the verdict inspector: the app stayed silent because it declined to decide.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus isn’t sure, so it says nothing."
+          }
+        }
+      }
+    },
+    "suppression.reason.withinGracePeriod" : {
+      "comment" : "Shown in the verdict inspector: drift has not been sustained long enough.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A short detour isn’t drift."
+          }
+        }
+      }
+    },
+    "suppression.reason.withinMandateCooldown" : {
+      "comment" : "Shown in the verdict inspector: the engine already said this about this subject.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus mentioned this recently."
           }
         }
       }

@@ -29,7 +29,34 @@
 #
 # Both extra launches are headless: they never come forward, never read a menu and never touch
 # a window, so they cost about a second between them.
+# ## e04: the third leg of the three-way engine agreement (plan R-75.4)
+#
+# The unit lane asserts `EngineStamp.current.cacheKey` and `RelevancePolicy.digest` of the
+# **test process**; gate stage 7d asserts the same two literals of the **evaluation report**;
+# and this script asserts them of the **running application**, on both configurations. Three
+# legs, one set of committed literals — and the literals are *read out of the one place they
+# are written down* rather than restated here, because a third copy of a string is a third
+# thing to keep in sync by hand.
 set -u
+
+REPO_ROOT="${0:A:h}/.."
+
+# The value of `static let <name>` in a committed source file, with Swift's digit separators
+# and quotes stripped. A missing literal is an empty string, and the assertion below fails on
+# it by name rather than passing vacuously.
+committed_literal() {
+    local file="$1" name="$2" line
+    line=$(grep -E "static let ${name}\b" "$REPO_ROOT/$file" 2>/dev/null | head -1)
+    [[ -n "$line" ]] || return 0
+    print -r -- "${${line#*= }//[\"_ ]/}"
+}
+
+COMMITTED_STAMP=$(committed_literal \
+    "Packages/FocusCore/Tests/FocusCoreTests/EngineStampTests.swift" \
+    "committedRuntimeCacheKey")
+COMMITTED_DIGEST=$(committed_literal \
+    "Packages/FocusCore/Tests/FocusCoreTests/RelevancePolicyTests.swift" \
+    "committedDigest")
 
 APP="${1:-}"
 if [[ -z "$APP" ]]; then
@@ -112,7 +139,7 @@ fi
 
 print
 print "== assertions"
-python3 - "$OUT" "$SEED_JSON" "$RESTORE_JSON" <<'PYTHON'
+python3 - "$OUT" "$SEED_JSON" "$RESTORE_JSON" "$COMMITTED_STAMP" "$COMMITTED_DIGEST" <<'PYTHON'
 import json
 import sys
 
@@ -123,6 +150,8 @@ with open(sys.argv[2]) as handle:
     seed = json.load(handle)
 with open(sys.argv[3]) as handle:
     restore = json.load(handle)
+committed_stamp = sys.argv[4]
+committed_digest = sys.argv[5]
 
 failures = []
 
@@ -806,6 +835,84 @@ check(
     (uptime_delta, wall_delta),
 )
 print(f"note uptime delta {uptime_delta:.6f} s against a wall delta of {wall_delta:.6f} s")
+
+# --- e04: the relevance engine, as the running application reports it ----------------------
+#
+# The stamp and the policy digest are the third leg of R-75.4. They are compared against the
+# literals read out of `EngineStampTests` and `RelevancePolicyTests` — the one place they are
+# written down — so a build whose thresholds moved without a version bump fails here as well
+# as in the unit lane and in the evaluation stage.
+
+relevance = report.get("relevance") or {}
+
+check(
+    bool(committed_stamp),
+    "the committed engine stamp was found in EngineStampTests",
+    committed_stamp,
+)
+check(
+    bool(committed_digest),
+    "the committed policy digest was found in RelevancePolicyTests",
+    committed_digest,
+)
+check(
+    report.get("engineStamp") == committed_stamp,
+    f"the running application stamps {committed_stamp}",
+    report.get("engineStamp"),
+)
+check(
+    report.get("policyDigest") == committed_digest,
+    f"the running application's policy digest is {committed_digest}",
+    report.get("policyDigest"),
+)
+
+# The seam and the inspector are one object. Two would be two drift accumulators, and the
+# verdict a person reads would not be the answer anything else in the app was given.
+check(
+    relevance.get("classifierIsEngine") is True,
+    "the RelevanceClassifier the composition root publishes IS the engine",
+    relevance.get("classifierIsEngine"),
+)
+
+# The snapshot was really built — the four-invalidation contract fired at least once at
+# launch — and it was built under the policy this build is running.
+check(
+    (relevance.get("snapshotBuildCount") or 0) >= 1,
+    "the rule snapshot was built at least once",
+    relevance.get("snapshotBuildCount"),
+)
+check(
+    relevance.get("snapshotMatchesRunningPolicy") is True,
+    "the snapshot was built under the policy this build is running",
+    relevance.get("snapshotMatchesRunningPolicy"),
+)
+
+# The engine RAN, in this process, at zero grants. A stamp alone would only prove it was
+# constructed.
+check(
+    (relevance.get("judgementCount") or 0) >= 1,
+    "the engine judged at least once during the self-check",
+    relevance.get("judgementCount"),
+)
+
+# **Nothing may be mandated here.** There is no nudge in this build to consume a mandate, and
+# a self-check that reported one would be reporting an intervention nobody can see. The
+# stronger half is structural and lives in the 4 320-combination invariant test; this is the
+# observation that the shipping path agrees with it.
+verdict = relevance.get("verdict") or {}
+check(
+    verdict.get("isMandated") in (False, None),
+    "the running application mandates no intervention (the nudge is e05's)",
+    verdict.get("isMandated"),
+)
+
+# R-72.2: nothing in e04 writes a session rule, so the box is empty on a launch that has
+# judged things. e05 adds the affordance; this is the record that it has not arrived early.
+check(
+    relevance.get("sessionRuleCount") == 0,
+    "the session rule box is empty — nothing in this epic writes to it",
+    relevance.get("sessionRuleCount"),
+)
 
 # ------------------------------------------------------------------------------------------
 

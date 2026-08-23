@@ -1,0 +1,61 @@
+{
+  "id": "seq-0016",
+  "note": "The heuristic absence route across a real afternoon, with no rule and no seed involved — only a context identity, a spreadsheet the priority never names, and the clock. Worth committing because the timing is not the one a reader expects: the verdict only becomes unrelated once the dwell itself passes ninety seconds, and the drift accumulator only starts counting from THAT observation, so the first thing the app says arrives a little over three minutes in. Conservative twice over, and deliberately so.",
+  "snapshot": {
+    "priority": {
+      "intent": "Write the Q3 proposal for Acme",
+      "doneWhen": "sent to Dana",
+      "revision": 1
+    },
+    "contextPack": [
+      {
+        "kind": "app",
+        "value": "com.apple.Pages"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "advanceSeconds": 0,
+      "bundleID": "com.microsoft.Excel",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "stage": "heuristic",
+        "eligibility": "suppressed:verdictUncertain",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 100,
+      "bundleID": "com.microsoft.Excel",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "heuristic",
+        "band": "medium",
+        "eligibility": "suppressed:withinGracePeriod",
+        "clauses": [
+          "sustainedDwell"
+        ],
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 100,
+      "bundleID": "com.microsoft.Excel",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "sustained",
+        "stage": "heuristic",
+        "band": "medium",
+        "eligibility": "mandated",
+        "clauses": [
+          "sustainedDwell"
+        ],
+        "accumulatedSeconds": 100
+      }
+    }
+  ],
+  "expectMandates": 1
+}

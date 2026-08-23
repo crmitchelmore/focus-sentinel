@@ -1,0 +1,553 @@
+{
+  "id": "seq-0018",
+  "note": "R-61's invariant under the stream the app actually produces: the transition window may only ever EXTEND the threshold, never shorten it. The host judges on every accepted activation and on e03's five-second corroboration tick, so a 180-second lookBackSpan holds around thirty-six observations whenever somebody stays anywhere for three minutes - past maximumLookBackEvents, and the first observation a plain drop-the-oldest bound discards is the relevant one the detour began from. That inverts D-05's own worked example: the effective threshold collapses from 180 seconds to 90, the accumulator is already past 90, and the app nudges a person for a detour it had already accepted. Here Xcode's stand-in holds for thirty-five seconds - past returnAnchorDwell - and then a hundred and thirty-two seconds of documentation accumulate across thirty-three ticks. Thirty-five observations, the count bound biting from step 32 onward, and NO mandate at any step, because the anchor is retained past the bound.",
+  "snapshot": {
+    "priority": {
+      "intent": "Write the Q3 proposal for Acme",
+      "doneWhen": "sent to Dana",
+      "revision": 1
+    },
+    "contextPack": [
+      {
+        "kind": "app",
+        "value": "com.apple.Pages"
+      }
+    ],
+    "rules": [
+      {
+        "authority": "global",
+        "subjectKind": "app",
+        "subject": "com.valvesoftware.steam",
+        "verdict": "unrelated"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "advanceSeconds": 0,
+      "bundleID": "com.apple.Pages",
+      "expect": {
+        "verdict": "relevant",
+        "drift": "aligned",
+        "stage": "contextPack",
+        "band": "high",
+        "eligibility": "suppressed:verdictRelevant",
+        "clauses": [
+          "contextItem"
+        ],
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 35,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:withinGracePeriod",
+        "clauses": [
+          "userRule"
+        ],
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 4,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:withinGracePeriod",
+        "clauses": [
+          "userRule"
+        ],
+        "accumulatedSeconds": 4
+      }
+    },
+    {
+      "advanceSeconds": 4,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:withinGracePeriod",
+        "clauses": [
+          "userRule"
+        ],
+        "accumulatedSeconds": 8
+      }
+    },
+    {
+      "advanceSeconds": 4,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:withinGracePeriod",
+        "clauses": [
+          "userRule"
+        ],
+        "accumulatedSeconds": 12
+      }
+    },
+    {
+      "advanceSeconds": 4,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:withinGracePeriod",
+        "clauses": [
+          "userRule"
+        ],
+        "accumulatedSeconds": 16
+      }
+    },
+    {
+      "advanceSeconds": 4,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:withinGracePeriod",
+        "clauses": [
+          "userRule"
+        ],
+        "accumulatedSeconds": 20
+      }
+    },
+    {
+      "advanceSeconds": 4,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:withinGracePeriod",
+        "clauses": [
+          "userRule"
+        ],
+        "accumulatedSeconds": 24
+      }
+    },
+    {
+      "advanceSeconds": 4,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:withinGracePeriod",
+        "clauses": [
+          "userRule"
+        ],
+        "accumulatedSeconds": 28
+      }
+    },
+    {
+      "advanceSeconds": 4,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:withinGracePeriod",
+        "clauses": [
+          "userRule"
+        ],
+        "accumulatedSeconds": 32
+      }
+    },
+    {
+      "advanceSeconds": 4,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:withinGracePeriod",
+        "clauses": [
+          "userRule"
+        ],
+        "accumulatedSeconds": 36
+      }
+    },
+    {
+      "advanceSeconds": 4,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:withinGracePeriod",
+        "clauses": [
+          "userRule"
+        ],
+        "accumulatedSeconds": 40
+      }
+    },
+    {
+      "advanceSeconds": 4,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:withinGracePeriod",
+        "clauses": [
+          "userRule"
+        ],
+        "accumulatedSeconds": 44
+      }
+    },
+    {
+      "advanceSeconds": 4,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:withinGracePeriod",
+        "clauses": [
+          "userRule"
+        ],
+        "accumulatedSeconds": 48
+      }
+    },
+    {
+      "advanceSeconds": 4,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:withinGracePeriod",
+        "clauses": [
+          "userRule"
+        ],
+        "accumulatedSeconds": 52
+      }
+    },
+    {
+      "advanceSeconds": 4,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:withinGracePeriod",
+        "clauses": [
+          "userRule"
+        ],
+        "accumulatedSeconds": 56
+      }
+    },
+    {
+      "advanceSeconds": 4,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:withinGracePeriod",
+        "clauses": [
+          "userRule"
+        ],
+        "accumulatedSeconds": 60
+      }
+    },
+    {
+      "advanceSeconds": 4,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:withinGracePeriod",
+        "clauses": [
+          "userRule"
+        ],
+        "accumulatedSeconds": 64
+      }
+    },
+    {
+      "advanceSeconds": 4,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:withinGracePeriod",
+        "clauses": [
+          "userRule"
+        ],
+        "accumulatedSeconds": 68
+      }
+    },
+    {
+      "advanceSeconds": 4,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:withinGracePeriod",
+        "clauses": [
+          "userRule"
+        ],
+        "accumulatedSeconds": 72
+      }
+    },
+    {
+      "advanceSeconds": 4,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:withinGracePeriod",
+        "clauses": [
+          "userRule"
+        ],
+        "accumulatedSeconds": 76
+      }
+    },
+    {
+      "advanceSeconds": 4,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:withinGracePeriod",
+        "clauses": [
+          "userRule"
+        ],
+        "accumulatedSeconds": 80
+      }
+    },
+    {
+      "advanceSeconds": 4,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:withinGracePeriod",
+        "clauses": [
+          "userRule"
+        ],
+        "accumulatedSeconds": 84
+      }
+    },
+    {
+      "advanceSeconds": 4,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:withinGracePeriod",
+        "clauses": [
+          "userRule"
+        ],
+        "accumulatedSeconds": 88
+      }
+    },
+    {
+      "advanceSeconds": 4,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:withinGracePeriod",
+        "clauses": [
+          "userRule"
+        ],
+        "accumulatedSeconds": 92
+      }
+    },
+    {
+      "advanceSeconds": 4,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:withinGracePeriod",
+        "clauses": [
+          "userRule"
+        ],
+        "accumulatedSeconds": 96
+      }
+    },
+    {
+      "advanceSeconds": 4,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:withinGracePeriod",
+        "clauses": [
+          "userRule"
+        ],
+        "accumulatedSeconds": 100
+      }
+    },
+    {
+      "advanceSeconds": 4,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:withinGracePeriod",
+        "clauses": [
+          "userRule"
+        ],
+        "accumulatedSeconds": 104
+      }
+    },
+    {
+      "advanceSeconds": 4,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:withinGracePeriod",
+        "clauses": [
+          "userRule"
+        ],
+        "accumulatedSeconds": 108
+      }
+    },
+    {
+      "advanceSeconds": 4,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:withinGracePeriod",
+        "clauses": [
+          "userRule"
+        ],
+        "accumulatedSeconds": 112
+      }
+    },
+    {
+      "advanceSeconds": 4,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:withinGracePeriod",
+        "clauses": [
+          "userRule"
+        ],
+        "accumulatedSeconds": 116
+      }
+    },
+    {
+      "advanceSeconds": 4,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:withinGracePeriod",
+        "clauses": [
+          "userRule"
+        ],
+        "accumulatedSeconds": 120
+      }
+    },
+    {
+      "advanceSeconds": 4,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:withinGracePeriod",
+        "clauses": [
+          "userRule"
+        ],
+        "accumulatedSeconds": 124
+      }
+    },
+    {
+      "advanceSeconds": 4,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:withinGracePeriod",
+        "clauses": [
+          "userRule"
+        ],
+        "accumulatedSeconds": 128
+      }
+    },
+    {
+      "advanceSeconds": 4,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:withinGracePeriod",
+        "clauses": [
+          "userRule"
+        ],
+        "accumulatedSeconds": 132
+      }
+    }
+  ],
+  "expectMandates": 0
+}

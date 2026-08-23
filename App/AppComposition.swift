@@ -92,10 +92,22 @@ final class AppComposition {
     /// unchanged: they read availability and a `CockpitState`, not an implementation.
     let sensingHost: SensingHost
 
-    /// The relevance classifier. In e02 this is still the undecided classifier: it answers
-    /// `uncertain` to everything, and `uncertain` suppresses intervention, so an app built
-    /// on it is structurally incapable of nudging. e04 and e06 replace it behind the same
-    /// seam.
+    /// The relevance runtime: the engine, the snapshot it judges against, and the verdict the
+    /// cockpit and the Privacy pane draw.
+    ///
+    /// **Nothing consumes a mandate in this build.** The nudge is e05's; e04's demonstrable is
+    /// the verdict stream and the restrained explanation beside it.
+    let relevanceHost: RelevanceHost
+
+    /// The relevance classifier. e01 and e02 shipped `UndecidedClassifier` here — it answers
+    /// `uncertain` to everything, and `uncertain` suppresses intervention, so an app built on
+    /// it is structurally incapable of nudging. e04 replaces it with the deterministic engine
+    /// **before any model exists**, which is what makes the charter's *"heuristic fallback
+    /// always present and independently tested"* clause temporally true rather than a promise
+    /// about a later epic.
+    ///
+    /// It is the *same object* `relevanceHost` owns rather than a second one: the answer given
+    /// across the seam and the verdict drawn in the inspector must not be two opinions.
     let classifier: any RelevanceClassifier
 
     /// The rule store. SwiftData-backed from e02, so a rule the user authors in the cockpit
@@ -129,7 +141,6 @@ final class AppComposition {
         calendar: Calendar = .autoupdatingCurrent,
         locale: Locale = .autoupdatingCurrent,
         uptimeClock: any UptimeClock = SystemUptimeClock(),
-        classifier: any RelevanceClassifier = UndecidedClassifier(),
         hotKeyRegistrar: any HotKeyRegistering = CarbonHotKeyRegistrar(),
         ruleStoreOverride: (any RuleStore)? = nil
     ) {
@@ -138,7 +149,6 @@ final class AppComposition {
         self.calendar = calendar
         self.locale = locale
         self.uptimeClock = uptimeClock
-        self.classifier = classifier
         self.hotKeyRegistrar = hotKeyRegistrar
         // Read once, at launch. It cannot change while the process lives — a machine that
         // restarts takes the process with it — so re-reading it would be re-asking a question
@@ -206,15 +216,28 @@ final class AppComposition {
         self.sessionHost = sessions
         self.sensingHost = sensing
 
+        // The engine, warmed at construction. P-116 measured a 59.4 ms cold embedding load and
+        // a further 57 ms for `NaturalLanguage`'s first tagger; both are paid here, off the
+        // classification path, because a stutter that long inside a judgement is a defect a
+        // person can feel.
+        let relevance = RelevanceHost(
+            context: context,
+            ruleStore: self.ruleStore,
+            monotonicClock: monotonicClock
+        )
+        self.relevanceHost = relevance
+        self.classifier = relevance.engine
+
         self.priorityHost = PriorityHost(
             context: context,
             dateProvider: dateProvider,
             calendar: calendar,
             locale: locale,
             environment: PriorityHost.Environment(
-                // Sensing is live from e03, so the honest status is `uncertain` — the app is
-                // observing and the classifier is still `UndecidedClassifier`, which answers
-                // `uncertain` to everything. It is `paused` when the person has the switch off.
+                // Nothing has been judged yet at this point in construction, so `uncertain` is
+                // the honest status: the app is observing and has concluded nothing. It is
+                // `paused` when the person has the switch off. `start()` re-projects once the
+                // engine has actually looked.
                 status: settings.sensingPaused ? .paused : .uncertain,
                 storeIsReady: status.isReady,
                 isObservingActivity: !settings.sensingPaused,
@@ -297,6 +320,22 @@ final class AppComposition {
             self?.refreshCockpit()
         }
 
+        // The relevance lane, joined to the two things that already happen.
+        //
+        // `onSnapshotInvalidated` fires on exactly the four events R-65 names — the priority
+        // changed, its revision changed, a rule was written, a context item moved — and on
+        // nothing else, so the store is read when a person did something rather than every five
+        // seconds. The session-rule closure is the only thing this host may ask the session
+        // host for: `SessionRuleBox` is the sole owner of the session authority (R-72.2), and a
+        // reference to the whole host would be a licence to reach for the rest of it.
+        priorityHost.onSnapshotInvalidated = { [weak self] in
+            self?.relevanceHost.invalidateSnapshot()
+        }
+        relevanceHost.sessionRules = { [weak sessionHost] priorityID in
+            sessionHost?.sessionRules(forPriority: priorityID) ?? []
+        }
+        relevanceHost.invalidateSnapshot()
+
         registerHotKey(storedHotKeySpec())
 
         // Restoration first, so that the graph's first activation is written against the
@@ -353,12 +392,12 @@ final class AppComposition {
     /// The status the cockpit displays.
     ///
     /// `paused` is the truthful answer while nothing is being observed: the app has observed
-    /// nothing and therefore judged nothing. `uncertain` is the truthful answer while it *is* —
-    /// `UndecidedClassifier` is still wired, and it answers `uncertain` to everything, so at
-    /// the end of this epic the app observes everything and judges nothing. Showing `relevant`
-    /// or `unrelated` here would be inventing a verdict.
+    /// nothing and therefore judged nothing. Otherwise it is the engine's own answer — and
+    /// `uncertain` until there has been one, because an app that drew `relevant` before it had
+    /// looked at anything would be inventing a verdict.
     var currentStatus: FocusStatus {
-        sensingHost.isRunning ? .uncertain : .paused
+        guard sensingHost.isRunning else { return .paused }
+        return relevanceHost.verdict?.status ?? .uncertain
     }
 
     /// Whether the platform can supply activation events at all.
@@ -402,6 +441,7 @@ final class AppComposition {
     /// the person happened to press something.
     func refreshCockpit() {
         let snapshot = sessionHost.snapshot
+        judge(in: snapshot)
         priorityHost.update(
             environment: PriorityHost.Environment(
                 status: currentStatus,
@@ -411,8 +451,33 @@ final class AppComposition {
                 sessionElapsedSeconds: snapshot?.elapsedWallSeconds(now: dateProvider.now),
                 lastActiveBundleID: sensingHost.lastForeignBundleIdentifier,
                 sensing: sensingHost.summary,
-                capabilities: sensingHost.capabilities
+                capabilities: sensingHost.capabilities,
+                verdict: relevanceHost.verdict
             )
+        )
+    }
+
+    /// Hand the engine one observation, if there is anything to observe.
+    ///
+    /// Called from `refreshCockpit`, which already runs on every accepted activation **and** on
+    /// e03's five-second corroboration tick — so the drift clock advances between activations
+    /// without this programme acquiring a second timer. An observation at a monotonic reading
+    /// the machine has already seen moves nothing: the drift reducer guards on a positive
+    /// interval.
+    ///
+    /// Nothing is judged while sensing is detached. The person turned observation off, and
+    /// judging what was frontmost when they did would be reporting on a screen nobody is
+    /// watching.
+    private func judge(in session: SessionSnapshot?) {
+        guard sensingHost.isRunning else { return }
+        relevanceHost.observe(
+            sensingHost.judgeableSubject,
+            // No open session is not a break: the person can be working with no session
+            // started, and `.focus` is the phase that says "nothing forbids a judgement here".
+            // What forbids an *intervention* is a separate question, answered by
+            // `InterventionEligibility.decide` on facts this call also supplies.
+            phase: session?.phase ?? .focus,
+            isUserIdle: sensingHost.summary.isUserIdle
         )
     }
 }

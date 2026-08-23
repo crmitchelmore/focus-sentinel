@@ -1,0 +1,104 @@
+{
+  "id": "seq-0010",
+  "note": "D-05's own worked example, and detourExtension's witness: the IDE, then the documentation for two and a half minutes, then back to the IDE. The IDE held for thirty seconds before the detour began, which is exactly returnAnchorDwell, so the transition window recognises it as somewhere the person WAS and the effective threshold becomes a hundred and eighty seconds. The app therefore says nothing at any step, and the return is recognised with a returnedToAnchor clause.\n\nThe detour's length is chosen rather than picked: a hundred and fifty seconds sits above the hundred-and-thirty-five-second threshold a forty-five-second extension would give and below the hundred and eighty this one does. Cut detourExtension to its committed alternative and this fixture starts issuing precisely the false nudge D-05 ruled against, which is what makes it a witness rather than an illustration.",
+  "snapshot": {
+    "priority": {
+      "intent": "Write the Q3 proposal for Acme",
+      "doneWhen": "sent to Dana",
+      "revision": 1
+    },
+    "contextPack": [
+      {
+        "kind": "app",
+        "value": "com.apple.dt.Xcode"
+      }
+    ],
+    "rules": [
+      {
+        "authority": "global",
+        "subjectKind": "app",
+        "subject": "com.apple.Safari",
+        "verdict": "unrelated"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "advanceSeconds": 0,
+      "bundleID": "com.apple.dt.Xcode",
+      "expect": {
+        "verdict": "relevant",
+        "drift": "aligned",
+        "stage": "contextPack",
+        "band": "high",
+        "eligibility": "suppressed:verdictRelevant",
+        "clauses": [
+          "contextItem"
+        ],
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 30,
+      "bundleID": "com.apple.Safari",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:withinGracePeriod",
+        "clauses": [
+          "userRule"
+        ],
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 150,
+      "bundleID": "com.apple.Safari",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:withinGracePeriod",
+        "clauses": [
+          "userRule"
+        ],
+        "accumulatedSeconds": 150
+      }
+    },
+    {
+      "advanceSeconds": 30,
+      "bundleID": "com.apple.dt.Xcode",
+      "expect": {
+        "verdict": "relevant",
+        "drift": "grace",
+        "stage": "contextPack",
+        "band": "high",
+        "eligibility": "suppressed:verdictRelevant",
+        "clauses": [
+          "contextItem"
+        ],
+        "accumulatedSeconds": 180
+      }
+    },
+    {
+      "advanceSeconds": 30,
+      "bundleID": "com.apple.dt.Xcode",
+      "expect": {
+        "verdict": "relevant",
+        "drift": "aligned",
+        "stage": "contextPack",
+        "band": "high",
+        "eligibility": "suppressed:verdictRelevant",
+        "clauses": [
+          "contextItem",
+          "returnedToAnchor"
+        ],
+        "accumulatedSeconds": 0
+      }
+    }
+  ],
+  "expectMandates": 0
+}

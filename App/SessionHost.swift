@@ -242,12 +242,55 @@ final class SessionHost: SessionActing {
 
     /// Rebuild the projection from the store.
     func refresh() {
+        let previous = snapshot?.sessionID
         do {
             snapshot = try store.openSnapshot()
         } catch {
             record(error)
         }
+        expireSessionRules(previouslyOpen: previous)
         onChange?()
+    }
+
+    // MARK: - Session-lived rules (R-72.2)
+
+    /// The only owner of `RuleAuthority.session`.
+    ///
+    /// In memory, never persisted, and cleared here. **Nothing in e04 writes to it**: e05 owns
+    /// the one-click *"not now"* affordance that creates a session rule, and this epic supplies
+    /// the shape it will write into plus the lifetime that makes it safe. A session rule that
+    /// survived a relaunch would be a session rule that outlived its session, and giving the
+    /// value no persistence to reach is what makes that unrepresentable rather than unlikely.
+    let sessionRuleBox = SessionRuleBox()
+
+    /// Every session rule that applies to the open session and the given priority.
+    ///
+    /// Empty when no session is open, which is the honest answer: a rule scoped to "this focus
+    /// session" has nothing to be scoped to when there is not one.
+    ///
+    /// The priority is *declared* here before it is used, which is the second half of R-72.2's
+    /// lifetime contract: this is the only path on which the box is read, the snapshot is rebuilt
+    /// on exactly the four events that change the priority, so noting it here is what turns "the
+    /// rule dies when the priority changes" into a clear rather than a hide. A rule the person
+    /// wrote under an earlier priority must not come back when they switch back to it — the
+    /// *"not now"* it recorded answered a question they have since left.
+    func sessionRules(forPriority priorityID: UUID?) -> [ScopedRuleValue] {
+        guard let sessionID = snapshot?.sessionID else { return [] }
+        sessionRuleBox.setActivePriority(priorityID, forSession: sessionID)
+        return sessionRuleBox.rules(forSession: sessionID, priorityID: priorityID)
+    }
+
+    /// Drop the session's rules the moment the session they belonged to stops being the open
+    /// one — whether it ended, was interrupted, or was replaced by a new one.
+    ///
+    /// Called from `refresh()`, which is the transition handler every verb on this host already
+    /// funnels through, so there is no phase change that can happen without passing here. The
+    /// other two halves of the lifetime contract are owned elsewhere: a **priority** change is
+    /// cleared on the read path above, where the change is observable, and a process exit takes
+    /// an in-memory store with it by definition.
+    private func expireSessionRules(previouslyOpen: UUID?) {
+        guard let previouslyOpen, previouslyOpen != snapshot?.sessionID else { return }
+        sessionRuleBox.clear(sessionID: previouslyOpen)
     }
 
     // MARK: - The launcher (F-169)

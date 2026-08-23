@@ -1,0 +1,105 @@
+{
+  "id": "seq-0007",
+  "note": "mandateCooldown. One mandate per subject per ten minutes, from the ENGINE — e05's ladder has its own proportionality on top of this, and an engine that could issue two a minute would make that ladder's job impossible. At five hundred and ninety-nine seconds after the first mandate the app is still quiet; two seconds past the cooldown it begins a fresh grace period rather than resuming the old accumulator, because the person has heard it once and the second time starts from the beginning.",
+  "snapshot": {
+    "priority": {
+      "intent": "Write the Q3 proposal for Acme",
+      "doneWhen": "sent to Dana",
+      "revision": 1
+    },
+    "contextPack": [
+      {
+        "kind": "app",
+        "value": "com.apple.Pages"
+      }
+    ],
+    "rules": [
+      {
+        "authority": "global",
+        "subjectKind": "app",
+        "subject": "com.valvesoftware.steam",
+        "verdict": "unrelated"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "advanceSeconds": 0,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:withinGracePeriod",
+        "clauses": [
+          "userRule"
+        ],
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 91,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "sustained",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "mandated",
+        "clauses": [
+          "userRule",
+          "sustainedDwell"
+        ],
+        "accumulatedSeconds": 91
+      }
+    },
+    {
+      "advanceSeconds": 599,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "cooldown",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:withinMandateCooldown",
+        "clauses": [
+          "userRule"
+        ],
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 2,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:withinGracePeriod",
+        "clauses": [
+          "userRule"
+        ],
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 91,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "sustained",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "mandated",
+        "clauses": [
+          "userRule",
+          "sustainedDwell"
+        ],
+        "accumulatedSeconds": 91
+      }
+    }
+  ],
+  "expectMandates": 2
+}

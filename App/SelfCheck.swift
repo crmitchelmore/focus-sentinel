@@ -186,6 +186,10 @@ enum SelfCheck {
         // Settings window and ⌘W closes the cockpit. Every read in it is grant-free.
         let sensing = sensingReport()
         let capabilities = capabilityReport()
+        // e04's block runs beside e03's, before the key-equivalent probes: it makes one real
+        // judgement, and a judgement made after ⌘W closed the cockpit would be a judgement about
+        // a different screen.
+        let relevance = relevanceReport()
         let surfaces = authorisationSurfaceReport()
         let claims = keyEquivalentClaims()
 
@@ -235,6 +239,14 @@ enum SelfCheck {
             AppComposition.shared.sensingHost.settings.sensingPaused
         root["bootIdentity"] = AppComposition.shared.bootIdentity
         root["uptimeSeconds"] = AppComposition.shared.uptimeClock.uptimeSeconds
+
+        // --- e04 -------------------------------------------------------------------------
+        root["relevance"] = relevance
+        // Lifted to the root as well, because they are the two values `self-check.sh` compares
+        // against the committed literals and a gate assertion should not have to walk a path
+        // into a sub-object to find its subject.
+        root["engineStamp"] = relevance["engineStamp"] ?? ""
+        root["policyDigest"] = relevance["policyDigest"] ?? ""
         return root
     }
 
@@ -383,6 +395,75 @@ enum SelfCheck {
                 "state": entry.state.rawValue
             ]
         }
+    }
+
+    // MARK: - e04 · the relevance engine (F-03, F-46, F-53)
+
+    /// What the **running application** believes about the engine it is running.
+    ///
+    /// This is the third leg of R-75.4's three-way agreement. The unit lane asserts
+    /// `EngineStamp.current.cacheKey` and `RelevancePolicy.digest` of the *test process*; stage
+    /// 7d asserts the same literals of the *evaluation report*; and `self-check.sh` asserts them
+    /// of *this* — on both configurations. All three compare against one committed set of
+    /// literals, so a report generated against a different policy version cannot certify this
+    /// build and neither can a product built against one.
+    ///
+    /// `engineStamp` is read from the live engine rather than from `EngineStamp.current`,
+    /// because its `embeddingRevision` component is supplied by the OS at runtime (P-117): if
+    /// Apple ships a new sentence-embedding asset in a point release, every distance the engine
+    /// computes changes, and a stamp that counted only our own edits would not say so.
+    ///
+    /// Everything below is grant-free. `AXIsProcessTrusted()` is `false` in the evidence lane's
+    /// `open -a` launch and the embedding still loads — measured from a zero-grant ad-hoc app
+    /// bundle at P-110 — which is why the whole relevance layer is a T1 claim rather than a
+    /// TCC-gated one.
+    @MainActor
+    static func relevanceReport() -> [String: Any] {
+        let host = AppComposition.shared.relevanceHost
+        var report: [String: Any] = [:]
+
+        report["engineStamp"] = host.stampKey
+        report["policyDigest"] = host.policyDigest
+
+        // The seam really is the engine, not a second object built for the occasion.
+        report["classifierIsEngine"] =
+            (AppComposition.shared.classifier as AnyObject) === host.engine
+
+        // The snapshot the engine judges against, as it stands. `skippedRuleCount` is the
+        // R-72.3 drop made visible: a legacy `.session` row has no subject kind, reaches no
+        // rung, and is counted rather than guessed at.
+        report["snapshotBuildCount"] = host.snapshotBuildCount
+        report["skippedRuleCount"] = host.skippedRuleCount
+        report["snapshotMatchesRunningPolicy"] = host.snapshot.matchesRunningPolicy
+
+        // One judgement, made here, in this process, at zero grants — so the report says the
+        // engine *ran* rather than that it was constructed. The subject is whatever is
+        // frontmost, read through the sensitivity gate like every other deeper answer.
+        AppComposition.shared.refreshCockpit()
+        report["judgementCount"] = AppComposition.shared.relevanceHost.judgementCount
+
+        if let verdict = host.verdict {
+            report["verdict"] = [
+                "status": verdict.status.rawValue,
+                "stage": verdict.stage.rawValue,
+                "band": verdict.band?.rawValue ?? "",
+                "isMandated": verdict.isMandated,
+                "suppressionReason": verdict.eligibility.suppressionReason?.rawValue ?? "",
+                "clauses": verdict.explanation.clauseKinds.map(\.rawValue),
+                "stampKey": verdict.stampKey
+            ]
+        } else {
+            // A real answer rather than a missing one: nothing has come forward, so nothing has
+            // been judged, and the inspector draws "nothing judged yet".
+            report["verdict"] = [:]
+        }
+
+        // R-72.2. Nothing in e04 writes to the box — e05 owns the one-click affordance — so a
+        // launch that has judged things still finds it empty, which is the observation rather
+        // than the assumption.
+        report["sessionRuleCount"] = AppComposition.shared.sessionHost.sessionRuleBox.count
+
+        return report
     }
 
     /// **The gateable form of "the app never triggers a permission prompt".**

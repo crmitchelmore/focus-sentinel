@@ -24,6 +24,7 @@ public struct PrivacySettingsView: View {
     private let storeURL: URL
     private let summary: SensingSummary
     private let capabilities: CapabilityMatrix
+    private let verdict: VerdictSnapshot?
 
     @Environment(\.appearanceTraits) private var traits
     @Environment(\.shellTextScale) private var textScale
@@ -33,24 +34,27 @@ public struct PrivacySettingsView: View {
     public init(
         storeURL: URL = FocusStore.applicationSupportURL,
         summary: SensingSummary = .inactive,
-        capabilities: CapabilityMatrix = CapabilityMatrix()
+        capabilities: CapabilityMatrix = CapabilityMatrix(),
+        verdict: VerdictSnapshot? = nil
     ) {
         self.storeURL = storeURL
         self.summary = summary
         self.capabilities = capabilities
+        self.verdict = verdict
     }
 
     /// The strings this pane draws. Non-empty by construction, and asserted so: a Settings
     /// tab that renders nothing is a defect, not a design.
-    nonisolated public static let contentKeys: [ShellStringKey] = [
-        .settingsPrivacyStatement,
-        .settingsPrivacyStoreLabel,
-        .settingsPrivacyReveal,
-        .sensingHeading,
-        .sensingLimitationScreenSharing,
-        .capabilityHeading,
-        .capabilityExplanation
-    ]
+    nonisolated public static let contentKeys: [ShellStringKey] =
+        [
+            .settingsPrivacyStatement,
+            .settingsPrivacyStoreLabel,
+            .settingsPrivacyReveal,
+            .sensingHeading,
+            .sensingLimitationScreenSharing,
+            .capabilityHeading,
+            .capabilityExplanation
+        ] + VerdictInspectorView.contentKeys
 
     public var body: some View {
         content
@@ -126,6 +130,21 @@ public struct PrivacySettingsView: View {
             Divider()
 
             CapabilityMatrixView(capabilities: capabilities)
+
+            Divider()
+
+            // How the app decides, drawn from the one ordered list of rungs in the repository
+            // (R-54). It sits between *what the app can see* and *what it made of it*, which is
+            // the order a person reads them in. It offers nothing to press either.
+            CascadePrecedenceView()
+
+            Divider()
+
+            // What the app concluded about the person, and why (R-71). It sits at the foot of
+            // this pane rather than behind a developer flag because it is a *trust* surface:
+            // the capability table above says what the app can see, and this says what it made
+            // of it. Neither offers anything to press.
+            VerdictInspectorView(verdict: verdict)
 
             Spacer(minLength: 0)
         }

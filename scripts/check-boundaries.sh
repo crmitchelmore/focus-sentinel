@@ -68,6 +68,20 @@
 #   * **No package imports a framework its row does not name.** The forbidden list catches the
 #     imports somebody thought of; this catches the ones nobody did. A new framework in a
 #     package is a boundary decision, so it fails the gate until the table above says so.
+#
+# e04 adds two more, both about the same object and both proved on the binary rather than in
+# the source (plan R-70i/j):
+#
+#   * **`FocusClassify` probes no privacy boundary.** `nm -u FocusClassify.o` must name no
+#     window-list, Accessibility or screen-capture symbol at all. The adversarial
+#     private-browsing fixtures assert that an absent origin yields `uncertain`; a test can
+#     only observe that the engine did not try another route, and the symbol table proves it
+#     could not. Promoted from skip to failure by `FOCUS_REQUIRE_BINARY_CHECK=1`, exactly like
+#     the zero-networking half above.
+#   * **The `FocusClassify` framework row is unchanged from e01.** It is listed here *because
+#     it needs no edit*: e04 puts a whole classification engine in that package and adds no
+#     framework to it, and pinning the row is what turns "no new dependency" from a claim into
+#     a check.
 set -u
 
 REPO_ROOT="${0:A:h}/.."
@@ -201,8 +215,18 @@ else:
     # The positive half: everything this package actually imports must be named by its row.
     # `import Carbon.HIToolbox` is kept whole rather than truncated at the dot, because
     # `Carbon` and `Carbon.HIToolbox` are exactly the distinction R-13 turns on.
+    #
+    # Scoped to `Sources/<package>` — the package's own shipping target — rather than to the
+    # whole of `Sources/`. e04 puts two TEST-LANE targets beside FocusClassify's
+    # (`FocusEvaluateCore` and `FocusEvaluate`, R-75), and a row that had to name them would be
+    # a row that no longer says what the SHIPPING library may import. R-70j pins that row to a
+    # literal precisely so it cannot be widened; widening it to accommodate a target the
+    # application does not link would be the same edit by another route. The test-lane targets
+    # get their own scan below, and the forbidden-import half above still searches all of
+    # `Sources/` — so nothing in this package may import AppKit, SwiftUI or networking wherever
+    # it lives.
     imported=$(grep -rhE '^[[:space:]]*(@[A-Za-z_]+[[:space:]]+)?(public[[:space:]]+|internal[[:space:]]+|@_exported[[:space:]]+)?import[[:space:]]+[A-Za-z_]' \
-        "$dir/Sources" --include='*.swift' 2>/dev/null \
+        "$dir/Sources/$package" --include='*.swift' 2>/dev/null \
         | sed -E 's/.*import[[:space:]]+//; s/[[:space:]].*//' | sort -u)
 
     permitted_modules=(${=ALLOWED_FRAMEWORKS[$package]} ${=ALLOWED_PRODUCTS[$package]} "$package")
@@ -253,6 +277,125 @@ else
     # pass — the gate runs this script a second time after building, with
     # FOCUS_REQUIRE_BINARY_CHECK=1, and that run is the one that proves it.
     print "binary: SKIPPED — no build product at $CLASSIFY_OBJECT (the gate re-runs this after the build)"
+fi
+
+# --- FocusClassify probes no privacy boundary, proven on the object (e04 R-70i) -----------
+#
+# The adversarial private-browsing fixtures assert that an absent origin yields `uncertain`
+# and that the engine makes no attempt to obtain one another way. A test can only observe
+# that it did not; the symbol table proves it COULD not. `CGWindowListCopyWindowInfo`,
+# the AXUIElement family and the ScreenCaptureKit stream classes all leave undefined symbols
+# in an object that references them, and none of them may appear in this one.
+#
+# Note also what this stage does NOT need to check. P-120 measured an object that imports
+# NaturalLanguage and calls NLEmbedding.distance and NLTagger.enumerateTags: its undefined
+# symbols are seven NL names and nothing else — zero matches for nw_, CFNetwork, URLSession,
+# CFURLConnection, SecureTransport or socket. Importing NaturalLanguage costs the
+# zero-networking guarantee nothing at all.
+print
+print "== FocusClassify probes no privacy boundary"
+
+PRIVACY_SYMBOL_PATTERN='CGWindowList|kCGWindow|AXUIElement|AXIsProcess|SCStream|SCShareableContent|CGDisplayStream|CGRequestScreenCapture|CGPreflightScreenCapture'
+
+if [[ -f "$CLASSIFY_OBJECT" ]]; then
+    probing=$(nm -u "$CLASSIFY_OBJECT" 2>/dev/null | grep -E "$PRIVACY_SYMBOL_PATTERN")
+    if [[ -n "$probing" ]]; then
+        fail "FocusClassify.o names a window-list, Accessibility or capture symbol:"
+        print -u2 "$probing"
+    else
+        print "binary: nm -u $CLASSIFY_OBJECT — 0 window-list/AX/capture symbols"
+    fi
+elif [[ "${FOCUS_REQUIRE_BINARY_CHECK:-0}" == "1" ]]; then
+    fail "FOCUS_REQUIRE_BINARY_CHECK=1 but there is no build product at $CLASSIFY_OBJECT"
+else
+    print "binary: SKIPPED — no build product (the gate re-runs this after the build)"
+fi
+
+# --- e04 R-70j: the FocusClassify framework row is asserted UNCHANGED ----------------------
+#
+# The positive half of the matrix above already fails the gate on any framework a row does not
+# name, so a drive-by `import CoreGraphics` in the engine is caught by machinery that already
+# exists. What that machinery cannot catch is the row itself being widened — which is the edit
+# somebody would make *in order to* add the import. e04 adds an engine to this package and
+# needs exactly the frameworks e01 gave it, so the row is pinned to a literal here and a change
+# to it becomes a deliberate, reviewed act rather than a quiet one (P-120).
+print
+print "== the FocusClassify framework row is unchanged from e01"
+EXPECTED_CLASSIFY_FRAMEWORKS="Foundation NaturalLanguage os"
+if [[ "${ALLOWED_FRAMEWORKS[FocusClassify]}" == "$EXPECTED_CLASSIFY_FRAMEWORKS" ]]; then
+    print "ok   FocusClassify may import exactly: $EXPECTED_CLASSIFY_FRAMEWORKS"
+else
+    fail "the FocusClassify framework row has changed"
+    print -u2 "    expected: $EXPECTED_CLASSIFY_FRAMEWORKS"
+    print -u2 "    found:    ${ALLOWED_FRAMEWORKS[FocusClassify]}"
+    print -u2 "    e04 adds an engine to this package and needs no new framework (R-70j, P-120)."
+fi
+
+# --- e04 R-75/T103a: FocusEvaluate is a TEST-LANE product and is not in the shipping graph --
+#
+# R-75 moves the evaluation harness out of the test target, because a report emitted as a side
+# effect of a test run is a report whose existence depends on a test having been scheduled — and
+# because `xcodebuild` does not carry an environment value into a SwiftPM test target's process,
+# so `$FOCUS_EVAL_OUT` and `$FOCUS_GATE_RUN_ID` can only reach the harness through a plain
+# process. That buys the gate a real product and costs the shipping graph nothing, PROVIDED
+# nothing in the application ever links it.
+#
+# "Provided" is the word this stage exists to remove. Three reads, in the three places a link
+# could be introduced: the application's own sources, the project file that describes what the
+# app links, and the classification package's target graph.
+print
+print "== FocusEvaluate is a test-lane product only"
+
+EVALUATE_TARGETS='FocusEvaluate|FocusEvaluateCore'
+
+app_evaluate_hits=$(grep -rnE "$EVALUATE_TARGETS" App --include='*.swift' 2>/dev/null \
+    | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|///|\*)')
+if [[ -n "$app_evaluate_hits" ]]; then
+    fail "an application source names an evaluation target:"
+    print -u2 "$app_evaluate_hits"
+else
+    print "source: App/ names neither FocusEvaluate nor FocusEvaluateCore"
+fi
+
+project_evaluate_hits=$(grep -nE "$EVALUATE_TARGETS" FocusSentinel.xcodeproj/project.pbxproj 2>/dev/null)
+if [[ -n "$project_evaluate_hits" ]]; then
+    fail "the project file references an evaluation target — the app would link it:"
+    print -u2 "$project_evaluate_hits"
+else
+    print "project: FocusSentinel.xcodeproj links neither"
+fi
+
+# And the shipping library must not reach sideways into the test-lane one. The dependency runs
+# the other way round by construction — FocusEvaluateCore depends on FocusClassify — and this
+# is what stops somebody inverting it to reuse the corpus loader from the engine.
+classify_evaluate_hits=$(grep -rnE "^[[:space:]]*import[[:space:]]+($EVALUATE_TARGETS)" \
+    Packages/FocusClassify/Sources/FocusClassify 2>/dev/null)
+if [[ -n "$classify_evaluate_hits" ]]; then
+    fail "FocusClassify imports its own test-lane library:"
+    print -u2 "$classify_evaluate_hits"
+else
+    print "graph:   FocusClassify does not import FocusEvaluateCore"
+fi
+
+# The test-lane targets get the same positive treatment the shipping rows do — a closed list of
+# what they may import — so "it is only the harness" never becomes a place a framework can be
+# added without review. They may reach the engine and the two packages beneath it, and nothing
+# else: no AppKit, no SwiftUI, no networking, and no sideways reach into Sensing or UI (which
+# the forbidden-import half above already enforces across all of Sources/).
+EVALUATE_ALLOWED_MODULES=(Foundation FocusCore FocusRules FocusClassify FocusEvaluateCore)
+evaluate_imported=$(grep -rhE '^[[:space:]]*import[[:space:]]+[A-Za-z_]' \
+    Packages/FocusClassify/Sources/FocusEvaluateCore \
+    Packages/FocusClassify/Sources/FocusEvaluate --include='*.swift' 2>/dev/null \
+    | sed -E 's/.*import[[:space:]]+//; s/[[:space:]].*//' | sort -u)
+evaluate_unlisted=()
+for module in ${(f)evaluate_imported}; do
+    [[ -z "$module" ]] && continue
+    (( ${EVALUATE_ALLOWED_MODULES[(Ie)$module]} )) || evaluate_unlisted+=("$module")
+done
+if (( ${#evaluate_unlisted} )); then
+    fail "the evaluation targets import ${(j:, :)evaluate_unlisted}, which is not permitted"
+else
+    print "imports: the evaluation targets import only ${EVALUATE_ALLOWED_MODULES[*]}"
 fi
 
 # --- every package: no networking symbols anywhere in the shipping graph ----------------

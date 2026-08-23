@@ -117,6 +117,62 @@ SNAPSHOT_STAGING="${FOCUS_SNAPSHOT_OUT:-${TMP_ROOT%/}/focus-snapshots}"
 SNAPSHOT_STAGING="${SNAPSHOT_STAGING%/}"
 SNAPSHOT_OUT="$LOG_DIR/snapshots"
 
+# --- e04: the evaluation lane, and R-75's staleness guard ---------------------------------
+#
+# The snapshot lane above documents the constraint and misses one hazard, and the evaluation
+# lane must not inherit it: **the staging path is shared between runs and nothing deletes it**.
+# A report left behind by an earlier green tree would be parsed as this run's evidence, and a
+# gate whose central number can be satisfied by a file nobody wrote today is not a gate.
+#
+# So the evaluation lane is two stages rather than one:
+#
+#   6b  eval-clean   removes $FOCUS_EVAL_OUT in its entirety and touches an mtime marker,
+#                    immediately before `unit`. A missing directory is a pass; a failure to
+#                    remove is a hard fail. This is the only cleanup stage in the gate.
+#   7d  evaluation   runs the `FocusEvaluate` product, copies its report into this run's log
+#                    directory **before** anything parses it, applies R-75's five binding
+#                    checks to the copy, and only then reports the metric verdict.
+#
+# Emission is a *product* rather than a test side effect (R-75) for the same reason the
+# snapshot note gives: `xcodebuild` does not carry an environment value into a SwiftPM test
+# target's process, and a plain process does. `FocusEvaluate` is a test-lane product — no
+# application target links it, and `check-boundaries.sh` asserts that rather than assuming it.
+EVAL_STAGING="${FOCUS_EVAL_OUT:-${TMP_ROOT%/}/focus-eval}"
+EVAL_STAGING="${EVAL_STAGING%/}"
+EVAL_STAGED_REPORT="$EVAL_STAGING/evaluation.json"
+
+# This run's own copy — the bytes the gate asserts on and the bytes it archives are the same
+# bytes, which is binding check B5.
+EVAL_REPORT="$LOG_DIR/evaluation.json"
+EVAL_MARKER="$LOG_DIR/focus-eval.marker"
+EVAL_LOG="$LOG_DIR/focus-evaluate.log"
+
+# The run token the report must carry (R-75.2). The per-run log directory's basename is
+# already unique per run, so there is nothing new to mint and nothing that can collide.
+GATE_RUN_ID="${LOG_DIR:t}"
+
+CORPUS_DIR="Packages/FocusClassify/Tests/FocusClassifyTests/Resources/GoldenCorpus"
+
+# The committed engine literals, read from the one place they are written down.
+#
+# R-75.4 wants three legs to agree — the test process, the evaluation report and the running
+# application — and the way to get that without three copies of a string is for each leg to
+# compare against the *same* literal. `scripts/self-check.sh` reads these two lines the same
+# way for the third leg; the literals themselves live only in the two suites that assert them.
+committed_literal() {
+    local file="$1" name="$2" line
+    line=$(grep -E "static let ${name}\b" "$REPO_ROOT/$file" 2>/dev/null | head -1)
+    [[ -n "$line" ]] || return 0
+    print -r -- "${${line#*= }//[\"_ ]/}"
+}
+
+COMMITTED_STAMP=$(committed_literal \
+    "Packages/FocusCore/Tests/FocusCoreTests/EngineStampTests.swift" \
+    "committedRuntimeCacheKey")
+COMMITTED_DIGEST=$(committed_literal \
+    "Packages/FocusCore/Tests/FocusCoreTests/RelevancePolicyTests.swift" \
+    "committedDigest")
+
 typeset -a STAGE_NAMES STAGE_CODES STAGE_LOGS
 
 record() {
@@ -264,6 +320,233 @@ forbidden_binary_stage() {
     FOCUS_REQUIRE_BINARY_CHECK=1 scripts/check-forbidden.sh
 }
 
+# Stage 6b — eval-clean (R-75.1, R-75.3).
+#
+# Delete the shared staging directory in its entirety, then touch the marker every later
+# freshness comparison is made against. It runs immediately before `unit` so that nothing
+# between the deletion and the emission can leave a file the gate would then believe.
+#
+# A missing directory is a **pass**: there is nothing stale if there is nothing at all. A
+# failure to remove is a **hard fail**, because a staging directory that survived a `rm -rf` is
+# exactly the condition under which a stale report reaches the parser.
+eval_clean_stage() {
+    print "staging directory: $EVAL_STAGING"
+
+    if [[ -e "$EVAL_STAGING" ]]; then
+        if ! rm -rf -- "$EVAL_STAGING"; then
+            print -u2 "FAIL [R-75.1] could not remove $EVAL_STAGING"
+            return 1
+        fi
+        print "ok   removed the staging directory"
+    else
+        print "ok   nothing to remove (a missing staging directory is a pass)"
+    fi
+
+    if [[ -e "$EVAL_STAGING" ]]; then
+        print -u2 "FAIL [R-75.1] $EVAL_STAGING is still present after rm -rf"
+        return 1
+    fi
+
+    rm -f -- "$EVAL_MARKER"
+    if ! : > "$EVAL_MARKER"; then
+        print -u2 "FAIL [R-75.3] could not write the mtime marker at $EVAL_MARKER"
+        return 1
+    fi
+    print "ok   marker touched: $EVAL_MARKER"
+    print "     any report not newer than this marker is not this run's evidence"
+    print "run token: $GATE_RUN_ID"
+    return 0
+}
+
+# Stage 7d — evaluation (R-67, R-75, §4.4).
+#
+# Order matters and is the ruling rather than a preference. The report is copied out of staging
+# **before** anything parses it; R-75's five binding checks are applied to that copy **first**;
+# and only then is the metric verdict reported. A stale or foreign report is not a failing
+# number — it is *no evidence at all* — and reporting it as a metric failure would send a
+# reader looking in the wrong place.
+#
+# The metric thresholds themselves are **not** restated here. They live in
+# `FocusEvaluateCore.EvaluationGate`, which `FocusEvaluate` decides its exit status from and
+# which `EvaluationGateTests` asserts in the unit lane, so `swift test` alone still catches a
+# metric regression. Writing the twelve numbers into this script a second time would be the
+# fifth-place drift R-54 forbids everywhere else in this epic.
+evaluation_stage() {
+    # Unpiped, into a log of its own, judged on exit status — the same doctrine every build
+    # command in this gate follows. The log is printed at the foot of this stage rather than
+    # here, so the binding verdict is what a reader meets first.
+    FOCUS_EVAL_OUT="$EVAL_STAGING" FOCUS_GATE_RUN_ID="$GATE_RUN_ID" \
+        swift run --package-path Packages/FocusClassify -c release FocusEvaluate \
+        > "$EVAL_LOG" 2>&1
+    local produce_rc=$?
+
+    if [[ ! -f "$EVAL_STAGED_REPORT" ]]; then
+        print -u2 "FAIL [R-75] FocusEvaluate wrote no report at $EVAL_STAGED_REPORT (EXIT=$produce_rc)"
+        print
+        cat -- "$EVAL_LOG"
+        return 1
+    fi
+
+    rm -f -- "$EVAL_REPORT"
+    if ! cp -- "$EVAL_STAGED_REPORT" "$EVAL_REPORT"; then
+        print -u2 "FAIL [R-75] could not copy the report to $EVAL_REPORT"
+        return 1
+    fi
+    print "report copied from $EVAL_STAGED_REPORT"
+    print "                to $EVAL_REPORT"
+    print
+
+    print "== R-75 binding checks (evaluated before any metric)"
+    python3 - \
+        "$EVAL_REPORT" "$EVAL_STAGED_REPORT" "$EVAL_MARKER" "$GATE_RUN_ID" \
+        "$COMMITTED_STAMP" "$COMMITTED_DIGEST" "$REPO_ROOT/$CORPUS_DIR" <<'PYTHON'
+import json
+import os
+import sys
+
+parsed_path, staging_path, marker_path = sys.argv[1], sys.argv[2], sys.argv[3]
+expected_run_id, expected_stamp, expected_digest = sys.argv[4], sys.argv[5], sys.argv[6]
+corpus_dir = sys.argv[7]
+
+failures = []
+
+
+def check(condition, message, detail=None):
+    if condition:
+        print(f"ok   {message}")
+        return
+    line = f"FAIL {message}"
+    if detail is not None:
+        line += f"\n      got: {detail!r}"
+    failures.append(line)
+    print(line, file=sys.stderr)
+
+
+with open(parsed_path) as handle:
+    report = json.load(handle)
+
+# --- B1 · the report names this run ------------------------------------------------------
+#
+# The assertion that survives even if the pre-`unit` deletion silently no-ops. Belt as well as
+# braces, because the failure mode is *accepting stale evidence*, which is invisible when it
+# happens.
+check(
+    report.get("runID") == expected_run_id,
+    f"B1 runID is this run's token ({expected_run_id})",
+    report.get("runID"),
+)
+
+# --- B2 · newer than the marker the gate touched before `unit` ---------------------------
+try:
+    report_mtime = os.stat(parsed_path).st_mtime
+    marker_mtime = os.stat(marker_path).st_mtime
+except OSError as error:
+    report_mtime = marker_mtime = None
+    check(False, "B2 the report and the marker both exist", str(error))
+
+if report_mtime is not None:
+    # A check that cannot be performed has not been performed; there is no benefit of the
+    # doubt here, because an unperformed check reads exactly like a green one.
+    check(
+        report_mtime > marker_mtime,
+        "B2 the report is newer than the eval-clean marker",
+        (report_mtime, marker_mtime),
+    )
+
+# --- B3 · the same engine ----------------------------------------------------------------
+#
+# Compared against the committed literals the unit lane asserts of the test process and both
+# self-checks assert of the running application. Three legs, one set of literals.
+check(bool(expected_stamp), "B3 the committed engine stamp was found in EngineStampTests", expected_stamp)
+check(bool(expected_digest), "B3 the committed policy digest was found in RelevancePolicyTests", expected_digest)
+check(
+    report.get("stamp") == expected_stamp,
+    f"B3 the report was produced by engine {expected_stamp}",
+    report.get("stamp"),
+)
+check(
+    report.get("policyDigest") == expected_digest,
+    f"B3 the report's policy digest is {expected_digest}",
+    report.get("policyDigest"),
+)
+
+# --- B4 · the same corpus ----------------------------------------------------------------
+#
+# FNV-1a over the concatenated corpus bytes, in sorted relative-path order, with each path
+# hashed alongside its own bytes so that renaming a file changes the digest. FNV-1a and never
+# a language hash: P-118 measured Swift's `Hasher` returning a different value for identical
+# data in two processes, and Python's own `hash()` is salted per process for the same reason.
+FNV_OFFSET = 0xCBF29CE484222325
+FNV_PRIME = 0x100000001B3
+MASK = 0xFFFFFFFFFFFFFFFF
+
+
+def fnv1a(data):
+    value = FNV_OFFSET
+    for byte in data:
+        value ^= byte
+        value = (value * FNV_PRIME) & MASK
+    return value
+
+
+def corpus_entries(directory):
+    entries = []
+    for name in ("baseline", "rules", "heuristic", "adversarial"):
+        path = os.path.join(directory, f"{name}.json")
+        if os.path.exists(path):
+            with open(path, "rb") as handle:
+                entries.append((f"{name}.json", handle.read()))
+    sequences = os.path.join(directory, "sequences")
+    if os.path.isdir(sequences):
+        for name in sorted(os.listdir(sequences)):
+            if not name.endswith(".json"):
+                continue
+            with open(os.path.join(sequences, name), "rb") as handle:
+                entries.append((f"sequences/{name}", handle.read()))
+    return entries
+
+
+accumulated = bytearray()
+entries = corpus_entries(corpus_dir)
+for path, data in sorted(entries, key=lambda entry: entry[0]):
+    accumulated += path.encode("utf-8")
+    accumulated += data
+recomputed = f"0x{fnv1a(bytes(accumulated)):016x}"
+
+check(bool(entries), f"B4 the corpus was read from the working tree ({len(entries)} file(s))", corpus_dir)
+check(
+    report.get("corpusDigest") == recomputed,
+    "B4 the report describes the corpus on disk",
+    (report.get("corpusDigest"), recomputed),
+)
+
+# --- B5 · the bytes parsed are this run's copy --------------------------------------------
+check(
+    parsed_path and parsed_path != staging_path,
+    "B5 the parsed bytes are the per-run copy, not the shared staging file",
+    (parsed_path, staging_path),
+)
+
+print()
+if failures:
+    print(f"BINDING CHECKS FAILED — {len(failures)} of 5 (the report is NOT this run's evidence)", file=sys.stderr)
+    sys.exit(1)
+print("BINDING CHECKS OK — the report is this run's evidence; the metrics below are about it")
+PYTHON
+    local binding_rc=$?
+
+    print
+    print "== FocusEvaluate (emission and the committed metric thresholds of §4.4)"
+    cat -- "$EVAL_LOG"
+
+    if (( binding_rc != 0 )); then
+        print
+        print -u2 "FAIL [R-75] the report is not this run's evidence; its numbers certify nothing"
+        return 1
+    fi
+    return $produce_rc
+}
+
 # The whole gate is a function rather than a `{ … }` block. A `{ … } > log` group is not a
 # subshell, so an `exit` inside it terminates the script outright — which is what used to
 # happen here, and it meant the summary table was written to the log and then never echoed:
@@ -306,6 +589,11 @@ gate() {
     # Zero grants, and it catches the one failure a green build cannot (see check_packaging).
     run_stage "packaging" "$LOG_DIR/focus-packaging.log" check_packaging
 
+    # 6b — eval-clean. The only cleanup stage in the gate, and it runs immediately before
+    # `unit` so that nothing between the deletion and stage 7d's emission can leave a file the
+    # gate would then believe (R-75.1/3).
+    run_stage "eval-clean" "$LOG_DIR/focus-eval-clean.log" eval_clean_stage
+
     # 7 — the headless unit lane, the only lane that compiles String Catalogs
     rm -rf -- "$RB"
     run_stage "unit" "$LOG_DIR/focus-test.log" \
@@ -322,6 +610,13 @@ gate() {
     else
         print -u2 "GATE snapshots MISSING at $SNAPSHOT_STAGING"
     fi
+
+    # 7d — the evaluation lane. It runs **before** the binary stages so that a metric
+    # regression is visible in the same summary table as a symbol regression, and it runs the
+    # `FocusEvaluate` product rather than reading a test's leavings (R-75). It is a separate
+    # stage rather than a test assertion because it has to fail the gate *on a number*, and a
+    # number that only lives inside an `.xcresult` is a number nobody reads.
+    run_stage "evaluation" "$LOG_DIR/focus-evaluation.log" evaluation_stage
 
     # 7b — the binary half of the zero-networking assertion.
     # Stage 2 runs before anything is built, so on a cold checkout `nm -u FocusClassify.o`
@@ -385,6 +680,7 @@ gate() {
     print "result bundle:  $RB"
     print "self-check:     $SELFCHECK_JSON"
     print "snapshots:      $SNAPSHOT_OUT (staged in $SNAPSHOT_STAGING)"
+    print "evaluation:     $EVAL_REPORT (staged in $EVAL_STAGING, run token $GATE_RUN_ID)"
     print "finished:       $(date -u +%Y-%m-%dT%H:%M:%SZ)"
     print
     print "The live osascript/screencapture lane is deliberately NOT a stage: it needs"
@@ -430,6 +726,13 @@ collect_evidence() {
         "focus-selfcheck-release.log:selfcheck-release.log"
         "focus-selfcheck.json:selfcheck.json"
         "focus-selfcheck-release.json:selfcheck-release.json"
+        "focus-eval-clean.log:eval-clean.log"
+        "focus-evaluation.log:evaluation.log"
+        "focus-evaluate.log:focus-evaluate.log"
+        # The report itself, so a closing epic is audited from an artefact rather than from an
+        # assertion about an artefact — and two runs of one tree produce two diffable files,
+        # which P-118's determinism is what makes true (R-67, §4.4).
+        "evaluation.json:evaluation.json"
     )
 
     print

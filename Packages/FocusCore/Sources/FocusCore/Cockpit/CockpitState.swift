@@ -268,6 +268,17 @@ public struct CockpitState: Sendable, Equatable, Hashable {
     /// What the observer graph is doing. Drawn plainly, including when the answer is "nothing".
     public var sensing: SensingSummary
 
+    /// What the relevance engine last concluded, or `nil` when it has concluded nothing.
+    ///
+    /// `nil` is the honest default and it renders as "nothing judged yet", never as a verdict:
+    /// an app that drew `relevant` before it had looked at anything would be inventing a
+    /// judgement, in exactly the way `CockpitState.ready` refuses to (its status is `paused`
+    /// for the same reason).
+    ///
+    /// Nothing consumes a mandate in this build. **The nudge is e05's**; e04's demonstrable is
+    /// the verdict stream and the restrained explanation beside it.
+    public var verdict: VerdictSnapshot?
+
     /// What the app currently believes about all twelve capabilities.
     ///
     /// Carried on the cockpit value rather than read from a probe by the view, for the same
@@ -287,6 +298,7 @@ public struct CockpitState: Sendable, Equatable, Hashable {
         showsRitualPrompt: Bool = false,
         session: SessionSnapshot? = nil,
         sensing: SensingSummary = .inactive,
+        verdict: VerdictSnapshot? = nil,
         capabilities: CapabilityMatrix = CapabilityMatrix()
     ) {
         self.status = status
@@ -298,6 +310,7 @@ public struct CockpitState: Sendable, Equatable, Hashable {
         self.showsRitualPrompt = showsRitualPrompt
         self.session = session
         self.sensing = sensing
+        self.verdict = verdict
         self.capabilities = capabilities
     }
 

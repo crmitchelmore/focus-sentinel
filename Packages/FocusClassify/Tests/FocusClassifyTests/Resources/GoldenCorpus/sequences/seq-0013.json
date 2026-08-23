@@ -1,0 +1,106 @@
+{
+  "id": "seq-0013",
+  "note": "R-60 ruling 4: idle freezes. e03 already owns the hardware idle source and its 180-second threshold; a person who walked away is not drifting. Nine minutes away from the keyboard contributes nothing at all to the accumulator, and the count resumes from the sixty seconds it had before they left.",
+  "snapshot": {
+    "priority": {
+      "intent": "Write the Q3 proposal for Acme",
+      "doneWhen": "sent to Dana",
+      "revision": 1
+    },
+    "contextPack": [
+      {
+        "kind": "app",
+        "value": "com.apple.Pages"
+      }
+    ],
+    "rules": [
+      {
+        "authority": "global",
+        "subjectKind": "app",
+        "subject": "com.valvesoftware.steam",
+        "verdict": "unrelated"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "advanceSeconds": 0,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:withinGracePeriod",
+        "clauses": [
+          "userRule"
+        ],
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 60,
+      "bundleID": "com.valvesoftware.steam",
+      "isUserIdle": true,
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:userIdle",
+        "clauses": [
+          "userRule"
+        ],
+        "accumulatedSeconds": 60
+      }
+    },
+    {
+      "advanceSeconds": 540,
+      "bundleID": "com.valvesoftware.steam",
+      "isUserIdle": true,
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:userIdle",
+        "clauses": [
+          "userRule"
+        ],
+        "accumulatedSeconds": 60
+      }
+    },
+    {
+      "advanceSeconds": 60,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:withinGracePeriod",
+        "clauses": [
+          "userRule"
+        ],
+        "accumulatedSeconds": 60
+      }
+    },
+    {
+      "advanceSeconds": 31,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "sustained",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "mandated",
+        "clauses": [
+          "userRule",
+          "sustainedDwell"
+        ],
+        "accumulatedSeconds": 91
+      }
+    }
+  ],
+  "expectMandates": 1
+}

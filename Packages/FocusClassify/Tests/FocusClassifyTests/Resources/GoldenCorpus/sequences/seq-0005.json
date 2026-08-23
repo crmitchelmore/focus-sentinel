@@ -1,0 +1,149 @@
+{
+  "id": "seq-0005",
+  "note": "driftResetGrace, both legs in one transcript. A twenty-two second return to the work CLEARS the accumulator; a nineteen second one does not, and the count resumes from where it was. Without the second half, alt-tabbing back to the IDE for a second every minute would make the app permanently mute — the single most obvious way to defeat a drift detector, and the one a naive implementation always has.",
+  "snapshot": {
+    "priority": {
+      "intent": "Write the Q3 proposal for Acme",
+      "doneWhen": "sent to Dana",
+      "revision": 1
+    },
+    "contextPack": [
+      {
+        "kind": "app",
+        "value": "com.apple.Pages"
+      }
+    ],
+    "rules": [
+      {
+        "authority": "global",
+        "subjectKind": "app",
+        "subject": "com.valvesoftware.steam",
+        "verdict": "unrelated"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "advanceSeconds": 0,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:withinGracePeriod",
+        "clauses": [
+          "userRule"
+        ],
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 60,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:withinGracePeriod",
+        "clauses": [
+          "userRule"
+        ],
+        "accumulatedSeconds": 60
+      }
+    },
+    {
+      "advanceSeconds": 1,
+      "bundleID": "com.apple.Pages",
+      "expect": {
+        "verdict": "relevant",
+        "drift": "grace",
+        "stage": "contextPack",
+        "band": "high",
+        "eligibility": "suppressed:verdictRelevant",
+        "clauses": [
+          "contextItem"
+        ],
+        "accumulatedSeconds": 61
+      }
+    },
+    {
+      "advanceSeconds": 22,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:withinGracePeriod",
+        "clauses": [
+          "userRule"
+        ],
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 60,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:withinGracePeriod",
+        "clauses": [
+          "userRule"
+        ],
+        "accumulatedSeconds": 60
+      }
+    },
+    {
+      "advanceSeconds": 1,
+      "bundleID": "com.apple.Pages",
+      "expect": {
+        "verdict": "relevant",
+        "drift": "grace",
+        "stage": "contextPack",
+        "band": "high",
+        "eligibility": "suppressed:verdictRelevant",
+        "clauses": [
+          "contextItem"
+        ],
+        "accumulatedSeconds": 61
+      }
+    },
+    {
+      "advanceSeconds": 19,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "suppressed:withinGracePeriod",
+        "clauses": [
+          "userRule"
+        ],
+        "accumulatedSeconds": 61
+      }
+    },
+    {
+      "advanceSeconds": 30,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "sustained",
+        "stage": "globalRule",
+        "band": "high",
+        "eligibility": "mandated",
+        "clauses": [
+          "userRule",
+          "sustainedDwell"
+        ],
+        "accumulatedSeconds": 91
+      }
+    }
+  ],
+  "expectMandates": 1
+}
