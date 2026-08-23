@@ -83,7 +83,17 @@ public struct TaskRulesView: View {
 
             Spacer(minLength: spacing)
 
-            ForEach(PriorityRuleVerdict.allCases) { verdict in
+            // **The picker is F-130's disposition vocabulary, not a private list of three.**
+            //
+            // The four dispositions the registry names map totally and reversibly onto the
+            // shipped rule vocabulary with no schema change (plan R-64): three are stored
+            // verdicts and the fourth — *interpret by context* — is the **absence of a row**,
+            // which is why it is the control below rather than a fourth button here. Driving
+            // the loop from `AppRuleDisposition` is what keeps that mapping a property of the
+            // surface rather than a coincidence: a fifth disposition would appear here, and a
+            // disposition that stopped being decisive would leave.
+            ForEach(Self.decisiveDispositions) { disposition in
+                let verdict = Self.verdict(of: disposition)
                 Button {
                     change?(rule.id, verdict)
                 } label: {
@@ -101,6 +111,10 @@ public struct TaskRulesView: View {
                 )
                 .disabled(change == nil)
                 .accessibilityLabel(Text(ShellStrings.resource(Self.verdictKey(verdict))))
+                // The disposition's own name, from `FocusCore`'s catalog. The glyph and the
+                // short verdict word are what the row has room for; this is where the four
+                // dispositions are named in full, without costing the row a pixel.
+                .help(Text(disposition.labelResource))
             }
 
             if let remove {
@@ -112,6 +126,11 @@ public struct TaskRulesView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(Text(ShellStrings.resource(.priorityRulesActionRemove)))
+                // Removing the row **is** `interpretByContext`: with no rule about this subject
+                // the cascade falls through to the heuristic, which is exactly what "interpret
+                // by context" means. Naming it here is what makes the fourth disposition
+                // reachable rather than implied.
+                .help(Text(AppRuleDisposition.interpretByContext.labelResource))
             }
         }
     }
@@ -191,6 +210,30 @@ public struct TaskRulesView: View {
     /// The scopes a person can author by hand. `.session` is not one of them: it describes how
     /// long a rule lives, and it is set by the code paths that make a rule temporary.
     static let authorableScopes: [PriorityRuleScope] = [.app, .domain, .titleToken]
+
+    /// The dispositions that are a stored row, in `AppRuleDisposition.allCases` order.
+    ///
+    /// `interpretByContext` is excluded because it is *not* a row: it is the absence of one,
+    /// and the row's remove control is how a person reaches it. Filtered from `allCases`
+    /// through `isDecisive` rather than written out, so the two can never disagree about which
+    /// dispositions the store can hold.
+    nonisolated static var decisiveDispositions: [AppRuleDisposition] {
+        AppRuleDisposition.allCases.filter(\.isDecisive)
+    }
+
+    /// The verdict a decisive disposition is stored as.
+    ///
+    /// Total on `decisiveDispositions` by construction — `isDecisive` is exactly
+    /// *"`ruleVerdict` is not `nil`"* — and `RelevanceSeedTests` already asserts the round trip
+    /// is the identity on `allCases`. The `preconditionFailure` is unreachable and says so:
+    /// a crash here would mean the two definitions had come apart, which is a programming error
+    /// rather than a runtime condition.
+    nonisolated static func verdict(of disposition: AppRuleDisposition) -> PriorityRuleVerdict {
+        guard let verdict = disposition.ruleVerdict else {
+            preconditionFailure("\(disposition.rawValue) is not a stored rule verdict")
+        }
+        return verdict
+    }
 
     static func scopeKey(_ scope: PriorityRuleScope) -> ShellStringKey {
         switch scope {

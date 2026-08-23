@@ -133,6 +133,13 @@ public struct PrivacySettingsView: View {
 
             Divider()
 
+            // How the app decides, drawn from the one ordered list of rungs in the repository
+            // (R-54). It sits between *what the app can see* and *what it made of it*, which is
+            // the order a person reads them in. It offers nothing to press either.
+            CascadePrecedenceView()
+
+            Divider()
+
             // What the app concluded about the person, and why (R-71). It sits at the foot of
             // this pane rather than behind a developer flag because it is a *trust* surface:
             // the capability table above says what the app can see, and this says what it made
