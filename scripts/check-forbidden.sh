@@ -587,6 +587,13 @@ check_set "R-70h" "no FoundationModels in this epic" \
 #        * `Packages/FocusRules` — the store implementations that must still be able to write
 #          and wipe the legacy shape (`clearSessionRules()` keeps its shipped behaviour
 #          exactly), and their tests, which plant one to prove the builder skips it.
+#        * `Packages/FocusClassify/Tests` — R-72.3 requires the *engine* side to prove the skip
+#          too: `RuleSnapshotBuilder` must drop a legacy row into `skippedRuleCount`, the
+#          cascade must treat it as absent rather than as contradicting, and the golden corpus
+#          carries a `legacySessionScopedRows` block for exactly that. A fixture that plants the
+#          ambiguous shape in order to prove it reaches no rung is the opposite of a violation —
+#          the same reason `Packages/FocusRules/Tests` is on this list, applied to the package
+#          that consumes what that one stores.
 #        * `PrioritySnapshotTests.swift` — a **FocusUI** fixture that builds a cockpit
 #          `PriorityRuleValue`, not a `FocusRules.RelevanceRuleValue`. It never reaches the
 #          cascade; it feeds a committed snapshot baseline that renders a legacy row. The
@@ -598,6 +605,7 @@ check_outside "R-70n" "no rule is constructed with the session scope" \
     --allow Packages/FocusRules/Sources/FocusRules/SwiftDataRuleStore.swift \
     --allow Packages/FocusRules/Sources/FocusRules/InMemoryRuleStore.swift \
     --allow Packages/FocusRules/Tests \
+    --allow Packages/FocusClassify/Tests \
     --allow Packages/FocusUI/Tests/FocusUITests/PrioritySnapshotTests.swift
 
 # --- SC-1, the binary half ----------------------------------------------------------------
