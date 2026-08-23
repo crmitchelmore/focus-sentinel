@@ -83,9 +83,19 @@ struct HandoffRequestTests {
     }
 
     @Test("the 5,019-character URL is refused by the cap, before anything is decoded")
-    func theOverlongURL() {
+    func theOverlongURL() throws {
         #expect(HandoffCorpus.overlongURL.count > HandoffRequest.maximumURLLength)
         #expect(HandoffRequest.parse(HandoffCorpus.overlongURL) == .rejected(.tooLong))
+
+        // **And through the overload the app actually calls.** `PriorityHost` receives a `URL`
+        // from `.onOpenURL` and passes it straight to `parse(_ url: URL)`, which carries its
+        // own pre-decoding cap. Asserting the cap only through `parse(_ string: String)` proves
+        // the *string* overload's guard and nothing about the production one: measured by
+        // deleting `guard url.absoluteString.count <= maximumURLLength` from the URL overload,
+        // after which this whole suite — this test included — still passed, 18 of 18.
+        let url = try #require(URL(string: HandoffCorpus.overlongURL))
+        #expect(url.absoluteString.count > HandoffRequest.maximumURLLength)
+        #expect(HandoffRequest.parse(url) == .rejected(.tooLong))
     }
 
     @Test("a task under the URL cap but over the field cap is truncated and flagged")
@@ -219,6 +229,75 @@ struct HandoffRequestTests {
     func fragmentsAreNotContent() throws {
         let request = try #require(HandoffRequest.parse("focus://start?task=ok#fragment").request)
         #expect(request.task == "ok")
+    }
+
+    // MARK: - The overload the app actually calls
+
+    /// `parse(_ string: String)` is a convenience; `parse(_ url: URL)` is the production entry
+    /// point — `PriorityHost` hands it the `URL` that `.onOpenURL` delivered (P-60). The two
+    /// carry **separate** length guards, and a suite that drives only the string overload
+    /// short-circuits before the URL one is ever reached. That gap was real: with the URL
+    /// overload's `guard url.absoluteString.count <= maximumURLLength` deleted, every test in
+    /// this suite still passed. These tests close it.
+
+    @Test("the whole hostile corpus goes through the URL overload too")
+    func theCorpusThroughTheURLOverload() {
+        let urls = HandoffCorpus.urls
+        #expect(urls.count >= 35, "URL(string:) dropped too much of the corpus to mean anything")
+
+        for url in urls {
+            switch HandoffRequest.parse(url) {
+            case .confirm(let request):
+                #expect(!request.task.isEmpty, "‘\(url)’ confirmed an empty task")
+                #expect(request.task.count <= HandoffRequest.maximumFieldLength)
+                #expect((request.doneWhen?.count ?? 0) <= HandoffRequest.maximumFieldLength)
+                #expect(
+                    !request.task.unicodeScalars.contains {
+                        CharacterSet.controlCharacters.contains($0)
+                    },
+                    "‘\(url)’ let a control character through"
+                )
+            case .rejected:
+                break
+            }
+        }
+    }
+
+    @Test("both public overloads answer every corpus input identically")
+    func theTwoOverloadsAgree() {
+        for input in HandoffCorpus.strings {
+            guard let url = URL(string: input) else { continue }
+            #expect(
+                HandoffRequest.parse(input) == HandoffRequest.parse(url),
+                "‘\(input)’ is answered differently by the String and URL overloads"
+            )
+        }
+    }
+
+    @Test("the URL overload's own cap holds at the boundary, with no String in sight")
+    func theURLOverloadCapAtTheBoundary() throws {
+        let prefix = "focus://start?task="
+
+        for total in [
+            HandoffRequest.maximumURLLength - 1,
+            HandoffRequest.maximumURLLength,
+            HandoffRequest.maximumURLLength + 1,
+            HandoffRequest.maximumURLLength + 923   // P-61's 5,019 characters
+        ] {
+            let task = String(repeating: "a", count: total - prefix.count)
+            let url = try #require(URL(string: prefix + task))
+            #expect(url.absoluteString.count == total)
+
+            let parse = HandoffRequest.parse(url)
+            if total > HandoffRequest.maximumURLLength {
+                #expect(parse == .rejected(.tooLong), "a \(total)-character URL was not refused")
+            } else {
+                // Under the URL cap it is accepted and then bounded by the *field* cap — the
+                // two caps are different rules and this is where they are told apart.
+                let request = try #require(parse.request, "a \(total)-character URL was refused")
+                #expect(request.task.count == HandoffRequest.maximumFieldLength)
+            }
+        }
     }
 
     // MARK: - Properties over the whole corpus
