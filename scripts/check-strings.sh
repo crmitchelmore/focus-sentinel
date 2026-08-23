@@ -102,8 +102,18 @@ root = sys.argv[1]
 # switch and the sensing status line. `FocusCore` keeps only the `undo.` and `status.` keys it
 # already owns — the session machine returns typed values, and the labels for them live in the
 # UI package where every other user-visible string does.
+#
+# e04 adds five, and all five are **`FocusCore`'s**, which is a departure worth stating: the
+# relevance vocabulary — the cascade ladder, the explanation clauses, the suppression reasons,
+# the evidence bands and the per-app dispositions — is declared in `FocusCore` because `FocusUI`
+# may not import `FocusClassify` (plan R-53), and a surface that cannot name a rung is a surface
+# that cannot draw the precedence pane. Each vocabulary exposes its keys as
+# `LocalizedStringResource`s resolved against `FocusCore`'s own bundle, in exactly the shape
+# `FocusStatus.shortLabelResource` already ships, so `FocusUI` renders them without writing a
+# single string of its own.
 NAMESPACES = ("shell.", "settings.", "status.", "priority.", "capture.", "context.",
-              "handoff.", "undo.", "session.", "sensing.", "capability.")
+              "handoff.", "undo.", "session.", "sensing.", "capability.",
+              "cascade.", "explanation.", "suppression.", "evidence.", "rule.")
 
 # module name -> (catalog path, source directory)
 MODULES = {
@@ -214,6 +224,95 @@ for module, (catalog_path, source_dir) in sorted(MODULES.items()):
         not untranslated,
         f"{module}: every catalog entry has a translated English value",
         [f"not translated: {key}" for key in untranslated],
+    )
+
+# --- e04: three bijections between a Swift vocabulary and its copy (plan R-70k/l/m) --------
+#
+# The catalog checks above are about *presence*: every key is referenced, every referenced key
+# exists. These three are about *totality*, which is a different property and the one that
+# actually matters for a closed vocabulary:
+#
+#   R-70k  CascadeStage.allCases        ↔ cascade.rung.*
+#   R-70l  ExplanationClause's cases    ↔ explanation.clause.*
+#   R-70m  SuppressionReason.allCases   ↔ suppression.reason.*
+#
+# Why a bijection rather than a subset in each direction. A rung with no copy is a row the
+# precedence pane cannot draw — and that pane exists precisely to show a person that their own
+# rules outrank everything, so a missing row is a broken promise rather than a cosmetic gap. A
+# copy key with no rung is a sentence the app can never say, which is how a catalog rots. And
+# `check-strings.sh` is the fourth reader of `CascadePrecedence.rungs` (plan R-54): the runtime
+# iterates it, the explanation builder switches over it, the Settings pane renders it, and this
+# compares it to the copy. Three of the four are mechanically checked; this is one of them.
+#
+# The cases are read out of the **source**, by parsing the `case` declarations of the named
+# enum, rather than from a hand-kept list here — a list in this script would be a fifth place
+# the vocabulary is written down, and the whole ruling is that there is no fifth place.
+
+RELEVANCE_SOURCE = "Packages/FocusCore/Sources/FocusCore/Relevance"
+
+BIJECTIONS = (
+    ("R-70k", "CascadeStage", "CascadePrecedence.swift", "cascade.rung."),
+    ("R-70l", "ExplanationClause", "Explanation.swift", "explanation.clause."),
+    ("R-70m", "SuppressionReason", "UncertaintyReason.swift", "suppression.reason."),
+)
+
+# Keys inside a namespace that are captions rather than members of the vocabulary. Named one by
+# one, because "everything that does not parse" would be a hole the next caption falls through.
+NON_MEMBER_KEYS = {"cascade.rung.unavailable"}
+
+CASE_DECLARATION = re.compile(r"^\s*case\s+([A-Za-z_][A-Za-z0-9_]*)")
+
+
+def enum_cases(path, name):
+    """The case names declared by `enum <name>` in `path`, in declaration order."""
+    with open(os.path.join(root, path)) as handle:
+        lines = handle.readlines()
+
+    cases = []
+    depth = 0
+    inside = False
+    for line in lines:
+        if not inside:
+            if re.search(rf"\benum\s+{name}\b", line) and not COMMENT.match(line):
+                inside = True
+                depth = line.count("{") - line.count("}")
+            continue
+        if COMMENT.match(line):
+            continue
+        found = CASE_DECLARATION.match(line)
+        if found:
+            cases.append(found.group(1))
+        depth += line.count("{") - line.count("}")
+        if depth <= 0:
+            break
+    return cases
+
+
+core_catalog = catalog_keys(MODULES["FocusCore"][0])
+
+for condition, enum_name, file_name, namespace in BIJECTIONS:
+    declared = set(enum_cases(os.path.join(RELEVANCE_SOURCE, file_name), enum_name))
+    keys = {
+        key
+        for key in core_catalog
+        if key.startswith(namespace) and key not in NON_MEMBER_KEYS
+    }
+    suffixes = {key[len(namespace):] for key in keys}
+
+    report(
+        bool(declared),
+        f"{condition}: {enum_name} declares at least one case",
+        [f"no `case` found in {file_name} — has the enum been renamed?"],
+    )
+    report(
+        not (declared - suffixes),
+        f"{condition}: every {enum_name} case has a {namespace}* key",
+        [f"no copy for {enum_name}.{case}: add {namespace}{case}" for case in sorted(declared - suffixes)],
+    )
+    report(
+        not (suffixes - declared),
+        f"{condition}: every {namespace}* key names a {enum_name} case",
+        [f"{namespace}{suffix} names no case of {enum_name}" for suffix in sorted(suffixes - declared)],
     )
 
 print()
