@@ -1,17 +1,12 @@
 import Foundation
 import SwiftData
 
-/// Which phase a focus session is in.
-///
-/// Stored as `FocusSessionRecord.phaseRaw`, a `String`. Every enum-backed field in this
-/// schema is stored as its string raw value and never as an ordinal, so that reordering a
-/// Swift enum can never silently reinterpret persisted data.
-public enum SessionPhase: String, Sendable, CaseIterable, Codable, Hashable {
-    case running
-    case paused
-    case onBreak
-    case ended
-}
+// `SessionPhase` used to be declared here, with v1's four cases (`running`, `paused`,
+// `onBreak`, `ended`). It now lives in `Session/SessionPhase.swift` with e03's six, and
+// `SessionPhase.decode(_:)` carries v1's two retired raw values as aliases — `running` →
+// `focus`, `ended` → `complete`. Nothing about the *stored bytes* changed: every enum-backed
+// field in this schema is stored as its string raw value and never as an ordinal, which is
+// exactly why the vocabulary could grow without a data migration.
 
 /// The user's appearance choice, as persisted.
 ///
@@ -216,11 +211,15 @@ extension FocusSchemaV1.AppSettingsRecord {
 }
 
 extension FocusSchemaV1.FocusSessionRecord {
-    /// The stored phase, decoded. Falls back to `ended` for an unknown string: a session
-    /// this build cannot interpret is over as far as it is concerned, which is the safe
-    /// reading.
+    /// The stored phase, decoded through the one sanctioned decoder.
+    ///
+    /// `SessionPhase.decode(_:)` is an exhaustive switch carrying v1's retired raw values as
+    /// aliases, and it falls back to `.complete` for a string this build does not know: a
+    /// session this build cannot interpret is over as far as it is concerned, which is the
+    /// safe reading. `SessionPhase(rawValue:)` is banned outright by `check-forbidden.sh`,
+    /// because it would silently turn a legacy `running` row into no phase at all.
     public var phase: SessionPhase {
-        get { SessionPhase(rawValue: phaseRaw) ?? .ended }
+        get { SessionPhase.decode(phaseRaw) }
         set { phaseRaw = newValue.rawValue }
     }
 }

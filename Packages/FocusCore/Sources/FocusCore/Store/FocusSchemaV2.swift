@@ -344,10 +344,10 @@ extension FocusSchemaV2.AppSettingsRecord {
 }
 
 extension FocusSchemaV2.FocusSessionRecord {
-    /// The stored phase, decoded. Falls back to `ended` for an unknown string: a session this
-    /// build cannot interpret is over as far as it is concerned.
+    /// The stored phase, decoded through the one sanctioned decoder — see the identical note
+    /// on `FocusSchemaV1.FocusSessionRecord.phase`.
     public var phase: SessionPhase {
-        get { SessionPhase(rawValue: phaseRaw) ?? .ended }
+        get { SessionPhase.decode(phaseRaw) }
         set { phaseRaw = newValue.rawValue }
     }
 }

@@ -604,6 +604,39 @@ public enum FocusSchemaV3: VersionedSchema {
     }
 }
 
+extension FocusSchemaV3.FocusSessionRecord {
+    /// The stored phase, decoded through the one sanctioned decoder.
+    ///
+    /// `SessionPhase.decode(_:)` is an exhaustive switch over string literals that carries the
+    /// v1/v2 aliases (`running` → `focus`, `ended` → `complete`) and answers `.complete` for
+    /// anything else — a session this build cannot interpret is over as far as it is
+    /// concerned. `SessionPhase(rawValue:)` is banned outright by `check-forbidden.sh`, with
+    /// no allowlist and no exempted call site, which is possible only because the sanctioned
+    /// decoder does not use one either.
+    public var phase: SessionPhase {
+        get { SessionPhase.decode(phaseRaw) }
+        set { phaseRaw = newValue.rawValue }
+    }
+
+    /// The phase a resume returns to, decoded. `nil` means "resume to `.focus`", which is
+    /// what the machine does with an absent `resumeTo`.
+    public var resumeTo: ResumablePhase? {
+        get { ResumablePhase.decode(resumeToRaw) }
+        set { resumeToRaw = newValue?.rawValue }
+    }
+
+    /// The causes this session is paused for, decoded from the sorted comma-joined column.
+    /// Empty for every non-paused phase, which is the persisted half of the invariant.
+    public var pauseCauses: Set<PauseReason> {
+        get { SessionState.decodePauseCauses(pauseCausesRaw) }
+        set {
+            pauseCausesRaw = newValue.isEmpty
+                ? nil
+                : newValue.sorted().map(\.rawValue).joined(separator: ",")
+        }
+    }
+}
+
 extension FocusSchemaV3.AppSettingsRecord {
     /// The stored preference, decoded. Falls back to `matchSystem` if the stored string is
     /// not a value this build knows — a forward-compatible read, never a crash.
