@@ -18,7 +18,13 @@ let package = Package(
     name: "FocusClassify",
     platforms: [.macOS(.v26)],
     products: [
-        .library(name: "FocusClassify", targets: ["FocusClassify"])
+        .library(name: "FocusClassify", targets: ["FocusClassify"]),
+        // The test-lane library. R-75 moves the evaluation harness out of the test target
+        // because a harness that lives in a test target can only ever be run by a test, and
+        // T103a's `FocusEvaluate` executable and the swift-testing suites both need it. It is
+        // **not** in the shipping graph: no application target links it, and
+        // `check-boundaries.sh` asserts that rather than assuming it.
+        .library(name: "FocusEvaluateCore", targets: ["FocusEvaluateCore"])
     ],
     dependencies: [
         .package(path: "../FocusCore"),
@@ -32,9 +38,17 @@ let package = Package(
                 .product(name: "FocusRules", package: "FocusRules")
             ]
         ),
+        .target(
+            name: "FocusEvaluateCore",
+            dependencies: [
+                "FocusClassify",
+                .product(name: "FocusCore", package: "FocusCore"),
+                .product(name: "FocusRules", package: "FocusRules")
+            ]
+        ),
         .testTarget(
             name: "FocusClassifyTests",
-            dependencies: ["FocusClassify"],
+            dependencies: ["FocusClassify", "FocusEvaluateCore"],
             // `.copy`, never `.process` — the same ruling e02 made for the schema fixtures and
             // for the same reason: a directory of fixtures must reach the bundle with its
             // subdirectory structure intact, so that

@@ -554,9 +554,21 @@ check_set "R-70e" "no timer or sleep in the classification package" \
 # R-70f  Every numeric threshold lives in RelevancePolicy.swift and nowhere else. This is what
 #        makes "no magic numbers" mechanical instead of a habit. Excepted: 0 and 1, and
 #        comparisons against `count`/`isEmpty`.
+#
+#        A SECOND excepted file, and the reason it is not a weakening. R-75 moves the evaluation
+#        harness into `Packages/FocusClassify/Sources/FocusEvaluateCore/` — emission has to be a
+#        product rather than a test side effect, and this search path predates that decision by
+#        two phases. A percentile rank, a cache-sweep capacity and a corpus floor are all
+#        numbers, and none of them is a threshold about a person: they size the evidence, not
+#        the judgement. So the harness tree gets exactly the same discipline the engine tree has
+#        — ONE file in which a literal may appear, every constant named, doc-commented and
+#        traceable to the ruling that fixed it — and `EvaluationPolicy.swift` is that file. The
+#        engine's own exception list is untouched, and a threshold cannot be introduced anywhere
+#        a reviewer would not think to look in either tree.
 check_literals "R-70f" "no numeric literal outside RelevancePolicy" \
     Packages/FocusClassify/Sources Packages/FocusCore/Sources/FocusCore/Relevance \
-    --except Packages/FocusCore/Sources/FocusCore/Relevance/RelevancePolicy.swift
+    --except Packages/FocusCore/Sources/FocusCore/Relevance/RelevancePolicy.swift \
+    --except Packages/FocusClassify/Sources/FocusEvaluateCore/EvaluationPolicy.swift
 
 # R-70g  NormalisedToken and Explanation are constructed only where they are declared — the
 #        same shape as R-41's ActivityEvent.detail lint, applied to the other end of the
@@ -600,12 +612,20 @@ check_set "R-70h" "no FoundationModels in this epic" \
 #          pattern cannot tell the two vocabularies apart because the line reads `scope:
 #          .session,` with the type three lines above it, so the exemption is one named file
 #          rather than a looser pattern.
+#        * `FocusEvaluateCore/CorpusRunner.swift` — the golden corpus's `legacySessionScopedRows`
+#          block plants exactly this row in order to prove `RuleSnapshotBuilder` drops it into
+#          `skippedRuleCount` and that the cascade treats it as absent rather than as
+#          contradicting. It is the same fixture machinery as the two Tests entries above,
+#          living in a library only because R-75 requires the `FocusEvaluate` product to be able
+#          to run the corpus too. `FocusEvaluateCore` is a test-lane target: no application
+#          target links it, and `check-boundaries.sh` asserts that rather than assuming it.
 check_outside "R-70n" "no rule is constructed with the session scope" \
     'scope: \.session|RuleScope\.session' App Packages \
     --allow Packages/FocusRules/Sources/FocusRules/SwiftDataRuleStore.swift \
     --allow Packages/FocusRules/Sources/FocusRules/InMemoryRuleStore.swift \
     --allow Packages/FocusRules/Tests \
     --allow Packages/FocusClassify/Tests \
+    --allow Packages/FocusClassify/Sources/FocusEvaluateCore/CorpusRunner.swift \
     --allow Packages/FocusUI/Tests/FocusUITests/PrioritySnapshotTests.swift
 
 # --- SC-1, the binary half ----------------------------------------------------------------
