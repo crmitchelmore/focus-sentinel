@@ -291,6 +291,28 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case capabilityFallbackFeatureAbsent = "capability.fallback.featureAbsent"
     case capabilityFallbackSuppressOnly = "capability.fallback.suppressOnly"
     case capabilityFallbackShowUnavailable = "capability.fallback.showUnavailable"
+
+    // The verdict inspector (F-46, F-52, R-71).
+    //
+    // The *vocabulary* it draws — the rung names, the clause sentences, the suppression
+    // reasons, the evidence bands — is `FocusCore`'s, because `FocusUI` may not import
+    // `FocusClassify` and the whole classification vocabulary moved beside the status it
+    // mirrors (R-53). What is here is only this pane's own chrome: the headings and the labels
+    // that introduce those values.
+    case verdictHeading = "settings.verdict.heading"
+    case verdictExplanation = "settings.verdict.explanation"
+    /// `nil` is a real answer: the engine has concluded nothing, and saying so is not the same
+    /// as saying `relevant`.
+    case verdictNothingJudged = "settings.verdict.nothingJudged"
+    case verdictRungLabel = "settings.verdict.rungLabel"
+    case verdictBandLabel = "settings.verdict.bandLabel"
+    case verdictDriftLabel = "settings.verdict.driftLabel"
+    case verdictReasonsLabel = "settings.verdict.reasonsLabel"
+    case verdictSilenceLabel = "settings.verdict.silenceLabel"
+    /// What this build says when the engine has authorised an interruption and there is
+    /// nothing to consume it. The nudge is e05's; this is the honest report of its absence.
+    case verdictMandated = "settings.verdict.mandated"
+    case verdictEngineLabel = "settings.verdict.engineLabel"
 }
 
 /// A transform applied to a resolved string immediately before it is drawn.

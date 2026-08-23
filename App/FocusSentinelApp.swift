@@ -67,7 +67,8 @@ struct FocusSentinelApp: App {
             SettingsHost(
                 appearance: appearance,
                 dateProvider: composition.dateProvider,
-                sensing: composition.sensingHost
+                sensing: composition.sensingHost,
+                relevance: composition.relevanceHost
             )
                 .appearanceTraits(appearance.traits)
         }
@@ -157,6 +158,9 @@ private struct SettingsHost: View {
     let dateProvider: any DateProvider
     /// The live observer graph, so the Privacy pane draws what is actually attached.
     let sensing: SensingHost
+    /// The live relevance runtime, so the Privacy pane's verdict inspector draws what the
+    /// engine actually concluded rather than a value assembled for the occasion (R-71).
+    let relevance: RelevanceHost
 
     @Environment(\.modelContext) private var modelContext
 
@@ -168,7 +172,8 @@ private struct SettingsHost: View {
             // rather than probed again here, so the Privacy pane and the cockpit's status line
             // are one answer rather than two opinions.
             summary: sensing.summary,
-            capabilities: sensing.capabilities
+            capabilities: sensing.capabilities,
+            verdict: relevance.verdict
         )
         .task {
             // The window may be opened long after launch, so the stored value is read here

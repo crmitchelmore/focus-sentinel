@@ -39,17 +39,20 @@ public struct ShellSettingsView: View {
     private let storeURL: URL
     private let summary: SensingSummary
     private let capabilities: CapabilityMatrix
+    private let verdict: VerdictSnapshot?
 
     public init(
         preference: Binding<AppearancePreference>,
         storeURL: URL,
         summary: SensingSummary = .inactive,
-        capabilities: CapabilityMatrix = CapabilityMatrix()
+        capabilities: CapabilityMatrix = CapabilityMatrix(),
+        verdict: VerdictSnapshot? = nil
     ) {
         self._preference = preference
         self.storeURL = storeURL
         self.summary = summary
         self.capabilities = capabilities
+        self.verdict = verdict
     }
 
     public var body: some View {
@@ -61,7 +64,8 @@ public struct ShellSettingsView: View {
             PrivacySettingsView(
                 storeURL: storeURL,
                 summary: summary,
-                capabilities: capabilities
+                capabilities: capabilities,
+                verdict: verdict
             )
             .tabItem { tabLabel(.privacy) }
             .tag(SettingsTab.privacy)

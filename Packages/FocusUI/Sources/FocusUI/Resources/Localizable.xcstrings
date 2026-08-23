@@ -2281,6 +2281,126 @@
         }
       }
     },
+    "settings.verdict.bandLabel" : {
+      "comment" : "Label before the evidence band — how much Focus had to go on.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Evidence"
+          }
+        }
+      }
+    },
+    "settings.verdict.driftLabel" : {
+      "comment" : "Label before the drift clock: how long the person has been away from their priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Away for"
+          }
+        }
+      }
+    },
+    "settings.verdict.engineLabel" : {
+      "comment" : "Label before the engine version stamp.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Engine"
+          }
+        }
+      }
+    },
+    "settings.verdict.explanation" : {
+      "comment" : "Introduces the verdict inspector. States plainly that this version never interrupts.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus works this out on your Mac, from the app in front and the rules you wrote. This version shows you what it concluded and says nothing else."
+          }
+        }
+      }
+    },
+    "settings.verdict.heading" : {
+      "comment" : "The heading of the verdict inspector in Settings ▸ Privacy.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "What Focus thinks right now"
+          }
+        }
+      }
+    },
+    "settings.verdict.mandated" : {
+      "comment" : "Shown when the engine would interrupt and there is nothing yet to do it with.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus would speak up now. Nothing in this version can, so it does not."
+          }
+        }
+      }
+    },
+    "settings.verdict.nothingJudged" : {
+      "comment" : "Shown when the engine has concluded nothing yet. Never shown as a verdict.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing judged yet."
+          }
+        }
+      }
+    },
+    "settings.verdict.reasonsLabel" : {
+      "comment" : "Label above the list of explanation clauses.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Why"
+          }
+        }
+      }
+    },
+    "settings.verdict.rungLabel" : {
+      "comment" : "Label before the name of the cascade rung that decided.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Decided by"
+          }
+        }
+      }
+    },
+    "settings.verdict.silenceLabel" : {
+      "comment" : "Label before the reason Focus is not saying anything.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Staying quiet because"
+          }
+        }
+      }
+    },
     "shell.cockpit.heading" : {
       "comment" : "Heading of the main cockpit window.",
       "extractionState" : "manual",
