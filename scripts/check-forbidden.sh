@@ -156,6 +156,137 @@ check() {
     fi
 }
 
+# check_set <condition> <description> <pattern> <path> [<path>…]
+#
+# `check` above searches the whole shipping graph and takes an *exempt prefix* as its fourth
+# argument. Three of e04's assertions need the other thing — a narrower **search set** — and
+# passing one to `check` would be silently catastrophic rather than merely wrong: with
+# `exempt="Packages"`, every hit under `Packages/` is filtered out of the result and the check
+# prints `ok` however many violations it found. So a search set gets its own helper, and the
+# two shapes cannot be confused at a call site.
+check_set() {
+    local condition="$1"
+    local description="$2"
+    local pattern="$3"
+    shift 3
+
+    local hits
+    hits=$(grep -rnE --include='*.swift' --exclude-dir='.build' "$pattern" "$@" 2>/dev/null | strip_comments)
+
+    if [[ -n "$hits" ]]; then
+        print -u2 "FAIL [$condition] $description"
+        print -u2 "$hits" | sed 's/^/    /'
+        rc=1
+    else
+        print "ok   [$condition] $description (searched: $*)"
+    fi
+}
+
+# count_files <condition> <description> <fixed-string> <expected-count> <path> [<path>…]
+#
+# Not "is it absent" but "how many files contain it". The `fileprivate` initialiser already
+# makes a second construction site a compile error; this makes the COUNT visible, so moving a
+# producer becomes a deliberate, reviewed act rather than a quiet one. The pattern is matched
+# as a FIXED string, because the shapes this is used on end in `(`.
+count_files() {
+    local condition="$1"
+    local description="$2"
+    local pattern="$3"
+    local expected="$4"
+    shift 4
+
+    local files count
+    files=$(grep -rnF --include='*.swift' --exclude-dir='.build' -- "$pattern" "$@" 2>/dev/null \
+        | strip_comments | cut -d: -f1 | sort -u)
+    count=$(print -r -- "$files" | grep -c '[^[:space:]]')
+
+    if [[ "$count" != "$expected" ]]; then
+        print -u2 "FAIL [$condition] $description — expected $expected file(s), found $count"
+        print -u2 "$files" | sed 's/^/    /'
+        rc=1
+    else
+        print "ok   [$condition] $description ($count file)"
+    fi
+}
+
+# check_outside <condition> <description> <pattern> <search-path> --allow <path> [--allow <path>…]
+#
+# The same shape as R-41's `.detail` lint: the construction is sanctioned in named places and
+# forbidden everywhere else. An allowed path is a prefix of grep's `path:line:` output, so
+# naming a directory allows everything beneath it.
+check_outside() {
+    local condition="$1"
+    local description="$2"
+    local pattern="$3"
+    shift 3
+
+    local -a paths allowed
+    while (( $# )); do
+        if [[ "$1" == "--allow" ]]; then
+            allowed+=("$2")
+            shift 2
+        else
+            paths+=("$1")
+            shift
+        fi
+    done
+
+    local hits
+    hits=$(grep -rnE --include='*.swift' --exclude-dir='.build' "$pattern" "${paths[@]}" 2>/dev/null | strip_comments)
+    local allow
+    for allow in $allowed; do
+        [[ -n "$hits" ]] && hits=$(print -r -- "$hits" | grep -vE "^${allow}")
+    done
+
+    if [[ -n "$hits" ]]; then
+        print -u2 "FAIL [$condition] $description"
+        print -u2 "$hits" | sed 's/^/    /'
+        print -u2 "    Sanctioned locations: ${allowed[*]}"
+        rc=1
+    else
+        print "ok   [$condition] $description (allowed: ${allowed[*]})"
+    fi
+}
+
+# check_literals <condition> <description> <path> [<path>…] --except <file> [--except <file>…]
+#
+# R-70f, and the reason it is a script rather than a grep: a numeric literal has to be found in
+# *code*, not in a comment, a doc comment, a string or an identifier such as `FocusSchemaV3`,
+# `UInt64` or `BCP47`. Excepted: the literals `0` and `1` anywhere, and any line comparing
+# against `count` or `isEmpty` — the two shapes where a small number is arithmetic about a
+# collection rather than a threshold about a person.
+check_literals() {
+    local condition="$1"
+    local description="$2"
+    shift 2
+
+    local -a paths excepted
+    while (( $# )); do
+        if [[ "$1" == "--except" ]]; then
+            excepted+=("$2")
+            shift 2
+        else
+            paths+=("$1")
+            shift
+        fi
+    done
+
+    local hits
+    hits=$(python3 "$REPO_ROOT/scripts/find-numeric-literals.py" \
+        --paths "${paths[@]}" --except "${excepted[@]}" 2>&1)
+    local literal_rc=$?
+
+    if (( literal_rc != 0 )); then
+        print -u2 "FAIL [$condition] $description"
+        print -u2 "$hits" | sed 's/^/    /'
+        print -u2 "    Every threshold in the engine lives in RelevancePolicy.swift, is named,"
+        print -u2 "    is classed B/C/S, is digested and carries a mutation witness (R-59, R-74)."
+        rc=1
+    else
+        print "ok   [$condition] $description (searched: ${paths[*]})"
+    fi
+}
+
 print "== forbidden symbols (searched: ${SEARCH_PATHS[*]}; excluded: Tools/, scripts/, comments)"
 print "   SC-1 alone is searched repository-wide, in source and in the built objects (R-32)"
 
@@ -373,6 +504,101 @@ if [[ -n "$entitlement_hits" ]]; then
 else
     print "ok   [SC-7] App/FocusSentinel.entitlements declares no networking or iCloud key"
 fi
+
+# ---- e04 -------------------------------------------------------------------------------
+#
+# Nine assertions, landing in Phase B — **before** the engine they constrain exists. That
+# ordering is e03's doctrine and it is the whole point: a lint that forbids a shape must exist
+# before the shape could be written, or the first green gate proves nothing.
+
+print
+print "== e04: the shapes the relevance engine must not take"
+
+# R-70a  `Verdict.permitsIntervention` is DELETED. The Bool was the collapse hazard —
+#        `if v.permitsIntervention || confidence > 0.9` compiles and defeats standing
+#        condition 6 — so the guarantee moved to a type with no reachable initialiser
+#        (`InterventionMandate`) and the member is banned so it cannot come back.
+check_set "R-70a" "no permitsIntervention on a Verdict" \
+    'Verdict\.permitsIntervention|verdict\.permitsIntervention' \
+    App Packages
+
+# R-70b  `InterventionMandate` has a fileprivate memberwise initialiser, so a second
+#        construction site is already a compile error. This makes the COUNT visible: moving
+#        the producer becomes a deliberate, reviewed act rather than a quiet one.
+count_files "R-70b" "InterventionMandate is constructed in exactly one file" \
+    'InterventionMandate(' 1 App Packages
+
+# R-70c  `NLEmbedding.wordEmbedding` is banned. Measured (P-112): cross-domain separation of
+#        0.017 on code~programming vs code~cooking, and it INVERTS on proposal~invoice (1.2665,
+#        both work) vs proposal~game (1.2629, a distraction). A signal that ranks a distraction
+#        closer than a colleague is not a signal.
+check_set "R-70c" "no NLEmbedding.wordEmbedding" \
+    'wordEmbedding' \
+    App Packages
+
+# R-70d  `NLContextualEmbedding` is banned outright. It is asset-gated and its surface includes
+#        an asset REQUEST. A package whose whole guarantee is that it cannot reach the network
+#        may not name a type that can ask for a download (SC-7).
+check_set "R-70d" "no NLContextualEmbedding or asset request" \
+    'NLContextualEmbedding|requestEmbeddingAssets|hasAvailableAssets' \
+    App Packages
+
+# R-70e  No timer in FocusClassify. The drift machine and the transition window are pure
+#        reducers on an injected MonotonicClock reading (R-60); that is what makes every
+#        sequence fixture an exact assertion rather than a flaky one. A timer inside a
+#        replayable reducer is a non-determinism no fixture can catch.
+check_set "R-70e" "no timer or sleep in the classification package" \
+    'Timer\(|DispatchSourceTimer|Task\.sleep|asyncAfter|RunLoop\.' \
+    Packages/FocusClassify/Sources
+
+# R-70f  Every numeric threshold lives in RelevancePolicy.swift and nowhere else. This is what
+#        makes "no magic numbers" mechanical instead of a habit. Excepted: 0 and 1, and
+#        comparisons against `count`/`isEmpty`.
+check_literals "R-70f" "no numeric literal outside RelevancePolicy" \
+    Packages/FocusClassify/Sources Packages/FocusCore/Sources/FocusCore/Relevance \
+    --except Packages/FocusCore/Sources/FocusCore/Relevance/RelevancePolicy.swift
+
+# R-70g  NormalisedToken and Explanation are constructed only where they are declared — the
+#        same shape as R-41's ActivityEvent.detail lint, applied to the other end of the
+#        pipeline. Together with their private initialisers this is what makes raw captured
+#        content in an explanation UNREPRESENTABLE rather than merely forbidden.
+check_outside "R-70g" "NormalisedToken and Explanation are built only in their own files" \
+    'NormalisedToken\(|Explanation\(' App Packages \
+    --allow Packages/FocusCore/Sources/FocusCore/Relevance/NormalisedToken.swift \
+    --allow Packages/FocusCore/Sources/FocusCore/Relevance/Explanation.swift
+
+# R-70h  No model, anywhere, in any form — not even behind an availability check. e04 is the
+#        DETERMINISTIC-FIRST epic: the heuristic layer is proven before a model exists, which
+#        is what makes the charter's always-present-fallback clause temporally true rather
+#        than a promise about a later epic. FoundationModels arrives in e06 and not before.
+check_set "R-70h" "no FoundationModels in this epic" \
+    'import FoundationModels|SystemLanguageModel|LanguageModelSession' \
+    App Packages
+
+# R-70n  A persisted rule with scopeRaw == "session" has NO subject kind: the shipped RuleScope
+#        makes `.session` mutually exclusive with app/domain/titleToken, so nothing in the row
+#        says whether its subject is a bundle identifier, an origin or a title token. e04 skips
+#        and counts such rows (R-72.3) rather than guessing, and session-lived rules are owned
+#        by SessionRuleBox instead. This lint stops the ambiguous shape being revived: the next
+#        person who needs a session rule must reach for the box, not for the enum case.
+#
+#        Two notes on the allow-list, both deliberate and both self-limiting:
+#
+#        * `Packages/FocusRules` — the store implementations that must still be able to write
+#          and wipe the legacy shape (`clearSessionRules()` keeps its shipped behaviour
+#          exactly), and their tests, which plant one to prove the builder skips it.
+#        * `PrioritySnapshotTests.swift` — a **FocusUI** fixture that builds a cockpit
+#          `PriorityRuleValue`, not a `FocusRules.RelevanceRuleValue`. It never reaches the
+#          cascade; it feeds a committed snapshot baseline that renders a legacy row. The
+#          pattern cannot tell the two vocabularies apart because the line reads `scope:
+#          .session,` with the type three lines above it, so the exemption is one named file
+#          rather than a looser pattern.
+check_outside "R-70n" "no rule is constructed with the session scope" \
+    'scope: \.session|RuleScope\.session' App Packages \
+    --allow Packages/FocusRules/Sources/FocusRules/SwiftDataRuleStore.swift \
+    --allow Packages/FocusRules/Sources/FocusRules/InMemoryRuleStore.swift \
+    --allow Packages/FocusRules/Tests \
+    --allow Packages/FocusUI/Tests/FocusUITests/PrioritySnapshotTests.swift
 
 # --- SC-1, the binary half ----------------------------------------------------------------
 #
