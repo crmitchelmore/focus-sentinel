@@ -90,7 +90,17 @@ failed. It never short-circuits: a failing early stage does not hide a later one
 log, every stage log and both self-check reports) and the result bundle are all derived from a
 per-run token, so two gate runs at once cannot braid their output into one file that describes
 neither of them. The cost is that a default run builds cold; set `FOCUS_DERIVED_DATA` to reuse
-a warm tree when you are the only run. The stages:
+a warm tree when you are the only run.
+
+**And every green invocation gives those paths back.** A per-run derived-data tree is about
+750 MB, so a gate that only ever created them turned a green day into gigabytes of dead
+scratch — and a build that then dies on a full volume does not fail a check, it produces no
+exit status at all, which is the least legible way for a gate to break. A passing run therefore
+deletes its own derived data and result bundle; a **failing** run keeps both, because the
+inside of a failed build is what you need next. The log directory is never deleted either way —
+the stage logs are the evidence, and they are kilobytes. A pinned `FOCUS_DERIVED_DATA` or
+`FOCUS_RESULT_BUNDLE` is left alone (it belongs to whoever pinned it), and
+`FOCUS_KEEP_DERIVED_DATA=1` keeps a green run's tree as well. The stages:
 
 | # | stage | what it proves |
 |---|---|---|
@@ -191,9 +201,10 @@ Never pipe any of it. Redirect unpiped to a log and gate on the explicit exit st
 | variable | used by | meaning |
 |---|---|---|
 | `FOCUS_RUN_TOKEN` | the gate | the per-run suffix every default path is derived from. Default `<UTC timestamp>-<pid>` |
-| `FOCUS_DERIVED_DATA` | the gate, `check-boundaries.sh`, the live lane | build location. Gate default `/tmp/focus-dd-$FOCUS_RUN_TOKEN`; the live lane's own default is `/tmp/focus-dd`. Pin it to reuse a warm tree |
-| `FOCUS_LOG_DIR` | the gate | where the gate log, every stage log and both self-check reports are written. Default `/tmp/focus-gate-$FOCUS_RUN_TOKEN` |
-| `FOCUS_RESULT_BUNDLE` | the gate | the unit lane's `-resultBundlePath`. Default `$FOCUS_LOG_DIR/focus-e01-$FOCUS_RUN_TOKEN.xcresult`; either way it is `rm -rf`'d immediately before the run |
+| `FOCUS_DERIVED_DATA` | the gate, `check-boundaries.sh`, the live lane | build location. Gate default `/tmp/focus-dd-$FOCUS_RUN_TOKEN`; the live lane's own default is `/tmp/focus-dd`. Pin it to reuse a warm tree — a pinned path is also never deleted by the gate |
+| `FOCUS_LOG_DIR` | the gate | where the gate log, every stage log and both self-check reports are written. Default `/tmp/focus-gate-$FOCUS_RUN_TOKEN`. Never deleted: these logs are the evidence |
+| `FOCUS_RESULT_BUNDLE` | the gate | the unit lane's `-resultBundlePath`. Default `$FOCUS_LOG_DIR/focus-e01-$FOCUS_RUN_TOKEN.xcresult`; either way it is `rm -rf`'d immediately before the run, and a green run removes it again afterwards unless it was pinned |
+| `FOCUS_KEEP_DERIVED_DATA` | the gate | set to any value to keep a **green** run's derived data and result bundle. A failing run always keeps them |
 | `FOCUS_EVIDENCE_DIR` | the gate, `self-check.sh`, the live lanes | where the evidence set is assembled, under the canonical names below. Default for `live-shell-drive.sh`: `.agents/evidence/e01`; for `live-capture-drive.sh` and `live-handoff-drive.sh`: `.agents/evidence/e02`. **Never committed** |
 | `FOCUS_SNAPSHOT_OUT` | the snapshot lane, the gate | where snapshot renders are written. Default `$TMPDIR/focus-snapshots`. `xcodebuild` carries no value into a SwiftPM test target's environment — measured both by inheriting the shell's environment and by a scheme `<EnvironmentVariable>` expanding a command-line build setting, and neither reaches the test — so under the gate this names where to *look*, not where to write. The gate copies from it into `$FOCUS_LOG_DIR/snapshots` and collects evidence from the copy |
 | `FOCUS_SNAPSHOT_RECORD=1` | the snapshot lane | re-record the committed baselines instead of comparing. `swift test` only, for the same reason. Recorded PNGs are read by eye before being committed |
