@@ -145,6 +145,42 @@
         }
       }
     },
+    "evidence.band.high" : {
+      "comment" : "Label for the highest evidence band: you said so, or something you attached matched exactly.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Strong"
+          }
+        }
+      }
+    },
+    "evidence.band.low" : {
+      "comment" : "Label for the lowest evidence band. A band this weak can never cause an interruption.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Weak"
+          }
+        }
+      }
+    },
+    "evidence.band.medium" : {
+      "comment" : "Label for the middle evidence band.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fair"
+          }
+        }
+      }
+    },
     "explanation.stage.contextPack" : {
       "comment" : "Explanation phrase naming the rung that decided.",
       "extractionState" : "manual",
@@ -345,6 +381,114 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Unrelated"
+          }
+        }
+      }
+    },
+    "suppression.reason.evidenceBandTooLow" : {
+      "comment" : "Shown in the verdict inspector: the evidence was below the band an interruption needs.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "There isn’t enough to go on."
+          }
+        }
+      }
+    },
+    "suppression.reason.noActivePriority" : {
+      "comment" : "Shown in the verdict inspector: nothing has been committed to.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "There’s no priority to be away from."
+          }
+        }
+      }
+    },
+    "suppression.reason.sessionPhaseForbids" : {
+      "comment" : "Shown in the verdict inspector: the session is not in its focus phase.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You’re on a break."
+          }
+        }
+      }
+    },
+    "suppression.reason.statusForbids" : {
+      "comment" : "Shown in the verdict inspector: the overall status does not permit an interruption.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing is off track."
+          }
+        }
+      }
+    },
+    "suppression.reason.userIdle" : {
+      "comment" : "Shown in the verdict inspector: the hardware idle source says nobody is there.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You’re away from the keyboard."
+          }
+        }
+      }
+    },
+    "suppression.reason.verdictRelevant" : {
+      "comment" : "Shown in the verdict inspector: the app stayed silent because the context supports the priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This looks like the work."
+          }
+        }
+      }
+    },
+    "suppression.reason.verdictUncertain" : {
+      "comment" : "Shown in the verdict inspector: the app stayed silent because it declined to decide.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus isn’t sure, so it says nothing."
+          }
+        }
+      }
+    },
+    "suppression.reason.withinGracePeriod" : {
+      "comment" : "Shown in the verdict inspector: drift has not been sustained long enough.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A short detour isn’t drift."
+          }
+        }
+      }
+    },
+    "suppression.reason.withinMandateCooldown" : {
+      "comment" : "Shown in the verdict inspector: the engine already said this about this subject.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus mentioned this recently."
           }
         }
       }
