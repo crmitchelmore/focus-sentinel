@@ -29,12 +29,21 @@ import Foundation
 /// *sufficiency* of `maximumLookBackEvents` a benchmark: truncating to it must produce a
 /// transcript identical to an untruncated replay over every sequence fixture, which is what
 /// makes 32 a bound somebody measured rather than a round number.
+
 public struct TransitionWindow: Sendable, Equatable {
-    /// The retained observations, oldest first. Never longer than
-    /// `RelevancePolicy.maximumLookBackEvents`, and never spanning more than `lookBackSpan`.
+    /// The retained observations, oldest first. Never longer than `capacity`, and never
+    /// spanning more than `lookBackSpan`.
     public private(set) var observations: [DriftObservation] = []
 
-    public init() {}
+    /// How many observations the window keeps. `RelevancePolicy.maximumLookBackEvents` in every
+    /// shipping path — the parameter exists so R-74.4's *sufficiency* proof can replay the very
+    /// same fixtures against a window that keeps everything and compare the transcripts. A
+    /// benchmark that can only run the bounded version cannot say the bound changed nothing.
+    public let capacity: Int
+
+    public init(capacity: Int = RelevancePolicy.maximumLookBackEvents) {
+        self.capacity = capacity
+    }
 
     /// Add an observation and prune, in that order.
     ///
@@ -48,8 +57,8 @@ public struct TransitionWindow: Sendable, Equatable {
     mutating func prune(now: Duration) {
         let horizon = now - RelevancePolicy.lookBackSpan
         observations.removeAll { $0.now < horizon }
-        if observations.count > RelevancePolicy.maximumLookBackEvents {
-            observations.removeFirst(observations.count - RelevancePolicy.maximumLookBackEvents)
+        if observations.count > capacity {
+            observations.removeFirst(observations.count - capacity)
         }
     }
 
@@ -118,11 +127,13 @@ public struct TransitionWindow: Sendable, Equatable {
 
     /// The same window truncated to a given number of most-recent observations.
     ///
-    /// R-74.4's instrument: a replay against `TransitionWindow` and against
-    /// `untruncated.truncated(to:)` must produce identical transcripts, which is what proves
-    /// `maximumLookBackEvents` *sufficient* rather than merely bounded.
+    /// R-74.4's instrument for a *single* window. The whole-replay form — the one the ruling
+    /// actually asks for — is `SequenceReplayHarness.replay(_:lookBackCapacity:)`, which runs
+    /// every fixture against a window that keeps everything and compares the transcript byte for
+    /// byte with the bounded run.
     public func truncated(to count: Int) -> TransitionWindow {
-        var copy = self
+        var copy = TransitionWindow(capacity: count)
+        copy.observations = observations
         if copy.observations.count > count {
             copy.observations.removeFirst(copy.observations.count - count)
         }

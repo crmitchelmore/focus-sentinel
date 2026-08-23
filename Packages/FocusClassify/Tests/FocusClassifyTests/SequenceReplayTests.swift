@@ -93,21 +93,45 @@ struct SequenceReplayTests {
 
     // MARK: - The look-back bound is sufficient, not merely present (R-74.4)
 
+    /// **R-74.4's assertion, in the form the ruling names it.**
+    ///
     /// `maximumLookBackEvents` is class **C** and owes a workload argument rather than a
-    /// per-call figure. `TransitionWindow` prunes by span first and by count second, so the
-    /// count bound only bites once a span-wide window already holds more than that many
-    /// observations. No fixture's window comes close, so truncating to the bound is provably a
-    /// no-op over this corpus — which is the stronger form of "sufficient", and the one that
-    /// fails loudly if a future fixture ever needs a deeper window.
-    @Test("no fixture's look-back window ever reaches the committed bound")
+    /// per-call figure: *"an assertion, over every sequence fixture, that truncating the window
+    /// to 32 events produces a transcript byte-identical to an untruncated replay — which is
+    /// what makes 32 sufficient rather than merely bounded."* So every committed fixture is
+    /// replayed twice, once against the shipped bound and once against an engine whose window
+    /// keeps everything, and the two transcripts are compared byte for byte.
+    ///
+    /// The comparison is only worth making if the bound actually bites somewhere, which is what
+    /// the second assertion is for. An earlier form of this test asserted instead that no
+    /// fixture's window ever *reaches* the bound — true, and a valid proof that truncation was a
+    /// no-op, but a vacuous one: if the thirty-third-oldest observation is never introduced, no
+    /// evidence has been produced about what discarding it would do. `seq-0017` exists to
+    /// introduce it.
+    @Test("truncating the look-back to its bound changes no transcript")
     func theLookBackBoundIsSufficient() throws {
-        for fixture in try Self.fixtures() {
-            let occupancy = SequenceReplayHarness.maximumWindowOccupancy(of: fixture)
+        let harness = Self.harness
+        let fixtures = try Self.fixtures()
+
+        for fixture in fixtures {
+            let bounded = harness.replay(fixture, lookBackCapacity: RelevancePolicy.maximumLookBackEvents)
+            let unbounded = harness.replay(fixture, lookBackCapacity: .max)
             #expect(
-                occupancy <= RelevancePolicy.maximumLookBackEvents,
-                "\(fixture.id) fills \(occupancy) of \(RelevancePolicy.maximumLookBackEvents) look-back slots"
+                bounded.text == unbounded.text,
+                "\(fixture.id): the look-back bound changed the transcript"
             )
+            #expect(bounded.digest == unbounded.digest)
         }
+
+        let deepest = fixtures.map(SequenceReplayHarness.maximumWindowOccupancy(of:)).max() ?? 0
+        #expect(
+            deepest > RelevancePolicy.maximumLookBackEvents,
+            """
+            No committed fixture ever fills more than \(deepest) of \
+            \(RelevancePolicy.maximumLookBackEvents) look-back slots, so the comparison above \
+            discarded nothing and proved nothing. R-74.4 needs a fixture on which the bound bites.
+            """
+        )
     }
 
     // MARK: - D-05's two cases, named

@@ -129,10 +129,20 @@ public struct SequenceReplayHarness: Sendable {
     }
 
     /// Replay one fixture and record everything.
-    public func replay(_ fixture: SequenceFixture) -> SequenceTranscript {
+    ///
+    /// `lookBackCapacity` is `RelevancePolicy.maximumLookBackEvents` on every ordinary replay.
+    /// R-74.4's sufficiency proof passes an unbounded value and requires the transcript to come
+    /// back byte-identical — which is what makes 32 a bound somebody measured rather than a
+    /// round number, and what will fail loudly the day a fixture needs a deeper window.
+    public func replay(
+        _ fixture: SequenceFixture,
+        lookBackCapacity: Int = RelevancePolicy.maximumLookBackEvents
+    ) -> SequenceTranscript {
         let snapshot = snapshot(for: fixture)
         let engine = DeterministicRelevanceEngine(
-            normalizer: runner.normalizer, scorer: runner.scorer
+            normalizer: runner.normalizer,
+            scorer: runner.scorer,
+            lookBackCapacity: lookBackCapacity
         )
         var clock = TestClock()
 
@@ -253,17 +263,13 @@ public struct SequenceReplayHarness: Sendable {
 
     /// The most observations any `lookBackSpan`-wide window over this fixture ever holds.
     ///
-    /// **R-74.4's look-back sufficiency, in the form this corpus can actually prove.** The
-    /// ruling asks for evidence that truncating the window to `maximumLookBackEvents` produces a
-    /// transcript byte-identical to an untruncated replay. `TransitionWindow` prunes by span
-    /// first and by count second, so the count bound only ever bites when a span-wide window
-    /// already holds more than that many observations — and if no fixture's window ever reaches
-    /// the cap, the truncation is provably a no-op rather than measurably one. That is the
-    /// stronger statement of the two, and it is checkable from the fixture alone: this returns
-    /// the high-water mark and `SequenceReplayTests` asserts it stays under the cap.
-    ///
-    /// If a fixture ever needs more, this rises above the cap, the assertion fails, and the
-    /// constant is re-derived rather than quietly raised.
+    /// The *non-vacuity* half of R-74.4's look-back proof. The proof itself is a replay against
+    /// an unbounded window compared byte for byte with the bounded one; this number is what says
+    /// whether that comparison exercised anything. A corpus in which no window ever reaches the
+    /// cap makes the comparison trivially true and proves nothing about the bound, so
+    /// `SequenceReplayTests` requires at least one committed fixture whose high-water mark is
+    /// **above** `maximumLookBackEvents` — a fixture on which the 33rd-oldest observation really
+    /// is discarded, and on which the transcript is nevertheless unchanged.
     public static func maximumWindowOccupancy(of fixture: SequenceFixture) -> Int {
         var instants: [Duration] = []
         var now = Duration.zero

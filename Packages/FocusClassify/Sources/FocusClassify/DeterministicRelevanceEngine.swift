@@ -78,14 +78,26 @@ public final class DeterministicRelevanceEngine: RelevanceClassifier, @unchecked
 
     private let lock = NSLock()
     private var drift = DriftMachine()
-    private var window = TransitionWindow()
+    private var window: TransitionWindow
+
+    /// How many observations the look-back keeps.
+    ///
+    /// `RelevancePolicy.maximumLookBackEvents` in every shipping path, and the only reason it is
+    /// a parameter at all is R-74.4: `maximumLookBackEvents` is class **C** and owes evidence
+    /// that the bound is *sufficient* rather than merely present, which means replaying the
+    /// committed sequences against an engine that keeps everything and showing the transcript
+    /// does not move.
+    private let lookBackCapacity: Int
 
     public init(
         normalizer: TokenNormalizer = TokenNormalizer(),
-        scorer: SimilarityScorer = SimilarityScorer()
+        scorer: SimilarityScorer = SimilarityScorer(),
+        lookBackCapacity: Int = RelevancePolicy.maximumLookBackEvents
     ) {
         self.normalizer = normalizer
         self.scorer = scorer
+        self.lookBackCapacity = lookBackCapacity
+        self.window = TransitionWindow(capacity: lookBackCapacity)
         self.cascade = RuleCascade(
             heuristic: HeuristicClassifier(scorer: scorer),
             normalizer: normalizer
