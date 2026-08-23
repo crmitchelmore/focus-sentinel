@@ -587,11 +587,12 @@ check(
     f"the window reader decodes exactly {EXPECTED_WINDOW_KEYS}",
     windows_read.get("decodedKeys"),
 )
-check(
-    "kCGWindowName" not in (windows_read.get("decodedKeys") or []),
-    "the window reader does not decode kCGWindowName",
-    windows_read.get("decodedKeys"),
-)
+# There is deliberately no assertion here naming the banned key. Standing condition 1 bans it
+# from the **whole repository** outside a comment, this file included, and a check that wrote it
+# out would fail the very lint it was restating. It is not needed either: the exact-list assertion
+# above already proves the key is not decoded, and `decodedKeysAreTitleFree` proves the stronger
+# property — that no decoded key names a window rather than its owning application, which would
+# still hold for a future key called something else.
 check(
     windows_read.get("decodedKeysAreTitleFree") is True,
     "no decoded window key names a window rather than its owning application",

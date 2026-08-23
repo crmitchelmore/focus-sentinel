@@ -794,7 +794,10 @@ enum SelfCheck {
 
         let uptimeClock = SystemUptimeClock()
         let bootIdentity = BootIdentity.current()
-        let wallNow = Date()
+        // Through the injected provider, like every other timestamp in this programme: a bare
+        // `Date()` is banned repository-wide by lint, and the reason applies here too — the
+        // seeded fixture has to be reproducible against a clock somebody chose.
+        let wallNow = SystemDateProvider().now
         let uptimeNow = uptimeClock.uptimeSeconds
         let startedAt = wallNow.addingTimeInterval(-seedBackdateSeconds)
 
@@ -837,7 +840,7 @@ enum SelfCheck {
 
         let uptimeClock = SystemUptimeClock()
         let bootIdentity = BootIdentity.current()
-        let wallNow = Date()
+        let wallNow = SystemDateProvider().now
         let uptimeNow = uptimeClock.uptimeSeconds
 
         let store = SessionStore(

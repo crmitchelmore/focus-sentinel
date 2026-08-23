@@ -51,6 +51,11 @@ struct FocusSentinelApp: App {
                 .appearanceTraits(appearance.traits)
         }
         .commands { ShellCommands() }
+        // Tall enough for the whole column at the default text size, measured against the real
+        // window: with e03's session controls and sensing status added, the cockpit outgrew the
+        // 704-point window e02 shipped and the footer was clipped below the fold. A window whose
+        // last two lines are unreachable is a defect however good the lines are.
+        .defaultSize(width: 560, height: 900)
         .modelContainer(composition.modelContainer)
 
         Window(Text(ShellStrings.resource(ShellWindow.help.titleKey)), id: ShellWindow.help.id) {
@@ -88,7 +93,26 @@ private struct CockpitHost: View {
 
     @Environment(\.undoManager) private var undoManager
 
+    /// The cockpit, in a scroll view.
+    ///
+    /// **The wrapper is here rather than inside `CockpitView`, and that is deliberate.** Measured
+    /// on this machine: a `ScrollView` reports no intrinsic height, so under `ImageRenderer` a
+    /// view inside one rasterises as a blank rectangle — the Privacy pane did exactly that the
+    /// first time the capability table was put in one, 1 040 ink pixels in a 1040×2699 frame. Put
+    /// the wrapper in the view and every committed cockpit baseline becomes a picture of nothing.
+    ///
+    /// So the view stays a plain column that renders whole, and the *scene* gives it somewhere to
+    /// scroll. The person gets a window whose content is always reachable; the snapshot lane gets
+    /// a picture of the whole column. Neither is traded for the other.
     var body: some View {
+        ScrollView {
+            cockpit
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(DesignTokens.Palette.windowBackground)
+    }
+
+    private var cockpit: some View {
         CockpitView(
             state: composition.priorityHost.state,
             actions: composition.priorityHost,
