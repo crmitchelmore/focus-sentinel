@@ -12,6 +12,8 @@ public enum FocusSurface: String, Sendable, CaseIterable, Hashable, Identifiable
     case completionSheet
     /// The sheet an incoming focus:// handoff lands on.
     case handoffConfirm
+    /// The sheet that stops a session and asks why (F-101).
+    case interruptionSheet
     case settingsGeneral
     case settingsPrivacy
 
@@ -45,8 +47,16 @@ public enum FocusField: String, Sendable, CaseIterable, Hashable, Identifiable {
     case cockpitContextAddFiles
     /// The field that names what a new per-task rule is about.
     case cockpitRuleSubject
+    /// The session's primary verb — Start, Pause or Resume, whichever the phase makes primary.
+    ///
+    /// **One identity for the control, not one per verb.** The traversal model names the session
+    /// section; which button carries the identity depends on the phase the session is actually
+    /// in, exactly as the timebox control names itself rather than each of its four presets.
+    case cockpitSessionPrimary
     /// The cockpit's primary action: finish the current priority.
     case cockpitComplete
+    /// F-119's switch, in the cockpit. The same stored value the menu item drives.
+    case cockpitSensingPause
     /// The cockpit's route to Settings.
     case cockpitOpenSettings
     /// The appearance preference picker in General settings.
@@ -65,6 +75,12 @@ public enum FocusField: String, Sendable, CaseIterable, Hashable, Identifiable {
     /// The handoff sheet's two buttons — and there are only ever two.
     case handoffReplace
     case handoffCancel
+    /// The interruption sheet: a reason, an optional note, and the two buttons. Every field is
+    /// optional and the confirm button is enabled with all of them empty.
+    case interruptReason
+    case interruptNote
+    case interruptConfirm
+    case interruptCancel
 
     public var id: String { rawValue }
 }
@@ -116,10 +132,17 @@ public enum FocusTraversal {
                 .cockpitSetPriority,
                 .cockpitDoneWhen,
                 .cockpitTimebox,
+                // The session sits directly under the timebox: both are about how the time is
+                // being spent, and a person who has just chosen a box is one Tab from starting
+                // the session that runs inside it.
+                .cockpitSessionPrimary,
                 .cockpitContextKeyword,
                 .cockpitContextAddFiles,
                 .cockpitRuleSubject,
                 .cockpitComplete,
+                // The footer, in the order it reads: what is being watched, then the way out to
+                // Settings.
+                .cockpitSensingPause,
                 .cockpitOpenSettings
             ],
             // **No default action, deliberately.** The cockpit is a non-modal window full of
@@ -153,6 +176,18 @@ public enum FocusTraversal {
             // away the priority the user was already working on.
             order: [.handoffCancel, .handoffReplace],
             defaultField: .handoffCancel,
+            cancel: .dismissWindow
+        ),
+        SurfaceFocus(
+            surface: .interruptionSheet,
+            // The reason first, because it is the only field with a value already in it, then
+            // the optional note, then the two buttons — cancel before confirm, so Tab reaches
+            // the harmless one first.
+            order: [.interruptReason, .interruptNote, .interruptCancel, .interruptConfirm],
+            // Return stops the session. This is a modal sheet the person opened on purpose,
+            // which is exactly where a default button belongs — unlike the cockpit, which
+            // declares none.
+            defaultField: .interruptConfirm,
             cancel: .dismissWindow
         ),
         SurfaceFocus(

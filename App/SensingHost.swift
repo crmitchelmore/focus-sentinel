@@ -102,6 +102,16 @@ final class SensingHost {
     /// refresh policy. The composition root wires it; nothing else may.
     var onSessionChanged: (() -> Void)?
 
+    /// Called whenever anything in `summary` may have moved — the corroboration tick, a
+    /// lifecycle change, a media transition, the global switch, a capability re-probe.
+    ///
+    /// It exists for the same reason `onSessionChanged` does. Two of this epic's signals have no
+    /// reliable notification and are therefore read on a tick; a surface that only refreshed on
+    /// a mutation would show the idle state as it was when the person last pressed something,
+    /// which is worse than showing nothing. The projection it drives is assigned only when it
+    /// actually differs, so a tick that changes nothing redraws nothing.
+    var onSensingChanged: (() -> Void)?
+
     /// The corroboration tick, held so that `pause()` can invalidate it. Nothing else in this
     /// programme owns a repeating timer.
     private var tick: Timer?
@@ -215,6 +225,7 @@ final class SensingHost {
 
         record(kind: .sensingPaused, detail: .tokens([.observersDetached]))
         applyToSession(.paused(cause: .globalPause))
+        onSensingChanged?()
     }
 
     /// F-119's switch, on.
@@ -232,6 +243,7 @@ final class SensingHost {
 
         record(kind: .sensingResumed, detail: .tokens([.observersAttached]))
         applyToSession(.resumed(cause: .globalPause))
+        onSensingChanged?()
     }
 
     /// Detach without touching the session. Used at termination, where a pause event would be
@@ -270,6 +282,42 @@ final class SensingHost {
     var audioInputDeviceCount: Int { media.inputDeviceCount }
 
     var audioOutputDeviceCount: Int { media.outputDeviceCount }
+
+    /// The last application that came forward and was **not** this one, as a bundle identifier
+    /// and nothing else (F-101).
+    ///
+    /// Recorded only for activations the sensitivity gate cleared. An application on the
+    /// sensitive list stands the app down, and putting its identifier on a surface the person
+    /// reads afterwards would be recording the thing the gate exists to decline to record — the
+    /// suppression event already says one stood the app down, which is what they are entitled
+    /// to know.
+    ///
+    /// This app's own activations are excluded because they are not the answer to the question
+    /// the interruption sheet asks. Pressing *Stop and Say Why…* brings this app forward, so the
+    /// most recent activation is always this one; what the person means by "what was I doing" is
+    /// the application before it.
+    private(set) var lastForeignBundleIdentifier: String?
+
+    /// Everything the cockpit and the Privacy pane draw about the graph, as one value.
+    ///
+    /// Built here rather than read piecemeal by a view, so that `FocusUI` renders a value and
+    /// never learns which observer produced it. `isPausedByUser` is the *stored* switch, not the
+    /// attachment state: "you turned it off" and "nothing is attached" are different facts and
+    /// the status line has to be able to say which one it means.
+    var summary: SensingSummary {
+        SensingSummary(
+            isObserving: isRunning,
+            isPausedByUser: settings.sensingPaused,
+            liveObserverCount: liveObserverCount,
+            redundantActivations: redundantActivations,
+            lifecycle: lifecycleState,
+            isUserIdle: isIdle,
+            media: mediaActivity,
+            cameraReason: camera.unavailableReason,
+            presentation: presentationState,
+            isOnSecondaryDisplay: currentDisplay.map { !$0.isPrimary } ?? false
+        )
+    }
 
     /// The current idle reading, both sources, without disturbing the transition edges.
     var idleReading: IdleReading { idle.read() }
@@ -346,6 +394,7 @@ final class SensingHost {
         }
         capabilities = updated
         refreshCascade()
+        onSensingChanged?()
     }
 
     private func refreshCascade() {
@@ -364,6 +413,7 @@ final class SensingHost {
         case .cleared(let cleared):
             lookDeeper(at: cleared, activation: activation)
         }
+        onSensingChanged?()
     }
 
     /// The frontmost application is on a list, so nothing deeper is read.
@@ -391,6 +441,12 @@ final class SensingHost {
         if holdsSensitivePause {
             holdsSensitivePause = false
             applyToSession(.resumed(cause: .sensitiveApp))
+        }
+
+        // Remembered for the interruption sheet, and only for cleared activations that are not
+        // this app's own. See `lastForeignBundleIdentifier`.
+        if !activation.isUnbundled, cleared.bundleIdentifier != FocusStore.bundleIdentifier {
+            lastForeignBundleIdentifier = cleared.bundleIdentifier
         }
 
         var tokens: [DetailToken] = []
@@ -461,6 +517,10 @@ final class SensingHost {
     /// One corroboration pass: the idle pair, the media state, and — through the gate — the
     /// display and presentation state of whatever is frontmost.
     func sample() {
+        // Whatever this pass finds, the surfaces are told once at the end of it — including
+        // when it finds nothing, because `refreshCockpit` compares before it assigns.
+        defer { onSensingChanged?() }
+
         sampleIdle()
         _ = media.refresh()
 
@@ -526,6 +586,7 @@ final class SensingHost {
             applyToSession(.resumed(cause: lifted))
             refreshCapabilities()
         }
+        onSensingChanged?()
     }
 
     private func mediaChanged(to activity: MediaActivity) {
@@ -534,6 +595,7 @@ final class SensingHost {
             kind: .mediaActivityChanged,
             detail: .tokens([activity.microphoneRunning ? .micRunning : .micIdle, .cameraHeldOff])
         )
+        onSensingChanged?()
     }
 
     private func notePresentationChange(to state: PresentationState) {

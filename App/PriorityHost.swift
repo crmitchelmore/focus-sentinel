@@ -39,6 +39,18 @@ final class PriorityHost: PriorityActing {
         var status: FocusStatus
         var storeIsReady: Bool
         var isObservingActivity: Bool
+        /// The session the person is in, projected by `SessionHost`. `nil` when there is none.
+        var session: SessionSnapshot?
+        /// How long that session has been running on the wall clock, read at the moment the
+        /// environment was built. There is no timer here or anywhere: the figure is a value,
+        /// not a subscription.
+        var sessionElapsedSeconds: Double?
+        /// The last application in front that was not this one, as a bundle identifier (F-101).
+        var lastActiveBundleID: String?
+        /// What the observer graph is doing, including when the answer is "nothing".
+        var sensing: SensingSummary = .inactive
+        /// What this Mac lets the app do, as the probe last read it.
+        var capabilities: CapabilityMatrix = CapabilityMatrix()
     }
 
     private let context: ModelContext
@@ -83,7 +95,10 @@ final class PriorityHost: PriorityActing {
         self.state = CockpitState(
             status: environment.status,
             storeIsReady: environment.storeIsReady,
-            isObservingActivity: environment.isObservingActivity
+            isObservingActivity: environment.isObservingActivity,
+            session: environment.session,
+            sensing: environment.sensing,
+            capabilities: environment.capabilities
         )
         refresh()
     }
@@ -318,15 +333,25 @@ final class PriorityHost: PriorityActing {
             record(error)
         }
 
-        state = CockpitState(
+        let next = CockpitState(
             status: environment.status,
             storeIsReady: environment.storeIsReady && writeFailure == nil,
             isObservingActivity: environment.isObservingActivity,
             priority: priority,
             recent: recent,
             pendingHandoff: pendingHandoff,
-            showsRitualPrompt: shouldPromptRitual()
+            showsRitualPrompt: shouldPromptRitual(),
+            session: environment.session,
+            sensing: environment.sensing,
+            capabilities: environment.capabilities
         )
+
+        // Assigned only when it actually changed. From e03 this projection is rebuilt on the
+        // five-second corroboration tick as well as on every mutation, and `@Observable` reports
+        // a write rather than a difference — so an unconditional assignment would redraw the
+        // window twelve times a minute to show the same picture.
+        guard next != state else { return }
+        state = next
     }
 
     /// How many previous commitments the history offers. F-15 is a recent list, not a backlog:

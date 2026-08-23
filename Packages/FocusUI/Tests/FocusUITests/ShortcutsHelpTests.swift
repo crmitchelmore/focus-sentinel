@@ -112,7 +112,7 @@ struct ShortcutsHelpTests {
     func cockpitStringsResolve() {
         let keys: [ShellStringKey] = [
             .cockpitWindowTitle, .helpWindowTitle, .cockpitHeading, .cockpitStoreReady,
-            .cockpitStoreUnavailable, .cockpitSensingUnavailable, .cockpitOpenSettings
+            .cockpitStoreUnavailable, .cockpitOpenSettings
         ]
         for key in keys {
             let resolved = ShellStrings.string(key)

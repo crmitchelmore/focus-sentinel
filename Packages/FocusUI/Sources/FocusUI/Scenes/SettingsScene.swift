@@ -37,10 +37,19 @@ public enum SettingsTab: String, Sendable, CaseIterable, Hashable, Identifiable 
 public struct ShellSettingsView: View {
     @Binding private var preference: AppearancePreference
     private let storeURL: URL
+    private let summary: SensingSummary
+    private let capabilities: CapabilityMatrix
 
-    public init(preference: Binding<AppearancePreference>, storeURL: URL) {
+    public init(
+        preference: Binding<AppearancePreference>,
+        storeURL: URL,
+        summary: SensingSummary = .inactive,
+        capabilities: CapabilityMatrix = CapabilityMatrix()
+    ) {
         self._preference = preference
         self.storeURL = storeURL
+        self.summary = summary
+        self.capabilities = capabilities
     }
 
     public var body: some View {
@@ -49,11 +58,15 @@ public struct ShellSettingsView: View {
                 .tabItem { tabLabel(.general) }
                 .tag(SettingsTab.general)
 
-            PrivacySettingsView(storeURL: storeURL)
-                .tabItem { tabLabel(.privacy) }
-                .tag(SettingsTab.privacy)
+            PrivacySettingsView(
+                storeURL: storeURL,
+                summary: summary,
+                capabilities: capabilities
+            )
+            .tabItem { tabLabel(.privacy) }
+            .tag(SettingsTab.privacy)
         }
-        .frame(minWidth: 460)
+        .frame(minWidth: 460, minHeight: 520)
         // Escape backs out of Settings, which is what `CancelBehaviour.dismissWindow`
         // declares for both panes and what a Mac user expects of a preferences window.
         .onExitCommand {

@@ -4,6 +4,11 @@ import SwiftUI
 ///
 /// Typed, and declared beside the registry that binds the key equivalents, so a menu item and
 /// the surface that answers it cannot disagree about what the command *is*.
+///
+/// From e03 it carries session and sensing verbs as well as priority ones, and they stay in one
+/// enum for one reason: the cockpit answers all of them, so they travel down one channel to one
+/// registered handler. A second command type would mean a second buffer, and two buffers would
+/// eventually deliver two commands in an order neither of them chose.
 public enum PriorityCommand: String, Sendable, CaseIterable, Hashable {
     /// Put the cursor in the capture field, ready for a new sentence.
     case newPriority
@@ -11,6 +16,16 @@ public enum PriorityCommand: String, Sendable, CaseIterable, Hashable {
     case completePriority
     /// Open the file importer for the current priority's context pack.
     case addFilesToContext
+    /// Begin a session on the active priority (F-98).
+    case startSession
+    /// The person's own pause. Sends `paused(cause: .user)`, which only a `.user` resume lifts.
+    case pauseSession
+    /// Finish the session. Deliberately a different verb from *Complete Priority*: a task can
+    /// span many sessions, so ending one is not finishing the other.
+    case completeSession
+    /// F-119's global switch, from the menu bar. It detaches every observer rather than setting
+    /// a flag, and the same stored value drives the cockpit's own control.
+    case pauseSensing
 }
 
 /// How a menu item reaches the cockpit.

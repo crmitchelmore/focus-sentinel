@@ -57,6 +57,14 @@ final class SessionHost: SessionActing {
     /// that live for the whole process is a leak nobody would ever notice.
     weak var sensing: SensingHost?
 
+    /// Called after the projection has been rebuilt, so the composition root can push the new
+    /// session into the value the cockpit draws.
+    ///
+    /// A hook rather than the host reaching for `AppComposition`: this object knows about the
+    /// store and the launcher and nothing else, and the wiring belongs where every other
+    /// concrete choice in this app is made.
+    var onChange: (() -> Void)?
+
     /// The window's undo manager, once a window exists to have one.
     private var undo: UndoManager?
 
@@ -239,6 +247,7 @@ final class SessionHost: SessionActing {
         } catch {
             record(error)
         }
+        onChange?()
     }
 
     // MARK: - The launcher (F-169)

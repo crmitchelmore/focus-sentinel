@@ -30,6 +30,23 @@ public struct CockpitView: View {
     /// can never look live and do nothing.
     public let actions: (any PriorityActing)?
 
+    /// The session host, or `nil` when none is attached. Same rule as `actions`: every session
+    /// control is disabled while it is `nil`.
+    public let sessionActions: (any SessionActing)?
+
+    /// How long the session has been running on the wall clock, read by whoever owns the
+    /// injected clock. `nil` when nobody has read one.
+    ///
+    /// Passed in rather than computed here for the reason the whole programme is built on:
+    /// there is no timer object anywhere, and `FocusUI` reads no clock. The figure is a value
+    /// somebody chose an instant for, which is what makes this window renderable at a fixed
+    /// instant in the snapshot lane.
+    public let sessionElapsedSeconds: Double?
+
+    /// The last application in front that was not this one, as a bundle identifier (F-101).
+    /// Handed to the interruption sheet and nowhere else.
+    public let lastActiveBundleID: String?
+
     /// Where the File menu's commands arrive. Injectable so a test can drive the cockpit the
     /// way ⌘N does, without a menu bar.
     public let commandCenter: FocusCommandCenter
@@ -73,10 +90,16 @@ public struct CockpitView: View {
     public init(
         state: CockpitState,
         actions: (any PriorityActing)? = nil,
+        sessionActions: (any SessionActing)? = nil,
+        sessionElapsedSeconds: Double? = nil,
+        lastActiveBundleID: String? = nil,
         commandCenter: FocusCommandCenter = .shared
     ) {
         self.state = state
         self.actions = actions
+        self.sessionActions = sessionActions
+        self.sessionElapsedSeconds = sessionElapsedSeconds
+        self.lastActiveBundleID = lastActiveBundleID
         self.commandCenter = commandCenter
     }
 
@@ -107,6 +130,7 @@ public struct CockpitView: View {
             if let priority = state.priority {
                 doneWhenSection(priority)
                 timeboxSection(priority)
+                sessionSection
                 contextSection(priority)
                 rulesSection(priority)
             }
@@ -195,6 +219,24 @@ public struct CockpitView: View {
                 return
             }
             fileImportToken &+= 1
+
+        // The four e03 verbs. Each lands on the same host the cockpit's own control calls, so a
+        // key equivalent and a click are one code path rather than two implementations of the
+        // same idea — and each guards on the machine's own rules rather than sending an event
+        // the transition table would reject.
+        case .startSession:
+            guard state.session == nil else { return }
+            sessionActions?.startSession(kind: .openEnded, plannedSeconds: nil, deadlineAt: nil)
+        case .pauseSession:
+            // ⌃⌘P on an already-paused session would be rejected `alreadyInPhase`, and a
+            // shortcut that silently does nothing is a shortcut people stop trusting.
+            guard let session = state.session, session.phase != .paused else { return }
+            sessionActions?.pauseSession()
+        case .completeSession:
+            guard let session = state.session, !session.phase.isTerminal else { return }
+            sessionActions?.completeSession()
+        case .pauseSensing:
+            sessionActions?.setSensingPaused(!state.sensing.isPausedByUser)
         }
     }
 
@@ -336,6 +378,23 @@ public struct CockpitView: View {
             timeboxSeconds: priority.timeboxSeconds,
             state: priority.timebox,
             choose: wiring.setTimebox,
+            focus: $focus
+        )
+    }
+
+    // MARK: - The session (F-98, F-99, F-101)
+
+    /// The session runs *inside* the timebox, so it is drawn directly under it.
+    ///
+    /// It is shown only where there is a priority, because a session is always about one: the
+    /// store starts it on the active task, and offering to start one with nothing committed to
+    /// would be offering to time nothing.
+    private var sessionSection: some View {
+        SessionControls(
+            session: state.session,
+            elapsedSeconds: sessionElapsedSeconds,
+            lastActiveBundleID: lastActiveBundleID,
+            actions: sessionActions,
             focus: $focus
         )
     }
@@ -507,12 +566,20 @@ public struct CockpitView: View {
 
     // MARK: - What the app can honestly say about itself
 
-    /// Two quiet lines at the bottom — whether anything is being saved, and whether anything
-    /// is being observed — and the route to Settings.
+    /// Two quiet truths at the bottom — whether anything is being saved, and what is actually
+    /// being watched — the switch that changes the second, and the route to Settings.
     ///
-    /// All three are `.footnote` or a plain link. Settings was e01's most prominent control
-    /// and is deliberately demoted here: it is a route, not an action, and nothing in this
-    /// window may compete with the priority for the eye.
+    /// All of it is `.footnote` or smaller. Settings was e01's most prominent control and is
+    /// deliberately demoted here: it is a route, not an action, and nothing in this window may
+    /// compete with the priority for the eye.
+    ///
+    /// **The sensing line used to lie.** e01 drew one string —
+    /// `shell.cockpit.sensing.unavailable` — whatever was happening underneath it, changing only
+    /// the glyph between an open eye and a closed one. So the shell said "no activity source is
+    /// running" while it was observing, and said exactly the same thing while it was switched
+    /// off. `SensingStatusView` replaces it with the three sentences those three states
+    /// actually deserve, and lists by name any capability that is not available — because a
+    /// person reading a status line is owed the parts of it that are missing.
     private var footer: some View {
         VStack(alignment: .leading, spacing: rowSpacing / 2) {
             detail(
@@ -521,9 +588,19 @@ public struct CockpitView: View {
                     : "exclamationmark.triangle.fill",
                 key: state.storeIsReady ? .cockpitStoreReady : .cockpitStoreUnavailable
             )
-            detail(
-                systemImage: state.isObservingActivity ? "eye" : "eye.slash",
-                key: .cockpitSensingUnavailable
+
+            SensingStatusView(
+                summary: state.sensing,
+                capabilities: state.capabilities,
+                showsReducedCapabilities: true
+            )
+
+            PauseSwitch(
+                isWatching: !state.sensing.isPausedByUser,
+                setWatching: sessionActions.map { host in
+                    { watching in host.setSensingPaused(!watching) }
+                },
+                focus: $focus
             )
 
             Button {

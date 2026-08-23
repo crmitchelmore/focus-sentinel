@@ -217,7 +217,12 @@ final class AppComposition {
                 // `uncertain` to everything. It is `paused` when the person has the switch off.
                 status: settings.sensingPaused ? .paused : .uncertain,
                 storeIsReady: status.isReady,
-                isObservingActivity: !settings.sensingPaused
+                isObservingActivity: !settings.sensingPaused,
+                session: sessions.snapshot,
+                sessionElapsedSeconds: sessions.snapshot?.elapsedWallSeconds(now: dateProvider.now),
+                lastActiveBundleID: sensing.lastForeignBundleIdentifier,
+                sensing: sensing.summary,
+                capabilities: sensing.capabilities
             )
         )
 
@@ -226,6 +231,9 @@ final class AppComposition {
         // either of them from having to know about the other's lifetime.
         sessions.sensing = sensing
         sensing.onSessionChanged = { [weak sessions] in sessions?.refresh() }
+
+        // …and the cockpit value follows both of them. Assigned after `self` is fully
+        // initialised, in `start()`, because the closure captures the composition root.
 
         // Built now, with the panel's SwiftUI content and its hosting view, so that `show()`
         // later is nothing but state changes on objects that already exist (P-57).
@@ -273,6 +281,22 @@ final class AppComposition {
             self.priorityHost.setPriority(intent: result.intent, doneWhen: result.doneWhen)
         }
 
+        // The three hosts, joined. Assigned here rather than in `init` because each closure
+        // captures the composition root, which does not exist until `init` has returned.
+        //
+        // The chain is one-way and terminates: the graph changes the stored session, the session
+        // host re-projects it, and the projection is pushed into the value the cockpit draws —
+        // which is assigned only when it actually differs, so nothing here can oscillate.
+        sensingHost.onSessionChanged = { [weak self] in
+            self?.sessionHost.refresh()
+        }
+        sensingHost.onSensingChanged = { [weak self] in
+            self?.refreshCockpit()
+        }
+        sessionHost.onChange = { [weak self] in
+            self?.refreshCockpit()
+        }
+
         registerHotKey(storedHotKeySpec())
 
         // Restoration first, so that the graph's first activation is written against the
@@ -280,6 +304,11 @@ final class AppComposition {
         // and no timer is started, because there is none to start.
         sessionHost.restore()
         sensingHost.start()
+
+        // One last projection, so the cockpit's first paint already shows the reconciled
+        // session, the live observer count and the capability matrix as the probe just read it —
+        // rather than the placeholder values `init` could build before any of them existed.
+        refreshCockpit()
     }
 
     /// Detach the observer graph without pausing the session.
@@ -358,5 +387,32 @@ final class AppComposition {
     /// was handed, only what that observer currently reports.
     var cockpitState: CockpitState {
         priorityHost.state
+    }
+
+    /// Re-read everything the store knows nothing about and push it into the cockpit value.
+    ///
+    /// Called whenever the session or the graph changes — a lifecycle pause, a stand-down for a
+    /// sensitive application, the global switch, the corroboration tick. **This is the only
+    /// place the elapsed figure is read**, from the injected wall clock, at the moment somebody
+    /// asked: there is no timer anywhere in this programme, so the number on the screen is the
+    /// number as of the last real change rather than a subscription that has to be cancelled.
+    ///
+    /// Without this the app would have a visible defect rather than a stale one: locking the
+    /// screen pauses the session in the store, and the window would keep saying *Focus* until
+    /// the person happened to press something.
+    func refreshCockpit() {
+        let snapshot = sessionHost.snapshot
+        priorityHost.update(
+            environment: PriorityHost.Environment(
+                status: currentStatus,
+                storeIsReady: storeStatus.isReady,
+                isObservingActivity: sensingHost.isRunning,
+                session: snapshot,
+                sessionElapsedSeconds: snapshot?.elapsedWallSeconds(now: dateProvider.now),
+                lastActiveBundleID: sensingHost.lastForeignBundleIdentifier,
+                sensing: sensingHost.summary,
+                capabilities: sensingHost.capabilities
+            )
+        )
     }
 }

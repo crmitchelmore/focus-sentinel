@@ -172,9 +172,18 @@ public struct CommandRegistry: Sendable, Equatable {
     ///   help book that does not exist. A menu item that leads nowhere is a defect; this one
     ///   opens the in-app shortcut reference.
     ///
+    /// e03 adds four more, all real:
+    ///
+    /// * **Start Session ⌃⌘S**, **Pause Session ⌃⌘P** and **Finish Session ⌃⌘E.** Session verbs
+    ///   the cockpit's own controls also offer, reached from anywhere.
+    /// * **Pause Watching ⇧⌘W.** F-119's global switch. Deliberately outside the ⌃⌘ family the
+    ///   session verbs use: pausing the session and pausing the watching are different acts, and
+    ///   ⌃⌘P beside ⌃⌘⇧P would have been two shortcuts a person could not keep apart.
+    ///
     /// `Complete Priority` reuses the cockpit button's own title key rather than declaring a
     /// second one: the menu item and the button are the same action, and two keys reading
-    /// "Complete Priority" would be two things to keep in step for no gain.
+    /// "Complete Priority" would be two things to keep in step for no gain. The three session
+    /// items do the same with `session.action.*`.
     public static let shell = CommandRegistry(actions: [
         ShellAction(
             id: "priority.new",
@@ -196,6 +205,40 @@ public struct CommandRegistry: Sendable, Equatable {
             shortcut: Shortcut("\r", modifiers: [.control, .command]),
             placement: .file,
             effect: .priority(.completePriority)
+        ),
+        // The four e03 verbs. All four are ⌃⌘ combinations rather than plain ⌘ ones, for the
+        // reason `priority.complete` already gives: this window is full of text fields, and a
+        // session verb one modifier away from typing is a session verb somebody will trigger by
+        // accident. ⇧⌘W for the watching switch keeps it out of the session family entirely,
+        // because pausing the session and pausing the watching are different acts and a person
+        // must never confuse the two shortcuts.
+        ShellAction(
+            id: "session.start",
+            titleKey: .sessionActionStart,
+            shortcut: Shortcut("s", modifiers: [.control, .command]),
+            placement: .file,
+            effect: .priority(.startSession)
+        ),
+        ShellAction(
+            id: "session.pause",
+            titleKey: .sessionActionPause,
+            shortcut: Shortcut("p", modifiers: [.control, .command]),
+            placement: .file,
+            effect: .priority(.pauseSession)
+        ),
+        ShellAction(
+            id: "session.complete",
+            titleKey: .sessionActionComplete,
+            shortcut: Shortcut("e", modifiers: [.control, .command]),
+            placement: .file,
+            effect: .priority(.completeSession)
+        ),
+        ShellAction(
+            id: "sensing.pause",
+            titleKey: .commandPauseSensing,
+            shortcut: Shortcut("w", modifiers: [.shift, .command]),
+            placement: .file,
+            effect: .priority(.pauseSensing)
         ),
         ShellAction(
             id: "shell.closeWindow",

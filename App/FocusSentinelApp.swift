@@ -59,7 +59,11 @@ struct FocusSentinelApp: App {
         }
 
         Settings {
-            SettingsHost(appearance: appearance, dateProvider: composition.dateProvider)
+            SettingsHost(
+                appearance: appearance,
+                dateProvider: composition.dateProvider,
+                sensing: composition.sensingHost
+            )
                 .appearanceTraits(appearance.traits)
         }
         .modelContainer(composition.modelContainer)
@@ -87,7 +91,14 @@ private struct CockpitHost: View {
     var body: some View {
         CockpitView(
             state: composition.priorityHost.state,
-            actions: composition.priorityHost
+            actions: composition.priorityHost,
+            // The session host is the app's only `SessionActing`, and it is what the cockpit's
+            // session controls and the four e03 menu commands both call — one code path for a
+            // click and for a key equivalent.
+            sessionActions: composition.sessionHost,
+            sessionElapsedSeconds: composition.priorityHost.state.session
+                .map { $0.elapsedWallSeconds(now: composition.dateProvider.now) },
+            lastActiveBundleID: composition.sensingHost.lastForeignBundleIdentifier
         )
         .onAppear {
             composition.priorityHost.adoptUndoManager(undoManager)
@@ -120,13 +131,20 @@ private struct CockpitHost: View {
 private struct SettingsHost: View {
     let appearance: AppearanceObserver
     let dateProvider: any DateProvider
+    /// The live observer graph, so the Privacy pane draws what is actually attached.
+    let sensing: SensingHost
 
     @Environment(\.modelContext) private var modelContext
 
     var body: some View {
         ShellSettingsView(
             preference: preferenceBinding,
-            storeURL: FocusStore.applicationSupportURL
+            storeURL: FocusStore.applicationSupportURL,
+            // What is being watched, and what this Mac lets the app do — read from the graph
+            // rather than probed again here, so the Privacy pane and the cockpit's status line
+            // are one answer rather than two opinions.
+            summary: sensing.summary,
+            capabilities: sensing.capabilities
         )
         .task {
             // The window may be opened long after launch, so the stored value is read here
