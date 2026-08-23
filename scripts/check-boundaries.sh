@@ -215,8 +215,18 @@ else:
     # The positive half: everything this package actually imports must be named by its row.
     # `import Carbon.HIToolbox` is kept whole rather than truncated at the dot, because
     # `Carbon` and `Carbon.HIToolbox` are exactly the distinction R-13 turns on.
+    #
+    # Scoped to `Sources/<package>` — the package's own shipping target — rather than to the
+    # whole of `Sources/`. e04 puts two TEST-LANE targets beside FocusClassify's
+    # (`FocusEvaluateCore` and `FocusEvaluate`, R-75), and a row that had to name them would be
+    # a row that no longer says what the SHIPPING library may import. R-70j pins that row to a
+    # literal precisely so it cannot be widened; widening it to accommodate a target the
+    # application does not link would be the same edit by another route. The test-lane targets
+    # get their own scan below, and the forbidden-import half above still searches all of
+    # `Sources/` — so nothing in this package may import AppKit, SwiftUI or networking wherever
+    # it lives.
     imported=$(grep -rhE '^[[:space:]]*(@[A-Za-z_]+[[:space:]]+)?(public[[:space:]]+|internal[[:space:]]+|@_exported[[:space:]]+)?import[[:space:]]+[A-Za-z_]' \
-        "$dir/Sources" --include='*.swift' 2>/dev/null \
+        "$dir/Sources/$package" --include='*.swift' 2>/dev/null \
         | sed -E 's/.*import[[:space:]]+//; s/[[:space:]].*//' | sort -u)
 
     permitted_modules=(${=ALLOWED_FRAMEWORKS[$package]} ${=ALLOWED_PRODUCTS[$package]} "$package")
@@ -319,6 +329,73 @@ else
     print -u2 "    expected: $EXPECTED_CLASSIFY_FRAMEWORKS"
     print -u2 "    found:    ${ALLOWED_FRAMEWORKS[FocusClassify]}"
     print -u2 "    e04 adds an engine to this package and needs no new framework (R-70j, P-120)."
+fi
+
+# --- e04 R-75/T103a: FocusEvaluate is a TEST-LANE product and is not in the shipping graph --
+#
+# R-75 moves the evaluation harness out of the test target, because a report emitted as a side
+# effect of a test run is a report whose existence depends on a test having been scheduled — and
+# because `xcodebuild` does not carry an environment value into a SwiftPM test target's process,
+# so `$FOCUS_EVAL_OUT` and `$FOCUS_GATE_RUN_ID` can only reach the harness through a plain
+# process. That buys the gate a real product and costs the shipping graph nothing, PROVIDED
+# nothing in the application ever links it.
+#
+# "Provided" is the word this stage exists to remove. Three reads, in the three places a link
+# could be introduced: the application's own sources, the project file that describes what the
+# app links, and the classification package's target graph.
+print
+print "== FocusEvaluate is a test-lane product only"
+
+EVALUATE_TARGETS='FocusEvaluate|FocusEvaluateCore'
+
+app_evaluate_hits=$(grep -rnE "$EVALUATE_TARGETS" App --include='*.swift' 2>/dev/null \
+    | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|///|\*)')
+if [[ -n "$app_evaluate_hits" ]]; then
+    fail "an application source names an evaluation target:"
+    print -u2 "$app_evaluate_hits"
+else
+    print "source: App/ names neither FocusEvaluate nor FocusEvaluateCore"
+fi
+
+project_evaluate_hits=$(grep -nE "$EVALUATE_TARGETS" FocusSentinel.xcodeproj/project.pbxproj 2>/dev/null)
+if [[ -n "$project_evaluate_hits" ]]; then
+    fail "the project file references an evaluation target — the app would link it:"
+    print -u2 "$project_evaluate_hits"
+else
+    print "project: FocusSentinel.xcodeproj links neither"
+fi
+
+# And the shipping library must not reach sideways into the test-lane one. The dependency runs
+# the other way round by construction — FocusEvaluateCore depends on FocusClassify — and this
+# is what stops somebody inverting it to reuse the corpus loader from the engine.
+classify_evaluate_hits=$(grep -rnE "^[[:space:]]*import[[:space:]]+($EVALUATE_TARGETS)" \
+    Packages/FocusClassify/Sources/FocusClassify 2>/dev/null)
+if [[ -n "$classify_evaluate_hits" ]]; then
+    fail "FocusClassify imports its own test-lane library:"
+    print -u2 "$classify_evaluate_hits"
+else
+    print "graph:   FocusClassify does not import FocusEvaluateCore"
+fi
+
+# The test-lane targets get the same positive treatment the shipping rows do — a closed list of
+# what they may import — so "it is only the harness" never becomes a place a framework can be
+# added without review. They may reach the engine and the two packages beneath it, and nothing
+# else: no AppKit, no SwiftUI, no networking, and no sideways reach into Sensing or UI (which
+# the forbidden-import half above already enforces across all of Sources/).
+EVALUATE_ALLOWED_MODULES=(Foundation FocusCore FocusRules FocusClassify FocusEvaluateCore)
+evaluate_imported=$(grep -rhE '^[[:space:]]*import[[:space:]]+[A-Za-z_]' \
+    Packages/FocusClassify/Sources/FocusEvaluateCore \
+    Packages/FocusClassify/Sources/FocusEvaluate --include='*.swift' 2>/dev/null \
+    | sed -E 's/.*import[[:space:]]+//; s/[[:space:]].*//' | sort -u)
+evaluate_unlisted=()
+for module in ${(f)evaluate_imported}; do
+    [[ -z "$module" ]] && continue
+    (( ${EVALUATE_ALLOWED_MODULES[(Ie)$module]} )) || evaluate_unlisted+=("$module")
+done
+if (( ${#evaluate_unlisted} )); then
+    fail "the evaluation targets import ${(j:, :)evaluate_unlisted}, which is not permitted"
+else
+    print "imports: the evaluation targets import only ${EVALUATE_ALLOWED_MODULES[*]}"
 fi
 
 # --- every package: no networking symbols anywhere in the shipping graph ----------------
