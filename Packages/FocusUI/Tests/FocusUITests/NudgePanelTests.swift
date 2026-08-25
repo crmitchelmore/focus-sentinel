@@ -389,15 +389,17 @@ struct NudgePanelTests {
     ///
     /// * the live lane captured by window id, which proves a window **rendered**, never that a
     ///   person can **see** it;
-    /// * `check-focus-steal.sh` asserts the panel *takes* nothing and never that it *shows*
-    ///   anything;
+    /// * `check-focus-steal.sh` asserted the panel *takes* nothing and never that it *shows*
+    ///   anything — and it showed an **empty** panel, so it proved that a window with nothing in
+    ///   it steals no focus. It now asserts the size too, on the real app binary;
     /// * the snapshot lane renders `QueryPanelView` standalone at a fixed size and never touches
     ///   an `NSPanel` at all.
     ///
     /// So the missing assertion is at the level of the window object, needs no grant of any
-    /// kind, and is exactly this: **put the real content in, and the window is still the size it
-    /// says it is.** `update(content:)` is the operation under test, because the hosting view is
-    /// what drives the window's size and `update(content:)` is the only thing that changes it.
+    /// kind, and is exactly this: **put the real content in, show it, let the run loop turn, and
+    /// the window is still the size it says it is.** All four steps are load-bearing: the real
+    /// content because `EmptyView` cannot provoke a layout defect, and the turn because the frame
+    /// is correct until the pass that resizes it happens.
     @Test(
         "real nudge content never resizes the window",
         arguments: [true, false]
