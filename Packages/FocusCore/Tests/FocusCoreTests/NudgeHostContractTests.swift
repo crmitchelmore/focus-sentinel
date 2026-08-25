@@ -193,6 +193,53 @@ struct NudgeHostContractTests {
         )
     }
 
+    // MARK: - A question nobody could see is never written down (focus-x7d, U-1)
+
+    /// **The burned-question regression, and why it is the worst failure this app has.**
+    ///
+    /// U-1 licenses the app to interrupt on `uncertain` for exactly one reason: the interruption
+    /// is a single cheap click that teaches it, after which it never asks again. Every receipt in
+    /// `QueryLedger` is immutable and `hasAsked(…)` is gate 11 of the suppression stack, so the
+    /// never-ask-twice promise and the burn-it-once hazard are the same mechanism read from two
+    /// sides.
+    ///
+    /// A live drive found the panel on screen at 380 × 2212 and unreadable. Every path that ends
+    /// an unanswered question — `expireOpenQuestion()` on a session end, a phase change, a
+    /// priority change or a presentation, and `close(_:)` on a preemption — writes a receipt, so
+    /// the app would have recorded that question as asked and never asked it again. The person
+    /// saw a blank slab; the ledger recorded a conversation.
+    ///
+    /// The rule these assertions hold is therefore: **a receipt is written only about a question
+    /// that reached a surface a person could read.** A question that did not is deferred,
+    /// unwritten, and stays askable.
+    @Test("no receipt is written about a question that never reached a readable surface")
+    func noReceiptForAQuestionNobodyCouldSee() throws {
+        let host = try #require(
+            try Self.sources().first { $0.name == "NudgeHost.swift" }
+        )
+        let lines = Self.code(host.text)
+
+        // The reading exists, and it is the panel's own — not an inference from "we called show".
+        #expect(
+            lines.contains { $0.contains("panel.isPresentedAtIntendedSize") },
+            "the host never asks whether the panel a person is being asked to answer is readable"
+        )
+        // Every ledger write about an open question is guarded by it.
+        #expect(
+            lines.contains { $0.contains("guard questionWasPresentable()") },
+            "a question nobody could read can still spend the app's one chance to ask it"
+        )
+        #expect(
+            lines.filter { $0.contains("questionWasPresentable()") }.count >= 3,
+            "at least one of the receipt-writing paths is unguarded"
+        )
+        // The panel show path is followed by the guard rather than by the delivery bookkeeping.
+        #expect(
+            lines.contains { $0.contains("guard panel.isPresentedAtIntendedSize else") },
+            "a panel that came up unreadable is still counted as a delivered question"
+        )
+    }
+
     // MARK: - The scan is proving something
 
     /// A scan that found no sources would pass every assertion above by describing nothing.

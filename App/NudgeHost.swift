@@ -113,6 +113,21 @@ final class NudgeHost {
     private var openWarrantAskedAt: Date?
     private var openRung: LadderRung?
 
+    /// **Whether the open question ever reached a surface a person could read** (focus-x7d, U-1).
+    ///
+    /// `false` until a surface says otherwise, and the whole reason it exists is that the app
+    /// gets **one** chance to ask about a subject. Every receipt in `QueryLedger` is immutable
+    /// and `hasAsked(…)` is gate 11 of the suppression stack, so a receipt written about a
+    /// question nobody saw does not merely mis-record history — it permanently silences the
+    /// question. U-1 licenses the app to interrupt on `uncertain` precisely because the
+    /// interruption is one cheap click that teaches it; spending that click on a panel the
+    /// person never read is the app burning its licence.
+    ///
+    /// A question that was never presentable is therefore **never written down**, and comes back
+    /// — which is the correct outcome and the opposite of the one the ledger's other paths want,
+    /// so it is a stored fact rather than something inferred at the write.
+    private var openQuestionWasPresentable = false
+
     init(
         context: ModelContext,
         sessionRules: SessionRuleBox,
@@ -382,6 +397,7 @@ final class NudgeHost {
         slot = taken
         openWarrant = warrant
         openWarrantAskedAt = dateProvider.now
+        openQuestionWasPresentable = false
         openRung = nil
 
         let presentation = QueryPresentation(
@@ -410,10 +426,38 @@ final class NudgeHost {
                 presentationIsClear: !surroundings.presentation.suppressesOverlays,
                 announcement: presentation.announcement()
             )
+
+            // **The question is only asked if it is askable** (focus-x7d).
+            //
+            // `RungDelivery`'s own doctrine, applied to the one surface it was not applied to:
+            // *a window being listed on screen is not a window being visible.* A panel that came
+            // up at some size other than the one it was built to be is a panel whose question is
+            // somewhere the person cannot read — the state a live drive photographed — and a
+            // delivery reading taken from "we called `orderFrontRegardless`" cannot tell the
+            // difference. This reading can, it needs no grant, and it is taken here rather than
+            // trusted from the show path.
+            //
+            // A question that fails it is a **deferral**: nothing is counted, nothing is
+            // written, the slot is given back, and the subject stays askable. Deferring costs
+            // the person one more moment of drift; recording it would cost them the question.
+            guard panel.isPresentedAtIntendedSize else {
+                panel.hide()
+                slot = slot.released()
+                openWarrant = nil
+                openWarrantAskedAt = nil
+                record(
+                    deferral: .noSurfaceAvailable,
+                    kind: .query,
+                    subject: warrant.subject.identifier,
+                    priorityID: priorityID
+                )
+                return
+            }
         }
         // A `popoverBadge` question is drawn by the menu-bar refresh, which reads
         // `pendingPopoverQuery` below. A question is never a notification (R-82).
 
+        openQuestionWasPresentable = true
         deliveredCount += 1
         fatigue.reduce(.delivered(.query), now: surroundings.monotonic)
         openRecordID = write(
@@ -616,6 +660,7 @@ final class NudgeHost {
         slot = slot.released()
         openWarrant = nil
         openWarrantAskedAt = nil
+        openQuestionWasPresentable = false
         openRung = nil
     }
 
@@ -624,12 +669,20 @@ final class NudgeHost {
         slot = slot.released()
         openWarrant = nil
         openWarrantAskedAt = nil
+        openQuestionWasPresentable = false
         openRung = nil
     }
 
     /// A question closed to make room for an accusation (R-84a).
     private func close(_ preempted: PreemptedQuery) {
         guard let priorityID = activePriorityID() else { return }
+        // A question the person could never read is not a question that was asked, so
+        // preempting it costs nothing and writes nothing (focus-x7d). It still leaves the
+        // surface, because the accusation needs it.
+        guard questionWasPresentable() else {
+            complete(.dismissed)
+            return
+        }
         do {
             try ledger.record(
                 priorityID: priorityID,
@@ -675,12 +728,40 @@ final class NudgeHost {
         clearSessionState()
     }
 
+    /// **Whether the open question reached a person at all** (focus-x7d, U-1).
+    ///
+    /// Two readings, and the second is the one the live drive needed. `ask(…)` recorded whether
+    /// the surface presented correctly at the moment it went up; this re-reads the panel now,
+    /// because a window can be the right size when it is ordered front and the wrong size one
+    /// turn of the run loop later — which is exactly how a 380 × 2212 panel passed a check
+    /// taken at show time and reached a person as a blank slab.
+    ///
+    /// A panel that is no longer on screen cannot be re-read, so the show-time reading stands:
+    /// the alternative would be to forget every question the person actually answered.
+    private func questionWasPresentable() -> Bool {
+        guard openQuestionWasPresentable else { return false }
+        guard panel.isVisible else { return true }
+        return panel.isPresentedAtIntendedSize
+    }
+
     /// A question that was on screen when the world changed under it.
     ///
     /// Written down as `expired` rather than left unrecorded: the asking happened, and a
     /// question whose receipt was never written is a question that comes back.
+    ///
+    /// **Unless the asking did not happen.** A receipt is immutable and `hasAsked(…)` is gate 11,
+    /// so writing one about a question that never reached a readable surface would silence that
+    /// question for the life of the priority — the app spending its single licensed interruption
+    /// on a panel nobody saw (focus-x7d). That question is left unwritten, on purpose, and comes
+    /// back.
     private func expireOpenQuestion() {
         guard let warrant = openWarrant, let priorityID = activePriorityID() else { return }
+        guard questionWasPresentable() else {
+            logger.error(
+                "a question that never reached a readable surface was not written down, so it stays askable"
+            )
+            return
+        }
         try? ledger.record(
             priorityID: priorityID,
             subjectKind: warrant.subject.kind,
