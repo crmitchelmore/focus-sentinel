@@ -5,7 +5,7 @@ import Testing
 
 @testable import FocusUI
 
-/// Settings ships two tabs and both are full. These tests hold that line — an empty pane is
+/// Settings ships three tabs and all of them are full. These tests hold that line — an empty pane is
 /// the failure mode this suite exists to catch — and prove that the preference the General
 /// tab edits really does survive a round trip through the local store.
 @Suite("Settings")
@@ -13,11 +13,14 @@ import Testing
 struct SettingsTests {
     // MARK: - Both tabs exist and neither is empty
 
-    @Test("there are exactly two tabs, and both are named")
-    func bothTabsExist() {
-        #expect(SettingsTab.allCases.map(\.id) == ["general", "privacy"])
-        #expect(Set(SettingsTab.allCases.map(\.titleKey)).count == 2)
-        #expect(Set(SettingsTab.allCases.map(\.systemImage)).count == 2)
+    /// Three from e05, and the count is deliberate rather than incidental: the Intervention tab
+    /// arrives in the epic that gives it something to configure, and the rule it is held to is
+    /// the one this suite has always held — **no empty pane**.
+    @Test("there are exactly three tabs, and all three are named")
+    func everyTabExists() {
+        #expect(SettingsTab.allCases.map(\.id) == ["general", "intervention", "privacy"])
+        #expect(Set(SettingsTab.allCases.map(\.titleKey)).count == 3)
+        #expect(Set(SettingsTab.allCases.map(\.systemImage)).count == 3)
         for tab in SettingsTab.allCases {
             #expect(!tab.systemImage.isEmpty)
         }

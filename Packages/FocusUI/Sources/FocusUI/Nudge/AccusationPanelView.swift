@@ -270,17 +270,25 @@ public struct AccusationPanelView: View {
     private func actionRow(_ action: CorrectionAction) -> some View {
         if action == .snooze {
             snoozeRow
+        } else if action == presentation.primaryAction {
+            // **Prominent, never default.** An earlier draft bound the primary action to
+            // `.keyboardShortcut(.defaultAction)`; `DefaultActionContractTests` is right to
+            // forbid it here, and R-89 is the stronger reason. A window default button collects
+            // every Return no focused field claimed — so the moment a person clicked this panel
+            // and made it key, a bare Return would perform "Back to …". The panel exists to take
+            // nothing; emphasis is a colour, not a key equivalent.
+            plainActionButton(action).buttonStyle(.borderedProminent)
         } else {
-            Button {
-                onAction(action, nil)
-            } label: {
-                actionLabel(action)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .buttonStyle(.bordered)
-            .keyboardShortcut(
-                action == presentation.primaryAction ? .defaultAction : nil
-            )
+            plainActionButton(action).buttonStyle(.bordered)
+        }
+    }
+
+    private func plainActionButton(_ action: CorrectionAction) -> some View {
+        Button {
+            onAction(action, nil)
+        } label: {
+            actionLabel(action)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 

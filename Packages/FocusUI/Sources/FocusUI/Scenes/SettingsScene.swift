@@ -4,10 +4,13 @@ import SwiftUI
 
 /// The tabs the Settings window offers.
 ///
-/// Two, and both are full. No "coming soon" pane, no empty third tab reserved for a feature
-/// that does not exist: a surface ships when it has content, not before.
+/// Three from e05, and all three are full. No "coming soon" pane, no empty tab reserved for a
+/// feature that does not exist: a surface ships when it has content, not before — which is why
+/// the Intervention tab arrives in the epic that gives it something to configure rather than in
+/// the one that first imagined it.
 public enum SettingsTab: String, Sendable, CaseIterable, Hashable, Identifiable {
     case general
+    case intervention
     case privacy
 
     public var id: String { rawValue }
@@ -15,6 +18,7 @@ public enum SettingsTab: String, Sendable, CaseIterable, Hashable, Identifiable 
     public var titleKey: ShellStringKey {
         switch self {
         case .general: .settingsGeneralTitle
+        case .intervention: .interventionTitle
         case .privacy: .settingsPrivacyTitle
         }
     }
@@ -23,6 +27,7 @@ public enum SettingsTab: String, Sendable, CaseIterable, Hashable, Identifiable 
     public var systemImage: String {
         switch self {
         case .general: "gearshape"
+        case .intervention: "bell.badge"
         case .privacy: "hand.raised"
         }
     }
@@ -40,19 +45,25 @@ public struct ShellSettingsView: View {
     private let summary: SensingSummary
     private let capabilities: CapabilityMatrix
     private let verdict: VerdictSnapshot?
+    private let intervention: InterventionSettings
+    private let onInterventionAction: (InterventionSettingsAction) -> Void
 
     public init(
         preference: Binding<AppearancePreference>,
         storeURL: URL,
         summary: SensingSummary = .inactive,
         capabilities: CapabilityMatrix = CapabilityMatrix(),
-        verdict: VerdictSnapshot? = nil
+        verdict: VerdictSnapshot? = nil,
+        intervention: InterventionSettings = InterventionSettings(),
+        onInterventionAction: @escaping (InterventionSettingsAction) -> Void = { _ in }
     ) {
         self._preference = preference
         self.storeURL = storeURL
         self.summary = summary
         self.capabilities = capabilities
         self.verdict = verdict
+        self.intervention = intervention
+        self.onInterventionAction = onInterventionAction
     }
 
     public var body: some View {
@@ -60,6 +71,13 @@ public struct ShellSettingsView: View {
             GeneralSettingsView(preference: $preference)
                 .tabItem { tabLabel(.general) }
                 .tag(SettingsTab.general)
+
+            InterventionSettingsView(
+                settings: intervention,
+                onAction: onInterventionAction
+            )
+            .tabItem { tabLabel(.intervention) }
+            .tag(SettingsTab.intervention)
 
             PrivacySettingsView(
                 storeURL: storeURL,

@@ -38,10 +38,19 @@ public enum NudgeCopy {
     /// the words are Foundation's and the number is a fact about the person's own day. Minutes
     /// below the hour and hours-and-minutes above it, because "97 minutes" is a measurement and
     /// "1 hour, 37 minutes" is a sentence.
+    /// Seconds below a minute, minutes below an hour, hours and minutes above it.
+    ///
+    /// The seconds band is not decoration: the Intervention pane draws
+    /// `InterventionPolicy.queryDwellThreshold` — **45 s** — as a read-only mirror of the
+    /// constant, and rounding it to "1 minute" would print a number the app does not use. A
+    /// mirror that rounds is a mirror that lies.
     public static func duration(_ span: Duration) -> String {
         let clamped = span < .zero ? .zero : span
         if clamped >= .seconds(3600) {
             return clamped.formatted(.units(allowed: [.hours, .minutes], width: .wide))
+        }
+        if clamped < .seconds(60) {
+            return clamped.formatted(.units(allowed: [.seconds], width: .wide))
         }
         return clamped.formatted(.units(allowed: [.minutes], width: .wide))
     }

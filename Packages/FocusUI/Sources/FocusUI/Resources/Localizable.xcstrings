@@ -2233,6 +2233,582 @@
         }
       }
     },
+    "settings.intervention.authorisation.authorised" : {
+      "comment" : "Notification authorisation state.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On"
+          }
+        }
+      }
+    },
+    "settings.intervention.authorisation.denied" : {
+      "comment" : "Notification authorisation state: the person said no.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Off"
+          }
+        }
+      }
+    },
+    "settings.intervention.authorisation.notRequested" : {
+      "comment" : "Notification authorisation state: nobody has asked.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not asked"
+          }
+        }
+      }
+    },
+    "settings.intervention.authorisation.provisional" : {
+      "comment" : "Notification authorisation state: provisional, quiet delivery.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quiet"
+          }
+        }
+      }
+    },
+    "settings.intervention.caps.accusations" : {
+      "comment" : "Usage row label.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nudges today"
+          }
+        }
+      }
+    },
+    "settings.intervention.caps.explanation" : {
+      "comment" : "Explains the shared budget and the reserved unit.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Questions and nudges share one daily budget, and the last of it is kept for a nudge."
+          }
+        }
+      }
+    },
+    "settings.intervention.caps.heading" : {
+      "comment" : "Heading above the daily usage rows.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Today"
+          }
+        }
+      }
+    },
+    "settings.intervention.caps.interruptions" : {
+      "comment" : "Usage row label for the shared budget.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Interruptions today"
+          }
+        }
+      }
+    },
+    "settings.intervention.caps.queriesDay" : {
+      "comment" : "Usage row label.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Questions today"
+          }
+        }
+      }
+    },
+    "settings.intervention.caps.queriesPriority" : {
+      "comment" : "Usage row label.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Questions about this task"
+          }
+        }
+      }
+    },
+    "settings.intervention.exclusions.empty" : {
+      "comment" : "Shown when the exclusion list is empty.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing yet. Add an app here when Focus mistakes its full-screen window for a presentation."
+          }
+        }
+      }
+    },
+    "settings.intervention.exclusions.heading" : {
+      "comment" : "Heading above e03's presentation exclusion list.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not presentations"
+          }
+        }
+      }
+    },
+    "settings.intervention.exclusions.remove" : {
+      "comment" : "Action: take one app off the presentation exclusion list.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove"
+          }
+        }
+      }
+    },
+    "settings.intervention.notifications.enable" : {
+      "comment" : "The one user-initiated authorisation request in the app.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn on notifications"
+          }
+        }
+      }
+    },
+    "settings.intervention.notifications.explanation" : {
+      "comment" : "What happens without the permission — which is the whole degraded path, stated plainly.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus never asks for this on its own, and it works without it: the last step of a nudge appears in the app instead."
+          }
+        }
+      }
+    },
+    "settings.intervention.notifications.label" : {
+      "comment" : "Heading for the notification authorisation section.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notifications"
+          }
+        }
+      }
+    },
+    "settings.intervention.quietHours.endEarlier" : {
+      "comment" : "Action: move the end of the quiet window back.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "End earlier"
+          }
+        }
+      }
+    },
+    "settings.intervention.quietHours.endLater" : {
+      "comment" : "Action: move the end of the quiet window forward.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "End later"
+          }
+        }
+      }
+    },
+    "settings.intervention.quietHours.explanation" : {
+      "comment" : "The honest capability statement: the app makes no claim to read the system Focus state.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This is Focus's own window, not your Mac's Focus mode — Focus cannot read that and does not claim to. Notifications still follow your Mac's Focus, because the system applies it for us."
+          }
+        }
+      }
+    },
+    "settings.intervention.quietHours.label" : {
+      "comment" : "Heading for the app's own quiet window.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quiet hours"
+          }
+        }
+      }
+    },
+    "settings.intervention.quietHours.off" : {
+      "comment" : "Shown when no quiet-hours window is set, which is what ships.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Off. Focus has no opinion about your evenings."
+          }
+        }
+      }
+    },
+    "settings.intervention.quietHours.startEarlier" : {
+      "comment" : "Action: move the start of the quiet window back.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start earlier"
+          }
+        }
+      }
+    },
+    "settings.intervention.quietHours.startLater" : {
+      "comment" : "Action: move the start of the quiet window forward.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start later"
+          }
+        }
+      }
+    },
+    "settings.intervention.quietHours.turnOff" : {
+      "comment" : "Action: remove the quiet-hours window.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn off"
+          }
+        }
+      }
+    },
+    "settings.intervention.quietHours.turnOn" : {
+      "comment" : "Action: begin editing a quiet-hours window.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set a window"
+          }
+        }
+      }
+    },
+    "settings.intervention.reduced.explanation" : {
+      "comment" : "What reduced interruption actually changes — it is a routing preference, not a second set of surfaces.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Panels become menu-bar badges and questions wait in the menu bar. Notifications are unchanged; they are already quiet."
+          }
+        }
+      }
+    },
+    "settings.intervention.reduced.forced" : {
+      "comment" : "Shown when the accessibility setting forces the flag on.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reduce Motion is on, so this stays on."
+          }
+        }
+      }
+    },
+    "settings.intervention.reduced.label" : {
+      "comment" : "F-148's routing flag, as a preference.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Interrupt me less"
+          }
+        }
+      }
+    },
+    "settings.intervention.routing.explanation" : {
+      "comment" : "Caption above the rendered routing table.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Every step of a nudge has somewhere to go, whatever you answer about notifications."
+          }
+        }
+      }
+    },
+    "settings.intervention.routing.heading" : {
+      "comment" : "Heading above the routing matrix.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Where each step appears"
+          }
+        }
+      }
+    },
+    "settings.intervention.surface.menuBar" : {
+      "comment" : "A routing destination.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menu bar"
+          }
+        }
+      }
+    },
+    "settings.intervention.surface.notification" : {
+      "comment" : "A routing destination.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A notification"
+          }
+        }
+      }
+    },
+    "settings.intervention.surface.panel" : {
+      "comment" : "A routing destination.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A small panel"
+          }
+        }
+      }
+    },
+    "settings.intervention.surface.popoverBadge" : {
+      "comment" : "A routing destination.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The menu-bar popover"
+          }
+        }
+      }
+    },
+    "settings.intervention.surface.unavailable" : {
+      "comment" : "A routing destination that cannot be seen in the current state.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nowhere right now"
+          }
+        }
+      }
+    },
+    "settings.intervention.thresholds.accusationCooldown" : {
+      "comment" : "Threshold row label.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Between nudges"
+          }
+        }
+      }
+    },
+    "settings.intervention.thresholds.escalation" : {
+      "comment" : "Threshold row label.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Before the next step"
+          }
+        }
+      }
+    },
+    "settings.intervention.thresholds.heading" : {
+      "comment" : "Heading above the read-only threshold mirrors.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Timings"
+          }
+        }
+      }
+    },
+    "settings.intervention.thresholds.queryCooldown" : {
+      "comment" : "Threshold row label.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Between questions"
+          }
+        }
+      }
+    },
+    "settings.intervention.thresholds.queryDwell" : {
+      "comment" : "Threshold row label.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Before a question"
+          }
+        }
+      }
+    },
+    "settings.intervention.thresholds.snooze" : {
+      "comment" : "Threshold row label.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Snooze lengths"
+          }
+        }
+      }
+    },
+    "settings.intervention.title" : {
+      "comment" : "Title of the Intervention settings tab.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Intervention"
+          }
+        }
+      }
+    },
+    "settings.intervention.voice.direct" : {
+      "comment" : "A terse deck. Fewer words, never harder words.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Direct"
+          }
+        }
+      }
+    },
+    "settings.intervention.voice.label" : {
+      "comment" : "Heading above the five static voice decks.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How it speaks"
+          }
+        }
+      }
+    },
+    "settings.intervention.voice.neutral" : {
+      "comment" : "The Court's adopted default deck.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neutral"
+          }
+        }
+      }
+    },
+    "settings.intervention.voice.playful" : {
+      "comment" : "A lighter deck. Still never accusatory.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Playful"
+          }
+        }
+      }
+    },
+    "settings.intervention.voice.silentVisual" : {
+      "comment" : "A routing deck: no panel, no motion, no sound.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Silent and visual"
+          }
+        }
+      }
+    },
+    "settings.intervention.voice.warm" : {
+      "comment" : "A gentler deck.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Warm"
+          }
+        }
+      }
+    },
     "settings.privacy.reveal" : {
       "comment" : "Button that reveals the local data store in the Finder.",
       "extractionState" : "manual",
@@ -2648,7 +3224,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Focus"
+            "value" : "Focus status"
           }
         }
       }

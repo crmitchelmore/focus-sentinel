@@ -164,7 +164,20 @@ public struct QueryPanelView: View {
         }
     }
 
+    /// Prominent, never default — the same ruling the accusation panel records. "Yes, add it"
+    /// is the easiest button to find because it is the one that buys future silence, and it is
+    /// easy to find by being **drawn** that way rather than by claiming the Return key from
+    /// whatever the person happens to be typing into.
+    @ViewBuilder
     private func answerButton(_ answer: QueryAnswer) -> some View {
+        if answer == presentation.primaryAnswer {
+            plainAnswerButton(answer).buttonStyle(.borderedProminent)
+        } else {
+            plainAnswerButton(answer).buttonStyle(.bordered)
+        }
+    }
+
+    private func plainAnswerButton(_ answer: QueryAnswer) -> some View {
         Button {
             onAnswer(answer)
         } label: {
@@ -173,7 +186,5 @@ public struct QueryPanelView: View {
                 // cannot choose.
                 .fixedSize(horizontal: true, vertical: false)
         }
-        .buttonStyle(.bordered)
-        .keyboardShortcut(answer == presentation.primaryAnswer ? .defaultAction : nil)
     }
 }

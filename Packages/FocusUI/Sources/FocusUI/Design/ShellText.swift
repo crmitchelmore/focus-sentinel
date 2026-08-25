@@ -342,6 +342,60 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     /// what the app would do next — so it gets a label of its own rather than borrowing one
     /// that would make the popover say "Decided by: a small panel you can answer".
     case menuBarNudgeRung = "shell.menuBar.nudgeRung"
+
+    // The Intervention settings pane (R-98, F-132, F-148).
+    //
+    // The pane's own chrome. The *numbers* it draws are read from `InterventionPolicy` and
+    // the routing table it draws is `SurfaceRouter.table(...)` itself, so neither has a key
+    // here: a threshold written down twice is a threshold that drifts.
+    case interventionTitle = "settings.intervention.title"
+    case interventionVoiceLabel = "settings.intervention.voice.label"
+    case interventionVoiceNeutral = "settings.intervention.voice.neutral"
+    case interventionVoiceWarm = "settings.intervention.voice.warm"
+    case interventionVoiceDirect = "settings.intervention.voice.direct"
+    case interventionVoicePlayful = "settings.intervention.voice.playful"
+    case interventionVoiceSilentVisual = "settings.intervention.voice.silentVisual"
+    case interventionReducedLabel = "settings.intervention.reduced.label"
+    case interventionReducedExplanation = "settings.intervention.reduced.explanation"
+    case interventionReducedForced = "settings.intervention.reduced.forced"
+    case interventionQuietHoursLabel = "settings.intervention.quietHours.label"
+    case interventionQuietHoursOff = "settings.intervention.quietHours.off"
+    case interventionQuietHoursTurnOn = "settings.intervention.quietHours.turnOn"
+    case interventionQuietHoursTurnOff = "settings.intervention.quietHours.turnOff"
+    case interventionQuietHoursStartEarlier = "settings.intervention.quietHours.startEarlier"
+    case interventionQuietHoursStartLater = "settings.intervention.quietHours.startLater"
+    case interventionQuietHoursEndEarlier = "settings.intervention.quietHours.endEarlier"
+    case interventionQuietHoursEndLater = "settings.intervention.quietHours.endLater"
+    case interventionQuietHoursExplanation = "settings.intervention.quietHours.explanation"
+    case interventionNotificationsLabel = "settings.intervention.notifications.label"
+    case interventionNotificationsEnable = "settings.intervention.notifications.enable"
+    case interventionNotificationsExplanation = "settings.intervention.notifications.explanation"
+    case interventionAuthorisationAuthorised = "settings.intervention.authorisation.authorised"
+    case interventionAuthorisationDenied = "settings.intervention.authorisation.denied"
+    case interventionAuthorisationNotRequested = "settings.intervention.authorisation.notRequested"
+    case interventionAuthorisationProvisional = "settings.intervention.authorisation.provisional"
+    case interventionRoutingHeading = "settings.intervention.routing.heading"
+    case interventionRoutingExplanation = "settings.intervention.routing.explanation"
+    case interventionSurfaceMenuBar = "settings.intervention.surface.menuBar"
+    case interventionSurfacePanel = "settings.intervention.surface.panel"
+    case interventionSurfaceNotification = "settings.intervention.surface.notification"
+    case interventionSurfacePopoverBadge = "settings.intervention.surface.popoverBadge"
+    case interventionSurfaceUnavailable = "settings.intervention.surface.unavailable"
+    case interventionCapsHeading = "settings.intervention.caps.heading"
+    case interventionCapsQueriesPriority = "settings.intervention.caps.queriesPriority"
+    case interventionCapsQueriesDay = "settings.intervention.caps.queriesDay"
+    case interventionCapsAccusations = "settings.intervention.caps.accusations"
+    case interventionCapsInterruptions = "settings.intervention.caps.interruptions"
+    case interventionCapsExplanation = "settings.intervention.caps.explanation"
+    case interventionThresholdsHeading = "settings.intervention.thresholds.heading"
+    case interventionThresholdQueryDwell = "settings.intervention.thresholds.queryDwell"
+    case interventionThresholdQueryCooldown = "settings.intervention.thresholds.queryCooldown"
+    case interventionThresholdAccusationCooldown = "settings.intervention.thresholds.accusationCooldown"
+    case interventionThresholdEscalation = "settings.intervention.thresholds.escalation"
+    case interventionThresholdSnooze = "settings.intervention.thresholds.snooze"
+    case interventionExclusionsHeading = "settings.intervention.exclusions.heading"
+    case interventionExclusionsEmpty = "settings.intervention.exclusions.empty"
+    case interventionExclusionsRemove = "settings.intervention.exclusions.remove"
 }
 
 /// A transform applied to a resolved string immediately before it is drawn.

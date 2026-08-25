@@ -91,8 +91,21 @@ struct StringCatalogTests {
         }
         let duplicated = byValue.filter { $0.value.count > 1 }.map { $0.value.sorted() }.sorted { $0[0] < $1[0] }
 
+        // e05 adds three, and every one is the same word for the same act in two places a
+        // person reaches it from — which is the case this assertion is meant to permit, not the
+        // copy-paste it is meant to catch:
+        //
+        //   * "Notifications" heads the capability matrix's row and the Intervention pane's
+        //     section. One capability, two surfaces.
+        //   * "Remove" takes a context item off the pack and an app off the presentation
+        //     exclusion list. Two lists, one verb.
+        //   * "Cancel" backs out of the completion sheet and ends a snooze early. Two
+        //     retractions, one word.
         #expect(
             duplicated == [
+                ["capability.name.notifications", "settings.intervention.notifications.label"],
+                ["context.action.remove", "settings.intervention.exclusions.remove"],
+                ["priority.complete.action.cancel", "shell.menuBar.cancelSnooze"],
                 ["shell.cockpit.heading", "shell.window.cockpit.title"],
                 ["shell.help.heading", "shell.window.help.title"]
             ],
