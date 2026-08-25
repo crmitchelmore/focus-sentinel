@@ -998,6 +998,45 @@ check(
     nudge.get("querySurface"),
 )
 
+# **Every deck and every flag, not only the cell that always answers `panel`** (focus-kby).
+#
+# This stage used to ask the router exactly one question — standard deck, reduced interruption
+# off, nothing playing — which always answers `.panel`. The badge route was therefore invisible
+# to every gate in the programme, and the badge route is the one the ledger was burning questions
+# on: the silentVisual deck, reduced interruption (forced on by Reduce Motion) and a live
+# microphone or camera, which is anybody on a call.
+query_routes = nudge.get("queryRoutes") or []
+check(
+    len(query_routes) >= 15,
+    f"the router is exercised across every deck and flag ({len(query_routes)} cells)",
+    len(query_routes),
+)
+check(
+    nudge.get("everyQueryRouteCanCarryAQuestion") is True,
+    "every cell routes a question to a surface that can actually carry one",
+    [row for row in query_routes if not row.get("canCarryAQuestion")],
+)
+check(
+    (nudge.get("queryRoutesReachingTheBadge") or 0) > 0,
+    "the badge route is reachable, and is therefore exercised rather than assumed unreachable",
+    nudge.get("queryRoutesReachingTheBadge"),
+)
+check(
+    (nudge.get("queryRoutesReachingThePanel") or 0) > 0,
+    "the panel route is still reachable too, so the table has not collapsed to one answer",
+    nudge.get("queryRoutesReachingThePanel"),
+)
+# P-131: a badge in a hidden menu bar is a deferral, never a question nobody can answer.
+check(
+    nudge.get("querySurfaceWhenMenuBarHidden") == ""
+    and nudge.get("queryDeferralWhenMenuBarHidden") == "menuBarHidden",
+    "a question routed to a hidden menu bar is deferred rather than delivered to nothing",
+    {
+        "surface": nudge.get("querySurfaceWhenMenuBarHidden"),
+        "deferral": nudge.get("queryDeferralWhenMenuBarHidden"),
+    },
+)
+
 # 4 — **the panel takes nothing**, on all four of R-89's grant-free readings.
 #
 # Reading 1 alone is what an earlier draft of this gate asserted, and P-139 measured a real

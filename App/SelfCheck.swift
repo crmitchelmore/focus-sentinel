@@ -380,6 +380,67 @@ enum SelfCheck {
         )
         report["querySurface"] = queryRoute.surface?.rawValue ?? ""
 
+        // **Every deck and every flag, not just the one cell that always answers `panel`**
+        // (focus-kby).
+        //
+        // This stage used to ask the router exactly one question — the standard deck, reduced
+        // interruption off, nothing playing — which always answers `.panel`. The badge route was
+        // therefore invisible to every gate in the programme, and the badge route is the one the
+        // ledger was burning questions on: `silentVisual`, reduced interruption (forced on by
+        // Reduce Motion), and a live microphone or camera, which is anybody on a call. Three
+        // ordinary conditions, none of them exotic, none of them ever exercised.
+        //
+        // `routeQuery(…)` is a pure function of typed inputs, so the whole cross product costs
+        // nothing, prompts nothing and needs no grant.
+        var queryRoutes: [[String: Any]] = []
+        for voice in NudgeVoice.allCases {
+            for reduced in [false, true] {
+                let mediaStates: [(String, MediaActivity)] = [
+                    ("idle", .idle),
+                    ("microphone", MediaActivity(microphoneRunning: true)),
+                    ("camera", MediaActivity(microphoneRunning: false, cameraRunning: true))
+                ]
+                for (mediaName, media) in mediaStates {
+                    let route = SurfaceRouter.routeQuery(
+                        presentation: .notPresenting,
+                        media: media,
+                        reducedInterruption: reduced,
+                        menuBarVisible: true,
+                        voice: voice
+                    )
+                    queryRoutes.append([
+                        "voice": voice.rawValue,
+                        "reducedInterruption": reduced,
+                        "media": mediaName,
+                        "surface": route.surface?.rawValue ?? "",
+                        "deferralReason": route.deferralReason?.rawValue ?? "",
+                        "canCarryAQuestion": route.surface?.canCarryAQuestion ?? false
+                    ])
+                }
+            }
+        }
+        report["queryRoutes"] = queryRoutes
+        report["everyQueryRouteCanCarryAQuestion"] = queryRoutes.allSatisfy {
+            ($0["canCarryAQuestion"] as? Bool) == true
+        }
+        report["queryRoutesReachingTheBadge"] = queryRoutes.count {
+            ($0["surface"] as? String) == NudgeSurface.popoverBadge.rawValue
+        }
+        report["queryRoutesReachingThePanel"] = queryRoutes.count {
+            ($0["surface"] as? String) == NudgeSurface.panel.rawValue
+        }
+        // The badge is only a surface while the menu bar is on screen (P-131), and a question
+        // routed to a hidden menu bar is a deferral rather than a question nobody answers.
+        let hiddenMenuBar = SurfaceRouter.routeQuery(
+            presentation: .notPresenting,
+            media: .idle,
+            reducedInterruption: true,
+            menuBarVisible: false,
+            voice: .standard
+        )
+        report["querySurfaceWhenMenuBarHidden"] = hiddenMenuBar.surface?.rawValue ?? ""
+        report["queryDeferralWhenMenuBarHidden"] = hiddenMenuBar.deferralReason?.rawValue ?? ""
+
         report["panel"] = panelReport()
         report["menuBarInstalled"] = composition.menuBar.isInstalled
         report["decisionCount"] = host.decisionCount
@@ -408,16 +469,13 @@ enum SelfCheck {
         //
         // The question is used rather than the accusation because it is the surface U-1's whole
         // bargain rests on; the unit lane asserts both.
-        panel.update(
-            content: QueryPanelView(
-                presentation: QueryPresentation(
-                    task: "Write the Q3 proposal for Acme",
-                    subject: FocusStore.bundleIdentifier,
-                    reason: .noNegativeBasis,
-                    dwelled: .seconds(62)
-                )
-            )
+        let presentation = QueryPresentation(
+            task: "Write the Q3 proposal for Acme",
+            subject: FocusStore.bundleIdentifier,
+            reason: .noNegativeBasis,
+            dwelled: .seconds(62)
         )
+        panel.update(content: QueryPanelView(presentation: presentation))
 
         let before = panel.readings()
         panel.show(presentationIsClear: true)
@@ -441,10 +499,29 @@ enum SelfCheck {
             "x": frame.x, "y": frame.y, "width": frame.width, "height": frame.height
         ]
         report["contentSize"] = [
-            "width": Double(NudgePanelController.contentSize.width),
-            "height": Double(NudgePanelController.contentSize.height)
+            "width": Double(panel.contentSize.width),
+            "height": Double(panel.contentSize.height)
         ]
-        report["presentedAtIntendedSize"] = panel.isPresentedAtIntendedSize
+        report["contentWidth"] = NudgePanelController.contentWidth
+        report["maximumContentHeight"] = NudgePanelController.maximumContentHeight(
+            screens: NudgePanelController.currentScreens()
+        )
+
+        // **The invariant that replaced "the frame equals a constant"** (focus-vpu, focus-kby).
+        //
+        // A size comparison passed a panel measured at y = −1186 — off screen as well as
+        // oversized — and passed a panel whose Pause row was below the clip, because the frame
+        // really was the constant. What a person being asked to choose needs is that the window
+        // is on a display and **every action it offers is somewhere they can click**, and that is
+        // what this reads. `offeredAnswerIdentifiers` is the question's own list, so the report
+        // and the panel cannot be describing two different sets of buttons.
+        let reading = panel.decisionSurfaceReading(offering: presentation.offeredAnswerIdentifiers)
+        report["decisionSurface"] = reading.dictionary
+        report["everyActionIsReachable"] = reading.everyActionIsReachable
+        report["hitTestsEveryAction"] = panel.hitTestsEveryAction(
+            offering: presentation.offeredAnswerIdentifiers
+        )
+        report["offeredActions"] = presentation.offeredAnswerIdentifiers
 
         panel.hide()
 

@@ -277,22 +277,79 @@ check(
 # before reading the frame — the turn is the assertion, because the window is exactly the right
 # size until it happens. Zero grants: a window's own frame needs no permission to read.
 frame = panel.get("frame") or {}
-intended = panel.get("contentSize") or {}
+measured = panel.get("contentSize") or {}
 tolerance = 1.0
-for axis in ("width", "height"):
-    measured = frame.get(axis)
-    expected = intended.get(axis)
-    check(
-        isinstance(measured, (int, float))
-        and isinstance(expected, (int, float))
-        and abs(measured - expected) <= tolerance,
-        f"the panel's {axis} is its intended {expected} (measured {measured})",
-        {"frame": frame, "contentSize": intended},
-    )
+
+# The WIDTH is a commitment and is asserted against the constant.
+width = frame.get("width")
+committed = panel.get("contentWidth")
 check(
-    panel.get("presentedAtIntendedSize") is True,
-    "the panel is one a person could actually read: visible AND its intended size",
-    {"frame": frame, "contentSize": intended},
+    isinstance(width, (int, float))
+    and isinstance(committed, (int, float))
+    and abs(width - committed) <= tolerance,
+    f"the panel is the committed {committed} points wide (measured {width})",
+    {"frame": frame, "contentWidth": committed},
+)
+
+# The HEIGHT is measured from the content, so the assertion is a bound rather than an equality:
+# a constant here is exactly what shipped the clipped panel, in which content needing 237 to 404
+# points was laid into 190 and three and a half of six actions were drawn.
+height = frame.get("height")
+ceiling = panel.get("maximumContentHeight")
+check(
+    isinstance(height, (int, float)) and height > 0,
+    f"the panel has a height at all (measured {height})",
+    {"frame": frame},
+)
+check(
+    isinstance(height, (int, float))
+    and isinstance(ceiling, (int, float))
+    and height <= ceiling + tolerance,
+    f"the panel is within the {ceiling}-point ceiling (measured {height})",
+    {"frame": frame, "maximumContentHeight": ceiling},
+)
+check(
+    isinstance(height, (int, float))
+    and isinstance(measured.get("height"), (int, float))
+    and abs(height - measured["height"]) <= tolerance,
+    "the window and the content it was sized for are the same height",
+    {"frame": frame, "contentSize": measured},
+)
+
+# --- and the assertion that replaced "the frame equals a constant" -----------------------------
+#
+# A size comparison passed a panel at y = -1186 (off screen as well as oversized) and passed a
+# panel whose Pause and Change priority rows were below the clip. The only claim worth making
+# about a decision surface is that every action it offers can be clicked: on screen, on a
+# display, inside the content the person can see. Both instruments are asserted — the geometric
+# reading and a real AppKit hit test at the centre of each action.
+offered = panel.get("offeredActions") or []
+check(
+    len(offered) > 0,
+    f"the panel is offering something, so the reading is about actual buttons ({offered})",
+    offered,
+)
+check(
+    panel.get("everyActionIsReachable") is True,
+    "every action the panel offers is on a screen and inside the panel a person can see",
+    panel.get("decisionSurface"),
+)
+check(
+    panel.get("hitTestsEveryAction") is True,
+    "a click at the centre of every offered action lands on the panel",
+    panel.get("decisionSurface"),
+)
+surface_reading = panel.get("decisionSurface") or {}
+check(
+    surface_reading.get("isWhollyOnAScreen") is True,
+    "the panel is wholly inside a display's visible frame (the y = -1186 case)",
+    surface_reading,
+)
+check(
+    surface_reading.get("unreportedActions") == []
+    and surface_reading.get("unreachableActions") == [],
+    "no offered action is missing from the layout or out of reach in it",
+    surface_reading,
 )
 
 # --- SC-5, restated here because this stage launches the app -----------------------------------
