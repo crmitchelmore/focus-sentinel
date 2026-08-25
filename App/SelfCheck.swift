@@ -56,6 +56,19 @@ enum SelfCheck {
     /// Export the local event stream, for the live evidence lane to read.
     static let exportArgument = "--focus-export-events"
 
+    /// **The nudge channel** (§4.5, §4.7).
+    ///
+    /// Present as well as the ordinary report rather than instead of it, because the two gate
+    /// stages e05 adds want different things: `focus-steal` wants the panel shown and its four
+    /// grant-free readings taken, and `notification-denied` wants every rung's surface at zero
+    /// grants. Both are in the `nudge` block of the ordinary report; this flag runs **only**
+    /// that block, headlessly, without waiting to come forward — which is what makes it cheap
+    /// enough for a gate stage rather than an evidence lane.
+    static let nudgeArgument = "--focus-self-check-nudge"
+
+    /// Whether this process was asked for the nudge block alone.
+    static var wantsNudgeOnly: Bool { CommandLine.arguments.contains(nudgeArgument) }
+
     /// How far back the seeded session's `startedAt` is dated. Ninety minutes, which is what
     /// §4.6 asserts the restoring launch reports to within two seconds.
     static let seedBackdateSeconds: Double = 5_400
@@ -247,7 +260,141 @@ enum SelfCheck {
         // into a sub-object to find its subject.
         root["engineStamp"] = relevance["engineStamp"] ?? ""
         root["policyDigest"] = relevance["policyDigest"] ?? ""
+
+        // --- e05 -------------------------------------------------------------------------
+        let nudge = nudgeReport()
+        root["nudge"] = nudge
+        // Lifted for the same reason the two above are: these are the values the gate compares
+        // against committed literals, and one of them — `requestAuthorizationCallCount` — is
+        // the number that discharges standing condition 5 for this epic.
+        root["interventionDigest"] = nudge["interventionDigest"] ?? ""
+        root["notificationAuthorisation"] = nudge["notificationAuthorisation"] ?? ""
+        root["requestAuthorizationCallCount"] = nudge["requestAuthorizationCallCount"] ?? -1
+        root["ladderRungsDeclared"] = nudge["ladderRungsDeclared"] ?? -1
         return root
+    }
+
+    // MARK: - e05 · the nudge loop, at zero grants (§4.5, §4.7)
+
+    /// **What the running application can say about the nudge without asking for anything.**
+    ///
+    /// Three claims, and each is what one of the epic's gates needs:
+    ///
+    /// 1. **The panel takes nothing.** It is really shown — `orderFrontRegardless()`, the one
+    ///    show path — and all four of R-89's grant-free readings are taken before and after.
+    ///    Reading 1 alone is what an earlier draft asserted, and P-139 measured a focus theft it
+    ///    cannot see: `makeKeyAndOrderFront(nil)` flips `NSApp.isActive` to `true` and installs a
+    ///    key window while the frontmost application never moves.
+    /// 2. **Every rung has a surface at whatever authorisation this Mac actually has.** Read
+    ///    from `SurfaceRouter` — the committed table the settings pane renders — so the report
+    ///    and the behaviour cannot be two different answers.
+    /// 3. **Nothing asked for a permission.** `requestAuthorizationCallCount` is published by
+    ///    the notification boundary, which contains no call that could increment it; the number
+    ///    is here so a gate can assert the fact rather than infer it from a lint.
+    @MainActor
+    static func nudgeReport() -> [String: Any] {
+        let composition = AppComposition.shared
+        let host = composition.nudgeHost
+        var report: [String: Any] = [:]
+
+        report["interventionDigest"] = InterventionPolicy.digestHex
+        report["interventionVersion"] = InterventionPolicy.version
+        report["ladderRungsDeclared"] = LadderRung.Kind.allCases.count
+        report["notificationAuthorisation"] = host.notificationAuthorisation.rawValue
+        report["permitsNotificationDelivery"] = host.notificationAuthorisation.permitsDelivery
+        report["requestAuthorizationCallCount"] = host.requestAuthorizationCallCount
+
+        // Every rung, at this Mac's real authorisation, with nothing presenting and no call in
+        // progress — which is the state the settings pane's matrix describes.
+        let authorisation = host.notificationAuthorisation
+        var routes: [[String: Any]] = []
+        for rung in LadderRung.Kind.allCases {
+            let route = SurfaceRouter.route(
+                rung: rung,
+                authorisation: authorisation,
+                presentation: .notPresenting,
+                media: .idle,
+                reducedInterruption: false,
+                menuBarVisible: true,
+                voice: .standard
+            )
+            routes.append([
+                "rung": rung.rawValue,
+                "rank": rung.rank,
+                "surface": route.surface?.rawValue ?? "",
+                "deferralReason": route.deferralReason?.rawValue ?? "",
+                "isInApp": route.surface?.isInApp ?? false
+            ])
+        }
+        report["routes"] = routes
+        report["everyRungHasASurface"] = routes.allSatisfy {
+            !(($0["surface"] as? String) ?? "").isEmpty
+        }
+        report["everyRungIsInApp"] = routes.allSatisfy { ($0["isInApp"] as? Bool) == true }
+
+        // The query's route, which takes no authorisation at all: **a question is never a
+        // notification** (R-82).
+        let queryRoute = SurfaceRouter.routeQuery(
+            presentation: .notPresenting,
+            media: .idle,
+            reducedInterruption: false,
+            menuBarVisible: true,
+            voice: .standard
+        )
+        report["querySurface"] = queryRoute.surface?.rawValue ?? ""
+
+        report["panel"] = panelReport()
+        report["menuBarInstalled"] = composition.menuBar.isInstalled
+        report["decisionCount"] = host.decisionCount
+        return report
+    }
+
+    /// Show the nudge panel, take the four readings, and put it away again.
+    ///
+    /// The panel is shown for real. Nothing here activates the application, makes a window key
+    /// or brings anything forward — and `check-forbidden.sh` (R-96m) makes that structural by
+    /// confining `orderFrontRegardless` to the controller's one show function and banning the
+    /// call that would take focus outright.
+    @MainActor
+    static func panelReport() -> [String: Any] {
+        let composition = AppComposition.shared
+        let panel = composition.nudgePanel
+        var report: [String: Any] = [:]
+
+        let before = panel.readings()
+        panel.show(presentationIsClear: true)
+        let after = panel.readings()
+        panel.hide()
+
+        // Read **after** the show, so the report describes the panel as it was actually
+        // presented: `.fullScreenAuxiliary` is applied by the show path and only when the
+        // presentation gate has cleared (R-84), so reading the properties first would report a
+        // window nobody was ever shown.
+        report["properties"] = panel.properties.dictionary
+
+        report["readingsBeforeShow"] = before.dictionary
+        report["readingsAfterShow"] = after.dictionary
+        report["frontmostBeforeShow"] = before.frontmostBundleIdentifier ?? ""
+        report["frontmostAfterShow"] = after.frontmostBundleIdentifier ?? ""
+        // Two conjunctions, and the difference between them is the posture this process is in.
+        //
+        // `tookNothing` is R-89's **absolute** form — frontmost unchanged, `NSApp.isActive`
+        // false, the panel not key, no key window at all — and it is what §4.5's `focus-steal`
+        // stage asserts, because that stage launches the app with `open -g -a`: an application
+        // that has never been frontmost, which is the posture a nudge really fires in (P-128).
+        //
+        // `changedNothing` is the **delta** form, and it is the honest claim in the ordinary
+        // self-check: that survey activates the application on purpose, because AppKit validates
+        // a menu item by walking the key window's responder chain and a background application
+        // has no key window at all. Asserting `NSApp.isActive == false` there would be asserting
+        // something about the self-check's own launch rather than about the panel.
+        report["tookNothing"] = after.tookNothing(comparedTo: before)
+        report["changedNothing"] = after.changedNothing(comparedTo: before)
+        report["wasVisible"] = after.panelIsVisible
+        report["hiddenAfter"] = !panel.isVisible
+        report["propertiesAreCorrect"] = panel.properties.isCorrect
+        report["windowNumber"] = panel.windowNumber
+        return report
     }
 
     // MARK: - e03 · the observer graph (F-119, F-23, F-29, F-32, F-35, F-36)
@@ -458,9 +605,10 @@ enum SelfCheck {
             report["verdict"] = [:]
         }
 
-        // R-72.2. Nothing in e04 writes to the box — e05 owns the one-click affordance — so a
-        // launch that has judged things still finds it empty, which is the observation rather
-        // than the assumption.
+        // R-72.2. e05 ships the one-click affordance that writes to the box, and a self-check
+        // clicks nothing — so a launch that has judged things still finds it empty. That is now
+        // an observation about a *reachable* mechanism rather than about an absent one, which
+        // makes it a stronger statement than it was.
         report["sessionRuleCount"] = AppComposition.shared.sessionHost.sessionRuleBox.count
 
         return report
@@ -1055,6 +1203,18 @@ final class FocusAppDelegate: NSObject, NSApplicationDelegate {
             SelfCheck.runModeAndTerminate(writingTo: path) {
                 try SelfCheck.exportEvents(to: export)
                 return ["mode": "export", "events": export]
+            }
+            return
+        }
+        if SelfCheck.wantsNudgeOnly {
+            // Headless in the sense that matters: it never comes forward, never reads a menu and
+            // never takes a key window — which is also what makes its focus readings mean
+            // something. An application that had activated itself to run this check would be
+            // reporting on a state it had just created.
+            SelfCheck.runModeAndTerminate(writingTo: path) {
+                var report = SelfCheck.nudgeReport()
+                report["mode"] = "nudge"
+                return report
             }
             return
         }

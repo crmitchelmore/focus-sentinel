@@ -57,6 +57,12 @@ COMMITTED_STAMP=$(committed_literal \
 COMMITTED_DIGEST=$(committed_literal \
     "Packages/FocusCore/Tests/FocusCoreTests/RelevancePolicyTests.swift" \
     "committedDigest")
+# e05's own digest, read from the one place it is written down. Two policies, two digests, one
+# stamp — the nudge's thresholds are deliberately NOT in `RelevancePolicy`, so that changing a
+# cooldown cannot invalidate e06's verdict cache (R-95).
+COMMITTED_INTERVENTION_DIGEST=$(committed_literal \
+    "Packages/FocusCore/Tests/FocusCoreTests/InterventionPolicyTests.swift" \
+    "committedDigest")
 
 APP="${1:-}"
 if [[ -z "$APP" ]]; then
@@ -139,7 +145,8 @@ fi
 
 print
 print "== assertions"
-python3 - "$OUT" "$SEED_JSON" "$RESTORE_JSON" "$COMMITTED_STAMP" "$COMMITTED_DIGEST" <<'PYTHON'
+python3 - "$OUT" "$SEED_JSON" "$RESTORE_JSON" "$COMMITTED_STAMP" "$COMMITTED_DIGEST" \
+    "$COMMITTED_INTERVENTION_DIGEST" <<'PYTHON'
 import json
 import sys
 
@@ -152,6 +159,7 @@ with open(sys.argv[3]) as handle:
     restore = json.load(handle)
 committed_stamp = sys.argv[4]
 committed_digest = sys.argv[5]
+committed_intervention_digest = sys.argv[6]
 
 failures = []
 
@@ -912,6 +920,162 @@ check(
     relevance.get("sessionRuleCount") == 0,
     "the session rule box is empty — nothing in this epic writes to it",
     relevance.get("sessionRuleCount"),
+)
+
+# --- e05: the nudge loop, as the running application reports it ----------------------------
+#
+# Three claims, and each is what one of this epic's gates rests on. Every one of them is made
+# at **zero grants**, from a plain `exec`, with no prompt of any kind — which is the whole of
+# standing condition 5 for e05.
+
+nudge = report.get("nudge") or {}
+panel = nudge.get("panel") or {}
+
+# 1 — the digest. The nudge's thresholds live in their own manifest with their own digest, so
+# that tuning a cooldown never invalidates e06's verdict cache (R-95). Asserted against the one
+# place the literal is written down, exactly as the engine stamp and the policy digest are.
+check(
+    bool(committed_intervention_digest),
+    "the committed intervention digest was found in InterventionPolicyTests",
+    committed_intervention_digest,
+)
+check(
+    report.get("interventionDigest") == committed_intervention_digest,
+    f"the running application's intervention digest is {committed_intervention_digest}",
+    report.get("interventionDigest"),
+)
+# …and it is NOT the relevance digest. Two policies, two digests: if these two were ever equal
+# the split would have collapsed and a snooze duration would be keying a verdict cache.
+check(
+    report.get("interventionDigest") != report.get("policyDigest"),
+    "the intervention digest and the policy digest are two different numbers",
+    (report.get("interventionDigest"), report.get("policyDigest")),
+)
+
+# 2 — **nothing asked for anything.** The number that discharges standing condition 5 for this
+# epic. `requestAuthorization` appears in exactly one file in the repository — the Intervention
+# settings pane's user-initiated button — and no routing path, no host and no gate stage can
+# reach it, so this is a property of the call graph rather than of a counter somebody remembered
+# to leave alone.
+check(
+    report.get("requestAuthorizationCallCount") == 0,
+    "the application asked for no notification authorisation",
+    report.get("requestAuthorizationCallCount"),
+)
+check(
+    report.get("notificationAuthorisation") in
+    ("authorised", "denied", "notRequested", "provisional"),
+    "the notification authorisation was read, and decoded to one of the four states",
+    report.get("notificationAuthorisation"),
+)
+
+# D-06: three rungs, no more and no fewer — asserted in the running application as well as in
+# the policy manifest and the evaluation report.
+check(
+    report.get("ladderRungsDeclared") == 3,
+    "the ladder declares exactly three rungs",
+    report.get("ladderRungsDeclared"),
+)
+
+# 3 — **every rung reaches a surface, whatever this Mac says about notifications.** This is
+# F-73's degraded path observed in the shipping product: at zero grants the top rung routes to
+# the in-app recommitment panel rather than to nothing.
+check(
+    nudge.get("everyRungHasASurface") is True,
+    "every rung of the ladder reaches a surface at this Mac's real authorisation",
+    nudge.get("routes"),
+)
+if report.get("notificationAuthorisation") in ("denied", "notRequested"):
+    check(
+        nudge.get("everyRungIsInApp") is True,
+        "with notifications unauthorised every rung is delivered in-app",
+        nudge.get("routes"),
+    )
+# A question is never a notification (R-82): its route takes no authorisation at all.
+check(
+    nudge.get("querySurface") in ("panel", "popoverBadge"),
+    "a question routes to an in-app surface and never to a notification",
+    nudge.get("querySurface"),
+)
+
+# 4 — **the panel takes nothing**, on all four of R-89's grant-free readings.
+#
+# Reading 1 alone is what an earlier draft of this gate asserted, and P-139 measured a real
+# focus theft it cannot see: `makeKeyAndOrderFront(nil)` on this style mask flips
+# `NSApp.isActive` from false to true and installs a key window **while the frontmost
+# application never moves**. Readings 2-4 are the ones that catch it, and none needs a grant.
+before = panel.get("readingsBeforeShow") or {}
+after = panel.get("readingsAfterShow") or {}
+
+check(
+    panel.get("wasVisible") is True,
+    "the nudge panel really appeared, so the readings are about something",
+    panel.get("wasVisible"),
+)
+check(
+    bool(before.get("frontmostBundleIdentifier"))
+    and before.get("frontmostBundleIdentifier") == after.get("frontmostBundleIdentifier"),
+    "reading 1: the frontmost application is byte-identical before and after the panel is shown",
+    (before.get("frontmostBundleIdentifier"), after.get("frontmostBundleIdentifier")),
+)
+# Reading 3 is absolute here as well: the panel becomes key only when a person clicks it, and
+# that is true whether or not the application is active.
+check(
+    after.get("panelIsKey") is False,
+    "reading 3: the panel is not the key window",
+    after.get("panelIsKey"),
+)
+# Readings 2 and 4 are asserted as a **delta**, not absolutely, and the reason is this launch.
+# The shell survey activates the application on purpose — AppKit validates a menu item by
+# walking the *key window's* responder chain, and a background application has no key window at
+# all — so `NSApp.isActive` is legitimately true here before the panel is shown. Requiring it to
+# be false would be asserting something about the self-check's own launch rather than about the
+# panel. The absolute form is §4.5's `focus-steal` stage, which launches the app with
+# `open -g -a`: never frontmost, which is the posture a nudge really fires in (P-128, P-139).
+check(
+    panel.get("changedNothing") is True,
+    "showing the nudge changed none of the four focus readings",
+    (before, after),
+)
+check(
+    after.get("applicationIsActive") == before.get("applicationIsActive"),
+    "reading 2: NSApp.isActive is exactly what it was before the panel was shown",
+    (before.get("applicationIsActive"), after.get("applicationIsActive")),
+)
+check(
+    after.get("applicationKeyWindowIsNil") == before.get("applicationKeyWindowIsNil"),
+    "reading 4: showing the panel installed no key window",
+    (before.get("applicationKeyWindowIsNil"), after.get("applicationKeyWindowIsNil")),
+)
+check(
+    panel.get("hiddenAfter") is True,
+    "the panel was put away again, so a self-check leaves no window on the screen",
+    panel.get("hiddenAfter"),
+)
+
+# R-89's six properties, on the real window object the application actually showed.
+properties = panel.get("properties") or {}
+check(
+    panel.get("propertiesAreCorrect") is True,
+    "the panel is non-activating, key-capable, never main, and never hides on deactivate",
+    properties,
+)
+check(
+    properties.get("isNonActivating") is True,
+    "the panel's style mask carries .nonactivatingPanel",
+    properties.get("isNonActivating"),
+)
+check(
+    properties.get("canBecomeMain") is False,
+    "the panel can never become the application's main window",
+    properties.get("canBecomeMain"),
+)
+
+# The menu bar is really installed, so the ambient rung has somewhere to be.
+check(
+    nudge.get("menuBarInstalled") is True,
+    "the menu-bar command centre is installed",
+    nudge.get("menuBarInstalled"),
 )
 
 # ------------------------------------------------------------------------------------------

@@ -75,6 +75,27 @@ public final class NudgePanelController {
                 && applicationKeyWindowIsNil
         }
 
+        /// **What the show changed**, rather than what it left true.
+        ///
+        /// The absolute form above is the one §4.5's `focus-steal` stage asserts, because that
+        /// stage launches the app with `open -g -a` — the posture a nudge actually fires in, in
+        /// which the application has never been frontmost and readings 2 and 4 are false and
+        /// true respectively before anything happens.
+        ///
+        /// The **ordinary** self-check is a different situation and this is the honest assertion
+        /// for it: that survey deliberately activates the application, because AppKit validates a
+        /// menu item by walking the *key window's* responder chain and a background app has no
+        /// key window at all. In that process `NSApp.isActive` is legitimately `true` before the
+        /// panel is shown — so the claim worth making is that showing the panel **moved
+        /// nothing**, which is exactly as strong a statement about the panel and does not
+        /// pretend the process was in a posture it was not.
+        public func changedNothing(comparedTo before: FocusReadings) -> Bool {
+            frontmostBundleIdentifier == before.frontmostBundleIdentifier
+                && applicationIsActive == before.applicationIsActive
+                && panelIsKey == before.panelIsKey
+                && applicationKeyWindowIsNil == before.applicationKeyWindowIsNil
+        }
+
         /// The report the self-check serialises and `focus-steal` reads.
         public var dictionary: [String: Any] {
             [
