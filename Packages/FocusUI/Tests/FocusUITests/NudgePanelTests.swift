@@ -629,12 +629,24 @@ struct NudgePanelTests {
 
     /// **Overflow adapts the layout; it never clips** (focus-vpu).
     ///
-    /// Content taller than the ceiling gets a scroll view rather than a clip rectangle — and,
-    /// because an action a person has to scroll to is not an action in reach, the reading says so
-    /// rather than passing a panel whose last button is below the fold. That is the whole
-    /// difference between this and the shape it replaces: the previous fix laid 404 points of
-    /// content into 190 points of window and reported success.
-    @Test("content taller than the ceiling scrolls, and is not counted as reachable")
+    /// ## Why the reading alone was not this assertion
+    ///
+    /// This test used to assert `!everyActionIsReachable`, `!unreachableActions.isEmpty` and
+    /// `!hitTestsEveryAction`, and every one of those is **equally true of a clipped panel**.
+    /// A mutation that turned the scroll decision off — `let scrolls = measured.height > …`
+    /// replaced by `false` — reinstated the clip rectangle and left the suite green, because
+    /// nothing here could tell "the person can scroll to Pause" apart from "Pause is gone
+    /// forever". The design rests on exactly that difference.
+    ///
+    /// So it is measured. The panel really has a scroll view; its document really is taller than
+    /// the visible area; and the two actions the live drive found below the clip — Pause and
+    /// Change priority — really do come into reach when it is scrolled to the bottom. A clipped
+    /// panel has no scroll view to find and no position at which those actions exist.
+    ///
+    /// The un-scrolled reading is still asserted, and still says no: an action a person has to
+    /// scroll to is not an action in reach at the moment the app is deciding whether the
+    /// question was asked.
+    @Test("content taller than the ceiling scrolls to its actions rather than clipping them")
     func overflowScrollsRatherThanClipping() {
         // A policy nobody would write, which is the point: the panel must behave when the
         // content is pathological, not only when it is the fixture. The snooze spans are read
@@ -676,6 +688,101 @@ struct NudgePanelTests {
         // The second instrument agrees: a click where those actions are lands on nothing,
         // because they are not in the window at all.
         #expect(!controller.hitTestsEveryAction(offering: enormous.offeredActionIdentifiers))
+
+        // --- scrolled, not clipped ------------------------------------------------------
+        //
+        // The two rows the live drive read below the clip. Under a clip they are gone; under a
+        // scroll view they are one gesture away, and that is the whole distinction.
+        let pause = CorrectionAction.pause.rawValue
+        let changePriority = CorrectionAction.changePriority.rawValue
+        #expect(reading.unreachableActions.contains(pause))
+        #expect(reading.unreachableActions.contains(changePriority))
+
+        let scrollViews = Self.scrollViews(in: controller.panel.contentView)
+        #expect(
+            scrollViews.count == 1,
+            "the overflowing panel has no scroll view: its content is clipped, not scrolled"
+        )
+        guard let scroll = scrollViews.first, let document = scroll.documentView else { return }
+        let visible = scroll.contentView.bounds.height
+        #expect(
+            document.frame.height > visible + Self.sizeTolerance,
+            "the document is not taller than the visible area, so nothing was scrollable"
+        )
+
+        // Scroll to the bottom, the way a person would, and read again.
+        scroll.contentView.scroll(to: NSPoint(x: 0, y: document.frame.height - visible))
+        scroll.reflectScrolledClipView(scroll.contentView)
+        Self.settle()
+
+        let scrolled = controller.decisionSurfaceReading(
+            offering: enormous.offeredActionIdentifiers
+        )
+        #expect(
+            !scrolled.unreachableActions.contains(pause),
+            "Pause never comes into reach, so the panel clipped it rather than scrolling to it"
+        )
+        #expect(
+            !scrolled.unreachableActions.contains(changePriority),
+            "Change priority never comes into reach: the content is clipped, not scrolled"
+        )
+        #expect(!scrolled.unreportedActions.contains(pause))
+        #expect(!scrolled.unreportedActions.contains(changePriority))
+    }
+
+    /// **A reading of the previous nudge is not a reading of this one** (focus-kby).
+    ///
+    /// The frames come from a SwiftUI preference, and a preference is delivered when its value
+    /// *changes*. Put a content in the panel that publishes no action frames at all and nothing
+    /// is delivered — so the controller is still holding the last nudge's frames, which describe
+    /// a layout nobody is looking at any more. Under default-deny the honest answer for one is
+    /// "no frames", which reads as unreachable rather than as reachable-because-it-used-to-be.
+    ///
+    /// The layout generation is what makes the two distinguishable, and this is what fails if
+    /// the check on it is removed: an accusation's six actions would go on being reported as
+    /// reachable on a panel that is showing something else entirely.
+    @Test("a new content that reports no frames does not inherit the last nudge's")
+    func framesFromAReplacedLayoutAreRefused() {
+        let presentation = AccusationPresentation(
+            rung: .recommitment,
+            task: "Write the Q3 proposal for Acme",
+            subject: "com.chrismitchelmore.FocusDecoy",
+            dwelled: .seconds(600),
+            returnTarget: "com.apple.TextEdit"
+        )
+        let offered = presentation.offeredActionIdentifiers
+        let controller = Self.controller()
+        controller.update(content: AccusationPanelView(presentation: presentation))
+        controller.show(presentationIsClear: true)
+        defer { controller.hide() }
+        Self.settle()
+
+        // The layout reported every action, and the reading is a reading of this layout.
+        let onTheNudge = controller.decisionSurfaceReading(offering: offered)
+        #expect(onTheNudge.unreportedActions.isEmpty)
+        #expect(onTheNudge.everyActionIsReachable)
+
+        // Now something with no action targets in it at all.
+        controller.update(content: Text(verbatim: "an interstitial with nothing to click"))
+
+        let afterwards = controller.decisionSurfaceReading(offering: offered)
+        #expect(
+            afterwards.unreportedActions.sorted() == offered.sorted(),
+            "the panel answered for a layout it had already replaced"
+        )
+        #expect(!afterwards.everyActionIsReachable)
+        #expect(!controller.hitTestsEveryAction(offering: offered))
+    }
+
+    /// Every `NSScrollView` in a view tree. SwiftUI's `ScrollView` is backed by one, and its
+    /// presence is the only thing that distinguishes a panel that scrolls from a panel that
+    /// clips.
+    private static func scrollViews(in view: NSView?) -> [NSScrollView] {
+        guard let view else { return [] }
+        var found: [NSScrollView] = []
+        if let scroll = view as? NSScrollView { found.append(scroll) }
+        for subview in view.subviews { found += scrollViews(in: subview) }
+        return found
     }
 
     /// **One turn of the run loop**, which is where the defect lives.
