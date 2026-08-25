@@ -21,6 +21,15 @@ public struct SequenceObservationRecord: Sendable, Equatable {
     public let eligibility: CorpusEligibility
     public let clauses: [ExplanationClauseKind]
     public let isMixed: Bool
+    /// **What the nudge did with this step**, in `NudgeExpectation`'s own encoding.
+    ///
+    /// Recorded on every step of every fixture, including the eighteen e04 committed that assert
+    /// nothing about it. A transcript that carried only what a fixture happened to claim would let
+    /// a change in the decider pass unseen on every fixture that predates it; carrying the whole
+    /// state is what makes the digest an assertion rather than a summary (R-69).
+    public let nudge: NudgeExpectation
+    /// What the person then did, when the fixture said they did something.
+    public let action: String
 
     /// One line, pipe-separated and fully ordered. This is what the digest is taken over, so it
     /// has to be a total description rather than a summary.
@@ -39,7 +48,9 @@ public struct SequenceObservationRecord: Sendable, Equatable {
             "\(accumulatedSeconds)",
             eligibility.encoded,
             clauseText.isEmpty ? "-" : clauseText,
-            isMixed ? "mixed" : "single"
+            isMixed ? "mixed" : "single",
+            nudge.encoded,
+            action
         ].joined(separator: "|")
     }
 }
@@ -49,6 +60,13 @@ public struct SequenceTranscript: Sendable, Equatable {
     public let id: String
     public let records: [SequenceObservationRecord]
     public let mandateCount: Int
+    /// Questions actually **delivered** — not offered, not withheld.
+    public let queryCount: Int
+    /// Accusation rungs actually delivered. A mandate is not a delivery (R-81).
+    public let accusationCount: Int
+    /// The nudge world as the replay left it, so a fixture's claim about a receipt, a cap or a
+    /// backoff can be read rather than inferred.
+    public let world: NudgeWorld
 
     /// The transcript, one line per step. Printed on a failure, so a reviewer reads what
     /// happened rather than which assertion tripped.
@@ -93,7 +111,19 @@ public struct SequenceReplayHarness: Sendable {
         self.runner = runner
     }
 
-    public func snapshot(for fixture: SequenceFixture) -> RuleSnapshot {
+    /// The snapshot a fixture's own rules produce, plus whatever an answer has since taught the
+    /// app.
+    ///
+    /// `learned` is the durable half of R-78's two-record transaction: a `RuleAuthority.task` rule
+    /// the person wrote by clicking "Yes, add it" or "No". It is rebuilt into the snapshot rather
+    /// than remembered beside it, because the whole claim of the cascade is that the *next*
+    /// classification answers at the `taskRule` rung — and a harness that kept the learned rule
+    /// outside the snapshot would be asserting that claim against a snapshot that never heard of
+    /// it (goal §3.B.9).
+    public func snapshot(
+        for fixture: SequenceFixture,
+        learned: [CorpusRule] = []
+    ) -> RuleSnapshot {
         // A sequence's snapshot is the same shape a single-shot case builds, so the two lanes
         // cannot drift apart in what a "snapshot" means.
         runner.snapshot(
@@ -104,7 +134,7 @@ public struct SequenceReplayHarness: Sendable {
                 isNegativeControl: false,
                 priority: fixture.priority,
                 contextPack: fixture.contextPack,
-                rules: fixture.rules,
+                rules: fixture.rules + learned,
                 legacySessionScopedRows: [],
                 expectSkippedRuleCount: 0,
                 evidence: CorpusEvidence(bundleIdentifier: nil, origin: nil, titleTokens: []),
@@ -122,6 +152,8 @@ public struct SequenceReplayHarness: Sendable {
                     clauses: [],
                     uncertaintyReason: nil
                 ),
+                expectNudge: .silent(.verdictDoesNotAuthorise),
+                queryGroundTruth: nil,
                 expectExplanationTokens: nil,
                 file: "sequences"
             )
@@ -138,7 +170,6 @@ public struct SequenceReplayHarness: Sendable {
         _ fixture: SequenceFixture,
         lookBackCapacity: Int = RelevancePolicy.maximumLookBackEvents
     ) -> SequenceTranscript {
-        let snapshot = snapshot(for: fixture)
         let engine = DeterministicRelevanceEngine(
             normalizer: runner.normalizer,
             scorer: runner.scorer,
@@ -150,6 +181,16 @@ public struct SequenceReplayHarness: Sendable {
         var mandateCount = 0
         var currentSubject: String??
         var subjectSince = Duration.zero
+
+        // The nudge world runs beside the engine, with the caps, cooldowns and backoffs **on**: a
+        // sequence is a stretch of one person's time, which is exactly what a cap is about.
+        var world = NudgeWorld(enforcesFatigue: true)
+        var learned: [CorpusRule] = []
+        var snapshot = snapshot(for: fixture)
+        let priorityID = CorpusRunner.priorityID(for: fixture.priority)
+        let decidable = DecidableSubjects(
+            contextPack: fixture.contextPack, rules: fixture.rules
+        )
 
         for (index, step) in fixture.steps.enumerated() {
             clock.advance(by: .seconds(step.advanceSeconds))
@@ -180,6 +221,67 @@ public struct SequenceReplayHarness: Sendable {
 
             if judgement.eligibility.isMandated { mandateCount += 1 }
 
+            let observation = world.decide(
+                NudgeJudgement(
+                    outcome: judgement.outcome,
+                    uncertainty: judgement.uncertaintyReason,
+                    subject: step.subject,
+                    dwelled: dwell,
+                    snapshot: judgement.verdictSnapshot(stampKey: EngineStamp.current.cacheKey),
+                    stamp: EngineStamp.current
+                ),
+                surroundings: NudgeLane.surroundings(
+                    subject: step.subject,
+                    hasActivePriority: fixture.priority != nil,
+                    phase: step.sessionPhase,
+                    isUserIdle: step.isUserIdle,
+                    presentation: step.isPresenting,
+                    menuBarVisible: step.menuBarVisible,
+                    monotonic: now
+                ),
+                priorityID: priorityID,
+                decidable: decidable
+            )
+
+            // What the person then did. Performed through the world's own transitions — the same
+            // ones the host performs — so a fixture cannot assert a state the app cannot reach.
+            var actions: [String] = []
+            if let answer = step.then.answer {
+                world.resolveQuery(answer, now: now)
+                actions.append("answer=\(answer.rawValue)")
+                if let verdict = answer.ruleVerdict,
+                   let subject = observation.decision.warrant?.subject {
+                    learned.append(
+                        CorpusRule(
+                            authority: .task,
+                            subjectKind: subject.kind,
+                            subject: subject.identifier,
+                            verdict: verdict
+                        )
+                    )
+                    snapshot = self.snapshot(for: fixture, learned: learned)
+                }
+            }
+            if let outcome = step.then.accusationOutcome {
+                world.resolveAccusation(outcome, now: now)
+                actions.append("rung=\(outcome.rawValue)")
+            }
+            if let subject = step.then.deleteLearnedRule {
+                // **Finding 3.** The rule is deletable by design; the receipt is not. After this
+                // the subject classifies `uncertain` again and the app still says nothing.
+                learned.removeAll { $0.subject == subject }
+                snapshot = self.snapshot(for: fixture, learned: learned)
+                actions.append("deleted=\(subject)")
+            }
+            if step.then.newDay {
+                world.startNewDay()
+                actions.append("newDay")
+            }
+            if step.then.relaunch {
+                world.relaunch()
+                actions.append("relaunch")
+            }
+
             records.append(
                 SequenceObservationRecord(
                     index: index,
@@ -196,12 +298,21 @@ public struct SequenceReplayHarness: Sendable {
                         ? .mandated
                         : .suppressed(judgement.eligibility.suppressionReason ?? .verdictUncertain),
                     clauses: judgement.explanation.clauseKinds,
-                    isMixed: judgement.drift.isMixed
+                    isMixed: judgement.drift.isMixed,
+                    nudge: observation.expectation,
+                    action: actions.isEmpty ? "-" : actions.joined(separator: ",")
                 )
             )
         }
 
-        return SequenceTranscript(id: fixture.id, records: records, mandateCount: mandateCount)
+        return SequenceTranscript(
+            id: fixture.id,
+            records: records,
+            mandateCount: mandateCount,
+            queryCount: world.deliveredQueries.count,
+            accusationCount: world.deliveredAccusations,
+            world: world
+        )
     }
 
     /// Compare a replay to what the fixture claimed, step by step.
@@ -215,6 +326,17 @@ public struct SequenceReplayHarness: Sendable {
             differences.append(
                 "mandates \(transcript.mandateCount) ≠ \(fixture.expectMandates)"
             )
+        }
+        if let expected = fixture.expectQueries, transcript.queryCount != expected {
+            differences.append("queries delivered \(transcript.queryCount) ≠ \(expected)")
+        }
+        if let expected = fixture.expectAccusations, transcript.accusationCount != expected {
+            differences.append("rungs delivered \(transcript.accusationCount) ≠ \(expected)")
+        }
+        // **A defect's gate is zero** (R-94). Asserted on every fixture rather than only on the
+        // ones written about it, because a question asked twice is a defect wherever it happens.
+        if transcript.world.repeatQueries != 0 {
+            differences.append("asked \(transcript.world.repeatQueries) question(s) twice")
         }
 
         for (record, step) in zip(transcript.records, fixture.steps) {
@@ -248,6 +370,11 @@ public struct SequenceReplayHarness: Sendable {
                record.accumulatedSeconds != accumulated {
                 differences.append(
                     "\(at): accumulated \(record.accumulatedSeconds)s ≠ \(accumulated)s"
+                )
+            }
+            if let nudge = expect.nudge, record.nudge != nudge {
+                differences.append(
+                    "\(at): nudge \(record.nudge.encoded) ≠ \(nudge.encoded)"
                 )
             }
         }

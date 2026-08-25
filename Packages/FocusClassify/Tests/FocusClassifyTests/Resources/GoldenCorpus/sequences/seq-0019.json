@@ -1,0 +1,98 @@
+{
+  "id": "seq-0019",
+  "note": "queryCooldown's committed witness. Four applications in three and a half minutes, every one of them an askable uncertainty with a nameable subject and enough dwell to warrant a question — and the app asks ONCE. The three that follow are inside the hundred and eighty second gap and are refused at gate 10. Set queryCooldown to zero and this fixture asks four times, which is what tab-hopping through a morning would feel like; the constant is eight thousand times e03's measured 22 ms activation storm (P-82) for exactly that reason.",
+  "snapshot": {
+    "priority": {
+      "intent": "Write the Q3 proposal for Acme",
+      "doneWhen": "sent to Dana",
+      "revision": 1
+    }
+  },
+  "steps": [
+    {
+      "advanceSeconds": 0,
+      "bundleID": "com.microsoft.Excel",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 50,
+      "bundleID": "com.microsoft.Excel",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "nudge": "ask:noNegativeBasis",
+        "accumulatedSeconds": 0
+      },
+      "then": {
+        "answer": "notNow"
+      }
+    },
+    {
+      "advanceSeconds": 0,
+      "bundleID": "com.figma.Desktop",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "nudge": "silent:budgetExhausted",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 50,
+      "bundleID": "com.figma.Desktop",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "nudge": "silent:budgetExhausted",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 0,
+      "bundleID": "com.omnigroup.OmniGraffle",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "nudge": "silent:budgetExhausted",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 50,
+      "bundleID": "com.omnigroup.OmniGraffle",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "nudge": "silent:budgetExhausted",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 0,
+      "bundleID": "com.apple.iWork.Numbers",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "nudge": "silent:budgetExhausted",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 50,
+      "bundleID": "com.apple.iWork.Numbers",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "nudge": "silent:budgetExhausted",
+        "accumulatedSeconds": 0
+      }
+    }
+  ],
+  "expectMandates": 0,
+  "expectQueries": 1,
+  "expectAccusations": 0
+}

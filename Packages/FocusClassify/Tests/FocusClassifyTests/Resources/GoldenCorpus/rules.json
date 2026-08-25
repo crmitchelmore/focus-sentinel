@@ -14,7 +14,8 @@
       "dwellSeconds": 10,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "relevant", "source": "userRule", "stage": "sessionRule", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["userRule"] }
+      "expect": { "verdict": "relevant", "source": "userRule", "stage": "sessionRule", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["userRule"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0102",
@@ -28,7 +29,8 @@
       "dwellSeconds": 120,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "unrelated", "source": "userRule", "stage": "sessionRule", "band": "high", "eligibility": "mandated", "clauses": ["userRule", "sustainedDwell"] }
+      "expect": { "verdict": "unrelated", "source": "userRule", "stage": "sessionRule", "band": "high", "eligibility": "mandated", "clauses": ["userRule", "sustainedDwell"] },
+      "expectNudge": "accuse:ambient"
     },
     {
       "id": "gc-0103",
@@ -42,7 +44,8 @@
       "dwellSeconds": 10,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "relevant", "source": "userRule", "stage": "sessionRule", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["userRule"] }
+      "expect": { "verdict": "relevant", "source": "userRule", "stage": "sessionRule", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["userRule"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0104",
@@ -56,7 +59,8 @@
       "dwellSeconds": 0,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "unrelated", "source": "userRule", "stage": "sessionRule", "band": "high", "eligibility": "suppressed:withinGracePeriod", "clauses": ["userRule"] }
+      "expect": { "verdict": "unrelated", "source": "userRule", "stage": "sessionRule", "band": "high", "eligibility": "suppressed:withinGracePeriod", "clauses": ["userRule"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0105",
@@ -70,7 +74,8 @@
       "dwellSeconds": 10,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "relevant", "source": "userRule", "stage": "taskRule", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["userRule"] }
+      "expect": { "verdict": "relevant", "source": "userRule", "stage": "taskRule", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["userRule"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0106",
@@ -84,7 +89,8 @@
       "dwellSeconds": 120,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "unrelated", "source": "userRule", "stage": "taskRule", "band": "high", "eligibility": "mandated", "clauses": ["userRule", "sustainedDwell"] }
+      "expect": { "verdict": "unrelated", "source": "userRule", "stage": "taskRule", "band": "high", "eligibility": "mandated", "clauses": ["userRule", "sustainedDwell"] },
+      "expectNudge": "accuse:ambient"
     },
     {
       "id": "gc-0107",
@@ -96,7 +102,8 @@
       "dwellSeconds": 120,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "unrelated", "source": "userRule", "stage": "sessionRule", "band": "high", "eligibility": "mandated", "clauses": ["userRule", "sustainedDwell"] }
+      "expect": { "verdict": "unrelated", "source": "userRule", "stage": "sessionRule", "band": "high", "eligibility": "mandated", "clauses": ["userRule", "sustainedDwell"] },
+      "expectNudge": "accuse:ambient"
     },
     {
       "id": "gc-0108",
@@ -108,7 +115,8 @@
       "dwellSeconds": 10,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "relevant", "source": "userRule", "stage": "sessionRule", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["userRule"] }
+      "expect": { "verdict": "relevant", "source": "userRule", "stage": "sessionRule", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["userRule"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0109",
@@ -120,7 +128,8 @@
       "dwellSeconds": 120,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "unrelated", "source": "userRule", "stage": "taskRule", "band": "high", "eligibility": "mandated", "clauses": ["userRule", "sustainedDwell"] }
+      "expect": { "verdict": "unrelated", "source": "userRule", "stage": "taskRule", "band": "high", "eligibility": "mandated", "clauses": ["userRule", "sustainedDwell"] },
+      "expectNudge": "accuse:ambient"
     },
     {
       "id": "gc-0110",
@@ -132,7 +141,8 @@
       "dwellSeconds": 120,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "unrelated", "source": "userRule", "stage": "globalRule", "band": "high", "eligibility": "mandated", "clauses": ["userRule", "sustainedDwell"] }
+      "expect": { "verdict": "unrelated", "source": "userRule", "stage": "globalRule", "band": "high", "eligibility": "mandated", "clauses": ["userRule", "sustainedDwell"] },
+      "expectNudge": "accuse:ambient"
     },
     {
       "id": "gc-0111",
@@ -144,7 +154,8 @@
       "dwellSeconds": 10,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "relevant", "source": "userRule", "stage": "globalRule", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["userRule"] }
+      "expect": { "verdict": "relevant", "source": "userRule", "stage": "globalRule", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["userRule"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0112",
@@ -155,7 +166,8 @@
       "dwellSeconds": 10,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "relevant", "source": "userRule", "stage": "sessionRule", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["userRule"] }
+      "expect": { "verdict": "relevant", "source": "userRule", "stage": "sessionRule", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["userRule"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0113",
@@ -166,7 +178,8 @@
       "dwellSeconds": 10,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "relevant", "source": "userRule", "stage": "taskRule", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["userRule"] }
+      "expect": { "verdict": "relevant", "source": "userRule", "stage": "taskRule", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["userRule"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0114",
@@ -177,7 +190,8 @@
       "dwellSeconds": 10,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "relevant", "source": "userRule", "stage": "globalRule", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["userRule"] }
+      "expect": { "verdict": "relevant", "source": "userRule", "stage": "globalRule", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["userRule"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0115",
@@ -188,7 +202,8 @@
       "dwellSeconds": 120,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "unrelated", "source": "userRule", "stage": "globalRule", "band": "high", "eligibility": "mandated", "clauses": ["userRule", "sustainedDwell"] }
+      "expect": { "verdict": "unrelated", "source": "userRule", "stage": "globalRule", "band": "high", "eligibility": "mandated", "clauses": ["userRule", "sustainedDwell"] },
+      "expectNudge": "accuse:ambient"
     },
     {
       "id": "gc-0116",
@@ -199,7 +214,8 @@
       "dwellSeconds": 120,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "unrelated", "source": "userRule", "stage": "sessionRule", "band": "high", "eligibility": "mandated", "clauses": ["userRule", "sustainedDwell"] }
+      "expect": { "verdict": "unrelated", "source": "userRule", "stage": "sessionRule", "band": "high", "eligibility": "mandated", "clauses": ["userRule", "sustainedDwell"] },
+      "expectNudge": "accuse:ambient"
     },
     {
       "id": "gc-0117",
@@ -211,7 +227,8 @@
       "dwellSeconds": 120,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "relevant", "source": "userRule", "stage": "sessionRule", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["userRule", "returnedToAnchor"] }
+      "expect": { "verdict": "relevant", "source": "userRule", "stage": "sessionRule", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["userRule", "returnedToAnchor"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0118",
@@ -222,7 +239,8 @@
       "dwellSeconds": 120,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "unrelated", "source": "userRule", "stage": "taskRule", "band": "high", "eligibility": "mandated", "clauses": ["userRule", "sustainedDwell"] }
+      "expect": { "verdict": "unrelated", "source": "userRule", "stage": "taskRule", "band": "high", "eligibility": "mandated", "clauses": ["userRule", "sustainedDwell"] },
+      "expectNudge": "accuse:ambient"
     },
     {
       "id": "gc-0119",
@@ -234,7 +252,8 @@
       "dwellSeconds": 120,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "relevant", "source": "userRule", "stage": "taskRule", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["userRule", "returnedToAnchor"] }
+      "expect": { "verdict": "relevant", "source": "userRule", "stage": "taskRule", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["userRule", "returnedToAnchor"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0120",
@@ -245,7 +264,8 @@
       "dwellSeconds": 120,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "unrelated", "source": "userRule", "stage": "globalRule", "band": "high", "eligibility": "mandated", "clauses": ["userRule", "sustainedDwell"] }
+      "expect": { "verdict": "unrelated", "source": "userRule", "stage": "globalRule", "band": "high", "eligibility": "mandated", "clauses": ["userRule", "sustainedDwell"] },
+      "expectNudge": "accuse:ambient"
     },
     {
       "id": "gc-0121",
@@ -257,7 +277,8 @@
       "dwellSeconds": 120,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "relevant", "source": "userRule", "stage": "globalRule", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["userRule", "returnedToAnchor"] }
+      "expect": { "verdict": "relevant", "source": "userRule", "stage": "globalRule", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["userRule", "returnedToAnchor"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0122",
@@ -268,7 +289,8 @@
       "dwellSeconds": 10,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "relevant", "source": "userRule", "stage": "contextPack", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["contextItem"] }
+      "expect": { "verdict": "relevant", "source": "userRule", "stage": "contextPack", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["contextItem"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0123",
@@ -279,7 +301,8 @@
       "dwellSeconds": 10,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "relevant", "source": "userRule", "stage": "contextPack", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["contextItem"] }
+      "expect": { "verdict": "relevant", "source": "userRule", "stage": "contextPack", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["contextItem"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0124",
@@ -290,7 +313,8 @@
       "dwellSeconds": 120,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "unrelated", "source": "heuristic", "stage": "seedRule", "band": "medium", "eligibility": "mandated", "clauses": ["seedDefault", "sustainedDwell"] }
+      "expect": { "verdict": "unrelated", "source": "heuristic", "stage": "seedRule", "band": "medium", "eligibility": "mandated", "clauses": ["seedDefault", "sustainedDwell"] },
+      "expectNudge": "accuse:ambient"
     },
     {
       "id": "gc-0125",
@@ -300,7 +324,9 @@
       "dwellSeconds": 400,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "uncertain", "source": "heuristic", "stage": "seedRule", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["seedDefault", "insufficientEvidence"], "uncertaintyReason": "mixedUseApplication" }
+      "expect": { "verdict": "uncertain", "source": "heuristic", "stage": "seedRule", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["seedDefault", "insufficientEvidence"], "uncertaintyReason": "mixedUseApplication" },
+      "expectNudge": "ask:mixedUseApplication",
+      "queryGroundTruth": "relevant"
     },
     {
       "id": "gc-0126",
@@ -314,7 +340,8 @@
       "dwellSeconds": 10,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "relevant", "source": "userRule", "stage": "globalRule", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["userRule"] }
+      "expect": { "verdict": "relevant", "source": "userRule", "stage": "globalRule", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["userRule"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0127",
@@ -328,7 +355,8 @@
       "dwellSeconds": 120,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "unrelated", "source": "userRule", "stage": "globalRule", "band": "high", "eligibility": "mandated", "clauses": ["userRule", "sustainedDwell"] }
+      "expect": { "verdict": "unrelated", "source": "userRule", "stage": "globalRule", "band": "high", "eligibility": "mandated", "clauses": ["userRule", "sustainedDwell"] },
+      "expectNudge": "accuse:ambient"
     },
     {
       "id": "gc-0128",
@@ -342,7 +370,8 @@
       "dwellSeconds": 10,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "relevant", "source": "userRule", "stage": "globalRule", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["userRule"] }
+      "expect": { "verdict": "relevant", "source": "userRule", "stage": "globalRule", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["userRule"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0129",
@@ -356,7 +385,8 @@
       "dwellSeconds": 120,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "unrelated", "source": "userRule", "stage": "globalRule", "band": "high", "eligibility": "mandated", "clauses": ["userRule", "sustainedDwell"] }
+      "expect": { "verdict": "unrelated", "source": "userRule", "stage": "globalRule", "band": "high", "eligibility": "mandated", "clauses": ["userRule", "sustainedDwell"] },
+      "expectNudge": "accuse:ambient"
     },
     {
       "id": "gc-0130",
@@ -370,7 +400,8 @@
       "dwellSeconds": 120,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "uncertain", "source": "userRule", "stage": "globalRule", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["conflictingRules", "insufficientEvidence"], "uncertaintyReason": "conflictingRules" }
+      "expect": { "verdict": "uncertain", "source": "userRule", "stage": "globalRule", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["conflictingRules", "insufficientEvidence"], "uncertaintyReason": "conflictingRules" },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0131",
@@ -384,7 +415,8 @@
       "dwellSeconds": 120,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "uncertain", "source": "userRule", "stage": "taskRule", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["conflictingRules", "insufficientEvidence"], "uncertaintyReason": "conflictingRules" }
+      "expect": { "verdict": "uncertain", "source": "userRule", "stage": "taskRule", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["conflictingRules", "insufficientEvidence"], "uncertaintyReason": "conflictingRules" },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0132",
@@ -398,7 +430,8 @@
       "dwellSeconds": 120,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "uncertain", "source": "userRule", "stage": "sessionRule", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["conflictingRules", "insufficientEvidence"], "uncertaintyReason": "conflictingRules" }
+      "expect": { "verdict": "uncertain", "source": "userRule", "stage": "sessionRule", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["conflictingRules", "insufficientEvidence"], "uncertaintyReason": "conflictingRules" },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0133",
@@ -409,7 +442,9 @@
       "dwellSeconds": 400,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "uncertain", "source": "userRule", "stage": "globalRule", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["userRule"], "uncertaintyReason": "mixedUseApplication" }
+      "expect": { "verdict": "uncertain", "source": "userRule", "stage": "globalRule", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["userRule"], "uncertaintyReason": "mixedUseApplication" },
+      "expectNudge": "ask:mixedUseApplication",
+      "queryGroundTruth": "eitherIsReasonable"
     },
     {
       "id": "gc-0134",
@@ -421,7 +456,8 @@
       "dwellSeconds": 120,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "unrelated", "source": "heuristic", "stage": "heuristic", "band": "medium", "eligibility": "mandated", "clauses": ["sustainedDwell"] }
+      "expect": { "verdict": "unrelated", "source": "heuristic", "stage": "heuristic", "band": "medium", "eligibility": "mandated", "clauses": ["sustainedDwell"] },
+      "expectNudge": "accuse:ambient"
     },
     {
       "id": "gc-0135",
@@ -432,7 +468,8 @@
       "dwellSeconds": 120,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "unrelated", "source": "userRule", "stage": "sessionRule", "band": "high", "eligibility": "mandated", "clauses": ["userRule", "sustainedDwell"] }
+      "expect": { "verdict": "unrelated", "source": "userRule", "stage": "sessionRule", "band": "high", "eligibility": "mandated", "clauses": ["userRule", "sustainedDwell"] },
+      "expectNudge": "accuse:ambient"
     },
     {
       "id": "gc-0136",
@@ -443,7 +480,8 @@
       "dwellSeconds": 10,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "relevant", "source": "userRule", "stage": "sessionRule", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["userRule"] }
+      "expect": { "verdict": "relevant", "source": "userRule", "stage": "sessionRule", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["userRule"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0137",
@@ -454,7 +492,8 @@
       "dwellSeconds": 10,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "relevant", "source": "userRule", "stage": "taskRule", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["userRule"] }
+      "expect": { "verdict": "relevant", "source": "userRule", "stage": "taskRule", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["userRule"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0138",
@@ -465,7 +504,8 @@
       "dwellSeconds": 120,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "unrelated", "source": "userRule", "stage": "taskRule", "band": "high", "eligibility": "mandated", "clauses": ["userRule", "sustainedDwell"] }
+      "expect": { "verdict": "unrelated", "source": "userRule", "stage": "taskRule", "band": "high", "eligibility": "mandated", "clauses": ["userRule", "sustainedDwell"] },
+      "expectNudge": "accuse:ambient"
     },
     {
       "id": "gc-0139",
@@ -476,7 +516,9 @@
       "dwellSeconds": 300,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "uncertain", "source": "userRule", "stage": "globalRule", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["userRule"], "uncertaintyReason": "mixedUseApplication" }
+      "expect": { "verdict": "uncertain", "source": "userRule", "stage": "globalRule", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["userRule"], "uncertaintyReason": "mixedUseApplication" },
+      "expectNudge": "ask:mixedUseApplication",
+      "queryGroundTruth": "unrelated"
     },
     {
       "id": "gc-0140",
@@ -490,7 +532,8 @@
       "dwellSeconds": 10,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "relevant", "source": "userRule", "stage": "globalRule", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["userRule"] }
+      "expect": { "verdict": "relevant", "source": "userRule", "stage": "globalRule", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["userRule"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     }
   ]
 }

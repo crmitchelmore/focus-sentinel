@@ -1,0 +1,300 @@
+{
+  "id": "day-01",
+  "note": "dailyQueryCapAllPriorities' committed witness, and the defect it closes. Three commitments in one working day — a proposal in the morning, an audit after lunch, release notes in the afternoon — with a break, a presentation, an idle span and one real accusation. The per-priority cap alone would license twelve questions across three priorities and would be bounded only by the shared budget at seven; the day cap stops the fifth question being followed by a sixth, and it stops it under a FRESH priority whose own cap has barely been touched, which is exactly the shape of the hole. The number a person feels is questions-per-day, so that is the number with a constant, a fixture and a gated metric.",
+  "segments": [
+    {
+      "priority": {
+        "intent": "Write the Q3 proposal for Acme",
+        "doneWhen": "sent to Dana",
+        "revision": 1
+      },
+      "steps": [
+        {
+          "advanceSeconds": 0,
+          "bundleID": "com.apple.Pages",
+          "expect": {
+            "verdict": "relevant",
+            "drift": "aligned",
+            "nudge": "silent:verdictDoesNotAuthorise",
+            "accumulatedSeconds": 0
+          }
+        },
+        {
+          "advanceSeconds": 600,
+          "bundleID": "com.apple.Pages",
+          "expect": {
+            "verdict": "relevant",
+            "drift": "aligned",
+            "nudge": "silent:verdictDoesNotAuthorise",
+            "accumulatedSeconds": 0
+          }
+        },
+        {
+          "advanceSeconds": 0,
+          "bundleID": "com.tinyspeck.slackmacgap",
+          "expect": {
+            "verdict": "uncertain",
+            "drift": "aligned",
+            "accumulatedSeconds": 0
+          }
+        },
+        {
+          "advanceSeconds": 200,
+          "bundleID": "com.tinyspeck.slackmacgap",
+          "expect": {
+            "verdict": "uncertain",
+            "drift": "aligned",
+            "nudge": "ask:mixedUseApplication",
+            "accumulatedSeconds": 0
+          },
+          "then": {
+            "answer": "yesAddIt"
+          }
+        },
+        {
+          "advanceSeconds": 0,
+          "bundleID": "com.hnc.Discord",
+          "expect": {
+            "verdict": "uncertain",
+            "drift": "aligned",
+            "nudge": "silent:budgetExhausted",
+            "accumulatedSeconds": 0
+          }
+        },
+        {
+          "advanceSeconds": 200,
+          "bundleID": "com.hnc.Discord",
+          "expect": {
+            "verdict": "uncertain",
+            "drift": "aligned",
+            "nudge": "ask:mixedUseApplication",
+            "accumulatedSeconds": 0
+          },
+          "then": {
+            "answer": "notNow"
+          }
+        },
+        {
+          "advanceSeconds": 0,
+          "bundleID": "com.apple.Pages",
+          "sessionPhase": "onBreak",
+          "expect": {
+            "verdict": "relevant",
+            "drift": "aligned",
+            "nudge": "silent:sessionPhaseForbids",
+            "accumulatedSeconds": 0
+          }
+        },
+        {
+          "advanceSeconds": 600,
+          "bundleID": "com.apple.Pages",
+          "expect": {
+            "verdict": "relevant",
+            "drift": "aligned",
+            "nudge": "silent:verdictDoesNotAuthorise",
+            "accumulatedSeconds": 0
+          }
+        }
+      ],
+      "contextPack": [
+        {
+          "kind": "app",
+          "value": "com.apple.Pages"
+        }
+      ]
+    },
+    {
+      "priority": {
+        "intent": "close the Bergman audit",
+        "revision": 1
+      },
+      "steps": [
+        {
+          "advanceSeconds": 600,
+          "bundleID": "com.apple.iWork.Numbers",
+          "expect": {
+            "verdict": "relevant",
+            "drift": "aligned",
+            "nudge": "silent:verdictDoesNotAuthorise",
+            "accumulatedSeconds": 0
+          }
+        },
+        {
+          "advanceSeconds": 0,
+          "bundleID": "com.apple.Safari",
+          "expect": {
+            "verdict": "uncertain",
+            "drift": "aligned",
+            "accumulatedSeconds": 0
+          }
+        },
+        {
+          "advanceSeconds": 200,
+          "bundleID": "com.apple.Safari",
+          "expect": {
+            "verdict": "uncertain",
+            "drift": "aligned",
+            "nudge": "ask:mixedUseApplication",
+            "accumulatedSeconds": 0
+          },
+          "then": {
+            "answer": "yesAddIt"
+          }
+        },
+        {
+          "advanceSeconds": 0,
+          "bundleID": "com.apple.mail",
+          "expect": {
+            "verdict": "uncertain",
+            "drift": "aligned",
+            "nudge": "silent:budgetExhausted",
+            "accumulatedSeconds": 0
+          }
+        },
+        {
+          "advanceSeconds": 200,
+          "bundleID": "com.apple.mail",
+          "expect": {
+            "verdict": "uncertain",
+            "drift": "aligned",
+            "nudge": "ask:mixedUseApplication",
+            "accumulatedSeconds": 0
+          },
+          "then": {
+            "answer": "yesAddIt"
+          }
+        },
+        {
+          "advanceSeconds": 0,
+          "bundleID": "com.microsoft.Excel",
+          "expect": {
+            "verdict": "uncertain",
+            "drift": "aligned",
+            "accumulatedSeconds": 0
+          }
+        },
+        {
+          "advanceSeconds": 200,
+          "bundleID": "com.microsoft.Excel",
+          "expect": {
+            "verdict": "unrelated",
+            "drift": "grace",
+            "nudge": "silent:verdictDoesNotAuthorise",
+            "accumulatedSeconds": 0
+          }
+        },
+        {
+          "advanceSeconds": 92,
+          "bundleID": "com.microsoft.Excel",
+          "expect": {
+            "verdict": "unrelated",
+            "drift": "sustained",
+            "nudge": "accuse:ambient",
+            "accumulatedSeconds": 92
+          },
+          "then": {
+            "accusationOutcome": "returned"
+          }
+        }
+      ],
+      "contextPack": [
+        {
+          "kind": "app",
+          "value": "com.apple.iWork.Numbers"
+        }
+      ]
+    },
+    {
+      "priority": {
+        "intent": "ship the release notes",
+        "revision": 1
+      },
+      "steps": [
+        {
+          "advanceSeconds": 600,
+          "bundleID": "com.apple.Preview",
+          "expect": {
+            "verdict": "relevant",
+            "drift": "aligned",
+            "nudge": "silent:verdictDoesNotAuthorise",
+            "accumulatedSeconds": 0
+          }
+        },
+        {
+          "advanceSeconds": 0,
+          "bundleID": "com.apple.Music",
+          "expect": {
+            "verdict": "uncertain",
+            "drift": "aligned",
+            "accumulatedSeconds": 0
+          }
+        },
+        {
+          "advanceSeconds": 200,
+          "bundleID": "com.apple.Music",
+          "expect": {
+            "verdict": "uncertain",
+            "drift": "aligned",
+            "nudge": "ask:mixedUseApplication",
+            "accumulatedSeconds": 0
+          },
+          "then": {
+            "answer": "notNow"
+          }
+        },
+        {
+          "advanceSeconds": 0,
+          "bundleID": "com.apple.Terminal",
+          "expect": {
+            "verdict": "uncertain",
+            "drift": "aligned",
+            "nudge": "silent:budgetExhausted",
+            "accumulatedSeconds": 0
+          }
+        },
+        {
+          "advanceSeconds": 200,
+          "bundleID": "com.apple.Terminal",
+          "expect": {
+            "verdict": "uncertain",
+            "drift": "aligned",
+            "nudge": "silent:budgetExhausted",
+            "accumulatedSeconds": 0
+          }
+        },
+        {
+          "advanceSeconds": 0,
+          "bundleID": "com.apple.Preview",
+          "isPresenting": true,
+          "menuBarVisible": false,
+          "expect": {
+            "verdict": "relevant",
+            "drift": "aligned",
+            "nudge": "silent:presentationActive",
+            "accumulatedSeconds": 0
+          }
+        },
+        {
+          "advanceSeconds": 600,
+          "bundleID": "com.apple.Preview",
+          "isUserIdle": true,
+          "expect": {
+            "verdict": "relevant",
+            "drift": "aligned",
+            "nudge": "silent:userIdle",
+            "accumulatedSeconds": 0
+          }
+        }
+      ],
+      "contextPack": [
+        {
+          "kind": "app",
+          "value": "com.apple.Preview"
+        }
+      ]
+    }
+  ],
+  "expectQueries": 5,
+  "expectAccusations": 1,
+  "expectInterruptions": 6
+}

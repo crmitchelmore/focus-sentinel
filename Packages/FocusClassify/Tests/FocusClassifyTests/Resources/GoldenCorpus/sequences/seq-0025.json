@@ -1,0 +1,92 @@
+{
+  "id": "seq-0025",
+  "note": "R-81, as a transcript. A full-screen space is up, the mandate is live, and the ambient rung is DEFERRED rather than delivered — P-131 measured the menu-bar layer's owners collapsing from eleven to one while our own status item stayed listed as on screen, so a window being listed is not a window being seen. Nothing advances, nothing is spent, and the escalation clock never starts: the second mandate offers the SAME rung again rather than the next one, which is what an escalation through rungs nobody saw would look like if R-81 were not there. When the presentation ends the ladder delivers the rung it never left, and the person meets the quietest thing the app can do rather than the loudest. Note the two six-hundred-second gaps: e04's drift machine enters its mandate cooldown on the MANDATE, whether or not e05 could deliver anything, so a deferred rung costs the app a cooldown even though it costs the person nothing.",
+  "snapshot": {
+    "priority": {
+      "intent": "Write the Q3 proposal for Acme",
+      "doneWhen": "sent to Dana",
+      "revision": 1
+    },
+    "rules": [
+      {
+        "authority": "global",
+        "subjectKind": "app",
+        "subject": "com.valvesoftware.steam",
+        "verdict": "unrelated"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "advanceSeconds": 0,
+      "bundleID": "com.valvesoftware.steam",
+      "isPresenting": true,
+      "menuBarVisible": false,
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "nudge": "silent:presentationActive",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 92,
+      "bundleID": "com.valvesoftware.steam",
+      "isPresenting": true,
+      "menuBarVisible": false,
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "sustained",
+        "nudge": "deferred:menuBarHidden",
+        "accumulatedSeconds": 92
+      }
+    },
+    {
+      "advanceSeconds": 601,
+      "bundleID": "com.valvesoftware.steam",
+      "isPresenting": true,
+      "menuBarVisible": false,
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "nudge": "silent:presentationActive",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 92,
+      "bundleID": "com.valvesoftware.steam",
+      "isPresenting": true,
+      "menuBarVisible": false,
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "sustained",
+        "nudge": "deferred:menuBarHidden",
+        "accumulatedSeconds": 92
+      }
+    },
+    {
+      "advanceSeconds": 601,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "nudge": "silent:verdictDoesNotAuthorise",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 92,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "sustained",
+        "nudge": "accuse:ambient",
+        "accumulatedSeconds": 92
+      }
+    }
+  ],
+  "expectMandates": 3,
+  "expectQueries": 0,
+  "expectAccusations": 1
+}

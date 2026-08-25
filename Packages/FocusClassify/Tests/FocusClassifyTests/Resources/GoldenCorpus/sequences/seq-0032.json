@@ -1,0 +1,86 @@
+{
+  "id": "seq-0032",
+  "note": "R-84a, and the asymmetry that makes it safe. A question is on screen when a mandate arrives; the accusation takes the slot and the question is CLOSED as declined rather than dropped, so its receipt is written and it is never asked again. 'You are off task' outranks 'is this part of it?' — a person who has drifted needs the more important sentence, and two panels on screen at once is the behaviour that makes people uninstall. The reverse never happens, and there is no code path by which it could.",
+  "snapshot": {
+    "priority": {
+      "intent": "Write the Q3 proposal for Acme",
+      "doneWhen": "sent to Dana",
+      "revision": 1
+    },
+    "rules": [
+      {
+        "authority": "global",
+        "subjectKind": "app",
+        "subject": "com.valvesoftware.steam",
+        "verdict": "unrelated"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "advanceSeconds": 0,
+      "bundleID": "com.microsoft.Excel",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 50,
+      "bundleID": "com.microsoft.Excel",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "nudge": "ask:noNegativeBasis",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 0,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "nudge": "silent:interruptionInFlight",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 92,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "sustained",
+        "nudge": "accuse:ambient",
+        "accumulatedSeconds": 92
+      },
+      "then": {
+        "accusationOutcome": "returned"
+      }
+    },
+    {
+      "advanceSeconds": 0,
+      "bundleID": "com.microsoft.Excel",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "cooldown",
+        "nudge": "silent:budgetExhausted",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 200,
+      "bundleID": "com.microsoft.Excel",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "cooldown",
+        "nudge": "silent:alreadyAsked",
+        "accumulatedSeconds": 0
+      }
+    }
+  ],
+  "expectMandates": 1,
+  "expectQueries": 1,
+  "expectAccusations": 1
+}

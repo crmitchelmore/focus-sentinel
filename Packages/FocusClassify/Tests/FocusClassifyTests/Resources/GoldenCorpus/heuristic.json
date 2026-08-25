@@ -10,7 +10,9 @@
       "dwellSeconds": 20,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "uncertain", "source": "heuristic", "stage": "heuristic", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["noNegativeBasis", "insufficientEvidence"], "uncertaintyReason": "noNegativeBasis" }
+      "expect": { "verdict": "uncertain", "source": "heuristic", "stage": "heuristic", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["noNegativeBasis", "insufficientEvidence"], "uncertaintyReason": "noNegativeBasis" },
+      "expectNudge": "silent:verdictDoesNotAuthorise",
+      "queryGroundTruth": "relevant"
     },
     {
       "id": "gc-0201",
@@ -20,7 +22,8 @@
       "dwellSeconds": 20,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "low", "eligibility": "suppressed:verdictRelevant", "clauses": ["tokenOverlap"] }
+      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "low", "eligibility": "suppressed:verdictRelevant", "clauses": ["tokenOverlap"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0202",
@@ -30,7 +33,8 @@
       "dwellSeconds": 20,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "medium", "eligibility": "suppressed:verdictRelevant", "clauses": ["tokenOverlap"] }
+      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "medium", "eligibility": "suppressed:verdictRelevant", "clauses": ["tokenOverlap"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0203",
@@ -40,7 +44,8 @@
       "dwellSeconds": 20,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "medium", "eligibility": "suppressed:verdictRelevant", "clauses": ["tokenOverlap"] }
+      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "medium", "eligibility": "suppressed:verdictRelevant", "clauses": ["tokenOverlap"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0204",
@@ -50,7 +55,9 @@
       "dwellSeconds": 20,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "uncertain", "source": "heuristic", "stage": "heuristic", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["noNegativeBasis", "insufficientEvidence"], "uncertaintyReason": "noNegativeBasis" }
+      "expect": { "verdict": "uncertain", "source": "heuristic", "stage": "heuristic", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["noNegativeBasis", "insufficientEvidence"], "uncertaintyReason": "noNegativeBasis" },
+      "expectNudge": "silent:verdictDoesNotAuthorise",
+      "queryGroundTruth": "relevant"
     },
     {
       "id": "gc-0205",
@@ -61,7 +68,8 @@
       "sessionPhase": "focus",
       "isUserIdle": false,
       "expectExplanationTokens": 3,
-      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "medium", "eligibility": "suppressed:verdictRelevant", "clauses": ["tokenOverlap"] }
+      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "medium", "eligibility": "suppressed:verdictRelevant", "clauses": ["tokenOverlap"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0206",
@@ -71,7 +79,8 @@
       "dwellSeconds": 20,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "low", "eligibility": "suppressed:verdictRelevant", "clauses": ["similarityCorroborated"] }
+      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "low", "eligibility": "suppressed:verdictRelevant", "clauses": ["similarityCorroborated"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0207",
@@ -81,7 +90,8 @@
       "dwellSeconds": 20,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "low", "eligibility": "suppressed:verdictRelevant", "clauses": ["similarityCorroborated"] }
+      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "low", "eligibility": "suppressed:verdictRelevant", "clauses": ["similarityCorroborated"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0208",
@@ -91,7 +101,8 @@
       "dwellSeconds": 20,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "medium", "eligibility": "suppressed:verdictRelevant", "clauses": ["tokenOverlap"] }
+      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "medium", "eligibility": "suppressed:verdictRelevant", "clauses": ["tokenOverlap"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0209",
@@ -101,7 +112,8 @@
       "dwellSeconds": 20,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "medium", "eligibility": "suppressed:verdictRelevant", "clauses": ["tokenOverlap"] }
+      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "medium", "eligibility": "suppressed:verdictRelevant", "clauses": ["tokenOverlap"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0210",
@@ -111,7 +123,9 @@
       "dwellSeconds": 20,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "uncertain", "source": "heuristic", "stage": "heuristic", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["noNegativeBasis", "insufficientEvidence"], "uncertaintyReason": "noNegativeBasis" }
+      "expect": { "verdict": "uncertain", "source": "heuristic", "stage": "heuristic", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["noNegativeBasis", "insufficientEvidence"], "uncertaintyReason": "noNegativeBasis" },
+      "expectNudge": "silent:verdictDoesNotAuthorise",
+      "queryGroundTruth": "eitherIsReasonable"
     },
     {
       "id": "gc-0211",
@@ -121,7 +135,8 @@
       "dwellSeconds": 20,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "medium", "eligibility": "suppressed:verdictRelevant", "clauses": ["tokenOverlap"] }
+      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "medium", "eligibility": "suppressed:verdictRelevant", "clauses": ["tokenOverlap"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0212",
@@ -131,7 +146,8 @@
       "dwellSeconds": 400,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "uncertain", "source": "heuristic", "stage": "heuristic", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["insufficientEvidence"], "uncertaintyReason": "insufficientPriorityEvidence" }
+      "expect": { "verdict": "uncertain", "source": "heuristic", "stage": "heuristic", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["insufficientEvidence"], "uncertaintyReason": "insufficientPriorityEvidence" },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0213",
@@ -141,7 +157,9 @@
       "dwellSeconds": 400,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "uncertain", "source": "heuristic", "stage": "heuristic", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["noNegativeBasis", "insufficientEvidence"], "uncertaintyReason": "noNegativeBasis" }
+      "expect": { "verdict": "uncertain", "source": "heuristic", "stage": "heuristic", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["noNegativeBasis", "insufficientEvidence"], "uncertaintyReason": "noNegativeBasis" },
+      "expectNudge": "ask:noNegativeBasis",
+      "queryGroundTruth": "eitherIsReasonable"
     },
     {
       "id": "gc-0214",
@@ -152,7 +170,8 @@
       "sessionPhase": "focus",
       "isUserIdle": false,
       "expectExplanationTokens": 2,
-      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "medium", "eligibility": "suppressed:verdictRelevant", "clauses": ["tokenOverlap"] }
+      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "medium", "eligibility": "suppressed:verdictRelevant", "clauses": ["tokenOverlap"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0215",
@@ -163,7 +182,8 @@
       "sessionPhase": "focus",
       "isUserIdle": false,
       "expectExplanationTokens": 3,
-      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "medium", "eligibility": "suppressed:verdictRelevant", "clauses": ["tokenOverlap"] }
+      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "medium", "eligibility": "suppressed:verdictRelevant", "clauses": ["tokenOverlap"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0216",
@@ -173,7 +193,8 @@
       "dwellSeconds": 20,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "low", "eligibility": "suppressed:verdictRelevant", "clauses": ["similarityCorroborated"] }
+      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "low", "eligibility": "suppressed:verdictRelevant", "clauses": ["similarityCorroborated"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0217",
@@ -183,7 +204,9 @@
       "dwellSeconds": 20,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "uncertain", "source": "heuristic", "stage": "heuristic", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["noNegativeBasis", "insufficientEvidence"], "uncertaintyReason": "noNegativeBasis" }
+      "expect": { "verdict": "uncertain", "source": "heuristic", "stage": "heuristic", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["noNegativeBasis", "insufficientEvidence"], "uncertaintyReason": "noNegativeBasis" },
+      "expectNudge": "silent:verdictDoesNotAuthorise",
+      "queryGroundTruth": "relevant"
     },
     {
       "id": "gc-0218",
@@ -193,7 +216,9 @@
       "dwellSeconds": 20,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "uncertain", "source": "heuristic", "stage": "heuristic", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["noNegativeBasis", "insufficientEvidence"], "uncertaintyReason": "noNegativeBasis" }
+      "expect": { "verdict": "uncertain", "source": "heuristic", "stage": "heuristic", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["noNegativeBasis", "insufficientEvidence"], "uncertaintyReason": "noNegativeBasis" },
+      "expectNudge": "silent:verdictDoesNotAuthorise",
+      "queryGroundTruth": "relevant"
     },
     {
       "id": "gc-0219",
@@ -203,7 +228,8 @@
       "dwellSeconds": 20,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "low", "eligibility": "suppressed:verdictRelevant", "clauses": ["similarityCorroborated"] }
+      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "low", "eligibility": "suppressed:verdictRelevant", "clauses": ["similarityCorroborated"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0220",
@@ -214,7 +240,8 @@
       "dwellSeconds": 89,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "uncertain", "source": "heuristic", "stage": "heuristic", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["insufficientEvidence"], "uncertaintyReason": "noEvidence" }
+      "expect": { "verdict": "uncertain", "source": "heuristic", "stage": "heuristic", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["insufficientEvidence"], "uncertaintyReason": "noEvidence" },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0221",
@@ -225,7 +252,8 @@
       "dwellSeconds": 90,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "uncertain", "source": "heuristic", "stage": "heuristic", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["insufficientEvidence"], "uncertaintyReason": "noEvidence" }
+      "expect": { "verdict": "uncertain", "source": "heuristic", "stage": "heuristic", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["insufficientEvidence"], "uncertaintyReason": "noEvidence" },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0222",
@@ -236,7 +264,8 @@
       "dwellSeconds": 91,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "unrelated", "source": "heuristic", "stage": "heuristic", "band": "medium", "eligibility": "mandated", "clauses": ["sustainedDwell"] }
+      "expect": { "verdict": "unrelated", "source": "heuristic", "stage": "heuristic", "band": "medium", "eligibility": "mandated", "clauses": ["sustainedDwell"] },
+      "expectNudge": "accuse:ambient"
     },
     {
       "id": "gc-0223",
@@ -247,7 +276,8 @@
       "dwellSeconds": 299,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "unrelated", "source": "heuristic", "stage": "heuristic", "band": "medium", "eligibility": "mandated", "clauses": ["sustainedDwell"] }
+      "expect": { "verdict": "unrelated", "source": "heuristic", "stage": "heuristic", "band": "medium", "eligibility": "mandated", "clauses": ["sustainedDwell"] },
+      "expectNudge": "accuse:ambient"
     },
     {
       "id": "gc-0224",
@@ -258,7 +288,8 @@
       "dwellSeconds": 300,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "unrelated", "source": "heuristic", "stage": "heuristic", "band": "medium", "eligibility": "mandated", "clauses": ["sustainedDwell"] }
+      "expect": { "verdict": "unrelated", "source": "heuristic", "stage": "heuristic", "band": "medium", "eligibility": "mandated", "clauses": ["sustainedDwell"] },
+      "expectNudge": "accuse:ambient"
     },
     {
       "id": "gc-0225",
@@ -269,7 +300,8 @@
       "dwellSeconds": 301,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "unrelated", "source": "heuristic", "stage": "heuristic", "band": "high", "eligibility": "mandated", "clauses": ["sustainedDwell"] }
+      "expect": { "verdict": "unrelated", "source": "heuristic", "stage": "heuristic", "band": "high", "eligibility": "mandated", "clauses": ["sustainedDwell"] },
+      "expectNudge": "accuse:ambient"
     },
     {
       "id": "gc-0226",
@@ -280,7 +312,8 @@
       "dwellSeconds": 29,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "relevant", "source": "userRule", "stage": "contextPack", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["contextItem"] }
+      "expect": { "verdict": "relevant", "source": "userRule", "stage": "contextPack", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["contextItem"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0227",
@@ -291,7 +324,8 @@
       "dwellSeconds": 30,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "relevant", "source": "userRule", "stage": "contextPack", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["contextItem", "returnedToAnchor"] }
+      "expect": { "verdict": "relevant", "source": "userRule", "stage": "contextPack", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["contextItem", "returnedToAnchor"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0228",
@@ -302,7 +336,8 @@
       "dwellSeconds": 31,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "relevant", "source": "userRule", "stage": "contextPack", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["contextItem", "returnedToAnchor"] }
+      "expect": { "verdict": "relevant", "source": "userRule", "stage": "contextPack", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["contextItem", "returnedToAnchor"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0229",
@@ -312,7 +347,9 @@
       "dwellSeconds": 480,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "uncertain", "source": "heuristic", "stage": "heuristic", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["noNegativeBasis", "insufficientEvidence"], "uncertaintyReason": "noNegativeBasis" }
+      "expect": { "verdict": "uncertain", "source": "heuristic", "stage": "heuristic", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["noNegativeBasis", "insufficientEvidence"], "uncertaintyReason": "noNegativeBasis" },
+      "expectNudge": "ask:noNegativeBasis",
+      "queryGroundTruth": "relevant"
     },
     {
       "id": "gc-0230",
@@ -323,7 +360,8 @@
       "dwellSeconds": 480,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "unrelated", "source": "heuristic", "stage": "heuristic", "band": "high", "eligibility": "mandated", "clauses": ["sustainedDwell"] }
+      "expect": { "verdict": "unrelated", "source": "heuristic", "stage": "heuristic", "band": "high", "eligibility": "mandated", "clauses": ["sustainedDwell"] },
+      "expectNudge": "accuse:ambient"
     },
     {
       "id": "gc-0231",
@@ -337,7 +375,8 @@
       "dwellSeconds": 480,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "unrelated", "source": "heuristic", "stage": "heuristic", "band": "high", "eligibility": "mandated", "clauses": ["sustainedDwell"] }
+      "expect": { "verdict": "unrelated", "source": "heuristic", "stage": "heuristic", "band": "high", "eligibility": "mandated", "clauses": ["sustainedDwell"] },
+      "expectNudge": "accuse:ambient"
     },
     {
       "id": "gc-0232",
@@ -348,7 +387,8 @@
       "dwellSeconds": 20,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "relevant", "source": "userRule", "stage": "contextPack", "band": "medium", "eligibility": "suppressed:verdictRelevant", "clauses": ["contextItem", "tokenOverlap"] }
+      "expect": { "verdict": "relevant", "source": "userRule", "stage": "contextPack", "band": "medium", "eligibility": "suppressed:verdictRelevant", "clauses": ["contextItem", "tokenOverlap"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0233",
@@ -359,7 +399,9 @@
       "dwellSeconds": 480,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "uncertain", "source": "heuristic", "stage": "heuristic", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["noNegativeBasis", "insufficientEvidence"], "uncertaintyReason": "noNegativeBasis" }
+      "expect": { "verdict": "uncertain", "source": "heuristic", "stage": "heuristic", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["noNegativeBasis", "insufficientEvidence"], "uncertaintyReason": "noNegativeBasis" },
+      "expectNudge": "ask:noNegativeBasis",
+      "queryGroundTruth": "relevant"
     },
     {
       "id": "gc-0234",
@@ -370,7 +412,9 @@
       "dwellSeconds": 480,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "uncertain", "source": "heuristic", "stage": "heuristic", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["noNegativeBasis", "insufficientEvidence"], "uncertaintyReason": "noNegativeBasis" }
+      "expect": { "verdict": "uncertain", "source": "heuristic", "stage": "heuristic", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["noNegativeBasis", "insufficientEvidence"], "uncertaintyReason": "noNegativeBasis" },
+      "expectNudge": "ask:noNegativeBasis",
+      "queryGroundTruth": "relevant"
     },
     {
       "id": "gc-0235",
@@ -381,7 +425,8 @@
       "dwellSeconds": 480,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "unrelated", "source": "heuristic", "stage": "heuristic", "band": "high", "eligibility": "mandated", "clauses": ["sustainedDwell"] }
+      "expect": { "verdict": "unrelated", "source": "heuristic", "stage": "heuristic", "band": "high", "eligibility": "mandated", "clauses": ["sustainedDwell"] },
+      "expectNudge": "accuse:ambient"
     },
     {
       "id": "gc-0236",
@@ -391,7 +436,9 @@
       "dwellSeconds": 480,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "uncertain", "source": "heuristic", "stage": "heuristic", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["noNegativeBasis", "insufficientEvidence"], "uncertaintyReason": "noNegativeBasis" }
+      "expect": { "verdict": "uncertain", "source": "heuristic", "stage": "heuristic", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["noNegativeBasis", "insufficientEvidence"], "uncertaintyReason": "noNegativeBasis" },
+      "expectNudge": "ask:noNegativeBasis",
+      "queryGroundTruth": "unrelated"
     },
     {
       "id": "gc-0237",
@@ -402,7 +449,8 @@
       "dwellSeconds": 480,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "unrelated", "source": "heuristic", "stage": "heuristic", "band": "high", "eligibility": "mandated", "clauses": ["sustainedDwell"] }
+      "expect": { "verdict": "unrelated", "source": "heuristic", "stage": "heuristic", "band": "high", "eligibility": "mandated", "clauses": ["sustainedDwell"] },
+      "expectNudge": "accuse:ambient"
     },
     {
       "id": "gc-0238",
@@ -412,7 +460,8 @@
       "dwellSeconds": 20,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "low", "eligibility": "suppressed:verdictRelevant", "clauses": ["similarityCorroborated"] }
+      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "low", "eligibility": "suppressed:verdictRelevant", "clauses": ["similarityCorroborated"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0239",
@@ -422,7 +471,9 @@
       "dwellSeconds": 20,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "uncertain", "source": "heuristic", "stage": "heuristic", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["noNegativeBasis", "insufficientEvidence"], "uncertaintyReason": "noNegativeBasis" }
+      "expect": { "verdict": "uncertain", "source": "heuristic", "stage": "heuristic", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["noNegativeBasis", "insufficientEvidence"], "uncertaintyReason": "noNegativeBasis" },
+      "expectNudge": "silent:verdictDoesNotAuthorise",
+      "queryGroundTruth": "relevant"
     },
     {
       "id": "gc-0240",
@@ -433,7 +484,9 @@
       "dwellSeconds": 400,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "uncertain", "source": "heuristic", "stage": "heuristic", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["languageNotSupported", "insufficientEvidence"], "uncertaintyReason": "languageNotSupported" }
+      "expect": { "verdict": "uncertain", "source": "heuristic", "stage": "heuristic", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["languageNotSupported", "insufficientEvidence"], "uncertaintyReason": "languageNotSupported" },
+      "expectNudge": "ask:languageNotSupported",
+      "queryGroundTruth": "relevant"
     },
     {
       "id": "gc-0241",
@@ -443,7 +496,8 @@
       "dwellSeconds": 20,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "medium", "eligibility": "suppressed:verdictRelevant", "clauses": ["tokenOverlap"] }
+      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "medium", "eligibility": "suppressed:verdictRelevant", "clauses": ["tokenOverlap"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0242",
@@ -453,7 +507,8 @@
       "dwellSeconds": 20,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "medium", "eligibility": "suppressed:verdictRelevant", "clauses": ["tokenOverlap"] }
+      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "medium", "eligibility": "suppressed:verdictRelevant", "clauses": ["tokenOverlap"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0243",
@@ -463,7 +518,9 @@
       "dwellSeconds": 20,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "uncertain", "source": "heuristic", "stage": "heuristic", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["noNegativeBasis", "insufficientEvidence"], "uncertaintyReason": "noNegativeBasis" }
+      "expect": { "verdict": "uncertain", "source": "heuristic", "stage": "heuristic", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["noNegativeBasis", "insufficientEvidence"], "uncertaintyReason": "noNegativeBasis" },
+      "expectNudge": "silent:verdictDoesNotAuthorise",
+      "queryGroundTruth": "eitherIsReasonable"
     },
     {
       "id": "gc-0244",
@@ -473,7 +530,8 @@
       "dwellSeconds": 20,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "medium", "eligibility": "suppressed:verdictRelevant", "clauses": ["tokenOverlap"] }
+      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "medium", "eligibility": "suppressed:verdictRelevant", "clauses": ["tokenOverlap"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0245",
@@ -483,7 +541,8 @@
       "dwellSeconds": 20,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "low", "eligibility": "suppressed:verdictRelevant", "clauses": ["tokenOverlap"] }
+      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "low", "eligibility": "suppressed:verdictRelevant", "clauses": ["tokenOverlap"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0246",
@@ -494,7 +553,28 @@
       "dwellSeconds": 540,
       "sessionPhase": "focus",
       "isUserIdle": false,
-      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "medium", "eligibility": "suppressed:verdictRelevant", "clauses": ["tokenOverlap", "returnedToAnchor"] }
+      "expect": { "verdict": "relevant", "source": "heuristic", "stage": "heuristic", "band": "medium", "eligibility": "suppressed:verdictRelevant", "clauses": ["tokenOverlap", "returnedToAnchor"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
+    },
+    {
+      "id": "gc-0501",
+      "note": "queryDwellThreshold, below. Forty-four seconds on an askable uncertain subject, and the app says NOTHING — a question the moment somebody opens an application is a question about a keystroke rather than about their work. This is the committed mutation witness for queryDwellThreshold: at 44 the constant would have to move for this case to speak.",
+      "priority": { "intent": "write the onboarding guide for new hires", "revision": 1 },
+      "evidence": { "bundleID": "com.apple.Terminal", "titleTokens": [] },
+      "dwellSeconds": 44,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": {
+        "verdict": "uncertain",
+        "source": "heuristic",
+        "stage": "heuristic",
+        "band": null,
+        "eligibility": "suppressed:verdictUncertain",
+        "clauses": ["noNegativeBasis", "insufficientEvidence"],
+        "uncertaintyReason": "noNegativeBasis"
+      },
+      "expectNudge": "silent:verdictDoesNotAuthorise",
+      "queryGroundTruth": "eitherIsReasonable"
     }
   ]
 }

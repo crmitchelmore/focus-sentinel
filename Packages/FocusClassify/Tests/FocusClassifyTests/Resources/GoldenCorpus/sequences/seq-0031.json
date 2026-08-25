@@ -1,0 +1,235 @@
+{
+  "id": "seq-0031",
+  "note": "reservedAccusationUnits, which is the one rule in the budget that is not arithmetic. Seven of the day's eight shared units are spent — three questions and four rungs — and both kinds are then offered. The question is refused although a unit remains, because that unit is the accusation's; the accusation takes it. Running out of budget on questions and therefore being unable to say 'you are off task' is the failure that defeats the product, and this is the fixture that makes the reservation observable rather than merely written down.",
+  "snapshot": {
+    "priority": {
+      "intent": "Write the Q3 proposal for Acme",
+      "doneWhen": "sent to Dana",
+      "revision": 1
+    },
+    "rules": [
+      {
+        "authority": "global",
+        "subjectKind": "app",
+        "subject": "com.valvesoftware.steam",
+        "verdict": "unrelated"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "advanceSeconds": 0,
+      "bundleID": "com.microsoft.Excel",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 50,
+      "bundleID": "com.microsoft.Excel",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "nudge": "ask:noNegativeBasis",
+        "accumulatedSeconds": 0
+      },
+      "then": {
+        "answer": "yesAddIt"
+      }
+    },
+    {
+      "advanceSeconds": 0,
+      "bundleID": "com.figma.Desktop",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 200,
+      "bundleID": "com.figma.Desktop",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "nudge": "ask:noNegativeBasis",
+        "accumulatedSeconds": 0
+      },
+      "then": {
+        "answer": "yesAddIt"
+      }
+    },
+    {
+      "advanceSeconds": 0,
+      "bundleID": "com.omnigroup.OmniGraffle",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 200,
+      "bundleID": "com.omnigroup.OmniGraffle",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "nudge": "ask:noNegativeBasis",
+        "accumulatedSeconds": 0
+      },
+      "then": {
+        "answer": "yesAddIt"
+      }
+    },
+    {
+      "advanceSeconds": 200,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "nudge": "silent:verdictDoesNotAuthorise",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 92,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "sustained",
+        "nudge": "accuse:ambient",
+        "accumulatedSeconds": 92
+      },
+      "then": {
+        "accusationOutcome": "returned"
+      }
+    },
+    {
+      "advanceSeconds": 601,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "nudge": "silent:verdictDoesNotAuthorise",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 92,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "sustained",
+        "nudge": "accuse:ambient",
+        "accumulatedSeconds": 92
+      },
+      "then": {
+        "accusationOutcome": "returned"
+      }
+    },
+    {
+      "advanceSeconds": 601,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "nudge": "silent:verdictDoesNotAuthorise",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 92,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "sustained",
+        "nudge": "accuse:ambient",
+        "accumulatedSeconds": 92
+      },
+      "then": {
+        "accusationOutcome": "returned"
+      }
+    },
+    {
+      "advanceSeconds": 601,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "nudge": "silent:verdictDoesNotAuthorise",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 92,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "sustained",
+        "nudge": "accuse:ambient",
+        "accumulatedSeconds": 92
+      },
+      "then": {
+        "accusationOutcome": "returned"
+      }
+    },
+    {
+      "advanceSeconds": 0,
+      "bundleID": "com.apple.iWork.Numbers",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "cooldown",
+        "nudge": "silent:budgetExhausted",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 200,
+      "bundleID": "com.apple.iWork.Numbers",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "cooldown",
+        "nudge": "silent:budgetExhausted",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 601,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "cooldown",
+        "nudge": "silent:budgetExhausted",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 92,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "nudge": "silent:budgetExhausted",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 92,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "sustained",
+        "nudge": "accuse:ambient",
+        "accumulatedSeconds": 92
+      },
+      "then": {
+        "accusationOutcome": "returned"
+      }
+    }
+  ],
+  "expectMandates": 5,
+  "expectQueries": 3,
+  "expectAccusations": 5
+}

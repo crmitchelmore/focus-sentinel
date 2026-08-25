@@ -1,0 +1,129 @@
+{
+  "id": "seq-0027",
+  "note": "Adversarial review finding 3, as a fixture, and it takes BOTH of R-78's memories to hold. Ask, answer 'Yes', and the subject classifies relevant at the taskRule rung ever after — the fast path, and the reason most questions never even become constructible. Then DELETE the learned rule, which every learned chip and every Rules-pane row lets a person do: the subject is uncertain again and a warrant is constructible again. Inside the same session the correction memory silences it at gate 10; the process then restarts, every session-lived thing goes with it, and the subject returns to an app that has nothing left but the IMMUTABLE RECEIPT — and still says nothing, at gate 11, by name. Removing a learned chip means 'that is not a fact about my work', never 'ask me again'.",
+  "snapshot": {
+    "priority": {
+      "intent": "Write the Q3 proposal for Acme",
+      "doneWhen": "sent to Dana",
+      "revision": 1
+    }
+  },
+  "steps": [
+    {
+      "advanceSeconds": 0,
+      "bundleID": "com.microsoft.Excel",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 50,
+      "bundleID": "com.microsoft.Excel",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "nudge": "ask:noNegativeBasis",
+        "accumulatedSeconds": 0
+      },
+      "then": {
+        "answer": "yesAddIt"
+      }
+    },
+    {
+      "advanceSeconds": 0,
+      "bundleID": "com.figma.Desktop",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 200,
+      "bundleID": "com.figma.Desktop",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "nudge": "ask:noNegativeBasis",
+        "accumulatedSeconds": 0
+      },
+      "then": {
+        "answer": "notNow"
+      }
+    },
+    {
+      "advanceSeconds": 200,
+      "bundleID": "com.microsoft.Excel",
+      "expect": {
+        "verdict": "relevant",
+        "drift": "aligned",
+        "stage": "taskRule",
+        "nudge": "silent:budgetExhausted",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 200,
+      "bundleID": "com.microsoft.Excel",
+      "expect": {
+        "verdict": "relevant",
+        "drift": "aligned",
+        "stage": "taskRule",
+        "nudge": "silent:budgetExhausted",
+        "accumulatedSeconds": 0
+      },
+      "then": {
+        "deleteLearnedRule": "com.microsoft.Excel"
+      }
+    },
+    {
+      "advanceSeconds": 200,
+      "bundleID": "com.microsoft.Excel",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "stage": "heuristic",
+        "nudge": "silent:budgetExhausted",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 200,
+      "bundleID": "com.microsoft.Excel",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "nudge": "silent:budgetExhausted",
+        "accumulatedSeconds": 0
+      },
+      "then": {
+        "relaunch": true
+      }
+    },
+    {
+      "advanceSeconds": 200,
+      "bundleID": "com.microsoft.Excel",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "nudge": "silent:alreadyAsked",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 200,
+      "bundleID": "com.microsoft.Excel",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "nudge": "silent:alreadyAsked",
+        "accumulatedSeconds": 0
+      }
+    }
+  ],
+  "expectMandates": 0,
+  "expectQueries": 2,
+  "expectAccusations": 0
+}

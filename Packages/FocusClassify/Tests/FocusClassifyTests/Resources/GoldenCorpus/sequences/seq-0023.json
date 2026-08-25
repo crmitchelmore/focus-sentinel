@@ -1,0 +1,113 @@
+{
+  "id": "seq-0023",
+  "note": "ignoredAccusationBackoff, and the whole three-rung ladder on its way there. The glyph, the panel and the recommitment surface are delivered in order, each one ignored, and after the third the ladder drops back to the ambient rung and holds there for the rest of the session — F-63's 'back off when ignored', with the quietest channel RETAINED, because going fully silent would lose the one channel the person has not objected to. The fourth mandate is live, the engine still says unrelated, and the app shows nothing new.",
+  "snapshot": {
+    "priority": {
+      "intent": "Write the Q3 proposal for Acme",
+      "doneWhen": "sent to Dana",
+      "revision": 1
+    },
+    "rules": [
+      {
+        "authority": "global",
+        "subjectKind": "app",
+        "subject": "com.valvesoftware.steam",
+        "verdict": "unrelated"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "advanceSeconds": 0,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "nudge": "silent:verdictDoesNotAuthorise",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 92,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "sustained",
+        "nudge": "accuse:ambient",
+        "accumulatedSeconds": 92
+      },
+      "then": {
+        "accusationOutcome": "ignored"
+      }
+    },
+    {
+      "advanceSeconds": 601,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "nudge": "silent:verdictDoesNotAuthorise",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 92,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "sustained",
+        "nudge": "accuse:panel",
+        "accumulatedSeconds": 92
+      },
+      "then": {
+        "accusationOutcome": "ignored"
+      }
+    },
+    {
+      "advanceSeconds": 601,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "nudge": "silent:verdictDoesNotAuthorise",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 92,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "sustained",
+        "nudge": "accuse:recommitment",
+        "accumulatedSeconds": 92
+      },
+      "then": {
+        "accusationOutcome": "ignored"
+      }
+    },
+    {
+      "advanceSeconds": 601,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "nudge": "silent:verdictDoesNotAuthorise",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 92,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "sustained",
+        "nudge": "silent:budgetExhausted",
+        "accumulatedSeconds": 92
+      }
+    }
+  ],
+  "expectMandates": 4,
+  "expectQueries": 0,
+  "expectAccusations": 3
+}

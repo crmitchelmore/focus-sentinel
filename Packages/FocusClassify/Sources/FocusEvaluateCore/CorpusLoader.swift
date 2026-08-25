@@ -15,6 +15,11 @@ public struct GoldenCorpus: Sendable, Equatable {
     /// The replayable event streams beside the single-shot files. F-151's fixtures cannot
     /// express time; these are what does (R-69).
     public let sequences: [SequenceFixture]
+    /// The realistic-day fixtures (T143c, R-94a). A sequence expresses a stretch of time; a day
+    /// expresses **a whole one** — priority changes, breaks, a pause, a presentation, an idle
+    /// span and a relaunch — because a per-judgement rate can look excellent while a day still
+    /// contains twelve questions, and a bad day is what a person quits over.
+    public let days: [DayFixture]
     /// Committed files this directory did not hold.
     ///
     /// Recorded rather than thrown, because the corpus was committed **file by file** — the
@@ -31,10 +36,11 @@ public struct GoldenCorpus: Sendable, Equatable {
 
     public var cases: [CorpusCase] { files.flatMap(\.cases) }
 
-    /// Single-shot cases plus sequence fixtures. The committed floor of 132 is over **both**,
-    /// because a corpus that could meet its total by dropping every sequence would not be able
-    /// to express time at all — and time is what F-48 and F-49 are made of.
-    public var caseCount: Int { cases.count + sequences.count }
+    /// Single-shot cases plus sequence fixtures plus realistic days. The committed floor is over
+    /// **all three**, because a corpus that could meet its total by dropping every sequence would
+    /// not be able to express time at all — and time is what F-48 and F-49 are made of, and a
+    /// whole day is what the interruption budget is made of.
+    public var caseCount: Int { cases.count + sequences.count + days.count }
 
     public var adversarial: [CorpusCase] { cases.filter { !$0.families.isEmpty } }
 
@@ -68,6 +74,15 @@ public struct GoldenCorpus: Sendable, Equatable {
                     + "\(EvaluationPolicy.sequenceFloor)"
             )
         }
+        guard days.count >= EvaluationPolicy.dayFloor else {
+            throw CorpusDecodingError(
+                path: CorpusLoader.daysDirectoryName,
+                reason: "holds \(days.count) day fixture(s) but the committed floor is "
+                    + "\(EvaluationPolicy.dayFloor) — `queriesPerFocusDay` and "
+                    + "`interruptionsPerFocusDayMax` are measured on these, and a gate scoring a "
+                    + "metric on absent data is a gate reporting a pass it did not measure"
+            )
+        }
         guard caseCount >= EvaluationPolicy.corpusFloor else {
             throw CorpusDecodingError(
                 path: CorpusLoader.goldenCorpusDirectoryName,
@@ -90,6 +105,7 @@ public struct GoldenCorpus: Sendable, Equatable {
 public enum CorpusLoader {
     public static let goldenCorpusDirectoryName = "GoldenCorpus"
     public static let sequencesDirectoryName = "sequences"
+    public static let daysDirectoryName = "days"
 
     /// Load and decode strictly.
     ///
@@ -129,16 +145,23 @@ public enum CorpusLoader {
         }
 
         var sequences: [SequenceFixture] = []
-        for (name, data) in try sequenceFiles(in: directory) {
+        for (name, data) in try jsonFiles(in: directory, named: sequencesDirectoryName) {
             hashed.append((name, data))
             sequences.append(
                 try SequenceFixture.decode(try StrictObject.parse(data: data, path: name))
             )
         }
 
+        var days: [DayFixture] = []
+        for (name, data) in try jsonFiles(in: directory, named: daysDirectoryName) {
+            hashed.append((name, data))
+            days.append(try DayFixture.decode(try StrictObject.parse(data: data, path: name)))
+        }
+
         let corpus = GoldenCorpus(
             files: files,
             sequences: sequences,
+            days: days,
             missingFiles: missing,
             digest: digest(over: hashed)
         )
@@ -146,9 +169,10 @@ public enum CorpusLoader {
         return corpus
     }
 
-    /// Every sequence fixture, in sorted filename order so two loads agree.
-    static func sequenceFiles(in directory: URL) throws -> [(String, Data)] {
-        let sequenceDirectory = directory.appendingPathComponent(sequencesDirectoryName)
+    /// Every fixture in one of the corpus's sub-directories, in sorted filename order so two
+    /// loads hash the same bytes in the same order.
+    static func jsonFiles(in directory: URL, named subdirectory: String) throws -> [(String, Data)] {
+        let sequenceDirectory = directory.appendingPathComponent(subdirectory)
         guard let contents = try? FileManager.default.contentsOfDirectory(
             at: sequenceDirectory, includingPropertiesForKeys: nil
         ) else {
@@ -158,7 +182,7 @@ public enum CorpusLoader {
         for url in contents.filter({ $0.pathExtension == "json" })
             .sorted(by: { $0.lastPathComponent < $1.lastPathComponent }) {
             guard let data = try optionalRead(url) else { continue }
-            loaded.append(("\(sequencesDirectoryName)/\(url.lastPathComponent)", data))
+            loaded.append(("\(subdirectory)/\(url.lastPathComponent)", data))
         }
         return loaded
     }
@@ -188,8 +212,10 @@ public enum CorpusLoader {
                 hashed.append((name, data))
             }
         }
-        for (name, data) in try sequenceFiles(in: directory) {
-            hashed.append((name, data))
+        for subdirectory in [sequencesDirectoryName, daysDirectoryName] {
+            for (name, data) in try jsonFiles(in: directory, named: subdirectory) {
+                hashed.append((name, data))
+            }
         }
         return digest(over: hashed)
     }
@@ -223,6 +249,14 @@ public enum CorpusLoader {
                 throw CorpusDecodingError(
                     path: sequencesDirectoryName,
                     reason: "\(sequence.id) is used twice — ids are unique and stable forever"
+                )
+            }
+        }
+        for day in corpus.days {
+            guard seen.insert(day.id).inserted else {
+                throw CorpusDecodingError(
+                    path: daysDirectoryName,
+                    reason: "\(day.id) is used twice — ids are unique and stable forever"
                 )
             }
         }

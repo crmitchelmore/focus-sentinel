@@ -50,10 +50,18 @@ struct CorpusIntegrityTests {
         }
     }
 
+    /// The total is a **consequence** of the per-file budget rather than a round number chosen
+    /// first — which is what stops somebody meeting it by adding easy cases to whichever file is
+    /// cheapest. e05 adds the third term: the realistic-day fixtures, on which
+    /// `queriesPerFocusDay` and `interruptionsPerFocusDayMax` are the only metrics that can see a
+    /// bad day (R-94a).
     @Test("the per-file floors add up to the committed total")
     func theBudgetAddsUp() {
         let fromFiles = EvaluationPolicy.budgets.reduce(0) { $0 + $1.floor }
-        #expect(fromFiles + EvaluationPolicy.sequenceFloor == EvaluationPolicy.corpusFloor)
+        #expect(
+            fromFiles + EvaluationPolicy.sequenceFloor + EvaluationPolicy.dayFloor
+                == EvaluationPolicy.corpusFloor
+        )
         #expect(EvaluationPolicy.corpusFloor >= 132, "R-74.3 commits the floor at 132")
     }
 

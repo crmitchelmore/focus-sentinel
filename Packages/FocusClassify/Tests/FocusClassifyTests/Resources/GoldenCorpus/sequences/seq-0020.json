@@ -1,0 +1,224 @@
+{
+  "id": "seq-0020",
+  "note": "dailyQueryCap's committed witness: one priority with NINE askable subjects, which P-138 measured as the heaviest priority in the whole corpus. Four questions land on day one and the fifth subject is refused; the day turns over, the budget empties, the receipts do not, and four more land on day two. The cap is therefore demonstrably a spread across days rather than a decoration — and the unasked subjects stay silent-uncertain, which is the pre-U-1 behaviour, so the cap can never make the app worse than the shipped baseline.",
+  "snapshot": {
+    "priority": {
+      "intent": "Write the Q3 proposal for Acme",
+      "doneWhen": "sent to Dana",
+      "revision": 1
+    }
+  },
+  "steps": [
+    {
+      "advanceSeconds": 0,
+      "bundleID": "com.microsoft.Excel",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 200,
+      "bundleID": "com.microsoft.Excel",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "nudge": "ask:noNegativeBasis",
+        "accumulatedSeconds": 0
+      },
+      "then": {
+        "answer": "yesAddIt"
+      }
+    },
+    {
+      "advanceSeconds": 0,
+      "bundleID": "com.figma.Desktop",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 200,
+      "bundleID": "com.figma.Desktop",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "nudge": "ask:noNegativeBasis",
+        "accumulatedSeconds": 0
+      },
+      "then": {
+        "answer": "yesAddIt"
+      }
+    },
+    {
+      "advanceSeconds": 0,
+      "bundleID": "com.omnigroup.OmniGraffle",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 200,
+      "bundleID": "com.omnigroup.OmniGraffle",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "nudge": "ask:noNegativeBasis",
+        "accumulatedSeconds": 0
+      },
+      "then": {
+        "answer": "yesAddIt"
+      }
+    },
+    {
+      "advanceSeconds": 0,
+      "bundleID": "com.apple.iWork.Numbers",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 200,
+      "bundleID": "com.apple.iWork.Numbers",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "nudge": "ask:noNegativeBasis",
+        "accumulatedSeconds": 0
+      },
+      "then": {
+        "answer": "yesAddIt"
+      }
+    },
+    {
+      "advanceSeconds": 0,
+      "bundleID": "com.apple.Preview",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 200,
+      "bundleID": "com.apple.Preview",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "nudge": "silent:budgetExhausted",
+        "accumulatedSeconds": 0
+      },
+      "then": {
+        "newDay": true
+      }
+    },
+    {
+      "advanceSeconds": 200,
+      "bundleID": "com.apple.Preview",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "nudge": "ask:noNegativeBasis",
+        "accumulatedSeconds": 0
+      },
+      "then": {
+        "answer": "yesAddIt"
+      }
+    },
+    {
+      "advanceSeconds": 0,
+      "bundleID": "com.readdle.PDFExpert",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 200,
+      "bundleID": "com.readdle.PDFExpert",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "nudge": "ask:noNegativeBasis",
+        "accumulatedSeconds": 0
+      },
+      "then": {
+        "answer": "yesAddIt"
+      }
+    },
+    {
+      "advanceSeconds": 0,
+      "bundleID": "com.apple.dt.Xcode",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 200,
+      "bundleID": "com.apple.dt.Xcode",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "nudge": "ask:noNegativeBasis",
+        "accumulatedSeconds": 0
+      },
+      "then": {
+        "answer": "yesAddIt"
+      }
+    },
+    {
+      "advanceSeconds": 0,
+      "bundleID": "com.example.tracker",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 200,
+      "bundleID": "com.example.tracker",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "nudge": "ask:noNegativeBasis",
+        "accumulatedSeconds": 0
+      },
+      "then": {
+        "answer": "yesAddIt"
+      }
+    },
+    {
+      "advanceSeconds": 0,
+      "bundleID": "com.example.friday",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 200,
+      "bundleID": "com.example.friday",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "nudge": "silent:budgetExhausted",
+        "accumulatedSeconds": 0
+      }
+    }
+  ],
+  "expectMandates": 0,
+  "expectQueries": 8,
+  "expectAccusations": 0
+}

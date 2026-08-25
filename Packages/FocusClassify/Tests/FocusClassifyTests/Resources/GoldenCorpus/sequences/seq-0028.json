@@ -1,0 +1,60 @@
+{
+  "id": "seq-0028",
+  "note": "What 'No' does, and what it does not. The question writes a task-authority rule with verdict unrelated plus its receipt, and the query is over. The NEXT time that subject appears the verdict is unrelated because THE USER SAID SO — source userRule, rung taskRule — and once the dwell is sustained it enters the accusation ladder on that authority. That is not a query escalating into an accusation: it is a user-authored rule producing an independent verdict on a later classification, and the distinction is visible in the source and the stage rather than asserted in prose.",
+  "snapshot": {
+    "priority": {
+      "intent": "Write the Q3 proposal for Acme",
+      "doneWhen": "sent to Dana",
+      "revision": 1
+    }
+  },
+  "steps": [
+    {
+      "advanceSeconds": 0,
+      "bundleID": "com.microsoft.Excel",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 50,
+      "bundleID": "com.microsoft.Excel",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "nudge": "ask:noNegativeBasis",
+        "accumulatedSeconds": 0
+      },
+      "then": {
+        "answer": "no"
+      }
+    },
+    {
+      "advanceSeconds": 200,
+      "bundleID": "com.microsoft.Excel",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "stage": "taskRule",
+        "nudge": "silent:alreadyAsked",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 92,
+      "bundleID": "com.microsoft.Excel",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "sustained",
+        "stage": "taskRule",
+        "nudge": "accuse:ambient",
+        "accumulatedSeconds": 92
+      }
+    }
+  ],
+  "expectMandates": 1,
+  "expectQueries": 1,
+  "expectAccusations": 1
+}

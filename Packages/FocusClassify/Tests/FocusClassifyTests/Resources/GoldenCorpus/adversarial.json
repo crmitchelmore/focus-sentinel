@@ -31,7 +31,9 @@
           "insufficientEvidence"
         ],
         "uncertaintyReason": "noNegativeBasis"
-      }
+      },
+      "expectNudge": "ask:noNegativeBasis",
+      "queryGroundTruth": "relevant"
     },
     {
       "id": "gc-0302",
@@ -62,7 +64,9 @@
           "insufficientEvidence"
         ],
         "uncertaintyReason": "noNegativeBasis"
-      }
+      },
+      "expectNudge": "ask:noNegativeBasis",
+      "queryGroundTruth": "relevant"
     },
     {
       "id": "gc-0303",
@@ -93,7 +97,9 @@
           "insufficientEvidence"
         ],
         "uncertaintyReason": "noNegativeBasis"
-      }
+      },
+      "expectNudge": "ask:noNegativeBasis",
+      "queryGroundTruth": "relevant"
     },
     {
       "id": "gc-0304",
@@ -123,7 +129,9 @@
           "insufficientEvidence"
         ],
         "uncertaintyReason": "noNegativeBasis"
-      }
+      },
+      "expectNudge": "ask:noNegativeBasis",
+      "queryGroundTruth": "relevant"
     },
     {
       "id": "gc-0305",
@@ -153,7 +161,9 @@
           "insufficientEvidence"
         ],
         "uncertaintyReason": "noNegativeBasis"
-      }
+      },
+      "expectNudge": "ask:noNegativeBasis",
+      "queryGroundTruth": "relevant"
     },
     {
       "id": "gc-0306",
@@ -183,7 +193,9 @@
           "insufficientEvidence"
         ],
         "uncertaintyReason": "noNegativeBasis"
-      }
+      },
+      "expectNudge": "ask:noNegativeBasis",
+      "queryGroundTruth": "relevant"
     },
     {
       "id": "gc-0307",
@@ -213,7 +225,9 @@
           "insufficientEvidence"
         ],
         "uncertaintyReason": "noNegativeBasis"
-      }
+      },
+      "expectNudge": "ask:noNegativeBasis",
+      "queryGroundTruth": "relevant"
     },
     {
       "id": "gc-0308",
@@ -243,7 +257,9 @@
           "insufficientEvidence"
         ],
         "uncertaintyReason": "noNegativeBasis"
-      }
+      },
+      "expectNudge": "ask:noNegativeBasis",
+      "queryGroundTruth": "relevant"
     },
     {
       "id": "gc-0309",
@@ -273,7 +289,9 @@
           "insufficientEvidence"
         ],
         "uncertaintyReason": "noNegativeBasis"
-      }
+      },
+      "expectNudge": "ask:noNegativeBasis",
+      "queryGroundTruth": "relevant"
     },
     {
       "id": "gc-0310",
@@ -303,7 +321,9 @@
           "insufficientEvidence"
         ],
         "uncertaintyReason": "noNegativeBasis"
-      }
+      },
+      "expectNudge": "ask:noNegativeBasis",
+      "queryGroundTruth": "unrelated"
     },
     {
       "id": "gc-0311",
@@ -334,7 +354,9 @@
           "insufficientEvidence"
         ],
         "uncertaintyReason": "noNegativeBasis"
-      }
+      },
+      "expectNudge": "ask:noNegativeBasis",
+      "queryGroundTruth": "eitherIsReasonable"
     },
     {
       "id": "gc-0312",
@@ -364,7 +386,9 @@
           "insufficientEvidence"
         ],
         "uncertaintyReason": "noNegativeBasis"
-      }
+      },
+      "expectNudge": "ask:noNegativeBasis",
+      "queryGroundTruth": "eitherIsReasonable"
     },
     {
       "id": "gc-0313",
@@ -401,7 +425,9 @@
           "insufficientEvidence"
         ],
         "uncertaintyReason": "noNegativeBasis"
-      }
+      },
+      "expectNudge": "ask:noNegativeBasis",
+      "queryGroundTruth": "relevant"
     },
     {
       "id": "gc-0314",
@@ -438,7 +464,9 @@
           "insufficientEvidence"
         ],
         "uncertaintyReason": "noNegativeBasis"
-      }
+      },
+      "expectNudge": "ask:noNegativeBasis",
+      "queryGroundTruth": "relevant"
     },
     {
       "id": "gc-0315",
@@ -474,7 +502,8 @@
         "clauses": [
           "sustainedDwell"
         ]
-      }
+      },
+      "expectNudge": "accuse:ambient"
     },
     {
       "id": "gc-0316",
@@ -510,7 +539,8 @@
         "clauses": [
           "sustainedDwell"
         ]
-      }
+      },
+      "expectNudge": "accuse:ambient"
     },
     {
       "id": "gc-0317",
@@ -547,7 +577,8 @@
           "contextItem",
           "returnedToAnchor"
         ]
-      }
+      },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0318",
@@ -586,7 +617,8 @@
           "userRule",
           "sustainedDwell"
         ]
-      }
+      },
+      "expectNudge": "accuse:ambient"
     },
     {
       "id": "gc-0401",
@@ -623,7 +655,9 @@
           "insufficientEvidence"
         ],
         "uncertaintyReason": "mixedUseApplication"
-      }
+      },
+      "expectNudge": "ask:mixedUseApplication",
+      "queryGroundTruth": "eitherIsReasonable"
     },
     {
       "id": "gc-0402",
@@ -660,7 +694,9 @@
           "insufficientEvidence"
         ],
         "uncertaintyReason": "mixedUseApplication"
-      }
+      },
+      "expectNudge": "ask:mixedUseApplication",
+      "queryGroundTruth": "eitherIsReasonable"
     },
     {
       "id": "gc-0403",
@@ -697,7 +733,9 @@
           "insufficientEvidence"
         ],
         "uncertaintyReason": "mixedUseApplication"
-      }
+      },
+      "expectNudge": "ask:mixedUseApplication",
+      "queryGroundTruth": "eitherIsReasonable"
     },
     {
       "id": "gc-0404",
@@ -734,7 +772,8 @@
         "clauses": [
           "contextItem"
         ]
-      }
+      },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0405",
@@ -770,7 +809,9 @@
           "insufficientEvidence"
         ],
         "uncertaintyReason": "mixedUseApplication"
-      }
+      },
+      "expectNudge": "ask:mixedUseApplication",
+      "queryGroundTruth": "eitherIsReasonable"
     },
     {
       "id": "gc-0407",
@@ -800,7 +841,9 @@
           "insufficientEvidence"
         ],
         "uncertaintyReason": "noNegativeBasis"
-      }
+      },
+      "expectNudge": "ask:noNegativeBasis",
+      "queryGroundTruth": "eitherIsReasonable"
     },
     {
       "id": "gc-0408",
@@ -830,7 +873,9 @@
           "insufficientEvidence"
         ],
         "uncertaintyReason": "noNegativeBasis"
-      }
+      },
+      "expectNudge": "ask:noNegativeBasis",
+      "queryGroundTruth": "unrelated"
     },
     {
       "id": "gc-0406",
@@ -865,7 +910,8 @@
         "clauses": [
           "tokenOverlap"
         ]
-      }
+      },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0409",
@@ -895,7 +941,9 @@
           "insufficientEvidence"
         ],
         "uncertaintyReason": "mixedUseApplication"
-      }
+      },
+      "expectNudge": "ask:mixedUseApplication",
+      "queryGroundTruth": "relevant"
     },
     {
       "id": "gc-0410",
@@ -925,7 +973,9 @@
           "insufficientEvidence"
         ],
         "uncertaintyReason": "mixedUseApplication"
-      }
+      },
+      "expectNudge": "ask:mixedUseApplication",
+      "queryGroundTruth": "relevant"
     },
     {
       "id": "gc-0411",
@@ -961,7 +1011,8 @@
         "clauses": [
           "contextItem"
         ]
-      }
+      },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0412",
@@ -992,7 +1043,8 @@
           "seedDefault",
           "sustainedDwell"
         ]
-      }
+      },
+      "expectNudge": "accuse:ambient"
     },
     {
       "id": "gc-0413",
@@ -1028,7 +1080,9 @@
           "insufficientEvidence"
         ],
         "uncertaintyReason": "languageNotSupported"
-      }
+      },
+      "expectNudge": "ask:languageNotSupported",
+      "queryGroundTruth": "relevant"
     },
     {
       "id": "gc-0414",
@@ -1064,7 +1118,9 @@
           "insufficientEvidence"
         ],
         "uncertaintyReason": "languageNotSupported"
-      }
+      },
+      "expectNudge": "ask:languageNotSupported",
+      "queryGroundTruth": "relevant"
     },
     {
       "id": "gc-0415",
@@ -1100,7 +1156,9 @@
           "insufficientEvidence"
         ],
         "uncertaintyReason": "languageNotSupported"
-      }
+      },
+      "expectNudge": "ask:languageNotSupported",
+      "queryGroundTruth": "relevant"
     },
     {
       "id": "gc-0416",
@@ -1134,7 +1192,8 @@
         "clauses": [
           "tokenOverlap"
         ]
-      }
+      },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0417",
@@ -1171,7 +1230,9 @@
           "insufficientEvidence"
         ],
         "uncertaintyReason": "mixedUseApplication"
-      }
+      },
+      "expectNudge": "ask:mixedUseApplication",
+      "queryGroundTruth": "eitherIsReasonable"
     },
     {
       "id": "gc-0418",
@@ -1207,7 +1268,8 @@
           "insufficientEvidence"
         ],
         "uncertaintyReason": "noEvidence"
-      }
+      },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0419",
@@ -1242,7 +1304,8 @@
           "insufficientEvidence"
         ],
         "uncertaintyReason": "noIdentifiableSubject"
-      }
+      },
+      "expectNudge": "silent:sensitiveApplication"
     },
     {
       "id": "gc-0420",
@@ -1279,7 +1342,8 @@
         "clauses": [
           "contextItem"
         ]
-      }
+      },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0421",
@@ -1314,7 +1378,8 @@
           "insufficientEvidence"
         ],
         "uncertaintyReason": "noIdentifiableSubject"
-      }
+      },
+      "expectNudge": "silent:sensitiveApplication"
     },
     {
       "id": "gc-0422",
@@ -1349,7 +1414,8 @@
           "insufficientEvidence"
         ],
         "uncertaintyReason": "noIdentifiableSubject"
-      }
+      },
+      "expectNudge": "silent:sensitiveApplication"
     },
     {
       "id": "gc-0423",
@@ -1378,7 +1444,8 @@
           "insufficientEvidence"
         ],
         "uncertaintyReason": "noIdentifiableSubject"
-      }
+      },
+      "expectNudge": "silent:sensitiveApplication"
     },
     {
       "id": "gc-0424",
@@ -1414,7 +1481,8 @@
         "clauses": [
           "contextItem"
         ]
-      }
+      },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0425",
@@ -1449,7 +1517,8 @@
           "insufficientEvidence"
         ],
         "uncertaintyReason": "noIdentifiableSubject"
-      }
+      },
+      "expectNudge": "silent:sensitiveApplication"
     },
     {
       "id": "gc-0426",
@@ -1478,7 +1547,8 @@
           "insufficientEvidence"
         ],
         "uncertaintyReason": "noIdentifiableSubject"
-      }
+      },
+      "expectNudge": "silent:sensitiveApplication"
     },
     {
       "id": "gc-0427",
@@ -1514,7 +1584,8 @@
         "clauses": [
           "contextItem"
         ]
-      }
+      },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0428",
@@ -1549,7 +1620,8 @@
           "insufficientEvidence"
         ],
         "uncertaintyReason": "insufficientPriorityEvidence"
-      }
+      },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0429",
@@ -1584,7 +1656,8 @@
           "insufficientEvidence"
         ],
         "uncertaintyReason": "insufficientPriorityEvidence"
-      }
+      },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0430",
@@ -1619,7 +1692,8 @@
           "insufficientEvidence"
         ],
         "uncertaintyReason": "insufficientPriorityEvidence"
-      }
+      },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0431",
@@ -1650,7 +1724,8 @@
           "insufficientEvidence"
         ],
         "uncertaintyReason": "insufficientPriorityEvidence"
-      }
+      },
+      "expectNudge": "silent:noActivePriority"
     },
     {
       "id": "gc-0432",
@@ -1686,7 +1761,8 @@
         "clauses": [
           "sustainedDwell"
         ]
-      }
+      },
+      "expectNudge": "accuse:ambient"
     },
     {
       "id": "gc-0433",
@@ -1734,7 +1810,8 @@
           "insufficientEvidence"
         ],
         "uncertaintyReason": "conflictingRules"
-      }
+      },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0434",
@@ -1782,7 +1859,8 @@
           "insufficientEvidence"
         ],
         "uncertaintyReason": "conflictingRules"
-      }
+      },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0435",
@@ -1829,7 +1907,8 @@
         "clauses": [
           "userRule"
         ]
-      }
+      },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0436",
@@ -1866,7 +1945,8 @@
           "insufficientEvidence"
         ],
         "uncertaintyReason": "staleSnapshot"
-      }
+      },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0437",
@@ -1911,7 +1991,8 @@
           "insufficientEvidence"
         ],
         "uncertaintyReason": "staleSnapshot"
-      }
+      },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
     },
     {
       "id": "gc-0438",
@@ -1957,7 +2038,8 @@
           "userRule",
           "sustainedDwell"
         ]
-      }
+      },
+      "expectNudge": "accuse:ambient"
     }
   ]
 }

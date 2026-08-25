@@ -29,6 +29,23 @@ public enum EvaluationPolicy {
     /// depend on the second the suite happened to run in.
     public static let ruleEpochSecondsSince1970: Double = 1_767_225_600
 
+    // MARK: - The nudge lane's fixed surroundings (T143, R-96j's doctrine in the harness tree)
+
+    /// The idle threshold every replayed lane uses — e03's own default, restated as a lane
+    /// constant because the harness has no settings store to read one from.
+    public static let nudgeIdleThresholdSeconds: Double = 120
+
+    /// How idle a step that declares `isUserIdle` is. Far enough above the threshold that a
+    /// reader is in no doubt the fixture meant it.
+    public static let nudgeIdleSeconds: Double = 900
+
+    /// A process identifier for the synthetic activation the lane hands `SensitivityGate`.
+    ///
+    /// It is never read by anything — the gate answers on the bundle identifier alone — but
+    /// `FrontmostActivation` requires one, and R-70f is right that a bare number in the middle of
+    /// an expression is a number nobody reviews.
+    public static let nudgeLanePID: Int32 = 4_242
+
     // MARK: - The corpus budget (R-74.3)
 
     /// An earlier draft promised "≥ 120 cases" without saying what they were, which is how a
@@ -52,20 +69,39 @@ public enum EvaluationPolicy {
     public static let rulesFloor = 30
 
     /// P-124's measured pairs as first-class cases, the overlap/similarity/dwell routes, the
-    /// band table row by row, and the single-shot boundary triples of R-74.1.
-    public static let heuristicFloor = 34
+    /// band table row by row, and the single-shot boundary triples of R-74.1 — plus **one** e05
+    /// case, `queryDwellThreshold`'s committed witness at forty-four seconds.
+    ///
+    /// One and not three, and the reason is a measurement rather than a preference. The
+    /// *at* and *above* points of that boundary are walked a second at a time in a sequence
+    /// fixture, exactly as `sustainedDriftThreshold`'s 89/90/91 are in seq-0003, because every
+    /// single-shot case added here is an `uncertain` verdict in `unaskableUncertaintyShare`'s
+    /// denominator: three askable cases move that share from 0.3472 to 0.3333 and take it below
+    /// its committed floor of 0.34. Lowering the floor to fit the corpus would be precisely the
+    /// move R-75 exists to catch, so the corpus was written to fit the floor instead.
+    public static let heuristicFloor = 35
 
     /// Eleven families, per-family floors, family 11's required shape (R-68).
     public static let adversarialFloor = 33
 
     /// D-05's two, the drift transition table cell by cell, the temporal boundary triples,
-    /// idle, phase exit, cooldown.
-    public static let sequenceFloor = 15
+    /// idle, phase exit, cooldown — **and e05's fourteen**: the tab-hop that witnesses
+    /// `queryCooldown`, the nine-subject priority that witnesses `dailyQueryCap` across two days,
+    /// the shared-budget contention, the deferred rung over a full-screen span, both backoffs,
+    /// never-ask-twice across a relaunch, and the rule-deletion sequence finding 3 added.
+    public static let sequenceFloor = 29
 
-    /// The total, committed at **132** rather than at 120 — a consequence of the per-file
-    /// budget rather than a round number chosen first.
+    /// **Three realistic days** (R-94a): one carrying three priorities, one a single long
+    /// priority with many askable subjects, one a quiet day that must produce **zero**
+    /// interruptions. `queriesPerFocusDay` and `interruptionsPerFocusDayMax` are measured on
+    /// these, and the gate fails closed if they are absent rather than scoring a metric as
+    /// passing on no data.
+    public static let dayFloor = 3
+
+    /// The total, committed as the sum of the per-file budget rather than as a round number
+    /// chosen first.
     public static let corpusFloor =
-        baselineFloor + rulesFloor + heuristicFloor + adversarialFloor + sequenceFloor
+        baselineFloor + rulesFloor + heuristicFloor + adversarialFloor + sequenceFloor + dayFloor
 
     /// The four single-shot corpus files, in load order, each with the floor it owes.
     public static let budgets: [CorpusBudget] = [

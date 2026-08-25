@@ -24,6 +24,13 @@ public struct CorpusOutcome: Sendable, Equatable {
     /// are excluded: R-65 pays the priority-side sentence vector once per revision, not per
     /// activation, and charging it to a classification would measure the wrong thing.
     public let latencies: [Duration]
+    /// **The judgement itself**, carried so the nudge lane decides from the same value the
+    /// classification lane asserted on.
+    ///
+    /// A second classification for the nudge's benefit would be a second opportunity to disagree
+    /// — and the two lanes disagreeing about what the engine said is precisely the failure a
+    /// split metric exists to make impossible.
+    public let judgement: Judgement
 
     public var isMandated: Bool { eligibility == .mandated }
 
@@ -271,8 +278,47 @@ public struct CorpusRunner: Sendable {
             consultedDepth: judgement.consultedDepth,
             drift: judgement.drift,
             explanationTokenCount: judgement.explanation.tokens.count,
-            latencies: latencies
+            latencies: latencies,
+            judgement: judgement
         )
+    }
+
+    // MARK: - The nudge lane's view of the same judgement
+
+    /// The judgement as the **nudge** sees it (T143a).
+    ///
+    /// e04 produces a `VerdictSnapshot` for the inspector; `NudgeJudgement` carries that plus the
+    /// three things the inspector had no use for and a question does — the outcome itself, the
+    /// named route to `uncertain`, and the subject the classification was actually *about*.
+    ///
+    /// The subject is `bundleIdentifier ?? origin`, which is what the sensing layer reports and
+    /// what a rule can be written about. An activation carrying neither is unaskable under R-76's
+    /// no-subject rule, and `QuerySubject.derive(judgedSubject:explanation:)` is the only route
+    /// from either to a nameable subject.
+    public static func nudgeJudgement(
+        for testCase: CorpusCase,
+        outcome: CorpusOutcome
+    ) -> NudgeJudgement {
+        NudgeJudgement(
+            outcome: outcome.judgement.outcome,
+            uncertainty: outcome.judgement.uncertaintyReason,
+            subject: testCase.evidence.bundleIdentifier ?? testCase.evidence.origin,
+            dwelled: .seconds(testCase.dwellSeconds),
+            snapshot: outcome.judgement.verdictSnapshot(stampKey: EngineStamp.current.cacheKey),
+            stamp: EngineStamp.current
+        )
+    }
+
+    /// A stable priority identity for a corpus case, so the ledger key `(priorityID, subjectKind,
+    /// subject)` means the same thing in two processes.
+    ///
+    /// Derived from the priority's own **prose**, not from the case id: two cases about the same
+    /// commitment are the same commitment, and a ledger keyed on the case id would never report a
+    /// repeat because no two cases share one. A revision bump does **not** change the identity —
+    /// R-78's ruling that editing a priority's wording does not re-open every answered question.
+    public static func priorityID(for priority: CorpusPriority?) -> UUID? {
+        guard let priority else { return nil }
+        return stableID(for: "priority|\(priority.prose)")
     }
 
     // MARK: - Comparing

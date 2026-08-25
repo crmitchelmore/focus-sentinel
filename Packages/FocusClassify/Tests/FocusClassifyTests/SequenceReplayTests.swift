@@ -312,4 +312,101 @@ struct SequenceReplayTests {
             )
         }
     }
+
+    // MARK: - e05 · the nudge lane (T143d)
+
+    /// The fourteen fixtures e05 owes, by id. A fixture that vanished would take an invariant
+    /// with it silently — and several of these are named as mutation witnesses in
+    /// `InterventionPolicy.manifest`, where a lost witness is a constant nothing tests.
+    @Test("every nudge sequence fixture e05 committed is present")
+    func theNudgeFixturesArePresent() throws {
+        let ids = Set(try Self.fixtures().map(\.id))
+        for number in 19...32 {
+            let id = String(format: "seq-%04d", number)
+            #expect(ids.contains(id), "\(id) is missing")
+        }
+    }
+
+    /// **A defect's gate is zero** (R-94, U-1). Asserted over every fixture rather than only the
+    /// ones written about it, because a question asked twice is a defect wherever it happens.
+    @Test("no sequence asks the same question twice")
+    func noSequenceRepeatsAQuestion() throws {
+        let harness = Self.harness
+        for fixture in try Self.fixtures() {
+            let transcript = harness.replay(fixture)
+            #expect(
+                transcript.world.repeatQueries == 0,
+                "\(fixture.id) asked \(transcript.world.repeatQueries) question(s) twice"
+            )
+            #expect(
+                transcript.world.accusationsFromQuery == 0,
+                "\(fixture.id) produced an accusation from an uncertain verdict"
+            )
+            #expect(
+                transcript.world.escalationsFromDeferred == 0,
+                "\(fixture.id) escalated past a rung nobody could see"
+            )
+            #expect(
+                transcript.world.queriesOnUnaskable == 0,
+                "\(fixture.id) asked a question R-77 marks unaskable"
+            )
+        }
+    }
+
+    /// **R-81, as arithmetic.** seq-0025 offers the ambient rung twice over a full-screen space
+    /// and delivers neither; the ladder does not advance, so when the presentation ends the rung
+    /// that arrives is the one it never left — the quietest thing the app can do rather than the
+    /// loudest.
+    @Test("a deferred rung advances nothing and spends nothing")
+    func aDeferredRungAdvancesNothing() throws {
+        let fixture = try #require(try Self.fixtures().first { $0.id == "seq-0025" })
+        let transcript = Self.harness.replay(fixture)
+
+        let deferred = transcript.records.filter { $0.nudge == .deferred(.menuBarHidden) }
+        #expect(deferred.count == 2, "seq-0025 must defer twice before it delivers once")
+        #expect(transcript.accusationCount == 1)
+        let delivered = transcript.records.compactMap { record -> LadderRung.Kind? in
+            if case .accuse(let kind) = record.nudge { return kind }
+            return nil
+        }
+        #expect(delivered == [.ambient], "the ladder resumed above the rung it never delivered")
+    }
+
+    /// **Adversarial review finding 3.** Ask, answer "Yes", delete the learned rule, and the app
+    /// still says nothing — because gate 11 reads the immutable receipt and never the rule.
+    @Test("deleting the rule an answer wrote does not re-open the question")
+    func deletingTheRuleDoesNotReopenTheQuestion() throws {
+        let fixture = try #require(try Self.fixtures().first { $0.id == "seq-0027" })
+        let transcript = Self.harness.replay(fixture)
+
+        #expect(transcript.records.contains { $0.action.contains("deleted=") })
+        // After the deletion the subject is uncertain again — a warrant IS constructible — and
+        // the app is silent anyway, by name.
+        let afterDeletion = transcript.records.drop { !$0.action.contains("deleted=") }.dropFirst()
+        #expect(
+            afterDeletion.contains { $0.verdict == .uncertain },
+            "the deletion must return the subject to uncertain, or the fixture proves nothing"
+        )
+        #expect(
+            afterDeletion.contains { $0.nudge == .silent(.alreadyAsked) },
+            "the receipt must be what holds once the session's own memory is gone"
+        )
+        #expect(transcript.queryCount == 2)
+    }
+
+    /// **R-84a.** A mandate closes an open question as declined and takes the slot; the question
+    /// is remembered, so it is never asked again. Losing the asking because something more urgent
+    /// happened would be invisible — the symptom is a question that comes back weeks later.
+    @Test("an accusation preempts an open question and the question is still remembered")
+    func anAccusationPreemptsAQuestion() throws {
+        let fixture = try #require(try Self.fixtures().first { $0.id == "seq-0032" })
+        let transcript = Self.harness.replay(fixture)
+
+        #expect(transcript.queryCount == 1)
+        #expect(transcript.accusationCount == 1)
+        #expect(
+            transcript.records.last?.nudge == .silent(.alreadyAsked),
+            "the preempted question came back"
+        )
+    }
 }

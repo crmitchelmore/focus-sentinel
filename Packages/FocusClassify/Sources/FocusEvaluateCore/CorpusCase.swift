@@ -168,6 +168,20 @@ public struct CorpusCase: Sendable, Equatable {
     public let focusStatus: FocusStatus?
     public let isUserIdle: Bool
     public let expect: CorpusExpectation
+    /// **What the nudge loop must do with this judgement** (T143a).
+    ///
+    /// Decided with a **fresh memory** — no receipt, no spent budget, no cooldown — because a
+    /// single-shot case is an independent claim exactly as its classification expectation is. The
+    /// caps and the never-ask-twice ledger are measured where they mean something: on the
+    /// realistic-day fixtures and on the corpus's own shared-ledger pass.
+    public let expectNudge: NudgeExpectation
+    /// **What a person would have answered**, on the cases where a question is asked (T143b).
+    ///
+    /// Required on every case that is askable *and* names a subject, and forbidden on every other
+    /// — an unanswerable case carrying a ground truth would be a label about a question nobody
+    /// asks. The loader enforces both directions, so the awkward cases cannot be quietly skipped
+    /// and a stray label cannot quietly enter a denominator (R-94a).
+    public let queryGroundTruth: QueryGroundTruth?
     /// How many `NormalisedToken`s the whole explanation may carry.
     ///
     /// The clause *kinds* alone cannot express `maximumExplanationTokens`: a four-token overlap
@@ -271,6 +285,13 @@ public struct CorpusCase: Sendable, Equatable {
         )
         try expectObject.finish()
 
+        let expectNudge = try NudgeExpectation.decode(
+            try object.string("expectNudge"), path: "\(object.path).expectNudge"
+        )
+        let queryGroundTruth = try object.optionalEnumeration(
+            "queryGroundTruth", QueryGroundTruth.self
+        )
+
         let expectSkipped = try object.optionalInt("expectSkippedRuleCount") ?? legacy.count
         let expectExplanationTokens = try object.optionalInt("expectExplanationTokens")
         let evidenceRevision = try object.optionalInt("evidenceRevision")
@@ -304,6 +325,29 @@ public struct CorpusCase: Sendable, Equatable {
             )
         }
 
+        // **The label cannot be skipped for the awkward cases, and cannot be added to the easy
+        // ones.** R-94a's whole correction rests on a ground truth that exists: a gate scoring a
+        // band on absent data is a gate reporting a pass it did not measure, and a stray label on
+        // an unaskable case is a vote in a denominator no question ever entered.
+        let askable = expect.verdict == .uncertain
+            && expect.uncertaintyReason?.queryable != nil
+            && (evidence.bundleIdentifier ?? evidence.origin) != nil
+        if askable, queryGroundTruth == nil {
+            throw CorpusDecodingError(
+                path: "\(object.path).queryGroundTruth",
+                reason: "is required: this case is askable (\(expect.uncertaintyReason?.rawValue ?? "?")) "
+                    + "and names a subject, so a question is asked about it and somebody has to say "
+                    + "what a person would have answered — relevant, unrelated or eitherIsReasonable"
+            )
+        }
+        if !askable, queryGroundTruth != nil {
+            throw CorpusDecodingError(
+                path: "\(object.path).queryGroundTruth",
+                reason: "is forbidden: no question is ever asked about this case, so a label about "
+                    + "how somebody would answer one is a vote in a denominator nothing entered"
+            )
+        }
+
         return CorpusCase(
             id: id,
             note: note,
@@ -321,6 +365,8 @@ public struct CorpusCase: Sendable, Equatable {
             focusStatus: focusStatus,
             isUserIdle: isUserIdle,
             expect: expect,
+            expectNudge: expectNudge,
+            queryGroundTruth: queryGroundTruth,
             expectExplanationTokens: expectExplanationTokens,
             file: file
         )

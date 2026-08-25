@@ -18,9 +18,67 @@ public struct SequenceStep: Sendable, Equatable {
     public let dwellSeconds: Int?
     public let isUserIdle: Bool
     public let sessionPhase: SessionPhase
+    /// F-35's gate, as a fixture switch. During a presentation the panel is suppressed and the
+    /// ambient rung is **deferred** — the app is mute, not quietly escalating (R-81).
+    public let isPresenting: Bool
+    /// Whether the system menu bar is on screen. P-131 measured that it is **not** during a
+    /// full-screen space while our own status item stays *listed*, which is why this is a
+    /// separate reading and not inferred from `isPresenting`.
+    public let menuBarVisible: Bool
     public let expect: SequenceExpectation
+    /// What the person did after the app spoke, and what became of the world (T143d).
+    public let then: SequenceAction
 
     public var subject: String? { bundleIdentifier ?? origin }
+}
+
+/// **What happened after the app spoke** — the half of a nudge fixture a classification fixture
+/// never needed.
+///
+/// A drift machine can be replayed from activations alone; a nudge loop cannot. Whether the next
+/// question comes depends on whether the last one was *answered*, whether the last rung was
+/// *ignored*, whether the learned rule still exists, and whether the process was restarted — and
+/// every one of those is a thing a person did rather than a thing the machine observed. So a
+/// fixture states them, and the replay performs them through the same transitions the host does.
+public struct SequenceAction: Sendable, Equatable {
+    /// The answer to the question currently on screen.
+    public let answer: QueryAnswer?
+    /// What became of the accusation rung currently on screen.
+    public let accusationOutcome: InterventionOutcome?
+    /// **Finding 3's sequence.** Remove the learned rule an earlier answer wrote, for this
+    /// subject. The subject classifies `uncertain` again and the app still says nothing, because
+    /// gate 11 reads the immutable receipt and never the rule (R-78).
+    public let deleteLearnedRule: String?
+    /// A relaunch. Receipts and the day's caps survive; every session-lived thing does not.
+    public let relaunch: Bool
+    /// A day boundary in the person's own calendar. The budget empties; the receipts stay,
+    /// because a question answered yesterday is still answered.
+    public let newDay: Bool
+
+    public static let none = SequenceAction(
+        answer: nil,
+        accusationOutcome: nil,
+        deleteLearnedRule: nil,
+        relaunch: false,
+        newDay: false
+    )
+
+    public var isEmpty: Bool { self == .none }
+
+    static func decode(_ object: StrictObject?) throws -> SequenceAction {
+        guard let object else { return .none }
+        let action = SequenceAction(
+            answer: try object.optionalEnumeration("answer", QueryAnswer.self),
+            accusationOutcome: try object.optionalEnumeration(
+                "accusationOutcome", InterventionOutcome.self
+            ),
+            deleteLearnedRule: try object.optionalString("deleteLearnedRule"),
+            relaunch: try object.optionalBool("relaunch", default: false),
+            newDay: try object.optionalBool("newDay", default: false)
+        )
+        try object.finish()
+        return action
+    }
 }
 
 /// What the fixture claims about one step.
@@ -40,6 +98,12 @@ public struct SequenceExpectation: Sendable, Equatable {
     /// The drift accumulator, in seconds. The one number that says whether the machine is
     /// counting the thing the fixture author thought it was counting.
     public let accumulatedSeconds: Int?
+    /// **What the nudge loop must do with this step**, when the fixture is about the nudge.
+    ///
+    /// Optional, because the eighteen fixtures e04 committed are about the classification and
+    /// have no business acquiring a claim they were not written to make. Every step's decision is
+    /// recorded in the transcript regardless, so a change anywhere is still visible in the digest.
+    public let nudge: NudgeExpectation?
 }
 
 /// A replayable event stream (R-69, F-158, D-05).
@@ -64,6 +128,13 @@ public struct SequenceFixture: Sendable, Equatable {
     /// How many mandates the whole replay must issue. The single number a reviewer reads first,
     /// and the one a transcript digest alone would not make legible.
     public let expectMandates: Int
+    /// How many **questions** the whole replay must deliver. `nil` on a fixture that is not about
+    /// the nudge, so e04's eighteen keep asserting exactly what they were written to assert.
+    public let expectQueries: Int?
+    /// How many **accusation rungs** the whole replay must deliver. A mandate is not a delivery:
+    /// a rung nobody could see is deferred, and `expectMandates` counts what the engine authorised
+    /// while this counts what a person was actually shown (R-81).
+    public let expectAccusations: Int?
 
     // MARK: - Decoding
 
@@ -111,8 +182,39 @@ public struct SequenceFixture: Sendable, Equatable {
             try snapshot.finish()
         }
 
+        let steps = try Self.decodeSteps(try object.objects("steps"))
+
+        let expectMandates = try object.int("expectMandates")
+        let expectQueries = try object.optionalInt("expectQueries")
+        let expectAccusations = try object.optionalInt("expectAccusations")
+        try object.finish()
+
+        guard !steps.isEmpty else {
+            throw CorpusDecodingError(path: id, reason: "has no steps")
+        }
+        return SequenceFixture(
+            id: id,
+            note: note,
+            priority: priority,
+            contextPack: contextPack,
+            rules: rules,
+            steps: steps,
+            expectMandates: expectMandates,
+            expectQueries: expectQueries,
+            expectAccusations: expectAccusations
+        )
+    }
+
+    public static let driftNames = ["aligned", "grace", "sustained", "cooldown"]
+
+    /// Decode a `steps` array.
+    ///
+    /// Shared with `DayFixture`, which is a sequence per priority rather than a second fixture
+    /// format: two step schemas would be two things to keep in step, and the day lane's whole
+    /// claim is that it measures the *same* decision the sequence lane does.
+    static func decodeSteps(_ objects: [StrictObject]) throws -> [SequenceStep] {
         var steps: [SequenceStep] = []
-        for step in try object.objects("steps") {
+        for step in objects {
             let expectObject = try step.object("expect")
             let eligibilityRaw = try expectObject.optionalString("eligibility")
             let clauseNames = try expectObject.optionalStrings("clauses")
@@ -138,7 +240,10 @@ public struct SequenceFixture: Sendable, Equatable {
                         return kind
                     })
                     : nil,
-                accumulatedSeconds: try expectObject.optionalInt("accumulatedSeconds")
+                accumulatedSeconds: try expectObject.optionalInt("accumulatedSeconds"),
+                nudge: try expectObject.optionalString("nudge").map {
+                    try NudgeExpectation.decode($0, path: "\(expectObject.path).nudge")
+                }
             )
             try expectObject.finish()
 
@@ -150,9 +255,17 @@ public struct SequenceFixture: Sendable, Equatable {
                 )
             }
 
+            let advance = try step.int("advanceSeconds")
+            guard advance >= 0 else {
+                throw CorpusDecodingError(
+                    path: "\(step.path).advanceSeconds",
+                    reason: "advances the clock backwards, which MonotonicClock forbids"
+                )
+            }
+
             steps.append(
                 SequenceStep(
-                    advanceSeconds: try step.int("advanceSeconds"),
+                    advanceSeconds: advance,
                     bundleIdentifier: try step.optionalString("bundleID"),
                     origin: try step.optionalString("origin"),
                     titleTokens: try step.optionalStrings("titleTokens"),
@@ -160,37 +273,16 @@ public struct SequenceFixture: Sendable, Equatable {
                     isUserIdle: try step.optionalBool("isUserIdle", default: false),
                     sessionPhase: try step.optionalEnumeration("sessionPhase", SessionPhase.self)
                         ?? .focus,
-                    expect: expect
+                    isPresenting: try step.optionalBool("isPresenting", default: false),
+                    menuBarVisible: try step.optionalBool("menuBarVisible", default: true),
+                    expect: expect,
+                    then: try SequenceAction.decode(try step.optionalObject("then"))
                 )
             )
             try step.finish()
         }
-
-        let expectMandates = try object.int("expectMandates")
-        try object.finish()
-
-        guard !steps.isEmpty else {
-            throw CorpusDecodingError(path: id, reason: "has no steps")
-        }
-        for step in steps where step.advanceSeconds < 0 {
-            throw CorpusDecodingError(
-                path: id,
-                reason: "advances the clock backwards, which MonotonicClock forbids"
-            )
-        }
-
-        return SequenceFixture(
-            id: id,
-            note: note,
-            priority: priority,
-            contextPack: contextPack,
-            rules: rules,
-            steps: steps,
-            expectMandates: expectMandates
-        )
+        return steps
     }
-
-    public static let driftNames = ["aligned", "grace", "sustained", "cooldown"]
 
     // MARK: - The bridge from a real run (R-69)
 
@@ -244,6 +336,8 @@ public struct SequenceFixture: Sendable, Equatable {
                     dwellSeconds: row.dwellSeconds.map { Int($0.rounded()) },
                     isUserIdle: false,
                     sessionPhase: .focus,
+                    isPresenting: false,
+                    menuBarVisible: true,
                     // A recording asserts nothing. The transcript is what a person reads and
                     // then chooses to commit.
                     expect: SequenceExpectation(
@@ -253,8 +347,10 @@ public struct SequenceFixture: Sendable, Equatable {
                         band: nil,
                         eligibility: nil,
                         clauses: nil,
-                        accumulatedSeconds: nil
-                    )
+                        accumulatedSeconds: nil,
+                        nudge: nil
+                    ),
+                    then: .none
                 )
             )
         }
@@ -266,7 +362,9 @@ public struct SequenceFixture: Sendable, Equatable {
             contextPack: contextPack,
             rules: rules,
             steps: steps,
-            expectMandates: 0
+            expectMandates: 0,
+            expectQueries: nil,
+            expectAccusations: nil
         )
     }
 }

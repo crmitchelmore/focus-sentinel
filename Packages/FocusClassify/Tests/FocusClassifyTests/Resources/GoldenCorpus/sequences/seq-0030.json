@@ -1,0 +1,59 @@
+{
+  "id": "seq-0030",
+  "note": "Gates 4 and 5, reached through the e03 types that own them. The same subject, the same priority and the same dwell three times over: on a break the phase forbids it, away from the keyboard the hardware idle source forbids it, and back in focus at the keyboard the question finally comes. Nothing here re-implements a suppression e03 already ships — SessionPhase.permitsIntervention and IdleReading.isIdle(threshold:) are the whole of both gates.",
+  "snapshot": {
+    "priority": {
+      "intent": "Write the Q3 proposal for Acme",
+      "doneWhen": "sent to Dana",
+      "revision": 1
+    }
+  },
+  "steps": [
+    {
+      "advanceSeconds": 0,
+      "bundleID": "com.microsoft.Excel",
+      "sessionPhase": "onBreak",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "nudge": "silent:sessionPhaseForbids",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 60,
+      "bundleID": "com.microsoft.Excel",
+      "sessionPhase": "onBreak",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "nudge": "silent:sessionPhaseForbids",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 60,
+      "bundleID": "com.microsoft.Excel",
+      "isUserIdle": true,
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "nudge": "silent:userIdle",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 60,
+      "bundleID": "com.microsoft.Excel",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "nudge": "ask:noNegativeBasis",
+        "accumulatedSeconds": 0
+      }
+    }
+  ],
+  "expectMandates": 0,
+  "expectQueries": 1,
+  "expectAccusations": 0
+}
