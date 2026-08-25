@@ -100,6 +100,50 @@ struct EngineStampTests {
         #expect(decoded.cacheKey == stamp.cacheKey)
     }
 
+    /// **e05, R-95.** The stamp gained two components — `interventionVersion` and
+    /// `interventionDigest` — and the cache key gained nothing.
+    ///
+    /// That asymmetry is the ruling, not an oversight. `cacheKey` is what e06's verdict cache
+    /// keys on; if a snooze duration or a daily cap moved the key, then tuning a cooldown would
+    /// invalidate every cached verdict — a cache stampede caused by a copy-adjacent change. So
+    /// the nudge's thresholds ride the stamp, are asserted by the self-check and the evaluation
+    /// report, and are **absent from every key**.
+    @Test("the nudge's policy rides the stamp and changes no key")
+    func interventionPolicyIsCarriedButNotKeyed() {
+        #expect(EngineStamp.current.cacheKey == Self.committedCacheKey)
+        #expect(EngineStamp.current.interventionVersion == InterventionPolicy.version)
+        #expect(EngineStamp.current.interventionDigest == InterventionPolicy.digestHex)
+
+        // A stamp whose intervention policy moved keys identically — which is the whole point.
+        let moved = EngineStamp(
+            schemaVersion: 1,
+            policyVersion: EngineStamp.policyRevisions.count,
+            lexiconVersion: 1,
+            embeddingRevision: 1,
+            promptVersion: 0,
+            interventionVersion: 99,
+            interventionDigest: "0xdeadbeefdeadbeef"
+        )
+        #expect(moved.cacheKey == Self.committedRuntimeCacheKey)
+        #expect(
+            moved.verdictCacheKey(
+                priorityID: UUID(uuidString: "3F2504E0-4F89-11D3-9A0C-0305E82C3301")!,
+                priorityRevision: 3,
+                evidenceKey: "com.apple.Safari"
+            )
+                == EngineStamp.current.withEmbeddingRevision(1).verdictCacheKey(
+                    priorityID: UUID(uuidString: "3F2504E0-4F89-11D3-9A0C-0305E82C3301")!,
+                    priorityRevision: 3,
+                    evidenceKey: "com.apple.Safari"
+                ),
+            "a nudge threshold moved a verdict-cache key — R-95 exists to stop exactly this"
+        )
+        // …and the two stamps are still distinguishable as values, so the self-check can tell
+        // them apart even though the cache cannot.
+        #expect(moved != EngineStamp.current.withEmbeddingRevision(1))
+        #expect(moved.cacheKey.split(separator: ".").count == 5)
+    }
+
     /// The policy digest and the policy version move together or not at all. Stated here as
     /// well as in `RelevancePolicyTests` because the two literals are the pair a careless
     /// re-record breaks: changing the digest alone would leave e06's cache keyed on a version

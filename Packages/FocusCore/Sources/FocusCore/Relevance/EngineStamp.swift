@@ -30,18 +30,40 @@ public struct EngineStamp: Sendable, Equatable, Hashable, Codable {
     /// The model prompt/schema version. **`0` in this build — there is no model.** e06 sets it.
     public let promptVersion: Int
 
+    /// The `InterventionPolicy` constant set — the nudge's thresholds, not the engine's.
+    ///
+    /// **Deliberately absent from `cacheKey`**, and that absence is the whole of R-95.
+    /// `cacheKey` is what e06's verdict cache keys on; if a snooze duration or a daily cap
+    /// moved this component *and* the key, then tuning a cooldown would invalidate every
+    /// cached verdict — a cache stampede caused by a copy-adjacent change. Two policies, two
+    /// digests, one stamp carrying both, and exactly one of them in the key.
+    public let interventionVersion: Int
+
+    /// `InterventionPolicy.digestHex` at the moment the stamp was made.
+    ///
+    /// Carried so that the zero-grant self-check and `evaluation.json` can assert it against a
+    /// committed literal, in the same shape `policyDigest` already ships — an intervention
+    /// threshold that moved without anybody re-recording the digest is a red gate.
+    public let interventionDigest: String
+
+    /// The two intervention components default to this build's, so every existing call site is
+    /// untouched and a stamp is never accidentally made without them.
     public init(
         schemaVersion: Int,
         policyVersion: Int,
         lexiconVersion: Int,
         embeddingRevision: Int,
-        promptVersion: Int
+        promptVersion: Int,
+        interventionVersion: Int = InterventionPolicy.version,
+        interventionDigest: String = InterventionPolicy.digestHex
     ) {
         self.schemaVersion = schemaVersion
         self.policyVersion = policyVersion
         self.lexiconVersion = lexiconVersion
         self.embeddingRevision = embeddingRevision
         self.promptVersion = promptVersion
+        self.interventionVersion = interventionVersion
+        self.interventionDigest = interventionDigest
     }
 
     /// This build's stamp, before any embedding revision has been read.
@@ -89,11 +111,15 @@ public struct EngineStamp: Sendable, Equatable, Hashable, Codable {
             policyVersion: policyVersion,
             lexiconVersion: lexiconVersion,
             embeddingRevision: revision,
-            promptVersion: promptVersion
+            promptVersion: promptVersion,
+            interventionVersion: interventionVersion,
+            interventionDigest: interventionDigest
         )
     }
 
     /// `"s1.p1.l1.e1.m0"` — short, sortable, and safe in a file name and a SwiftData column.
+    ///
+    /// **`interventionVersion` and `interventionDigest` are not in it, on purpose** (R-95).
     public var cacheKey: String {
         "s\(schemaVersion).p\(policyVersion).l\(lexiconVersion).e\(embeddingRevision).m\(promptVersion)"
     }
