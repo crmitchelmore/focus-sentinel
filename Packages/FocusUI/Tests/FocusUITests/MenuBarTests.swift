@@ -33,15 +33,14 @@ enum MenuBarFixture {
         snoozes: [MenuBarSnooze(subject: "com.apple.Safari", remaining: .seconds(305))]
     )
 
-    static let withQuestion = presentation(
-        status: .uncertain,
-        pendingQuery: QueryPresentation(
-            task: "Write the Q3 proposal",
-            subject: "com.figma.Desktop",
-            reason: .noNegativeBasis,
-            dwelled: .seconds(90)
-        )
+    static let query = QueryPresentation(
+        task: "Write the Q3 proposal",
+        subject: "com.figma.Desktop",
+        reason: .noNegativeBasis,
+        dwelled: .seconds(90)
     )
+
+    static let withQuestion = presentation(status: .uncertain, pendingQuery: query)
 }
 
 /// **The menu bar, and the two measurements that shape it** (R-91, P-132, P-133).
@@ -234,6 +233,49 @@ struct MenuBarTests {
         let paused = MenuBarAction.setSensingPaused(true)
         let watching = MenuBarAction.setSensingPaused(false)
         #expect(paused != watching)
+    }
+
+    // MARK: - A question in a closed popover is a question nobody has seen (focus-kby, U-1)
+
+    /// **The badge route's whole readability reading.**
+    ///
+    /// `SurfaceRouter.routeQuery(…)` sends a question here on three ordinary conditions — the
+    /// `silentVisual` deck, reduced interruption (forced on by Reduce Motion) and a live
+    /// microphone or camera — and the popover opens **only** when a person clicks the status
+    /// item. The nudge loop used to mark such a question presentable having read nothing, and a
+    /// receipt about a question nobody saw silences it for the life of the priority.
+    ///
+    /// Both halves of the reading are asserted, because both were knowable and neither was read:
+    /// a closed popover shows nothing whatever it is carrying, and an open popover carrying no
+    /// question is not showing one.
+    @Test("a question is only 'showing' when the popover is open and carrying it")
+    func aQuestionIsShowingOnlyWhenThePopoverIsOpenOnIt() {
+        let controller = MenuBarController()
+
+        // Nothing installed, nothing open: the popover cannot be showing anything.
+        controller.update(MenuBarFixture.presentation(pendingQuery: MenuBarFixture.query))
+        #expect(!controller.isPopoverShown)
+        #expect(
+            !controller.isShowingQuery,
+            "a question in a popover nobody has opened counted as a question somebody read"
+        )
+
+        // …and neither can an open one with no question in it.
+        controller.update(MenuBarFixture.presentation(pendingQuery: nil))
+        #expect(!controller.isShowingQuery)
+    }
+
+    /// The one wire that lets the nudge loop hear the click. Without it the popover can open on a
+    /// question and nothing in the programme is any the wiser.
+    @Test("the popover announces itself when a question arrives while it is open")
+    func theLoopIsToldWhenTheQuestionAppears() {
+        let controller = MenuBarController()
+        var announcements = 0
+        controller.onPopoverDidShow = { announcements += 1 }
+
+        // Closed: a new question is not an appearance, because nobody is looking at it.
+        controller.update(MenuBarFixture.presentation(pendingQuery: MenuBarFixture.query))
+        #expect(announcements == 0)
     }
 }
 

@@ -673,6 +673,9 @@ struct NudgePanelTests {
         // a question may be counted as delivered on.
         #expect(!reading.everyActionIsReachable)
         #expect(!reading.unreachableActions.isEmpty)
+        // The second instrument agrees: a click where those actions are lands on nothing,
+        // because they are not in the window at all.
+        #expect(!controller.hitTestsEveryAction(offering: enormous.offeredActionIdentifiers))
     }
 
     /// **One turn of the run loop**, which is where the defect lives.
