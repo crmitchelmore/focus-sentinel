@@ -261,7 +261,11 @@ public struct AccusationPanelView: View {
         // not offering it.
         VStack(alignment: .leading, spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
             ForEach(presentation.offeredActions, id: \.self) { action in
-                actionRow(action)
+                // **Every offered action reports where it landed** (focus-vpu). A panel whose
+                // Pause row is below the clip is not a panel with one button missing — it is not
+                // a decision surface at all, and `NudgePanelController` can only know that if the
+                // layout says where each row is.
+                actionRow(action).nudgeActionTarget(action.rawValue)
             }
         }
     }
@@ -307,46 +311,58 @@ public struct AccusationPanelView: View {
         let gap = DesignTokens.spacing(spacing / 2, scale: textScale)
         return ViewThatFits(in: .horizontal) {
             HStack(spacing: gap) {
-                snoozeLabel
+                snoozeLabel(wraps: false)
                 snoozeButtons(gap: gap)
             }
             VStack(alignment: .leading, spacing: gap) {
-                snoozeLabel
+                snoozeLabel(wraps: false)
                 snoozeButtons(gap: gap)
             }
+            // **The fallback, and it is the one arrangement that must not be honest about
+            // overflowing** (focus-vpu). The first two candidates are `fixedSize` so that "this
+            // does not fit" is a real answer rather than a silent truncation; this one is what is
+            // left when neither fits, and at the largest accessibility text size *it* demanded
+            // 410 points inside a 348-point column — dragging every other action out with it,
+            // because a leading-aligned stack is as wide as its widest child. Measured: all six
+            // actions reported frames ending 46 points past the edge of the panel. So the last
+            // candidate wraps instead of insisting, which is the layout adapting rather than the
+            // person losing the buttons.
             VStack(alignment: .leading, spacing: gap) {
-                snoozeLabel
+                snoozeLabel(wraps: true)
                 ForEach(presentation.snoozeDurations, id: \.self) { span in
-                    snoozeButton(span)
+                    snoozeButton(span, wraps: true)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
         }
     }
 
-    private var snoozeLabel: some View {
+    private func snoozeLabel(wraps: Bool) -> some View {
         NudgeText(.accusationActionSnooze, voice: presentation.voice, role: .callout)
             .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
-            .fixedSize(horizontal: true, vertical: false)
+            .lineLimit(wraps ? nil : 1)
+            .fixedSize(horizontal: !wraps, vertical: wraps)
     }
 
     private func snoozeButtons(gap: CGFloat) -> some View {
         HStack(spacing: gap) {
             ForEach(presentation.snoozeDurations, id: \.self) { span in
-                snoozeButton(span)
+                snoozeButton(span, wraps: false)
             }
         }
     }
 
-    private func snoozeButton(_ span: Duration) -> some View {
+    private func snoozeButton(_ span: Duration, wraps: Bool) -> some View {
         Button {
             onAction(.snooze, span)
         } label: {
             Text(verbatim: NudgeCopy.duration(span))
                 .font(DesignTokens.font(.callout, scale: textScale))
                 // Never truncated: `ViewThatFits` can only choose a layout that fits if the
-                // arrangement that does not fit says so instead of shrinking its own text.
-                .fixedSize(horizontal: true, vertical: false)
+                // arrangement that does not fit says so instead of shrinking its own text. The
+                // fallback wraps for the opposite reason — see `snoozeRow`.
+                .lineLimit(wraps ? nil : 1)
+                .fixedSize(horizontal: !wraps, vertical: wraps)
         }
         .buttonStyle(.bordered)
     }

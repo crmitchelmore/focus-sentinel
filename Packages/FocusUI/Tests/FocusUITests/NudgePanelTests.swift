@@ -240,6 +240,15 @@ struct NudgePanelTests {
 
     // MARK: - Placement, as a pure function over injected displays
 
+    /// A panel-shaped size for the placement fixtures: the committed width and a height in the
+    /// band the real panels measure at. Placement is a pure function of whatever size it is
+    /// handed, and the *height* is now content's to decide, so pinning these fixtures to a
+    /// constant here keeps them about placement rather than about sizing.
+    private static let placementSize = CGSize(
+        width: NudgePanelController.contentWidth,
+        height: 262
+    )
+
     private static func display(
         index: Int,
         isPrimary: Bool,
@@ -275,7 +284,7 @@ struct NudgePanelTests {
     @Test("the panel is placed inside the visible frame, never over the menu bar")
     func placedInsideVisibleFrame() {
         let placement = NudgePanelController.placement(
-            size: NudgePanelController.contentSize,
+            size: Self.placementSize,
             focusedWindowQuartzBounds: nil,
             screens: [Self.primary, Self.secondary]
         )
@@ -285,8 +294,8 @@ struct NudgePanelTests {
         #expect(placement.minY >= visible.minY)
         #expect(placement.maxX <= visible.maxX)
         #expect(placement.maxY <= visible.maxY)
-        #expect(placement.width == Double(NudgePanelController.contentSize.width))
-        #expect(placement.height == Double(NudgePanelController.contentSize.height))
+        #expect(placement.width == Double(Self.placementSize.width))
+        #expect(placement.height == Double(Self.placementSize.height))
     }
 
     @Test("it follows the focused window onto a secondary display")
@@ -296,7 +305,7 @@ struct NudgePanelTests {
         // rather than assuming display zero.
         let onSecondary = ScreenRect(x: 2100, y: 200, width: 800, height: 600)
         let placement = NudgePanelController.placement(
-            size: NudgePanelController.contentSize,
+            size: Self.placementSize,
             focusedWindowQuartzBounds: onSecondary,
             screens: [Self.primary, Self.secondary]
         )
@@ -309,7 +318,7 @@ struct NudgePanelTests {
     func windowOnNoDisplayFallsBackToPrimary() {
         let offCanvas = ScreenRect(x: -9000, y: -9000, width: 10, height: 10)
         let placement = NudgePanelController.placement(
-            size: NudgePanelController.contentSize,
+            size: Self.placementSize,
             focusedWindowQuartzBounds: offCanvas,
             screens: [Self.primary, Self.secondary]
         )
@@ -321,7 +330,7 @@ struct NudgePanelTests {
     @Test("with no displays at all there is nowhere to put it, and it says so")
     func noDisplays() {
         let placement = NudgePanelController.placement(
-            size: NudgePanelController.contentSize,
+            size: Self.placementSize,
             focusedWindowQuartzBounds: nil,
             screens: []
         )
@@ -337,7 +346,7 @@ struct NudgePanelTests {
             visibleFrame: ScreenRect(x: 0, y: 0, width: 200, height: 120)
         )
         let placement = NudgePanelController.placement(
-            size: NudgePanelController.contentSize,
+            size: Self.placementSize,
             focusedWindowQuartzBounds: nil,
             screens: [tiny]
         )
@@ -348,13 +357,13 @@ struct NudgePanelTests {
         #expect(placement.minY >= tiny.visibleFrame.minY)
     }
 
-    // MARK: - The panel is the size it claims to be (focus-x7d)
+    // MARK: - The panel is the size of its content, and every action is reachable
 
-    /// **What a nudge really says**, as the two values the shipping panels are built from.
+    /// **What a nudge really says**, as the three values the shipping panels are built from.
     ///
-    /// Deliberately *real* content rather than a placeholder: the defect this section exists to
-    /// catch is a layout one, and a layout defect cannot be provoked by `EmptyView`. The strings
-    /// are the ones the 19:26 live drive photographed, so the fixture and the frame agree.
+    /// Deliberately *real* content rather than a placeholder: the defects this section exists to
+    /// catch are layout ones, and a layout defect cannot be provoked by `EmptyView`. The strings
+    /// are the ones the live drives photographed, so the fixture and the frame agree.
     private static let queryPresentation = QueryPresentation(
         task: "Write the Q3 proposal for Acme",
         subject: "com.chrismitchelmore.FocusSentinel",
@@ -370,90 +379,300 @@ struct NudgePanelTests {
         returnTarget: "com.apple.TextEdit"
     )
 
+    /// Rung 3. The rung that asks for an explicit choice and does not auto-dismiss — so a
+    /// clipped action here is an action the person is being *required* to reach and cannot.
+    private static let recommitmentPresentation = AccusationPresentation(
+        rung: .recommitment,
+        task: "Write the Q3 proposal for Acme",
+        subject: "com.chrismitchelmore.FocusDecoy",
+        dwelled: .seconds(600),
+        returnTarget: "com.apple.TextEdit"
+    )
+
     /// The shipped tolerance, read from the type under test rather than restated here — a test
     /// that carried its own copy could go green while the app used a looser one.
     private static let sizeTolerance = NudgePanelController.sizeTolerance
-    /// An absolute ceiling on how much of the screen a nudge may take, independent of
-    /// `contentSize`. Raising the constant cannot silence this half.
-    private static let absoluteMaximumHeight: Double = 400
 
-    /// **The assertion that would have caught focus-x7d**, and the reason it lives in the
-    /// AppKit unit lane rather than anywhere else.
-    ///
-    /// A live drive at 19:26 measured the query panel at **380 × 2212** on a 1920 × 1080 screen.
-    /// `screencapture -l <windowNumber>` read the window's *backing store* and showed the
-    /// question rendering perfectly; `screencapture -R` at that same window's own coordinates
-    /// showed a blank white slab, because the 190-point band the content occupies was somewhere
-    /// in two thousand points of window the person could not see. Three existing proofs went
-    /// green over it, and each was green for a different structural reason:
-    ///
-    /// * the live lane captured by window id, which proves a window **rendered**, never that a
-    ///   person can **see** it;
-    /// * `check-focus-steal.sh` asserted the panel *takes* nothing and never that it *shows*
-    ///   anything — and it showed an **empty** panel, so it proved that a window with nothing in
-    ///   it steals no focus. It now asserts the size too, on the real app binary;
-    /// * the snapshot lane renders `QueryPanelView` standalone at a fixed size and never touches
-    ///   an `NSPanel` at all.
-    ///
-    /// So the missing assertion is at the level of the window object, needs no grant of any
-    /// kind, and is exactly this: **put the real content in, show it, let the run loop turn, and
-    /// the window is still the size it says it is.** All four steps are load-bearing: the real
-    /// content because `EmptyView` cannot provoke a layout defect, and the turn because the frame
-    /// is correct until the pass that resizes it happens.
-    @Test(
-        "real nudge content never resizes the window",
-        arguments: [true, false]
-    )
-    func realContentNeverResizesTheWindow(query: Bool) {
-        let controller = Self.controller()
+    /// One cell of the cross product this epic's invariant is asserted over.
+    struct PanelCase {
+        let name: String
+        let scale: ShellTextScale
+        let offered: [String]
+        let content: AnyView
+    }
 
-        if query {
-            controller.update(content: QueryPanelView(presentation: Self.queryPresentation))
-        } else {
-            controller.update(
-                content: AccusationPanelView(presentation: Self.accusationPresentation)
+    static func cases() -> [PanelCase] {
+        [SnapshotTypeSize.standard, .accessibilityLarge].flatMap { size -> [PanelCase] in
+            let scale = size.textScale
+            return [
+                PanelCase(
+                    name: "query.\(size.rawValue)",
+                    scale: scale,
+                    offered: queryPresentation.offeredAnswerIdentifiers,
+                    content: AnyView(
+                        QueryPanelView(presentation: queryPresentation).shellTextScale(scale)
+                    )
+                ),
+                PanelCase(
+                    name: "accusation.\(size.rawValue)",
+                    scale: scale,
+                    offered: accusationPresentation.offeredActionIdentifiers,
+                    content: AnyView(
+                        AccusationPanelView(presentation: accusationPresentation)
+                            .shellTextScale(scale)
+                    )
+                ),
+                PanelCase(
+                    name: "recommitment.\(size.rawValue)",
+                    scale: scale,
+                    offered: recommitmentPresentation.offeredActionIdentifiers,
+                    content: AnyView(
+                        AccusationPanelView(presentation: recommitmentPresentation)
+                            .shellTextScale(scale)
+                    )
+                )
+            ]
+        }
+    }
+
+    /// **THE assertion of this epic, over the whole cross product** (focus-vpu, focus-kby).
+    ///
+    /// `{query, accusation, recommitment} × {standard, accessibilityLarge}`, on the real window,
+    /// with the real views and the compiled String Catalog, after the run loop has turned. The
+    /// claim is not that the frame equals a constant — that claim passed a panel at y = −1186 and
+    /// passed a panel whose Pause row was below the clip. It is that **every action the
+    /// presentation says it is offering is somewhere a person can click**.
+    ///
+    /// Three things are asserted together and each catches a different way of failing:
+    ///
+    /// * the reading itself, which subsumes off-screen, oversize and clipping;
+    /// * a real AppKit `hitTest` at the centre of every action, which is the question a mouse
+    ///   asks;
+    /// * the window's own height against the content's measured height, so a panel that is
+    ///   reachable *because* the content was silently truncated is still a failure.
+    @Test("every offered action is reachable, at both text sizes, on all three panels")
+    func everyOfferedActionIsReachable() throws {
+        for panelCase in Self.cases() {
+            let controller = Self.controller()
+            controller.update(content: panelCase.content)
+            controller.show(presentationIsClear: true)
+            defer { controller.hide() }
+            Self.settle()
+
+            let reading = controller.decisionSurfaceReading(offering: panelCase.offered)
+            let frame = controller.frame
+
+            // Printed, because the driver asked for the measured size of every combination and a
+            // number that only exists inside an assertion is a number nobody read.
+            print(
+                "PANEL \(panelCase.name): \(frame.width) x \(frame.height) at "
+                    + "(\(frame.x), \(frame.y)) — offered \(panelCase.offered.count), "
+                    + "\(reading.summary)"
             )
+
+            #expect(
+                reading.everyActionIsReachable,
+                "\(panelCase.name): \(reading.summary) in a \(frame.width) x \(frame.height) panel"
+            )
+            #expect(
+                controller.hitTestsEveryAction(offering: panelCase.offered),
+                "\(panelCase.name): a click at the centre of an offered action hits nothing"
+            )
+            #expect(reading.isVisible)
+            #expect(reading.isWhollyOnAScreen)
+
+            // The width is the commitment.
+            #expect(abs(frame.width - NudgePanelController.contentWidth) <= Self.sizeTolerance)
+            // The height is measured, never constant: the six cells must not all be one number.
+            #expect(frame.height > 0)
+            #expect(
+                frame.height
+                    <= NudgePanelController.maximumContentHeight(
+                        screens: NudgePanelController.currentScreens()
+                    ) + Self.sizeTolerance
+            )
+            // …and the window really is the size of the view inside it, rather than a right-sized
+            // window with an overflowing hosting view clipped one rectangle further down.
+            let content = try #require(controller.panel.contentView)
+            let bounds = controller.panel.contentRect(forFrameRect: controller.panel.frame)
+            #expect(abs(content.frame.width - bounds.width) <= Self.sizeTolerance)
+            #expect(abs(content.frame.height - bounds.height) <= Self.sizeTolerance)
+        }
+    }
+
+    /// **A constant height is what broke this, so a constant height must be visibly wrong.**
+    ///
+    /// The six cells wrap to genuinely different heights — the accusation at the largest
+    /// accessibility text size is hundreds of points taller than the query at the default one —
+    /// and a panel that answered one number for all of them would be the round-1 defect back.
+    @Test("the panel is a different height for content of different heights")
+    func theHeightIsMeasuredRatherThanDeclared() {
+        var heights: [String: Double] = [:]
+        for panelCase in Self.cases() {
+            let controller = Self.controller()
+            controller.update(content: panelCase.content)
+            controller.show(presentationIsClear: true)
+            defer { controller.hide() }
+            Self.settle()
+            heights[panelCase.name] = controller.frame.height
         }
 
-        let intended = NudgePanelController.contentSize
-        let label = query ? "query" : "accusation"
+        #expect(Set(heights.values).count > 1, "every panel is the same height: \(heights)")
+        // The accessibility size is the same content in a bigger typeface. It cannot be shorter.
+        for panel in ["query", "accusation", "recommitment"] {
+            let standard = heights["\(panel).standard"] ?? 0
+            let large = heights["\(panel).accessibilityLarge"] ?? 0
+            #expect(large > standard, "\(panel) did not grow with its text: \(heights)")
+        }
+    }
 
-        // The panel goes up exactly as a nudge does, and then **the run loop turns** — which is
-        // the whole reason this defect survived three green proofs. Measured on the unfixed code:
-        // the frame is a perfectly correct 380 × 190 the instant `update(content:)` and `show(…)`
-        // return, and 380 × 1542 one turn later, when SwiftUI has been asked for its fitting
-        // sizes and the window has resized itself to obey the `contentMinSize` they published. A
-        // reading taken before that turn is a reading of the moment before the defect.
+    /// **The window never grows on its own again** (focus-x7d).
+    ///
+    /// The original defect was a window that was the right size when `show(…)` returned and 1542
+    /// points tall one turn of the run loop later, because an `NSHostingView` used as a
+    /// `contentView` publishes SwiftUI's own min/ideal/max sizes and the window resizes to obey
+    /// them. The measurement is the panel's now, so the size the show sets is the size that
+    /// survives the turn.
+    @Test("the size a show sets is the size that survives the run loop")
+    func theSizeSurvivesTheTurn() {
+        let controller = Self.controller()
+        controller.update(content: QueryPanelView(presentation: Self.queryPresentation))
+        controller.show(presentationIsClear: true)
+        defer { controller.hide() }
+
+        let atShow = controller.frame
+        Self.settle()
+        let afterTheTurn = controller.frame
+
+        #expect(abs(afterTheTurn.width - atShow.width) <= Self.sizeTolerance)
+        #expect(abs(afterTheTurn.height - atShow.height) <= Self.sizeTolerance)
+        // The window's own refusal, not just its current value: a window whose minimum is two
+        // thousand points is a window that will grow again at the next provocation.
+        #expect(
+            controller.panel.contentMinSize.height
+                <= NudgePanelController.absoluteMaximumHeight + Self.sizeTolerance
+        )
+    }
+
+    /// **The off-screen half of the predicate, on the real window.**
+    ///
+    /// The original live measurement was y = −1186: right size, right content, nowhere a person
+    /// could look. A panel moved off every display fails the reading with nothing else wrong with
+    /// it, which is exactly the case a size comparison waved through.
+    @Test("a panel moved off every display is not a decision surface")
+    func aPanelOffScreenIsNotADecisionSurface() {
+        let controller = Self.controller()
+        controller.update(content: QueryPanelView(presentation: Self.queryPresentation))
         controller.show(presentationIsClear: true)
         defer { controller.hide() }
         Self.settle()
 
+        let offered = Self.queryPresentation.offeredAnswerIdentifiers
+        #expect(controller.decisionSurfaceReading(offering: offered).everyActionIsReachable)
+
+        controller.panel.setFrameOrigin(NSPoint(x: 0, y: -1186))
+        let reading = controller.decisionSurfaceReading(offering: offered)
+
+        #expect(!reading.everyActionIsReachable)
+        #expect(!reading.isWhollyOnAScreen)
+        #expect(reading.isVisible)
+        #expect(reading.unreachableActions.isEmpty)
+    }
+
+    /// A hidden panel is not a decision surface either, and it is a different failure from an
+    /// off-screen one — which is why the reading names both rather than answering one `false`.
+    @Test("a hidden panel is not a decision surface")
+    func aHiddenPanelIsNotADecisionSurface() {
+        let controller = Self.controller()
+        controller.update(content: QueryPanelView(presentation: Self.queryPresentation))
+        controller.show(presentationIsClear: true)
+        Self.settle()
+        controller.hide()
+
+        let reading = controller.decisionSurfaceReading(
+            offering: Self.queryPresentation.offeredAnswerIdentifiers
+        )
+        #expect(!reading.isVisible)
+        #expect(!reading.everyActionIsReachable)
+    }
+
+    /// An action the panel is not offering is not required to be anywhere: the accusation
+    /// withdraws "Back to …" when there is nowhere to return to (R-88), and a panel failed for a
+    /// button it deliberately did not draw would make the invariant unsatisfiable.
+    @Test("only the actions the presentation offers are required to be reachable")
+    func onlyOfferedActionsAreRequired() {
+        let noAnchor = AccusationPresentation(
+            rung: .panel,
+            task: "Write the Q3 proposal for Acme",
+            subject: "com.chrismitchelmore.FocusDecoy",
+            dwelled: .seconds(180)
+        )
+        let controller = Self.controller()
+        controller.update(content: AccusationPanelView(presentation: noAnchor))
+        controller.show(presentationIsClear: true)
+        defer { controller.hide() }
+        Self.settle()
+
+        #expect(!noAnchor.offeredActionIdentifiers.contains(CorrectionAction.returnToTask.rawValue))
+        #expect(
+            controller.decisionSurfaceReading(
+                offering: noAnchor.offeredActionIdentifiers
+            ).everyActionIsReachable
+        )
+        // …and an action that really is not drawn is reported as unreported rather than passed.
+        let reading = controller.decisionSurfaceReading(
+            offering: AccusationPresentation.actionOrder.map(\.rawValue)
+        )
+        #expect(reading.unreportedActions == [CorrectionAction.returnToTask.rawValue])
+        #expect(!reading.everyActionIsReachable)
+    }
+
+    /// **Overflow adapts the layout; it never clips** (focus-vpu).
+    ///
+    /// Content taller than the ceiling gets a scroll view rather than a clip rectangle — and,
+    /// because an action a person has to scroll to is not an action in reach, the reading says so
+    /// rather than passing a panel whose last button is below the fold. That is the whole
+    /// difference between this and the shape it replaces: the previous fix laid 404 points of
+    /// content into 190 points of window and reported success.
+    @Test("content taller than the ceiling scrolls, and is not counted as reachable")
+    func overflowScrollsRatherThanClipping() {
+        // A policy nobody would write, which is the point: the panel must behave when the
+        // content is pathological, not only when it is the fixture. The snooze spans are read
+        // from `InterventionPolicy` by the shipping app and are injectable here, so twenty of
+        // them at the largest text size is a real layout rather than a contrived view.
+        let enormous = AccusationPresentation(
+            rung: .recommitment,
+            task: "Write the Q3 proposal for Acme",
+            subject: "com.chrismitchelmore.FocusDecoy",
+            dwelled: .seconds(600),
+            returnTarget: "com.apple.TextEdit",
+            snoozeDurations: (1...20).map { Duration.seconds($0 * 60) }
+        )
+        let controller = Self.controller()
+        controller.update(
+            content: AccusationPanelView(presentation: enormous)
+                .shellTextScale(.accessibilityLarge)
+        )
+        controller.show(presentationIsClear: true)
+        defer { controller.hide() }
+        Self.settle()
+
+        let ceiling = NudgePanelController.maximumContentHeight(
+            screens: NudgePanelController.currentScreens()
+        )
         let frame = controller.frame
+        print("PANEL overflow: \(frame.width) x \(frame.height), ceiling \(ceiling)")
 
-        #expect(
-            abs(frame.width - Double(intended.width)) <= Self.sizeTolerance,
-            """
-            the \(label) panel settled at \(frame.width)pt wide, not \(intended.width)pt: \
-            SwiftUI's fitting size is driving the window
-            """
-        )
-        #expect(
-            abs(frame.height - Double(intended.height)) <= Self.sizeTolerance,
-            """
-            the \(label) panel settled at \(frame.height)pt tall, not \(intended.height)pt: \
-            the content band is somewhere the person cannot see it (focus-x7d)
-            """
-        )
-        // The same fact without reference to the constant, so raising `contentSize` to make a
-        // failure go away is not a route through this test.
-        #expect(frame.height <= Self.absoluteMaximumHeight)
+        // Clamped, and still on its display: a panel that grew to its content here would be the
+        // 2212-point window again.
+        #expect(abs(frame.height - ceiling) <= Self.sizeTolerance)
+        let reading = controller.decisionSurfaceReading(offering: enormous.offeredActionIdentifiers)
+        #expect(reading.isWhollyOnAScreen)
 
-        // The window's own refusal, not just its current value: a window whose minimum is two
-        // thousand points is a window that will grow again at the next provocation.
-        #expect(controller.panel.contentMinSize.height <= Self.absoluteMaximumHeight)
-
-        // The single reading a caller takes before it writes "asked" into a ledger.
-        #expect(controller.isPresentedAtIntendedSize)
+        // And the honest reading: the actions are down there somewhere, and this is not a surface
+        // a question may be counted as delivered on.
+        #expect(!reading.everyActionIsReachable)
+        #expect(!reading.unreachableActions.isEmpty)
     }
 
     /// **One turn of the run loop**, which is where the defect lives.
@@ -467,26 +686,6 @@ struct NudgePanelTests {
     /// three tenths of a second and give AppKit its turn.
     private static func settle() {
         CFRunLoopRunInMode(.defaultMode, 0.3, false)
-    }
-
-    /// The content is not merely *somewhere* in a right-sized window — it fills it.
-    ///
-    /// The window could be 380 × 190 with the hosting view laid out at 380 × 2212 inside it and
-    /// the person would see the same blank slab, one clip rectangle further down. This asserts
-    /// the view AppKit actually draws is the size of the content rect.
-    @Test("the hosting view fills the panel rather than overflowing it")
-    func hostingViewFillsThePanel() {
-        let controller = Self.controller()
-        controller.update(content: QueryPanelView(presentation: Self.queryPresentation))
-        controller.show(presentationIsClear: true)
-        defer { controller.hide() }
-        Self.settle()
-
-        guard let content = controller.panel.contentView else { return }
-        let bounds = controller.panel.contentRect(forFrameRect: controller.panel.frame)
-
-        #expect(abs(content.frame.width - bounds.width) <= Self.sizeTolerance)
-        #expect(abs(content.frame.height - bounds.height) <= Self.sizeTolerance)
     }
 
     // MARK: - Escape

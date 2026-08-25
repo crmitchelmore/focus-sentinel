@@ -160,11 +160,29 @@ public final class NudgePanelController {
     /// frame the way a menu bar has a cadence.
     public static let edgeMargin: Double = 24
 
-    /// The panel's content size. Compact on purpose — a nudge that fills a quarter of the screen
-    /// is a nudge that has stopped being proportionate.
-    public static let contentSize = CGSize(width: 380, height: 190)
+    /// **The width is a commitment; the height is measured** (focus-vpu).
+    ///
+    /// A constant height was the previous fix and it inverted the defect: content needing 237 to
+    /// 404 points was laid out into 190 and clipped, so an accusation drew three and a half of
+    /// its six actions and the two that were missing — Pause and Change priority — were the two
+    /// a person most needs when the app is wrong. A panel is compact because 380 points is a
+    /// narrow column of text, not because a number says it is 190 tall.
+    public static let contentWidth: Double = 380
 
-    /// How far the window may be from `contentSize` before it is a different window.
+    /// How far the content is held off the window's edges. The snapshot lane renders these views
+    /// at the same inset, so what is measured here and what is read there are the same layout.
+    public static let contentInset: Double = 16
+
+    /// **An absolute ceiling on how much of a screen a nudge may take.**
+    ///
+    /// Every real combination measured on this machine fits under it — the tallest is the
+    /// recommitment rung at the largest accessibility text size, at 737 points — so it is a bound
+    /// on pathology rather than a size anything is squeezed into. Content that exceeds it
+    /// **scrolls**; it is never clipped, and while any offered action is out of reach the panel is
+    /// not a surface a question may be counted as delivered on.
+    public static let absoluteMaximumHeight: Double = 800
+
+    /// How far a measured size may be from the size in force before it is a different size.
     ///
     /// **Not a range and not a fudge factor.** `setContentSize(_:)` sets the content rect, and
     /// on this style mask the frame and the content rect measure equal on this machine. One
@@ -179,6 +197,31 @@ public final class NudgePanelController {
     /// values above.
     let panel: NudgePanel
     private let hosting: NSHostingView<AnyView>
+
+    /// **The measuring instrument, and it is never the window.**
+    ///
+    /// `NSHostingController.sizeThatFits(in:)` answers "how tall is this content when it is
+    /// **given this width**" — the wrapped truth, which is the only number worth having. It is
+    /// not `NSView.fittingSize`, which is SwiftUI's *unconstrained* fitting size: that is the
+    /// number that drove the window to 380 × 2212, because the minimum width of a paragraph is
+    /// roughly its longest word and at that width the paragraph is two thousand points tall.
+    ///
+    /// A second hosting object rather than the live one because measuring must not disturb the
+    /// view a person is looking at, and because the live one carries the frame reporter — asking
+    /// *it* to measure would collect the frames of a layout nobody was shown.
+    private let measurer = NSHostingController(rootView: AnyView(EmptyView()))
+
+    /// The content, before it was wrapped for the panel. Kept so a re-layout — a show, a screen
+    /// change — can be performed without the caller handing the content in again.
+    private var content: AnyView = AnyView(EmptyView())
+    private var traits: AppearanceTraits = .systemDefault
+
+    /// Where every offered action landed, in the panel's content space, as the layout last
+    /// reported it — **and which layout said so**. A reading from a layout the panel has since
+    /// replaced is not a reading of what is on screen, so it is refused rather than trusted.
+    private var reportedFrames = NudgeActionFrameSet.empty
+    /// Bumped on every layout, so two identical layouts produce two distinguishable readings.
+    private var layoutGeneration = 0
 
     /// Escape, or the panel's own close affordance. Wired by whoever put content in the panel.
     public var onDismiss: (() -> Void)?
@@ -201,12 +244,12 @@ public final class NudgePanelController {
         // fixed-size HUD panel means.
         hosting.sizingOptions = []
         hosting.translatesAutoresizingMaskIntoConstraints = true
-        hosting.frame = NSRect(origin: .zero, size: Self.contentSize)
+        hosting.frame = NSRect(origin: .zero, size: Self.startingSize)
         hosting.autoresizingMask = [.width, .height]
         self.hosting = hosting
 
         panel = NudgePanel(
-            contentRect: NSRect(origin: .zero, size: Self.contentSize),
+            contentRect: NSRect(origin: .zero, size: Self.startingSize),
             styleMask: NudgePanel.nudgeStyleMask,
             backing: .buffered,
             defer: false
@@ -231,56 +274,102 @@ public final class NudgePanelController {
         panel.contentView = hosting
         panel.setAccessibilityRole(.window)
         panel.setAccessibilitySubrole(.systemDialog)
-        enforceContentSize()
+        self.traits = traits
+        layOutContent()
 
         panel.onCancel = { [weak self] in self?.onDismiss?() }
     }
 
+    /// The size the window is built at, before anything has been measured. An empty panel's
+    /// content is its inset and nothing else, which is the honest size for a panel with nothing
+    /// in it — and it is replaced by a measured one the moment there is content to measure.
+    private static var startingSize: CGSize {
+        CGSize(width: contentWidth, height: contentInset + contentInset)
+    }
+
     // MARK: - Content
 
-    /// Put a view in the panel.
+    /// Put a view in the panel, and size the panel to it.
     ///
     /// The hosting view is built once, in `init`, and its root view is replaced — so showing a
     /// nudge is a state change on objects that already exist, exactly as the capture panel's
     /// 34 ms depends on (P-57) and for the same reason.
     public func update(content: some View, traits: AppearanceTraits = .systemDefault) {
-        hosting.rootView = AnyView(content.appearanceTraits(traits))
-        enforceContentSize()
+        self.content = AnyView(content)
+        self.traits = traits
+        layOutContent()
     }
 
-    /// **The panel is exactly `contentSize`, and the content is laid out into it** (focus-x7d).
+    /// **A width commitment and a measured height** (focus-vpu).
     ///
-    /// ## What was measured, and why this is not defensive coding
+    /// ## What each of the two previous shapes did, and why neither was the size of anything
     ///
-    /// A live drive read the query panel as a real window **380 × 2212** on a 1920 × 1080
-    /// screen. `screencapture -l <windowNumber>` — the window's backing store — showed the
-    /// question drawn perfectly; `screencapture -R` at that same window's own coordinates showed
-    /// a blank white slab, because the band the content occupied was two thousand points away
-    /// from anywhere a person could look. The panel was on screen, painting, and unreadable.
+    /// The first shape let `NSHostingView` publish SwiftUI's own min/ideal/max sizes to the
+    /// window (`sizingOptions` defaults to `.standardBounds`) and let the next layout pass resize
+    /// the window to obey them. A live drive read the result as a real window **380 × 2212** on a
+    /// 1920 × 1080 screen: the *minimum* width of a paragraph is roughly its longest word — 209
+    /// points here — and at that width the same paragraph is 1542 points tall. The window grew
+    /// into its own minimum and the question ended up somewhere nobody could look.
     ///
-    /// The mechanism, reproduced on this machine: after `update(content:)` the window's
-    /// `contentMinSize` read **(209, 1542)**. An `NSHostingView` used as a `contentView`
-    /// publishes SwiftUI's own min/ideal/max sizes to the window (`sizingOptions` defaults to
-    /// `.standardBounds`), and the *minimum* width of a paragraph is roughly its longest word —
-    /// 209 points here — at which width the same paragraph is 1542 points tall. The next layout
-    /// pass grew the window to that minimum. Nothing in the frame was wrong; the frame was
-    /// simply not what anybody had asked for.
+    /// The second shape pinned the window to a constant 380 × 190 and left the content to fend
+    /// for itself. Measured against the real binary: the accusation needs 237 points at the
+    /// **default** text size and 404 at the largest accessibility size, the recommitment rung 262
+    /// — so the panel was laid out into 190 and clipped. Read on screen: the title cut through
+    /// its first line, the snooze row sliced, and Pause and Change priority below the clip and
+    /// unreachable. The size check still said yes, because the frame really was the constant.
     ///
-    /// ## Why the size is stated three times
+    /// ## What this does instead
     ///
-    /// Each one closes a different route back to the defect, and none of them is the other two:
+    /// * the **width** is committed — 380 points, a narrow column of text — and text wraps into
+    ///   it rather than the window growing sideways;
+    /// * the **height** is measured at that width, through `NSHostingController.sizeThatFits(in:)`
+    ///   with an unbounded height proposal. That is the *wrapped* height, and it is not
+    ///   `NSView.fittingSize`, which is the unconstrained number that produced 2212;
+    /// * it is **clamped** to what the display can actually hold, and content that exceeds the
+    ///   clamp **scrolls** — the layout adapts, and nothing is ever clipped;
+    /// * `contentMinSize`/`contentMaxSize` then hold the window at exactly that size, so a font
+    ///   change or a `ViewThatFits` re-evaluation after the panel is up has nothing to grow into.
     ///
-    /// * `sizingOptions = []` (in `init`) stops SwiftUI publishing sizes to the window at all;
-    /// * `contentMinSize`/`contentMaxSize` make the window itself refuse a resize, so a layout
-    ///   pass provoked by a font change, a Dynamic Type change or a `ViewThatFits` re-evaluation
-    ///   after the panel is already up has nothing to grow into;
-    /// * `setContentSize` + the hosting frame set the size that is actually in force now.
-    ///
-    /// The final `layoutIfNeeded()` is what makes this **synchronous**. Without it the growth
-    /// happens on the next pass — which is exactly why every existing proof went green: the
-    /// frame is right the instant you read it and wrong by the time a person sees it.
-    private func enforceContentSize() {
-        let size = Self.contentSize
+    /// `layoutIfNeeded()` is what makes the whole thing synchronous — and it is also what makes
+    /// the action frames readable in the same turn, because SwiftUI delivers the preference the
+    /// action targets publish during that layout rather than one pass later.
+    private func layOutContent() {
+        let wrappedForMeasurement = AnyView(
+            NudgePanelContent(
+                inset: Self.contentInset,
+                scrolls: false,
+                content: content,
+                onFrames: { _ in }
+            )
+            .appearanceTraits(traits)
+        )
+        measurer.rootView = wrappedForMeasurement
+
+        let measured = measurer.sizeThatFits(
+            in: CGSize(width: Self.contentWidth, height: .greatestFiniteMagnitude)
+        )
+        let ceiling = Self.maximumContentHeight(screens: Self.currentScreens())
+        let height = min(max(measured.height, Self.startingSize.height), ceiling)
+        // A hair of slack, so a content that measures a fraction over the ceiling because of a
+        // rounding difference does not acquire a scroll view it has no use for.
+        let scrolls = measured.height > ceiling + Self.sizeTolerance
+
+        layoutGeneration += 1
+        hosting.rootView = AnyView(
+            NudgePanelContent(
+                inset: Self.contentInset,
+                scrolls: scrolls,
+                content: content,
+                onFrames: { [weak self] reported in self?.reportedFrames = reported }
+            )
+            .environment(\.nudgeLayoutGeneration, layoutGeneration)
+            .appearanceTraits(traits)
+            // The live layout fills the window it was sized for; the measurement above must not,
+            // or an unbounded height proposal would come back unbounded.
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        )
+
+        let size = CGSize(width: Self.contentWidth, height: height)
         panel.contentMinSize = size
         panel.contentMaxSize = size
         panel.setContentSize(size)
@@ -289,6 +378,25 @@ public final class NudgePanelController {
             size: panel.contentRect(forFrameRect: panel.frame).size
         )
         panel.layoutIfNeeded()
+    }
+
+    /// **How tall a nudge may be on the display it is being placed on.**
+    ///
+    /// The absolute ceiling, or what the display can hold with the panel's own margin at top and
+    /// bottom, whichever is smaller. A ceiling taken from a constant alone would put a panel off
+    /// the bottom of a small display; one taken from the display alone would let a nudge fill a
+    /// laptop screen, which is a nudge that has stopped being proportionate.
+    public static func maximumContentHeight(screens: [DisplayGeometry]) -> Double {
+        guard let display = DisplayMapper.primaryScreen(in: screens) else {
+            return absoluteMaximumHeight
+        }
+        let usable = display.visibleFrame.height - edgeMargin - edgeMargin
+        return max(min(absoluteMaximumHeight, usable), startingSize.height)
+    }
+
+    /// The size the window is actually at, as opposed to any size anybody committed to.
+    public var contentSize: CGSize {
+        panel.contentRect(forFrameRect: panel.frame).size
     }
 
     // MARK: - Showing, once, in one function
@@ -311,9 +419,10 @@ public final class NudgePanelController {
             presentationIsClear: presentationIsClear
         )
 
-        // Before `position()`, never after: placement is computed from `panel.frame.size`, so a
-        // window that had grown would be put in the wrong place as well as being the wrong size.
-        enforceContentSize()
+        // Before `position()`, never after: placement is computed from `panel.frame.size`, and
+        // the height is measured from the content — so a panel whose content changed, or whose
+        // display did, is re-measured here rather than being placed at the size of the last one.
+        layOutContent()
         position()
 
         let before = readings()
@@ -362,17 +471,75 @@ public final class NudgePanelController {
 
     public var isVisible: Bool { panel.isVisible }
 
-    /// **Whether the panel is one a person could actually answer** (focus-x7d).
+    /// **Whether this is a surface a person could actually decide on** (focus-vpu, focus-kby).
     ///
-    /// Visible *and* the size it is supposed to be. The second half is not pedantry: the window
-    /// that provoked this was on screen and painting correctly into its backing store, and 2212
-    /// points tall, so the 190-point band carrying the question was nowhere a person would look.
-    /// A caller about to write "asked" into a ledger reads this first, because a question nobody
-    /// saw must never spend the one chance the app gets to ask it (U-1).
-    public var isPresentedAtIntendedSize: Bool {
-        panel.isVisible
-            && abs(panel.frame.width - Self.contentSize.width) <= Self.sizeTolerance
-            && abs(panel.frame.height - Self.contentSize.height) <= Self.sizeTolerance
+    /// The reading that replaced `isPresentedAtIntendedSize`, and the replacement is not a
+    /// widening — it is a different question. "The frame equals a constant" passed a panel at
+    /// y = −1186, because a size says nothing about where a window is, and it passed a panel
+    /// whose Pause and Change priority rows were below the clip, because the frame really was the
+    /// constant. This asks the only thing that matters to somebody being asked to choose: is the
+    /// window on a screen, and is **every action it is offering** somewhere they can click?
+    ///
+    /// The frames come from the layout itself, through the preference the action targets publish,
+    /// so this is a reading of what SwiftUI actually did rather than of what the window was told.
+    ///
+    /// - Parameter identifiers: every action the presentation says it is offering, by `rawValue`.
+    ///   `AccusationPresentation.offeredActionIdentifiers` and
+    ///   `QueryPresentation.offeredAnswerIdentifiers` are what the callers pass.
+    public func decisionSurfaceReading(offering identifiers: [String]) -> DecisionSurfaceReading {
+        DecisionSurfaceReachability.evaluate(
+            isVisible: panel.isVisible,
+            surfaceFrame: frame,
+            screens: Self.currentScreens(),
+            contentBounds: ScreenRect(
+                x: 0,
+                y: 0,
+                width: contentSize.width,
+                height: contentSize.height
+            ),
+            actionTargets: currentActionFrames.map { identifier, rect in
+                ActionHitTarget(
+                    identifier: identifier,
+                    frame: ScreenRect(
+                        x: rect.origin.x,
+                        y: rect.origin.y,
+                        width: rect.width,
+                        height: rect.height
+                    )
+                )
+            },
+            offering: identifiers
+        )
+    }
+
+    /// The frames the **current** layout reported, and nothing else.
+    ///
+    /// A layout that has been replaced describes a panel nobody is looking at any more; under
+    /// default-deny the honest answer for one is "no frames", which reads as unreachable rather
+    /// than as reachable-because-it-used-to-be.
+    private var currentActionFrames: [String: CGRect] {
+        reportedFrames.generation == layoutGeneration ? reportedFrames.frames : [:]
+    }
+
+    /// Whether the panel could hit-test a click at the centre of each offered action.
+    ///
+    /// The geometric reading above says the button is inside the content the person can see; this
+    /// says AppKit would route a click there to the panel's content view — the same question a
+    /// mouse asks. It is a second instrument on the same claim rather than a replacement for it,
+    /// and it is what the self-check reports beside the reading.
+    public func hitTestsEveryAction(offering identifiers: [String]) -> Bool {
+        guard let contentView = panel.contentView else { return false }
+        let height = contentSize.height
+        return identifiers.allSatisfy { identifier in
+            let frames = currentActionFrames
+            guard let rect = frames[identifier], rect.width > 0, rect.height > 0 else {
+                return false
+            }
+            // SwiftUI reports frames from the top-left of the content, AppKit hit-tests from the
+            // bottom-left of it. The flip is stated here rather than assumed anywhere.
+            let point = NSPoint(x: rect.midX, y: height - rect.midY)
+            return contentView.hitTest(point) != nil
+        }
     }
 
     /// The window number, for the live lane's `screencapture -l <windowNumber>` (P-136).

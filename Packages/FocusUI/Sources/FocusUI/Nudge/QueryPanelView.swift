@@ -153,11 +153,17 @@ public struct QueryPanelView: View {
         let gap = DesignTokens.spacing(spacing / 2, scale: textScale)
         return ViewThatFits(in: .horizontal) {
             HStack(spacing: gap) {
-                ForEach(QueryPresentation.actionOrder, id: \.self, content: answerButton)
+                ForEach(QueryPresentation.actionOrder, id: \.self) { answer in
+                    answerButton(answer, wraps: false)
+                }
             }
+            // The fallback. It wraps, because at the largest accessibility text size "Not now"
+            // measured 371 points inside a 348-point column and reported a frame past the edge of
+            // the panel — an answer a person cannot click is an answer they do not have, which is
+            // the U-1 defect this whole invariant exists to catch.
             VStack(alignment: .leading, spacing: gap) {
                 ForEach(QueryPresentation.actionOrder, id: \.self) { answer in
-                    answerButton(answer)
+                    answerButton(answer, wraps: true)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
@@ -169,22 +175,32 @@ public struct QueryPanelView: View {
     /// easy to find by being **drawn** that way rather than by claiming the Return key from
     /// whatever the person happens to be typing into.
     @ViewBuilder
-    private func answerButton(_ answer: QueryAnswer) -> some View {
+    private func answerButton(_ answer: QueryAnswer, wraps: Bool) -> some View {
+        // **The answer reports where it landed** (focus-vpu). A live drive found "Yes, add it /
+        // No / Not now" entirely absent at the largest accessibility text size, on a panel that
+        // reported itself correctly sized — which is the U-1 defect in its purest form: the app
+        // counting a question as asked that nobody could answer.
         if answer == presentation.primaryAnswer {
-            plainAnswerButton(answer).buttonStyle(.borderedProminent)
+            plainAnswerButton(answer, wraps: wraps)
+                .buttonStyle(.borderedProminent)
+                .nudgeActionTarget(answer.rawValue)
         } else {
-            plainAnswerButton(answer).buttonStyle(.bordered)
+            plainAnswerButton(answer, wraps: wraps)
+                .buttonStyle(.bordered)
+                .nudgeActionTarget(answer.rawValue)
         }
     }
 
-    private func plainAnswerButton(_ answer: QueryAnswer) -> some View {
+    private func plainAnswerButton(_ answer: QueryAnswer, wraps: Bool) -> some View {
         Button {
             onAnswer(answer)
         } label: {
             NudgeText(answer.copyKey, voice: presentation.voice, role: .callout)
                 // Never truncated: an answer whose words a person cannot read is an answer they
-                // cannot choose.
-                .fixedSize(horizontal: true, vertical: false)
+                // cannot choose. The stacked fallback wraps rather than insisting on one line,
+                // because an answer drawn past the edge of the panel is one they cannot click.
+                .lineLimit(wraps ? nil : 1)
+                .fixedSize(horizontal: !wraps, vertical: wraps)
         }
     }
 }
