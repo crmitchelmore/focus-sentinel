@@ -2581,6 +2581,78 @@
         }
       }
     },
+    "shell.menuBar.cancelSnooze" : {
+      "comment" : "Popover action: end one subject's snooze now.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancel"
+          }
+        }
+      }
+    },
+    "shell.menuBar.nudgeRung" : {
+      "comment" : "Label for the accusation ladder's current rung in the menu-bar popover: what the app would do next.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next nudge"
+          }
+        }
+      }
+    },
+    "shell.menuBar.openCockpit" : {
+      "comment" : "Popover action: bring the main window forward.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Focus Sentinel"
+          }
+        }
+      }
+    },
+    "shell.menuBar.pendingQuestion" : {
+      "comment" : "Heading above the question when reduced interruption routed it to the popover instead of a panel.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A question is waiting"
+          }
+        }
+      }
+    },
+    "shell.menuBar.snoozed" : {
+      "comment" : "Heading above the list of subjects a snooze is currently running for.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Snoozed"
+          }
+        }
+      }
+    },
+    "shell.menuBar.statusItem" : {
+      "comment" : "Accessibility label for the menu-bar status item's button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus"
+          }
+        }
+      }
+    },
     "shell.nudge.dismiss" : {
       "comment" : "Accessibility label for the nudge panel's close affordance. Escape does the same thing.",
       "extractionState" : "manual",

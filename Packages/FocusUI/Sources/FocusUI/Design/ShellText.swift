@@ -325,6 +325,23 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case nudgeDismiss = "shell.nudge.dismiss"
     case nudgeSnoozeCountdown = "shell.nudge.snoozeCountdown"
     case nudgeRecommitment = "shell.nudge.recommitment"
+
+    // The menu-bar command centre (F-82, F-83, R-91).
+    //
+    // The popover reuses the priority, session, sensing and verdict keys the cockpit already
+    // owns rather than declaring a second set: the menu bar is a second *place* to see the same
+    // facts, and two keys reading "Pause" would be two things to keep in step for no gain.
+    // What is here is only what the command centre itself introduces.
+    case menuBarStatusItem = "shell.menuBar.statusItem"
+    case menuBarOpenCockpit = "shell.menuBar.openCockpit"
+    case menuBarSnoozedHeading = "shell.menuBar.snoozed"
+    case menuBarCancelSnooze = "shell.menuBar.cancelSnooze"
+    case menuBarPendingQuestion = "shell.menuBar.pendingQuestion"
+    /// The **ladder** rung, not the cascade rung. `settings.verdict.rungLabel` reads "Decided
+    /// by" and belongs to e04's precedence ladder; a nudge rung answers a different question —
+    /// what the app would do next — so it gets a label of its own rather than borrowing one
+    /// that would make the popover say "Decided by: a small panel you can answer".
+    case menuBarNudgeRung = "shell.menuBar.nudgeRung"
 }
 
 /// A transform applied to a resolved string immediately before it is drawn.
