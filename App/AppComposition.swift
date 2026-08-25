@@ -418,6 +418,12 @@ final class AppComposition {
     private func startNudgeLoop() {
         menuBar.install()
         menuBar.onAction = { [weak self] action in self?.perform(action) }
+        // **A badge question is asked at the moment the popover opens, not before** (focus-kby).
+        //
+        // The popover opens only on a human click, and the menu bar is the only object that
+        // knows the click happened. This is the one wire that lets the nudge loop tell the
+        // difference between a question somebody read and a question sitting behind a click.
+        menuBar.onPopoverDidShow = { [weak self] in self?.nudgeHost.popoverPresentedTheQuestion() }
         // Read once at launch, and again whenever the settings pane's one sanctioned request
         // returns. `getNotificationSettings` never prompts (P-134), so this costs no permission.
         notificationDelivery.refresh { [weak self] authorisation in

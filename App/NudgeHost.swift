@@ -113,20 +113,36 @@ final class NudgeHost {
     private var openWarrantAskedAt: Date?
     private var openRung: LadderRung?
 
-    /// **Whether the open question ever reached a surface a person could read** (focus-x7d, U-1).
+    /// **Which surface the open question went to, and what that surface could be proven to
+    /// show** (focus-kby, U-1).
     ///
-    /// `false` until a surface says otherwise, and the whole reason it exists is that the app
-    /// gets **one** chance to ask about a subject. Every receipt in `QueryLedger` is immutable
-    /// and `hasAsked(…)` is gate 11 of the suppression stack, so a receipt written about a
-    /// question nobody saw does not merely mis-record history — it permanently silences the
-    /// question. U-1 licenses the app to interrupt on `uncertain` precisely because the
-    /// interruption is one cheap click that teaches it; spending that click on a panel the
-    /// person never read is the app burning its licence.
+    /// Three facts rather than one `Bool`, because the `Bool` was the defect. It was set outside
+    /// the `if surface == .panel` branch, so a question routed to the popover badge was marked
+    /// presentable having read **nothing** — and the popover opens only when a person clicks it,
+    /// so the reading it never took would have been `false`. The router sends questions there on
+    /// three ordinary conditions: the `silentVisual` deck, reduced interruption (forced on by
+    /// Reduce Motion), and a live microphone or camera — which is to say, anybody on a call.
     ///
-    /// A question that was never presentable is therefore **never written down**, and comes back
-    /// — which is the correct outcome and the opposite of the one the ledger's other paths want,
-    /// so it is a stored fact rather than something inferred at the write.
-    private var openQuestionWasPresentable = false
+    /// Every receipt in `QueryLedger` is immutable and `hasAsked(…)` is gate 11 of the
+    /// suppression stack, so a receipt about a question nobody saw does not merely mis-record
+    /// history — it permanently silences that question. U-1 licenses the app to interrupt on
+    /// `uncertain` precisely because the interruption is one cheap click that teaches it;
+    /// spending that click on a surface the person never read is the app burning its licence.
+    ///
+    /// The reading is **per surface** and is taken by the surface itself:
+    ///
+    /// | surface | readable means |
+    /// |---|---|
+    /// | `panel` | on screen, on a display, and every answer in reach — `decisionSurfaceReading` |
+    /// | `popoverBadge` | the popover is **open and showing this question** |
+    ///
+    /// Nothing infers readability from having called `show(…)`, and nothing infers it from
+    /// falling through a branch.
+    private var openQuestionSurface: NudgeSurface?
+    private var openQuestionReadingAtAsk: SurfaceReadability = .unknowable
+    /// The answers the open question is offering, by `rawValue`, so the reading taken as it ends
+    /// asks about the same set the panel was drawn with.
+    private var openQuestionActions: [String] = []
 
     init(
         context: ModelContext,
@@ -350,6 +366,29 @@ final class NudgeHost {
                 presentationIsClear: !surroundings.presentation.suppressesOverlays,
                 announcement: presentation.announcement()
             )
+
+            // **R-81 at the level that matters: a rung whose corrections are out of reach was
+            // not delivered** (focus-vpu). A live drive read this panel with Pause and Change
+            // priority below the clip — the two actions a person most needs when the app is
+            // wrong. An accusation you cannot answer back to is the anti-pattern the Court's
+            // product boundary forbids, so it is a deferral: the ladder's clock stays stopped,
+            // nothing is counted, and the rung is offered again.
+            let reading = panel.decisionSurfaceReading(
+                offering: presentation.offeredActionIdentifiers
+            )
+            guard reading.everyActionIsReachable else {
+                logger.error(
+                    "a rung was put on an unreadable panel: \(reading.summary, privacy: .public)"
+                )
+                panel.hide()
+                record(
+                    deferral: .noSurfaceAvailable,
+                    kind: .accusation,
+                    subject: rung.subject,
+                    priorityID: priorityID
+                )
+                return
+            }
             delivered(surface: .panel, rung: rung, priorityID: priorityID)
 
         case .notification:
@@ -397,7 +436,8 @@ final class NudgeHost {
         slot = taken
         openWarrant = warrant
         openWarrantAskedAt = dateProvider.now
-        openQuestionWasPresentable = false
+        openQuestionSurface = nil
+        openQuestionReadingAtAsk = .unknowable
         openRung = nil
 
         let presentation = QueryPresentation(
@@ -417,8 +457,11 @@ final class NudgeHost {
             )
             return
         }
+        openQuestionSurface = surface
+        openQuestionActions = presentation.offeredAnswerIdentifiers
 
-        if surface == .panel {
+        switch surface {
+        case .panel:
             panel.update(content: QueryPanelView(presentation: presentation) { [weak self] answer in
                 self?.answer(answer)
             })
@@ -427,24 +470,26 @@ final class NudgeHost {
                 announcement: presentation.announcement()
             )
 
-            // **The question is only asked if it is askable** (focus-x7d).
+            // **The question is only asked if it is askable** (focus-x7d, focus-vpu).
             //
             // `RungDelivery`'s own doctrine, applied to the one surface it was not applied to:
-            // *a window being listed on screen is not a window being visible.* A panel that came
-            // up at some size other than the one it was built to be is a panel whose question is
-            // somewhere the person cannot read — the state a live drive photographed — and a
-            // delivery reading taken from "we called `orderFrontRegardless`" cannot tell the
-            // difference. This reading can, it needs no grant, and it is taken here rather than
-            // trusted from the show path.
+            // *a window being listed on screen is not a window being visible.* The reading is
+            // taken here, from the panel, rather than trusted from the show path — and it is
+            // about the **answers**, not about the frame: a panel of exactly the agreed size with
+            // "Not now" past its edge is a question the person cannot answer.
             //
             // A question that fails it is a **deferral**: nothing is counted, nothing is
             // written, the slot is given back, and the subject stays askable. Deferring costs
             // the person one more moment of drift; recording it would cost them the question.
-            guard panel.isPresentedAtIntendedSize else {
+            let reading = panel.decisionSurfaceReading(offering: openQuestionActions)
+            openQuestionReadingAtAsk = reading.everyActionIsReachable ? .readable : .notReadable
+            guard reading.everyActionIsReachable else {
+                logger.error(
+                    "a question was put on an unreadable panel and left unwritten: \(reading.summary, privacy: .public)"
+                )
                 panel.hide()
                 slot = slot.released()
-                openWarrant = nil
-                openWarrantAskedAt = nil
+                forgetOpenQuestion()
                 record(
                     deferral: .noSurfaceAvailable,
                     kind: .query,
@@ -453,13 +498,49 @@ final class NudgeHost {
                 )
                 return
             }
-        }
-        // A `popoverBadge` question is drawn by the menu-bar refresh, which reads
-        // `pendingPopoverQuery` below. A question is never a notification (R-82).
 
-        openQuestionWasPresentable = true
+        case .popoverBadge:
+            // **The badge is an invitation, not a delivery** (focus-kby).
+            //
+            // The popover is drawn by the composition root's menu-bar refresh, which reads
+            // `pendingPopoverQuery` below, and it opens **only when a person clicks the status
+            // item**. So a question routed here has reached nobody yet: the reading is taken
+            // now, and taken again when the popover actually opens
+            // (`popoverPresentedTheQuestion()`). Until then nothing is counted and nothing is
+            // written, which is what stops a question burning its one asking behind a click that
+            // opens it.
+            openQuestionReadingAtAsk = popoverReadability()
+            guard openQuestionReadingAtAsk == .readable else { return }
+
+        case .menuBar, .notification:
+            // A question is never a notification (R-82), and the glyph has no answer affordance.
+            // Reaching either would be a routing bug; it is a deferral, never a receipt.
+            slot = slot.released()
+            forgetOpenQuestion()
+            record(
+                deferral: .noSurfaceAvailable,
+                kind: .query,
+                subject: warrant.subject.identifier,
+                priorityID: priorityID
+            )
+            return
+        }
+
+        deliverQuestion(surface: surface, warrant: warrant, priorityID: priorityID, now: surroundings.monotonic)
+    }
+
+    /// The bookkeeping of a question that has actually reached somebody.
+    ///
+    /// One function and one call per question, so "delivered" cannot be recorded twice for a
+    /// badge question that is asked once and read once.
+    private func deliverQuestion(
+        surface: NudgeSurface,
+        warrant: QueryWarrant,
+        priorityID: UUID?,
+        now: Duration
+    ) {
         deliveredCount += 1
-        fatigue.reduce(.delivered(.query), now: surroundings.monotonic)
+        fatigue.reduce(.delivered(.query), now: now)
         openRecordID = write(
             InterventionEvent(
                 kind: .query,
@@ -469,6 +550,27 @@ final class NudgeHost {
                 queryReason: warrant.reason
             ),
             priorityID: priorityID
+        )
+    }
+
+    /// **The popover has opened, and the question is on it** (focus-kby).
+    ///
+    /// Wired from the composition root, which is the only object that knows the menu bar and the
+    /// nudge loop both exist. This is the moment a badge question stops being an invitation and
+    /// becomes an asking — and it is the only moment at which one may be counted as delivered.
+    func popoverPresentedTheQuestion() {
+        guard let warrant = openWarrant,
+              openQuestionSurface == .popoverBadge,
+              openQuestionReadingAtAsk != .readable,
+              popoverReadability() == .readable
+        else { return }
+
+        openQuestionReadingAtAsk = .readable
+        deliverQuestion(
+            surface: .popoverBadge,
+            warrant: warrant,
+            priorityID: activePriorityID(),
+            now: monotonicClock.elapsed
         )
     }
 
@@ -655,49 +757,52 @@ final class NudgeHost {
     /// is released for the same reason in the other direction: a surface nobody can see must not
     /// hold the one open interruption for the rest of the session.
     private func withdrawForPresentation() {
+        // Before the window goes, never after: the reading the ledger needs is a reading of the
+        // surface as it was while the question was still on it.
         expireOpenQuestion()
         panel.withdrawForPresentation()
         slot = slot.released()
-        openWarrant = nil
-        openWarrantAskedAt = nil
-        openQuestionWasPresentable = false
+        forgetOpenQuestion()
         openRung = nil
     }
 
     private func closeSurfaces() {
         panel.hide()
         slot = slot.released()
+        forgetOpenQuestion()
+        openRung = nil
+    }
+
+    /// Forget the open question **without writing anything**.
+    ///
+    /// One place, so that every path which ends a question either writes through
+    /// `recordQuestion(…)` first or writes nothing at all — and none of them can leave a reading
+    /// behind for the next question to inherit.
+    private func forgetOpenQuestion() {
         openWarrant = nil
         openWarrantAskedAt = nil
-        openQuestionWasPresentable = false
-        openRung = nil
+        openQuestionSurface = nil
+        openQuestionReadingAtAsk = .unknowable
+        openQuestionActions = []
     }
 
     /// A question closed to make room for an accusation (R-84a).
     private func close(_ preempted: PreemptedQuery) {
         guard let priorityID = activePriorityID() else { return }
         // A question the person could never read is not a question that was asked, so
-        // preempting it costs nothing and writes nothing (focus-x7d). It still leaves the
-        // surface, because the accusation needs it.
-        guard questionWasPresentable() else {
-            complete(.dismissed)
-            return
-        }
-        do {
-            try ledger.record(
-                priorityID: priorityID,
-                subjectKind: preempted.warrant.subject.kind,
-                subject: preempted.warrant.subject.identifier,
-                reason: preempted.warrant.reason,
-                outcome: preempted.outcome,
-                askedAt: openWarrantAskedAt
-            )
-        } catch {
-            logger.error(
-                "the preempted question could not be recorded: \(error.localizedDescription, privacy: .public)"
-            )
-        }
+        // preempting it costs nothing and writes nothing (focus-kby). The ledger decides that,
+        // not this host: it is handed the two readings and the end path, and it writes or
+        // refuses. The surface is left either way, because the accusation needs it.
+        let wrote = recordQuestion(
+            subjectKind: preempted.warrant.subject.kind,
+            subject: preempted.warrant.subject.identifier,
+            reason: preempted.warrant.reason,
+            outcome: preempted.outcome,
+            ending: .preempted,
+            priorityID: priorityID
+        )
         complete(.dismissed)
+        guard wrote else { return }
         fatigue.reduce(.queryResolved(preempted.outcome), now: monotonicClock.elapsed)
     }
 
@@ -728,20 +833,84 @@ final class NudgeHost {
         clearSessionState()
     }
 
-    /// **Whether the open question reached a person at all** (focus-x7d, U-1).
+    /// **What the open question's surface can be proven to show, right now** (focus-kby, U-1).
     ///
-    /// Two readings, and the second is the one the live drive needed. `ask(…)` recorded whether
-    /// the surface presented correctly at the moment it went up; this re-reads the panel now,
-    /// because a window can be the right size when it is ordered front and the wrong size one
-    /// turn of the run loop later — which is exactly how a 380 × 2212 panel passed a check
-    /// taken at show time and reached a person as a blank slab.
+    /// Per surface, and taken from the surface itself. There is no fallback that answers *yes*
+    /// for a surface that has gone: the previous shape did — `guard panel.isVisible else { return
+    /// true }` — which meant a question routed to a popover that was never open was "readable"
+    /// for its whole life, because a closed popover has `isVisible == false` from beginning to
+    /// end. Under default-deny the honest answer when a surface cannot be re-read is
+    /// **`unknowable`**, and `QuestionLedgerPolicy` refuses to write on one.
     ///
-    /// A panel that is no longer on screen cannot be re-read, so the show-time reading stands:
-    /// the alternative would be to forget every question the person actually answered.
-    private func questionWasPresentable() -> Bool {
-        guard openQuestionWasPresentable else { return false }
-        guard panel.isVisible else { return true }
-        return panel.isPresentedAtIntendedSize
+    /// The question a person actually answered is not lost by that: an answer travels through
+    /// `answer(_:)` and `QueryLedger.answer(…)`, which is a different path with a different
+    /// end — `.answered`, which always writes.
+    private func currentReadability() -> SurfaceReadability {
+        switch openQuestionSurface {
+        case .panel:
+            guard panel.isVisible else { return .unknowable }
+            return panel.decisionSurfaceReading(offering: openQuestionActions)
+                .everyActionIsReachable ? .readable : .notReadable
+        case .popoverBadge:
+            return popoverReadability()
+        case .menuBar, .notification, nil:
+            return .unknowable
+        }
+    }
+
+    /// **Whether the popover is open and showing this question** (focus-kby).
+    ///
+    /// `MenuBarController.isPopoverShown` and `isShowingQuery` are both knowable and were both
+    /// unread. A closed popover is `unknowable` rather than `notReadable`: nothing can be
+    /// established about a surface that is not on screen, and both answers refuse the write.
+    private func popoverReadability() -> SurfaceReadability {
+        guard menuBar.isPopoverShown else { return .unknowable }
+        return menuBar.isShowingQuery ? .readable : .notReadable
+    }
+
+    /// A question that has ended, offered to the ledger.
+    ///
+    /// The host states the four facts — which surface, what it showed at the ask, what it shows
+    /// now, and how the question ended — and `QueryLedger.recordResolution(…)` decides. The
+    /// decision is `QuestionLedgerPolicy`'s, in `FocusCore`, where a test can instantiate it;
+    /// this function has no rule of its own to get wrong.
+    ///
+    /// - Returns: whether a receipt was written.
+    @discardableResult
+    private func recordQuestion(
+        subjectKind: RuleSubjectKind,
+        subject: String,
+        reason: QueryableUncertainty,
+        outcome: AskedQuestionOutcome,
+        ending: QuestionEnding,
+        priorityID: UUID
+    ) -> Bool {
+        do {
+            let action = try ledger.recordResolution(
+                priorityID: priorityID,
+                subjectKind: subjectKind,
+                subject: subject,
+                reason: reason,
+                outcome: outcome,
+                askedAt: openWarrantAskedAt,
+                surface: openQuestionSurface,
+                readingAtAsk: openQuestionReadingAtAsk,
+                readingNow: currentReadability(),
+                ending: ending
+            )
+            if case .stayAskable(let reason) = action {
+                logger.error(
+                    "a question nobody could be shown was not written down (\(reason.rawValue, privacy: .public)), so it stays askable"
+                )
+                return false
+            }
+            return true
+        } catch {
+            logger.error(
+                "the question could not be recorded: \(error.localizedDescription, privacy: .public)"
+            )
+            return false
+        }
     }
 
     /// A question that was on screen when the world changed under it.
@@ -752,23 +921,17 @@ final class NudgeHost {
     /// **Unless the asking did not happen.** A receipt is immutable and `hasAsked(…)` is gate 11,
     /// so writing one about a question that never reached a readable surface would silence that
     /// question for the life of the priority — the app spending its single licensed interruption
-    /// on a panel nobody saw (focus-x7d). That question is left unwritten, on purpose, and comes
-    /// back.
+    /// on a surface nobody saw (focus-kby). That question is left unwritten, on purpose, and
+    /// comes back.
     private func expireOpenQuestion() {
         guard let warrant = openWarrant, let priorityID = activePriorityID() else { return }
-        guard questionWasPresentable() else {
-            logger.error(
-                "a question that never reached a readable surface was not written down, so it stays askable"
-            )
-            return
-        }
-        try? ledger.record(
-            priorityID: priorityID,
+        recordQuestion(
             subjectKind: warrant.subject.kind,
             subject: warrant.subject.identifier,
             reason: warrant.reason,
             outcome: .expired,
-            askedAt: openWarrantAskedAt
+            ending: .expired,
+            priorityID: priorityID
         )
     }
 
@@ -783,7 +946,11 @@ final class NudgeHost {
     /// The question waiting in the menu-bar popover, when reduced interruption or the
     /// `silentVisual` deck routed one there (R-92). `nil` the rest of the time.
     var pendingPopoverQuery: QueryPresentation? {
-        guard let warrant = openWarrant, !panel.isVisible else { return nil }
+        // **The surface the router chose, not "the panel is not up"** (focus-kby). The old test
+        // was the second one, so a question the panel had just deferred appeared in the popover
+        // as though it had been routed there — and would have been read as a badge question by
+        // anything that asked.
+        guard let warrant = openWarrant, openQuestionSurface == .popoverBadge else { return nil }
         return QueryPresentation(
             voice: preferences.voice,
             task: activeIntent() ?? "",
@@ -843,8 +1010,19 @@ final class NudgeHost {
     /// that is the honest reading of "hide", and it is why this is not `.dismiss`.
     func hideOverlays() {
         panel.hide()
-        slot = slot.released()
         menuBar.closePopover()
+        slot = slot.released()
+        // **The open question goes with the screen it was on** (focus-kby, F-81).
+        //
+        // It used to survive: the panel went away and the warrant and its readability stayed,
+        // so the next thing to end a question — a session end, a phase change — read the
+        // *previous* question's reading against a surface that had been gone for an hour, and
+        // the reading it read was the `isVisible` fallback's cheerful `true`. Nothing is written
+        // here, which is the whole of F-81: the person asked for their screen back, not to tell
+        // the app anything, so the question is still unanswered and will be offered again.
+        forgetOpenQuestion()
+        openRung = nil
+        openRecordID = nil
     }
 
     /// The rung the ladder has reached, for the popover.

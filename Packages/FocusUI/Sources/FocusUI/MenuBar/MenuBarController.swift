@@ -216,6 +216,13 @@ public final class MenuBarController {
     /// What a click asked for. Wired by the composition root.
     public var onAction: ((MenuBarAction) -> Void)?
 
+    /// **The popover has opened, or has just been handed something new to show.**
+    ///
+    /// Wired by the composition root, because a question routed to the badge has reached nobody
+    /// until this fires: the popover opens **only** when a person clicks the status item, and
+    /// nothing else in the programme can tell the nudge loop that the click happened (focus-kby).
+    public var onPopoverDidShow: (() -> Void)?
+
     private var statusItem: NSStatusItem?
     private let popover = NSPopover()
     private var presentation = MenuBarPresentation(status: .uncertain)
@@ -288,10 +295,15 @@ public final class MenuBarController {
 
     /// Hand the item a new state. Redraws only what changed.
     public func update(_ presentation: MenuBarPresentation, traits: AppearanceTraits? = nil) {
+        let hadQuery = self.presentation.pendingQuery != nil
         self.presentation = presentation
         if let traits { self.traits = traits }
         redraw(force: false)
-        if popover.isShown { popover.contentViewController = popoverController() }
+        guard popover.isShown else { return }
+        popover.contentViewController = popoverController()
+        // A question that arrived while the popover was already open is a question the person is
+        // looking at, and the loop is told for the same reason it is told about an opening.
+        if !hadQuery, presentation.pendingQuery != nil { onPopoverDidShow?() }
     }
 
     private func redraw(force: Bool) {
@@ -379,9 +391,18 @@ public final class MenuBarController {
         }
         popover.contentViewController = popoverController()
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+        onPopoverDidShow?()
     }
 
     public var isPopoverShown: Bool { popover.isShown }
+
+    /// **Whether a question is on screen in the popover right now** (focus-kby, U-1).
+    ///
+    /// Both halves are load-bearing and both were knowable and unread: a popover that is open
+    /// but showing snoozes is not showing a question, and a question in a popover nobody has
+    /// opened is a question nobody has seen. This is the whole of the badge route's readability
+    /// reading, and the nudge loop writes no receipt about a badge question without it.
+    public var isShowingQuery: Bool { popover.isShown && presentation.pendingQuery != nil }
 
     public func closePopover() {
         popover.performClose(nil)
