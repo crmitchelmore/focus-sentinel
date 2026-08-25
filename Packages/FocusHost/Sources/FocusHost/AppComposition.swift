@@ -17,7 +17,7 @@ import SwiftData
 /// it was handed. That one-way rule is what keeps the privacy posture checkable at the
 /// dependency-graph level instead of by reading code.
 @MainActor
-final class AppComposition {
+public final class AppComposition {
     /// The application's one composition root.
     ///
     /// A single instance rather than a `@State` value, for two reasons that both matter. The
@@ -27,7 +27,7 @@ final class AppComposition {
     /// cannot shorten. And `--focus-self-check` has to report on the *live* panel and the
     /// *live* hot-key registration rather than on a second set built for the occasion, or the
     /// report would describe something the user never gets.
-    static let shared = AppComposition()
+    public static let shared = AppComposition()
 
     /// Whether the local data store opened, and why not if it did not.
     ///
@@ -40,12 +40,12 @@ final class AppComposition {
         var isReady: Bool { self == .ready }
     }
 
-    let modelContainer: ModelContainer
+    public let modelContainer: ModelContainer
     let storeStatus: StoreStatus
 
     /// Wall-clock time. Injected everywhere rather than called directly, so that every
     /// timestamp in the programme is reproducible in a test.
-    let dateProvider: any DateProvider
+    public let dateProvider: any DateProvider
 
     /// Elapsed time. Deliberately a different protocol returning a different type.
     let monotonicClock: any MonotonicClock
@@ -352,7 +352,7 @@ final class AppComposition {
     /// `FocusSentinelApp.init()` calls this, which is **before the first frame**: the session
     /// is reconciled and the graph is attached before any surface draws, so the cockpit's first
     /// paint already shows the corrected elapsed time rather than a restarted one.
-    func start() {
+    public func start() {
         guard !hasStarted else { return }
         hasStarted = true
 
@@ -604,7 +604,7 @@ final class AppComposition {
     ///
     /// The pane performs the request; this learns the answer. Nothing here can ask, which is
     /// what keeps the routing path provably prompt-free (R-82.1, R-96g).
-    func refreshNotificationAuthorisation() {
+    public func refreshNotificationAuthorisation() {
         notificationDelivery.refresh { [weak self] authorisation in
             guard let self else { return }
             self.nudgeHost.preferences = NudgePreferences(
@@ -619,7 +619,7 @@ final class AppComposition {
     ///
     /// Quitting is not a pause the person took: a `sensingPaused` row at termination would be a
     /// fact about the app closing rather than about their day.
-    func stop() {
+    public func stop() {
         sensingHost.stop()
     }
 
@@ -689,8 +689,110 @@ final class AppComposition {
     /// value `FocusUI` consumes. That translation happening *here* is what lets `FocusUI`
     /// stay free of any dependency on `FocusSensing` — the UI never learns which observer it
     /// was handed, only what that observer currently reports.
-    var cockpitState: CockpitState {
+    public var cockpitState: CockpitState {
         priorityHost.state
+    }
+
+    // MARK: - The surface the app target reaches this package through
+    //
+    // **Deliberately narrow, and narrower than it was.** When these objects lived in the
+    // application target the scenes reached straight into `composition.priorityHost.state`,
+    // `composition.sensingHost.summary` and `composition.nudgeHost.preferences` — three hosts'
+    // internals read and, in the nudge's case, written from inside a `View`. The hosts are
+    // `internal` to this package now, so a scene can only ask the composition root, which is
+    // the one object whose job is to know them all.
+    //
+    // Every member below is a projection or a verb that already existed; none of them decides
+    // anything, and there is still exactly one place a click becomes a write.
+
+    /// The cockpit's mutation host. `PriorityHost` is the app's only `PriorityActing`.
+    public var cockpitActions: any PriorityActing { priorityHost }
+
+    /// The session controls' host. `SessionHost` is the app's only `SessionActing`, and it is
+    /// what the four session menu commands and the cockpit's buttons both call.
+    public var sessionActions: any SessionActing { sessionHost }
+
+    /// How long the open session has been running, read from the injected wall clock at the
+    /// moment somebody asked. `nil` when there is no session.
+    public var sessionElapsedSeconds: Double? {
+        sessionHost.snapshot.map { $0.elapsedWallSeconds(now: dateProvider.now) }
+    }
+
+    /// The last application the observer graph saw that was not this one.
+    public var lastActiveBundleID: String? { sensingHost.lastForeignBundleIdentifier }
+
+    /// What is being watched, for the Privacy pane and the cockpit's status line — one answer
+    /// rather than two opinions.
+    public var sensingSummary: SensingSummary { sensingHost.summary }
+
+    /// What this Mac lets the app do, as the probe read it.
+    public var capabilities: CapabilityMatrix { sensingHost.capabilities }
+
+    /// What the engine actually concluded, for the verdict inspector (R-71).
+    public var verdict: VerdictSnapshot? { relevanceHost.verdict }
+
+    /// The window's own `UndoManager`, handed to both journals.
+    ///
+    /// One call rather than two, because the two journals drive one Edit menu and a scene that
+    /// could adopt into one of them and forget the other is a scene with a half-working ⌘Z.
+    public func adoptUndoManager(_ manager: UndoManager?) {
+        priorityHost.adoptUndoManager(manager)
+        // Only the operations a *person* performed reach it: an auto-pause for a screen lock
+        // is not something they meant to do, and offering to undo it would be offering to undo
+        // the world.
+        sessionHost.adoptUndoManager(manager)
+    }
+
+    /// An incoming `focus://` handoff. It parses and **shows**; there is no route from here to
+    /// a store mutation that does not pass through a person pressing Replace (F-142).
+    public func receive(_ url: URL) {
+        priorityHost.receive(url)
+    }
+
+    /// Re-theme the pre-built quick-capture panel when the appearance preference changes.
+    public func updateCapturePanelTraits(_ traits: AppearanceTraits) {
+        quickCapturePanel.update(traits: traits)
+    }
+
+    /// What the Intervention pane draws, read from the live loop rather than assembled for the
+    /// occasion.
+    public var interventionSettings: InterventionSettings {
+        InterventionSettings(
+            voice: nudgeHost.preferences.voice,
+            reducedInterruption: nudgeHost.preferences.reducedInterruption,
+            quietHours: InterventionPolicy.quietHoursDefault,
+            authorisation: nudgeHost.notificationAuthorisation,
+            usage: nudgeHost.todaysUsage(),
+            presentationExclusions: sensingHost.presentationExclusions.sorted()
+        )
+    }
+
+    /// What the Intervention pane asked for.
+    ///
+    /// The one thing it is **not** allowed to do is ask for a permission: that call lives in
+    /// the pane's own file and nowhere else (R-96g), and this handler only learns that the
+    /// answer changed and re-reads it from `getNotificationSettings`, which never prompts.
+    public func perform(_ action: InterventionSettingsAction) {
+        switch action {
+        case .setVoice(let voice):
+            nudgeHost.preferences = NudgePreferences(
+                voice: voice,
+                reducedInterruption: nudgeHost.preferences.reducedInterruption,
+                authorisation: nudgeHost.preferences.authorisation
+            )
+        case .setReducedInterruption(let reduced):
+            nudgeHost.preferences = NudgePreferences(
+                voice: nudgeHost.preferences.voice,
+                reducedInterruption: reduced,
+                authorisation: nudgeHost.preferences.authorisation
+            )
+        case .setQuietHours, .removePresentationExclusion:
+            // Both are stored settings e05 does not yet persist a row for; the pane reports the
+            // request and the store lands in a later task rather than being faked here.
+            break
+        case .notificationAuthorisationChanged:
+            refreshNotificationAuthorisation()
+        }
     }
 
     /// Re-read everything the store knows nothing about and push it into the cockpit value.
@@ -704,7 +806,7 @@ final class AppComposition {
     /// Without this the app would have a visible defect rather than a stale one: locking the
     /// screen pauses the session in the store, and the window would keep saying *Focus* until
     /// the person happened to press something.
-    func refreshCockpit() {
+    public func refreshCockpit() {
         let snapshot = sessionHost.snapshot
         judge(in: snapshot)
         refreshMenuBar(session: snapshot)

@@ -12,6 +12,7 @@
 		B00000000000000000000003 /* FocusClassify in Frameworks */ = {isa = PBXBuildFile; productRef = A00000000000000000000003 /* FocusClassify */; };
 		B00000000000000000000004 /* FocusSensing in Frameworks */ = {isa = PBXBuildFile; productRef = A00000000000000000000004 /* FocusSensing */; };
 		B00000000000000000000005 /* FocusUI in Frameworks */ = {isa = PBXBuildFile; productRef = A00000000000000000000005 /* FocusUI */; };
+		B00000000000000000000006 /* FocusHost in Frameworks */ = {isa = PBXBuildFile; productRef = A00000000000000000000006 /* FocusHost */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -32,6 +33,7 @@
 				B00000000000000000000003 /* FocusClassify in Frameworks */,
 				B00000000000000000000004 /* FocusSensing in Frameworks */,
 				B00000000000000000000005 /* FocusUI in Frameworks */,
+				B00000000000000000000006 /* FocusHost in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -79,6 +81,7 @@
 				A00000000000000000000003 /* FocusClassify */,
 				A00000000000000000000004 /* FocusSensing */,
 				A00000000000000000000005 /* FocusUI */,
+				A00000000000000000000006 /* FocusHost */,
 			);
 			productName = FocusSentinel;
 			productReference = 500000000000000000000001 /* FocusSentinel.app */;
@@ -114,6 +117,7 @@
 				900000000000000000000003 /* XCLocalSwiftPackageReference "Packages/FocusClassify" */,
 				900000000000000000000004 /* XCLocalSwiftPackageReference "Packages/FocusSensing" */,
 				900000000000000000000005 /* XCLocalSwiftPackageReference "Packages/FocusUI" */,
+				900000000000000000000006 /* XCLocalSwiftPackageReference "Packages/FocusHost" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 200000000000000000000002 /* Products */;
@@ -285,6 +289,10 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/FocusUI;
 		};
+		900000000000000000000006 /* XCLocalSwiftPackageReference "Packages/FocusHost" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/FocusHost;
+		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -307,6 +315,10 @@
 		A00000000000000000000005 /* FocusUI */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = FocusUI;
+		};
+		A00000000000000000000006 /* FocusHost */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = FocusHost;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

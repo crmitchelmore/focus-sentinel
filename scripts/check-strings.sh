@@ -132,12 +132,19 @@ MODULES = {
         "Packages/FocusUI/Sources/FocusUI/Resources/Localizable.xcstrings",
         "Packages/FocusUI/Sources",
     ),
+    # The composition layer. It moved out of the app target so that a test bundle could reach
+    # it, and this row is what stops that move quietly retiring the assertion the app target
+    # was carrying: the composition root owns no user-visible text, wherever it lives.
+    "FocusHost": (
+        "Packages/FocusHost/Sources/FocusHost/Resources/Localizable.xcstrings",
+        "Packages/FocusHost/Sources",
+    ),
 }
 
 # Modules whose catalog is deliberately empty. See the header: the app target is a
 # composition root and owns no user-visible text, so its catalog is the guard rather than the
 # content, and this is the assertion that keeps it one.
-EXPECTS_NO_STRINGS = ("App",)
+EXPECTS_NO_STRINGS = ("App", "FocusHost")
 
 LITERAL = re.compile(r'"([^"\\\n]+)"')
 COMMENT = re.compile(r'^\s*(//|///|\*|/\*)')
@@ -248,7 +255,8 @@ for module, (catalog_path, source_dir) in sorted(MODULES.items()):
             f"{module}: owns no user-visible text, as the catalog split intends",
             [f"unexpected key: {key}" for key in owned]
             + [
-                "The app target is a composition root: user-visible text belongs to FocusUI",
+                "The app target and FocusHost are the composition layer: user-visible text",
+                "belongs to FocusUI",
                 "and is reached through ShellStrings. Move the key there, or take this module",
                 "out of EXPECTS_NO_STRINGS deliberately.",
             ],

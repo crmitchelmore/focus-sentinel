@@ -1339,8 +1339,10 @@ enum SelfCheck {
 /// Hosts the self-check. In every other respect the app has no delegate behaviour: the
 /// scenes are SwiftUI's.
 @MainActor
-final class FocusAppDelegate: NSObject, NSApplicationDelegate {
-    func applicationDidFinishLaunching(_ notification: Notification) {
+public final class FocusAppDelegate: NSObject, NSApplicationDelegate {
+    public override init() { super.init() }
+
+    public func applicationDidFinishLaunching(_ notification: Notification) {
         guard let path = SelfCheck.requestedOutputPath else { return }
 
         // The headless modes first. None of them has anything to say about the shell, so none of
@@ -1403,7 +1405,7 @@ final class FocusAppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// A single-window cockpit has nothing to keep running once its window is gone.
-    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+    public func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         false
     }
 }

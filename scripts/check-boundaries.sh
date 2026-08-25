@@ -15,6 +15,20 @@
 #                  FocusCore
 #   FocusUI        SwiftUI, AppKit, Observation, QuickLook,     SwiftData, networking, Sensing, Classify, Rules
 #                  UniformTypeIdentifiers, FocusCore
+#   FocusHost      Foundation, AppKit, SwiftData, Observation,   SwiftUI, networking
+#                  ApplicationServices, os, ALL FIVE siblings
+#
+# The sixth row is the composition layer, and it is the one row that may import every sibling
+# at once — because that is the whole of its job. It used to be the app target, where the same
+# permission was granted implicitly and checked by nothing: `App/` is not a package, so no
+# `swift package describe` could read its graph and no test bundle could import its module.
+# Three mutations to `NudgeHost` survived a full green suite for exactly that reason. Making it
+# a package puts its dependencies under this matrix and its wiring under a test target.
+#
+# It may **not** import SwiftUI. Views are FocusUI's, and a composition root able to declare
+# one would be a second place surfaces are written. `ApplicationServices` is the self-check's,
+# and only the read-only half: it is how `--focus-self-check` reports whether Accessibility has
+# been granted without ever asking for it.
 #
 # The three e02 additions are rulings, not conveniences (plan R-14):
 #
@@ -116,6 +130,7 @@ ALLOWED_PRODUCTS[FocusRules]="FocusCore"
 ALLOWED_PRODUCTS[FocusClassify]="FocusCore FocusRules"
 ALLOWED_PRODUCTS[FocusSensing]="FocusCore"
 ALLOWED_PRODUCTS[FocusUI]="FocusCore"
+ALLOWED_PRODUCTS[FocusHost]="FocusClassify FocusCore FocusRules FocusSensing FocusUI"
 
 typeset -A FORBIDDEN_IMPORTS
 FORBIDDEN_IMPORTS[FocusCore]="AppKit SwiftUI Cocoa Network CFNetwork NetworkExtension FocusRules FocusClassify FocusSensing FocusUI"
@@ -124,9 +139,13 @@ FORBIDDEN_IMPORTS[FocusClassify]="AppKit SwiftUI Cocoa Network CFNetwork Network
 FORBIDDEN_IMPORTS[FocusSensing]="SwiftUI Network CFNetwork NetworkExtension FocusClassify FocusRules FocusUI"
 # SwiftData is on FocusUI's forbidden list from e02, and it is the enforcement point for R-24:
 # the cockpit renders a `CockpitState` value and calls a `PriorityActing` protocol, both
-# declared in `FocusCore`, and `App/PriorityHost.swift` is the only type that opens a store.
+# declared in `FocusCore`, and `FocusHost`'s `PriorityHost` is the only type that opens a store.
 # That is what keeps every surface in this package snapshot-testable with no container.
 FORBIDDEN_IMPORTS[FocusUI]="SwiftData Network CFNetwork NetworkExtension FocusSensing FocusClassify FocusRules"
+# The composition layer's one prohibition. Everything else it is allowed precisely because it
+# is the layer that assembles the others; SwiftUI is not, because a view here would be a view
+# outside FocusUI.
+FORBIDDEN_IMPORTS[FocusHost]="SwiftUI Cocoa Network CFNetwork NetworkExtension"
 
 # The positive half of the matrix: every platform framework each package is permitted to
 # import. Sibling packages are handled by ALLOWED_PRODUCTS above and are added to this set per
@@ -137,8 +156,9 @@ ALLOWED_FRAMEWORKS[FocusRules]="Foundation SwiftData os"
 ALLOWED_FRAMEWORKS[FocusClassify]="Foundation NaturalLanguage os"
 ALLOWED_FRAMEWORKS[FocusSensing]="Foundation AppKit CoreGraphics IOKit Carbon.HIToolbox CoreAudio CoreMediaIO os"
 ALLOWED_FRAMEWORKS[FocusUI]="Foundation SwiftUI AppKit Observation QuickLook UniformTypeIdentifiers UserNotifications os"
+ALLOWED_FRAMEWORKS[FocusHost]="Foundation AppKit SwiftData Observation ApplicationServices os"
 
-PACKAGES=(FocusCore FocusRules FocusClassify FocusSensing FocusUI)
+PACKAGES=(FocusCore FocusRules FocusClassify FocusSensing FocusUI FocusHost)
 
 # Foundation networking types that are the usual accidental route onto the network.
 NETWORK_SYMBOL_PATTERN='URLSession|URLRequest|URLConnection|NWConnection|NWListener|NWBrowser|CFStream|CFSocket'

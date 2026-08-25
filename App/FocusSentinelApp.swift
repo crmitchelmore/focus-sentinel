@@ -1,6 +1,6 @@
 import AppKit
 import FocusCore
-import FocusSensing
+import FocusHost
 import FocusUI
 import SwiftData
 import SwiftUI
@@ -64,13 +64,7 @@ struct FocusSentinelApp: App {
         }
 
         Settings {
-            SettingsHost(
-                appearance: appearance,
-                dateProvider: composition.dateProvider,
-                sensing: composition.sensingHost,
-                relevance: composition.relevanceHost,
-                nudge: composition.nudgeHost
-            )
+            SettingsHost(appearance: appearance, composition: composition)
                 .appearanceTraits(appearance.traits)
         }
         .modelContainer(composition.modelContainer)
@@ -116,33 +110,27 @@ private struct CockpitHost: View {
 
     private var cockpit: some View {
         CockpitView(
-            state: composition.priorityHost.state,
-            actions: composition.priorityHost,
+            state: composition.cockpitState,
+            actions: composition.cockpitActions,
             // The session host is the app's only `SessionActing`, and it is what the cockpit's
             // session controls and the four e03 menu commands both call — one code path for a
             // click and for a key equivalent.
-            sessionActions: composition.sessionHost,
-            sessionElapsedSeconds: composition.priorityHost.state.session
-                .map { $0.elapsedWallSeconds(now: composition.dateProvider.now) },
-            lastActiveBundleID: composition.sensingHost.lastForeignBundleIdentifier
+            sessionActions: composition.sessionActions,
+            sessionElapsedSeconds: composition.sessionElapsedSeconds,
+            lastActiveBundleID: composition.lastActiveBundleID
         )
         .onAppear {
-            composition.priorityHost.adoptUndoManager(undoManager)
-            // The session journal drives the same Edit menu. Only the operations a *person*
-            // performed reach it: an auto-pause for a screen lock is not something they meant
-            // to do, and offering to undo it would be offering to undo the world.
-            composition.sessionHost.adoptUndoManager(undoManager)
-            composition.quickCapturePanel.update(traits: appearance.traits)
+            composition.adoptUndoManager(undoManager)
+            composition.updateCapturePanelTraits(appearance.traits)
         }
         .onChange(of: undoManager) { _, manager in
-            composition.priorityHost.adoptUndoManager(manager)
-            composition.sessionHost.adoptUndoManager(manager)
+            composition.adoptUndoManager(manager)
         }
         .onChange(of: appearance.traits) { _, traits in
-            composition.quickCapturePanel.update(traits: traits)
+            composition.updateCapturePanelTraits(traits)
         }
         .onOpenURL { url in
-            composition.priorityHost.receive(url)
+            composition.receive(url)
         }
     }
 }
@@ -156,15 +144,10 @@ private struct CockpitHost: View {
 /// knowledge of SwiftData at all.
 private struct SettingsHost: View {
     let appearance: AppearanceObserver
-    let dateProvider: any DateProvider
-    /// The live observer graph, so the Privacy pane draws what is actually attached.
-    let sensing: SensingHost
-    /// The live relevance runtime, so the Privacy pane's verdict inspector draws what the
-    /// engine actually concluded rather than a value assembled for the occasion (R-71).
-    let relevance: RelevanceHost
-    /// The live nudge loop, so the Intervention pane's usage rows show today's real spend and
-    /// its routing matrix is the router's own table under the preferences actually in force.
-    let nudge: NudgeHost
+    /// The live graph, so the Privacy pane draws what is actually attached, the verdict
+    /// inspector draws what the engine actually concluded (R-71), and the Intervention pane's
+    /// usage rows show today's real spend.
+    let composition: AppComposition
 
     @Environment(\.modelContext) private var modelContext
 
@@ -175,56 +158,16 @@ private struct SettingsHost: View {
             // What is being watched, and what this Mac lets the app do — read from the graph
             // rather than probed again here, so the Privacy pane and the cockpit's status line
             // are one answer rather than two opinions.
-            summary: sensing.summary,
-            capabilities: sensing.capabilities,
-            verdict: relevance.verdict,
-            intervention: interventionSettings,
-            onInterventionAction: apply(_:)
+            summary: composition.sensingSummary,
+            capabilities: composition.capabilities,
+            verdict: composition.verdict,
+            intervention: composition.interventionSettings,
+            onInterventionAction: composition.perform(_:)
         )
         .task {
             // The window may be opened long after launch, so the stored value is read here
             // rather than assumed to still match what the observer was built with.
             appearance.preference = FocusStore.appearancePreference(in: modelContext)
-        }
-    }
-
-    /// What the Intervention pane draws, read from the live loop rather than assembled here.
-    private var interventionSettings: InterventionSettings {
-        InterventionSettings(
-            voice: nudge.preferences.voice,
-            reducedInterruption: nudge.preferences.reducedInterruption,
-            quietHours: InterventionPolicy.quietHoursDefault,
-            authorisation: nudge.notificationAuthorisation,
-            usage: nudge.todaysUsage(),
-            presentationExclusions: sensing.presentationExclusions.sorted()
-        )
-    }
-
-    /// What the pane asked for.
-    ///
-    /// The one thing it is **not** allowed to do here is ask for a permission: that call lives
-    /// in the pane's own file and nowhere else (R-96g), and this handler only learns that the
-    /// answer changed and re-reads it from `getNotificationSettings`, which never prompts.
-    private func apply(_ action: InterventionSettingsAction) {
-        switch action {
-        case .setVoice(let voice):
-            nudge.preferences = NudgePreferences(
-                voice: voice,
-                reducedInterruption: nudge.preferences.reducedInterruption,
-                authorisation: nudge.preferences.authorisation
-            )
-        case .setReducedInterruption(let reduced):
-            nudge.preferences = NudgePreferences(
-                voice: nudge.preferences.voice,
-                reducedInterruption: reduced,
-                authorisation: nudge.preferences.authorisation
-            )
-        case .setQuietHours, .removePresentationExclusion:
-            // Both are stored settings e05 does not yet persist a row for; the pane reports the
-            // request and the store lands in a later task rather than being faked here.
-            break
-        case .notificationAuthorisationChanged:
-            AppComposition.shared.refreshNotificationAuthorisation()
         }
     }
 
@@ -239,7 +182,7 @@ private struct SettingsHost: View {
                 try? FocusStore.setAppearancePreference(
                     newValue,
                     in: modelContext,
-                    now: dateProvider.now
+                    now: composition.dateProvider.now
                 )
             }
         )

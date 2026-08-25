@@ -902,7 +902,7 @@ check_outside "R-96e" "NSApp.activate appears only where the person summoned the
     'NSApp\.activate\(|NSApplication\.shared\.activate\(|activateIgnoringOtherApps' \
     App Packages \
     --allow Packages/FocusUI/Sources/FocusUI/Capture/QuickCapturePanelController.swift \
-    --allow App/SelfCheck.swift
+    --allow Packages/FocusHost/Sources/FocusHost/SelfCheck.swift
 
 # R-96f — the question never accuses.
 #

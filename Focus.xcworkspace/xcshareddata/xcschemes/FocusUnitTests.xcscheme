@@ -62,6 +62,16 @@
                ReferencedContainer = "container:Packages/FocusUI">
             </BuildableReference>
          </TestableReference>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "FocusHostTests"
+               BuildableName = "FocusHostTests.xctest"
+               BlueprintName = "FocusHostTests"
+               ReferencedContainer = "container:Packages/FocusHost">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
       <EnvironmentVariables>
          <EnvironmentVariable
