@@ -481,6 +481,150 @@
         }
       }
     },
+    "nudge.withheld.alreadyAsked" : {
+      "comment" : "Query withheld: this exact question was already asked for this priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus already asked about this one."
+          }
+        }
+      }
+    },
+    "nudge.withheld.budgetExhausted" : {
+      "comment" : "Query withheld: a cap, a cooldown or a backoff says not now.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "That’s enough questions for now."
+          }
+        }
+      }
+    },
+    "nudge.withheld.interruptionInFlight" : {
+      "comment" : "Query withheld: a nudge already holds the single interruption slot.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Something else is already on screen."
+          }
+        }
+      }
+    },
+    "nudge.withheld.noActivePriority" : {
+      "comment" : "Query withheld: no priority is set.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "There’s no priority to ask about."
+          }
+        }
+      }
+    },
+    "nudge.withheld.noSingleSubject" : {
+      "comment" : "Query withheld: drift spans several subjects, or the activation named none.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "There’s no single app to ask about."
+          }
+        }
+      }
+    },
+    "nudge.withheld.reasonNotAskable" : {
+      "comment" : "Query withheld: the uncertainty has no answerable question in it.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "There’s no useful question to ask."
+          }
+        }
+      }
+    },
+    "nudge.withheld.sessionPhaseForbids" : {
+      "comment" : "Query withheld: the session is on a break, a detour, paused, interrupted or complete.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The session isn’t in focus right now."
+          }
+        }
+      }
+    },
+    "nudge.withheld.statusForbids" : {
+      "comment" : "Query withheld: the shown status is not the uncertain one.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus isn’t undecided about this."
+          }
+        }
+      }
+    },
+    "nudge.withheld.userIdle" : {
+      "comment" : "Query withheld: no hardware input for longer than the idle threshold.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nobody’s at the keyboard."
+          }
+        }
+      }
+    },
+    "nudge.withheld.verdictRelevant" : {
+      "comment" : "Query withheld: the app is confident this supports the priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This looks like part of the task."
+          }
+        }
+      }
+    },
+    "nudge.withheld.verdictUnrelated" : {
+      "comment" : "Query withheld: the verdict was unrelated, which is the accusation ladder's business.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "There is nothing to ask about here."
+          }
+        }
+      }
+    },
+    "nudge.withheld.withinDwellGrace" : {
+      "comment" : "Query withheld: the person has only just arrived.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "It’s too soon to ask."
+          }
+        }
+      }
+    },
     "rule.authority.global" : {
       "comment" : "Label for a rule scoped to no particular priority.",
       "extractionState" : "manual",
