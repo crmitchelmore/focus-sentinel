@@ -445,6 +445,54 @@
         }
       }
     },
+    "nudge.deferred.menuBarHidden" : {
+      "comment" : "Deferral: a full-screen space is hiding the system menu bar, so the ambient rung has nowhere to appear.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The menu bar is hidden right now."
+          }
+        }
+      }
+    },
+    "nudge.deferred.noSurfaceAvailable" : {
+      "comment" : "Deferral: no surface can carry this rung in the state the app is in.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "There’s nowhere to show this right now."
+          }
+        }
+      }
+    },
+    "nudge.deferred.notificationDeliveryFailed" : {
+      "comment" : "Deferral: the notification centre refused the request after a positive settings read.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The notification could not be delivered."
+          }
+        }
+      }
+    },
+    "nudge.deferred.presentationActive" : {
+      "comment" : "Deferral: the presentation gate is closed, so nothing is drawn over the screen.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Something is being presented."
+          }
+        }
+      }
+    },
     "nudge.query.reason.languageNotSupported" : {
       "comment" : "Query reason line: this Mac has no sentence embedding for the language in play.",
       "extractionState" : "manual",
@@ -477,6 +525,42 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Focus hasn’t been told which apps this task lives in."
+          }
+        }
+      }
+    },
+    "nudge.rung.ambient" : {
+      "comment" : "Ladder rung 1: the menu-bar glyph changes and nothing else happens.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A quiet change in the menu bar"
+          }
+        }
+      }
+    },
+    "nudge.rung.panel" : {
+      "comment" : "Ladder rung 2: the compact non-activating panel with the correction economy.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A small panel you can answer"
+          }
+        }
+      }
+    },
+    "nudge.rung.recommitment" : {
+      "comment" : "Ladder rung 3: a notification where authorised, otherwise the panel in recommitment form.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A prompt that asks you to choose"
           }
         }
       }
