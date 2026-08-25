@@ -164,6 +164,15 @@ public final class NudgePanelController {
     /// is a nudge that has stopped being proportionate.
     public static let contentSize = CGSize(width: 380, height: 190)
 
+    /// How far the window may be from `contentSize` before it is a different window.
+    ///
+    /// **Not a range and not a fudge factor.** `setContentSize(_:)` sets the content rect, and
+    /// on this style mask the frame and the content rect measure equal on this machine. One
+    /// point is here so the assertion is about a layout escape rather than about a rounding
+    /// difference in some future AppKit — the defect it exists to catch overshot by **two
+    /// thousand** points, so nothing real can hide inside it.
+    public static let sizeTolerance: Double = 1
+
     /// The window itself. **Internal, not public**: R-89's properties are asserted on this
     /// object by the unit lane through `@testable import`, and nothing outside this package has
     /// any business reaching for a window when the readings and the properties are published as
@@ -183,6 +192,17 @@ public final class NudgePanelController {
 
     public init(traits: AppearanceTraits = .systemDefault) {
         let hosting = NSHostingView(rootView: AnyView(EmptyView().appearanceTraits(traits)))
+        // **The whole of focus-x7d, in one property.** See `enforceContentSize()` below for the
+        // measurement. An `NSHostingView` installed as a window's `contentView` publishes
+        // SwiftUI's fitting sizes as the window's `contentMinSize`/`contentMaxSize` by default
+        // (`sizingOptions` defaults to `.standardBounds`), and the next layout pass resizes the
+        // window to obey them. `[]` is the statement that this window's size is decided here and
+        // by nothing else; the view is laid out into the frame it is given, which is what a
+        // fixed-size HUD panel means.
+        hosting.sizingOptions = []
+        hosting.translatesAutoresizingMaskIntoConstraints = true
+        hosting.frame = NSRect(origin: .zero, size: Self.contentSize)
+        hosting.autoresizingMask = [.width, .height]
         self.hosting = hosting
 
         panel = NudgePanel(
@@ -211,6 +231,7 @@ public final class NudgePanelController {
         panel.contentView = hosting
         panel.setAccessibilityRole(.window)
         panel.setAccessibilitySubrole(.systemDialog)
+        enforceContentSize()
 
         panel.onCancel = { [weak self] in self?.onDismiss?() }
     }
@@ -224,6 +245,50 @@ public final class NudgePanelController {
     /// 34 ms depends on (P-57) and for the same reason.
     public func update(content: some View, traits: AppearanceTraits = .systemDefault) {
         hosting.rootView = AnyView(content.appearanceTraits(traits))
+        enforceContentSize()
+    }
+
+    /// **The panel is exactly `contentSize`, and the content is laid out into it** (focus-x7d).
+    ///
+    /// ## What was measured, and why this is not defensive coding
+    ///
+    /// A live drive read the query panel as a real window **380 × 2212** on a 1920 × 1080
+    /// screen. `screencapture -l <windowNumber>` — the window's backing store — showed the
+    /// question drawn perfectly; `screencapture -R` at that same window's own coordinates showed
+    /// a blank white slab, because the band the content occupied was two thousand points away
+    /// from anywhere a person could look. The panel was on screen, painting, and unreadable.
+    ///
+    /// The mechanism, reproduced on this machine: after `update(content:)` the window's
+    /// `contentMinSize` read **(209, 1542)**. An `NSHostingView` used as a `contentView`
+    /// publishes SwiftUI's own min/ideal/max sizes to the window (`sizingOptions` defaults to
+    /// `.standardBounds`), and the *minimum* width of a paragraph is roughly its longest word —
+    /// 209 points here — at which width the same paragraph is 1542 points tall. The next layout
+    /// pass grew the window to that minimum. Nothing in the frame was wrong; the frame was
+    /// simply not what anybody had asked for.
+    ///
+    /// ## Why the size is stated three times
+    ///
+    /// Each one closes a different route back to the defect, and none of them is the other two:
+    ///
+    /// * `sizingOptions = []` (in `init`) stops SwiftUI publishing sizes to the window at all;
+    /// * `contentMinSize`/`contentMaxSize` make the window itself refuse a resize, so a layout
+    ///   pass provoked by a font change, a Dynamic Type change or a `ViewThatFits` re-evaluation
+    ///   after the panel is already up has nothing to grow into;
+    /// * `setContentSize` + the hosting frame set the size that is actually in force now.
+    ///
+    /// The final `layoutIfNeeded()` is what makes this **synchronous**. Without it the growth
+    /// happens on the next pass — which is exactly why every existing proof went green: the
+    /// frame is right the instant you read it and wrong by the time a person sees it.
+    private func enforceContentSize() {
+        let size = Self.contentSize
+        panel.contentMinSize = size
+        panel.contentMaxSize = size
+        panel.setContentSize(size)
+        hosting.frame = NSRect(
+            origin: .zero,
+            size: panel.contentRect(forFrameRect: panel.frame).size
+        )
+        panel.layoutIfNeeded()
     }
 
     // MARK: - Showing, once, in one function
@@ -246,6 +311,9 @@ public final class NudgePanelController {
             presentationIsClear: presentationIsClear
         )
 
+        // Before `position()`, never after: placement is computed from `panel.frame.size`, so a
+        // window that had grown would be put in the wrong place as well as being the wrong size.
+        enforceContentSize()
         position()
 
         let before = readings()
@@ -293,6 +361,19 @@ public final class NudgePanelController {
     }
 
     public var isVisible: Bool { panel.isVisible }
+
+    /// **Whether the panel is one a person could actually answer** (focus-x7d).
+    ///
+    /// Visible *and* the size it is supposed to be. The second half is not pedantry: the window
+    /// that provoked this was on screen and painting correctly into its backing store, and 2212
+    /// points tall, so the 190-point band carrying the question was nowhere a person would look.
+    /// A caller about to write "asked" into a ledger reads this first, because a question nobody
+    /// saw must never spend the one chance the app gets to ask it (U-1).
+    public var isPresentedAtIntendedSize: Bool {
+        panel.isVisible
+            && abs(panel.frame.width - Self.contentSize.width) <= Self.sizeTolerance
+            && abs(panel.frame.height - Self.contentSize.height) <= Self.sizeTolerance
+    }
 
     /// The window number, for the live lane's `screencapture -l <windowNumber>` (P-136).
     public var windowNumber: Int { panel.windowNumber }

@@ -348,6 +348,141 @@ struct NudgePanelTests {
         #expect(placement.minY >= tiny.visibleFrame.minY)
     }
 
+    // MARK: - The panel is the size it claims to be (focus-x7d)
+
+    /// **What a nudge really says**, as the two values the shipping panels are built from.
+    ///
+    /// Deliberately *real* content rather than a placeholder: the defect this section exists to
+    /// catch is a layout one, and a layout defect cannot be provoked by `EmptyView`. The strings
+    /// are the ones the 19:26 live drive photographed, so the fixture and the frame agree.
+    private static let queryPresentation = QueryPresentation(
+        task: "Write the Q3 proposal for Acme",
+        subject: "com.chrismitchelmore.FocusSentinel",
+        reason: .noNegativeBasis,
+        dwelled: .seconds(62)
+    )
+
+    private static let accusationPresentation = AccusationPresentation(
+        rung: .panel,
+        task: "Write the Q3 proposal for Acme",
+        subject: "com.chrismitchelmore.FocusDecoy",
+        dwelled: .seconds(180),
+        returnTarget: "com.apple.TextEdit"
+    )
+
+    /// The shipped tolerance, read from the type under test rather than restated here — a test
+    /// that carried its own copy could go green while the app used a looser one.
+    private static let sizeTolerance = NudgePanelController.sizeTolerance
+    /// An absolute ceiling on how much of the screen a nudge may take, independent of
+    /// `contentSize`. Raising the constant cannot silence this half.
+    private static let absoluteMaximumHeight: Double = 400
+
+    /// **The assertion that would have caught focus-x7d**, and the reason it lives in the
+    /// AppKit unit lane rather than anywhere else.
+    ///
+    /// A live drive at 19:26 measured the query panel at **380 × 2212** on a 1920 × 1080 screen.
+    /// `screencapture -l <windowNumber>` read the window's *backing store* and showed the
+    /// question rendering perfectly; `screencapture -R` at that same window's own coordinates
+    /// showed a blank white slab, because the 190-point band the content occupies was somewhere
+    /// in two thousand points of window the person could not see. Three existing proofs went
+    /// green over it, and each was green for a different structural reason:
+    ///
+    /// * the live lane captured by window id, which proves a window **rendered**, never that a
+    ///   person can **see** it;
+    /// * `check-focus-steal.sh` asserts the panel *takes* nothing and never that it *shows*
+    ///   anything;
+    /// * the snapshot lane renders `QueryPanelView` standalone at a fixed size and never touches
+    ///   an `NSPanel` at all.
+    ///
+    /// So the missing assertion is at the level of the window object, needs no grant of any
+    /// kind, and is exactly this: **put the real content in, and the window is still the size it
+    /// says it is.** `update(content:)` is the operation under test, because the hosting view is
+    /// what drives the window's size and `update(content:)` is the only thing that changes it.
+    @Test(
+        "real nudge content never resizes the window",
+        arguments: [true, false]
+    )
+    func realContentNeverResizesTheWindow(query: Bool) {
+        let controller = Self.controller()
+
+        if query {
+            controller.update(content: QueryPanelView(presentation: Self.queryPresentation))
+        } else {
+            controller.update(
+                content: AccusationPanelView(presentation: Self.accusationPresentation)
+            )
+        }
+
+        let intended = NudgePanelController.contentSize
+        let label = query ? "query" : "accusation"
+
+        // The panel goes up exactly as a nudge does, and then **the run loop turns** — which is
+        // the whole reason this defect survived three green proofs. Measured on the unfixed code:
+        // the frame is a perfectly correct 380 × 190 the instant `update(content:)` and `show(…)`
+        // return, and 380 × 1542 one turn later, when SwiftUI has been asked for its fitting
+        // sizes and the window has resized itself to obey the `contentMinSize` they published. A
+        // reading taken before that turn is a reading of the moment before the defect.
+        controller.show(presentationIsClear: true)
+        defer { controller.hide() }
+        Self.settle()
+
+        let frame = controller.frame
+
+        #expect(
+            abs(frame.width - Double(intended.width)) <= Self.sizeTolerance,
+            """
+            the \(label) panel settled at \(frame.width)pt wide, not \(intended.width)pt: \
+            SwiftUI's fitting size is driving the window
+            """
+        )
+        #expect(
+            abs(frame.height - Double(intended.height)) <= Self.sizeTolerance,
+            """
+            the \(label) panel settled at \(frame.height)pt tall, not \(intended.height)pt: \
+            the content band is somewhere the person cannot see it (focus-x7d)
+            """
+        )
+        // The same fact without reference to the constant, so raising `contentSize` to make a
+        // failure go away is not a route through this test.
+        #expect(frame.height <= Self.absoluteMaximumHeight)
+
+        // The window's own refusal, not just its current value: a window whose minimum is two
+        // thousand points is a window that will grow again at the next provocation.
+        #expect(controller.panel.contentMinSize.height <= Self.absoluteMaximumHeight)
+
+        // The single reading a caller takes before it writes "asked" into a ledger.
+        #expect(controller.isPresentedAtIntendedSize)
+    }
+
+    /// **One turn of the run loop**, which is where the defect lives.
+    ///
+    /// Grant-free and headless: no window server access, no screen recording, nothing this
+    /// process has to be trusted for. It is simply the interval between "the app showed the
+    /// nudge" and "a person looked at it", which is the interval every earlier proof skipped.
+    private static func settle() {
+        RunLoop.current.run(until: Date().addingTimeInterval(0.3))
+    }
+
+    /// The content is not merely *somewhere* in a right-sized window — it fills it.
+    ///
+    /// The window could be 380 × 190 with the hosting view laid out at 380 × 2212 inside it and
+    /// the person would see the same blank slab, one clip rectangle further down. This asserts
+    /// the view AppKit actually draws is the size of the content rect.
+    @Test("the hosting view fills the panel rather than overflowing it")
+    func hostingViewFillsThePanel() {
+        let controller = Self.controller()
+        controller.update(content: QueryPanelView(presentation: Self.queryPresentation))
+        controller.show(presentationIsClear: true)
+        defer { controller.hide() }
+        Self.settle()
+
+        guard let content = controller.panel.contentView else { return }
+        let bounds = controller.panel.contentRect(forFrameRect: controller.panel.frame)
+
+        #expect(abs(content.frame.width - bounds.width) <= Self.sizeTolerance)
+        #expect(abs(content.frame.height - bounds.height) <= Self.sizeTolerance)
+    }
+
     // MARK: - Escape
 
     @Test("Escape dismisses the panel, because every surface is dismissible (D-07)")
