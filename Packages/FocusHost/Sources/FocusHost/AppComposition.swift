@@ -166,6 +166,11 @@ public final class AppComposition {
     /// The session the format was chosen for. A new session chooses again, from its own plan.
     private var menuBarTimerSessionID: UUID?
 
+    /// - Parameter storeKind: where the data lives. `applicationSupport` is the application's
+    ///   own store and is the default; the unit lane passes `inMemory`, because a test that
+    ///   opened the real store would be a test that could change what the person sees. It is a
+    ///   parameter rather than a branch on a build flag so that the composition the tests build
+    ///   is the composition that ships, with one value different.
     init(
         dateProvider: any DateProvider = SystemDateProvider(),
         monotonicClock: any MonotonicClock = SystemMonotonicClock(),
@@ -173,6 +178,8 @@ public final class AppComposition {
         locale: Locale = .autoupdatingCurrent,
         uptimeClock: any UptimeClock = SystemUptimeClock(),
         hotKeyRegistrar: any HotKeyRegistering = CarbonHotKeyRegistrar(),
+        storeKind: FocusStore.Kind = .applicationSupport,
+        notificationCentre: (any NotificationCentring)? = nil,
         ruleStoreOverride: (any RuleStore)? = nil
     ) {
         self.dateProvider = dateProvider
@@ -193,7 +200,7 @@ public final class AppComposition {
         let container: ModelContainer
         let status: StoreStatus
         do {
-            container = try FocusStore.makeContainer(kind: .applicationSupport)
+            container = try FocusStore.makeContainer(kind: storeKind)
             status = .ready
         } catch {
             status = .unavailable(error.localizedDescription)
@@ -296,7 +303,14 @@ public final class AppComposition {
         // The e05 surfaces, all built before the first frame for the same reason.
         let nudgePanel = NudgePanelController()
         let menuBar = MenuBarController()
-        let centre = SystemNotificationCentre()
+        // **The system centre is constructed only when nobody supplied one.**
+        // `UNUserNotificationCenter.current()` traps in a process with no bundle proxy, which is
+        // every unit-test process, so the seam is a parameter rather than a branch on a build
+        // flag: the composition the tests build is the composition that ships, with one value
+        // different.
+        // Qualified: `FocusSensing` declares a `SystemNotificationCentre` of its own, for
+        // `NSWorkspace` notifications, and the two names would otherwise be ambiguous here.
+        let centre = notificationCentre ?? FocusUI.SystemNotificationCentre()
         let notifications = NotificationDelivery(centre: centre)
         self.nudgePanel = nudgePanel
         self.menuBar = menuBar
@@ -315,7 +329,9 @@ public final class AppComposition {
             dateProvider: dateProvider,
             calendar: calendar
         )
-        centre.onActionIdentifier = { [weak notifications] identifier in
+        // One click on a notification's own button. Only the system centre has one; a supplied
+        // centre delivers its actions however it likes and this wire has nothing to say about it.
+        (centre as? FocusUI.SystemNotificationCentre)?.onActionIdentifier = { [weak notifications] identifier in
             notifications?.handle(actionIdentifier: identifier)
         }
     }
@@ -415,7 +431,10 @@ public final class AppComposition {
     /// the sensing types supply the surroundings, one function performs whatever a click decided
     /// to write, and the menu bar is redrawn from the same projection every other surface reads.
     /// Nothing here decides anything; `NudgeDecider` does.
-    private func startNudgeLoop() {
+    /// Internal rather than private so the unit lane can join the loop without also
+    /// registering a global hot key and attaching the observer graph, which `start()` does and
+    /// which a test process has no business doing.
+    func startNudgeLoop() {
         menuBar.install()
         menuBar.onAction = { [weak self] action in self?.perform(action) }
         // **A badge question is asked at the moment the popover opens, not before** (focus-kby).
@@ -498,7 +517,10 @@ public final class AppComposition {
     /// `CorrectionAction.outcome(scope:at:)` decided **what**; this decides **where**, and every
     /// destination is a mechanism that already existed: the rules pane's own writer (with its
     /// undo), e03's session machine, e02's confirm surface.
-    private func perform(_ outcome: CorrectionOutcome) {
+    /// Internal rather than private for the reason `startNudgeLoop()` is: this is the function
+    /// the duplicate-learned-rule regression lived in, and the only honest test of it is one
+    /// that calls it with a real `CorrectionOutcome` and counts the rows afterwards.
+    func perform(_ outcome: CorrectionOutcome) {
         switch outcome {
         case .rule, .ruleAndReceipt:
             // **Who writes the row is decided by the outcome, not by this switch** (R-78).

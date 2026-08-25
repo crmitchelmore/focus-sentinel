@@ -482,9 +482,17 @@ final class NudgeHost {
             // A question that fails it is a **deferral**: nothing is counted, nothing is
             // written, the slot is given back, and the subject stays askable. Deferring costs
             // the person one more moment of drift; recording it would cost them the question.
+            // **The reading is derived once and the guard tests the derived value.** It used to
+            // be derived twice — the property from `everyActionIsReachable`, the guard from
+            // `everyActionIsReachable` again — and the duplication made the property unfalsifiable:
+            // replacing the whole expression with a constant `.readable` changed nothing a test
+            // could observe, because the guard still read the panel and the failing branch called
+            // `forgetOpenQuestion()`, which overwrote the constant with `.unknowable` on its way
+            // out. One derivation, one gate: a question is delivered only if the value the ledger
+            // will later be handed says it could be read.
             let reading = panel.decisionSurfaceReading(offering: openQuestionActions)
             openQuestionReadingAtAsk = reading.everyActionIsReachable ? .readable : .notReadable
-            guard reading.everyActionIsReachable else {
+            guard openQuestionReadingAtAsk == .readable else {
                 logger.error(
                     """
                     a question was put on a panel nobody could answer and was left unwritten: \
