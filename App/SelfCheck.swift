@@ -34,6 +34,16 @@ enum SelfCheck {
     /// has not populated them yet.
     static let settleDelay: TimeInterval = 1.0
 
+    /// How long the nudge panel stays on screen inside `panelReport()` (focus-x7d).
+    ///
+    /// Long enough for two different things. **AppKit's** — a window whose size is being driven
+    /// by SwiftUI's fitting size is still correct at the instant it is ordered front and wrong
+    /// one layout pass later, so a report written without this turn describes the moment before
+    /// the defect. And **an outside observer's** — `Tools/windowid` can measure the same window
+    /// from another process while it is up, which is what stops the claim resting on the app's
+    /// own report of itself.
+    static let panelSettleSeconds: TimeInterval = 2.5
+
     /// How long to keep asking to come forward before reading the shell anyway.
     ///
     /// Reaching this deadline is a *reported failure*, not a fallback: `self-check.sh` asserts
@@ -388,9 +398,54 @@ enum SelfCheck {
         let panel = composition.nudgePanel
         var report: [String: Any] = [:]
 
+        // **Real nudge content, and this is not decoration** (focus-x7d).
+        //
+        // This stage used to show an EMPTY panel. It therefore proved, with great rigour, that a
+        // window with nothing in it takes nothing — while the panel a person actually meets grew
+        // to 380 × 2212 the moment real content went into it, and the gate had no way to notice.
+        // "It takes nothing" and "it shows something" are two different claims, and a stage that
+        // only ever made the first is a stage that could not have caught this.
+        //
+        // The question is used rather than the accusation because it is the surface U-1's whole
+        // bargain rests on; the unit lane asserts both.
+        panel.update(
+            content: QueryPanelView(
+                presentation: QueryPresentation(
+                    task: "Write the Q3 proposal for Acme",
+                    subject: FocusStore.bundleIdentifier,
+                    reason: .noNegativeBasis,
+                    dwelled: .seconds(62)
+                )
+            )
+        )
+
         let before = panel.readings()
         panel.show(presentationIsClear: true)
+
+        // **The turn of the run loop, and it is the whole assertion.**
+        //
+        // A window driven by an `NSHostingView`'s fitting size is still exactly the size it was
+        // built as at the instant `show(…)` returns, and the wrong size one pass later. Every
+        // reading taken without this line is a reading of the moment before the defect. It also
+        // holds the panel on screen long enough for an outside observer — `Tools/windowid` — to
+        // measure the same window independently, which is how the live claim is checked against
+        // something other than the app's own report.
+        RunLoop.current.run(until: .now + panelSettleSeconds)
+
         let after = panel.readings()
+
+        // Taken while the panel is still up: a frame read after `hide()` is a frame read off a
+        // window nobody is being shown.
+        let frame = panel.frame
+        report["frame"] = [
+            "x": frame.x, "y": frame.y, "width": frame.width, "height": frame.height
+        ]
+        report["contentSize"] = [
+            "width": Double(NudgePanelController.contentSize.width),
+            "height": Double(NudgePanelController.contentSize.height)
+        ]
+        report["presentedAtIntendedSize"] = panel.isPresentedAtIntendedSize
+
         panel.hide()
 
         // Read **after** the show, so the report describes the panel as it was actually

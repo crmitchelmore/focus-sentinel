@@ -265,6 +265,36 @@ check(
     panel.get("hiddenAfter"),
 )
 
+# --- it SHOWS something, and not only TAKES nothing (focus-x7d) ---------------------------------
+#
+# Every assertion above is about what the panel did not do. This stage had no assertion at all
+# about what it did — and it showed an EMPTY panel, so it proved with great rigour that a window
+# with nothing in it takes nothing. Meanwhile the panel a person meets, with the real question in
+# it, grew to 380 x 2212 on a 1920 x 1080 display: on screen a blank white slab, while
+# `screencapture -l` read the backing store and photographed the question perfectly.
+#
+# The self-check now puts the real question in the panel, shows it, and lets the run loop turn
+# before reading the frame — the turn is the assertion, because the window is exactly the right
+# size until it happens. Zero grants: a window's own frame needs no permission to read.
+frame = panel.get("frame") or {}
+intended = panel.get("contentSize") or {}
+tolerance = 1.0
+for axis in ("width", "height"):
+    measured = frame.get(axis)
+    expected = intended.get(axis)
+    check(
+        isinstance(measured, (int, float))
+        and isinstance(expected, (int, float))
+        and abs(measured - expected) <= tolerance,
+        f"the panel's {axis} is its intended {expected} (measured {measured})",
+        {"frame": frame, "contentSize": intended},
+    )
+check(
+    panel.get("presentedAtIntendedSize") is True,
+    "the panel is one a person could actually read: visible AND its intended size",
+    {"frame": frame, "contentSize": intended},
+)
+
 # --- SC-5, restated here because this stage launches the app -----------------------------------
 check(
     report.get("requestAuthorizationCallCount") == 0,
