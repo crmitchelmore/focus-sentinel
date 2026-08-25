@@ -173,9 +173,26 @@ struct IdleReaderTests {
     @Test("The production source reads a live counter with no prompt and no error")
     func productionSourceReadsBothCounters() {
         let source = CGEventIdleSource()
+        // **Session first, then hardware — the order `IdleReader.read()` itself uses.**
+        //
+        // The two counters are read microseconds apart, and on a machine where no input arrives
+        // between the reads the later one is larger by exactly that elapsed time. Taking hardware
+        // first therefore makes the session figure the larger of the two and violates
+        // `sourcesAreInTheRightOrder` by a few hundred nanoseconds — which is what happened here,
+        // on an unattended gate run against a machine that had been idle for 584 s:
+        //
+        //     hardware 584.292967667  session 584.292967875   (208 ns the wrong way)
+        //
+        // The invariant is real and worth asserting: `.combinedSessionState` counts a superset of
+        // the events `.hidSystemState` does, so `combined ≤ hid` is a property of the sources
+        // rather than a coincidence, and a violation would mean the reader had swapped them. What
+        // was wrong was this test reading them in the opposite order from the shipping code —
+        // which is why `read()` puts the session figure in a local first, and why `self-check.sh`
+        // carries the same note beside its own half-second tolerance.
+        let sessionSeconds = source.sessionSeconds
         let reading = IdleReading(
             hardwareSeconds: source.hardwareSeconds,
-            sessionSeconds: source.sessionSeconds
+            sessionSeconds: sessionSeconds
         )
 
         // Both are real seconds since some real input — never negative, never NaN.
