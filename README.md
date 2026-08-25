@@ -15,12 +15,13 @@ and `tuist` is not used.
 |---|---|
 | `FocusSentinel.xcodeproj/` | the **hand-authored, committed** Xcode project (see "The project file" below) |
 | `Focus.xcworkspace/` | the workspace that owns the shared schemes; the unit lane lives here |
-| `App/` | the thin app target — composition root, scenes, entitlements, and a deliberately empty string catalog (see "Strings" below) |
+| `App/` | the thin app target — `@main`, the scenes, the appearance observer, the entitlements, the icon, and a deliberately empty string catalog (see "Strings" below). It owns no host and no wiring: those are `Packages/FocusHost` |
 | `Packages/FocusCore` | domain types, SwiftData schema, status tokens, clocks, appearance traits |
 | `Packages/FocusRules` | the deterministic rule model |
 | `Packages/FocusClassify` | the deterministic relevance engine and the classification seam — no networking, ever. It also holds `FocusEvaluateCore` and the `FocusEvaluate` product, which are test-lane only and which no application target links |
 | `Packages/FocusSensing` | macOS observation adapters |
 | `Packages/FocusUI` | every SwiftUI view, scene, command and design token |
+| `Packages/FocusHost` | the composition layer — `AppComposition` and the five hosts. The only module that imports more than one sibling package, and the reason it is a package rather than the app target is that `App/` is not one: no test bundle could import it, so every claim about the wiring in it was a source scan (see "Why the composition layer is a package" below) |
 | `Config/` | build inputs that are neither app source nor scripts. Exactly one file: `FocusSentinel-Info.plist`, the partial plist carrying `CFBundleURLTypes`. It lives here and **not** in `App/` — see "The project file" below |
 | `scripts/` | the build gate and its seventeen stages, plus the six live evidence lanes |
 | `Tools/windowid` | a test driver: window ids for `screencapture -l`, read from the public window list without ever asking for a window *name*. Not part of the shipping app's package graph |
@@ -596,7 +597,7 @@ typed symbol — never a bare literal, never `String(format:)`. `scripts/check-s
 gate stage and checks both directions: no hardcoded user-visible literal, and no key that is
 in a catalog but unused or used but missing.
 
-There are three catalogs and each module resolves its own against its own bundle, so they are
+There are four catalogs and each module resolves its own against its own bundle, so they are
 checked separately:
 
 | catalog | keys | who reads it |
@@ -604,6 +605,7 @@ checked separately:
 | `Packages/FocusUI/Sources/FocusUI/Resources/Localizable.xcstrings` | `shell.`, `settings.`, `priority.`, `capture.`, `context.`, `handoff.`, `session.`, `sensing.`, `capability.` | `FocusUI`, and the app target through `ShellStrings` |
 | `Packages/FocusCore/Sources/FocusCore/Resources/Localizable.xcstrings` | `status.` (the `FocusStatus` short labels), `undo.` (the action names the system Edit menu draws after "Undo"), and the relevance vocabulary — `cascade.`, `explanation.`, `suppression.`, `evidence.`, `rule.` | `FocusCore`, and `FocusUI` through the `…Resource` accessors each vocabulary exposes |
 | `App/Localizable.xcstrings` | **none, by design** | nothing yet |
+| `Packages/FocusHost/Sources/FocusHost/Resources/Localizable.xcstrings` | **none, by design** | nothing yet |
 
 The app target's catalog is empty because the app target is a composition root: it declares
 scenes and wires concrete types to protocols, and even its window titles are `FocusUI` keys
@@ -613,6 +615,41 @@ the `App` row from the lint's table — the only check that would notice an app-
 starting to name a catalog key that its bundle cannot resolve. So the lint asserts the
 emptiness instead: `App` is listed in `EXPECTS_NO_STRINGS`, and a key appearing there fails
 the gate with instructions to move it to `FocusUI` or to change the list on purpose.
+
+`FocusHost` carries the same empty catalog and the same row for the same reason: the hosts
+moved out of the app target, and an assertion that quietly stopped applying because the code
+it was about changed address is not an assertion.
+
+## Why the composition layer is a package
+
+`xcodebuild test` runs test bundles. The `FocusUnitTests` scheme lists package test targets and
+nothing else, because Xcode's implicit package schemes cannot run package tests and an app
+target's module cannot be imported by a bundle that is not hosted by it. `App/` was therefore
+unreachable to every test in the programme, and the claims about the code in it were made by a
+test that read the *source text* of `App/*.swift` and looked for the substrings the wiring
+happened to be spelled with.
+
+Three mutations to `NudgeHost` measured what that was worth. Replacing the readability reading
+taken when a question goes up with a constant `.readable`, replacing the popover's readability
+with a constant, and inverting the `panel.isVisible` fallback each left the entire lane
+identical: build `EXIT=0`, 1 115 tests green, `check-focus-steal.sh` `EXIT=0`, an identical
+self-check report. Each of the three reinstates a path by which the app writes an immutable
+receipt about a question nobody was shown — and because `hasAsked(…)` is gate 11 of the
+suppression stack, that silences the question for the life of the priority.
+
+So the layer is `Packages/FocusHost`, and `FocusHostTests` is in the scheme. Its tests
+instantiate `NudgeHost` against the real `NudgePanelController` and the real
+`MenuBarController`, over an in-memory store, and drive it. The app target keeps only what an
+app can own and reaches the package through a narrow surface on `AppComposition`, so the hosts
+stay `internal`.
+
+The alternative — an app-hosted unit-test bundle in `FocusSentinel.xcodeproj` — was rejected on
+two counts. A hosted bundle runs *inside* the launched application, which here means a live
+store in Application Support, a registered global hot key and an attached observer graph in
+every test process. And the package route puts the layer's dependencies under
+`check-boundaries.sh`'s import matrix, which the app target's imports were never subject to:
+`FocusHost` is now the sixth row, the one row permitted every sibling, and forbidden `SwiftUI`
+because a view here would be a view outside `FocusUI`.
 
 ## The project file
 
