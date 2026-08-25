@@ -1,0 +1,242 @@
+import Foundation
+import Testing
+
+@testable import FocusCore
+
+/// **A decision surface whose Pause button is below the fold is not a decision surface**
+/// (focus-vpu, focus-kby).
+///
+/// ## The predicate this replaces
+///
+/// `isPresentedAtIntendedSize` asked whether the window's frame equalled a constant. It was the
+/// wrong question in both directions, and each direction shipped a defect:
+///
+/// * a live drive measured the query panel at 380 × 2212 at y = **−1186** — off screen as well as
+///   oversized — and a size comparison cannot see where a window is;
+/// * the fix pinned the window to a constant 380 × 190 without shrinking or scrolling the
+///   content, so an accusation needing 237 points was laid out into 190 and clipped: at the
+///   default text size the title was cut through its first line and **Pause** and **Change
+///   priority** were below the clip and unreachable — and `isPresentedAtIntendedSize` returned
+///   `true` for every clipped case, because the frame really was the constant.
+///
+/// One predicate subsumes all three failures: the surface is visible, its frame lies inside a
+/// display's visible frame, and **every** offered action has a non-empty frame inside the content
+/// the person can see. These are its fixtures; `NudgePanelTests` runs the same predicate against
+/// the real window with the real views at both text sizes.
+@Suite("Every offered action is reachable, or the surface is not one")
+struct DecisionSurfaceReachabilityTests {
+    static let screen = DisplayGeometry(
+        displayID: 1,
+        screenIndex: 0,
+        isPrimary: true,
+        frame: ScreenRect(x: 0, y: 0, width: 1920, height: 1080),
+        visibleFrame: ScreenRect(x: 0, y: 60, width: 1920, height: 995),
+        backingScaleFactor: 2
+    )
+
+    /// A panel in the top trailing corner, 380 wide and 262 tall — the wrapped height of the
+    /// recommitment rung at the standard text size.
+    static let panelFrame = ScreenRect(x: 1516, y: 769, width: 380, height: 262)
+    static let contentBounds = ScreenRect(x: 0, y: 0, width: 380, height: 262)
+
+    static let offered = ["returnToTask", "thisIsRelevant", "notThisTime", "snooze", "pause", "changePriority"]
+
+    /// Six rows stacked down the content, all inside it. The shape a panel sized to its content
+    /// actually produces.
+    static var everyActionLaidOut: [ActionHitTarget] {
+        offered.enumerated().map { index, identifier in
+            ActionHitTarget(
+                identifier: identifier,
+                frame: ScreenRect(
+                    x: 16,
+                    y: 80 + Double(index) * 30,
+                    width: 348,
+                    height: 24
+                )
+            )
+        }
+    }
+
+    static func evaluate(
+        isVisible: Bool = true,
+        surfaceFrame: ScreenRect = Self.panelFrame,
+        screens: [DisplayGeometry] = [Self.screen],
+        contentBounds: ScreenRect = Self.contentBounds,
+        targets: [ActionHitTarget] = Self.everyActionLaidOut,
+        offering: [String] = Self.offered
+    ) -> DecisionSurfaceReading {
+        DecisionSurfaceReachability.evaluate(
+            isVisible: isVisible,
+            surfaceFrame: surfaceFrame,
+            screens: screens,
+            contentBounds: contentBounds,
+            actionTargets: targets,
+            offering: offering
+        )
+    }
+
+    @Test("a panel on a display with every action laid out inside it is reachable")
+    func theGoodCase() {
+        let reading = Self.evaluate()
+
+        #expect(reading.everyActionIsReachable)
+        #expect(reading.isVisible)
+        #expect(reading.isWhollyOnAScreen)
+        #expect(reading.unreportedActions.isEmpty)
+        #expect(reading.unreachableActions.isEmpty)
+        #expect(reading.summary == "every offered action is reachable")
+    }
+
+    // MARK: - The three defects, one fixture each
+
+    /// **focus-vpu, read on screen.** The window is exactly the size it claims; two actions are
+    /// laid out past the bottom of it. This is the case the constant-size check called healthy.
+    @Test("an action below the fold makes the surface unreachable even at the agreed size")
+    func clippedActionsAreUnreachable() {
+        // 190pt of window, six rows ending at 260: the last three fall off the bottom.
+        let clipped = ScreenRect(x: 0, y: 0, width: 380, height: 190)
+        let reading = Self.evaluate(
+            surfaceFrame: ScreenRect(x: 1516, y: 841, width: 380, height: 190),
+            contentBounds: clipped
+        )
+
+        #expect(!reading.everyActionIsReachable)
+        #expect(reading.unreachableActions == ["snooze", "pause", "changePriority"])
+        #expect(reading.isVisible)
+        #expect(reading.isWhollyOnAScreen)
+        #expect(reading.summary.contains("pause"))
+    }
+
+    /// **The y = −1186 case.** Right size, right content, nowhere a person could look.
+    @Test("a surface off every display is unreachable however well laid out it is")
+    func offScreenIsUnreachable() {
+        let reading = Self.evaluate(
+            surfaceFrame: ScreenRect(x: 1516, y: -1186, width: 380, height: 262)
+        )
+
+        #expect(!reading.everyActionIsReachable)
+        #expect(!reading.isWhollyOnAScreen)
+        // Nothing else is wrong with it, which is precisely why a check of the other terms
+        // passed this window.
+        #expect(reading.unreachableActions.isEmpty)
+        #expect(reading.unreportedActions.isEmpty)
+    }
+
+    /// Half on, half off. A window whose bottom edge hangs below the visible frame has its
+    /// bottom row of buttons under the Dock.
+    @Test("a surface hanging off the edge of its display is unreachable")
+    func partiallyOffScreenIsUnreachable() {
+        let reading = Self.evaluate(
+            surfaceFrame: ScreenRect(x: 1516, y: -10, width: 380, height: 262)
+        )
+
+        #expect(!reading.isWhollyOnAScreen)
+        #expect(!reading.everyActionIsReachable)
+    }
+
+    @Test("a surface that is not on screen at all is unreachable")
+    func invisibleIsUnreachable() {
+        #expect(!Self.evaluate(isVisible: false).everyActionIsReachable)
+    }
+
+    @Test("with no displays there is nowhere for a surface to be reachable")
+    func noDisplays() {
+        #expect(!Self.evaluate(screens: []).everyActionIsReachable)
+    }
+
+    // MARK: - The actions themselves
+
+    /// **The V06 case: the answers were ENTIRELY ABSENT.** An action that drew nothing reports no
+    /// frame at all, which is a different defect from one that drew somewhere unreachable — and
+    /// the reading names which.
+    @Test("an offered action that drew nothing is reported as unreported, not as reachable")
+    func anActionThatNeverDrewIsNotReachable() {
+        let missing = Self.everyActionLaidOut.filter { $0.identifier != "pause" }
+        let reading = Self.evaluate(targets: missing)
+
+        #expect(!reading.everyActionIsReachable)
+        #expect(reading.unreportedActions == ["pause"])
+        #expect(reading.unreachableActions.isEmpty)
+    }
+
+    /// A zero-sized frame is a button a click cannot land on, whatever the layout thinks.
+    @Test("an action laid out at zero size is unreachable")
+    func aCollapsedActionIsUnreachable() {
+        var targets = Self.everyActionLaidOut
+        targets[0] = ActionHitTarget(
+            identifier: "returnToTask",
+            frame: ScreenRect(x: 16, y: 80, width: 0, height: 0)
+        )
+        let reading = Self.evaluate(targets: targets)
+
+        #expect(!reading.everyActionIsReachable)
+        #expect(reading.unreachableActions == ["returnToTask"])
+    }
+
+    /// An action reported but never offered is nobody's business: a presentation that withdraws
+    /// "Back to …" because there is nowhere to return to must not be failed for the button it
+    /// deliberately did not draw.
+    @Test("only the actions actually offered are required to be reachable")
+    func onlyOfferedActionsCount() {
+        let withoutReturn = Self.offered.filter { $0 != "returnToTask" }
+        let clipped = ScreenRect(x: 0, y: 0, width: 380, height: 110)
+        // Only the first action fits in this content; asking for only that one passes.
+        let reading = Self.evaluate(contentBounds: clipped, offering: ["returnToTask"])
+
+        #expect(reading.everyActionIsReachable)
+        #expect(Self.evaluate(offering: withoutReturn).everyActionIsReachable)
+    }
+
+    /// A surface offering nothing is not a decision surface, but it is not *unreachable* either —
+    /// the geometry terms still have to hold, so an empty offer cannot be used to wave a panel
+    /// through from off the edge of the world.
+    @Test("an empty offer still has to be a window on a screen")
+    func anEmptyOfferIsStillGeometry() {
+        #expect(Self.evaluate(targets: [], offering: []).everyActionIsReachable)
+        #expect(
+            !Self.evaluate(
+                surfaceFrame: ScreenRect(x: 1516, y: -1186, width: 380, height: 262),
+                targets: [],
+                offering: []
+            ).everyActionIsReachable
+        )
+    }
+
+    /// A content area of nothing contains nothing — including a zero-sized action. Answering
+    /// otherwise would make the predicate vacuous exactly when the surface has collapsed.
+    @Test("a collapsed content area contains no action at all")
+    func aCollapsedContentAreaContainsNothing() {
+        let reading = Self.evaluate(
+            contentBounds: ScreenRect(x: 0, y: 0, width: 0, height: 0),
+            targets: [
+                ActionHitTarget(
+                    identifier: "pause",
+                    frame: ScreenRect(x: 0, y: 0, width: 0, height: 0)
+                )
+            ],
+            offering: ["pause"]
+        )
+
+        #expect(!reading.everyActionIsReachable)
+        #expect(reading.unreachableActions == ["pause"])
+    }
+
+    /// One point of tolerance, and not one point more: the defect this exists to catch overshot
+    /// by two thousand points, and a fudge factor big enough to hide a button would be one big
+    /// enough to hide the defect.
+    @Test("the tolerance admits a rounding difference and not a clipped row")
+    func toleranceIsRoundingOnly() {
+        var targets = Self.everyActionLaidOut
+        targets[0] = ActionHitTarget(
+            identifier: "returnToTask",
+            frame: ScreenRect(x: 16, y: 80, width: 348.4, height: 24)
+        )
+        #expect(Self.evaluate(targets: targets).everyActionIsReachable)
+
+        targets[0] = ActionHitTarget(
+            identifier: "returnToTask",
+            frame: ScreenRect(x: 16, y: 80, width: 370, height: 24)
+        )
+        #expect(!Self.evaluate(targets: targets).everyActionIsReachable)
+    }
+}
