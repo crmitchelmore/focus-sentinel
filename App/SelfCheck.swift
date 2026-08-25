@@ -304,33 +304,60 @@ enum SelfCheck {
         report["permitsNotificationDelivery"] = host.notificationAuthorisation.permitsDelivery
         report["requestAuthorizationCallCount"] = host.requestAuthorizationCallCount
 
-        // Every rung, at this Mac's real authorisation, with nothing presenting and no call in
-        // progress — which is the state the settings pane's matrix describes.
-        let authorisation = host.notificationAuthorisation
-        var routes: [[String: Any]] = []
-        for rung in LadderRung.Kind.allCases {
-            let route = SurfaceRouter.route(
-                rung: rung,
-                authorisation: authorisation,
-                presentation: .notPresenting,
-                media: .idle,
-                reducedInterruption: false,
-                menuBarVisible: true,
-                voice: .standard
-            )
-            routes.append([
-                "rung": rung.rawValue,
-                "rank": rung.rank,
-                "surface": route.surface?.rawValue ?? "",
-                "deferralReason": route.deferralReason?.rawValue ?? "",
-                "isInApp": route.surface?.isInApp ?? false
-            ])
+        // Every rung, with nothing presenting and no call in progress — which is the state the
+        // settings pane's matrix describes.
+        //
+        // **Three tables, not one, and the two extra ones are what make the gate honest.** This
+        // Mac's own authorisation is whatever a person set it to, and the `notification-denied`
+        // stage has to prove F-73's degraded path *whatever that is* — a stage that asserted the
+        // in-app path only when the machine happened to be in the degraded state would be a stage
+        // that silently stopped asserting the moment somebody granted notifications. `route(…)` is
+        // a pure function of typed inputs, so asking it what it would do at `denied` and at
+        // `notRequested` costs nothing, prompts nothing and needs no grant (R-82, P-134).
+        func table(at authorisation: NotificationAuthorisation) -> [[String: Any]] {
+            LadderRung.Kind.allCases.map { rung in
+                let route = SurfaceRouter.route(
+                    rung: rung,
+                    authorisation: authorisation,
+                    presentation: .notPresenting,
+                    media: .idle,
+                    reducedInterruption: false,
+                    menuBarVisible: true,
+                    voice: .standard
+                )
+                return [
+                    "rung": rung.rawValue,
+                    "rank": rung.rank,
+                    "surface": route.surface?.rawValue ?? "",
+                    "deferralReason": route.deferralReason?.rawValue ?? "",
+                    "isInApp": route.surface?.isInApp ?? false
+                ]
+            }
         }
+        func everyRungHasASurface(_ table: [[String: Any]]) -> Bool {
+            table.allSatisfy { !(($0["surface"] as? String) ?? "").isEmpty }
+        }
+        func everyRungIsInApp(_ table: [[String: Any]]) -> Bool {
+            table.allSatisfy { ($0["isInApp"] as? Bool) == true }
+        }
+
+        let routes = table(at: host.notificationAuthorisation)
         report["routes"] = routes
-        report["everyRungHasASurface"] = routes.allSatisfy {
-            !(($0["surface"] as? String) ?? "").isEmpty
-        }
-        report["everyRungIsInApp"] = routes.allSatisfy { ($0["isInApp"] as? Bool) == true }
+        report["everyRungHasASurface"] = everyRungHasASurface(routes)
+        report["everyRungIsInApp"] = everyRungIsInApp(routes)
+
+        let denied = table(at: .denied)
+        let notRequested = table(at: .notRequested)
+        report["routesWhenDenied"] = denied
+        report["routesWhenNotRequested"] = notRequested
+        report["everyRungIsInAppWhenDenied"] = everyRungIsInApp(denied)
+        report["everyRungIsInAppWhenNotRequested"] = everyRungIsInApp(notRequested)
+        // R-82.2: `denied` and `notRequested` differ in what the app may **offer** and never in
+        // what it may **deliver**. Two tables that had drifted apart would mean a person who said
+        // "no" and a person who was never asked were getting different products.
+        report["deniedAndNotRequestedDeliverAlike"] = denied.map {
+            ($0["surface"] as? String) ?? ""
+        } == notRequested.map { ($0["surface"] as? String) ?? "" }
 
         // The query's route, which takes no authorisation at all: **a question is never a
         // notification** (R-82).

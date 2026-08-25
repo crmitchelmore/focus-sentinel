@@ -13,7 +13,12 @@
 # ## Zero grants, by construction
 #
 # Nothing here needs Accessibility, Screen Recording or Automation — not for the app, and
-# not for the shell that invokes it. Revoking every permission on this Mac must still leave
+# not for the shell that invokes it. That includes e05's two new stages: `focus-steal` launches
+# the app with `open -g -a` (LaunchServices) and reads the frontmost application with
+# `lsappinfo` (a plain system query), and `notification-denied` is a plain `exec` of the built
+# binary. The one behaviour neither can prove — that a person typing while the panel is on
+# screen keeps their keystrokes — needs a synthetic key event and therefore an Accessibility
+# grant, so it lives in the live lane (§4.9 frame 17) as read evidence rather than here. Revoking every permission on this Mac must still leave
 # a green gate. That is why the live `osascript` + `screencapture` lane is not a stage and is
 # never invoked from here: it produces evidence a human reads, never a pass/fail criterion.
 # Run it separately, when the grants exist:
@@ -171,6 +176,13 @@ COMMITTED_STAMP=$(committed_literal \
     "committedRuntimeCacheKey")
 COMMITTED_DIGEST=$(committed_literal \
     "Packages/FocusCore/Tests/FocusCoreTests/RelevancePolicyTests.swift" \
+    "committedDigest")
+# e05's own digest. Two policies, two digests, one stamp: the nudge's thresholds are deliberately
+# NOT in `RelevancePolicy`, so that tuning a cooldown cannot invalidate e06's verdict cache
+# (R-95) — which also means `policyDigest` is blind to a nudge threshold moving, and B3 would
+# certify a report whose numbers no longer describe the app. Hence the third literal.
+COMMITTED_INTERVENTION_DIGEST=$(committed_literal \
+    "Packages/FocusCore/Tests/FocusCoreTests/InterventionPolicyTests.swift" \
     "committedDigest")
 
 typeset -a STAGE_NAMES STAGE_CODES STAGE_LOGS
@@ -399,7 +411,8 @@ evaluation_stage() {
     print "== R-75 binding checks (evaluated before any metric)"
     python3 - \
         "$EVAL_REPORT" "$EVAL_STAGED_REPORT" "$EVAL_MARKER" "$GATE_RUN_ID" \
-        "$COMMITTED_STAMP" "$COMMITTED_DIGEST" "$REPO_ROOT/$CORPUS_DIR" <<'PYTHON'
+        "$COMMITTED_STAMP" "$COMMITTED_DIGEST" "$REPO_ROOT/$CORPUS_DIR" \
+        "$COMMITTED_INTERVENTION_DIGEST" <<'PYTHON'
 import json
 import os
 import sys
@@ -407,6 +420,7 @@ import sys
 parsed_path, staging_path, marker_path = sys.argv[1], sys.argv[2], sys.argv[3]
 expected_run_id, expected_stamp, expected_digest = sys.argv[4], sys.argv[5], sys.argv[6]
 corpus_dir = sys.argv[7]
+expected_intervention_digest = sys.argv[8]
 
 failures = []
 
@@ -469,6 +483,19 @@ check(
     f"B3 the report's policy digest is {expected_digest}",
     report.get("policyDigest"),
 )
+# e05's third digest. `policyDigest` cannot see a nudge threshold move — that is the point of
+# giving the nudge its own manifest — so without this line B3 would happily certify a report whose
+# caps, cooldowns and snooze durations are not the ones the app is running.
+check(
+    bool(expected_intervention_digest),
+    "B3 the committed intervention digest was found in InterventionPolicyTests",
+    expected_intervention_digest,
+)
+check(
+    (report.get("nudge") or {}).get("interventionDigest") == expected_intervention_digest,
+    f"B3 the report's intervention digest is {expected_intervention_digest}",
+    (report.get("nudge") or {}).get("interventionDigest"),
+)
 
 # --- B4 · the same corpus ----------------------------------------------------------------
 #
@@ -496,13 +523,18 @@ def corpus_entries(directory):
         if os.path.exists(path):
             with open(path, "rb") as handle:
                 entries.append((f"{name}.json", handle.read()))
-    sequences = os.path.join(directory, "sequences")
-    if os.path.isdir(sequences):
-        for name in sorted(os.listdir(sequences)):
+    # The sequences AND the realistic days: both are corpus files, and `queriesPerFocusDay` and
+    # `interruptionsPerFocusDayMax` are measured on the days alone. A digest that did not cover
+    # them would let a day fixture be edited under a report that still bound.
+    for subdirectory in ("sequences", "days"):
+        path = os.path.join(directory, subdirectory)
+        if not os.path.isdir(path):
+            continue
+        for name in sorted(os.listdir(path)):
             if not name.endswith(".json"):
                 continue
-            with open(os.path.join(sequences, name), "rb") as handle:
-                entries.append((f"sequences/{name}", handle.read()))
+            with open(os.path.join(path, name), "rb") as handle:
+                entries.append((f"{subdirectory}/{name}", handle.read()))
     return entries
 
 
@@ -656,6 +688,27 @@ gate() {
     FOCUS_EVIDENCE_DIR= FOCUS_SELFCHECK_JSON="$SELFCHECK_JSON" \
         run_stage "selfcheck-debug" "$LOG_DIR/focus-selfcheck.log" \
         scripts/self-check.sh "$DD/Build/Products/Debug/FocusSentinel.app"
+    # 9a — focus-steal (§4.5, R-89, P-128, P-139). **The epic's headline gate.**
+    #
+    # Launches the Debug app with `open -g -a` — a background application that has never been
+    # frontmost, which is the posture a nudge really fires in — shows the panel, and asserts all
+    # FOUR of R-89's grant-free readings. Reading 1 comes from an independent observer process,
+    # because a stage that took every reading from inside the app under test would be trusting the
+    # app to report on itself; readings 2-4 can only come from inside, which is what the
+    # self-check channel is for. P-139 measured a focus theft that reading 1 alone cannot see.
+    FOCUS_FOCUS_STEAL_JSON="$LOG_DIR/focus-focus-steal.json" \
+        run_stage "focus-steal" "$LOG_DIR/focus-focus-steal.log" \
+        scripts/check-focus-steal.sh "$DD/Build/Products/Debug/FocusSentinel.app"
+
+    # 9b — notification-denied (§4.5, R-82, P-134). **This discharges standing condition 5.**
+    #
+    # Zero grants, no prompt of any kind, and the whole ladder still reaches somebody: every rung
+    # in-app at both unauthorised states, rung 3 on the panel in recommitment form, and
+    # `requestAuthorizationCallCount == 0`.
+    FOCUS_NOTIFICATION_DENIED_JSON="$LOG_DIR/focus-notification-denied.json" \
+        run_stage "notification-denied" "$LOG_DIR/focus-notification-denied.log" \
+        scripts/check-notification-denied.sh "$DD/Build/Products/Debug/FocusSentinel.app"
+
     FOCUS_EVIDENCE_DIR= FOCUS_SELFCHECK_JSON="$SELFCHECK_JSON_RELEASE" \
         run_stage "selfcheck-release" "$LOG_DIR/focus-selfcheck-release.log" \
         scripts/self-check.sh "$DD/Build/Products/Release/FocusSentinel.app"
@@ -725,6 +778,10 @@ collect_evidence() {
         "focus-selfcheck.log:selfcheck.log"
         "focus-selfcheck-release.log:selfcheck-release.log"
         "focus-selfcheck.json:selfcheck.json"
+        "focus-focus-steal.log:focus-steal.log"
+        "focus-focus-steal.json:focus-steal.json"
+        "focus-notification-denied.log:notification-denied.log"
+        "focus-notification-denied.json:notification-denied.json"
         "focus-selfcheck-release.json:selfcheck-release.json"
         "focus-eval-clean.log:eval-clean.log"
         "focus-evaluation.log:evaluation.log"
