@@ -377,11 +377,20 @@ check "R-22" "startAccessingSecurityScopedResource only in SecurityScopedBookmar
 # prompt-free from a zero-grant bundle (P-74, P-84, P-94/P-95, P-97), so the guarantee is made
 # structural: the asking calls are not in the binary, therefore no code path can reach one.
 # `AXIsProcessTrusted()` and `CGPreflightScreenCaptureAccess()` stay permitted — reading trust
-# state is not requesting it. `requestAuthorization` is banned graph-wide in e03 and narrows to
-# a single named file when e05 ships notification consent, in the same self-limiting shape as
-# the Carbon.HIToolbox exemption above.
+# state is not requesting it.
+#
+# **`requestAuthorization` has left this pattern, and it has been replaced by something
+# stronger, not weaker.** e03 banned it graph-wide and said in this paragraph that it would
+# narrow to a single named file when e05 shipped notification consent. That is what R-96g does
+# below, and it is a *bound plus an identity*: the call may appear in at most one file and that
+# file must be the Intervention settings pane's user-initiated action. A blanket ban here plus a
+# narrowed check there would have been the same assertion twice, with the blanket one failing on
+# the honest reporting name the self-check publishes — `requestAuthorizationCallCount`, the
+# number whose being zero is what §3.F.37 and the `notification-denied` gate stage actually
+# assert. A lint that made the app unable to *report* it had never asked would be a lint working
+# against the thing it exists to prove.
 check "R-33" "no API that can raise a TCC prompt" \
-    'AXIsProcessTrustedWithOptions|kAXTrustedCheckOptionPrompt|CGRequestScreenCaptureAccess|SCShareableContent|AVCaptureDevice\.requestAccess|requestAuthorization|requestAccess\(for:|CGRequestPostEventAccess|CGRequestListenEventAccess|IOHIDRequestAccess'
+    'AXIsProcessTrustedWithOptions|kAXTrustedCheckOptionPrompt|CGRequestScreenCaptureAccess|SCShareableContent|AVCaptureDevice\.requestAccess|requestAccess\(for:|CGRequestPostEventAccess|CGRequestListenEventAccess|IOHIDRequestAccess'
 
 # R-45: `SessionPhase(rawValue:)` would silently turn a legacy "running" row into a phase this
 # build does not recognise. Every decode goes through SessionPhase.decode(_:), which carries

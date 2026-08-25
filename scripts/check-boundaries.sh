@@ -43,6 +43,19 @@
 #     behind a flag set nowhere, because the rig has no camera and an unanswered question is not
 #     a pass (P-104, R-40).
 #
+# The one e05 addition is a ruling of the same kind (plan R-82, T137):
+#
+#   * **`UserNotifications` for `FocusUI`.** The top rung of the accusation ladder is a
+#     notification where the person has authorised one, and a notification is a surface — so it
+#     belongs in the package that owns surfaces, behind the `NotificationCentring` seam that
+#     lets every one of R-82's rulings be tested with no grant and no notification centre.
+#     It costs the matrix nothing it was protecting: P-134 measured `getNotificationSettings`,
+#     `setNotificationCategories` and `add(_:)` all obtainable at zero grants and **none of them
+#     prompting**, and the one call that *would* prompt — `requestAuthorization` — is pinned by
+#     `check-forbidden.sh`'s R-96g to a single named file, which is the settings pane's
+#     user-initiated action and is not this one. The framework carries no networking, no window
+#     list and no Accessibility surface.
+#
 # `mach_continuous_time` and `sysctl kern.boottime` need no row of their own: both are reachable
 # through `Foundation` on macOS, so the restoration anchor costs the matrix nothing.
 #
@@ -123,7 +136,7 @@ ALLOWED_FRAMEWORKS[FocusCore]="Foundation SwiftData os"
 ALLOWED_FRAMEWORKS[FocusRules]="Foundation SwiftData os"
 ALLOWED_FRAMEWORKS[FocusClassify]="Foundation NaturalLanguage os"
 ALLOWED_FRAMEWORKS[FocusSensing]="Foundation AppKit CoreGraphics IOKit Carbon.HIToolbox CoreAudio CoreMediaIO os"
-ALLOWED_FRAMEWORKS[FocusUI]="Foundation SwiftUI AppKit Observation QuickLook UniformTypeIdentifiers os"
+ALLOWED_FRAMEWORKS[FocusUI]="Foundation SwiftUI AppKit Observation QuickLook UniformTypeIdentifiers UserNotifications os"
 
 PACKAGES=(FocusCore FocusRules FocusClassify FocusSensing FocusUI)
 
