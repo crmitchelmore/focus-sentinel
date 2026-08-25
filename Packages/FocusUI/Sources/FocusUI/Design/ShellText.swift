@@ -313,6 +313,18 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     /// nothing to consume it. The nudge is e05's; this is the honest report of its absence.
     case verdictMandated = "settings.verdict.mandated"
     case verdictEngineLabel = "settings.verdict.engineLabel"
+
+    // The nudge surfaces' own chrome (e05).
+    //
+    // **The nudge's *words* are not here.** Every sentence a nudge says comes from one of the
+    // five static decks in `FocusCore`'s catalog, through `NudgeVoice → NudgeCopyKey`, because
+    // D-11 requires the intervention copy to be human-authored and checkable and R-96l asserts
+    // the deck matrix as a bijection. What is here is the chrome around those sentences: the
+    // close affordance's label, the countdown's spoken form and the one line that tells somebody
+    // the top rung wants an answer.
+    case nudgeDismiss = "shell.nudge.dismiss"
+    case nudgeSnoozeCountdown = "shell.nudge.snoozeCountdown"
+    case nudgeRecommitment = "shell.nudge.recommitment"
 }
 
 /// A transform applied to a resolved string immediately before it is drawn.

@@ -2581,6 +2581,42 @@
         }
       }
     },
+    "shell.nudge.dismiss" : {
+      "comment" : "Accessibility label for the nudge panel's close affordance. Escape does the same thing.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dismiss"
+          }
+        }
+      }
+    },
+    "shell.nudge.recommitment" : {
+      "comment" : "The one line that distinguishes the top rung: it asks for a choice and does not take one away.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose what happens next."
+          }
+        }
+      }
+    },
+    "shell.nudge.snoozeCountdown" : {
+      "comment" : "Spoken form of the nudge panel's snooze countdown. %@ is a rendered duration.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Snoozed for %@"
+          }
+        }
+      }
+    },
     "shell.window.cockpit.title" : {
       "comment" : "Title of the main cockpit window, as it appears in the Window menu.",
       "extractionState" : "manual",
