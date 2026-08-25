@@ -628,6 +628,366 @@ check_outside "R-70n" "no rule is constructed with the session scope" \
     --allow Packages/FocusClassify/Sources/FocusEvaluateCore/CorpusRunner.swift \
     --allow Packages/FocusUI/Tests/FocusUITests/PrioritySnapshotTests.swift
 
+# ---- e05 -------------------------------------------------------------------------------
+#
+# Eleven assertions, and every one of them lands BEFORE the code it constrains exists (e03's
+# ordering doctrine). A lint that forbids a thing must exist before the thing could have been
+# written, or the first green gate proves nothing.
+#
+# R-96a  `QueryWarrant(` appears in exactly ONE source file in the shipping graph — the same
+#        guarantee R-70b gives `InterventionMandate(`, applied to the second authorisation
+#        U-1 created. The count is the point: moving the producer becomes a reviewed act.
+#
+# R-96b  No source file names BOTH `QueryWarrant(` and `InterventionMandate(`. The adapter
+#        that would widen a question into an accusation has to be written somewhere, and
+#        this is the somewhere. U-1 retains e04's invariant in its true form: an uncertain
+#        verdict gains the query affordance and NOTHING ELSE.
+#
+# R-96c  `LadderRung(` appears in exactly one file; that file names `InterventionMandate`
+#        and does not name `QueryWarrant`. The rung is the unit of escalation, so its
+#        provenance IS the no-escalation invariant.
+#
+# R-96d  No shared protocol over the two authorisations. `: NudgeAuthorisation`-shaped
+#        conformances are banned outright — a shared abstraction is the elegant refactor
+#        that would quietly destroy the guarantee while looking like an improvement.
+#
+# R-96e  `NSApp.activate(`, `NSApplication.shared.activate(` and `activateIgnoringOtherApps`
+#        are banned. P-135 measured them harmless in an .accessory probe with no activatable
+#        window; the shipping app is .regular (F-01, F-85), so that reading does not
+#        transfer and the ban stands on the policy, not on the measurement.
+#
+#        Two search sets, because the ruling is about the NUDGE and the repository already
+#        contains two activations that are not nudges and were shipped deliberately:
+#
+#          * **Absolute in the nudge module.** Return-to-task is
+#            `NSRunningApplication.activate()` falling back to `NSWorkspace.openApplication`
+#            (R-88), both measured at zero grants from a never-active app, and the nudge has
+#            no other reason to bring anything forward. No allow-list, ever.
+#          * **Pinned to two named files everywhere else.** e02's quick-capture panel
+#            activates because the **person pressed the global hot key** (F-06) — an app that
+#            did not come forward when summoned would be broken, and this is the opposite of
+#            stealing focus; and `SelfCheck.comeForward` activates so the zero-grant shell
+#            has a readable window to photograph, in a mode `--focus-self-check` alone
+#            reaches. Neither is re-opened here (both are shipped e01–e03 rulings); both are
+#            pinned, so a THIRD activation anywhere in the repository fails the gate.
+#
+# R-96f  No string under `nudge.*.query.*` matches the accusatory word list. D-11 made the
+#        copy static precisely so it could be checked; tone is the product.
+#
+# R-96g  `requestAuthorization(` appears in exactly one file, the Intervention settings
+#        pane's user-initiated action. P-134 proved the router needs only
+#        getNotificationSettings, which never prompts — so SC-5 is discharged structurally.
+#
+# R-96h  `hidesOnDeactivate = true` and a `canBecomeMain` returning true are banned on any
+#        NSPanel subclass in the nudge module. Both are silent failures: the first makes
+#        the nudge vanish exactly when it is needed, the second activates the app.
+#
+# R-96i  No timer, DispatchSourceTimer, Task.sleep or Timer.scheduledTimer in the nudge
+#        reducers. R-70e's doctrine applied to the third and fourth state machines.
+#
+# R-96j  Every numeric literal in nudge code lives in InterventionPolicy.swift — the second
+#        and last such file. Excepted: 0, 1, and comparisons against count/isEmpty.
+#
+# R-96m  The panel's show path is ONE function. `makeKeyAndOrderFront(` and `makeKey(` are
+#        banned outright in the nudge module; `orderFrontRegardless` may appear only in
+#        NudgePanelController's show function; `becomesKeyOnlyIfNeeded = false` is banned.
+#        P-139 measured makeKeyAndOrderFront flipping NSApp.isActive false -> true while
+#        NSWorkspace.frontmostApplication never moved — a focus theft invisible to the one
+#        instrument the original gate read. The two calls look identical in a diff, so the
+#        difference is held by a lint rather than by a reviewer's memory.
+#
+# ## Two shapes these assertions need that the helpers above do not have
+#
+# `count_files` answers "how many files contain this", which is exactly R-96a's and R-96c's
+# question. Two of the eleven ask something else:
+#
+#   * **R-96b** asks whether any ONE file contains two different things. An intersection, not
+#     a count, and getting it wrong in the safe-looking direction (two separate `check`s, each
+#     passing) would leave the adapter's home unguarded.
+#   * **R-96g** has to hold BEFORE its one sanctioned call site exists. A `count_files … 1`
+#     would fail today, when the count is legitimately zero, and the honest assertion is
+#     "at most one, and if there is one it is that file" — which is what `count_at_most`
+#     below says. It is a bound plus an identity, never a bare "at most", because "at most
+#     one call site, anywhere" would let the prompt move into a router.
+#
+# The nudge module's search set is named once, in NUDGE_SOURCES, and paths that do not exist
+# yet are dropped rather than making grep error — Phase B lands before Phase E, so
+# `FocusUI/Nudge` is legitimately absent today. `existing_paths` prints what survives and the
+# checks print what they searched, so an empty set is visible rather than a silent pass.
+
+# Every path a nudge decision or a nudge surface may live in. FocusCore/Nudge is the
+# decision module; the other three arrive in Phases E and F.
+NUDGE_SOURCES=(
+    Packages/FocusCore/Sources/FocusCore/Nudge
+    Packages/FocusUI/Sources/FocusUI/Nudge
+    Packages/FocusUI/Sources/FocusUI/MenuBar
+)
+
+# The reducers alone — no surface, no AppKit. R-96i and R-96j are about these.
+NUDGE_REDUCERS=(Packages/FocusCore/Sources/FocusCore/Nudge)
+
+# The one file permitted to show the panel (R-96m). It arrives in T133.
+PANEL_SHOW_FILE="Packages/FocusUI/Sources/FocusUI/Nudge/NudgePanelController.swift"
+
+# The one file permitted to ask for notification authorisation (R-96g). It arrives in T138.
+AUTHORISATION_ALLOWED_FILE="Packages/FocusUI/Sources/FocusUI/Scenes/InterventionSettingsView.swift"
+
+# The String Catalog the decks live in (R-96f).
+NUDGE_CATALOG="Packages/FocusCore/Sources/FocusCore/Resources/Localizable.xcstrings"
+
+# Echo the arguments that name something that exists. A check whose whole search set has
+# vanished prints so rather than passing in silence.
+existing_paths() {
+    local path
+    for path in "$@"; do
+        [[ -e "$path" ]] && print -r -- "$path"
+    done
+}
+
+# check_not_both <condition> <description> <fixed-string-a> <fixed-string-b> <path>…
+#
+# R-96b. Fails on any single file containing both needles. Fixed strings, because both shapes
+# end in `(`.
+check_not_both() {
+    local condition="$1"
+    local description="$2"
+    local first="$3"
+    local second="$4"
+    shift 4
+
+    local files_first files_second both
+    files_first=$(grep -rlF --include='*.swift' --exclude-dir='.build' -- "$first" "$@" 2>/dev/null | sort -u)
+    files_second=$(grep -rlF --include='*.swift' --exclude-dir='.build' -- "$second" "$@" 2>/dev/null | sort -u)
+    both=$(comm -12 <(print -r -- "$files_first") <(print -r -- "$files_second") | grep '[^[:space:]]')
+
+    if [[ -n "$both" ]]; then
+        print -u2 "FAIL [$condition] $description"
+        print -u2 "$both" | sed 's/^/    /'
+        print -u2 "    A file that can build both authorisations is a file that can adapt one"
+        print -u2 "    into the other. U-1 gives an uncertain verdict the query affordance and"
+        print -u2 "    NOTHING ELSE (R-76)."
+        rc=1
+    else
+        print "ok   [$condition] $description"
+    fi
+}
+
+# count_at_most <condition> <description> <fixed-string> <max> <allowed-file> <path>…
+#
+# R-96g's shape: a bound plus an identity. Zero files is a pass and says so — the sanctioned
+# call site has not been written yet — one file is a pass only when it is the sanctioned one,
+# and two is a failure whatever they are.
+count_at_most() {
+    local condition="$1"
+    local description="$2"
+    local pattern="$3"
+    local maximum="$4"
+    local allowed="$5"
+    shift 5
+
+    local files count
+    files=$(grep -rlF --include='*.swift' --exclude-dir='.build' -- "$pattern" "$@" 2>/dev/null | sort -u)
+    count=$(print -r -- "$files" | grep -c '[^[:space:]]')
+
+    if (( count > maximum )); then
+        print -u2 "FAIL [$condition] $description — at most $maximum file(s), found $count"
+        print -u2 "$files" | sed 's/^/    /'
+        rc=1
+        return
+    fi
+
+    local file
+    for file in ${(f)files}; do
+        [[ -z "$file" ]] && continue
+        if [[ "$file" != "$allowed" ]]; then
+            print -u2 "FAIL [$condition] $description — found in $file"
+            print -u2 "    The only sanctioned location is $allowed"
+            rc=1
+            return
+        fi
+    done
+
+    if (( count == 0 )); then
+        print "ok   [$condition] $description (0 call sites; the sanctioned one is $allowed)"
+    else
+        print "ok   [$condition] $description ($count file: $allowed)"
+    fi
+}
+
+print
+print "== e05: the nudge, the two authorisations and the panel's show path"
+
+# R-96a — the second authorisation has exactly one producer, as the first one does.
+count_files "R-96a" "QueryWarrant is constructed in exactly one file" \
+    'QueryWarrant(' 1 App Packages
+
+# R-96b — and no file can build both.
+check_not_both "R-96b" "no file constructs both a QueryWarrant and an InterventionMandate" \
+    'QueryWarrant(' 'InterventionMandate(' App Packages
+
+# R-96c — the rung's provenance IS the no-escalation invariant, so its construction site is
+# pinned and that site's contents are asserted: it must name the authorisation a rung is built
+# from, and must not name the one it is not.
+count_files "R-96c" "LadderRung is constructed in exactly one file" \
+    'LadderRung(' 1 App Packages
+# Comment-stripped, exactly as `count_files` counts: a doc comment that quotes the constructor
+# in order to explain the rule is the opposite of a violation.
+ladder_files=(${(f)"$(grep -rnF --include='*.swift' --exclude-dir='.build' -- 'LadderRung(' App Packages 2>/dev/null | strip_comments | cut -d: -f1 | sort -u)"})
+if (( ${#ladder_files} == 0 )) || [[ -z "${ladder_files[1]}" ]]; then
+    print -u2 "FAIL [R-96c] no file constructs a LadderRung — the ladder has lost its unit"
+    rc=1
+else
+    # Every such file, not the first: `head -1` would let a second construction site pass its
+    # content check by happening to sort after the sanctioned one.
+    for ladder_file in $ladder_files; do
+        if grep -HnF 'InterventionMandate' "$ladder_file" | strip_comments | grep -q .; then
+            print "ok   [R-96c] $ladder_file names InterventionMandate"
+        else
+            print -u2 "FAIL [R-96c] $ladder_file builds a rung without naming InterventionMandate"
+            print -u2 "    A rung is built from a mandate and from nothing else (R-76.3)."
+            rc=1
+        fi
+        if grep -HnF 'QueryWarrant' "$ladder_file" | strip_comments | grep -q .; then
+            print -u2 "FAIL [R-96c] $ladder_file names QueryWarrant beside the rung constructor"
+            print -u2 "    This is the file an escalation adapter would have to be written in."
+            rc=1
+        else
+            print "ok   [R-96c] $ladder_file does not name QueryWarrant"
+        fi
+    done
+fi
+
+# R-96d — no shared abstraction over the two authorisations, and no retroactive conformance
+# added to either of them. The elegant refactor is the one that would destroy the guarantee.
+check_set "R-96d" "no shared authorisation protocol over the two types" \
+    'NudgeAuthorisation|NudgeAuthorization|InterventionAuthorisation|AnyAuthorisation|extension[[:space:]]+(QueryWarrant|InterventionMandate)[[:space:]]*:' \
+    App Packages
+
+# R-96e — the shipping app is .regular, so every one of these steals focus. Pinned to the two
+# shipped, deliberately user-summoned call sites; a third one anywhere fails the gate. The
+# nudge module's own absolute ban is asserted below, with no allow-list at all.
+check_outside "R-96e" "NSApp.activate appears only where the person summoned the app" \
+    'NSApp\.activate\(|NSApplication\.shared\.activate\(|activateIgnoringOtherApps' \
+    App Packages \
+    --allow Packages/FocusUI/Sources/FocusUI/Capture/QuickCapturePanelController.swift \
+    --allow App/SelfCheck.swift
+
+# R-96f — the question never accuses.
+#
+# The word list is small and blunt on purpose. Tone is the product: the Court's default voice
+# asks "Is {subject} part of {task}?", and the whole difference between this app and the ones
+# people uninstall is that the question does not carry an accusation inside it. D-11 made the
+# copy static precisely so a property like this could be checked at all.
+#
+# It reads the committed **catalog** rather than the source, because the string a person sees is
+# the catalog's; and it is inline here rather than in a script of its own so that the word list
+# exists in exactly one place in the repository.
+print
+print "== R-96f: no line under a nudge query key accuses anybody"
+python3 - "$NUDGE_CATALOG" <<'PYTHON'
+import json
+import sys
+
+# Second-person accusation, in the shapes a well-meaning copy edit reaches for. Every entry is
+# lower-cased and matched as a substring, so "You're wasting time" and "wasted" both hit.
+ACCUSATORY = (
+    "distract", "off task", "off-task", "wasting", "waste of", "wasted",
+    "procrastinat", "you should", "you shouldn", "slacking", "goofing",
+    "avoiding", "supposed to", "not working", "get back to work", "stop it",
+    "focus up", "no excuse", "again?",
+)
+
+path = sys.argv[1]
+with open(path) as handle:
+    catalog = json.load(handle)
+
+failures = []
+checked = 0
+for key, entry in sorted(catalog.get("strings", {}).items()):
+    if not key.startswith("nudge.") or ".query." not in key:
+        continue
+    unit = entry.get("localizations", {}).get("en", {}).get("stringUnit", {})
+    value = unit.get("value", "")
+    checked += 1
+    lowered = value.lower()
+    for word in ACCUSATORY:
+        if word in lowered:
+            failures.append(f"{key}: {value!r} contains {word!r}")
+
+if checked == 0:
+    print("FAIL [R-96f] no nudge query keys found in the catalog at all", file=sys.stderr)
+    sys.exit(1)
+
+for failure in failures:
+    print(f"    {failure}", file=sys.stderr)
+
+if failures:
+    print(
+        "FAIL [R-96f] the question accuses somebody. The accusation never says "
+        '"you are distracted"; the question never says "you should be working" (R-90, D-11).',
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+print(f"ok   [R-96f] {checked} nudge query line(s) checked, none accusatory")
+PYTHON
+tone_rc=$?
+(( tone_rc != 0 )) && rc=1
+
+# R-96g — the routing path must be provably prompt-free, and the assertion has to hold before
+# the one sanctioned call site is written.
+count_at_most "R-96g" "requestAuthorization appears only in the settings pane's action" \
+    'requestAuthorization(' 1 "$AUTHORISATION_ALLOWED_FILE" App Packages
+
+print
+nudge_paths=(${(f)"$(existing_paths $NUDGE_SOURCES)"})
+if (( ${#nudge_paths} == 0 )); then
+    print -u2 "FAIL [R-96h/i/j/m] the nudge module has no source directory at all"
+    rc=1
+else
+    print "   nudge module: ${nudge_paths[*]}"
+
+    # R-96e, the half with no allow-list: a nudge never brings this application forward.
+    check_set "R-96e" "no nudge surface activates the application" \
+        'NSApp\.activate\(|NSApplication\.shared\.activate\(|activateIgnoringOtherApps' \
+        $nudge_paths
+
+    # R-96h — the two silent failures of R-89's panel. `hidesOnDeactivate = true` makes the
+    # nudge vanish exactly when it is needed; a `canBecomeMain` returning true activates the
+    # application.
+    check_set "R-96h" "no panel hides on deactivate or becomes main" \
+        'hidesOnDeactivate[[:space:]]*=[[:space:]]*true|canBecomeMain[^!=<>]*=[[:space:]]*true|canBecomeMain[[:space:]]*:[[:space:]]*Bool[[:space:]]*\{[[:space:]]*true' \
+        $nudge_paths
+
+    # R-96m — the show path is one function, and the call that takes focus is banned outright.
+    check_set "R-96m" "no nudge surface makes a window key programmatically" \
+        'makeKeyAndOrderFront\(|makeKey\(|becomesKeyOnlyIfNeeded[[:space:]]*=[[:space:]]*false' \
+        $nudge_paths
+
+    check_outside "R-96m" "orderFrontRegardless appears only in the panel's show function" \
+        'orderFrontRegardless' $nudge_paths \
+        --allow "$PANEL_SHOW_FILE"
+fi
+
+reducer_paths=(${(f)"$(existing_paths $NUDGE_REDUCERS)"})
+if (( ${#reducer_paths} == 0 )); then
+    print -u2 "FAIL [R-96i/j] the nudge reducers have no source directory"
+    rc=1
+else
+    # R-96i — a replayable reducer is what makes a sequence fixture an exact assertion rather
+    # than a flaky one. R-70e's doctrine, applied to the ladder and the fatigue controller.
+    check_set "R-96i" "no timer or sleep in the nudge reducers" \
+        'Timer\(|DispatchSourceTimer|Task\.sleep|asyncAfter|Timer\.scheduledTimer|RunLoop\.' \
+        $reducer_paths
+
+    # R-96j — InterventionPolicy.swift is the second and last file in which a numeric literal
+    # may appear. Scoped to the reducers rather than to the surfaces: a panel has a frame and a
+    # menu bar has a cadence, and neither is a threshold about a person.
+    check_literals "R-96j" "no numeric literal outside InterventionPolicy" \
+        $reducer_paths \
+        --except Packages/FocusCore/Sources/FocusCore/Nudge/InterventionPolicy.swift
+fi
+
 # --- SC-1, the binary half ----------------------------------------------------------------
 #
 # The grep above can be defeated by building the string at runtime. The symbol cannot:
