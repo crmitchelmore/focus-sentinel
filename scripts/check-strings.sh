@@ -111,9 +111,15 @@ root = sys.argv[1]
 # `LocalizedStringResource`s resolved against `FocusCore`'s own bundle, in exactly the shape
 # `FocusStatus.shortLabelResource` already ships, so `FocusUI` renders them without writing a
 # single string of its own.
+#
+# e05 adds one, `nudge.`, and it is FocusCore's for the same reason the five e04 namespaces
+# are: the nudge vocabulary is declared where `FocusUI` can reach it without importing
+# `FocusClassify`, and every key is exposed as a `LocalizedStringResource` resolved against
+# FocusCore's own bundle.
 NAMESPACES = ("shell.", "settings.", "status.", "priority.", "capture.", "context.",
               "handoff.", "undo.", "session.", "sensing.", "capability.",
-              "cascade.", "explanation.", "suppression.", "evidence.", "rule.")
+              "cascade.", "explanation.", "suppression.", "evidence.", "rule.",
+              "nudge.")
 
 # module name -> (catalog path, source directory)
 MODULES = {
@@ -135,6 +141,59 @@ EXPECTS_NO_STRINGS = ("App",)
 
 LITERAL = re.compile(r'"([^"\\\n]+)"')
 COMMENT = re.compile(r'^\s*(//|///|\*|/\*)')
+CASE_DECLARATION = re.compile(r"^\s*case\s+([A-Za-z_][A-Za-z0-9_]*)\s*(?:=\s*\"([^\"]*)\")?")
+
+# --- e05: the deck matrix is COMPOSED, and that is why it is checked as a bijection --------
+#
+# Sixty-five keys — five voices x thirteen lines — and not one of them appears as a literal in
+# any source file. `NudgeVoice.key(_:)` composes `nudge.<deck>.<situation>` from two enums, so
+# the "every catalog key is referenced by a source literal" check below cannot see them and
+# would report all sixty-five as dead text.
+#
+# Writing them out as sixty-five literals to satisfy that check would be the wrong fix: it is
+# the fifth place the vocabulary is written down, and it is the one that rots. The right fix is
+# the **stronger** assertion — a bijection between `NudgeVoice x NudgeCopyKey` and the
+# `nudge.<deck>.*` keys, in both directions — so the deck keys are exempted from the reference
+# check *here* and re-asserted *there*, never merely skipped.
+#
+# A missing deck entry is an untranslated nudge shipped to somebody at their most sensitive
+# moment (R-96l).
+NUDGE_SOURCE = "Packages/FocusCore/Sources/FocusCore/Nudge"
+
+
+def enum_case_values(path, name):
+    """The raw values of `enum <name>` in `path`, in declaration order.
+
+    A case with no `= "..."` contributes its own name, which is what a `String`-raw Swift enum
+    does. Read from the source rather than from a list here, because a list here would be the
+    fifth place the vocabulary is written down.
+    """
+    with open(os.path.join(root, path)) as handle:
+        lines = handle.readlines()
+
+    values = []
+    depth = 0
+    inside = False
+    for line in lines:
+        if not inside:
+            if re.search(rf"\benum\s+{name}\b", line) and not COMMENT.match(line):
+                inside = True
+                depth = line.count("{") - line.count("}")
+            continue
+        if COMMENT.match(line):
+            continue
+        found = CASE_DECLARATION.match(line)
+        if found:
+            values.append(found.group(2) or found.group(1))
+        depth += line.count("{") - line.count("}")
+        if depth <= 0:
+            break
+    return values
+
+
+NUDGE_VOICES = enum_case_values(os.path.join(NUDGE_SOURCE, "NudgeVoice.swift"), "NudgeVoice")
+NUDGE_LINES = enum_case_values(os.path.join(NUDGE_SOURCE, "NudgeVoice.swift"), "NudgeCopyKey")
+DECK_MATRIX = {f"nudge.{voice}.{line}" for voice in NUDGE_VOICES for line in NUDGE_LINES}
 
 failures = []
 
@@ -195,7 +254,9 @@ for module, (catalog_path, source_dir) in sorted(MODULES.items()):
             ],
         )
 
-    unreferenced = sorted(declared - referenced)
+    # The composed deck keys are exempt here and asserted as a bijection below — never
+    # skipped, replaced by a stronger check.
+    unreferenced = sorted(declared - referenced - DECK_MATRIX)
     report(
         not unreferenced,
         f"{module}: every catalog key is referenced by {source_dir}",
@@ -260,9 +321,6 @@ BIJECTIONS = (
 # one, because "everything that does not parse" would be a hole the next caption falls through.
 NON_MEMBER_KEYS = {"cascade.rung.unavailable"}
 
-CASE_DECLARATION = re.compile(r"^\s*case\s+([A-Za-z_][A-Za-z0-9_]*)")
-
-
 def enum_cases(path, name):
     """The case names declared by `enum <name>` in `path`, in declaration order."""
     with open(os.path.join(root, path)) as handle:
@@ -313,6 +371,97 @@ for condition, enum_name, file_name, namespace in BIJECTIONS:
         not (suffixes - declared),
         f"{condition}: every {namespace}* key names a {enum_name} case",
         [f"{namespace}{suffix} names no case of {enum_name}" for suffix in sorted(suffixes - declared)],
+    )
+
+# --- e05 R-96l: the deck matrix and four more bijections -----------------------------------
+#
+# Five assertions, and the first is different in kind from the rest.
+#
+#   the matrix   NudgeVoice x NudgeCopyKey  <-> nudge.<deck>.<situation>   (65 keys)
+#   R-96l        LadderRung.Kind            <-> nudge.rung.*
+#   R-96l        QueryableUncertainty       <-> nudge.query.reason.*
+#   R-96l        NudgeSuppressionReason     <-> nudge.suppressed.*
+#   R-96l        DeferralReason             <-> nudge.deferred.*
+#
+# The matrix is a **product** of two vocabularies rather than one, because a voice with a
+# missing line is not a missing sentence — it is a nudge that renders its own key to somebody
+# at their most sensitive moment. Five decks times thirteen lines, both directions, no
+# exceptions: a key with no pair is a sentence the app can never say, and a pair with no key is
+# a line it would say wrongly.
+#
+# `nudge.withheld.*` is deliberately NOT here. Those keys ARE written out as literals in
+# `QueryWithholdingReason.copyKey`, so the generic reference check above already covers them in
+# both directions; adding a bijection would be the same assertion twice.
+#
+# **The tone assertion is not here either, and that is deliberate.** R-96f — no line under a
+# `nudge.*.query.*` key may accuse anybody — lives in `check-forbidden.sh`, where the
+# accusatory word list exists exactly once. Splitting the list across two scripts would be the
+# fifth-place drift R-54 forbids everywhere else, and a word list that disagrees with itself is
+# worse than one that lives in the file whose name says "forbidden".
+
+NUDGE_BIJECTIONS = (
+    ("R-96l", "LadderRung.Kind", "LadderRung.swift", "Kind", "nudge.rung."),
+    (
+        "R-96l", "QueryableUncertainty", "QueryableUncertainty.swift",
+        "QueryableUncertainty", "nudge.query.reason.",
+    ),
+    (
+        "R-96l", "NudgeSuppressionReason", "SuppressionStack.swift",
+        "NudgeSuppressionReason", "nudge.suppressed.",
+    ),
+    ("R-96l", "DeferralReason", "RungDelivery.swift", "DeferralReason", "nudge.deferred."),
+)
+
+# The matrix, first.
+report(
+    bool(NUDGE_VOICES) and bool(NUDGE_LINES),
+    "R-96l: NudgeVoice and NudgeCopyKey both declare cases",
+    ["no `case` found in NudgeVoice.swift — has an enum been renamed?"],
+)
+
+deck_declared = {key for key in core_catalog if key.startswith("nudge.")}
+# Only the composed keys: `nudge.rung.*`, `nudge.suppressed.*` and friends are single-vocabulary
+# keys and are asserted by the four bijections below, not by the matrix.
+deck_declared = {
+    key
+    for key in deck_declared
+    if len(key.split(".")) > 2 and key.split(".")[1] in set(NUDGE_VOICES)
+}
+
+report(
+    not (DECK_MATRIX - deck_declared),
+    f"R-96l: all {len(DECK_MATRIX)} deck keys "
+    f"({len(NUDGE_VOICES)} voices x {len(NUDGE_LINES)} lines) exist in the catalog",
+    [f"missing deck entry: {key}" for key in sorted(DECK_MATRIX - deck_declared)],
+)
+report(
+    not (deck_declared - DECK_MATRIX),
+    "R-96l: every nudge.<deck>.* key names a real voice and line",
+    [
+        f"{key} names no NudgeVoice x NudgeCopyKey pair"
+        for key in sorted(deck_declared - DECK_MATRIX)
+    ],
+)
+
+for condition, label, file_name, enum_name, namespace in NUDGE_BIJECTIONS:
+    declared = set(enum_case_values(os.path.join(NUDGE_SOURCE, file_name), enum_name))
+    keys = {key for key in core_catalog if key.startswith(namespace)}
+    suffixes = {key[len(namespace):] for key in keys}
+
+    report(
+        bool(declared),
+        f"{condition}: {label} declares at least one case",
+        [f"no `case` found for {enum_name} in {file_name} — has it been renamed?"],
+    )
+    report(
+        not (declared - suffixes),
+        f"{condition}: every {label} case has a {namespace}* key",
+        [f"no copy for {label}.{case}: add {namespace}{case}" for case in sorted(declared - suffixes)],
+    )
+    report(
+        not (suffixes - declared),
+        f"{condition}: every {namespace}* key names a {label} case",
+        [f"{namespace}{suffix} names no case of {label}" for suffix in sorted(suffixes - declared)],
     )
 
 print()
