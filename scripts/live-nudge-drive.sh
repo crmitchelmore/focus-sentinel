@@ -358,6 +358,23 @@ app_window_records() {
 
 FRAME_INK="scripts/frame-ink.py"
 
+# The display's pixel size, asked for **once**: `system_profiler` takes seconds, and a lane that
+# re-read it per frame would spend more time measuring the screen than photographing it. Prints
+# `<width> <height>`, falling back to this rig's own 1920x1080 (P-90: one display, no notch).
+SCREEN_SIZE_CACHE=''
+screen_size() {
+    if [[ -z "$SCREEN_SIZE_CACHE" ]]; then
+        local pair
+        pair="$(system_profiler SPDisplaysDataType 2>/dev/null | grep -m1 -oE '[0-9]+ x [0-9]+')"
+        if [[ -n "$pair" ]]; then
+            SCREEN_SIZE_CACHE="${pair% x *} ${pair#* x }"
+        else
+            SCREEN_SIZE_CACHE='1920 1080'
+        fi
+    fi
+    print -r -- "$SCREEN_SIZE_CACHE"
+}
+
 # `ink`, `blank`, or `unreadable`, for one frame.
 frame_verdict() {
     local frame="$1" line
@@ -453,10 +470,7 @@ require_panel_geometry() {
     read -r width height <<< "$expected"
 
     local screen_width screen_height matches=0 observed=""
-    screen_width="$(system_profiler SPDisplaysDataType 2>/dev/null | grep -m1 -oE '[0-9]+ x [0-9]+' | cut -d' ' -f1)"
-    screen_height="$(system_profiler SPDisplaysDataType 2>/dev/null | grep -m1 -oE '[0-9]+ x [0-9]+' | cut -d' ' -f3)"
-    [[ -n "$screen_width" ]] || screen_width=1920
-    [[ -n "$screen_height" ]] || screen_height=1080
+    read -r screen_width screen_height <<< "$(screen_size)"
 
     for record in ${(f)"$(app_window_records "$WINDOW_OWNER")"}; do
         [[ -n "$record" ]] || continue
@@ -491,9 +505,8 @@ require_panel_geometry() {
 # `screencapture -l` cannot address them — so the instrument here is `-R <rect>` over the
 # right-hand strip, which is where the extras live.
 capture_menu_bar() {
-    local artefact="$1" width
-    width="$(system_profiler SPDisplaysDataType 2>/dev/null | grep -m1 -oE '[0-9]+ x [0-9]+' | cut -d' ' -f1)"
-    [[ -n "$width" ]] || width=1920
+    local artefact="$1" width height
+    read -r width height <<< "$(screen_size)"
     "$SCREENCAPTURE" -x -o -R "$(( width - 1220 )),0,1220,32" "$EVIDENCE_DIR/$artefact" 2>/dev/null
     if [[ -s "$EVIDENCE_DIR/$artefact" ]]; then
         produced "$artefact"
