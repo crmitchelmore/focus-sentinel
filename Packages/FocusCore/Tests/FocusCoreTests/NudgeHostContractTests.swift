@@ -193,52 +193,29 @@ struct NudgeHostContractTests {
         )
     }
 
-    // MARK: - A question nobody could see is never written down (focus-x7d, U-1)
-
-    /// **The burned-question regression, and why it is the worst failure this app has.**
-    ///
-    /// U-1 licenses the app to interrupt on `uncertain` for exactly one reason: the interruption
-    /// is a single cheap click that teaches it, after which it never asks again. Every receipt in
-    /// `QueryLedger` is immutable and `hasAsked(…)` is gate 11 of the suppression stack, so the
-    /// never-ask-twice promise and the burn-it-once hazard are the same mechanism read from two
-    /// sides.
-    ///
-    /// A live drive found the panel on screen at 380 × 2212 and unreadable. Every path that ends
-    /// an unanswered question — `expireOpenQuestion()` on a session end, a phase change, a
-    /// priority change or a presentation, and `close(_:)` on a preemption — writes a receipt, so
-    /// the app would have recorded that question as asked and never asked it again. The person
-    /// saw a blank slab; the ledger recorded a conversation.
-    ///
-    /// The rule these assertions hold is therefore: **a receipt is written only about a question
-    /// that reached a surface a person could read.** A question that did not is deferred,
-    /// unwritten, and stays askable.
-    @Test("no receipt is written about a question that never reached a readable surface")
-    func noReceiptForAQuestionNobodyCouldSee() throws {
-        let host = try #require(
-            try Self.sources().first { $0.name == "NudgeHost.swift" }
-        )
-        let lines = Self.code(host.text)
-
-        // The reading exists, and it is the panel's own — not an inference from "we called show".
-        #expect(
-            lines.contains { $0.contains("panel.isPresentedAtIntendedSize") },
-            "the host never asks whether the panel a person is being asked to answer is readable"
-        )
-        // Every ledger write about an open question is guarded by it.
-        #expect(
-            lines.contains { $0.contains("guard questionWasPresentable()") },
-            "a question nobody could read can still spend the app's one chance to ask it"
-        )
-        #expect(
-            lines.filter { $0.contains("questionWasPresentable()") }.count >= 3,
-            "at least one of the receipt-writing paths is unguarded"
-        )
-        // The panel show path is followed by the guard rather than by the delivery bookkeeping.
-        #expect(
-            lines.contains { $0.contains("guard panel.isPresentedAtIntendedSize else") },
-            "a panel that came up unreadable is still counted as a delivered question"
-        )
-    }
+    // MARK: - A question nobody could see is never written down (focus-kby, U-1)
+    //
+    // **There was an assertion here, and deleting it is the point.**
+    //
+    // `noReceiptForAQuestionNobodyCouldSee` grepped `App/NudgeHost.swift` for the substrings the
+    // guard was spelled with — `panel.isPresentedAtIntendedSize`, `guard
+    // questionWasPresentable()` — because no test target can import the application target. An
+    // adversarial lens replaced that method's body with `return true`, reinstating every path by
+    // which a question nobody saw spends the app's one chance to ask it, and **all 824 tests
+    // stayed green**: the substrings were still there, so the scan was still satisfied. It tested
+    // spelling.
+    //
+    // The rule now lives where it can be executed. `QuestionLedgerPolicy` decides, in `FocusCore`;
+    // `QueryLedger.recordResolution(…)` is the only route by which an unanswered question is ever
+    // written down, so the host cannot write one without going through the decision; and the
+    // proofs are `QuestionLedgerPolicyTests` over the whole surface × reading × reading × ending
+    // cross product and `QueryLedgerTests`' burn sequence against a real store. Mutating the
+    // decision to `return .writeReceipt` turns both of those red.
+    //
+    // The readability *readings* the host hands in are proved on the real window in
+    // `NudgePanelTests` and on real fixtures in `DecisionSurfaceReachabilityTests`. What remains
+    // unreachable to any test is the application target's own wiring, and a scan for the spelling
+    // of that wiring is not a proof of it — which is the whole finding.
 
     // MARK: - The scan is proving something
 
