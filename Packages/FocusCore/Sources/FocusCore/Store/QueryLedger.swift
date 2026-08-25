@@ -180,6 +180,51 @@ public final class QueryLedger {
         return receipt.id
     }
 
+    /// **The only way an unanswered question is ever written down** (U-1, focus-kby).
+    ///
+    /// `record(…)` above writes whatever it is handed. This asks `QuestionLedgerPolicy` first,
+    /// and writes only when the policy says the question reached somebody — so the guard is
+    /// inside the object that owns the immutable row rather than being an `if` in a caller no
+    /// test can import. A host that wants to record an expiry or a preemption has to say which
+    /// surface carried the question and what that surface could be proven to show, and if it
+    /// cannot prove it, nothing is written and the question stays askable.
+    ///
+    /// - Returns: what was decided, so the caller can log the refusal rather than guess at it.
+    ///   `.writeReceipt` means a row was inserted.
+    @discardableResult
+    public func recordResolution(
+        priorityID: UUID,
+        subjectKind: RuleSubjectKind,
+        subject: String,
+        reason: QueryableUncertainty,
+        outcome: AskedQuestionOutcome,
+        askedAt: Date? = nil,
+        at instant: Date? = nil,
+        surface: NudgeSurface?,
+        readingAtAsk: SurfaceReadability,
+        readingNow: SurfaceReadability,
+        ending: QuestionEnding
+    ) throws -> QuestionLedgerAction {
+        let action = QuestionLedgerPolicy.decide(
+            surface: surface,
+            readingAtAsk: readingAtAsk,
+            readingNow: readingNow,
+            ending: ending
+        )
+        guard action.writesAReceipt else { return action }
+
+        try record(
+            priorityID: priorityID,
+            subjectKind: subjectKind,
+            subject: subject,
+            reason: reason,
+            outcome: outcome,
+            askedAt: askedAt,
+            at: instant
+        )
+        return action
+    }
+
     /// **R-78's atomic answer.** Either both rows commit or neither does.
     ///
     /// "Yes, add it" and "No" each write a `RuleAuthority.task` rule *and* an immutable

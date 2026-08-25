@@ -608,6 +608,118 @@ struct QueryLedgerTests {
         #expect(QueryLedger.retention == .withPriority)
     }
 
+    // MARK: - A question nobody could read never spends the one chance to ask it (U-1)
+
+    /// **The burn, end to end, through the real store** (focus-kby, focus-x7d).
+    ///
+    /// The lens proved the burn as a sequence: `hasAsked` false → an expiry receipt → `hasAsked`
+    /// true → gate 11 withholds every future warrant with `alreadyAsked`, one receipt, terminal.
+    /// This is the same sequence against the same objects, with the readability reading the
+    /// surface actually took — and the row is never written, so the question survives.
+    ///
+    /// `recordResolution(…)` is the only route by which an unanswered question is written down,
+    /// which is what makes this a property of the ledger rather than of a caller no test can
+    /// import. Mutate `QuestionLedgerPolicy.decide(…)` to `return .writeReceipt` and the first
+    /// two expectations below fail.
+    @Test(
+        "a question no surface could show is never written down, and stays askable",
+        arguments: [
+            (SurfaceReadability.notReadable, SurfaceReadability.unknowable),
+            (.notReadable, .notReadable),
+            (.unknowable, .unknowable),
+            (.readable, .unknowable),
+            (.readable, .notReadable)
+        ]
+    )
+    @MainActor
+    func anUnreadableQuestionIsNeverWrittenDown(
+        readings: (atAsk: SurfaceReadability, now: SurfaceReadability)
+    ) throws {
+        let (ledger, _, task, container) = try Self.makeLedger()
+        defer { withExtendedLifetime(container) {} }
+
+        #expect(!(try ledger.hasAsked(priorityID: task.id, subjectKind: .app, subject: Self.decoy2)))
+
+        let action = try ledger.recordResolution(
+            priorityID: task.id,
+            subjectKind: .app,
+            subject: Self.decoy2,
+            reason: .noNegativeBasis,
+            outcome: .expired,
+            surface: .panel,
+            readingAtAsk: readings.atAsk,
+            readingNow: readings.now,
+            ending: .expired
+        )
+
+        #expect(!action.writesAReceipt)
+        #expect(try ledger.count() == 0)
+        // Gate 11's own reading: the subject is still askable, which is the whole point.
+        #expect(!(try ledger.hasAsked(priorityID: task.id, subjectKind: .app, subject: Self.decoy2)))
+
+        // …and the question really can be asked again and answered, which is what the person
+        // was owed all along.
+        _ = try ledger.answer(
+            .yesAddIt, priorityID: task.id, task: task, scope: Self.scope,
+            reason: .noNegativeBasis
+        )
+        #expect(try ledger.hasAsked(priorityID: task.id, subjectKind: .app, subject: Self.decoy2))
+    }
+
+    /// The other direction, and it is exactly as load-bearing: a question the person *did* see
+    /// and did not answer is written down, or it comes back tomorrow and the app becomes the
+    /// thing U-1 exists to stop it being.
+    @Test("a question that was readable at both ends is written down and never asked again")
+    @MainActor
+    func aReadableQuestionSpendsItsAsking() throws {
+        let (ledger, _, task, container) = try Self.makeLedger()
+        defer { withExtendedLifetime(container) {} }
+
+        let action = try ledger.recordResolution(
+            priorityID: task.id,
+            subjectKind: .app,
+            subject: Self.decoy2,
+            reason: .noNegativeBasis,
+            outcome: .expired,
+            surface: .panel,
+            readingAtAsk: .readable,
+            readingNow: .readable,
+            ending: .expired
+        )
+
+        #expect(action == .writeReceipt)
+        #expect(try ledger.count() == 1)
+        #expect(try ledger.hasAsked(priorityID: task.id, subjectKind: .app, subject: Self.decoy2))
+        #expect(try ledger.receipt(
+            priorityID: task.id, subjectKind: .app, subject: Self.decoy2
+        )?.outcome == .expired)
+    }
+
+    /// A question routed to the menu-bar badge that nobody ever opened the popover on. The
+    /// route succeeded, the surface exists, and not one word of it reached a person.
+    @Test("a badge question the popover never showed leaves the ledger empty")
+    @MainActor
+    func aBadgeQuestionNobodyOpened() throws {
+        let (ledger, _, task, container) = try Self.makeLedger()
+        defer { withExtendedLifetime(container) {} }
+
+        let action = try ledger.recordResolution(
+            priorityID: task.id,
+            subjectKind: .app,
+            subject: Self.decoy2,
+            reason: .noNegativeBasis,
+            outcome: .expired,
+            surface: .popoverBadge,
+            readingAtAsk: .notReadable,
+            readingNow: .unknowable,
+            ending: .expired
+        )
+
+        #expect(action == .stayAskable(.neverReachedAReadableSurface))
+        #expect(try ledger.count() == 0)
+        #expect(!(try ledger.hasAsked(priorityID: task.id, subjectKind: .app, subject: Self.decoy2)))
+    }
+
     /// What `dailyQueryCap` reads: questions asked for one priority on one **local** day, in
     /// the user's own calendar.
     @Test("the per-priority day count is a local day in the user's calendar")
