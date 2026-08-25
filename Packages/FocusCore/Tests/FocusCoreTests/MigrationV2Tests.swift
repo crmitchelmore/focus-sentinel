@@ -168,12 +168,15 @@ struct MigrationV2Tests {
     @Test("v2 is still the plan's second schema, unchanged")
     func planShape() {
         #expect(FocusSchemaV2.versionIdentifier == Schema.Version(2, 0, 0))
-        #expect(FocusMigrationPlan.schemas.count == 3)
+        // The chain's total length is asserted by whichever suite owns the newest schema —
+        // MigrationV4Tests since e05. What this suite owns is v2's own place in it, which does
+        // not move when a version is appended.
+        #expect(FocusMigrationPlan.schemas.count >= 3)
         #expect(FocusMigrationPlan.schemas[0] is FocusSchemaV1.Type)
         #expect(FocusMigrationPlan.schemas[1] is FocusSchemaV2.Type)
         #expect(FocusMigrationPlan.schemas[0].versionIdentifier == Schema.Version(1, 0, 0))
         #expect(FocusMigrationPlan.schemas[1].versionIdentifier == Schema.Version(2, 0, 0))
-        #expect(FocusMigrationPlan.stages.count == 2)
+        #expect(FocusMigrationPlan.stages.count >= 2)
 
         #expect(FocusSchemaV2.models.count == 7)
         let names = Set(FocusSchemaV2.models.map { String(describing: $0) })

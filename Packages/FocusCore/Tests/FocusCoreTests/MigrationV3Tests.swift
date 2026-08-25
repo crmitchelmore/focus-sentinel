@@ -198,15 +198,19 @@ enum SchemaV3Fixture {
 /// today's code, which would prove nothing of the kind.
 @Suite("Schema v3 migration")
 struct MigrationV3Tests {
-    @Test("the plan declares three schemas and exactly two stages")
+    @Test("v3 is still the plan's third schema, unchanged")
     func planShape() {
         #expect(FocusSchemaV3.versionIdentifier == Schema.Version(3, 0, 0))
-        #expect(FocusMigrationPlan.schemas.count == 3)
+        // e05 appends v4. The chain's total length is asserted by MigrationV4Tests, which owns
+        // the newest schema; what this suite owns is v3's own place in the chain and the fact
+        // that it still declares exactly the ten models it shipped with — a migration *source*
+        // today's code has quietly edited proves nothing about tomorrow.
+        #expect(FocusMigrationPlan.schemas.count >= 3)
         #expect(FocusMigrationPlan.schemas[0] is FocusSchemaV1.Type)
         #expect(FocusMigrationPlan.schemas[1] is FocusSchemaV2.Type)
         #expect(FocusMigrationPlan.schemas[2] is FocusSchemaV3.Type)
         #expect(FocusMigrationPlan.schemas[2].versionIdentifier == Schema.Version(3, 0, 0))
-        #expect(FocusMigrationPlan.stages.count == 2)
+        #expect(FocusMigrationPlan.stages.count >= 2)
 
         #expect(FocusSchemaV3.models.count == 10)
         let names = Set(FocusSchemaV3.models.map { String(describing: $0) })
