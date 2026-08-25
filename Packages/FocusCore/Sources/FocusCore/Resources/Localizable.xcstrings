@@ -493,6 +493,474 @@
         }
       }
     },
+    "nudge.direct.accusation.action.notNow" : {
+      "comment" : "[direct] Accusation action: a session-lived rule that dies with the session.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Allow once"
+          }
+        }
+      }
+    },
+    "nudge.direct.accusation.action.pause" : {
+      "comment" : "[direct] Accusation action: pause the session.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pause"
+          }
+        }
+      }
+    },
+    "nudge.direct.accusation.action.priority" : {
+      "comment" : "[direct] Accusation action: open the quick-capture confirm surface.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Switch task"
+          }
+        }
+      }
+    },
+    "nudge.direct.accusation.action.relevant" : {
+      "comment" : "[direct] Accusation action: write a task-authority rule marking this subject relevant.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Relevant"
+          }
+        }
+      }
+    },
+    "nudge.direct.accusation.action.return" : {
+      "comment" : "[direct] Accusation action: return to the stored work application. %@ is its name.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Back to %@"
+          }
+        }
+      }
+    },
+    "nudge.direct.accusation.action.snooze" : {
+      "comment" : "[direct] Accusation action: snooze this subject for 5, 10 or 15 minutes.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Snooze"
+          }
+        }
+      }
+    },
+    "nudge.direct.accusation.panel.body" : {
+      "comment" : "[direct] Accusation panel body. %1$@ is the application or origin, %2$@ a rendered duration.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@, %@."
+          }
+        }
+      }
+    },
+    "nudge.direct.accusation.panel.title" : {
+      "comment" : "[direct] Accusation panel title. %@ is the priority's intent.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ — still?"
+          }
+        }
+      }
+    },
+    "nudge.direct.query.action.no" : {
+      "comment" : "[direct] Query action: no, this is not part of the task.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No"
+          }
+        }
+      }
+    },
+    "nudge.direct.query.action.notNow" : {
+      "comment" : "[direct] Query action: decline to answer. Escape does the same.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Later"
+          }
+        }
+      }
+    },
+    "nudge.direct.query.action.yes" : {
+      "comment" : "[direct] Query action: yes, this is part of the task.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yes"
+          }
+        }
+      }
+    },
+    "nudge.direct.query.panel.scope.app" : {
+      "comment" : "[direct] Query panel: the scope the rule an answer writes will have.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Applies to the whole app."
+          }
+        }
+      }
+    },
+    "nudge.direct.query.panel.title" : {
+      "comment" : "[direct] Query panel title. %1$@ is the application or origin, %2$@ the priority's intent.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ — part of %@?"
+          }
+        }
+      }
+    },
+    "nudge.neutral.accusation.action.notNow" : {
+      "comment" : "[neutral] Accusation action: a session-lived rule that dies with the session.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not this time"
+          }
+        }
+      }
+    },
+    "nudge.neutral.accusation.action.pause" : {
+      "comment" : "[neutral] Accusation action: pause the session.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pause"
+          }
+        }
+      }
+    },
+    "nudge.neutral.accusation.action.priority" : {
+      "comment" : "[neutral] Accusation action: open the quick-capture confirm surface.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Change priority"
+          }
+        }
+      }
+    },
+    "nudge.neutral.accusation.action.relevant" : {
+      "comment" : "[neutral] Accusation action: write a task-authority rule marking this subject relevant.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This is relevant"
+          }
+        }
+      }
+    },
+    "nudge.neutral.accusation.action.return" : {
+      "comment" : "[neutral] Accusation action: return to the stored work application. %@ is its name.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Back to %@"
+          }
+        }
+      }
+    },
+    "nudge.neutral.accusation.action.snooze" : {
+      "comment" : "[neutral] Accusation action: snooze this subject for 5, 10 or 15 minutes.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Snooze"
+          }
+        }
+      }
+    },
+    "nudge.neutral.accusation.panel.body" : {
+      "comment" : "[neutral] Accusation panel body. %1$@ is the application or origin, %2$@ a rendered duration.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You’ve been in %@ for %@."
+          }
+        }
+      }
+    },
+    "nudge.neutral.accusation.panel.title" : {
+      "comment" : "[neutral] Accusation panel title. %@ is the priority's intent.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Still working on %@?"
+          }
+        }
+      }
+    },
+    "nudge.neutral.query.action.no" : {
+      "comment" : "[neutral] Query action: no, this is not part of the task.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No"
+          }
+        }
+      }
+    },
+    "nudge.neutral.query.action.notNow" : {
+      "comment" : "[neutral] Query action: decline to answer. Escape does the same.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not now"
+          }
+        }
+      }
+    },
+    "nudge.neutral.query.action.yes" : {
+      "comment" : "[neutral] Query action: yes, this is part of the task.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yes, add it"
+          }
+        }
+      }
+    },
+    "nudge.neutral.query.panel.scope.app" : {
+      "comment" : "[neutral] Query panel: the scope the rule an answer writes will have.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Answering adds it for this whole app."
+          }
+        }
+      }
+    },
+    "nudge.neutral.query.panel.title" : {
+      "comment" : "[neutral] Query panel title. %1$@ is the application or origin, %2$@ the priority's intent.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Is %@ part of %@?"
+          }
+        }
+      }
+    },
+    "nudge.playful.accusation.action.notNow" : {
+      "comment" : "[playful] Accusation action: a session-lived rule that dies with the session.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let it slide this once"
+          }
+        }
+      }
+    },
+    "nudge.playful.accusation.action.pause" : {
+      "comment" : "[playful] Accusation action: pause the session.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Coffee break"
+          }
+        }
+      }
+    },
+    "nudge.playful.accusation.action.priority" : {
+      "comment" : "[playful] Accusation action: open the quick-capture confirm surface.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New plan"
+          }
+        }
+      }
+    },
+    "nudge.playful.accusation.action.relevant" : {
+      "comment" : "[playful] Accusation action: write a task-authority rule marking this subject relevant.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "It counts, honest"
+          }
+        }
+      }
+    },
+    "nudge.playful.accusation.action.return" : {
+      "comment" : "[playful] Accusation action: return to the stored work application. %@ is its name.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hop back to %@"
+          }
+        }
+      }
+    },
+    "nudge.playful.accusation.action.snooze" : {
+      "comment" : "[playful] Accusation action: snooze this subject for 5, 10 or 15 minutes.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nudge me later"
+          }
+        }
+      }
+    },
+    "nudge.playful.accusation.panel.body" : {
+      "comment" : "[playful] Accusation panel body. %1$@ is the application or origin, %2$@ a rendered duration.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ has had the spotlight for %@."
+          }
+        }
+      }
+    },
+    "nudge.playful.accusation.panel.title" : {
+      "comment" : "[playful] Accusation panel title. %@ is the priority's intent.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Still on the trail of %@?"
+          }
+        }
+      }
+    },
+    "nudge.playful.query.action.no" : {
+      "comment" : "[playful] Query action: no, this is not part of the task.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nope"
+          }
+        }
+      }
+    },
+    "nudge.playful.query.action.notNow" : {
+      "comment" : "[playful] Query action: decline to answer. Escape does the same.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ask another time"
+          }
+        }
+      }
+    },
+    "nudge.playful.query.action.yes" : {
+      "comment" : "[playful] Query action: yes, this is part of the task.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yep, add it"
+          }
+        }
+      }
+    },
+    "nudge.playful.query.panel.scope.app" : {
+      "comment" : "[playful] Query panel: the scope the rule an answer writes will have.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A yes covers the whole app."
+          }
+        }
+      }
+    },
+    "nudge.playful.query.panel.title" : {
+      "comment" : "[playful] Query panel title. %1$@ is the application or origin, %2$@ the priority's intent.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Does %@ belong to %@?"
+          }
+        }
+      }
+    },
     "nudge.query.reason.languageNotSupported" : {
       "comment" : "Query reason line: this Mac has no sentence embedding for the language in play.",
       "extractionState" : "manual",
@@ -561,6 +1029,162 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "A prompt that asks you to choose"
+          }
+        }
+      }
+    },
+    "nudge.silentVisual.accusation.action.notNow" : {
+      "comment" : "[silentVisual] Accusation action: a session-lived rule that dies with the session.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Allow once"
+          }
+        }
+      }
+    },
+    "nudge.silentVisual.accusation.action.pause" : {
+      "comment" : "[silentVisual] Accusation action: pause the session.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pause"
+          }
+        }
+      }
+    },
+    "nudge.silentVisual.accusation.action.priority" : {
+      "comment" : "[silentVisual] Accusation action: open the quick-capture confirm surface.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Change priority"
+          }
+        }
+      }
+    },
+    "nudge.silentVisual.accusation.action.relevant" : {
+      "comment" : "[silentVisual] Accusation action: write a task-authority rule marking this subject relevant.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Relevant"
+          }
+        }
+      }
+    },
+    "nudge.silentVisual.accusation.action.return" : {
+      "comment" : "[silentVisual] Accusation action: return to the stored work application. %@ is its name.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Back to %@"
+          }
+        }
+      }
+    },
+    "nudge.silentVisual.accusation.action.snooze" : {
+      "comment" : "[silentVisual] Accusation action: snooze this subject for 5, 10 or 15 minutes.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Snooze"
+          }
+        }
+      }
+    },
+    "nudge.silentVisual.accusation.panel.body" : {
+      "comment" : "[silentVisual] Accusation panel body. %1$@ is the application or origin, %2$@ a rendered duration.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · %@"
+          }
+        }
+      }
+    },
+    "nudge.silentVisual.accusation.panel.title" : {
+      "comment" : "[silentVisual] Accusation panel title. %@ is the priority's intent.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@"
+          }
+        }
+      }
+    },
+    "nudge.silentVisual.query.action.no" : {
+      "comment" : "[silentVisual] Query action: no, this is not part of the task.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No"
+          }
+        }
+      }
+    },
+    "nudge.silentVisual.query.action.notNow" : {
+      "comment" : "[silentVisual] Query action: decline to answer. Escape does the same.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Later"
+          }
+        }
+      }
+    },
+    "nudge.silentVisual.query.action.yes" : {
+      "comment" : "[silentVisual] Query action: yes, this is part of the task.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add"
+          }
+        }
+      }
+    },
+    "nudge.silentVisual.query.panel.scope.app" : {
+      "comment" : "[silentVisual] Query panel: the scope the rule an answer writes will have.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Whole app."
+          }
+        }
+      }
+    },
+    "nudge.silentVisual.query.panel.title" : {
+      "comment" : "[silentVisual] Query panel title. %1$@ is the application or origin, %2$@ the priority's intent.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · %@?"
           }
         }
       }
@@ -705,6 +1329,162 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "There’s nothing to say about this."
+          }
+        }
+      }
+    },
+    "nudge.warm.accusation.action.notNow" : {
+      "comment" : "[warm] Accusation action: a session-lived rule that dies with the session.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Just this once"
+          }
+        }
+      }
+    },
+    "nudge.warm.accusation.action.pause" : {
+      "comment" : "[warm] Accusation action: pause the session.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Take a break"
+          }
+        }
+      }
+    },
+    "nudge.warm.accusation.action.priority" : {
+      "comment" : "[warm] Accusation action: open the quick-capture confirm surface.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Work on something else"
+          }
+        }
+      }
+    },
+    "nudge.warm.accusation.action.relevant" : {
+      "comment" : "[warm] Accusation action: write a task-authority rule marking this subject relevant.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This helps, actually"
+          }
+        }
+      }
+    },
+    "nudge.warm.accusation.action.return" : {
+      "comment" : "[warm] Accusation action: return to the stored work application. %@ is its name.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Back to %@"
+          }
+        }
+      }
+    },
+    "nudge.warm.accusation.action.snooze" : {
+      "comment" : "[warm] Accusation action: snooze this subject for 5, 10 or 15 minutes.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remind me later"
+          }
+        }
+      }
+    },
+    "nudge.warm.accusation.panel.body" : {
+      "comment" : "[warm] Accusation panel body. %1$@ is the application or origin, %2$@ a rendered duration.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ has had your attention for %@."
+          }
+        }
+      }
+    },
+    "nudge.warm.accusation.panel.title" : {
+      "comment" : "[warm] Accusation panel title. %@ is the priority's intent.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How’s %@ going?"
+          }
+        }
+      }
+    },
+    "nudge.warm.query.action.no" : {
+      "comment" : "[warm] Query action: no, this is not part of the task.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not really"
+          }
+        }
+      }
+    },
+    "nudge.warm.query.action.notNow" : {
+      "comment" : "[warm] Query action: decline to answer. Escape does the same.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skip for now"
+          }
+        }
+      }
+    },
+    "nudge.warm.query.action.yes" : {
+      "comment" : "[warm] Query action: yes, this is part of the task.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yes, keep it"
+          }
+        }
+      }
+    },
+    "nudge.warm.query.panel.scope.app" : {
+      "comment" : "[warm] Query panel: the scope the rule an answer writes will have.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Answering saves it for this whole app."
+          }
+        }
+      }
+    },
+    "nudge.warm.query.panel.title" : {
+      "comment" : "[warm] Query panel title. %1$@ is the application or origin, %2$@ the priority's intent.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Is %@ part of %@?"
           }
         }
       }
