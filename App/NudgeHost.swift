@@ -438,6 +438,7 @@ final class NudgeHost {
         openWarrantAskedAt = dateProvider.now
         openQuestionSurface = nil
         openQuestionReadingAtAsk = .unknowable
+        openQuestionActions = []
         openRung = nil
 
         let presentation = QueryPresentation(
@@ -485,7 +486,10 @@ final class NudgeHost {
             openQuestionReadingAtAsk = reading.everyActionIsReachable ? .readable : .notReadable
             guard reading.everyActionIsReachable else {
                 logger.error(
-                    "a question was put on an unreadable panel and left unwritten: \(reading.summary, privacy: .public)"
+                    """
+                    a question was put on a panel nobody could answer and was left unwritten: \
+                    \(reading.summary, privacy: .public)
+                    """
                 )
                 panel.hide()
                 slot = slot.released()
@@ -526,7 +530,12 @@ final class NudgeHost {
             return
         }
 
-        deliverQuestion(surface: surface, warrant: warrant, priorityID: priorityID, now: surroundings.monotonic)
+        deliverQuestion(
+            surface: surface,
+            warrant: warrant,
+            priorityID: priorityID,
+            now: surroundings.monotonic
+        )
     }
 
     /// The bookkeeping of a question that has actually reached somebody.
@@ -900,7 +909,10 @@ final class NudgeHost {
             )
             if case .stayAskable(let reason) = action {
                 logger.error(
-                    "a question nobody could be shown was not written down (\(reason.rawValue, privacy: .public)), so it stays askable"
+                    """
+                    a question nobody could be shown was not written down \
+                    (\(reason.rawValue, privacy: .public)), so it stays askable
+                    """
                 )
                 return false
             }
