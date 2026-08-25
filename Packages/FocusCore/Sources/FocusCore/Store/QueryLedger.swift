@@ -1,0 +1,335 @@
+import Foundation
+import SwiftData
+
+/// What can go wrong when a question is written down.
+///
+/// Each case is a **caller bug**, not a user-facing condition, and each is thrown rather than
+/// swallowed: a ledger that quietly did nothing when asked to record a second receipt would
+/// make `nudge.repeatQueryCount == 0` a statement about the store's silence rather than about
+/// the app's behaviour.
+public enum QueryLedgerError: Error, Equatable, Sendable {
+    /// A receipt already exists for `(priorityID, subjectKind, subject)`. Gate 11 of R-84's
+    /// suppression stack exists precisely so this never happens, and this is the assertion that
+    /// says so when it does.
+    case alreadyAsked(subject: String)
+    /// An answer that writes a rule was offered with no priority to scope the rule to. A
+    /// task-authority rule without a task is not a narrower rule, it is a global one.
+    case noPriorityToScopeTo
+    /// The priority handed in is not the one the receipt is keyed on. Writing the rule under
+    /// one commitment and the receipt under another would leave the app able to learn an answer
+    /// and forget the asking — the exact state R-78's transaction exists to make impossible.
+    case priorityMismatch
+}
+
+/// **The record of every question this app has asked, and the reason it is separate from the
+/// rules store** (R-78, U-1).
+///
+/// Answering a question performs **one atomic transaction that writes two records**:
+///
+/// | record | what it is | authority over | lifetime |
+/// |---|---|---|---|
+/// | the **rule** — a `ScopedRuleValue` at `RuleAuthority.task` | visible, editable, deletable, undoable | **future classification**: the cascade answers at the `taskRule` rung and no `uncertain` verdict is produced | until the user deletes it or the priority dies |
+/// | the **receipt** — an `AskedQuestion` row | invisible, **immutable**, never user-editable | **never-ask-twice**: `hasAsked(…)` is consulted *before* any warrant is offered | dies with its priority, and with nothing else |
+///
+/// ## Why two records and not one
+///
+/// An earlier draft said answering writes *exactly one thing* — the rule — and that
+/// never-ask-twice was a consequence of the cascade. That is elegant and it is wrong in one
+/// specific and reachable way: **the rule is deletable by design.** Every learned chip and
+/// every Rules-pane row has a remove affordance (R-86) and an undo (F-93). The moment the rule
+/// is gone the subject classifies `uncertain` again, a warrant becomes constructible, and the
+/// person is asked a question they already answered. U-1 calls that a defect, so it cannot rest
+/// on a record one click removes.
+///
+/// **Deleting the rule does not re-open the question, and that is the humane reading.** Removing
+/// a learned chip means "that is not a fact about my work", not "ask me again". After the
+/// deletion the subject returns to being uncertain-and-already-asked: silent, unaccused, and
+/// available for the person to name themselves from the context pack whenever they choose.
+///
+/// ## Write-once
+///
+/// There is **no API on this type that edits or deletes a row except `purge(priorityID:)`**.
+/// A receipt is written when a question is resolved — answered, declined or expired — and
+/// never touched again. That is what makes it something the never-ask-twice invariant can rest
+/// on: an immutable record has no state for a later bug to move.
+///
+/// ## The key
+///
+/// `(priorityID, subjectKind, subject)` — **priority**, not session, because U-1 says "for this
+/// task". Changing the priority legitimately re-opens every question: a new commitment makes
+/// old answers irrelevant. A **revision bump on the same priority id does not**, because
+/// editing the wording of a commitment is not making a new one.
+@MainActor
+public final class QueryLedger {
+    private let context: ModelContext
+    private let dateProvider: any DateProvider
+
+    /// A hook the atomicity test injects a failure into, between the rule write and the
+    /// receipt write.
+    ///
+    /// Internal rather than public, and `nil` in every shipping path. A transaction whose
+    /// atomicity is only asserted by reading the code is a transaction nobody has tested; this
+    /// is the seam that lets a test tear it in half and check that neither half survived.
+    var failureBetweenWrites: (() throws -> Void)?
+
+    public init(context: ModelContext, dateProvider: some DateProvider = SystemDateProvider()) {
+        self.context = context
+        self.dateProvider = dateProvider
+    }
+
+    /// How long a receipt lives: with its priority, and with nothing else (F-115/F-116).
+    public static var retention: NudgeRetentionRule { InterventionPolicy.queryLedgerRetention }
+
+    // MARK: - Reading
+
+    /// **Gate 11 of R-84's suppression stack.** Whether this exact question has been asked for
+    /// this priority.
+    ///
+    /// Consulted **before a warrant is constructed**, and it reads the **receipt** — never the
+    /// rule. Whatever the person answered, and whether or not the rule that answer wrote still
+    /// exists, the question is not asked again.
+    public func hasAsked(
+        priorityID: UUID,
+        subjectKind: RuleSubjectKind,
+        subject: String
+    ) throws -> Bool {
+        try receipt(priorityID: priorityID, subjectKind: subjectKind, subject: subject) != nil
+    }
+
+    /// The receipt for one question, if it has been asked.
+    public func receipt(
+        priorityID: UUID,
+        subjectKind: RuleSubjectKind,
+        subject: String
+    ) throws -> FocusSchemaV4.AskedQuestion? {
+        let kindRaw = subjectKind.rawValue
+        let descriptor = FetchDescriptor<FocusSchemaV4.AskedQuestion>(
+            predicate: #Predicate {
+                $0.priorityID == priorityID
+                    && $0.subjectKindRaw == kindRaw
+                    && $0.subject == subject
+            }
+        )
+        return try context.fetch(descriptor).first
+    }
+
+    /// Every receipt for one priority, oldest first.
+    public func receipts(priorityID: UUID) throws -> [FocusSchemaV4.AskedQuestion] {
+        let descriptor = FetchDescriptor<FocusSchemaV4.AskedQuestion>(
+            predicate: #Predicate { $0.priorityID == priorityID }
+        )
+        return try context.fetch(descriptor).sorted(by: Self.chronological)
+    }
+
+    /// Every receipt in the store, oldest first.
+    public func all() throws -> [FocusSchemaV4.AskedQuestion] {
+        try context.fetch(FetchDescriptor<FocusSchemaV4.AskedQuestion>())
+            .sorted(by: Self.chronological)
+    }
+
+    public func count() throws -> Int {
+        try context.fetchCount(FetchDescriptor<FocusSchemaV4.AskedQuestion>())
+    }
+
+    /// How many questions have been asked for one priority today, in the user's own calendar.
+    /// What `dailyQueryCap` reads.
+    public func askedCount(priorityID: UUID, on day: LocalDay, calendar: Calendar) throws -> Int {
+        try receipts(priorityID: priorityID)
+            .count { LocalDay.containing($0.askedAt, calendar: calendar) == day }
+    }
+
+    // MARK: - Writing
+
+    /// Record a question that produced **no answer** — "Not now", Escape, a preemption, or an
+    /// expiry.
+    ///
+    /// One row, because there is no answer to record. The asking still happened and is still
+    /// remembered, which is what stops the question coming back after a relaunch.
+    ///
+    /// - Throws: `QueryLedgerError.alreadyAsked` if a receipt already exists. Gate 11 exists so
+    ///   that never happens; this is what says so out loud when it does.
+    @discardableResult
+    public func record(
+        priorityID: UUID,
+        subjectKind: RuleSubjectKind,
+        subject: String,
+        reason: QueryableUncertainty,
+        outcome: AskedQuestionOutcome,
+        askedAt: Date? = nil,
+        at instant: Date? = nil
+    ) throws -> UUID {
+        guard !outcome.wroteRule else {
+            // An outcome that writes a rule must go through `answer(…)`, or the two records
+            // would not be one transaction.
+            throw QueryLedgerError.noPriorityToScopeTo
+        }
+        try refuseIfAsked(priorityID: priorityID, subjectKind: subjectKind, subject: subject)
+
+        let now = instant ?? dateProvider.now
+        let receipt = FocusSchemaV4.AskedQuestion(
+            priorityID: priorityID,
+            subjectKindRaw: subjectKind.rawValue,
+            subject: subject,
+            reasonRaw: reason.rawValue,
+            askedAt: askedAt ?? now,
+            outcomeRaw: outcome.rawValue,
+            answeredAt: nil
+        )
+        context.insert(receipt)
+        try context.save()
+        return receipt.id
+    }
+
+    /// **R-78's atomic answer.** Either both rows commit or neither does.
+    ///
+    /// "Yes, add it" and "No" each write a `RuleAuthority.task` rule *and* an immutable
+    /// receipt; "Not now" writes the receipt alone, because there is no answer to record. The
+    /// two inserts share one `ModelContext` and one `save()`, and a failure anywhere between
+    /// them rolls the context back — so there is no interval in which the app has learned the
+    /// answer but forgotten the asking, or vice versa.
+    ///
+    /// - Parameters:
+    ///   - answer: what the person clicked. Escape is `.notNow`.
+    ///   - priorityID: the ledger key's first component.
+    ///   - task: the priority row the rule is scoped to. Required for an answer that writes a
+    ///     rule; ignored for "Not now".
+    ///   - scope: the subject, derived from the warrant by `CorrectionScope.from(_:)`, so a
+    ///     correction can never name a subject the judgement did not use.
+    ///   - reason: which answerable uncertainty produced the question.
+    ///   - askedAt: when the question went on screen. Defaults to now, for a question answered
+    ///     the instant it appeared.
+    /// - Returns: the typed description of what was written.
+    /// - Throws: `QueryLedgerError`, or whatever the store throws.
+    @discardableResult
+    public func answer(
+        _ answer: QueryAnswer,
+        priorityID: UUID,
+        task: FocusSchemaV3.PriorityTask?,
+        scope: CorrectionScope,
+        reason: QueryableUncertainty,
+        askedAt: Date? = nil,
+        at instant: Date? = nil,
+        ruleID: UUID = UUID()
+    ) throws -> CorrectionOutcome {
+        try refuseIfAsked(
+            priorityID: priorityID, subjectKind: scope.kind, subject: scope.subject
+        )
+
+        let now = instant ?? dateProvider.now
+        let outcome = answer.outcome(scope: scope, at: now, id: ruleID)
+
+        // Everything this transaction inserted, so a failure can withdraw exactly those rows
+        // and nothing else.
+        //
+        // Deliberately **not** `ModelContext.rollback()`. That discards every unsaved change in
+        // the context and destroys the caller's live model instances with it — a ledger whose
+        // failure path invalidates the priority object the host is holding has traded one bug
+        // for a worse one. Withdrawing the rows this function inserted is the narrower and
+        // truer statement of "neither row commits".
+        var inserted: [any PersistentModel] = []
+
+        if let rule = outcome.persistedRule {
+            guard let task else { throw QueryLedgerError.noPriorityToScopeTo }
+            guard task.id == priorityID else { throw QueryLedgerError.priorityMismatch }
+
+            let row = FocusSchemaV3.RelevanceRule(
+                id: rule.id,
+                scopeRaw: rule.subjectKind.rawValue,
+                subject: rule.subject,
+                verdictRaw: rule.verdict.rawValue,
+                createdAt: rule.createdAt,
+                task: task
+            )
+            context.insert(row)
+            inserted.append(row)
+        }
+
+        do {
+            // The seam the atomicity test tears the transaction in half at. `nil` in every
+            // shipping path.
+            try failureBetweenWrites?()
+
+            let receipt = FocusSchemaV4.AskedQuestion(
+                priorityID: priorityID,
+                subjectKindRaw: scope.kind.rawValue,
+                subject: scope.subject,
+                reasonRaw: reason.rawValue,
+                askedAt: askedAt ?? now,
+                outcomeRaw: answer.outcome.rawValue,
+                answeredAt: now
+            )
+            context.insert(receipt)
+            inserted.append(receipt)
+            try context.save()
+        } catch {
+            for row in inserted { context.delete(row) }
+            // Best effort: the rows were never saved, so the store already agrees. This makes
+            // the in-memory context agree too, and a second failure here must not mask the
+            // first — the original error is what the caller needs to see.
+            try? context.save()
+            throw error
+        }
+
+        return outcome
+    }
+
+    // MARK: - Retention (F-115, F-116)
+
+    /// Delete every receipt for one priority. **The only route by which a row is ever
+    /// removed**, and the reason the type can otherwise claim to be write-once.
+    ///
+    /// Called when a priority is deleted. The key is a plain `UUID` rather than a relationship
+    /// precisely so this is one predicate rather than a cascade the store performs for us.
+    @discardableResult
+    public func purge(priorityID: UUID) throws -> Int {
+        let doomed = try receipts(priorityID: priorityID)
+        for receipt in doomed { context.delete(receipt) }
+        if !doomed.isEmpty { try context.save() }
+        return doomed.count
+    }
+
+    /// F-116's delete-everything path.
+    @discardableResult
+    public func purgeAll() throws -> Int {
+        let doomed = try all()
+        for receipt in doomed { context.delete(receipt) }
+        if !doomed.isEmpty { try context.save() }
+        return doomed.count
+    }
+
+    /// Delete every receipt whose priority no longer exists.
+    ///
+    /// The completeness half of the retention contract: a row whose priority was deleted by a
+    /// path that forgot to call `purge(priorityID:)` is a row that would outlive the commitment
+    /// it was about, and F-115's promise is that it does not.
+    @discardableResult
+    public func purgeOrphans(livingPriorityIDs: Set<UUID>) throws -> Int {
+        let doomed = try all().filter { !livingPriorityIDs.contains($0.priorityID) }
+        for receipt in doomed { context.delete(receipt) }
+        if !doomed.isEmpty { try context.save() }
+        return doomed.count
+    }
+
+    // MARK: - Helpers
+
+    private func refuseIfAsked(
+        priorityID: UUID,
+        subjectKind: RuleSubjectKind,
+        subject: String
+    ) throws {
+        if try hasAsked(priorityID: priorityID, subjectKind: subjectKind, subject: subject) {
+            throw QueryLedgerError.alreadyAsked(subject: subject)
+        }
+    }
+
+    /// Oldest first, tie-broken by identifier so two receipts stamped at the same instant read
+    /// back in one stable order rather than in whatever order the store felt like.
+    private static func chronological(
+        _ lhs: FocusSchemaV4.AskedQuestion,
+        _ rhs: FocusSchemaV4.AskedQuestion
+    ) -> Bool {
+        lhs.askedAt == rhs.askedAt
+            ? lhs.id.uuidString < rhs.id.uuidString
+            : lhs.askedAt < rhs.askedAt
+    }
+}
