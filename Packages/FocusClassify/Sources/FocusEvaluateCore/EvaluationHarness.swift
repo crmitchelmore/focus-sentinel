@@ -165,6 +165,9 @@ public struct EvaluationHarness: Sendable {
             }
         }
 
+        let (nudge, nudgeFailures) = measureNudge(runner: runner, replay: replay)
+        failures.append(contentsOf: nudgeFailures)
+
         let cache = CacheBenchmark.run(corpus: corpus, scorer: scorer)
 
         let samples = latencies.map(CacheBenchmark.milliseconds)
@@ -184,7 +187,10 @@ public struct EvaluationHarness: Sendable {
             perFile: corpus.files
                 .map { ($0.name, $0.cases.count) }
                 .sorted { $0.0 < $1.0 }
-                + [(CorpusLoader.sequencesDirectoryName, corpus.sequences.count)],
+                + [
+                    (CorpusLoader.sequencesDirectoryName, corpus.sequences.count),
+                    (CorpusLoader.daysDirectoryName, corpus.days.count)
+                ],
             overall: EvaluationRates(
                 falseNudgeRate: rate(falseNudges, over: notMandatedExpected),
                 missRate: rate(misses, over: mandatedExpected),
@@ -229,8 +235,218 @@ public struct EvaluationHarness: Sendable {
                 ($0.rawValue, byReason[$0] ?? 0)
             },
             byBand: EvidenceBand.allCases.map { ($0.rawValue, byBand[$0] ?? 0) },
+            nudge: nudge,
             failures: failures
         )
+    }
+
+    // MARK: - e05 · the split metric (R-94, R-94a)
+
+    /// **What the nudge loop did with the same judgements**, in three lanes and one decider.
+    ///
+    /// ## Two passes over the corpus, and each says what it measures
+    ///
+    /// **Pass A — independent.** Every case decided with a fresh memory: no receipt, no spent
+    /// budget, no cooldown, no live interruption slot. That is what makes each case an
+    /// independent claim, exactly as its classification expectation is, and it is what
+    /// `expectNudge` is compared against. Carrying state between 166 cases — several of which are
+    /// deliberately the same situation one second apart — would make every case after the first
+    /// depend on the one before it.
+    ///
+    /// **Pass B — one ledger, in id order.** The 166 cases are not one person's day, so no cap and
+    /// no cooldown binds here; what carries is the **receipt**, because never-ask-twice is a
+    /// property of the subject and the priority rather than of a session. `repeatQueryCount` and
+    /// `queryVolumeRate` are measured over this pass, which is P-138's own arithmetic.
+    ///
+    /// ## The day lane is where a cap is a cap
+    ///
+    /// A per-judgement rate can look excellent while a day still contains twelve questions.
+    /// `queriesPerFocusDay`, `interruptionsPerFocusDayMax` and `queriesPerPriorityMax` are read
+    /// off the realistic-day fixtures with the caps, cooldowns and backoffs **on**, and reported
+    /// as the maximum across days rather than the mean.
+    func measureNudge(
+        runner: CorpusRunner,
+        replay: SequenceReplayHarness
+    ) -> (NudgeSummary, [EvaluationFailure]) {
+        // --- pass A ------------------------------------------------------------------------
+        var independent = NudgeWorld(enforcesFatigue: false)
+        var accusationFalsePositives = 0
+        var notMandatedExpected = 0
+        var nudgeFailures: [EvaluationFailure] = []
+
+        for testCase in corpus.cases {
+            independent.beginIndependentObservation()
+            independent.forgetReceipts()
+            let outcome = runner.run(testCase)
+            let observation = independent.decide(
+                CorpusRunner.nudgeJudgement(for: testCase, outcome: outcome),
+                surroundings: surroundings(for: testCase),
+                priorityID: CorpusRunner.priorityID(for: testCase.priority),
+                decidable: DecidableSubjects(
+                    contextPack: testCase.contextPack, rules: testCase.rules
+                )
+            )
+            if observation.expectation != testCase.expectNudge {
+                nudgeFailures.append(
+                    EvaluationFailure(
+                        id: testCase.id,
+                        expected: testCase.expectNudge.encoded,
+                        actual: observation.expectation.encoded,
+                        note: "expectNudge — \(testCase.note)"
+                    )
+                )
+            }
+
+            // R-94's own definition: *an `InterventionMandate` on any corpus case not labelled
+            // `unrelated`*. Counted on the mandate rather than on the delivery, so a false
+            // accusation that happened to be suppressed by an unrelated gate still counts.
+            if testCase.expect.eligibility != .mandated {
+                notMandatedExpected += 1
+                if outcome.judgement.eligibility.mandate != nil { accusationFalsePositives += 1 }
+            }
+        }
+
+        // --- pass B ------------------------------------------------------------------------
+        var shared = NudgeWorld(enforcesFatigue: false)
+        var groundTruth: [QueryGroundTruth: Int] = [:]
+        var labelled = 0
+        var owedLabel = 0
+
+        for testCase in corpus.cases.sorted(by: { $0.id < $1.id }) {
+            let subject = testCase.evidence.bundleIdentifier ?? testCase.evidence.origin
+            if testCase.expect.verdict == .uncertain,
+               testCase.expect.uncertaintyReason?.queryable != nil,
+               subject != nil {
+                owedLabel += 1
+                if testCase.queryGroundTruth != nil { labelled += 1 }
+            }
+
+            shared.beginIndependentObservation()
+            let before = shared.deliveredQueries.count
+            let outcome = runner.run(testCase)
+            _ = shared.decide(
+                CorpusRunner.nudgeJudgement(for: testCase, outcome: outcome),
+                surroundings: surroundings(for: testCase),
+                priorityID: CorpusRunner.priorityID(for: testCase.priority),
+                decidable: DecidableSubjects(
+                    contextPack: testCase.contextPack, rules: testCase.rules
+                )
+            )
+            if shared.deliveredQueries.count > before, let truth = testCase.queryGroundTruth {
+                groundTruth[truth, default: 0] += 1
+            }
+        }
+
+        // --- the sequences ------------------------------------------------------------------
+        var counters = shared.counters
+        var repeats = shared.repeatQueries
+        var accusationsFromQuery = shared.accusationsFromQuery
+        var escalationsFromDeferred = shared.escalationsFromDeferred
+        var onDecidable = shared.queriesOnDecidable + independent.queriesOnDecidable
+        var onUnaskable = shared.queriesOnUnaskable + independent.queriesOnUnaskable
+
+        for fixture in corpus.sequences.sorted(by: { $0.id < $1.id }) {
+            let world = replay.replay(fixture).world
+            counters = counters.merging(world.counters)
+            repeats += world.repeatQueries
+            accusationsFromQuery += world.accusationsFromQuery
+            escalationsFromDeferred += world.escalationsFromDeferred
+            onDecidable += world.queriesOnDecidable
+            onUnaskable += world.queriesOnUnaskable
+        }
+
+        // --- the realistic days ---------------------------------------------------------------
+        let dayHarness = DayReplayHarness(runner: runner)
+        var queriesPerDay: [Int] = []
+        var interruptionsPerDay: [Int] = []
+        var queriesPerPriority: [Int] = []
+
+        for fixture in corpus.days.sorted(by: { $0.id < $1.id }) {
+            let transcript = dayHarness.replay(fixture)
+            queriesPerDay.append(transcript.queryCount)
+            interruptionsPerDay.append(transcript.interruptionCount)
+            queriesPerPriority.append(transcript.queriesForBusiestPriority)
+            counters = counters.merging(transcript.world.counters)
+            repeats += transcript.world.repeatQueries
+            accusationsFromQuery += transcript.world.accusationsFromQuery
+            escalationsFromDeferred += transcript.world.escalationsFromDeferred
+            onDecidable += transcript.world.queriesOnDecidable
+            onUnaskable += transcript.world.queriesOnUnaskable
+        }
+
+        let uncertain = corpus.cases.filter { $0.expect.verdict == .uncertain }
+        let unaskable = uncertain.filter { $0.expect.uncertaintyReason?.queryable == nil }
+        let banded = (groundTruth[.relevant] ?? 0) + (groundTruth[.unrelated] ?? 0)
+        let deliveredQueries = shared.deliveredQueries.count
+
+        let summary = NudgeSummary(
+            accusationFalsePositiveRate: rate(accusationFalsePositives, over: notMandatedExpected),
+            repeatQueryCount: repeats,
+            queryOnDecidableCount: onDecidable,
+            queryOnUnaskableCount: onUnaskable,
+            accusationsFromQuery: accusationsFromQuery,
+            escalationsFromDeferred: escalationsFromDeferred,
+            ladderRungsDeclared: LadderRung.Kind.allCases.count,
+            queryVolumeRate: rate(deliveredQueries, over: corpus.cases.count),
+            queriesPerFocusDay: queriesPerDay.max() ?? 0,
+            interruptionsPerFocusDayMax: interruptionsPerDay.max() ?? 0,
+            interruptionsPerFocusDayP50: Self.median(interruptionsPerDay),
+            queriesPerPriorityMax: queriesPerPriority.max() ?? 0,
+            queryAnsweredRelevantShare: rate(groundTruth[.relevant] ?? 0, over: banded),
+            queryGroundTruthCoverage: owedLabel == 0
+                ? EvaluationPolicy.queryGroundTruthCoverageFloor
+                : rate(labelled, over: owedLabel),
+            queryEitherIsReasonableShare: rate(
+                groundTruth[.eitherIsReasonable] ?? 0, over: deliveredQueries
+            ),
+            unaskableUncertaintyShare: rate(unaskable.count, over: uncertain.count),
+            deferredRungShare: counters.deferredRungShare,
+            byKind: InterruptionKind.allCases.map { ($0.rawValue, counters.count($0)) },
+            byRung: LadderRung.Kind.allCases.map { ($0.rawValue, counters.byRung[$0] ?? 0) },
+            bySurface: NudgeSurface.allCases.map { ($0.rawValue, counters.bySurface[$0] ?? 0) },
+            byDisposition: InterventionDisposition.allCases.map {
+                ($0.rawValue, counters.count($0))
+            },
+            byQueryReason: QueryableUncertainty.allCases.map {
+                ($0.rawValue, counters.byQueryReason[$0] ?? 0)
+            },
+            bySuppressionReason: NudgeSuppressionReason.allCases.map {
+                ($0.rawValue, counters.bySuppressionReason[$0] ?? 0)
+            },
+            byDeferralReason: DeferralReason.allCases.map {
+                ($0.rawValue, counters.byDeferralReason[$0] ?? 0)
+            },
+            interventionDigest: InterventionPolicy.digestHex
+        )
+        // A case whose nudge expectation did not hold is a **corpus failure**, and R-67 already
+        // has one place a reader looks for those — so it travels back as an `EvaluationFailure`
+        // rather than as a number of its own that somebody would have to think to read.
+        return (summary, nudgeFailures)
+    }
+
+    /// The surroundings a single-shot case is judged in.
+    ///
+    /// Fixed, and stated once: nothing varies between cases except what the case itself carries —
+    /// its phase, its idle reading, its subject and its dwell. A case that could also vary the
+    /// presentation state or the menu bar would be a case asserting two things at once.
+    func surroundings(for testCase: CorpusCase) -> NudgeSurroundings {
+        NudgeLane.surroundings(
+            subject: testCase.evidence.bundleIdentifier ?? testCase.evidence.origin,
+            hasActivePriority: testCase.priority != nil,
+            phase: testCase.sessionPhase,
+            isUserIdle: testCase.isUserIdle,
+            presentation: false,
+            menuBarVisible: true,
+            monotonic: .seconds(testCase.dwellSeconds)
+        )
+    }
+
+    /// The middle value, nearest-rank — the definition that does not interpolate between two
+    /// measurements nobody took.
+    static func median(_ values: [Int]) -> Int {
+        guard !values.isEmpty else { return 0 }
+        let sorted = values.sorted()
+        return sorted[(sorted.count - 1) / 2]
     }
 
     /// **Pass one: the whole corpus on an engine that has been warmed by nothing.**

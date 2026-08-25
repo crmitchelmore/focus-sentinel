@@ -608,6 +608,17 @@ public struct NudgeWorld: Sendable, Equatable {
         correctedSubjects = []
     }
 
+    /// **Forget every receipt.**
+    ///
+    /// Used only by the corpus's independent pass, where each case is its own claim and the
+    /// question one case asks must not silence the next. It is deliberately *not* on the path any
+    /// fixture or any host can reach: in the app a receipt is immutable and dies only with its
+    /// priority (R-78, F-115/F-116), and a method that emptied the ledger for any other reason
+    /// would be the one call that could re-open a question somebody has already answered.
+    public mutating func forgetReceipts() {
+        ledger = []
+    }
+
     /// A new local day. Every count is read from stored rows by `localDayKey`, so a day boundary
     /// in the **user's own calendar** empties the budget and nothing else — the receipts stay,
     /// because a question answered yesterday is still answered.

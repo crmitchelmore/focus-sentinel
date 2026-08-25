@@ -256,6 +256,50 @@ public enum EvaluationPolicy {
     /// stopped memoising — shows up here rather than being inferred.
     public static let cacheHitRateFloor = 0.70
 
+    // MARK: - e05's split metric (R-94, R-94a, §4.4)
+
+    /// **Zero, not "small", and unchanged from e04.** A wrong accusation is the failure the whole
+    /// product boundary exists to prevent, and `nudge.accusationFalsePositiveRate` is asserted
+    /// **equal** to `falseNudgeRate` so the split is explicit and the two halves cannot disagree.
+    public static let accusationFalsePositiveCeiling: Double = 0
+
+    /// **A volume ceiling, and it is named for what it measures** (R-94a, finding 2).
+    ///
+    /// Renamed from `queryRate` in adversarial review because the old name claimed a measurement
+    /// this number does not make: P-140 enumerated every field of all 165 committed cases and
+    /// found no field anywhere recording what a person would have answered, so `28/165` is an
+    /// incidence of questions asked rather than a rate of questions that should not have been.
+    ///
+    /// **Derived, not chosen.** P-138 measured 28 distinct askable (subject, priority) pairs over
+    /// 165 classifications = 0.1697; P-140's stricter keying, which drops the one pair with no
+    /// bundle identifier, gives 0.1576. Seventeen hundredths bounds both. What it bounds is *how
+    /// often the app opens its mouth per judgement*, which is a real and gateable failure mode.
+    public static let queryVolumeRateCeiling = 0.17
+
+    /// The floor P-138 measured at 25/72 = 0.3472, and a **floor** rather than a ceiling because
+    /// the cheapest way to make the app look less chatty would be to quietly reclassify an
+    /// unaskable reason as askable (R-94).
+    public static let unaskableUncertaintyFloor = 0.34
+
+    /// **A two-sided band, where both ends fail** (R-94a).
+    ///
+    /// The reviewer proposed gating *relevant answers ÷ delivered queries* with a ceiling. That
+    /// definition inverts U-1: a "yes" is the affordance working — one click, a durable rule, a
+    /// subject never asked about again — and a ceiling on it creates a direct incentive to ask
+    /// fewer of the questions U-1 exists to license. Read as a band it keeps every diagnostic the
+    /// reviewer wanted and removes the incentive to go quiet:
+    ///
+    /// * **above 0.75** the app is asking about work it should have recognised, U-1's bargain is
+    ///   not being kept, and e06's model has a target;
+    /// * **below 0.25** the app is using a polite question as a euphemism for an accusation it had
+    ///   the evidence to make.
+    public static let queryAnsweredRelevantFloor = 0.25
+    public static let queryAnsweredRelevantCeiling = 0.75
+
+    /// Coverage of the `queryGroundTruth` label over the cases that owe one. **The gate fails
+    /// closed below 1.0** rather than scoring a band on absent data.
+    public static let queryGroundTruthCoverageFloor = 1.0
+
     // MARK: - How the report is measured and written
 
     /// The two percentiles §4.4 gates on. Nearest-rank, which is the definition that does not

@@ -292,6 +292,8 @@ struct EvaluationGateTests {
             expectedStamp: report.stamp,
             policyDigest: report.policyDigest,
             expectedPolicyDigest: Self.committedPolicyDigest,
+            interventionDigest: report.nudge.interventionDigest,
+            expectedInterventionDigest: InterventionPolicy.digestHex,
             corpusDigest: report.corpusDigest,
             expectedCorpusDigest: corpusDigest,
             parsedPath: "/run/evaluation.json",
@@ -303,6 +305,7 @@ struct EvaluationGateTests {
         _ evidence: ReportBinding.Evidence,
         expectedRunID: String? = nil,
         expectedPolicyDigest: String? = nil,
+        expectedInterventionDigest: String? = nil,
         expectedCorpusDigest: String? = nil,
         parsedPath: String? = nil
     ) -> ReportBinding.Evidence {
@@ -315,10 +318,291 @@ struct EvaluationGateTests {
             expectedStamp: evidence.expectedStamp,
             policyDigest: evidence.policyDigest,
             expectedPolicyDigest: expectedPolicyDigest ?? evidence.expectedPolicyDigest,
+            interventionDigest: evidence.interventionDigest,
+            expectedInterventionDigest: expectedInterventionDigest
+                ?? evidence.expectedInterventionDigest,
             corpusDigest: evidence.corpusDigest,
             expectedCorpusDigest: expectedCorpusDigest ?? evidence.expectedCorpusDigest,
             parsedPath: parsedPath ?? evidence.parsedPath,
             stagingPath: evidence.stagingPath
         )
+    }
+
+    // MARK: - e05 · the split metric, and a regression for every bound (T144, R-94, R-94a)
+
+    /// A report with one nudge number moved, and everything else exactly as measured.
+    ///
+    /// **A gate nobody has watched fail is a gate nobody knows works.** Each assertion below moves
+    /// one metric across its bound and requires the gate to go red *by name* — which is the only
+    /// way to know that a threshold is load-bearing rather than decorative.
+    static func regressed(
+        _ report: EvaluationReport,
+        accusationFalsePositiveRate: Double? = nil,
+        repeatQueryCount: Int? = nil,
+        queryOnDecidableCount: Int? = nil,
+        queryOnUnaskableCount: Int? = nil,
+        accusationsFromQuery: Int? = nil,
+        escalationsFromDeferred: Int? = nil,
+        ladderRungsDeclared: Int? = nil,
+        queryVolumeRate: Double? = nil,
+        queriesPerFocusDay: Int? = nil,
+        interruptionsPerFocusDayMax: Int? = nil,
+        queriesPerPriorityMax: Int? = nil,
+        queryAnsweredRelevantShare: Double? = nil,
+        queryGroundTruthCoverage: Double? = nil,
+        unaskableUncertaintyShare: Double? = nil
+    ) -> EvaluationReport {
+        let nudge = report.nudge
+        return report.replacingNudge(
+            NudgeSummary(
+                accusationFalsePositiveRate: accusationFalsePositiveRate
+                    ?? nudge.accusationFalsePositiveRate,
+                repeatQueryCount: repeatQueryCount ?? nudge.repeatQueryCount,
+                queryOnDecidableCount: queryOnDecidableCount ?? nudge.queryOnDecidableCount,
+                queryOnUnaskableCount: queryOnUnaskableCount ?? nudge.queryOnUnaskableCount,
+                accusationsFromQuery: accusationsFromQuery ?? nudge.accusationsFromQuery,
+                escalationsFromDeferred: escalationsFromDeferred ?? nudge.escalationsFromDeferred,
+                ladderRungsDeclared: ladderRungsDeclared ?? nudge.ladderRungsDeclared,
+                queryVolumeRate: queryVolumeRate ?? nudge.queryVolumeRate,
+                queriesPerFocusDay: queriesPerFocusDay ?? nudge.queriesPerFocusDay,
+                interruptionsPerFocusDayMax: interruptionsPerFocusDayMax
+                    ?? nudge.interruptionsPerFocusDayMax,
+                interruptionsPerFocusDayP50: nudge.interruptionsPerFocusDayP50,
+                queriesPerPriorityMax: queriesPerPriorityMax ?? nudge.queriesPerPriorityMax,
+                queryAnsweredRelevantShare: queryAnsweredRelevantShare
+                    ?? nudge.queryAnsweredRelevantShare,
+                queryGroundTruthCoverage: queryGroundTruthCoverage
+                    ?? nudge.queryGroundTruthCoverage,
+                queryEitherIsReasonableShare: nudge.queryEitherIsReasonableShare,
+                unaskableUncertaintyShare: unaskableUncertaintyShare
+                    ?? nudge.unaskableUncertaintyShare,
+                deferredRungShare: nudge.deferredRungShare,
+                byKind: nudge.byKind,
+                byRung: nudge.byRung,
+                bySurface: nudge.bySurface,
+                byDisposition: nudge.byDisposition,
+                byQueryReason: nudge.byQueryReason,
+                bySuppressionReason: nudge.bySuppressionReason,
+                byDeferralReason: nudge.byDeferralReason,
+                interventionDigest: nudge.interventionDigest
+            )
+        )
+    }
+
+    static func failingNames(_ report: EvaluationReport) -> Set<String> {
+        Set(EvaluationGate.checks(for: report).filter { !$0.passed }.map(\.name))
+    }
+
+    /// The five exact-zero metrics, one at a time. Every one of them is a **defect**, and a
+    /// defect's gate is zero — so a report carrying one must fail, by name.
+    @Test("each exact-zero nudge metric fails the gate when it is regressed")
+    func eachExactZeroMetricFails() throws {
+        let report = try Self.report()
+        #expect(EvaluationGate.passes(report))
+
+        #expect(
+            Self.failingNames(Self.regressed(report, accusationFalsePositiveRate: 0.01))
+                .contains("nudge.accusationFalsePositiveRate")
+        )
+        #expect(
+            Self.failingNames(Self.regressed(report, repeatQueryCount: 1))
+                .contains("nudge.repeatQueryCount")
+        )
+        #expect(
+            Self.failingNames(Self.regressed(report, queryOnDecidableCount: 1))
+                .contains("nudge.queryOnDecidableCount")
+        )
+        #expect(
+            Self.failingNames(Self.regressed(report, queryOnUnaskableCount: 1))
+                .contains("nudge.queryOnUnaskableCount")
+        )
+        #expect(
+            Self.failingNames(Self.regressed(report, accusationsFromQuery: 1))
+                .contains("nudge.accusationsFromQuery")
+        )
+        #expect(
+            Self.failingNames(Self.regressed(report, escalationsFromDeferred: 1))
+                .contains("nudge.escalationsFromDeferred")
+        )
+        #expect(
+            Self.failingNames(Self.regressed(report, ladderRungsDeclared: 4))
+                .contains("nudge.ladderRungsDeclared")
+        )
+    }
+
+    /// **The split is asserted as an equality, not two ceilings.** e04's `falseNudgeRate` and
+    /// e05's `accusationFalsePositiveRate` are two names for one fact: a report in which they
+    /// disagreed would be a report in which one of them is lying, and a pair of independent
+    /// `== 0` checks would both pass on it.
+    @Test("the two halves of the split metric cannot disagree")
+    func theSplitCannotDisagree() throws {
+        let report = try Self.report()
+        #expect(report.nudge.accusationFalsePositiveRate == report.overall.falseNudgeRate)
+        // Moved to a value that is still zero-ish but not equal: the equality is what catches it.
+        let disagreeing = Self.regressed(report, accusationFalsePositiveRate: 0.0001)
+        #expect(
+            Self.failingNames(disagreeing).contains("nudge.accusationFalsePositiveRate")
+        )
+    }
+
+    /// **Both ends fail.** Above the ceiling the recogniser is under-performing and U-1's bargain
+    /// is not being kept; below the floor the app is using a polite question as a euphemism for an
+    /// accusation it had the evidence to make. A one-sided ceiling would catch only the second and
+    /// would create a direct incentive to ask fewer of the questions U-1 exists to license (R-94a).
+    @Test("the answered-relevant band fails at both ends")
+    func theBandFailsAtBothEnds() throws {
+        let report = try Self.report()
+        for regressedValue in [0.10, 0.24, 0.76, 0.95] {
+            let name = "nudge.queryAnsweredRelevantShare"
+            #expect(
+                Self.failingNames(
+                    Self.regressed(report, queryAnsweredRelevantShare: regressedValue)
+                ).contains(name),
+                "\(regressedValue) did not fail the band"
+            )
+        }
+        for insideValue in [
+            EvaluationPolicy.queryAnsweredRelevantFloor,
+            0.5,
+            EvaluationPolicy.queryAnsweredRelevantCeiling
+        ] {
+            #expect(
+                EvaluationGate.passes(
+                    Self.regressed(report, queryAnsweredRelevantShare: insideValue)
+                ),
+                "\(insideValue) failed the band it is inside"
+            )
+        }
+    }
+
+    /// **Fails closed.** A band scored on absent labels is a pass nobody measured, so coverage
+    /// below 1.0 reddens the gate before the band is read at all.
+    @Test("absent ground truth fails the gate closed")
+    func absentGroundTruthFailsClosed() throws {
+        let report = try Self.report()
+        #expect(report.nudge.queryGroundTruthCoverage == 1.0)
+        #expect(
+            Self.failingNames(Self.regressed(report, queryGroundTruthCoverage: 0.99))
+                .contains("nudge.queryGroundTruthCoverage")
+        )
+    }
+
+    /// The three volume ceilings, and the day-level ones in particular: a per-judgement rate can
+    /// look excellent while a day still contains twelve questions.
+    @Test("each volume ceiling fails the gate when it is exceeded")
+    func eachVolumeCeilingFails() throws {
+        let report = try Self.report()
+        #expect(
+            Self.failingNames(Self.regressed(report, queryVolumeRate: 0.18))
+                .contains("nudge.queryVolumeRate")
+        )
+        #expect(
+            Self.failingNames(
+                Self.regressed(
+                    report, queriesPerFocusDay: InterventionPolicy.dailyQueryCapAllPriorities + 1
+                )
+            ).contains("nudge.queriesPerFocusDay")
+        )
+        #expect(
+            Self.failingNames(
+                Self.regressed(
+                    report,
+                    interruptionsPerFocusDayMax: InterventionPolicy.dailyInterruptionCap + 1
+                )
+            ).contains("nudge.interruptionsPerFocusDayMax")
+        )
+        #expect(
+            Self.failingNames(
+                Self.regressed(report, queriesPerPriorityMax: InterventionPolicy.dailyQueryCap + 1)
+            ).contains("nudge.queriesPerPriorityMax")
+        )
+    }
+
+    /// A **floor**, and it fails downward. The cheapest way to look less chatty would be to
+    /// quietly reclassify an unaskable reason as askable, and this is what notices.
+    @Test("the unaskable floor fails downward")
+    func theUnaskableFloorFailsDownward() throws {
+        let report = try Self.report()
+        #expect(
+            Self.failingNames(Self.regressed(report, unaskableUncertaintyShare: 0.33))
+                .contains("nudge.unaskableUncertaintyShare")
+        )
+        #expect(EvaluationGate.passes(Self.regressed(report, unaskableUncertaintyShare: 0.99)))
+    }
+
+    /// Twelve gated metrics carrying **thirteen** bounds — the extra bound being the band's lower
+    /// end. Counted, so that a metric quietly dropped from the list is a red test rather than a
+    /// silently smaller gate.
+    @Test("the nudge gate carries twelve metrics and thirteen bounds")
+    func theNudgeGateIsComplete() throws {
+        let report = try Self.report()
+        let names = EvaluationGate.checks(for: report)
+            .map(\.name)
+            .filter { $0.hasPrefix("nudge.") }
+        #expect(Set(names).count == names.count, "a nudge metric is gated twice")
+
+        let expected: Set<String> = [
+            "nudge.accusationFalsePositiveRate",
+            "nudge.repeatQueryCount",
+            "nudge.queryOnDecidableCount",
+            "nudge.queryOnUnaskableCount",
+            "nudge.accusationsFromQuery",
+            "nudge.escalationsFromDeferred",
+            "nudge.ladderRungsDeclared",
+            "nudge.queryVolumeRate",
+            "nudge.queriesPerFocusDay",
+            "nudge.interruptionsPerFocusDayMax",
+            "nudge.queriesPerPriorityMax",
+            "nudge.queryGroundTruthCoverage",
+            "nudge.queryAnsweredRelevantShare",
+            "nudge.unaskableUncertaintyShare"
+        ]
+        #expect(Set(names) == expected, "the gated nudge metrics changed")
+    }
+
+    /// The `nudge` object reaches the artefact, and every distribution in it is **total** over its
+    /// vocabulary — including the zeroes. A key that vanished when its count did would turn an
+    /// exact-zero gate into a missing one.
+    @Test("the nudge block is emitted and its distributions are total")
+    func theNudgeBlockIsEmitted() throws {
+        let report = try Self.report()
+        let json = report.json
+
+        #expect(json.contains("\"nudge\": {"))
+        #expect(json.contains("\"queryVolumeRate\""))
+        #expect(!json.contains("\"queryRate\""), "the pre-finding-2 name is back")
+        #expect(json.contains("\"interventionDigest\": \"\(InterventionPolicy.digestHex)\""))
+
+        #expect(report.nudge.byRung.map(\.0) == LadderRung.Kind.allCases.map(\.rawValue))
+        #expect(report.nudge.bySurface.map(\.0) == NudgeSurface.allCases.map(\.rawValue))
+        #expect(
+            report.nudge.byQueryReason.map(\.0)
+                == QueryableUncertainty.allCases.map(\.rawValue)
+        )
+        #expect(
+            report.nudge.bySuppressionReason.map(\.0)
+                == NudgeSuppressionReason.allCases.map(\.rawValue)
+        )
+        #expect(
+            report.nudge.byDeferralReason.map(\.0) == DeferralReason.allCases.map(\.rawValue)
+        )
+        // e05's digest is its own. If these two were ever equal the split would have collapsed
+        // and a snooze duration would be keying e06's verdict cache (R-95).
+        #expect(report.nudge.interventionDigest != report.policyDigest)
+    }
+
+    /// **R-75.4, extended.** A report whose nudge thresholds moved must not bind, and
+    /// `policyDigest` is blind to that by construction — which is exactly why the split exists.
+    @Test("a report whose intervention digest moved does not bind")
+    func aMovedInterventionDigestDoesNotBind() throws {
+        let report = try Self.report()
+        let evidence = try Self.binding(for: report)
+        #expect(ReportBinding.passes(evidence))
+
+        let foreign = Self.replacing(evidence, expectedInterventionDigest: "0xdeadbeefdeadbeef")
+        #expect(!ReportBinding.passes(foreign))
+        let engine = ReportBinding.evaluate(foreign)
+            .first { $0.check == ReportBinding.Check.engine.rawValue }
+        #expect(engine?.passed == false)
     }
 }

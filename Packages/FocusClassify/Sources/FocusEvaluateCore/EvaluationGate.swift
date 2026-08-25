@@ -167,6 +167,131 @@ public enum EvaluationGate {
             "\(sequenceCount)",
             sequenceCount >= EvaluationPolicy.sequenceFloor
         )
+        let dayCount = report.perFile
+            .first { $0.0 == CorpusLoader.daysDirectoryName }?.1 ?? 0
+        check(
+            "perFile.days",
+            ">= \(EvaluationPolicy.dayFloor)",
+            "\(dayCount)",
+            dayCount >= EvaluationPolicy.dayFloor
+        )
+
+        checks.append(contentsOf: nudgeChecks(for: report))
+
+        return checks
+    }
+
+    /// **The split metric** (R-94, R-94a, §4.4): twelve gated metrics carrying thirteen bounds.
+    ///
+    /// The thirteenth bound is `queryAnsweredRelevantShare`'s lower end. It is a **band**, not a
+    /// ceiling, and the reason is recorded here because it is the one place somebody would think
+    /// to "simplify" it: gating *relevant answers ÷ delivered queries* with a ceiling alone
+    /// inverts U-1. A "yes" is the affordance working — one click, a durable rule, a subject the
+    /// app never has to ask about again — and a one-sided ceiling on it creates a direct incentive
+    /// to ask fewer of the questions U-1 exists to license. Both ends fail, and each end fails for
+    /// its own reason.
+    ///
+    /// Two of the twelve are **fail-closed**: `queryGroundTruthCoverage` must be 1.0 and the day
+    /// fixtures must be present, because a gate scoring a metric on absent data is a gate
+    /// reporting a pass it did not measure.
+    static func nudgeChecks(for report: EvaluationReport) -> [GateCheck] {
+        var checks: [GateCheck] = []
+        let nudge = report.nudge
+
+        func check(_ name: String, _ requirement: String, _ measured: String, _ passed: Bool) {
+            checks.append(
+                GateCheck(
+                    name: "nudge.\(name)",
+                    requirement: requirement,
+                    measured: measured,
+                    passed: passed
+                )
+            )
+        }
+        func number(_ value: Double) -> String { EvaluationReport.number(value) }
+
+        // --- the exact zeroes ---------------------------------------------------------------
+        //
+        // The split is asserted as an EQUALITY as well as a ceiling: e04's `falseNudgeRate` and
+        // e05's `accusationFalsePositiveRate` are two names for one fact, and the day they
+        // disagree one of them is lying.
+        check(
+            "accusationFalsePositiveRate",
+            "== \(number(EvaluationPolicy.accusationFalsePositiveCeiling)) and == falseNudgeRate",
+            number(nudge.accusationFalsePositiveRate),
+            nudge.accusationFalsePositiveRate == EvaluationPolicy.accusationFalsePositiveCeiling
+                && nudge.accusationFalsePositiveRate == report.overall.falseNudgeRate
+        )
+        check("repeatQueryCount", "== 0", "\(nudge.repeatQueryCount)", nudge.repeatQueryCount == 0)
+        check(
+            "queryOnDecidableCount", "== 0",
+            "\(nudge.queryOnDecidableCount)", nudge.queryOnDecidableCount == 0
+        )
+        check(
+            "queryOnUnaskableCount", "== 0",
+            "\(nudge.queryOnUnaskableCount)", nudge.queryOnUnaskableCount == 0
+        )
+        check(
+            "accusationsFromQuery", "== 0",
+            "\(nudge.accusationsFromQuery)", nudge.accusationsFromQuery == 0
+        )
+        check(
+            "escalationsFromDeferred", "== 0",
+            "\(nudge.escalationsFromDeferred)", nudge.escalationsFromDeferred == 0
+        )
+        check(
+            "ladderRungsDeclared", "== \(InterventionPolicy.ladderRungCount)",
+            "\(nudge.ladderRungsDeclared)",
+            nudge.ladderRungsDeclared == InterventionPolicy.ladderRungCount
+        )
+
+        // --- the volume ceilings ------------------------------------------------------------
+        check(
+            "queryVolumeRate",
+            "<= \(number(EvaluationPolicy.queryVolumeRateCeiling)) (VOLUME, not a false-positive rate)",
+            number(nudge.queryVolumeRate),
+            nudge.queryVolumeRate <= EvaluationPolicy.queryVolumeRateCeiling
+        )
+        check(
+            "queriesPerFocusDay",
+            "<= \(InterventionPolicy.dailyQueryCapAllPriorities) (max across day fixtures)",
+            "\(nudge.queriesPerFocusDay)",
+            nudge.queriesPerFocusDay <= InterventionPolicy.dailyQueryCapAllPriorities
+        )
+        check(
+            "interruptionsPerFocusDayMax",
+            "<= \(InterventionPolicy.dailyInterruptionCap)",
+            "\(nudge.interruptionsPerFocusDayMax)",
+            nudge.interruptionsPerFocusDayMax <= InterventionPolicy.dailyInterruptionCap
+        )
+        check(
+            "queriesPerPriorityMax",
+            "<= \(InterventionPolicy.dailyQueryCap)",
+            "\(nudge.queriesPerPriorityMax)",
+            nudge.queriesPerPriorityMax <= InterventionPolicy.dailyQueryCap
+        )
+
+        // --- the honesty band, and the data it needs ------------------------------------------
+        check(
+            "queryGroundTruthCoverage",
+            ">= \(number(EvaluationPolicy.queryGroundTruthCoverageFloor)) (fails closed)",
+            number(nudge.queryGroundTruthCoverage),
+            nudge.queryGroundTruthCoverage >= EvaluationPolicy.queryGroundTruthCoverageFloor
+        )
+        check(
+            "queryAnsweredRelevantShare",
+            "in [\(number(EvaluationPolicy.queryAnsweredRelevantFloor)), "
+                + "\(number(EvaluationPolicy.queryAnsweredRelevantCeiling))] — BOTH ends fail",
+            number(nudge.queryAnsweredRelevantShare),
+            nudge.queryAnsweredRelevantShare >= EvaluationPolicy.queryAnsweredRelevantFloor
+                && nudge.queryAnsweredRelevantShare <= EvaluationPolicy.queryAnsweredRelevantCeiling
+        )
+        check(
+            "unaskableUncertaintyShare",
+            ">= \(number(EvaluationPolicy.unaskableUncertaintyFloor)) (a FLOOR)",
+            number(nudge.unaskableUncertaintyShare),
+            nudge.unaskableUncertaintyShare >= EvaluationPolicy.unaskableUncertaintyFloor
+        )
 
         return checks
     }

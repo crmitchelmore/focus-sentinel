@@ -70,7 +70,141 @@ public struct CascadeSummary: Sendable, Equatable {
     public let maxDepth: Int
 }
 
-/// `evaluation.json`, as a value (Appendix A.4, extended by R-67 and R-75).
+/// **The `nudge` object of `evaluation.json`** (R-94, R-94a, Appendix A.3).
+///
+/// e04's `falseNudgeRate` stays a top-level key, so every committed digest and all five of R-75's
+/// binding checks remain valid; this sits beside it and `accusationFalsePositiveRate` is asserted
+/// **equal** to it, which is what makes the split explicit rather than a second opinion.
+///
+/// Read the names carefully, because the renaming is the point of finding 2. Three numbers bound
+/// how often the app speaks — per judgement, per day, per priority — and **none of them is a
+/// false-positive rate**. Two numbers are exact-zero gates on the query failures that are
+/// unambiguously defects. One is a two-sided honesty band. The rest are reported and ungated,
+/// because a number nobody gates is still a number somebody reads.
+/// `Sendable` and deliberately **not** `Equatable`: the distributions are `[(String, Int)]`, in
+/// the same key-ordered shape every other block in this report uses, and two reports are compared
+/// through `EvaluationReport.==` — which compares the emitted JSON, because the artefact is the
+/// thing two runs have to agree on.
+public struct NudgeSummary: Sendable {
+    // --- the exact zeroes ------------------------------------------------------------------
+    /// An `InterventionMandate` on any corpus case not labelled `unrelated`. **== `falseNudgeRate`.**
+    public let accusationFalsePositiveRate: Double
+    /// A second question about the same `(priorityID, subjectKind, subject)`. U-1 calls
+    /// repeat-asking a defect, and a defect's gate is zero.
+    public let repeatQueryCount: Int
+    /// A question about a subject the context pack, a decisive rule or a decisive seed had
+    /// already answered — the app failing to read its own notes.
+    public let queryOnDecidableCount: Int
+    /// A question produced from an uncertainty R-77 marks unaskable — the guard on `noEvidence`
+    /// above all, where a question would announce that we noticed a password manager.
+    public let queryOnUnaskableCount: Int
+    /// An accusation produced from an `uncertain` verdict. Structurally impossible; counted
+    /// anyway, because an invariant nobody counts is an invariant nobody notices losing.
+    public let accusationsFromQuery: Int
+    /// A rung delivered above the ambient one whose predecessor was not a delivered rung one rank
+    /// below. R-81, as arithmetic.
+    public let escalationsFromDeferred: Int
+    /// D-06's three, asserted as a number as well as a type.
+    public let ladderRungsDeclared: Int
+
+    // --- the volume ceilings ---------------------------------------------------------------
+    /// Delivered questions ÷ classifications. **A volume ceiling, not a false-positive rate.**
+    public let queryVolumeRate: Double
+    /// The **maximum** across the realistic-day fixtures, never the mean: a metric that averages
+    /// a bad day away is a metric that ships a bad day.
+    public let queriesPerFocusDay: Int
+    public let interruptionsPerFocusDayMax: Int
+    /// Reported, ungated — the middle of the distribution, so a reader can see whether the
+    /// maximum is a spike or the shape.
+    public let interruptionsPerFocusDayP50: Int
+    public let queriesPerPriorityMax: Int
+
+    // --- the honesty band ------------------------------------------------------------------
+    /// The share of delivered questions whose committed `queryGroundTruth` is `relevant`, over
+    /// the cases where the ground truth is not `eitherIsReasonable`. **Both ends fail.**
+    public let queryAnsweredRelevantShare: Double
+    /// Askable subject-bearing cases carrying a label ÷ askable subject-bearing cases. The gate
+    /// fails below 1.0 rather than scoring the band on absent data.
+    public let queryGroundTruthCoverage: Double
+    /// Reported; excluded from the band's denominator, because for these cases no answer is wrong.
+    public let queryEitherIsReasonableShare: Double
+    /// A **floor**: the share of uncertain verdicts whose reason has no answerable question in it.
+    public let unaskableUncertaintyShare: Double
+    /// Reported, ungated. A rising number means the presentation gate is over-firing, which is a
+    /// signal for e08 rather than a silent loss.
+    public let deferredRungShare: Double
+
+    // --- the distributions -----------------------------------------------------------------
+    public let byKind: [(String, Int)]
+    public let byRung: [(String, Int)]
+    public let bySurface: [(String, Int)]
+    public let byDisposition: [(String, Int)]
+    public let byQueryReason: [(String, Int)]
+    public let bySuppressionReason: [(String, Int)]
+    public let byDeferralReason: [(String, Int)]
+    /// e05's own manifest digest. **Not** `policyDigest`: two policies, two digests, so that
+    /// tuning a cooldown never invalidates e06's verdict cache (R-95).
+    public let interventionDigest: String
+
+    /// Public so a suite can build a **deliberately regressed** block and require the gate to go
+    /// red by name. A gate nobody has watched fail is a gate nobody knows works, and the only way
+    /// to watch this one fail is to hand it a report with one number moved.
+    public init(
+        accusationFalsePositiveRate: Double,
+        repeatQueryCount: Int,
+        queryOnDecidableCount: Int,
+        queryOnUnaskableCount: Int,
+        accusationsFromQuery: Int,
+        escalationsFromDeferred: Int,
+        ladderRungsDeclared: Int,
+        queryVolumeRate: Double,
+        queriesPerFocusDay: Int,
+        interruptionsPerFocusDayMax: Int,
+        interruptionsPerFocusDayP50: Int,
+        queriesPerPriorityMax: Int,
+        queryAnsweredRelevantShare: Double,
+        queryGroundTruthCoverage: Double,
+        queryEitherIsReasonableShare: Double,
+        unaskableUncertaintyShare: Double,
+        deferredRungShare: Double,
+        byKind: [(String, Int)],
+        byRung: [(String, Int)],
+        bySurface: [(String, Int)],
+        byDisposition: [(String, Int)],
+        byQueryReason: [(String, Int)],
+        bySuppressionReason: [(String, Int)],
+        byDeferralReason: [(String, Int)],
+        interventionDigest: String
+    ) {
+        self.accusationFalsePositiveRate = accusationFalsePositiveRate
+        self.repeatQueryCount = repeatQueryCount
+        self.queryOnDecidableCount = queryOnDecidableCount
+        self.queryOnUnaskableCount = queryOnUnaskableCount
+        self.accusationsFromQuery = accusationsFromQuery
+        self.escalationsFromDeferred = escalationsFromDeferred
+        self.ladderRungsDeclared = ladderRungsDeclared
+        self.queryVolumeRate = queryVolumeRate
+        self.queriesPerFocusDay = queriesPerFocusDay
+        self.interruptionsPerFocusDayMax = interruptionsPerFocusDayMax
+        self.interruptionsPerFocusDayP50 = interruptionsPerFocusDayP50
+        self.queriesPerPriorityMax = queriesPerPriorityMax
+        self.queryAnsweredRelevantShare = queryAnsweredRelevantShare
+        self.queryGroundTruthCoverage = queryGroundTruthCoverage
+        self.queryEitherIsReasonableShare = queryEitherIsReasonableShare
+        self.unaskableUncertaintyShare = unaskableUncertaintyShare
+        self.deferredRungShare = deferredRungShare
+        self.byKind = byKind
+        self.byRung = byRung
+        self.bySurface = bySurface
+        self.byDisposition = byDisposition
+        self.byQueryReason = byQueryReason
+        self.bySuppressionReason = bySuppressionReason
+        self.byDeferralReason = byDeferralReason
+        self.interventionDigest = interventionDigest
+    }
+}
+
+/// `evaluation.json`, as a value (Appendix A.4, extended by R-67, R-75 and R-94).
 ///
 /// Serialised **by hand** rather than through `JSONEncoder`, for one reason that matters: two
 /// runs of one tree must produce two byte-identical files, and a `Double` encoded by
@@ -104,10 +238,42 @@ public struct EvaluationReport: Sendable, Equatable {
     public let byStage: [(String, Int)]
     public let byUncertaintyReason: [(String, Int)]
     public let byBand: [(String, Int)]
+    public let nudge: NudgeSummary
     public let failures: [EvaluationFailure]
 
     public static func == (lhs: EvaluationReport, rhs: EvaluationReport) -> Bool {
         lhs.json == rhs.json
+    }
+
+    /// The same report with a different `nudge` block.
+    ///
+    /// The report's own initialiser stays internal — it is the harness's to build, and a report
+    /// somebody assembled by hand is not a measurement. This one seam is public because the gate
+    /// has to be watched failing: `EvaluationGateTests` moves one nudge number across its bound
+    /// and requires the check of that name to go red.
+    public func replacingNudge(_ nudge: NudgeSummary) -> EvaluationReport {
+        EvaluationReport(
+            stamp: stamp,
+            policyDigest: policyDigest,
+            caseCount: caseCount,
+            corpusFloor: corpusFloor,
+            classificationCount: classificationCount,
+            generatedAt: generatedAt,
+            runID: runID,
+            corpusDigest: corpusDigest,
+            perFile: perFile,
+            overall: overall,
+            adversarial: adversarial,
+            sequences: sequences,
+            cache: cache,
+            latencyMs: latencyMs,
+            cascade: cascade,
+            byStage: byStage,
+            byUncertaintyReason: byUncertaintyReason,
+            byBand: byBand,
+            nudge: nudge,
+            failures: failures
+        )
     }
 
     // MARK: - Serialisation
@@ -192,6 +358,42 @@ public struct EvaluationReport: Sendable, Equatable {
         lines.append("  \"byStage\": { \(Self.object(byStage)) },")
         lines.append("  \"byUncertaintyReason\": { \(Self.object(byUncertaintyReason)) },")
         lines.append("  \"byBand\": { \(Self.object(byBand)) },")
+        lines.append("  \"nudge\": {")
+        lines.append(
+            "    \"accusationFalsePositiveRate\": \(Self.number(nudge.accusationFalsePositiveRate)), "
+                + "\"repeatQueryCount\": \(nudge.repeatQueryCount), "
+                + "\"queryOnDecidableCount\": \(nudge.queryOnDecidableCount), "
+                + "\"queryOnUnaskableCount\": \(nudge.queryOnUnaskableCount),"
+        )
+        lines.append(
+            "    \"queryVolumeRate\": \(Self.number(nudge.queryVolumeRate)), "
+                + "\"queriesPerFocusDay\": \(nudge.queriesPerFocusDay), "
+                + "\"interruptionsPerFocusDayMax\": \(nudge.interruptionsPerFocusDayMax), "
+                + "\"interruptionsPerFocusDayP50\": \(nudge.interruptionsPerFocusDayP50), "
+                + "\"queriesPerPriorityMax\": \(nudge.queriesPerPriorityMax),"
+        )
+        lines.append(
+            "    \"queryAnsweredRelevantShare\": \(Self.number(nudge.queryAnsweredRelevantShare)), "
+                + "\"queryGroundTruthCoverage\": \(Self.number(nudge.queryGroundTruthCoverage)), "
+                + "\"queryEitherIsReasonableShare\": "
+                + "\(Self.number(nudge.queryEitherIsReasonableShare)), "
+                + "\"unaskableUncertaintyShare\": \(Self.number(nudge.unaskableUncertaintyShare)),"
+        )
+        lines.append(
+            "    \"ladderRungsDeclared\": \(nudge.ladderRungsDeclared), "
+                + "\"escalationsFromDeferred\": \(nudge.escalationsFromDeferred), "
+                + "\"accusationsFromQuery\": \(nudge.accusationsFromQuery), "
+                + "\"deferredRungShare\": \(Self.number(nudge.deferredRungShare)),"
+        )
+        lines.append("    \"byKind\": { \(Self.object(nudge.byKind)) },")
+        lines.append("    \"byRung\": { \(Self.object(nudge.byRung)) },")
+        lines.append("    \"bySurface\": { \(Self.object(nudge.bySurface)) },")
+        lines.append("    \"byDisposition\": { \(Self.object(nudge.byDisposition)) },")
+        lines.append("    \"byQueryReason\": { \(Self.object(nudge.byQueryReason)) },")
+        lines.append("    \"bySuppressionReason\": { \(Self.object(nudge.bySuppressionReason)) },")
+        lines.append("    \"byDeferralReason\": { \(Self.object(nudge.byDeferralReason)) },")
+        lines.append("    \"interventionDigest\": \(Self.quoted(nudge.interventionDigest))")
+        lines.append("  },")
         lines.append("  \"failures\": [")
         lines.append(
             failures.map {

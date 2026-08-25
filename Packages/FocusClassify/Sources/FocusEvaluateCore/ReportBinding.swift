@@ -25,9 +25,15 @@ public enum ReportBinding {
         /// B2 — the report is newer than the marker the gate touched immediately before `unit`
         /// (R-75.3).
         case freshness
-        /// B3 — the report was produced by this engine: its stamp and policy digest equal the
-        /// committed literals the unit lane asserts of the test process and both self-checks
-        /// assert of the running application (R-75.4).
+        /// B3 — the report was produced by this engine: its stamp, its policy digest **and its
+        /// intervention digest** equal the committed literals the unit lane asserts of the test
+        /// process and both self-checks assert of the running application (R-75.4, extended by
+        /// e05).
+        ///
+        /// Three digests and not two, because e05 deliberately gave the nudge its own manifest: a
+        /// report whose nudge thresholds had moved would otherwise certify a set of numbers that
+        /// no longer describe the app, and `policyDigest` — which e06's verdict cache keys on —
+        /// would be blind to it by construction (R-95).
         case engine
         /// B4 — the report describes the corpus on disk (R-75.5).
         case corpus
@@ -51,6 +57,8 @@ public enum ReportBinding {
         public let expectedStamp: String
         public let policyDigest: String
         public let expectedPolicyDigest: String
+        public let interventionDigest: String
+        public let expectedInterventionDigest: String
         public let corpusDigest: String
         public let expectedCorpusDigest: String
         public let parsedPath: String
@@ -65,6 +73,8 @@ public enum ReportBinding {
             expectedStamp: String,
             policyDigest: String,
             expectedPolicyDigest: String,
+            interventionDigest: String,
+            expectedInterventionDigest: String,
             corpusDigest: String,
             expectedCorpusDigest: String,
             parsedPath: String,
@@ -78,6 +88,8 @@ public enum ReportBinding {
             self.expectedStamp = expectedStamp
             self.policyDigest = policyDigest
             self.expectedPolicyDigest = expectedPolicyDigest
+            self.interventionDigest = interventionDigest
+            self.expectedInterventionDigest = expectedInterventionDigest
             self.corpusDigest = corpusDigest
             self.expectedCorpusDigest = expectedCorpusDigest
             self.parsedPath = parsedPath
@@ -118,9 +130,11 @@ public enum ReportBinding {
             Result(
                 check: Check.engine.rawValue,
                 passed: evidence.stamp == evidence.expectedStamp
-                    && evidence.policyDigest == evidence.expectedPolicyDigest,
-                detail: "\(evidence.stamp)/\(evidence.policyDigest)"
+                    && evidence.policyDigest == evidence.expectedPolicyDigest
+                    && evidence.interventionDigest == evidence.expectedInterventionDigest,
+                detail: "\(evidence.stamp)/\(evidence.policyDigest)/\(evidence.interventionDigest)"
                     + " vs \(evidence.expectedStamp)/\(evidence.expectedPolicyDigest)"
+                    + "/\(evidence.expectedInterventionDigest)"
             )
         )
 

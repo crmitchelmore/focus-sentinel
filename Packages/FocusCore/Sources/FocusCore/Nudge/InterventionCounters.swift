@@ -192,6 +192,25 @@ public struct InterventionCounters: Sendable, Equatable, Hashable {
     /// Interruptions that actually reached somebody. The only ones that spend a cap.
     public var delivered: Int { count(.delivered) }
 
+    /// Two counter sets added together.
+    ///
+    /// The evaluation lane reads three lanes — the corpus, the sequences and the realistic days —
+    /// and reports one distribution over all of them. Adding the values is what makes that one
+    /// number rather than three a reader has to add up by hand.
+    public func merging(_ other: InterventionCounters) -> InterventionCounters {
+        var merged = self
+        merged.byKind.merge(other.byKind, uniquingKeysWith: +)
+        merged.deliveredByKind.merge(other.deliveredByKind, uniquingKeysWith: +)
+        merged.byRung.merge(other.byRung, uniquingKeysWith: +)
+        merged.bySurface.merge(other.bySurface, uniquingKeysWith: +)
+        merged.byDisposition.merge(other.byDisposition, uniquingKeysWith: +)
+        merged.byOutcome.merge(other.byOutcome, uniquingKeysWith: +)
+        merged.byQueryReason.merge(other.byQueryReason, uniquingKeysWith: +)
+        merged.bySuppressionReason.merge(other.bySuppressionReason, uniquingKeysWith: +)
+        merged.byDeferralReason.merge(other.byDeferralReason, uniquingKeysWith: +)
+        return merged
+    }
+
     /// **Reported, ungated.** A rising share means the presentation gate is over-firing.
     /// `.zero` when nothing has been said, rather than a division by nothing.
     public var deferredRungShare: Double {
