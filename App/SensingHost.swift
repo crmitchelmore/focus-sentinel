@@ -363,6 +363,20 @@ final class SensingHost {
     /// Nothing deeper is read. There is no origin and no title in this value because there is
     /// none in this epic: `ClassificationInput.origin` and `.titleTokens` are exercised by the
     /// golden corpus and empty in every shipping path here, and e07 is what turns them on.
+    /// **e03's own answer**, as the value the nudge's suppression stack consumes (R-84 gate 3).
+    ///
+    /// Exposed rather than reconstructed, because `ClearedActivation`'s initialiser is
+    /// `fileprivate` to `SensitivityGate` and reconstructing one elsewhere would be a second
+    /// place the gate's decision is made. Nothing is fetched here: it is `gate.evaluate(_:)` on
+    /// the activation the graph already holds.
+    ///
+    /// With nothing frontmost the honest answer is `.suppressed(reason: .unbundled)` — there is
+    /// no application to clear, and an absent subject must never read as a cleared one.
+    var sensitivityDecision: SensitiveScreenDecision {
+        guard let current = activity.current else { return .suppressed(reason: .unbundled) }
+        return gate.evaluate(current)
+    }
+
     var judgeableSubject: JudgeableSubject {
         guard let current = activity.current else { return .none }
         switch gate.evaluate(current) {

@@ -68,7 +68,8 @@ struct FocusSentinelApp: App {
                 appearance: appearance,
                 dateProvider: composition.dateProvider,
                 sensing: composition.sensingHost,
-                relevance: composition.relevanceHost
+                relevance: composition.relevanceHost,
+                nudge: composition.nudgeHost
             )
                 .appearanceTraits(appearance.traits)
         }
@@ -161,6 +162,9 @@ private struct SettingsHost: View {
     /// The live relevance runtime, so the Privacy pane's verdict inspector draws what the
     /// engine actually concluded rather than a value assembled for the occasion (R-71).
     let relevance: RelevanceHost
+    /// The live nudge loop, so the Intervention pane's usage rows show today's real spend and
+    /// its routing matrix is the router's own table under the preferences actually in force.
+    let nudge: NudgeHost
 
     @Environment(\.modelContext) private var modelContext
 
@@ -173,12 +177,54 @@ private struct SettingsHost: View {
             // are one answer rather than two opinions.
             summary: sensing.summary,
             capabilities: sensing.capabilities,
-            verdict: relevance.verdict
+            verdict: relevance.verdict,
+            intervention: interventionSettings,
+            onInterventionAction: apply(_:)
         )
         .task {
             // The window may be opened long after launch, so the stored value is read here
             // rather than assumed to still match what the observer was built with.
             appearance.preference = FocusStore.appearancePreference(in: modelContext)
+        }
+    }
+
+    /// What the Intervention pane draws, read from the live loop rather than assembled here.
+    private var interventionSettings: InterventionSettings {
+        InterventionSettings(
+            voice: nudge.preferences.voice,
+            reducedInterruption: nudge.preferences.reducedInterruption,
+            quietHours: InterventionPolicy.quietHoursDefault,
+            authorisation: nudge.notificationAuthorisation,
+            usage: nudge.todaysUsage(),
+            presentationExclusions: sensing.presentationExclusions.sorted()
+        )
+    }
+
+    /// What the pane asked for.
+    ///
+    /// The one thing it is **not** allowed to do here is ask for a permission: that call lives
+    /// in the pane's own file and nowhere else (R-96g), and this handler only learns that the
+    /// answer changed and re-reads it from `getNotificationSettings`, which never prompts.
+    private func apply(_ action: InterventionSettingsAction) {
+        switch action {
+        case .setVoice(let voice):
+            nudge.preferences = NudgePreferences(
+                voice: voice,
+                reducedInterruption: nudge.preferences.reducedInterruption,
+                authorisation: nudge.preferences.authorisation
+            )
+        case .setReducedInterruption(let reduced):
+            nudge.preferences = NudgePreferences(
+                voice: nudge.preferences.voice,
+                reducedInterruption: reduced,
+                authorisation: nudge.preferences.authorisation
+            )
+        case .setQuietHours, .removePresentationExclusion:
+            // Both are stored settings e05 does not yet persist a row for; the pane reports the
+            // request and the store lands in a later task rather than being faked here.
+            break
+        case .notificationAuthorisationChanged:
+            AppComposition.shared.refreshNotificationAuthorisation()
         }
     }
 

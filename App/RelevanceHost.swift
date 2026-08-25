@@ -93,6 +93,19 @@ final class RelevanceHost {
         category: "RelevanceHost"
     )
 
+    /// **The verdict stream e05's nudge host consumes.**
+    ///
+    /// Observation only: it fires *after* the judgement has been made and published, carries a
+    /// value, and no classification anywhere in this file reads it or depends on whether
+    /// anybody is listening. e04's own promise — "this host publishes; nothing acts" — is
+    /// therefore intact in the direction that matters: e05 acts, and the acting cannot reach
+    /// back into the judging.
+    ///
+    /// `NudgeJudgement` rather than `VerdictSnapshot` because a question needs three things the
+    /// inspector had no use for: the `ClassificationOutcome` itself, the named route to
+    /// `uncertain`, and the subject the classification was actually **about**.
+    var onJudgement: ((NudgeJudgement) -> Void)?
+
     /// Where the session authority comes from (R-72.2).
     ///
     /// A closure rather than a reference to `SessionHost`, because this host must not be able to
@@ -318,16 +331,32 @@ final class RelevanceHost {
             subjectSince = now
         }
 
+        let dwell = now - subjectSince
         let judgement = engine.judge(
             input: ClassificationInput(bundleIdentifier: subject.bundleIdentifier),
             snapshot: snapshot,
             now: now,
-            dwell: now - subjectSince,
+            dwell: dwell,
             phase: phase,
             isUserIdle: isUserIdle
         )
         judgementCount += 1
-        verdict = judgement.verdictSnapshot(stampKey: stampKey)
+        let published = judgement.verdictSnapshot(stampKey: stampKey)
+        verdict = published
+
+        // Published last, and consumed by at most one listener. Everything above has already
+        // happened; a nudge host that threw would not change a verdict, and a nudge host that
+        // is absent changes nothing at all — which is exactly what e04 shipped.
+        onJudgement?(
+            NudgeJudgement(
+                outcome: judgement.outcome,
+                uncertainty: judgement.uncertaintyReason,
+                subject: subject.bundleIdentifier,
+                dwelled: dwell,
+                snapshot: published,
+                stamp: engine.stamp
+            )
+        )
     }
 
     /// Forget the clock and the last verdict.

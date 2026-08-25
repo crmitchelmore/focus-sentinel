@@ -120,7 +120,28 @@ final class AppComposition {
     let hotKeyRegistrar: any HotKeyRegistering
 
     /// The pre-built quick-capture panel. Built here, at launch, and never rebuilt.
+    ///
+    /// **Not the nudge panel.** This one activates the application on purpose — a capture field
+    /// nobody can type into is not capture — and `nudgePanel` must never take anything. They are
+    /// two objects rather than one object with a flag, because the safe call and the unsafe call
+    /// are one word apart (P-139, R-96m).
     let quickCapturePanel: QuickCapturePanelController
+
+    /// The non-activating nudge panel (R-89), built at launch for the same reason the capture
+    /// panel is: showing it is a state change on objects that already exist.
+    let nudgePanel: NudgePanelController
+
+    /// The menu-bar command centre. Installed in `start()`, because it touches `NSStatusBar`.
+    let menuBar: MenuBarController
+
+    /// The notification boundary. It reads `getNotificationSettings`, which P-134 measured never
+    /// prompting, and contains no call that can raise one — the single `requestAuthorization`
+    /// call site in the repository is the Intervention settings pane's button (R-96g).
+    let notificationDelivery: NotificationDelivery
+
+    /// The nudge loop. **The only thing in the app that turns a judgement into behaviour**, and
+    /// it decides nothing itself: `NudgeDecider` decides, and this host presents and records.
+    let nudgeHost: NudgeHost
 
     /// The only `PriorityActing` implementation: the SwiftData ⇄ `CockpitState` bridge.
     let priorityHost: PriorityHost
@@ -134,6 +155,16 @@ final class AppComposition {
     private(set) var hotKeySpec: HotKeySpec = .quickCaptureDefault
 
     private var hasStarted = false
+
+    /// **The menu-bar timer's shape, chosen once per session** (P-133, R-91).
+    ///
+    /// Held here rather than in the controller because it is a fact about the *session*, not
+    /// about the item: the width tracks the digit count, so a timer that grew a field at the
+    /// hour mark would move every item beside it. `MenuBarTimerFormat.advanced(elapsed:)` is
+    /// monotone, so an open-ended session widens exactly once and never narrows.
+    private var menuBarTimerFormat = MenuBarTimerFormat.minuteSecond
+    /// The session the format was chosen for. A new session chooses again, from its own plan.
+    private var menuBarTimerSessionID: UUID?
 
     init(
         dateProvider: any DateProvider = SystemDateProvider(),
@@ -261,6 +292,32 @@ final class AppComposition {
         // Built now, with the panel's SwiftUI content and its hosting view, so that `show()`
         // later is nothing but state changes on objects that already exist (P-57).
         self.quickCapturePanel = QuickCapturePanelController()
+
+        // The e05 surfaces, all built before the first frame for the same reason.
+        let nudgePanel = NudgePanelController()
+        let menuBar = MenuBarController()
+        let centre = SystemNotificationCentre()
+        let notifications = NotificationDelivery(centre: centre)
+        self.nudgePanel = nudgePanel
+        self.menuBar = menuBar
+        self.notificationDelivery = notifications
+
+        self.nudgeHost = NudgeHost(
+            context: context,
+            // The **same** box the relevance host reads through, so a "Not this time" written
+            // from a panel is a rule the very next classification consults (R-72.2).
+            sessionRules: sessions.sessionRuleBox,
+            panel: nudgePanel,
+            menuBar: menuBar,
+            notifications: notifications,
+            workspace: SystemReturnWorkspace(),
+            monotonicClock: monotonicClock,
+            dateProvider: dateProvider,
+            calendar: calendar
+        )
+        centre.onActionIdentifier = { [weak notifications] identifier in
+            notifications?.handle(actionIdentifier: identifier)
+        }
     }
 
     /// Seed the sensitive-application list and read both lists back.
@@ -336,6 +393,8 @@ final class AppComposition {
         }
         relevanceHost.invalidateSnapshot()
 
+        startNudgeLoop()
+
         registerHotKey(storedHotKeySpec())
 
         // Restoration first, so that the graph's first activation is written against the
@@ -348,6 +407,183 @@ final class AppComposition {
         // session, the live observer count and the capability matrix as the probe just read it —
         // rather than the placeholder values `init` could build before any of them existed.
         refreshCockpit()
+    }
+
+    /// Join the nudge loop to the three things that already happen.
+    ///
+    /// **The whole loop is four closures**, and that is the point: the verdict stream drives it,
+    /// the sensing types supply the surroundings, one function performs whatever a click decided
+    /// to write, and the menu bar is redrawn from the same projection every other surface reads.
+    /// Nothing here decides anything; `NudgeDecider` does.
+    private func startNudgeLoop() {
+        menuBar.install()
+        menuBar.onAction = { [weak self] action in self?.perform(action) }
+        // Read once at launch, and again whenever the settings pane's one sanctioned request
+        // returns. `getNotificationSettings` never prompts (P-134), so this costs no permission.
+        notificationDelivery.refresh { [weak self] authorisation in
+            self?.nudgeHost.preferences = NudgePreferences(
+                voice: self?.nudgeHost.preferences.voice ?? .standard,
+                reducedInterruption: self?.nudgeHost.preferences.reducedInterruption ?? false,
+                authorisation: authorisation
+            )
+        }
+
+        nudgeHost.surroundings = { [weak self] in
+            self?.nudgeSurroundings() ?? AppComposition.emptySurroundings()
+        }
+        nudgeHost.currentSessionID = { [weak self] in self?.sessionHost.snapshot?.sessionID }
+        nudgeHost.onCorrection = { [weak self] outcome in self?.perform(outcome) }
+
+        relevanceHost.onJudgement = { [weak self] judgement in
+            self?.nudgeHost.consider(judgement)
+        }
+    }
+
+    /// Everything the world is doing, as one value.
+    ///
+    /// Assembled from the types that own each fact — e03's sensing summary, e03's session phase,
+    /// e02's calendar, e01's clocks — and **nothing is fetched here**: every field is a reading
+    /// somebody else already took, which is what keeps the nudge module free of every sensing
+    /// API (R-96k).
+    private func nudgeSurroundings() -> NudgeSurroundings {
+        let summary = sensingHost.summary
+        return NudgeSurroundings(
+            hasActivePriority: priorityHost.state.priority != nil,
+            sensingPaused: !sensingHost.isRunning,
+            sensitivity: sensingHost.sensitivityDecision,
+            phase: sessionHost.snapshot?.phase ?? .focus,
+            idle: sensingHost.idleReading,
+            idleThresholdSeconds: sensingHost.settings.idleThresholdInterval,
+            media: sensingHost.mediaActivity,
+            mediaSuppressionEnabled: true,
+            presentation: sensingHost.presentationState,
+            menuBarVisible: !sensingHost.presentationState.suppressesOverlays,
+            quietHours: QuietHours.off,
+            now: dateProvider.now,
+            calendar: calendar,
+            monotonic: monotonicClock.elapsed
+        )
+    }
+
+    /// The value used when the composition root is gone. It has no active priority, so gate 1
+    /// suppresses everything — the safest possible reading of "this object is being torn down".
+    private static func emptySurroundings() -> NudgeSurroundings {
+        NudgeSurroundings(
+            hasActivePriority: false,
+            // Suppressed, not cleared: an object being torn down has looked at nothing, and
+            // "we did not look" must never read as "we looked and it was fine".
+            sensitivity: .suppressed(reason: .unbundled),
+            idleThresholdSeconds: 0,
+            now: Date(timeIntervalSince1970: 0),
+            calendar: Calendar(identifier: .gregorian),
+            monotonic: .zero
+        )
+    }
+
+    /// Perform whatever one click decided to write.
+    ///
+    /// `CorrectionAction.outcome(scope:at:)` decided **what**; this decides **where**, and every
+    /// destination is a mechanism that already existed: the rules pane's own writer (with its
+    /// undo), e03's session machine, e02's confirm surface.
+    private func perform(_ outcome: CorrectionOutcome) {
+        switch outcome {
+        case .rule(let rule), .ruleAndReceipt(let rule, _):
+            guard let taskID = priorityHost.state.priority?.id else { return }
+            priorityHost.addRule(
+                taskID: taskID,
+                scope: rule.subjectKind == .domain ? .domain : .app,
+                subject: rule.subject,
+                verdict: rule.verdict
+            )
+        case .pause:
+            // e03's own machine, never a second pause concept (F-64). It travels down the same
+            // one channel every menu item uses, so a pause from a nudge and a pause from ⌃⌘P are
+            // literally the same command.
+            FocusCommandCenter.shared.send(.pauseSession)
+        case .priorityChangeRequested:
+            // e02's confirm surface. **Never** a silent replacement (F-142): the command opens
+            // the capture field, and the person types and confirms.
+            FocusCommandCenter.shared.send(.newPriority)
+        case .sessionRule, .receiptOnly, .snooze, .returnToTask, .nothing:
+            break
+        }
+        refreshCockpit()
+    }
+
+    /// A click in the menu bar.
+    private func perform(_ action: MenuBarAction) {
+        switch action {
+        case .openCockpit: FocusCommandCenter.shared.send(.newPriority)
+        case .startSession: FocusCommandCenter.shared.send(.startSession)
+        case .pauseSession: FocusCommandCenter.shared.send(.pauseSession)
+        case .completeSession: FocusCommandCenter.shared.send(.completeSession)
+        case .setSensingPaused(let paused): sessionHost.setSensingPaused(paused)
+        case .cancelSnooze(let subject): nudgeHost.cancelSnooze(subject: subject)
+        case .answerQuery(let answer): nudgeHost.answer(answer)
+        }
+        refreshCockpit()
+    }
+
+    /// Redraw the menu bar from the same projection every other surface reads.
+    ///
+    /// **This is F-84's cadence, and it is a coalescing rather than a schedule.** It is called
+    /// from `refreshCockpit()`, which already runs on every accepted activation and on e03's
+    /// five-second corroboration tick, and `MenuBarController.update(_:)` rewrites the item's
+    /// title only when the rendered string actually differs — so at `mm:ss` granularity the
+    /// title is written once a minute, and there is no timer anywhere for anybody to leak.
+    private func refreshMenuBar(session: SessionSnapshot?) {
+        chooseMenuBarTimerFormat(for: session)
+        menuBar.update(menuBarPresentation())
+    }
+
+    /// Choose the timer's shape **once per session**, and widen it at most once thereafter.
+    private func chooseMenuBarTimerFormat(for session: SessionSnapshot?) {
+        guard let session else {
+            menuBarTimerSessionID = nil
+            menuBarTimerFormat = .minuteSecond
+            return
+        }
+        if menuBarTimerSessionID != session.sessionID {
+            menuBarTimerSessionID = session.sessionID
+            menuBarTimerFormat = MenuBarTimerFormat.chosen(
+                forPlanned: priorityHost.state.priority?.timeboxSeconds
+                    .map { Duration.seconds($0) }
+            )
+        }
+        let elapsed = session.elapsedWallSeconds(now: dateProvider.now)
+        menuBarTimerFormat = menuBarTimerFormat.advanced(elapsed: .seconds(Int(elapsed)))
+    }
+
+    /// What the menu bar draws, as one value.
+    func menuBarPresentation() -> MenuBarPresentation {
+        let session = sessionHost.snapshot
+        let elapsed = session?.elapsedWallSeconds(now: dateProvider.now)
+        return MenuBarPresentation(
+            status: currentStatus,
+            priorityIntent: priorityHost.state.priority?.intent,
+            elapsed: elapsed.map { Duration.seconds(Int($0)) },
+            timerFormat: menuBarTimerFormat,
+            snoozes: nudgeHost.activeSnoozes(),
+            pendingQuery: nudgeHost.pendingPopoverQuery,
+            rung: nudgeHost.currentRung,
+            band: relevanceHost.verdict?.band,
+            sensingPaused: !sensingHost.isRunning
+        )
+    }
+
+    /// Re-read `getNotificationSettings` after the settings pane's one sanctioned request.
+    ///
+    /// The pane performs the request; this learns the answer. Nothing here can ask, which is
+    /// what keeps the routing path provably prompt-free (R-82.1, R-96g).
+    func refreshNotificationAuthorisation() {
+        notificationDelivery.refresh { [weak self] authorisation in
+            guard let self else { return }
+            self.nudgeHost.preferences = NudgePreferences(
+                voice: self.nudgeHost.preferences.voice,
+                reducedInterruption: self.nudgeHost.preferences.reducedInterruption,
+                authorisation: authorisation
+            )
+        }
     }
 
     /// Detach the observer graph without pausing the session.
@@ -442,6 +678,7 @@ final class AppComposition {
     func refreshCockpit() {
         let snapshot = sessionHost.snapshot
         judge(in: snapshot)
+        refreshMenuBar(session: snapshot)
         priorityHost.update(
             environment: PriorityHost.Environment(
                 status: currentStatus,
