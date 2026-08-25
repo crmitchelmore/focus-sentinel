@@ -223,6 +223,10 @@ public final class MenuBarController {
     /// The last string actually written to the button. The coalescing cadence is this
     /// comparison and nothing else.
     private var drawnTitle: String?
+    /// The last status **announced**. VoiceOver hears a state change once, when it happens —
+    /// not once per corroboration tick, which would be the app reading the same word aloud
+    /// every five seconds (F-144, F-146).
+    private var announcedStatus: FocusStatus?
     /// How many times the title has actually been rewritten. Reported by the self-check, so
     /// "it does not redraw every tick" is a number rather than a promise.
     public private(set) var titleWriteCount = 0
@@ -297,6 +301,7 @@ public final class MenuBarController {
 
         button.image = Self.glyph(for: presentation.status)
         button.imagePosition = presentation.timerText.isEmpty ? .imageOnly : .imageLeading
+        announceStatusChange(button: button)
 
         let title = Self.buttonTitle(presentation)
         guard force || title != drawnTitle else { return }
@@ -312,7 +317,7 @@ public final class MenuBarController {
     /// it is also what makes the silhouette the whole signal — P-132 read all five in the real
     /// menu bar and confirmed they are distinguishable in monochrome, which is F-146 satisfied by
     /// the tokens e01 already shipped rather than by colour.
-    public static func glyph(for status: FocusStatus) -> NSImage? {
+    nonisolated public static func glyph(for status: FocusStatus) -> NSImage? {
         let image = NSImage(
             systemSymbolName: status.symbolName,
             accessibilityDescription: status.shortLabel
@@ -326,7 +331,7 @@ public final class MenuBarController {
     /// The timer, and — under "Differentiate without colour" — the status's short label in front
     /// of it, so a person who cannot use the colour channel is not left with the silhouette
     /// alone at menu-bar size.
-    public static func buttonTitle(_ presentation: MenuBarPresentation) -> String {
+    nonisolated public static func buttonTitle(_ presentation: MenuBarPresentation) -> String {
         let timer = presentation.timerText
         guard presentation.differentiateWithoutColor else { return timer }
         let label = presentation.status.shortLabel
@@ -334,10 +339,33 @@ public final class MenuBarController {
     }
 
     /// What VoiceOver reads off the item.
-    public static func accessibilityLabel(_ presentation: MenuBarPresentation) -> String {
+    nonisolated public static func accessibilityLabel(_ presentation: MenuBarPresentation) -> String {
         let timer = presentation.timerText
         let label = presentation.status.shortLabel
         return timer.isEmpty ? label : "\(label) \(timer)"
+    }
+
+    /// Say the new state out loud, once (F-144).
+    ///
+    /// The ambient rung is a **silent** surface for somebody who can see it. For somebody who
+    /// cannot, silence would mean the rung never happened — so the one channel it has is
+    /// announced, and it is announced on the change rather than on the reading, because a state
+    /// that is repeated is not a state that changed.
+    ///
+    /// `.medium` priority: it is a fact about the app, not an interruption. A high-priority
+    /// announcement would cut across whatever the person is having read to them, which is a
+    /// louder thing than the glyph it describes.
+    private func announceStatusChange(button: NSStatusBarButton) {
+        guard announcedStatus != presentation.status else { return }
+        announcedStatus = presentation.status
+        NSAccessibility.post(
+            element: button,
+            notification: .announcementRequested,
+            userInfo: [
+                .announcement: Self.accessibilityLabel(presentation),
+                .priority: NSAccessibilityPriorityLevel.medium.rawValue
+            ]
+        )
     }
 
     // MARK: - The popover

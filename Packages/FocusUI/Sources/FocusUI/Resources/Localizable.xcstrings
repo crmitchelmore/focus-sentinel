@@ -3061,6 +3061,18 @@
         }
       }
     },
+    "shell.command.hideOverlays" : {
+      "comment" : "View-menu verb: take every nudge surface off the screen without answering anything.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hide All Overlays"
+          }
+        }
+      }
+    },
     "shell.command.newPriority" : {
       "comment" : "File menu item that brings the cockpit forward and puts the cursor in the capture field.",
       "extractionState" : "manual",
@@ -3081,6 +3093,42 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pause Watching"
+          }
+        }
+      }
+    },
+    "shell.command.showMenuBar" : {
+      "comment" : "View-menu verb: open the menu-bar popover from the keyboard.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show Focus in the Menu Bar"
+          }
+        }
+      }
+    },
+    "shell.command.snoozeNudge" : {
+      "comment" : "View-menu verb: snooze the subject the current nudge is about, for the shortest span.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Snooze Nudge"
+          }
+        }
+      }
+    },
+    "shell.command.thisIsRelevant" : {
+      "comment" : "View-menu verb: write the durable task rule the nudge panel's This is relevant button writes.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mark as Relevant"
           }
         }
       }
@@ -3129,6 +3177,18 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Help Menu"
+          }
+        }
+      }
+    },
+    "shell.help.group.view" : {
+      "comment" : "Heading for the View menu's group in the Keyboard Shortcuts window. Reads 'View Menu' to match the File and Help headings beside it.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "View Menu"
           }
         }
       }

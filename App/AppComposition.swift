@@ -437,6 +437,13 @@ final class AppComposition {
         relevanceHost.onJudgement = { [weak self] judgement in
             self?.nudgeHost.consider(judgement)
         }
+
+        // Every command reaches the nudge loop as well as the cockpit, through **one** queue in
+        // one order (F-145). The cockpit answers the capture and session verbs; the loop answers
+        // the four nudge ones and ignores the rest.
+        FocusCommandCenter.shared.observe { [weak self] command in
+            self?.nudgeHost.perform(command)
+        }
     }
 
     /// Everything the world is doing, as one value.

@@ -237,6 +237,16 @@ public struct CockpitView: View {
             sessionActions?.completeSession()
         case .pauseSensing:
             sessionActions?.setSensingPaused(!state.sensing.isPausedByUser)
+
+        // The four e05 verbs are not the cockpit's. They act on whatever nudge surface is on
+        // screen, which the cockpit knows nothing about and should not: `FocusCommandCenter`
+        // delivers every command to the nudge loop as well, and that is where they land.
+        //
+        // Listed one by one rather than caught by a `default:` — the exhaustive switch is what
+        // tells the next epic that added a command that the cockpit has an opinion to form
+        // about it, and a `default:` would silently form the opinion "ignore it".
+        case .thisIsRelevant, .snoozeNudge, .hideOverlays, .showMenuBar:
+            break
         }
     }
 

@@ -18,10 +18,15 @@ struct CommandRegistryTests {
 
     @Test("the registry holds exactly the actions that have real behaviour, in menu order")
     func registryHoldsTheRealActions() {
-        // Nine, and every one of them does something: three priority commands, three session
-        // verbs, F-119's watching switch, the window close the Court's HIG review required, and
-        // the Help item that replaces SwiftUI's link to a help book this app does not ship.
-        #expect(registry.actions.count == 9)
+        // Thirteen, in **menu-bar order** — File, then View, then Help. The array order is the
+        // reference window's row order, so the registry is written in the order a person reads
+        // the menu bar rather than in the order the epics arrived. Thirteen, and every one of
+        // them does something: three priority commands, three session
+        // verbs, F-119's watching switch, the window close the Court's HIG review required, the
+        // Help item that replaces SwiftUI's link to a help book this app does not ship, and
+        // e05's four nudge verbs — which exist because F-145's rule is that a click is never the
+        // *only* way to reach an affordance.
+        #expect(registry.actions.count == 13)
         #expect(registry.actions.map(\.id) == [
             "priority.new",
             "context.addFiles",
@@ -31,8 +36,97 @@ struct CommandRegistryTests {
             "session.complete",
             "sensing.pause",
             "shell.closeWindow",
+            "nudge.relevant",
+            "nudge.snooze",
+            "nudge.hideOverlays",
+            "nudge.menuBar",
             "shell.help"
         ])
+    }
+
+    // MARK: - e05: the nudge verbs
+
+    /// **Every action on a nudge surface is reachable from the keyboard** (F-145).
+    ///
+    /// Six actions live on the accusation panel. Two of them are commands this registry already
+    /// had — "Pause" is `session.pause` and "Change priority" is `priority.new`, which opens
+    /// e02's capture surface — and a second command for either would be a second name for one
+    /// act. The other four are here, plus F-81's one command to clear the screen.
+    @Test("the nudge verbs are in the View menu and none duplicates an existing command")
+    func nudgeVerbsAreInTheViewMenu() {
+        #expect(registry.actions(in: .view).map(\.id) == [
+            "nudge.relevant",
+            "nudge.snooze",
+            "nudge.hideOverlays",
+            "nudge.menuBar"
+        ])
+
+        // Pause and Change priority reach the panel's own actions through the commands that
+        // already exist, so the registry names each act exactly once.
+        #expect(registry.action(id: "session.pause") != nil)
+        #expect(registry.action(id: "priority.new") != nil)
+        #expect(registry.actions.filter { $0.id.hasPrefix("nudge.") }.count == 4)
+    }
+
+    /// A nudge lands while somebody is typing, so every nudge verb costs two modifiers — the
+    /// same argument `priority.complete` makes about ⌃⌘⏎ rather than ⌘⏎.
+    @Test("every nudge verb costs a Control as well as a Command")
+    func nudgeVerbsCostTwoModifiers() throws {
+        for action in registry.actions(in: .view) {
+            let shortcut = try #require(action.shortcut)
+            #expect(shortcut.modifiers.contains(.command))
+            #expect(shortcut.modifiers.contains(.control))
+        }
+    }
+
+    /// **F-81's command is not a bare Escape**, and it must not become one: Escape already
+    /// reaches the panel through `NudgePanel.cancelOperation(_:)`, where it dismisses the
+    /// surface the person is looking at. Binding it as a *menu* key equivalent would take the
+    /// Escape key away from every text field in the application.
+    @Test("no action claims a bare, unmodified key")
+    func noActionIsUnmodified() throws {
+        for action in registry.actions {
+            let shortcut = try #require(action.shortcut)
+            #expect(!shortcut.modifiers.isEmpty)
+            #expect(shortcut.character != "\u{1b}")
+        }
+    }
+
+    /// Every command the centre can carry either opens the cockpit or deliberately does not,
+    /// and the nudge verbs are exactly the ones that do not: hiding an overlay by raising a
+    /// window on top of somebody's work would be the opposite of what it says.
+    @Test("the nudge verbs are exactly the commands that do not raise the cockpit")
+    func nudgeVerbsDoNotOpenTheCockpit() {
+        let quiet = PriorityCommand.allCases.filter { !$0.opensCockpit }
+        #expect(quiet == [.thisIsRelevant, .snoozeNudge, .hideOverlays, .showMenuBar])
+        for command in PriorityCommand.allCases where quiet.contains(command) == false {
+            #expect(command.opensCockpit)
+        }
+    }
+
+    /// One queue, one order, two listeners. The buffer is still the handler's alone — an
+    /// observer that received a *pending* command would be receiving one out of order.
+    @Test("an observer sees every command the handler sees, and never the buffered one")
+    @MainActor
+    func observersSeeEveryCommand() {
+        let centre = FocusCommandCenter()
+        var observed: [PriorityCommand] = []
+        centre.observe { observed.append($0) }
+
+        // Nothing is registered yet, so this one is buffered for the window that will arrive.
+        centre.send(.newPriority)
+        #expect(observed == [.newPriority])
+
+        var handled: [PriorityCommand] = []
+        centre.register { handled.append($0) }
+        // The buffered command is delivered to the handler — and not a second time to the
+        // observer, which already saw it.
+        #expect(handled == [.newPriority])
+        #expect(observed == [.newPriority])
+
+        centre.send(.hideOverlays)
+        #expect(handled == [.newPriority, .hideOverlays])
+        #expect(observed == [.newPriority, .hideOverlays])
     }
 
     @Test("every action has a menu placement")
@@ -51,11 +145,14 @@ struct CommandRegistryTests {
             "shell.closeWindow"
         ])
         #expect(registry.actions(in: .help).map(\.id) == ["shell.help"])
+        #expect(registry.actions(in: .view).count == 4)
     }
 
     @Test("every populated placement has a heading for the shortcut reference")
     func populatedPlacementsAreNamed() {
-        #expect(registry.populatedPlacements == [.file, .help])
+        // e05 is the first epic to put an action in the View menu, so `view` gains a heading
+        // rather than shipping an unnamed group — which is exactly what this assertion is for.
+        #expect(registry.populatedPlacements == [.file, .view, .help])
         for placement in registry.populatedPlacements {
             #expect(placement.headingKey != nil)
         }

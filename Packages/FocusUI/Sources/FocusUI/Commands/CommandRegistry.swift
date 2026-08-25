@@ -20,16 +20,18 @@ public enum MenuPlacement: String, Sendable, CaseIterable, Hashable {
     /// The heading this group carries in the Keyboard Shortcuts window, or `nil` for a menu
     /// the shell adds nothing to.
     ///
-    /// e01 registers actions in `file` and `help` only; the other four menus are entirely
-    /// the system's, so there is no heading to invent for them. A test asserts that every
-    /// placement the registry actually populates has a heading, so the epic that first adds
-    /// an action to another menu is told to add its heading rather than shipping an unnamed
-    /// group.
+    /// e01 registered actions in `file` and `help` only; the other four menus were entirely
+    /// the system's, so there was no heading to invent for them. A test asserts that every
+    /// placement the registry actually populates has a heading, so the epic that first adds an
+    /// action to another menu is told to add its heading rather than shipping an unnamed group
+    /// — and **e05 is that epic**: the four nudge verbs live in `view`, which is where a person
+    /// looks for "hide this", and `view` therefore gains a heading here.
     public var headingKey: ShellStringKey? {
         switch self {
         case .file: .helpGroupFile
+        case .view: .helpGroupView
         case .help: .helpGroupHelp
-        case .app, .edit, .view, .window: nil
+        case .app, .edit, .window: nil
         }
     }
 }
@@ -255,6 +257,46 @@ public struct CommandRegistry: Sendable, Equatable {
             placement: .file,
             effect: .closeKeyWindow
         ),
+        // --- e05: every nudge action is reachable from the keyboard (F-145) ------------------
+        //
+        // Four, in the View menu, all on ⌃⌘ for the reason `priority.complete` already gives:
+        // a nudge lands while somebody is typing, and a verb one modifier away from typing is a
+        // verb somebody will trigger by accident. No two actions in this registry share a base
+        // character, which is the rule the ⇧⌘W defect taught (see the note above).
+        //
+        // **"Hide All Overlays" is not a bare Escape**, and F-81 does not ask for one. Escape is
+        // already the panel's own dismissal through `NudgePanel.cancelOperation(_:)`, where it
+        // reaches the surface the person is looking at; binding it as a *menu* key equivalent
+        // would take the Escape key away from every text field in the application.
+        ShellAction(
+            id: "nudge.relevant",
+            titleKey: .commandThisIsRelevant,
+            shortcut: Shortcut("r", modifiers: [.control, .command]),
+            placement: .view,
+            effect: .priority(.thisIsRelevant)
+        ),
+        ShellAction(
+            id: "nudge.snooze",
+            titleKey: .commandSnoozeNudge,
+            shortcut: Shortcut("z", modifiers: [.control, .command]),
+            placement: .view,
+            effect: .priority(.snoozeNudge)
+        ),
+        ShellAction(
+            id: "nudge.hideOverlays",
+            titleKey: .commandHideOverlays,
+            shortcut: Shortcut("h", modifiers: [.control, .command]),
+            placement: .view,
+            effect: .priority(.hideOverlays)
+        ),
+        ShellAction(
+            id: "nudge.menuBar",
+            titleKey: .commandShowMenuBar,
+            shortcut: Shortcut("m", modifiers: [.control, .command]),
+            placement: .view,
+            effect: .priority(.showMenuBar)
+        ),
+
         ShellAction(
             id: "shell.help",
             titleKey: .commandHelp,

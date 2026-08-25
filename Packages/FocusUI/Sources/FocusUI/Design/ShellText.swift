@@ -62,6 +62,13 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     /// F-119's switch, as a menu verb. The cockpit's control reads positively ("Watch what I
     /// am working on"); a menu item has to name the *act*, so this one does.
     case commandPauseSensing = "shell.command.pauseSensing"
+    // The e05 verbs. "Pause" and "Change priority" are deliberately absent: they are
+    // `shell.command.*` entries this registry already has, under the names the rest of the app
+    // uses for them.
+    case commandThisIsRelevant = "shell.command.thisIsRelevant"
+    case commandSnoozeNudge = "shell.command.snoozeNudge"
+    case commandHideOverlays = "shell.command.hideOverlays"
+    case commandShowMenuBar = "shell.command.showMenuBar"
 
     // Cockpit
     case cockpitHeading = "shell.cockpit.heading"
@@ -169,6 +176,10 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case helpColumnShortcut = "shell.help.column.shortcut"
     case helpGroupFile = "shell.help.group.file"
     case helpGroupHelp = "shell.help.group.help"
+    /// The View menu's heading in the Keyboard Shortcuts window. e05 is the first epic to put
+    /// an action in that menu, and the rule the registry test holds is that a populated
+    /// placement is a named one.
+    case helpGroupView = "shell.help.group.view"
 
     // Settings
     case settingsGeneralTitle = "settings.general.title"

@@ -52,6 +52,106 @@ struct KeyboardReachabilityTests {
         #expect(cockpit.order.contains(.cockpitContextAddFiles))
     }
 
+    // MARK: - e05: every nudge action is reachable without a mouse (F-145)
+
+    /// The accusation panel offers six actions. Each one is reachable from the keyboard, and
+    /// this asserts the **mapping** rather than the count: every action either has a registry
+    /// command of its own or is one of the two the registry already had under another name.
+    @Test("every action on the accusation panel has a keyboard route")
+    func everyPanelActionHasAKeyboardRoute() throws {
+        let routes: [CorrectionAction: String] = [
+            .thisIsRelevant: "nudge.relevant",
+            .snooze: "nudge.snooze",
+            // Already in the registry under the name the rest of the app uses for it.
+            .pause: "session.pause",
+            .changePriority: "priority.new"
+        ]
+
+        for (action, id) in routes {
+            let command = try #require(registry.action(id: id), "\(action) has no command")
+            #expect(command.shortcut != nil)
+        }
+
+        // The two that are not commands, and why neither needs to be:
+        //
+        //   * `returnToTask` is offered only when there is somewhere to go, so a fixed key
+        //     equivalent would be a shortcut that does nothing most of the time — and the panel
+        //     draws it as the prominent action, which is where a person looks first.
+        //   * `dismiss` is **Escape**, on the panel itself, through
+        //     `NudgePanel.cancelOperation(_:)`. That is a keyboard route; it is simply not a
+        //     menu one, and binding Escape in the menu bar would take it from every text field.
+        #expect(registry.actions.allSatisfy { $0.id != "nudge.return" })
+        #expect(registry.actions.allSatisfy { $0.id != "nudge.dismiss" })
+    }
+
+    /// F-81's command clears the screen and is reachable, and it is the **only** action in the
+    /// registry that answers nothing: hiding is not dismissing, and it writes nothing at all.
+    @Test("hiding every overlay is one reachable command that answers nothing")
+    func hidingIsReachableAndAnswersNothing() throws {
+        let hide = try #require(registry.action(id: "nudge.hideOverlays"))
+        #expect(hide.shortcut != nil)
+        #expect(hide.placement == .view)
+        #expect(hide.effect == .priority(.hideOverlays))
+        #expect(!PriorityCommand.hideOverlays.opensCockpit)
+    }
+
+    // MARK: - e05: what VoiceOver hears (F-144, F-146)
+
+    /// A nudge that appeared silently for a VoiceOver user would be a visual event they never
+    /// learn about — the same failure "differentiate without colour" exists to prevent, at the
+    /// other end of the same problem. Both panels announce, and both announce **what they
+    /// actually draw** rather than a category like "dialog".
+    @Test(
+        "both nudge panels announce the words they draw",
+        .enabled(if: LocalizationLane.catalogsAreCompiled)
+    )
+    func panelsAnnounceTheirOwnWords() {
+        let accusation = AccusationPresentation(
+            rung: .panel,
+            task: "Write the Q3 proposal",
+            subject: "com.apple.Safari",
+            dwelled: .seconds(600),
+            returnTarget: "Pages"
+        ).announcement()
+        #expect(!accusation.isEmpty)
+        #expect(accusation.contains("Write the Q3 proposal"))
+        #expect(accusation.contains("com.apple.Safari"))
+
+        let question = QueryPresentation(
+            task: "Write the Q3 proposal",
+            subject: "com.figma.Desktop",
+            reason: .noNegativeBasis,
+            dwelled: .seconds(90)
+        ).announcement()
+        #expect(!question.isEmpty)
+        #expect(question.contains("com.figma.Desktop"))
+        // The scope is spoken **before** the answer, exactly as it is drawn.
+        #expect(question.contains(NudgeCopy.string(voice: .standard, .queryPanelScopeApp)))
+    }
+
+    /// The ambient rung is a silent surface for somebody who can see it. For somebody who
+    /// cannot, silence would mean the rung never happened — so the menu bar's spoken label
+    /// always carries the state's name, whatever the "differentiate without colour" setting
+    /// says, because that preference is about the *visual* channel.
+    @Test(
+        "the menu bar always has a spoken label, in every state",
+        .enabled(if: LocalizationLane.catalogsAreCompiled),
+        arguments: FocusStatus.allCases
+    )
+    func menuBarAlwaysSpeaksItsState(status: FocusStatus) {
+        for differentiate in [false, true] {
+            let label = MenuBarController.accessibilityLabel(
+                MenuBarPresentation(
+                    status: status,
+                    elapsed: .seconds(600),
+                    differentiateWithoutColor: differentiate
+                )
+            )
+            #expect(label.contains(status.shortLabel))
+            #expect(!label.isEmpty)
+        }
+    }
+
     // MARK: - The traversal model
 
     @Test("every surface has a focus contract")

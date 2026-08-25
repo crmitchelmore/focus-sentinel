@@ -34,6 +34,13 @@ public struct ShellCommands: Commands {
             actionButtons(in: .file)
         }
 
+        // The View menu, materialised the same way the File menu is. `after: .sidebar` puts the
+        // group where a person looks for "hide this" — under the system's own view items rather
+        // than above them, because the system's are the ones they already know.
+        CommandGroup(after: .sidebar) {
+            actionButtons(in: .view)
+        }
+
         CommandGroup(replacing: .help) {
             actionButtons(in: .help)
         }
@@ -62,7 +69,14 @@ public struct ShellCommands: Commands {
             // closed it is not listening yet, so the centre holds the command until it is —
             // which is what makes ⌘N from a closed window land in the capture field rather
             // than doing nothing visible.
-            openWindow(id: ShellWindow.cockpit.id)
+            //
+            // **The nudge verbs do not open it**, and that is the whole of `opensCockpit`:
+            // answering a nudge from the keyboard must not raise a window on top of the work
+            // the person was asked to go back to, and "hide all overlays" that opened one would
+            // be doing the opposite of what it says.
+            if command.opensCockpit {
+                openWindow(id: ShellWindow.cockpit.id)
+            }
             commandCenter.send(command)
         }
     }

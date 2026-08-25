@@ -688,6 +688,47 @@ final class NudgeHost {
         snoozes = snoozes.cancelling(subject: subject)
     }
 
+    // MARK: - The keyboard's own route to the economy (F-145, F-81)
+
+    /// One of the four View-menu verbs.
+    ///
+    /// Every one of them is an action a person can already take by clicking, and F-145's rule is
+    /// that a click is never the *only* way. The two that answer a nudge go through
+    /// `resolve(_:snoozeDuration:)` — the same function the buttons call — so a key equivalent
+    /// and a click are one code path rather than two implementations of one idea.
+    func perform(_ command: PriorityCommand) {
+        switch command {
+        case .thisIsRelevant:
+            guard openRung != nil else { return }
+            resolve(.thisIsRelevant, snoozeDuration: nil)
+        case .snoozeNudge:
+            guard openRung != nil else { return }
+            // The shortest span, because a menu item cannot offer three without three items and
+            // the shortest is the least presumptuous of them.
+            resolve(.snooze, snoozeDuration: InterventionPolicy.snoozeDurations.first)
+        case .hideOverlays:
+            hideOverlays()
+        case .showMenuBar:
+            menuBar.togglePopover()
+        case .newPriority, .completePriority, .addFilesToContext,
+             .startSession, .pauseSession, .completeSession, .pauseSensing:
+            break
+        }
+    }
+
+    /// **F-81's one command: take every overlay off the screen, and write nothing.**
+    ///
+    /// Not a dismissal and not an answer. The panel goes away, the slot is released so the next
+    /// judgement is not withheld against a surface nobody can see any more, and **no receipt and
+    /// no rule is written** — because the person asked for their screen back, not to tell the
+    /// app anything. A question hidden this way is still unanswered and will be offered again;
+    /// that is the honest reading of "hide", and it is why this is not `.dismiss`.
+    func hideOverlays() {
+        panel.hide()
+        slot = slot.released()
+        menuBar.closePopover()
+    }
+
     /// The rung the ladder has reached, for the popover.
     var currentRung: LadderRung.Kind? { ladder.state.rung?.kind }
 

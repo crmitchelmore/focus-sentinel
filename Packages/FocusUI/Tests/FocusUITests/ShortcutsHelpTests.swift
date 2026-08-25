@@ -28,7 +28,11 @@ struct ShortcutsHelpTests {
     func rowsAreTheShippedActions() {
         let rows = ShortcutsHelpView.groups(for: registry).flatMap(\.rows)
 
-        #expect(rows.map(\.glyphs) == ["⌘N", "⌘O", "⌃⌘↩", "⌃⌘S", "⌃⌘P", "⌃⌘F", "⌃⌘E", "⌘W", "⌘?"])
+        #expect(rows.map(\.glyphs) == [
+            "⌘N", "⌘O", "⌃⌘↩", "⌃⌘S", "⌃⌘P", "⌃⌘F", "⌃⌘E", "⌘W",
+            "⌃⌘R", "⌃⌘Z", "⌃⌘H", "⌃⌘M",
+            "⌘?"
+        ])
         #expect(rows.map(\.titleKey) == [
             .commandNewPriority,
             .commandAddFilesToContext,
@@ -38,6 +42,12 @@ struct ShortcutsHelpTests {
             .sessionActionComplete,
             .commandPauseSensing,
             .commandCloseWindow,
+            // e05's four View-menu verbs, so every action on a nudge surface is discoverable
+            // here as well as reachable (F-145).
+            .commandThisIsRelevant,
+            .commandSnoozeNudge,
+            .commandHideOverlays,
+            .commandShowMenuBar,
             .commandHelp
         ])
     }
@@ -46,8 +56,8 @@ struct ShortcutsHelpTests {
     func groupsFollowTheMenuBar() {
         let groups = ShortcutsHelpView.groups(for: registry)
 
-        #expect(groups.map(\.placement) == [.file, .help])
-        #expect(groups.map(\.headingKey) == [.helpGroupFile, .helpGroupHelp])
+        #expect(groups.map(\.placement) == [.file, .view, .help])
+        #expect(groups.map(\.headingKey) == [.helpGroupFile, .helpGroupView, .helpGroupHelp])
         for group in groups {
             #expect(!group.rows.isEmpty)
         }
@@ -92,6 +102,10 @@ struct ShortcutsHelpTests {
             "sensing.pause",
             "shell.closeWindow",
             "shell.test.unbound",
+            "nudge.relevant",
+            "nudge.snooze",
+            "nudge.hideOverlays",
+            "nudge.menuBar",
             "shell.help"
         ])
         #expect(rows.first { $0.id == "shell.test.unbound" }?.glyphs == nil)
