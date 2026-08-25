@@ -445,6 +445,42 @@
         }
       }
     },
+    "nudge.query.reason.languageNotSupported" : {
+      "comment" : "Query reason line: this Mac has no sentence embedding for the language in play.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus can’t read this wording well enough to judge it."
+          }
+        }
+      }
+    },
+    "nudge.query.reason.mixedUseApplication" : {
+      "comment" : "Query reason line: a browser, a chat client or a media player — used for all sorts of things.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This app gets used for all sorts of things."
+          }
+        }
+      }
+    },
+    "nudge.query.reason.noNegativeBasis" : {
+      "comment" : "Query reason line: the priority names nothing this app could be judged against.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus hasn’t been told which apps this task lives in."
+          }
+        }
+      }
+    },
     "rule.authority.global" : {
       "comment" : "Label for a rule scoped to no particular priority.",
       "extractionState" : "manual",
