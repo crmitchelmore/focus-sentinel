@@ -245,11 +245,14 @@ struct MenuBarTests {
     /// item. The nudge loop used to mark such a question presentable having read nothing, and a
     /// receipt about a question nobody saw silences it for the life of the priority.
     ///
-    /// Both halves of the reading are asserted, because both were knowable and neither was read:
-    /// a closed popover shows nothing whatever it is carrying, and an open popover carrying no
-    /// question is not showing one.
-    @Test("a question is only 'showing' when the popover is open and carrying it")
-    func aQuestionIsShowingOnlyWhenThePopoverIsOpenOnIt() {
+    /// **The closed half only.** `NSPopover.show(…)` does nothing unless the application is
+    /// active, and this suite deliberately never activates the test process — every focus
+    /// reading in `FocusUITests` would be vacuous if it did. So both cases below have the
+    /// popover **closed**, and the open one lives in `FocusHostTests`'
+    /// `MenuBarPopoverTests`, which activates a process of its own and opens the real popover.
+    /// The two together are the whole reading; this one alone is not, and used to claim to be.
+    @Test("a question in a popover nobody has opened is not a question anybody is showing")
+    func aQuestionIsNotShowingWhileThePopoverIsClosed() {
         let controller = MenuBarController()
 
         // Nothing installed, nothing open: the popover cannot be showing anything.
@@ -265,10 +268,15 @@ struct MenuBarTests {
         #expect(!controller.isShowingQuery)
     }
 
-    /// The one wire that lets the nudge loop hear the click. Without it the popover can open on a
-    /// question and nothing in the programme is any the wiser.
-    @Test("the popover announces itself when a question arrives while it is open")
-    func theLoopIsToldWhenTheQuestionAppears() {
+    /// **The half that must not fire.** A new question arriving while the popover is *closed* is
+    /// not an appearance, because nobody is looking at it.
+    ///
+    /// The half that must fire — the popover opening, and a question arriving in one that is
+    /// already open — cannot be read without a really-open popover and lives in `FocusHostTests`'
+    /// `MenuBarPopoverTests`. This test asserted only the negative case, so deleting the wire
+    /// entirely left it green.
+    @Test("a question arriving while the popover is closed announces nothing")
+    func nothingIsAnnouncedWhileThePopoverIsClosed() {
         let controller = MenuBarController()
         var announcements = 0
         controller.onPopoverDidShow = { announcements += 1 }

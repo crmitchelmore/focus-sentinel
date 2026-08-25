@@ -898,11 +898,18 @@ check_set "R-96d" "no shared authorisation protocol over the two types" \
 # R-96e — the shipping app is .regular, so every one of these steals focus. Pinned to the two
 # shipped, deliberately user-summoned call sites; a third one anywhere fails the gate. The
 # nudge module's own absolute ban is asserted below, with no allow-list at all.
+#
+# The third entry is a **test-lane** file and is not shipped. `NSPopover.show(…)` does nothing
+# unless the application is active, so the only way to read the badge route's three wires with
+# the popover really open is for the test process to activate itself. It is one file with one
+# function in it, named here for the same reason the two shipping call sites are: so that a
+# second one anywhere still fails the gate.
 check_outside "R-96e" "NSApp.activate appears only where the person summoned the app" \
     'NSApp\.activate\(|NSApplication\.shared\.activate\(|activateIgnoringOtherApps' \
     App Packages \
     --allow Packages/FocusUI/Sources/FocusUI/Capture/QuickCapturePanelController.swift \
-    --allow Packages/FocusHost/Sources/FocusHost/SelfCheck.swift
+    --allow Packages/FocusHost/Sources/FocusHost/SelfCheck.swift \
+    --allow Packages/FocusHost/Tests/FocusHostTests/MenuBarStage.swift
 
 # R-96f — the question never accuses.
 #
