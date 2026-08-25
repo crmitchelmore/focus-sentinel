@@ -15,6 +15,12 @@
 # is revoked — for a reason with nothing to do with the code. When a grant is missing this script
 # prints `LIVE-LANE SKIPPED: <grant>` and exits **0**, and `scripts/build-gate.sh` never invokes it.
 #
+# **One exception, and it is not a TCC dependency: a VISIBILITY FAILURE exits 1.** If this lane
+# holds the grants, takes both frames, and finds the app's own panel measuring something other
+# than its `contentSize` — or finds the window's backing store carrying the question while the
+# screen at that window's own coordinates is blank — then it has not failed to observe. It has
+# observed a defect. See THE VISIBILITY DOCTRINE below.
+#
 # The half of e05's contract that must hold regardless is gated at zero grants by two stages the
 # gate does run: `focus-steal` (all four of R-89's readings, reading 1 from an independent observer)
 # and `notification-denied` (F-73's degraded path, `requestAuthorizationCallCount == 0`).
@@ -124,9 +130,13 @@ mkdir -p -- "$EVIDENCE_DIR" "$LOG_DIR" || exit 1
 
 # --- the ledger ------------------------------------------------------------------------------
 
-typeset -a PRODUCED RECEIPTS ABORTED
+typeset -a PRODUCED RECEIPTS ABORTED VISIBILITY_FAILURES
 PRODUCED=()
 RECEIPTS=()
+# Frames whose backing store and screen disagreed, or whose panel was not the size it is built
+# to be. See THE VISIBILITY DOCTRINE below: unlike everything else in this lane, these are
+# failures of the APP rather than of the run, and they are the one thing that makes it exit 1.
+VISIBILITY_FAILURES=()
 ABORTED=()
 SCENARIO=''
 
@@ -271,6 +281,12 @@ ARTEFACTS=(
 )
 for artefact in $ARTEFACTS; do
     rm -f -- "$EVIDENCE_DIR/$artefact" "$EVIDENCE_DIR/${artefact}.MANUAL_REQUIRED.txt"
+    # The screen twin of every window frame, and the numbered extras of both (see the
+    # visibility doctrine). A stale -onscreen.png beside a fresh frame would be a picture of a
+    # different run's screen filed as proof about this one.
+    rm -f -- "$EVIDENCE_DIR/${artefact%.png}-onscreen.png"
+    rm -f -- "$EVIDENCE_DIR/${artefact%.png}"-[0-9]*.png
+    rm -f -- "$EVIDENCE_DIR/${artefact%.png}"-[0-9]*-onscreen.png
 done
 rm -f -- "$ECHO_FILE"
 
@@ -302,25 +318,173 @@ app_window_ids() {
     print -r -- "$lines" | while read -r id rest; do print -r -- "$id"; done
 }
 
+# The same, but the whole record: `<windowNumber> <x> <y> <w> <h>` in Quartz coordinates —
+# which is exactly the rectangle `screencapture -R` takes.
+app_window_records() {
+    local owner="$1" lines
+    lines="$("$WINDOWID" "$owner" --include-panels 2>/dev/null)"
+    [[ -n "$lines" ]] || return 1
+    print -r -- "$lines"
+}
+
+# ==================================================================================================
+# THE VISIBILITY DOCTRINE (focus-x7d)
+# ==================================================================================================
+#
+# **A window-id capture is never sole proof that a surface is visible, and this lane may never
+# again treat it as one.**
+#
+# `screencapture -l <windowid>` reads a window's **backing store**. On 2026-08-25 at 19:26 that
+# instrument photographed the query panel rendering its question perfectly — the sentence, the
+# subtitle, all three actions — while the panel on screen was a large blank white slab. The window
+# was 380 × 2212 on a 1920 × 1080 display, so the 190-point band carrying the question sat
+# somewhere nobody could look. The backing store was telling the truth about what the window had
+# drawn and nothing at all about what a person could see, and this lane accepted it as proof.
+#
+# So every frame is now taken **twice** and proved three ways:
+#
+# 1. **Geometry, and it is decisive.** The window's own measured bounds, from `windowid`. For a
+#    nudge panel they must equal the shipping `contentSize` — read out of the source constant, not
+#    restated here — and the window must lie inside the display. This is the assertion that would
+#    have caught the defect on its own, exactly, with no image analysis at all.
+# 2. **Both captures, always.** `-l <id>` for the backing store and `-R <x,y,w,h>` at that same
+#    window's own measured coordinates for the screen. The second frame is what a person sees.
+# 3. **The differential, and it fails loudly.** Both frames are measured by `scripts/frame-ink.py`.
+#    A run in which the backing store has ink and the screen at the window's own coordinates does
+#    not is the exact signature of this defect, and it stops the lane.
+#
+# The `-R` frame is filed beside its `-l` twin as `<name>-onscreen.png`, so a reader of the
+# evidence directory sees the pair rather than having to know one was taken.
+
+FRAME_INK="scripts/frame-ink.py"
+
+# `ink`, `blank`, or `unreadable`, for one frame.
+frame_verdict() {
+    local frame="$1" line
+    [[ -s "$frame" ]] || { print -r -- "missing"; return }
+    line="$(python3 "$FRAME_INK" "$frame" 2>/dev/null | tail -1)"
+    print -r -- "${${line##*verdict=}%% *}"
+}
+
+# The panel's intended size, read from the shipping constant so the lane cannot drift from the
+# app. Prints `<width> <height>`, or nothing when the constant cannot be read — in which case the
+# geometry assertion says so rather than inventing a number.
+PANEL_SIZE_SOURCE="Packages/FocusUI/Sources/FocusUI/Nudge/NudgePanelController.swift"
+panel_intended_size() {
+    local numbers
+    numbers="$(grep -oE 'contentSize = CGSize\(width: [0-9]+, height: [0-9]+\)' "$PANEL_SIZE_SOURCE" 2>/dev/null \
+        | grep -oE '[0-9]+' | tr '\n' ' ')"
+    print -r -- "${numbers% }"
+}
+
+# Both captures of one window, plus the differential. Never called with a window this lane has
+# not measured first.
+capture_window_pair() {
+    local artefact="$1" id="$2" x="$3" y="$4" w="$5" h="$6"
+    local backing="$EVIDENCE_DIR/$artefact"
+    local onscreen="$EVIDENCE_DIR/${artefact%.png}-onscreen.png"
+
+    "$SCREENCAPTURE" -x -o -l "$id" "$backing" 2>/dev/null
+    [[ -s "$backing" ]] || return 1
+    produced "${backing:t}"
+
+    "$SCREENCAPTURE" -x -o -R "$x,$y,$w,$h" "$onscreen" 2>/dev/null
+    if [[ ! -s "$onscreen" ]]; then
+        print -u2 "LIVE-LANE VISIBILITY FAILURE: ${backing:t} has a backing-store frame but no"
+        print -u2 "    screen frame at its own coordinates ($x,$y,$w,$h). A window-id capture is"
+        print -u2 "    not proof that anybody can see the window."
+        VISIBILITY_FAILURES+=("${backing:t}")
+        return 1
+    fi
+    produced "${onscreen:t}"
+
+    local backing_verdict onscreen_verdict
+    backing_verdict="$(frame_verdict "$backing")"
+    onscreen_verdict="$(frame_verdict "$onscreen")"
+    print "     visibility: ${backing:t} backing=$backing_verdict screen=$onscreen_verdict (window $id at $x,$y,$w,$h)"
+
+    if [[ "$backing_verdict" == "ink" && "$onscreen_verdict" == "blank" ]]; then
+        print -u2 "LIVE-LANE VISIBILITY FAILURE: ${backing:t}"
+        print -u2 "    The window's BACKING STORE has content and the SCREEN at that same window's"
+        print -u2 "    own coordinates ($x,$y,$w,$h) is blank. This is the exact signature of"
+        print -u2 "    focus-x7d: the surface rendered, and nobody could see it. Read"
+        print -u2 "    ${onscreen:t} beside ${backing:t} before believing any claim about this frame."
+        VISIBILITY_FAILURES+=("${backing:t}")
+        return 1
+    fi
+    return 0
+}
+
 # Capture every window an application owns into one frame set. **There is no "use the front-most
 # entry" fallback anywhere in this file.** e02's lane learned that the hard way: a 900×704 picture
 # of the cockpit filed as the quick-capture panel. A frame that shows the wrong window is worse
 # than a missing frame.
 capture_windows() {
-    local artefact="$1" owner="${2:-$WINDOW_OWNER}" index=0 target rc=1 id
-    for id in ${(f)"$(app_window_ids "$owner")"}; do
+    local artefact="$1" owner="${2:-$WINDOW_OWNER}" index=0 target rc=1
+    local record id x y w h
+    for record in ${(f)"$(app_window_records "$owner")"}; do
+        [[ -n "$record" ]] || continue
+        read -r id x y w h <<< "$record"
+        [[ -n "$h" ]] || continue
         (( index += 1 ))
         if (( index == 1 )); then
-            target="$EVIDENCE_DIR/$artefact"
+            target="$artefact"
         else
-            target="$EVIDENCE_DIR/${artefact%.png}-$index.png"
+            target="${artefact%.png}-$index.png"
         fi
-        "$SCREENCAPTURE" -x -o -l "$id" "$target" 2>/dev/null || continue
-        [[ -s "$target" ]] || continue
-        produced "${target:t}"
-        rc=0
+        capture_window_pair "$target" "$id" "$x" "$y" "$w" "$h" && rc=0
     done
     return $rc
+}
+
+# **The geometry half of the doctrine, and the one that would have caught focus-x7d alone.**
+#
+# Among the app's windows there must be exactly one whose size is the panel's intended size, and
+# it must lie inside the display. Failing here dumps every window this lane can see with its
+# bounds, because "the panel is the wrong size" is only useful next to what size it actually is.
+require_panel_geometry() {
+    local label="$1" expected width height record id x y w h
+    expected="$(panel_intended_size)"
+    if [[ -z "$expected" ]]; then
+        print -u2 "LIVE-LANE VISIBILITY FAILURE: cannot read contentSize from $PANEL_SIZE_SOURCE"
+        VISIBILITY_FAILURES+=("$label")
+        return 1
+    fi
+    read -r width height <<< "$expected"
+
+    local screen_width screen_height matches=0 observed=""
+    screen_width="$(system_profiler SPDisplaysDataType 2>/dev/null | grep -m1 -oE '[0-9]+ x [0-9]+' | cut -d' ' -f1)"
+    screen_height="$(system_profiler SPDisplaysDataType 2>/dev/null | grep -m1 -oE '[0-9]+ x [0-9]+' | cut -d' ' -f3)"
+    [[ -n "$screen_width" ]] || screen_width=1920
+    [[ -n "$screen_height" ]] || screen_height=1080
+
+    for record in ${(f)"$(app_window_records "$WINDOW_OWNER")"}; do
+        [[ -n "$record" ]] || continue
+        read -r id x y w h <<< "$record"
+        [[ -n "$h" ]] || continue
+        observed+="        window $id at $x,$y ${w}x${h}"$'\n'
+        if (( w == width && h == height )); then
+            if (( x >= 0 && y >= 0 && x + w <= screen_width && y + h <= screen_height )); then
+                (( matches += 1 ))
+            else
+                observed+="            ^ right size, but not inside the ${screen_width}x${screen_height} display"$'\n'
+            fi
+        fi
+    done
+
+    if (( matches == 1 )); then
+        print "ok   visibility: $label — one panel-sized window (${width}x${height}) inside the display"
+        return 0
+    fi
+
+    print -u2 "LIVE-LANE VISIBILITY FAILURE: $label"
+    print -u2 "    Expected exactly ONE window of ${width}x${height} (NudgePanelController.contentSize)"
+    print -u2 "    fully inside the ${screen_width}x${screen_height} display; found $matches."
+    print -u2 "    This is focus-x7d's own signature: the live panel measured 380x2212 while its"
+    print -u2 "    backing store photographed perfectly. Observed windows:"
+    print -ru2 -- "$observed"
+    VISIBILITY_FAILURES+=("$label")
+    return 1
 }
 
 # The menu bar. P-132 measured status-item window numbers at or above 2**32 — synthetic, and
@@ -465,6 +629,7 @@ scenario_ladder() {
 
     note "waiting out escalationDwell (${ESCALATION_DWELL}s) for rung 2"
     sleep $(( ESCALATION_DWELL + 8 ))
+    require_panel_geometry "05 · rung 2 panel"
     capture_windows "05-rung2-panel.png"
     timeline "05 · rung 2 — the compact panel over the decoy, 'Still working on {task}?', five actions"
     timeline "    READ: all four R-89 readings are gated at zero grants by scripts/check-focus-steal.sh"
@@ -473,6 +638,7 @@ scenario_ladder() {
 
     note "waiting out escalationDwell again for rung 3"
     sleep $(( ESCALATION_DWELL + 8 ))
+    require_panel_geometry "06 · rung 3 recommitment panel"
     capture_windows "06-rung3-recommitment.png"
     timeline "06 · rung 3 with notifications unauthorised — the recommitment panel, still dismissible (D-07)"
 }
@@ -640,6 +806,7 @@ scenario_query() {
     open -a "$DECOY2_APP" --args --echo "$ECHO_FILE"
     sleep $(( QUERY_DWELL + 10 ))
 
+    require_panel_geometry "12 · the question panel"
     capture_windows "12-the-query.png"
     timeline "12 · the question — 'Is {subject} part of {task}?', three actions, and the scope stated in the copy"
 
@@ -732,6 +899,14 @@ scenario_presentation
     for artefact in $PRODUCED; do print "  produced          $artefact"; done
     for artefact in $RECEIPTS; do print "  operator-assisted $artefact (receipt written)"; done
     for scenario in $ABORTED; do print "  ABORTED           $scenario"; done
+    for artefact in $VISIBILITY_FAILURES; do print "  NOT VISIBLE       $artefact"; done
+    print
+    print "Every window frame comes in a PAIR: <name>.png is the window's backing store, taken with"
+    print "screencapture -l, and <name>-onscreen.png is the SCREEN at that same window's own measured"
+    print "coordinates. Read both. On 2026-08-25 the backing store of the query panel showed the"
+    print "question perfectly while the screen at its coordinates was a blank white slab — the window"
+    print "was 380x2212 on a 1920x1080 display — and this lane called it proof. A window-id capture"
+    print "proves a window RENDERED. Only the screen frame proves a person could SEE it."
     print
     print "The frames are READ, by eye, and that reading is the evidence (charter tmux-verify"
     print "doctrine). Four of them decide whether this epic shipped a guardian or a nuisance:"
@@ -748,7 +923,22 @@ print "== live nudge drive complete"
 print "evidence:  $EVIDENCE_DIR"
 print "produced:  ${#PRODUCED} artefact(s), ${#RECEIPTS} receipt(s), ${#ABORTED} aborted scenario(s)"
 print
-print "This lane is read evidence and never a close condition. It exits 0 whatever it produced —"
-print "but an ABORTED scenario is a failure of that scenario, printed to stderr and recorded in"
-print "the timeline, never a frame captured in the wrong state (R-97 rule 3)."
+print "This lane is read evidence and never a close condition for a GRANT: a missing grant skips,"
+print "and an ABORTED scenario is a failure of that scenario, printed to stderr and recorded in the"
+print "timeline, never a frame captured in the wrong state (R-97 rule 3)."
+
+if (( ${#VISIBILITY_FAILURES} > 0 )); then
+    print
+    print -u2 "=============================================================="
+    print -u2 "LIVE-LANE FAILED: ${#VISIBILITY_FAILURES} VISIBILITY FAILURE(S)"
+    print -u2 "=============================================================="
+    for artefact in $VISIBILITY_FAILURES; do print -u2 "  $artefact"; done
+    print -u2
+    print -u2 "A visibility failure is NOT a missing grant and NOT an unreachable precondition. It"
+    print -u2 "is the app putting a surface somewhere a person cannot read it, proven by the app's"
+    print -u2 "own window bounds or by its backing store and the screen disagreeing. That is"
+    print -u2 "focus-x7d, it is the defect this lane was structurally unable to see, and it exits 1."
+    exit 1
+fi
+
 exit 0
