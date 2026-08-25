@@ -705,6 +705,26 @@ check_outside "R-70n" "no rule is constructed with the session scope" \
 #        instrument the original gate read. The two calls look identical in a diff, so the
 #        difference is held by a lint rather than by a reviewer's memory.
 #
+# R-96n  `.fullScreenAuxiliary` is CONDITIONAL, and the condition is the presentation gate.
+#        The flag may be ADDED to a collection behaviour in exactly one file and on exactly
+#        one expression — the true branch of `collectionBehavior(presentationIsClear:)` — it
+#        may never appear in `baseCollectionBehavior`, and `withdrawForPresentation()` must
+#        drop it BEFORE it orders the window out.
+#
+#        **The dissent this rule records, and why the rule is not the one two reviewers
+#        asked for.** Both adversarial reviewers of the e05 plan asked for
+#        `.fullScreenAuxiliary` to be removed from the programme entirely: P-130 measured a
+#        flagged panel drawn plainly on top of a real full-screen space, the window server
+#        will not protect a presentation for us, and a flag that can stomp a presentation is
+#        a flag with a hazard nobody can fully fence. The driver REJECTED that, and the plan
+#        (lines 572, 1171) stands: a blanket ban makes the app silent over a full-screen
+#        YouTube — the archetypal distraction — and U-1 exists precisely to end that silence.
+#        The reviewers' position is recorded verbatim in the plan's Review dispositions and is
+#        not erased by this lint. What the reviewers were RIGHT about is that nothing in
+#        scripts/ enforced any rule about the flag at all: a conditional use is only safer
+#        than an unconditional one if the condition is checkable, and until now it was held by
+#        a comment and a reviewer's memory. This is that condition, as a lint.
+#
 # ## Two shapes these assertions need that the helpers above do not have
 #
 # `count_files` answers "how many files contain this", which is exactly R-96a's and R-96c's
@@ -737,6 +757,9 @@ NUDGE_REDUCERS=(Packages/FocusCore/Sources/FocusCore/Nudge)
 
 # The one file permitted to show the panel (R-96m). It arrives in T133.
 PANEL_SHOW_FILE="Packages/FocusUI/Sources/FocusUI/Nudge/NudgePanelController.swift"
+
+# The one file permitted to ADD `.fullScreenAuxiliary` to a collection behaviour (R-96n).
+PANEL_BEHAVIOUR_FILE="Packages/FocusUI/Sources/FocusUI/Nudge/NudgePanel.swift"
 
 # The one file permitted to ask for notification authorisation (R-96g). It arrives in T138.
 AUTHORISATION_ALLOWED_FILE="Packages/FocusUI/Sources/FocusUI/Scenes/InterventionSettingsView.swift"
@@ -948,6 +971,102 @@ tone_rc=$?
 count_at_most "R-96g" "requestAuthorization appears only in the settings pane's action" \
     'requestAuthorization(' 1 "$AUTHORISATION_ALLOWED_FILE" App Packages
 
+# R-96n's two structural halves, which no grep over single lines can express.
+#
+# **Half one: the add is guarded by the gate.** `.fullScreenAuxiliary` may be unioned into a
+# behaviour only on an expression that names `presentationIsClear`. The union sits on the
+# ternary's true branch, one line below the condition, so the window under test is the matching
+# line plus the two above it — enough to see the condition, and far too small to accidentally
+# find a `presentationIsClear` belonging to some other statement.
+#
+# **Half two: the flag is dropped before the window goes.** `withdrawForPresentation()` exists
+# because a panel shown while the gate was clear is still on screen, and still flagged, when
+# somebody starts presenting a minute later. It must set the behaviour with
+# `presentationIsClear: false` and must do so BEFORE `orderOut(`: in the other order there is an
+# instant in which a still-visible panel is eligible to join the space it is being removed from.
+check_full_screen_auxiliary() {
+    local behaviour_file="$PANEL_BEHAVIOUR_FILE"
+    local show_file="$PANEL_SHOW_FILE"
+
+    if [[ ! -f "$behaviour_file" ]]; then
+        print -u2 "FAIL [R-96n] the panel's behaviour table is missing at $behaviour_file"
+        rc=1
+        return
+    fi
+    if [[ ! -f "$show_file" ]]; then
+        print -u2 "FAIL [R-96n] the panel's show path is missing at $show_file"
+        rc=1
+        return
+    fi
+
+    local unguarded
+    unguarded=$(awk '
+        { window = previous2 " " previous1 " " $0 }
+        /(union|formUnion|insert)\([[:space:]]*\.fullScreenAuxiliary/ &&
+            window !~ /presentationIsClear/ { printf "%s:%d:%s\n", FILENAME, NR, $0 }
+        { previous2 = previous1; previous1 = $0 }
+    ' "$behaviour_file")
+
+    if [[ -n "$unguarded" ]]; then
+        print -u2 "FAIL [R-96n] the full-screen flag is added without the presentation gate"
+        print -u2 "$unguarded" | sed 's/^/    /'
+        rc=1
+    else
+        print "ok   [R-96n] every full-screen-flag add is guarded by presentationIsClear"
+    fi
+
+    # The base behaviour is what a panel starts from, so the flag being absent from it is the
+    # whole of "conditional". The declaration wraps, so the three lines from it are read.
+    local base_violation
+    base_violation=$(awk '
+        /static let baseCollectionBehavior/ { remaining = 3 }
+        remaining > 0 {
+            if ($0 ~ /\.fullScreenAuxiliary/) { printf "%s:%d:%s\n", FILENAME, NR, $0 }
+            remaining--
+        }
+    ' "$behaviour_file")
+
+    if [[ -n "$base_violation" ]]; then
+        print -u2 "FAIL [R-96n] baseCollectionBehavior carries the full-screen flag unconditionally"
+        print -u2 "$base_violation" | sed 's/^/    /'
+        rc=1
+    else
+        print "ok   [R-96n] baseCollectionBehavior never carries the full-screen flag"
+    fi
+
+    # Half two, read as an ORDER rather than as two independent presences.
+    local withdraw
+    withdraw=$(awk '
+        /func withdrawForPresentation\(\)/ { inside = 1 }
+        inside { print }
+        inside && /^    \}/ { inside = 0 }
+    ' "$show_file")
+
+    if [[ -z "$withdraw" ]]; then
+        print -u2 "FAIL [R-96n] there is no withdrawForPresentation() to drop the flag"
+        rc=1
+        return
+    fi
+
+    local drop_line order_line
+    drop_line=$(print -r -- "$withdraw" | grep -nE 'collectionBehavior\(presentationIsClear:[[:space:]]*false\)' | head -1 | cut -d: -f1)
+    order_line=$(print -r -- "$withdraw" | grep -nE 'orderOut\(' | head -1 | cut -d: -f1)
+
+    if [[ -z "$drop_line" ]]; then
+        print -u2 "FAIL [R-96n] withdrawForPresentation() never drops the full-screen flag"
+        rc=1
+    elif [[ -z "$order_line" ]]; then
+        print -u2 "FAIL [R-96n] withdrawForPresentation() never takes the panel off screen"
+        rc=1
+    elif (( drop_line >= order_line )); then
+        print -u2 "FAIL [R-96n] withdrawForPresentation() orders the panel out before dropping the flag"
+        print -u2 "    drop at body line $drop_line, orderOut at body line $order_line"
+        rc=1
+    else
+        print "ok   [R-96n] withdrawForPresentation() drops the flag before ordering the panel out"
+    fi
+}
+
 print
 nudge_paths=(${(f)"$(existing_paths $NUDGE_SOURCES)"})
 if (( ${#nudge_paths} == 0 )); then
@@ -976,6 +1095,25 @@ else
     check_outside "R-96m" "orderFrontRegardless appears only in the panel's show function" \
         'orderFrontRegardless' $nudge_paths \
         --allow "$PANEL_SHOW_FILE"
+
+    # R-96n — the conditional flag, and the condition.
+    #
+    # An ADD is the thing under test, never a read: `properties` legitimately asks
+    # `behavior.contains(.fullScreenAuxiliary)` so the unit lane and the self-check can assert
+    # the flag's state, and a lint that could not tell a read from an add would either ban the
+    # instrument or pass everything.
+    check_outside "R-96n" "the full-screen-auxiliary flag is added in one file only" \
+        '(union|formUnion|insert)\([[:space:]]*\.fullScreenAuxiliary' \
+        $nudge_paths --allow "$PANEL_BEHAVIOUR_FILE"
+
+    # A collection behaviour assembled as a literal that names the flag would add it without
+    # ever calling `union`, so the literal shape is banned across the whole module — including
+    # the one file the union is allowed in.
+    check_set "R-96n" "no collection behaviour literal carries the full-screen flag" \
+        'collectionBehavior[^=]*=[^=]*\.fullScreenAuxiliary|\[[^]]*\.fullScreenAuxiliary[^]]*\]' \
+        $nudge_paths
+
+    check_full_screen_auxiliary
 fi
 
 reducer_paths=(${(f)"$(existing_paths $NUDGE_REDUCERS)"})

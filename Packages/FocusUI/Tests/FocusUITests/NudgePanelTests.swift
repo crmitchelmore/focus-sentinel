@@ -459,8 +459,12 @@ struct NudgePanelTests {
     /// Grant-free and headless: no window server access, no screen recording, nothing this
     /// process has to be trusted for. It is simply the interval between "the app showed the
     /// nudge" and "a person looked at it", which is the interval every earlier proof skipped.
+    /// `CFRunLoopRunInMode` rather than `RunLoop.run(until:)` because the latter needs a `Date`,
+    /// and R-26 bans a bare `Date()` outside `DateProvider` — correctly, and this is not a
+    /// question about the time of day. An interval is the honest argument: run the loop for
+    /// three tenths of a second and give AppKit its turn.
     private static func settle() {
-        RunLoop.current.run(until: Date().addingTimeInterval(0.3))
+        CFRunLoopRunInMode(.defaultMode, 0.3, false)
     }
 
     /// The content is not merely *somewhere* in a right-sized window — it fills it.
