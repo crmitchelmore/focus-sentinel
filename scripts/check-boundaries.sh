@@ -311,6 +311,66 @@ else
     print "binary: SKIPPED — no build product (the gate re-runs this after the build)"
 fi
 
+# --- e05 R-96k: the nudge module reaches for no sensing API, proven on the object ----------
+#
+# The suppression stack consumes SensitivityGate, PresentationState, MediaActivity and
+# IdleReading as VALUES produced by e03. A test can observe that it did not go and fetch
+# them itself; the symbol table proves it COULD not. AXUIElement*,
+# CGWindowListCopyWindowInfo, the ScreenCaptureKit stream classes and every networking
+# symbol must be absent from `nm -u` over the built nudge object — the same instrument
+# R-70i applied to FocusClassify, aimed at the module that decides whether to speak.
+#
+# ## Which object, and why it is named rather than globbed
+#
+# The module that decides whether to speak is `FocusCore/Nudge/` — the eligibility gates, the
+# suppression stack, the ladder, the budget, the decider. It compiles into **FocusCore.o**,
+# and that object is named here by path for exactly the reason `check-forbidden.sh` names its
+# five: a glob plus an "at least one object was seen" counter is not the claim "the nudge
+# object is clean". FocusCore is also the strongest possible object to aim this at — it is the
+# package the R-14 matrix already forbids AppKit, SwiftUI and every sibling, so a sensing
+# symbol appearing in it would mean two guarantees had failed at once.
+#
+# The nudge's **surfaces** are FocusUI's and are deliberately not asserted here: a panel needs
+# AppKit and a menu bar needs a status item, and pretending otherwise would be a lint nobody
+# could keep. What they must not do is *decide*, and R-96a/b/c/m are what hold that.
+#
+# The source half runs first and needs no build product, so a violation is caught in the inner
+# loop rather than only after a full build.
+print
+print "== the nudge module reaches for no sensing API"
+
+NUDGE_SOURCE_DIR="Packages/FocusCore/Sources/FocusCore/Nudge"
+NUDGE_OBJECT="$DERIVED_DATA/Build/Products/Debug/FocusCore.o"
+
+if [[ -d "$NUDGE_SOURCE_DIR" ]]; then
+    nudge_source_hits=$(grep -rnE "$PRIVACY_SYMBOL_PATTERN|$NETWORK_SYMBOL_PATTERN" \
+        "$NUDGE_SOURCE_DIR" --include='*.swift' 2>/dev/null \
+        | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|///|\*)')
+    if [[ -n "$nudge_source_hits" ]]; then
+        fail "a nudge source names a window-list, Accessibility, capture or networking API:"
+        print -u2 "$nudge_source_hits"
+    else
+        print "source: $NUDGE_SOURCE_DIR names no sensing or networking API"
+    fi
+else
+    fail "the nudge module has no source directory at $NUDGE_SOURCE_DIR"
+fi
+
+if [[ -f "$NUDGE_OBJECT" ]]; then
+    nudge_probing=$(nm -u "$NUDGE_OBJECT" 2>/dev/null \
+        | grep -E "$PRIVACY_SYMBOL_PATTERN|nw_|CFNetwork|URLSession|CFURLConnection|SecureTransport")
+    if [[ -n "$nudge_probing" ]]; then
+        fail "the nudge object names a sensing or networking symbol:"
+        print -u2 "$nudge_probing"
+    else
+        print "binary: nm -u $NUDGE_OBJECT — 0 window-list/AX/capture/networking symbols"
+    fi
+elif [[ "${FOCUS_REQUIRE_BINARY_CHECK:-0}" == "1" ]]; then
+    fail "FOCUS_REQUIRE_BINARY_CHECK=1 but there is no build product at $NUDGE_OBJECT"
+else
+    print "binary: SKIPPED — no build product (the gate re-runs this after the build)"
+fi
+
 # --- e04 R-70j: the FocusClassify framework row is asserted UNCHANGED ----------------------
 #
 # The positive half of the matrix above already fails the gate on any framework a row does not
