@@ -217,6 +217,68 @@ struct QueryLedgerTests {
         #expect(try context.fetch(FetchDescriptor<FocusSchemaV3.RelevanceRule>()).count == 1)
     }
 
+    // MARK: - One answer, one rule, one receipt (R-78, §3.B.9, §3.B.13)
+
+    /// **Exactly one of each, and the property that keeps it that way.**
+    ///
+    /// The transaction is the ledger's, so the rule it commits is already in the store by the
+    /// time anybody else hears about the answer. `CorrectionOutcome.persistedRule` answers
+    /// *"which rule does this describe?"* and is non-`nil` for both correction shapes;
+    /// `ruleAwaitingPersistence` answers *"has anybody written it yet?"* and is `nil` for this
+    /// one. A caller that reached for the first where it wanted the second would insert a second
+    /// learned rule under a different identifier — which is not the "one store, one truth, one
+    /// write, two renderings, same rule id" §3.B.13 promises.
+    ///
+    /// What the caller still owes is the ⌘Z: the ledger's transaction has no undo journal to
+    /// register with, and R-86's table says "Yes, part of this" is undoable like every other
+    /// correction. `registerCommittedRuleUndo(id:undo:)` is that registration and nothing else —
+    /// it writes no row, and its inverse removes the row the ledger already wrote.
+    @Test("answering writes one rule and one receipt, and the undo removes that same row")
+    @MainActor
+    func oneAnswerWritesOneRuleAndOneReceipt() throws {
+        let (ledger, context, task, container) = try Self.makeLedger()
+        defer { withExtendedLifetime(container) {} }
+
+        let outcome = try ledger.answer(
+            .yesAddIt, priorityID: task.id, task: task, scope: Self.scope,
+            reason: .noNegativeBasis
+        )
+
+        let committed = try #require(outcome.persistedRule)
+        #expect(
+            try context.fetch(FetchDescriptor<FocusSchemaV3.RelevanceRule>()).map(\.id)
+                == [committed.id],
+            "the answer did not leave exactly one rule, under the identifier it names"
+        )
+        #expect(try ledger.count() == 1)
+
+        // The `nil` a caller must branch on. This is the whole of the duplicate's prevention.
+        #expect(
+            outcome.ruleAwaitingPersistence == nil,
+            "the outcome invites a second insert of a row that is already in the store"
+        )
+
+        // What the caller does instead: register the inverse, write nothing.
+        let store = PriorityStore(context: context)
+        let undo = UndoManager()
+        store.registerCommittedRuleUndo(id: committed.id, undo: undo)
+        #expect(
+            try context.fetch(FetchDescriptor<FocusSchemaV3.RelevanceRule>()).count == 1,
+            "registering an undo inserted a row"
+        )
+
+        // ⌘Z removes the rule the ledger wrote — and leaves the receipt, because R-78's ruling
+        // is that losing the rule never re-opens the question.
+        undo.undo()
+        #expect(try context.fetch(FetchDescriptor<FocusSchemaV3.RelevanceRule>()).isEmpty)
+        #expect(
+            try ledger.hasAsked(
+                priorityID: task.id, subjectKind: .app, subject: Self.decoy2
+            ),
+            "undoing the learned rule dissolved the receipt, so the question would come back"
+        )
+    }
+
     // MARK: - Never twice
 
     /// **Finding 3's sequence, in the unit lane.** Ask, answer "Yes", delete the learned rule,

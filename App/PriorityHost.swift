@@ -265,6 +265,20 @@ final class PriorityHost: PriorityActing {
         }
     }
 
+    /// Give a rule the query ledger already committed its place in the undo journal (R-78, F-93).
+    ///
+    /// "Yes, add it" writes its rule and its immutable receipt in **one** transaction, inside
+    /// `QueryLedger.answer(…)`, because R-78 forbids an interval in which the app has learned the
+    /// answer but forgotten the asking. That transaction is not this store's, so the rule arrives
+    /// already persisted and unjournalled. Calling `addRule(…)` for the undo would insert a
+    /// duplicate under a fresh identifier; this registers the inverse alone and refreshes the
+    /// projection so the learned chip and the Rules-pane row appear.
+    func registerLearnedRuleUndo(id: UUID) {
+        perform { store in
+            store.registerCommittedRuleUndo(id: id, undo: self.undo)
+        }
+    }
+
     func changeRule(id: UUID, verdict: PriorityRuleVerdict) {
         perform { store in
             try store.changeRule(id: id, verdictRaw: verdict.rawValue, undo: self.undo)

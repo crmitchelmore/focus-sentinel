@@ -205,6 +205,50 @@ struct CorrectionScopeTests {
         #expect(notNow == .receiptOnly(.declined))
     }
 
+    /// **Two questions, two properties, and the difference is a duplicate rule** (R-78).
+    ///
+    /// `persistedRule` says *which* rule an outcome describes. `ruleAwaitingPersistence` says
+    /// whether anybody still has to write it. They differ in exactly one case, and it is the one
+    /// that matters: an answer's rule is committed inside `QueryLedger.answer(…)`'s transaction,
+    /// so a caller that inserted `persistedRule` would write it a second time under a fresh
+    /// identifier — two learned chips, two Rules-pane rows, and a ⌘Z that removed one of them.
+    @Test("only an accusation's rule is still waiting to be written")
+    func onlyAnAccusationsRuleAwaitsPersistence() throws {
+        let scope = CorrectionScope.from(Self.warrant())
+
+        // The accusation panel: nothing has been written, so the caller writes it.
+        let corrected = CorrectionAction.thisIsRelevant.outcome(scope: scope, at: Self.instant)
+        let awaiting = try #require(corrected.ruleAwaitingPersistence)
+        #expect(awaiting == corrected.persistedRule)
+        #expect(awaiting.authority == .task)
+
+        // The two answers that write a rule: the ledger has already committed it.
+        for answer in [QueryAnswer.yesAddIt, .no] {
+            let outcome = answer.outcome(scope: scope, at: Self.instant)
+            #expect(outcome.isAtomicPair)
+            #expect(outcome.persistedRule != nil, "the pair stopped describing its rule")
+            #expect(
+                outcome.ruleAwaitingPersistence == nil,
+                "an already-committed rule is offered for insertion a second time"
+            )
+        }
+
+        // Everything that writes no persisted rule at all agrees with itself.
+        let neverPersisted: [CorrectionOutcome] = [
+            CorrectionAction.notThisTime.outcome(scope: scope, at: Self.instant),
+            QueryAnswer.notNow.outcome(scope: scope, at: Self.instant),
+            CorrectionAction.snooze.outcome(scope: scope, at: Self.instant),
+            CorrectionAction.pause.outcome(scope: scope, at: Self.instant),
+            CorrectionAction.changePriority.outcome(scope: scope, at: Self.instant),
+            CorrectionAction.returnToTask.outcome(scope: scope, at: Self.instant),
+            CorrectionAction.dismiss.outcome(scope: scope, at: Self.instant)
+        ]
+        for outcome in neverPersisted {
+            #expect(outcome.persistedRule == nil)
+            #expect(outcome.ruleAwaitingPersistence == nil)
+        }
+    }
+
     @Test("there are exactly seven correction actions and every one writes exactly one thing")
     func correctionActionTotality() throws {
         #expect(CorrectionAction.allCases.count == 7)

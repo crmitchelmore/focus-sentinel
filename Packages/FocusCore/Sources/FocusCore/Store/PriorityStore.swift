@@ -722,6 +722,34 @@ public final class PriorityStore {
         )
     }
 
+    /// Register the undo for a rule **another transaction has already committed** (R-78, F-93).
+    ///
+    /// A query answer writes its rule and its immutable receipt inside `QueryLedger.answer(…)`,
+    /// as one transaction, because the two records must commit together or not at all. That
+    /// leaves the rule persisted but with no entry in the undo journal — and R-86's table says
+    /// "Yes, part of this" is undoable like every other correction.
+    ///
+    /// Calling `addRule(…)` to get the undo would insert a **second** row under a fresh
+    /// identifier, so this registers the inverse and nothing else. It writes nothing, so it
+    /// cannot fail; the inverse is `removeRule(id:undo:)`, which journals its own redo the way
+    /// every other inverse in this file does.
+    ///
+    /// - Parameters:
+    ///   - id: the identifier the committed row already carries.
+    ///   - undo: the responder-chain undo manager, or `nil` when there is none to register with.
+    public func registerCommittedRuleUndo(id: UUID, undo: UndoManager?) {
+        guard let undo else { return }
+
+        undo.beginUndoGrouping()
+        undo.setActionName(UndoActionName.addRule.localizedName)
+        undo.registerUndo(withTarget: self) { store in
+            MainActor.assumeIsolated {
+                try? store.removeRule(id: id, undo: undo)
+            }
+        }
+        undo.endUndoGrouping()
+    }
+
     /// Change a rule's verdict — the "actually, this *is* relevant" path.
     public func changeRule(id: UUID, verdictRaw: String, undo: UndoManager? = nil) throws {
         guard let rule = try rule(id: id) else { throw PriorityStoreError.ruleNotFound(id) }

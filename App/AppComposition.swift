@@ -494,14 +494,30 @@ final class AppComposition {
     /// undo), e03's session machine, e02's confirm surface.
     private func perform(_ outcome: CorrectionOutcome) {
         switch outcome {
-        case .rule(let rule), .ruleAndReceipt(let rule, _):
-            guard let taskID = priorityHost.state.priority?.id else { return }
-            priorityHost.addRule(
-                taskID: taskID,
-                scope: rule.subjectKind == .domain ? .domain : .app,
-                subject: rule.subject,
-                verdict: rule.verdict
-            )
+        case .rule, .ruleAndReceipt:
+            // **Who writes the row is decided by the outcome, not by this switch** (R-78).
+            //
+            // An accusation-panel correction (`.rule`) has been written by nobody, so this is the
+            // write, and going through the rules store is also what gives it its undo (F-93).
+            //
+            // A query answer (`.ruleAndReceipt`) has **already** been written: the ledger
+            // committed the rule and its immutable receipt as one transaction, under `rule.id`.
+            // Inserting it again here would write a *second* learned rule under a different
+            // identifier — two chips in the context row, two rows in the Rules pane, and an undo
+            // that removed only one of them. `ruleAwaitingPersistence` is `nil` for exactly that
+            // case, so the only thing still owed is the undo the ledger's transaction had no
+            // journal to register with.
+            if let pending = outcome.ruleAwaitingPersistence {
+                guard let taskID = priorityHost.state.priority?.id else { return }
+                priorityHost.addRule(
+                    taskID: taskID,
+                    scope: pending.subjectKind == .domain ? .domain : .app,
+                    subject: pending.subject,
+                    verdict: pending.verdict
+                )
+            } else if let committed = outcome.persistedRule {
+                priorityHost.registerLearnedRuleUndo(id: committed.id)
+            }
         case .pause:
             // e03's own machine, never a second pause concept (F-64). It travels down the same
             // one channel every menu item uses, so a pause from a nudge and a pause from ⌃⌘P are

@@ -282,6 +282,35 @@ public enum CorrectionOutcome: Sendable, Equatable, Hashable {
         }
     }
 
+    /// **The rule the caller must still write**, which is not the same question as
+    /// `persistedRule` and must never be confused with it (R-78).
+    ///
+    /// `persistedRule` answers *"which rule does this outcome describe?"* — it is what
+    /// `QueryLedger.answer(…)` reads in order to insert the row inside its own transaction, and
+    /// it is non-`nil` for both `.rule` and `.ruleAndReceipt`.
+    ///
+    /// This answers the different and narrower question *"has anybody written it yet?"*:
+    ///
+    /// * `.rule` — an accusation-panel correction. **Nothing has been persisted.** The caller
+    ///   inserts it, and gets the undo registration for free by going through the rules store.
+    /// * `.ruleAndReceipt` — a query answer. **The ledger already committed both rows**, together
+    ///   or not at all, and it committed the rule under `rule.id`. A caller that inserted it a
+    ///   second time would write a *duplicate* learned rule under a different identifier: two
+    ///   chips in the context row, two rows in the Rules pane, and an undo that removes only one
+    ///   of them — the exact opposite of §3.B.13's "one store, one truth, one write, two
+    ///   renderings, same rule id".
+    ///
+    /// So this is `nil` for the atomic pair, and that `nil` is the whole point of the property.
+    public var ruleAwaitingPersistence: ScopedRuleValue? {
+        switch self {
+        case .rule(let rule): rule
+        // Already committed by `QueryLedger.answer(…)`, inside R-78's one transaction.
+        case .ruleAndReceipt: nil
+        case .sessionRule, .receiptOnly, .snooze, .pause, .priorityChangeRequested,
+             .returnToTask, .nothing: nil
+        }
+    }
+
     /// The receipt this outcome writes, if any.
     public var receipt: AskedQuestionOutcome? {
         switch self {

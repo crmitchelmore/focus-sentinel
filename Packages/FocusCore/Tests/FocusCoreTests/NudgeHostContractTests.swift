@@ -127,6 +127,42 @@ struct NudgeHostContractTests {
         #expect(try Self.files(containing: rung).isEmpty)
     }
 
+    // MARK: - One answer, one rule (R-78, §3.B.9, §3.B.13)
+
+    /// **The duplicate-learned-rule regression.**
+    ///
+    /// `QueryLedger.answer(…)` commits the rule *and* the immutable receipt as one transaction,
+    /// because R-78 forbids any interval in which the app has learned the answer but forgotten
+    /// the asking. The composition root used to match `.ruleAndReceipt` alongside `.rule` in one
+    /// `case` and hand the bound rule straight to `addRule(…)` — so a real "Yes, add it" wrote
+    /// the learned rule **twice**: once inside the ledger's transaction under `rule.id`, and once
+    /// again under a fresh identifier. Two chips in the context row, two rows in the Rules pane,
+    /// and a ⌘Z that removed only the second of them.
+    ///
+    /// The fix is a property rather than a comment: `ruleAwaitingPersistence` is `nil` for the
+    /// atomic pair, and the root branches on it. These assertions are what stop the two cases
+    /// being collapsed back into one pattern.
+    @Test("the composition root never re-inserts a rule the ledger already committed")
+    func compositionRootWritesNoDuplicateRule() throws {
+        let root = try #require(
+            try Self.sources().first { $0.name == "AppComposition.swift" }
+        )
+        let lines = Self.code(root.text)
+
+        // The insert is decided by the outcome, which knows whether anybody has written the row.
+        #expect(lines.contains { $0.contains("outcome.ruleAwaitingPersistence") })
+        // …and never by a pattern that binds the atomic pair's rule straight into the insert.
+        #expect(
+            !lines.contains { $0.contains(".ruleAndReceipt(let") },
+            "the root binds the ledger's own rule again, which is how the duplicate was written"
+        )
+        // One insert call site, guarded by that property.
+        #expect(lines.filter { $0.contains("priorityHost.addRule(") }.count == 1)
+        // The undo the ledger's transaction had no journal to register with is still registered,
+        // so R-86's "yes" row keeps its ⌘Z.
+        #expect(lines.contains { $0.contains("registerLearnedRuleUndo(") })
+    }
+
     // MARK: - The scan is proving something
 
     /// A scan that found no sources would pass every assertion above by describing nothing.
