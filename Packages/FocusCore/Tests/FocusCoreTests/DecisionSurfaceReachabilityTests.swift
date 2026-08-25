@@ -202,23 +202,62 @@ struct DecisionSurfaceReachabilityTests {
         )
     }
 
-    /// A content area of nothing contains nothing — including a zero-sized action. Answering
-    /// otherwise would make the predicate vacuous exactly when the surface has collapsed.
-    @Test("a collapsed content area contains no action at all")
+    /// **A content area of nothing contains nothing** — and the action inside it is a real one.
+    ///
+    /// The zero-sized action was doing all the work here. `frame.isEmpty || !contains(…)`
+    /// short-circuits on an empty frame, so with a 0 × 0 button the containment test was never
+    /// reached at all and `guard !outer.isEmpty else { return false }` could be replaced by
+    /// `return true` with the suite still green. The action below is a perfectly ordinary
+    /// 348 × 24 row; the *container* is what has collapsed, and a button cannot be inside a
+    /// content area that has no area.
+    @Test("a collapsed content area contains no action at all, however well drawn the action is")
     func aCollapsedContentAreaContainsNothing() {
+        let realButton = ActionHitTarget(
+            identifier: "pause",
+            frame: ScreenRect(x: 16, y: 80, width: 348, height: 24)
+        )
+        #expect(!realButton.frame.isEmpty, "the fixture must not short-circuit on an empty frame")
+
         let reading = Self.evaluate(
             contentBounds: ScreenRect(x: 0, y: 0, width: 0, height: 0),
-            targets: [
-                ActionHitTarget(
-                    identifier: "pause",
-                    frame: ScreenRect(x: 0, y: 0, width: 0, height: 0)
-                )
-            ],
+            targets: [realButton],
             offering: ["pause"]
         )
 
         #expect(!reading.everyActionIsReachable)
         #expect(reading.unreachableActions == ["pause"])
+
+        // The zero-sized case still holds, and now says what it is about: an action that drew
+        // nothing is out of reach whatever container it is in.
+        let collapsedAction = Self.evaluate(
+            targets: [
+                ActionHitTarget(
+                    identifier: "pause",
+                    frame: ScreenRect(x: 16, y: 80, width: 0, height: 0)
+                )
+            ],
+            offering: ["pause"]
+        )
+        #expect(collapsedAction.unreachableActions == ["pause"])
+    }
+
+    /// The same guard on the other side of the predicate: a display with no visible area is not a
+    /// display a surface can be wholly on. It is the reading a screen list gives while the
+    /// machine is waking, and answering "yes, it is on that one" would pass every panel on it.
+    @Test("a display with no visible area holds no surface")
+    func aCollapsedDisplayHoldsNothing() {
+        let collapsed = DisplayGeometry(
+            displayID: 1,
+            screenIndex: 0,
+            isPrimary: true,
+            frame: ScreenRect(x: 0, y: 0, width: 0, height: 0),
+            visibleFrame: ScreenRect(x: 0, y: 0, width: 0, height: 0),
+            backingScaleFactor: 2
+        )
+        let reading = Self.evaluate(screens: [collapsed])
+
+        #expect(!reading.isWhollyOnAScreen)
+        #expect(!reading.everyActionIsReachable)
     }
 
     /// One point of tolerance, and not one point more: the defect this exists to catch overshot
