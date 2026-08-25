@@ -64,8 +64,12 @@ from pathlib import Path
 BLANK_INK_THRESHOLD = 2.0
 
 
-def bmp_pixels(path: Path) -> tuple[int, int, bytes]:
-    """(width, height, rows) from a 24- or 32-bit uncompressed BMP."""
+def bmp_pixels(path: Path) -> tuple[int, int, bytes, int]:
+    """(width, height, pixel bytes, bits per pixel) from an uncompressed BMP.
+
+    Row order is deliberately not corrected. This measure is a mean over adjacent pairs within
+    each row, so a bottom-up image and a top-down one give the same number.
+    """
     data = path.read_bytes()
     if data[:2] != b"BM":
         raise ValueError(f"{path} is not a BMP")
