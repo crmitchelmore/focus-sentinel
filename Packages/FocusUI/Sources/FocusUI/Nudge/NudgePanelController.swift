@@ -271,6 +271,27 @@ public final class NudgePanelController {
         panel.orderOut(nil)
     }
 
+    /// **Get off a display a presentation has just claimed** (R-84, F-35, P-130).
+    ///
+    /// `.fullScreenAuxiliary` is decided at show time, from the gate reading of that moment —
+    /// and P-130 measured exactly what the flag does when a full-screen space arrives
+    /// afterwards: the panel is drawn plainly on top of the presentation, and the window server
+    /// will not protect it for us. The frame was captured and read.
+    ///
+    /// That matters here because `hidesOnDeactivate` is deliberately `false` (R-89): a nudge
+    /// stays on screen until the person answers it, including while they click back into their
+    /// work. So a panel shown a minute before somebody starts presenting is still there, still
+    /// flagged, when the space opens. The suppression stack cannot reach it — that stack decides
+    /// whether to *speak*, and this nudge has already spoken.
+    ///
+    /// The flag is dropped **before** the window is ordered out, so there is no instant in which
+    /// a still-visible panel is eligible to join the space it is being removed from.
+    public func withdrawForPresentation() {
+        lastPresentationWasClear = false
+        panel.collectionBehavior = NudgePanel.collectionBehavior(presentationIsClear: false)
+        panel.orderOut(nil)
+    }
+
     public var isVisible: Bool { panel.isVisible }
 
     /// The window number, for the live lane's `screencapture -l <windowNumber>` (P-136).

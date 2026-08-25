@@ -82,6 +82,43 @@ struct NudgePanelTests {
         controller.hide()
     }
 
+    /// **The gate can close after the show, and the flag must not outlive it** (R-84, F-35).
+    ///
+    /// `fullScreenAuxiliaryFollowsThePresentationGate` above proves the flag is right *at every
+    /// show*. This proves the harder half: that a panel which is **already on screen** when a
+    /// presentation starts stops being eligible to join it. The panel is deliberately sticky —
+    /// `hidesOnDeactivate` is `false`, so it waits for an answer — which is exactly why it can
+    /// still be there when the space opens, and why P-130's measurement (a `.fullScreenAuxiliary`
+    /// panel drawn plainly on top of a real full-screen space) is reachable without any second
+    /// show ever happening.
+    @Test("a panel already on screen loses the flag when a presentation claims the display")
+    func withdrawingForAPresentationDropsTheFlag() {
+        let controller = Self.controller()
+
+        // The state the hazard needs: shown while the gate was clear, so it carries the flag,
+        // and still on screen because nobody has answered it.
+        controller.show(presentationIsClear: true)
+        #expect(controller.properties.isFullScreenAuxiliary)
+        #expect(controller.isVisible)
+        #expect(controller.lastPresentationWasClear)
+
+        // The presentation starts. No second show happens — this is the only thing that does.
+        controller.withdrawForPresentation()
+
+        #expect(
+            !controller.properties.isFullScreenAuxiliary,
+            "an on-screen panel kept the flag that lets it stomp a presentation"
+        )
+        #expect(!controller.isVisible, "the panel stayed on the display a presentation claimed")
+        #expect(!controller.lastPresentationWasClear)
+
+        // Everything else the base behaviour carries is untouched: withdrawing is not a reset.
+        #expect(controller.properties.joinsAllSpaces)
+        #expect(controller.properties.isStationary)
+        #expect(controller.properties.ignoresCycle)
+        #expect(controller.properties.isCorrect)
+    }
+
     @Test("the behaviour table itself never carries the flag unless the gate cleared")
     func behaviourTable() {
         #expect(!NudgePanel.baseCollectionBehavior.contains(.fullScreenAuxiliary))

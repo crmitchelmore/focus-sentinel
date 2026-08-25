@@ -163,6 +163,36 @@ struct NudgeHostContractTests {
         #expect(lines.contains { $0.contains("registerLearnedRuleUndo(") })
     }
 
+    // MARK: - A panel never outlives the presentation gate (R-84, F-35, P-130)
+
+    /// **The stomped-presentation regression.**
+    ///
+    /// A nudge panel is deliberately sticky — `hidesOnDeactivate` is `false` (R-89) — and
+    /// `.fullScreenAuxiliary` is decided at show time from the gate reading of that moment. A
+    /// panel shown while the gate was clear is therefore still on screen, and still flagged, when
+    /// somebody starts presenting a minute later; P-130 measured such a panel drawn plainly on
+    /// top of a real full-screen space. The suppression stack cannot reach it, because that stack
+    /// decides whether to *speak* and this nudge has already spoken.
+    ///
+    /// So the host has to notice the gate closing as an **event**. It does so on the same
+    /// activation and corroboration cadence every other nudge decision runs at.
+    @Test("the host takes an open panel off a display a presentation has claimed")
+    func hostWithdrawsAnOpenPanelForAPresentation() throws {
+        let host = try #require(
+            try Self.sources().first { $0.name == "NudgeHost.swift" }
+        )
+        let lines = Self.code(host.text)
+
+        #expect(
+            lines.contains { $0.contains("presentation.suppressesOverlays") },
+            "the host never reads the presentation gate, so it cannot notice it closing"
+        )
+        #expect(
+            lines.contains { $0.contains("withdrawForPresentation()") },
+            "an open panel is left on a display a presentation has claimed"
+        )
+    }
+
     // MARK: - The scan is proving something
 
     /// A scan that found no sources would pass every assertion above by describing nothing.

@@ -155,6 +155,23 @@ final class NudgeHost {
     func consider(_ judgement: NudgeJudgement) {
         guard let surroundings = surroundings?() else { return }
 
+        // **The presentation gate can close while a nudge is already on screen** (R-84, F-35).
+        //
+        // Gate 7 decides whether the app may *speak*; it has nothing to say about a panel that
+        // has already spoken. And a panel is deliberately sticky — `hidesOnDeactivate` is
+        // `false`, so a nudge waits for an answer rather than vanishing the moment somebody
+        // clicks back into their work (R-89). Put those two together and a panel shown a minute
+        // before a full-screen space opens is still there when it does, still carrying the
+        // `.fullScreenAuxiliary` the gate reading of that earlier moment granted it — and P-130
+        // measured such a panel drawn plainly on top of a real presentation.
+        //
+        // So the gate closing is an event, not just a condition, and this is where it is
+        // noticed: on the next accepted activation or corroboration tick, which is the same
+        // cadence every other nudge decision runs at.
+        if surroundings.presentation.suppressesOverlays, panel.isVisible {
+            withdrawForPresentation()
+        }
+
         // A snooze that has lifted is not a snooze. Pruning here rather than inside the decider
         // keeps the decider a pure function of the values it is handed.
         snoozes = snoozes.pruned(at: surroundings.monotonic)
@@ -580,6 +597,26 @@ final class NudgeHost {
             )
         }
         openRecordID = nil
+    }
+
+    /// Withdraw whatever is on screen because a presentation has claimed the display (R-84).
+    ///
+    /// **The ladder is not reset.** R-81's corollary is that during a presentation the app is
+    /// mute rather than quietly escalating, and that when the presentation ends the ladder
+    /// resumes at the rung it never left — so this touches the window and the slot, and nothing
+    /// that would cost the person their place in the escalation story.
+    ///
+    /// An open question is written down as `expired` on the way out. The asking happened, and a
+    /// question whose receipt was never written is a question that comes back tomorrow. The slot
+    /// is released for the same reason in the other direction: a surface nobody can see must not
+    /// hold the one open interruption for the rest of the session.
+    private func withdrawForPresentation() {
+        expireOpenQuestion()
+        panel.withdrawForPresentation()
+        slot = slot.released()
+        openWarrant = nil
+        openWarrantAskedAt = nil
+        openRung = nil
     }
 
     private func closeSurfaces() {
