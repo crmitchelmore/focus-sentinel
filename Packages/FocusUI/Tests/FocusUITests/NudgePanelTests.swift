@@ -738,9 +738,10 @@ struct NudgePanelTests {
     /// a layout nobody is looking at any more. Under default-deny the honest answer for one is
     /// "no frames", which reads as unreachable rather than as reachable-because-it-used-to-be.
     ///
-    /// The layout generation is what makes the two distinguishable, and this is what fails if
-    /// the check on it is removed: an accusation's six actions would go on being reported as
-    /// reachable on a panel that is showing something else entirely.
+    /// Measured on this toolchain: SwiftUI does deliver the empty value in that case, so the
+    /// frames are cleared even without the generation check. The check is what holds if it ever
+    /// does not — and `framesStampedWithAnotherLayoutAreRefused` below drives exactly that state
+    /// rather than assuming it cannot happen.
     @Test("a new content that reports no frames does not inherit the last nudge's")
     func framesFromAReplacedLayoutAreRefused() {
         let presentation = AccusationPresentation(
@@ -772,6 +773,36 @@ struct NudgePanelTests {
         )
         #expect(!afterwards.everyActionIsReachable)
         #expect(!controller.hitTestsEveryAction(offering: offered))
+    }
+
+    /// **Frames stamped with a layout the panel is not on are refused** (focus-kby).
+    ///
+    /// The state the generation exists for, produced directly: a content that publishes a
+    /// perfectly ordinary action frame carrying somebody else's layout number. That is what a
+    /// deferred preference delivery looks like from the controller's side — a non-empty set
+    /// describing a layout it has already replaced — and it is the one shape the *replaced
+    /// content* test above cannot manufacture, because SwiftUI happens to deliver the empty
+    /// value promptly on this toolchain.
+    ///
+    /// Without the generation check the panel answers "reachable" for a button that is not in
+    /// the window at all.
+    @Test("frames stamped with another layout are refused rather than believed")
+    func framesStampedWithAnotherLayoutAreRefused() {
+        let controller = Self.controller()
+        controller.update(content: StaleFrameReporter())
+        controller.show(presentationIsClear: true)
+        defer { controller.hide() }
+        Self.settle()
+
+        let reading = controller.decisionSurfaceReading(offering: [StaleFrameReporter.identifier])
+
+        #expect(
+            reading.unreportedActions == [StaleFrameReporter.identifier],
+            "the panel believed a frame belonging to a layout it is not showing"
+        )
+        #expect(reading.unreachableActions.isEmpty)
+        #expect(!reading.everyActionIsReachable)
+        #expect(!controller.hitTestsEveryAction(offering: [StaleFrameReporter.identifier]))
     }
 
     /// Every `NSScrollView` in a view tree. SwiftUI's `ScrollView` is backed by one, and its
@@ -814,5 +845,29 @@ struct NudgePanelTests {
         controller.hide()
 
         #expect(dismissals == 1)
+    }
+}
+
+/// A content that publishes one action frame stamped with a layout number no panel will ever
+/// be on.
+///
+/// It reports the preference directly rather than through `nudgeActionTarget(_:)`, because the
+/// modifier reads the *current* generation out of the environment and the whole point here is a
+/// frame that carries another one. The frame itself is ordinary: 100 x 20, well inside the
+/// content, exactly where a real button would be.
+private struct StaleFrameReporter: View {
+    static let identifier = CorrectionAction.pause.rawValue
+    static let staleGeneration = 999_999
+
+    var body: some View {
+        Color.clear
+            .frame(width: 200, height: 100)
+            .preference(
+                key: NudgeActionFramesKey.self,
+                value: NudgeActionFrameSet(
+                    generation: Self.staleGeneration,
+                    frames: [Self.identifier: CGRect(x: 16, y: 20, width: 100, height: 20)]
+                )
+            )
     }
 }
