@@ -118,13 +118,15 @@ the stage logs are the evidence, and they are kilobytes. A pinned `FOCUS_DERIVED
 | 7c | `check-forbidden.sh` again | the binary half of SC-1: `nm -u` finds no `_kCGWindowName` in **seven products named one by one** — the app binary, `FocusCore.o`, `FocusSensing.o`, `FocusRules.o`, `FocusClassify.o`, `FocusUI.o` and `Tools/windowid` — while the four sanctioned window-list symbols are asserted **present** in `windowid`, so the check cannot pass by the tool being gutted. Under `FOCUS_REQUIRE_BINARY_CHECK=1` a *missing* product is a failure, not a skipped line. `windowid` is built by the stage itself, because it lives outside the workspace scheme |
 | 8 | `entitlement-check.sh` ×2 | no network entitlement, Debug **and** Release; and `get-task-allow` present in Debug, **absent** in Release |
 | 9 | `self-check.sh` ×2 | the app's own zero-grant report of its menu bar, window and key equivalents — and, from e02, its declared URL schemes, its hot-key registration status, the Edit menu's undo title after one scripted in-process mutation, the pre-built capture panel's show latency, and the priority hero's point size against every other type role. From e03 it is **three launches**: the shell report, plus a session seeded back-dated ninety minutes into a store of its own and a **separate** launch that restores it. See "What the self-check adds in e03" below |
+| 9a | `check-focus-steal.sh` | **the panel takes nothing.** Launches the Debug app with `open -g -a` — a background application that has never been frontmost, which is the posture a nudge really fires in — shows the panel and asserts all four of R-89's grant-free readings. See "The nudge loop" below |
+| 9b | `check-notification-denied.sh` | **F-73's degraded path, and what discharges standing condition 5 for e05.** Zero grants, no prompt of any kind, and every rung of the ladder still reaches an in-app surface; `requestAuthorizationCallCount == 0` |
 | 10 | `verify-project.sh` again | the build did not rewrite the project |
 
-**Seventeen stages.** The count matters because the epic's close condition names it: `project`,
+**Nineteen stages.** The count matters because the epic's close condition names it: `project`,
 `boundaries`, `forbidden`, `strings`, `build-debug`, `build-release`, `packaging`,
 `eval-clean`, `unit`, `evaluation`, `boundaries-binary`, `forbidden-binary`,
-`entitlements-debug`, `entitlements-release`, `selfcheck-debug`, `selfcheck-release`,
-`project-post`.
+`entitlements-debug`, `entitlements-release`, `selfcheck-debug`, **`focus-steal`**,
+**`notification-denied`**, `selfcheck-release`, `project-post`.
 
 ### What the self-check adds in e03
 
@@ -314,6 +316,112 @@ regression and the gate script does not restate a single number:
 
 ---
 
+## The nudge loop
+
+The app speaks under exactly three postures, and the third one is a user ruling that inverts the
+obvious default:
+
+| verdict | what the app does |
+|---|---|
+| `relevant`, confidently derived | **silence** — and it is the *only* thing that buys silence |
+| `uncertain` | **a question**: "Is *{subject}* part of *{task}*?", asked once and never again |
+| `unrelated` | **the ladder**: silent glyph → non-activating panel → recommitment |
+
+### The two authorisations, and why a question can never become an accusation
+
+`InterventionMandate` and `QueryWarrant` are two types that share no protocol, no supertype and no
+field the other needs. Each has a `fileprivate` initialiser and exactly one producer, and each
+producer returns before reading anything else on the wrong verdict. Four independent facts stop a
+question widening into an accusation, and each is sufficient on its own:
+
+1. no shared protocol or supertype (lint-banned, `check-forbidden.sh` R-96d);
+2. no source file names both producers (R-96b);
+3. `QueryWarrant` carries no band and no stage, and the ladder needs both;
+4. `LadderRung` has exactly one initialiser and it takes an `InterventionMandate` (R-96c).
+
+`nudge.accusationsFromQuery == 0` asserts the same thing as a number, over the whole corpus, every
+sequence fixture and every realistic day.
+
+### Two memories, two jobs
+
+Answering a question performs **one atomic transaction that writes two records**:
+
+* the **rule** — a task-authority `ScopedRuleValue`, visible in the Rules pane, deletable, undoable,
+  and authoritative for future classification. Once it exists the subject answers at the `taskRule`
+  rung and no `uncertain` verdict is produced, so no warrant can even be constructed;
+* the **receipt** — an immutable `AskedQuestion` row, authoritative for never-ask-twice.
+
+The rule is deletable *by design*, so the invariant cannot rest on it. Deleting a learned chip means
+"that is not a fact about my work", never "ask me again": the subject returns to being
+uncertain-and-already-asked, and gate 11 of the suppression stack reads the receipt. `seq-0027`
+replays exactly that sequence, and live-lane frame 14b photographs it.
+
+### The panel takes nothing
+
+The nudge panel is a `.nonactivatingPanel` shown with `orderFrontRegardless()` and **never** made
+key programmatically — `makeKeyAndOrderFront(` is lint-banned in the nudge module, because the safe
+call and the unsafe call are one word apart in a diff. Probe P-139 measured why that matters:
+`makeKeyAndOrderFront(nil)` on this style mask flips `NSApp.isActive` from `false` to `true` and
+installs a key window **while `NSWorkspace.frontmostApplication` never moves**. A gate reading only
+the frontmost application would have gone green over it. So "did not steal focus" is four readings,
+not one:
+
+| reading | required | what it catches |
+|---|---|---|
+| `NSWorkspace.frontmostApplication` | unchanged | the coarse theft a person would see |
+| `NSApp.isActive` | `false` | the activation the frontmost reading is blind to |
+| `panel.isKeyWindow` | `false` | the key window that would take the keyboard |
+| `NSApp.keyWindow` | `nil` | the same fact from the application's side |
+
+Stage 9a asserts all four, and takes reading 1 from an **independent observer process**
+(`lsappinfo`) rather than from the app under test. The one thing it cannot prove — that a person
+*typing* while the panel is up keeps their keystrokes — needs a synthetic key event and therefore an
+Accessibility grant, so it is live-lane frame 17: read evidence, never a close condition.
+
+### The split metric
+
+`evaluation.json` gains a `nudge` object beside e04's `falseNudgeRate`. Read the names carefully,
+because the naming is the point:
+
+| metric | bound | kind |
+|---|---|---|
+| `accusationFalsePositiveRate` | `== 0.0`, **and** `== falseNudgeRate` | exact |
+| `repeatQueryCount` | `== 0` | exact |
+| `queryOnDecidableCount` | `== 0` | exact — asking about something the app had already been told |
+| `queryOnUnaskableCount` | `== 0` | exact — the guard on `noEvidence` above all |
+| `accusationsFromQuery` · `escalationsFromDeferred` | `== 0` | exact |
+| `queryVolumeRate` | `≤ 0.17` | **volume**, derived from P-138's 28/165 — *not* a false-positive rate |
+| `queriesPerFocusDay` | `≤ 5` | volume, day-level, max across three realistic-day fixtures |
+| `interruptionsPerFocusDayMax` | `≤ 8` | volume, day-level |
+| `queriesPerPriorityMax` | `≤ 4` | exact |
+| `queryAnsweredRelevantShare` | **band `[0.25, 0.75]`, both ends fail** | honesty |
+| `queryGroundTruthCoverage` | `≥ 1.0` | **fails closed** |
+| `unaskableUncertaintyShare` | `≥ 0.34` | **floor** |
+
+The band is two-sided on purpose. Gating *relevant answers ÷ delivered queries* with a ceiling alone
+would invert the ruling the affordance exists to serve: a "yes" is the affordance **working** — one
+click, a durable rule, a subject never asked about again — and a one-sided ceiling creates a direct
+incentive to ask fewer of the questions the app is supposed to ask. Above 0.75 the recogniser is
+under-performing; below 0.25 the app is using a polite question as a euphemism for an accusation it
+had the evidence to make. Both are failures, and they are different failures.
+
+The day-level numbers are measured by replaying three committed realistic days — priority changes,
+breaks, a pause, a presentation, an idle span, a relaunch — and reported as the **maximum** across
+days, never the mean: a metric that averages a bad day away is a metric that ships a bad day.
+
+### The live lane
+
+```
+scripts/live-nudge-drive.sh          # TCC-gated evidence, never a gate; exits 0 when a grant is missing
+```
+
+Eighteen frames in **seven independently reset scenarios**, driving two committed decoy
+applications (`Tools/FocusDecoy`, seeded unrelated for the ladder; `Tools/FocusDecoy2`, a neutral
+identity that is the only way an `uncertain` verdict is reachable on demand, with a focusable text
+field for frame 17). Frame numbers are stable identifiers rather than an execution order, and a
+precondition that cannot be reached **aborts the scenario** with the observed state dumped — a live
+lane that photographs whatever it happens to find is a live lane that proves nothing.
+
 ## Verification
 
 There are two kinds of check in this repository and the difference is not a matter of taste.
@@ -438,6 +546,7 @@ scripts/self-check.sh        /tmp/focus-dd/Build/Products/Debug/FocusSentinel.ap
 scripts/self-check.sh        /tmp/focus-dd/Build/Products/Release/FocusSentinel.app
 
 # the TCC-gated evidence lanes — read the frames they capture; capturing them is not the point
+scripts/live-nudge-drive.sh
 scripts/live-shell-drive.sh
 scripts/live-capture-drive.sh
 scripts/live-handoff-drive.sh
