@@ -194,22 +194,11 @@ struct CompositionRootTests {
         )
     }
 
-    /// …and the badge wire the same way: the menu bar is the only object that knows the popover
-    /// opened, and this is the wire that tells the loop.
-    @Test("the menu bar's popover wire reaches the nudge loop")
-    func thePopoverWireReachesTheLoop() throws {
-        let root = Self.root()
-        defer {
-            root.stop()
-            root.menuBar.remove()
-        }
-        root.startNudgeLoop()
-
-        #expect(
-            root.menuBar.onPopoverDidShow != nil,
-            "nothing in the programme can tell the loop that the popover opened"
-        )
-    }
+    // The badge wire used to be asserted here, as `root.menuBar.onPopoverDidShow != nil`. A
+    // non-nil no-op satisfies that, and every other suite that opened a popover installed a
+    // closure of its own — so the shipping wire was never run by anything and its deletion cost
+    // nothing. It is driven at its far end in `CompositionRootWireTests`, along with the other
+    // three wires that had the same shape of defect (focus-22m).
 
     // MARK: - The relevance host publishes, and nothing acts back into it
 

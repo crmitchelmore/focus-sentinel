@@ -15,18 +15,28 @@ enum MenuBarStage {
     ///
     /// The first `show` after an activation is routinely refused while AppKit catches up, so this
     /// asks until the popover is really open rather than assuming the first attempt took.
+    ///
+    /// - Parameters:
+    ///   - install: whether to call `install()` here. `false` for a controller the composition
+    ///     root has already installed, because installing twice would replace the status item
+    ///     the root is holding.
+    ///   - onDidShow: what to run when the popover opens, or `nil` to **leave whatever is already
+    ///     wired alone**. `nil` is what a composition-root test passes: a stage that installed a
+    ///     closure of its own would be proving that its own closure runs, which is the defect
+    ///     `thePopoverWireReachesTheLoop` had rather than a test of the shipping wire.
     static func open(
         _ controller: MenuBarController,
         showing presentation: MenuBarPresentation,
-        onDidShow: @escaping () -> Void
+        install: Bool = true,
+        onDidShow: (() -> Void)? = nil
     ) throws {
         let application = NSApplication.shared
         _ = application.setActivationPolicy(.accessory)
         NSApplication.shared.activate(ignoringOtherApps: true)
         NudgeHostFixture.settle(0.2)
 
-        controller.install()
-        controller.onPopoverDidShow = onDidShow
+        if install { controller.install() }
+        if let onDidShow { controller.onPopoverDidShow = onDidShow }
         controller.update(presentation)
 
         for _ in 0..<6 where !controller.isPopoverShown {
