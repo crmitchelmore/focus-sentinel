@@ -339,6 +339,21 @@ final class NudgeHost {
         slot = slot.offering(rung).slot ?? slot
         openRung = rung
         openWarrant = nil
+        // **The mandate reaches the ladder that persists** (focus-56y, R-80).
+        //
+        // `NudgeDecider.accuse(…)` folds the mandate into a **copy** of this machine to work out
+        // which rung is next, and that copy is discarded with the decision. Without the same fold
+        // here, `liveMandate` stayed `nil` on the ladder that survives the call — so
+        // `candidate(at:budgetPermits:)` answered `nil`, `offer(…)` recorded nothing, and
+        // `reduce(.delivery(.delivered(_)))` found no attempt to resolve and returned without
+        // touching the state. The ladder never left `.idle`, every judgement re-entered at
+        // `LadderRung.entry(for:)`, and the app could not escalate past the ambient glyph however
+        // long somebody drifted. The panel and recommitment rungs were unreachable in the running
+        // loop, which is why the whole of R-80's escalation story had no test that ran it.
+        //
+        // Folded here rather than in `consider(_:)` because this is the branch that has a mandate:
+        // the decision carries the rung, and the rung carries the mandate it was built for.
+        ladder.reduce(.mandate(rung.mandate), now: surroundings.monotonic)
         ladder.offer(at: surroundings.monotonic, budgetPermits: true)
 
         let presentation = accusationPresentation(for: rung)
