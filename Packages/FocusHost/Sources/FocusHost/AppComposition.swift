@@ -5,6 +5,7 @@ import FocusSensing
 import FocusUI
 import Foundation
 import SwiftData
+import os
 
 /// The composition root.
 ///
@@ -28,6 +29,11 @@ public final class AppComposition {
     /// *live* hot-key registration rather than on a second set built for the occasion, or the
     /// report would describe something the user never gets.
     public static let shared = AppComposition()
+
+    private let logger = Logger(
+        subsystem: FocusStore.bundleIdentifier,
+        category: "AppComposition"
+    )
 
     /// Whether the local data store opened, and why not if it did not.
     ///
@@ -871,6 +877,41 @@ public final class AppComposition {
     public func receive(_ url: URL) {
         shellWires.insert(.handoffReceived)
         priorityHost.receive(url)
+    }
+
+    // MARK: - The Settings scene's two stored facts (focus-cp2)
+    //
+    // Both of these used to be written out inside the Settings scene's own view body, in `App/`,
+    // where no test bundle can reach them and where the self-check cannot drive them either —
+    // the pane's controls need a click, and this programme's gate holds no Accessibility grant.
+    // What can be fixed is that there is no longer any *logic* there to rot: the scene reads one
+    // value and calls one verb, and both verbs are here, under `AppCompositionSettingsTests`.
+
+    /// The appearance the person last chose, read from the store.
+    ///
+    /// The Settings window may be opened long after launch, so the stored value is read when the
+    /// pane appears rather than assumed to still match what the observer was built with.
+    public func storedAppearancePreference() -> AppearancePreference {
+        FocusStore.appearancePreference(in: modelContainer.mainContext)
+    }
+
+    /// Persist the appearance the person just chose.
+    ///
+    /// The observer is updated by the caller *first*, so the shell re-renders immediately even if
+    /// this write fails: a store that cannot be written is a reason to tell the user, never a
+    /// reason to ignore what they just chose.
+    public func setAppearancePreference(_ preference: AppearancePreference) {
+        do {
+            try FocusStore.setAppearancePreference(
+                preference,
+                in: modelContainer.mainContext,
+                now: dateProvider.now
+            )
+        } catch {
+            logger.error(
+                "the store refused an appearance preference: \(error.localizedDescription, privacy: .public)"
+            )
+        }
     }
 
     /// Re-theme the pre-built quick-capture panel when the appearance preference changes.

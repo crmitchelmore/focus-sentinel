@@ -152,19 +152,18 @@ private struct CockpitHost: View {
 
 /// Persists the appearance preference the Settings window edits.
 ///
-/// This is glue, not a screen: it holds the `ModelContext` the Settings scene was given,
-/// hands `FocusUI` a plain `Binding<AppearancePreference>`, and writes every change through
-/// `FocusStore` — the same call the round-trip test exercises. Keeping it here rather than
-/// in `FocusUI` is what lets the UI package stay to SwiftUI, AppKit and `FocusCore`, with no
-/// knowledge of SwiftData at all.
+/// This is glue, not a screen, and it holds **no logic of its own** (focus-cp2). It reads one
+/// value and calls two verbs, both of which live on the composition root where
+/// `AppCompositionSettingsTests` drives them. That matters because the Settings pane's controls
+/// need a click: `App/` is not a package, and no lane in this programme holds the Accessibility
+/// grant it would take to press a button in a headless run — so what is achievable here is not
+/// "the wire is asserted" but "there is nothing in the wire left to assert".
 private struct SettingsHost: View {
     let appearance: AppearanceObserver
     /// The live graph, so the Privacy pane draws what is actually attached, the verdict
     /// inspector draws what the engine actually concluded (R-71), and the Intervention pane's
     /// usage rows show today's real spend.
     let composition: AppComposition
-
-    @Environment(\.modelContext) private var modelContext
 
     var body: some View {
         ShellSettingsView(
@@ -180,9 +179,10 @@ private struct SettingsHost: View {
             onInterventionAction: composition.perform(_:)
         )
         .task {
-            // The window may be opened long after launch, so the stored value is read here
-            // rather than assumed to still match what the observer was built with.
-            appearance.preference = FocusStore.appearancePreference(in: modelContext)
+            // The window may be opened long after launch, so the stored value is read rather
+            // than assumed to still match what the observer was built with. The read itself is
+            // the composition root's — this is the assignment.
+            appearance.preference = composition.storedAppearancePreference()
         }
     }
 
@@ -194,11 +194,7 @@ private struct SettingsHost: View {
                 // the write fails; a store that cannot be written is a reason to tell the
                 // user, never a reason to ignore what they just chose.
                 appearance.preference = newValue
-                try? FocusStore.setAppearancePreference(
-                    newValue,
-                    in: modelContext,
-                    now: composition.dateProvider.now
-                )
+                composition.setAppearancePreference(newValue)
             }
         )
     }
