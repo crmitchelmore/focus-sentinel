@@ -100,6 +100,40 @@ public final class InterventionLog {
         try context.save()
     }
 
+    /// **Take back a delivery nobody ever saw** (R-81, U-1, focus-mfc).
+    ///
+    /// `spendsBudget` is `disposition == .delivered`, and `budget(on:priorityID:)` and
+    /// `deliveredCount(kind:on:)` both sum on it. So a nudge the loop has *un-delivered* — a rung
+    /// stranded by a display change, a question whose answers went off the edge of a projector —
+    /// still spent a unit of the day's interruption budget for as long as the row said
+    /// `delivered`. Under U-1 the budget is what decides whether the app may speak again at all:
+    /// a nudge nobody saw, charged to it, is the app silencing itself over an interruption that
+    /// never happened.
+    ///
+    /// This is the log's half of `LadderMachine.undeliver(at:)`, and it is called from the same
+    /// places: the ladder stops the escalation clock, and this stops the spend.
+    ///
+    /// The surface is cleared with the disposition, for the reason the column's own
+    /// documentation gives — the empty string means "reached no surface", and leaving a surface
+    /// named on a withdrawn row would be the record claiming somebody saw something.
+    ///
+    /// - Returns: whether a delivery was actually taken back. `false` for a row that does not
+    ///   exist, for one that was never a delivery, and for one a person has already answered —
+    ///   an interruption somebody responded to was seen by definition, and withdrawing it would
+    ///   be the app editing history rather than correcting it.
+    @discardableResult
+    public func withdraw(_ id: UUID) throws -> Bool {
+        let descriptor = FetchDescriptor<FocusSchemaV4.InterventionRecord>(
+            predicate: #Predicate { $0.id == id }
+        )
+        guard let row = try context.fetch(descriptor).first else { return false }
+        guard row.disposition == .delivered, row.outcomeRaw == nil else { return false }
+        row.disposition = .deferred
+        row.surface = nil
+        try context.save()
+        return true
+    }
+
     // MARK: - Reading, by local day
 
     /// **The daily cap's fetch: a predicate, never a scan.**

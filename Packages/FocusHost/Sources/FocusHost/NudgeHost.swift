@@ -809,6 +809,62 @@ final class NudgeHost {
         }
     }
 
+    /// **A nudge the loop has taken back, in the ledger as well as on the ladder** (R-81,
+    /// focus-mfc, U-1).
+    ///
+    /// `LadderMachine.undeliver(at:)` stops the escalation clock. This stops the **spend**:
+    /// `spendsBudget` is `disposition == .delivered`, and both `budget(on:priorityID:)` and
+    /// `deliveredCount(kind:on:)` sum on it, so a stranded nudge left as a delivery went on
+    /// charging the day's interruption budget for something nobody saw. Under U-1 the budget is
+    /// what decides whether the app may speak again at all.
+    ///
+    /// The row that was written when the nudge went up **becomes** the deferral. One row per
+    /// interruption, not two: writing a fresh deferral beside a delivery that is being taken back
+    /// would count one attempt twice in every counter e09 renders. A fresh row is written only
+    /// when there is no open row to turn — a delivery whose write failed, which is the one case
+    /// where the alternative is no record at all.
+    private func undeliverOpenRecord(
+        kind: InterruptionKind,
+        subject: String?,
+        priorityID: UUID?
+    ) {
+        guard withdrawOpenRecord() else {
+            record(
+                deferral: .noSurfaceAvailable,
+                kind: kind,
+                subject: subject,
+                priorityID: priorityID
+            )
+            return
+        }
+        deferredCount += 1
+        ladder.reduce(
+            .delivery(.deferred(.noSurfaceAvailable)),
+            now: monotonicClock.elapsed
+        )
+    }
+
+    /// Take the open row off the day's spend, and forget it.
+    ///
+    /// The counterpart of `complete(_:)` for an interruption that ended without ever reaching
+    /// anybody. One place, so a path that un-delivers a nudge cannot take it off the ladder and
+    /// leave it on the budget.
+    ///
+    /// - Returns: whether a delivery was actually taken back.
+    @discardableResult
+    private func withdrawOpenRecord() -> Bool {
+        guard let id = openRecordID else { return false }
+        openRecordID = nil
+        do {
+            return try log.withdraw(id)
+        } catch {
+            logger.error(
+                "the intervention log refused a withdrawal: \(error.localizedDescription, privacy: .public)"
+            )
+            return false
+        }
+    }
+
     private func complete(_ outcome: InterventionOutcome) {
         guard let id = openRecordID else { return }
         do {
@@ -887,9 +943,8 @@ final class NudgeHost {
             panel.hide()
             slot = slot.released()
             forgetOpenQuestion()
-            openRecordID = nil
-            record(
-                deferral: .noSurfaceAvailable,
+            // The delivery is taken off the budget as well as off the screen (focus-mfc).
+            undeliverOpenRecord(
                 kind: .query,
                 subject: warrant.subject.identifier,
                 priorityID: priorityID
@@ -905,12 +960,16 @@ final class NudgeHost {
         )
         panel.hide()
         slot = slot.released()
-        openRecordID = nil
         // Before the deferral is written, so the record and the ladder agree: the attempt ended
         // as a deferral, and there is no delivery left standing for it to have escalated from.
+        //
+        // **Both halves of "un-delivered", together** (focus-mfc). `ladder.undeliver` stops the
+        // escalation clock; `InterventionLog.withdraw` stops the spend. Without the second one a
+        // rung nobody saw kept `disposition == .delivered`, which is exactly what
+        // `spendsBudget` reads, so the stranded nudge went on charging the day's interruption
+        // budget — and under U-1 the budget is what decides whether the app may speak again.
         ladder.undeliver(at: monotonicClock.elapsed)
-        record(
-            deferral: .noSurfaceAvailable,
+        undeliverOpenRecord(
             kind: .accusation,
             subject: rung.subject,
             priorityID: activePriorityID()

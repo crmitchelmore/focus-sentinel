@@ -264,6 +264,88 @@ struct InterventionLogTests {
         #expect(try log.count() == 1)
     }
 
+    // MARK: - Withdrawal (R-81, focus-mfc)
+
+    /// **A nudge nobody saw stops spending the budget** — which, under U-1, is what decides
+    /// whether the app may speak again at all.
+    ///
+    /// `LadderMachine.undeliver(at:)` existed and was called; this log had no counterpart, so a
+    /// rung a display change had stranded was un-delivered from the ladder and went on charging
+    /// the day's interruption budget for something that reached nobody. `spendsBudget` is
+    /// `disposition == .delivered`, and `budget(on:priorityID:)` and `deliveredCount(kind:on:)`
+    /// both sum on it — so the whole claim is readable as three numbers.
+    @Test("a withdrawn delivery stops spending the day's budget")
+    @MainActor
+    func aWithdrawnDeliveryStopsSpending() throws {
+        let (log, container) = try Self.makeLog()
+        defer { withExtendedLifetime(container) {} }
+        let priorityID = UUID()
+
+        let id = try log.record(Self.delivered(.accusation), priorityID: priorityID)
+        try log.record(Self.delivered(.query), priorityID: priorityID)
+
+        var budget = try log.budget(on: log.today, priorityID: priorityID)
+        #expect(budget.interruptionsToday == 2)
+        #expect(budget.accusationsToday == 1)
+
+        #expect(try log.withdraw(id), "the delivery was not taken back")
+
+        budget = try log.budget(on: log.today, priorityID: priorityID)
+        #expect(
+            budget.accusationsToday == 0,
+            "a rung nobody saw is still charged to the day's accusation cap"
+        )
+        #expect(
+            budget.interruptionsToday == 1,
+            "a rung nobody saw is still charged to the shared interruption cap"
+        )
+        #expect(try log.deliveredCount(kind: .accusation, on: log.today) == 0)
+        #expect(try log.deliveredCount(kind: .query, on: log.today) == 1)
+
+        // The row is kept and reads as a deferral, so the record still says the app tried…
+        let row = try #require(try log.all().first { $0.id == id })
+        #expect(row.disposition == .deferred)
+        #expect(try log.count() == 2, "a withdrawal deleted the record instead of correcting it")
+        // …and it names no surface, because the empty string is what "reached nobody" is stored
+        // as and a named surface would be the record claiming somebody saw something.
+        #expect(row.surfaceRaw.isEmpty)
+    }
+
+    /// The three things a withdrawal refuses, because each of them would be the app editing
+    /// history rather than correcting it.
+    @Test("a withdrawal refuses a row that was never a standing delivery")
+    @MainActor
+    func aWithdrawalRefusesWhatWasNeverADelivery() throws {
+        let (log, container) = try Self.makeLog()
+        defer { withExtendedLifetime(container) {} }
+
+        // A row that does not exist.
+        #expect(try log.withdraw(UUID()) == false)
+
+        // A row that was never a delivery.
+        let deferred = try log.record(
+            InterventionEvent(
+                kind: .accusation,
+                subject: Self.decoy,
+                disposition: .deferred,
+                deferralReason: .noSurfaceAvailable
+            )
+        )
+        #expect(try log.withdraw(deferred) == false)
+
+        // A row a person has already answered: an interruption somebody responded to was seen
+        // by definition.
+        let answered = try log.record(Self.delivered(.accusation))
+        try log.complete(answered, outcome: .corrected)
+        #expect(try log.withdraw(answered) == false)
+        #expect(try log.all().first { $0.id == answered }?.disposition == .delivered)
+
+        // And a second withdrawal of the same row changes nothing.
+        let once = try log.record(Self.delivered(.query))
+        #expect(try log.withdraw(once))
+        #expect(try log.withdraw(once) == false)
+    }
+
     // MARK: - The counters
 
     @Test("the counters read the columns the schema commits")

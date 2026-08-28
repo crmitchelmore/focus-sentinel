@@ -201,6 +201,10 @@ struct NudgeHostDisplayChangeTests {
         #expect(engagedRung != nil, "the ladder is not engaged, so there is no delivery to take back")
         let deferralsBefore = try fixture.interventions()
             .count { $0.dispositionRaw == InterventionDisposition.deferred.rawValue }
+        let spendBefore = try fixture.log.budget(
+            on: fixture.log.today, priorityID: fixture.priorityID
+        )
+        #expect(spendBefore.accusationsToday >= 1, "nothing was ever charged to the budget")
 
         // A display that cannot hold this panel however it is placed.
         let needed = fixture.panel.contentSize.height
@@ -218,6 +222,23 @@ struct NudgeHostDisplayChangeTests {
             "the withdrawal was not written down as a deferral"
         )
         #expect(fixture.host.deferredCount >= 1)
+
+        // **And it stops spending the day's budget** (focus-mfc, R-81). Un-delivering from the
+        // ladder stops the escalation clock; this is the other half. `spendsBudget` is
+        // `disposition == .delivered`, so a stranded rung left as a delivery goes on charging the
+        // interruption cap for something nobody saw — and under U-1 the budget is what decides
+        // whether the app may speak again at all.
+        let spendAfter = try fixture.log.budget(
+            on: fixture.log.today, priorityID: fixture.priorityID
+        )
+        #expect(
+            spendAfter.accusationsToday == spendBefore.accusationsToday - 1,
+            "a rung nobody saw is still charged to the day's accusation cap"
+        )
+        #expect(
+            spendAfter.interruptionsToday == spendBefore.interruptionsToday - 1,
+            "a rung nobody saw is still charged to the shared interruption cap"
+        )
 
         // The ladder is standing where it was before the delivery — so the escalation clock is
         // not running, and the next judgement offers **this same rung** rather than the one above.
@@ -258,6 +279,11 @@ struct NudgeHostDisplayChangeTests {
         NudgeHostFixture.settle()
         #expect(fixture.host.deliveredCount == 1)
         #expect(fixture.panel.isVisible)
+        #expect(
+            try fixture.log.budget(
+                on: fixture.log.today, priorityID: fixture.priorityID
+            ).queriesForPriorityToday == 1
+        )
 
         let needed = fixture.panel.contentSize.height
         fixture.panel.displays = { Self.displayTooSmall(for: needed) }
@@ -285,6 +311,14 @@ struct NudgeHostDisplayChangeTests {
 
         let rows = try fixture.interventions()
         #expect(rows.contains { $0.dispositionRaw == InterventionDisposition.deferred.rawValue })
+        // …and it is off the budget as well as off the screen (focus-mfc): a question the person
+        // never got to answer must not be the reason the app stays quiet for the rest of the day.
+        #expect(
+            try fixture.log.budget(
+                on: fixture.log.today, priorityID: fixture.priorityID
+            ).queriesForPriorityToday == 0,
+            "a question nobody could answer is still charged to the day's query cap"
+        )
     }
 
     // MARK: - The observation costs nothing when there is nothing up
