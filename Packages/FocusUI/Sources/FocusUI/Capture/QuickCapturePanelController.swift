@@ -48,6 +48,17 @@ public final class QuickCapturePanelController {
     /// placement is theirs to keep.
     private var hasBeenPositioned = false
 
+    /// **The traits the shell has actually handed it, or `nil` if nothing ever has**
+    /// (focus-cp2).
+    ///
+    /// A sentinel rather than a copy of `model.traits`, and the distinction is the whole point:
+    /// the model is initialised with `.systemDefault`, so "the panel has the right traits" and
+    /// "nobody ever told the panel anything" are indistinguishable on a machine whose appearance
+    /// happens to be the default. This is the second fact, and it can only become non-`nil` by
+    /// somebody calling `update(traits:)` — which, in the shipping application, only the cockpit
+    /// scene's own wiring does.
+    public private(set) var adoptedTraits: AppearanceTraits?
+
     public init(traits: AppearanceTraits = .systemDefault) {
         let model = QuickCaptureModel()
         model.traits = traits
@@ -118,6 +129,7 @@ public final class QuickCapturePanelController {
     /// surface in this package uses.
     public func update(traits: AppearanceTraits) {
         model.traits = traits
+        adoptedTraits = traits
     }
 
     private func finish(_ result: QuickCaptureResult) {

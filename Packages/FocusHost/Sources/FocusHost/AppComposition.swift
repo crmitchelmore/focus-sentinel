@@ -813,6 +813,40 @@ public final class AppComposition {
     /// What the engine actually concluded, for the verdict inspector (R-71).
     public var verdict: VerdictSnapshot? { relevanceHost.verdict }
 
+    // MARK: - The three wires that live in `App/` (focus-cp2)
+    //
+    // `App/` is not a package, so nothing in the unit lane can reach a closure in the scene
+    // graph — and four no-op mutations to those closures survived the whole nineteen-stage gate.
+    // The self-check is the only lane that runs the shipping scene graph in the shipping
+    // process, so each wire is given a name it says when it fires, and the report carries both
+    // the names heard and the effects they were supposed to have.
+    //
+    // The scene calls exactly one of these per wire. That is deliberate: a scene that called
+    // `adoptUndoManager` and `updateCapturePanelTraits` directly, from an `.onAppear` and again
+    // from an `.onChange`, was four statements with two effects — and no report could tell them
+    // apart, which is how the wires became invisible in the first place.
+
+    /// Which of the shell's wires have fired in this process, ever.
+    ///
+    /// Read by `--focus-self-check`. Not cleared: a wire that fires once has been proved to
+    /// exist, and there is no question this answers that a *current* reading would answer better.
+    public private(set) var shellWires: Set<ShellWire> = []
+
+    /// **The window's undo manager arrived, or changed.**
+    ///
+    /// `@Environment(\.undoManager)` is `nil` until there is a window, so the scene watches it
+    /// with `initial: true` and this is called both at the first draw and whenever it moves.
+    public func undoManagerChanged(_ manager: UndoManager?) {
+        shellWires.insert(.undoManagerChanged)
+        adoptUndoManager(manager)
+    }
+
+    /// **The Mac's appearance changed**, or the person chose a different one in Settings.
+    public func appearanceChanged(_ traits: AppearanceTraits) {
+        shellWires.insert(.appearanceChanged)
+        updateCapturePanelTraits(traits)
+    }
+
     /// The window's own `UndoManager`, handed to both journals.
     ///
     /// One call rather than two, because the two journals drive one Edit menu and a scene that
@@ -827,7 +861,15 @@ public final class AppComposition {
 
     /// An incoming `focus://` handoff. It parses and **shows**; there is no route from here to
     /// a store mutation that does not pass through a person pressing Replace (F-142).
+    ///
+    /// Reached from two places on purpose. `FocusAppDelegate.application(_:open:)` is the AppKit
+    /// route and lives in this package, where `FocusHostTests` drives it; the cockpit scene's
+    /// `.onOpenURL` is the SwiftUI route and is kept because which of the two AppKit dispatches
+    /// to is Apple's decision rather than this programme's, and a handoff that depended on
+    /// guessing right would be a handoff that silently stopped working. Arriving twice costs
+    /// nothing: the parse is pure and the result is the same value assigned to the same field.
     public func receive(_ url: URL) {
+        shellWires.insert(.handoffReceived)
         priorityHost.receive(url)
     }
 

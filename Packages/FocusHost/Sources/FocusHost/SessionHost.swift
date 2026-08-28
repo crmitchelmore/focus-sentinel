@@ -68,6 +68,13 @@ final class SessionHost: SessionActing {
     /// The window's undo manager, once a window exists to have one.
     private var undo: UndoManager?
 
+    /// The manager this journal is registering on, for the shell-wire lane to read.
+    ///
+    /// `PriorityHost` publishes the same fact for the same reason: the cockpit scene adopts into
+    /// **both** journals with one call, and a scene that reached one and not the other is a scene
+    /// with a half-working ⌘Z — which is a thing to assert rather than to assume (focus-cp2).
+    var journalUndoManager: UndoManager? { undo }
+
     init(
         context: ModelContext,
         events: ActivityEventStore,

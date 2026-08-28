@@ -579,6 +579,87 @@ check(
     undo.get("enabledAfterUndo"),
 )
 
+# --- the application target's own wiring (focus-cp2) ------------------------------------------
+#
+# `App/` is not a package. No test bundle can import it, so every closure in the scene graph is
+# unreachable from the unit lane — and four no-op mutations to those closures survived the whole
+# nineteen-stage gate byte for byte: EXIT=0 five times out of five against the mutant, and an
+# empty diff between the clean run's ok-assertion list and the mutant's.
+#
+# One `App/` wire was never in that state. Deleting `AppComposition.shared.start()` from
+# `FocusSentinelApp.init()` fails seven assertions here, loudly — because this script runs the
+# **shipping scene graph in the shipping process**, which no other lane in the programme does.
+# That control is what says the route works; the block below brings the rest of `App/` into it.
+#
+# Two facts per wire, and both are needed. `wiresFired` names which closure ran, so a failure
+# names the line rather than a symptom three objects away; the effect beside it says whether it
+# did anything, so a wire that fired and did nothing is not let through by its own receipt.
+
+shell = report.get("shell") or {}
+fired = set(shell.get("wiresFired") or [])
+
+check(
+    "undoManagerChanged" in fired,
+    "the cockpit scene's undo-manager wire ran",
+    sorted(fired),
+)
+check(
+    "appearanceChanged" in fired,
+    "the cockpit scene's appearance wire ran",
+    sorted(fired),
+)
+check(
+    shell.get("undoManagerAdopted") is True,
+    "the cockpit handed the journal the window's own undo manager (F-93)",
+    shell.get("undoManagerAdopted"),
+)
+check(
+    shell.get("undoManagerIsTheKeyWindows") is True,
+    "the manager the journal holds is the key window's own",
+    shell.get("undoManagerIsTheKeyWindows"),
+)
+# A sentinel, not a comparison: `QuickCaptureModel` is initialised with `.systemDefault`, so
+# "the shell themed the panel" and "nobody ever told the panel anything" are the same reading
+# on a machine whose appearance happens to be the default. This is the second fact.
+check(
+    shell.get("capturePanelTraitsAdopted") is True,
+    "the cockpit scene handed the quick-capture panel its appearance traits",
+    shell.get("capturePanelTraitsAdopted"),
+)
+# The handoff, driven through `NSApp.delegate.application(_:open:)` — which is where AppKit
+# hands a kAEGetURL event to an application and, with an @NSApplicationDelegateAdaptor in play,
+# is also how SwiftUI feeds the cockpit scene's `.onOpenURL`. So this runs the closure in
+# App/FocusSentinelApp.swift. It shows and never mutates (F-142).
+check(
+    shell.get("urlHandlerAnswersOpen") is True,
+    "the application answers application(_:open:), so a focus:// URL has somewhere to land",
+    shell.get("urlHandlerAnswersOpen"),
+)
+check(
+    "handoffReceived" in fired,
+    "the cockpit scene's onOpenURL wire ran when a focus:// URL was delivered",
+    sorted(fired),
+)
+check(
+    shell.get("handoffWasShown") is True,
+    "the delivered handoff reached CockpitState, where a person can accept or refuse it",
+    shell.get("handoffWasShown"),
+)
+check(
+    shell.get("handoffTask") == "Self-check handoff probe",
+    "the handoff that arrived is the one that was sent",
+    shell.get("handoffTask"),
+)
+# Recorded, never asserted. `NSApp.delegate` is SwiftUI's own adaptor object rather than
+# `FocusAppDelegate` itself — it forwards, which is what `urlHandlerAnswersOpen` and the drive
+# above actually prove — and asserting the class would be asserting a SwiftUI implementation
+# detail.
+print(
+    f"note NSApp.delegate is FocusAppDelegate = {shell.get('urlHandlerIsTheAppDelegate')!r}; "
+    f"declared wires {shell.get('wiresDeclared')!r}; fired {sorted(fired)!r} "
+    "(recorded, never asserted)"
+)
+
 # --- e02 · the quick-capture panel (F-06) -----------------------------------------------------
 
 panel = report.get("capturePanel") or {}

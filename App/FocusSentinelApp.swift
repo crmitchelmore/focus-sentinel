@@ -119,16 +119,31 @@ private struct CockpitHost: View {
             sessionElapsedSeconds: composition.sessionElapsedSeconds,
             lastActiveBundleID: composition.lastActiveBundleID
         )
-        .onAppear {
-            composition.adoptUndoManager(undoManager)
-            composition.updateCapturePanelTraits(appearance.traits)
+        // **Three wires, each of which says its own name, and each of which fires** (focus-cp2).
+        //
+        // `App/` is not a package, so nothing in the unit lane can reach a closure in this file —
+        // and four no-op mutations to the wiring that stood here survived the whole nineteen-stage
+        // gate byte for byte. Two things fix that, and both are visible in the shape below.
+        //
+        // Each wire calls **one named verb** on the composition root, which remembers that it was
+        // called; `--focus-self-check` reports the set beside the effect each wire was supposed to
+        // have, so a dead wire fails the gate by its own name rather than by a symptom three
+        // objects away.
+        //
+        // And there is no longer an `.onAppear` beside each `.onChange` doing the same thing.
+        // `initial: true` is exactly what that pair was emulating — run now, and again whenever
+        // the value moves — and collapsing them is not tidiness: two statements with one effect
+        // are two statements no lane can tell apart, so gutting either was unobservable however
+        // hard the gate looked. `@Environment(\.undoManager)` is still `nil` until there is a
+        // window, and this still adopts it when it arrives.
+        .onChange(of: undoManager, initial: true) { _, manager in
+            composition.undoManagerChanged(manager)
         }
-        .onChange(of: undoManager) { _, manager in
-            composition.adoptUndoManager(manager)
+        .onChange(of: appearance.traits, initial: true) { _, traits in
+            composition.appearanceChanged(traits)
         }
-        .onChange(of: appearance.traits) { _, traits in
-            composition.updateCapturePanelTraits(traits)
-        }
+        // F-142's handoff. It parses and **shows**: there is no route from here to a stored
+        // priority that does not pass through a person pressing Replace.
         .onOpenURL { url in
             composition.receive(url)
         }

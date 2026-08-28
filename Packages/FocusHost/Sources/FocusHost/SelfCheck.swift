@@ -205,6 +205,9 @@ enum SelfCheck {
         // The undo probe reads the *system* Edit menu, so it has to run while the cockpit is
         // still the key window — before the key-equivalent probes close it.
         let undo = undoReport()
+        // …and the shell block reads the key window's undo manager for the same reason, and
+        // drives the handoff into a cockpit that has to still be there to show it.
+        let shell = shellReport()
         // …and the e03 block reads the on-screen window list, so it runs before ⌘, opens a
         // Settings window and ⌘W closes the cockpit. Every read in it is grant-free.
         let sensing = sensingReport()
@@ -243,6 +246,8 @@ enum SelfCheck {
         root["undo"] = undo
         root["capturePanel"] = capturePanelReport()
         root["priorityHero"] = priorityHeroReport()
+        // The application target's own wiring, which no test bundle can reach (focus-cp2).
+        root["shell"] = shell
 
         // --- e03 -------------------------------------------------------------------------
         root["sensing"] = sensing
@@ -881,6 +886,72 @@ enum SelfCheck {
         }
     }
 
+    // MARK: - The application target's own wiring (focus-cp2)
+
+    /// **What `App/` actually did**, read from inside the running application.
+    ///
+    /// `App/` is not a package. No test bundle can import it, so every closure in the scene graph
+    /// is unreachable from the unit lane — and four no-op mutations to those closures survived
+    /// the whole nineteen-stage gate byte for byte. One `App/` wire was already caught loudly:
+    /// deleting `AppComposition.shared.start()` fails seven assertions here. This is the rest of
+    /// them brought into the same shape, in the only lane that runs the shipping scene graph in
+    /// the shipping process.
+    ///
+    /// Two facts per wire, and both are needed. `wiresFired` says **which** closure ran, so a
+    /// failure names the line rather than a symptom three objects away; the effect beside it says
+    /// **whether** it did anything, so a wire that fired and did nothing is not let through by its
+    /// own receipt.
+    ///
+    /// Every reading here is grant-free: three properties of objects this process already owns,
+    /// and one `responds(to:)`.
+    @MainActor
+    static func shellReport() -> [String: Any] {
+        let composition = AppComposition.shared
+        var report: [String: Any] = [:]
+
+        report["wiresDeclared"] = ShellWire.allCases.map(\.rawValue).sorted()
+        report["wiresFired"] = composition.shellWires.map(\.rawValue).sorted()
+
+        // The cockpit's two `View`-only facts, as effects rather than as receipts.
+        //
+        // `adoptedTraits` is a sentinel and not a copy of what the panel is drawing with: the
+        // model is initialised with `.systemDefault`, so "the shell themed the panel" and
+        // "nobody ever told the panel anything" are the same reading on a machine whose
+        // appearance happens to be the default.
+        report["undoManagerAdopted"] = composition.priorityHost.journalUndoManager != nil
+        report["undoManagerIsTheKeyWindows"] =
+            composition.priorityHost.journalUndoManager === NSApp.keyWindow?.undoManager
+        report["capturePanelTraitsAdopted"] = composition.quickCapturePanel.adoptedTraits != nil
+
+        // **The handoff, driven through the shell's own delivery point** (F-142).
+        //
+        // `application(_:open:)` on `NSApp.delegate` is where AppKit hands a `kAEGetURL` event
+        // to an application, and with an `@NSApplicationDelegateAdaptor` in play it is also how
+        // SwiftUI feeds the cockpit scene's `.onOpenURL`. Calling it here therefore runs the
+        // closure in `App/FocusSentinelApp.swift` — the whole point, because no test bundle can.
+        //
+        // It costs nothing and touches nothing: `PriorityHost.receive(_:)` parses and **shows**,
+        // and there is no route from a shown handoff to a stored priority that does not pass
+        // through a person pressing Replace. The URL is deliberately one no person would type.
+        let delegate = NSApp.delegate
+        report["urlHandlerAnswersOpen"] = (delegate as? NSObject)?
+            .responds(to: #selector(NSApplicationDelegate.application(_:open:))) ?? false
+        report["urlHandlerIsTheAppDelegate"] = delegate is FocusAppDelegate
+
+        let handoff = URL(string: "focus://start?task=Self-check%20handoff%20probe")
+        if let handoff {
+            delegate?.application?(NSApplication.shared, open: [handoff])
+        }
+        report["handoffURL"] = handoff?.absoluteString ?? ""
+        report["handoffWasShown"] = composition.cockpitState.pendingHandoff != nil
+        report["handoffTask"] = composition.cockpitState.pendingHandoff?.task ?? ""
+        // Re-read after the drive: `handoffReceived` can only be in here because the shell's own
+        // URL wire ran.
+        report["wiresFired"] = composition.shellWires.map(\.rawValue).sorted()
+
+        return report
+    }
+
     // MARK: - e02 · undo through the system Edit menu (F-93)
 
     /// One scripted mutation, then a reading of the real Edit menu.
@@ -922,8 +993,16 @@ enum SelfCheck {
     static func undoReport() -> [String: Any] {
         var report: [String: Any] = [:]
 
+        // **The journal's own manager, with no fallback** (focus-cp2).
+        //
+        // It used to be `?? NSApp.keyWindow?.undoManager`, and that fallback was what made the
+        // cockpit scene's `adoptUndoManager` wire invisible: mutated to a no-op, the journal held
+        // nothing, this probe quietly picked the key window's manager up off the floor, registered
+        // the scripted mutation on it, and every assertion below passed — describing an Edit menu
+        // that works for a manager `PriorityStore` would never have written to. What F-93 claims
+        // is that the *journal* reaches the standard Edit menu, so the journal's manager is the
+        // one the reading is taken through, and its absence is a failure rather than a fallback.
         let manager = AppComposition.shared.priorityHost.journalUndoManager
-            ?? NSApp.keyWindow?.undoManager
         guard let manager else {
             report["available"] = false
             return report
