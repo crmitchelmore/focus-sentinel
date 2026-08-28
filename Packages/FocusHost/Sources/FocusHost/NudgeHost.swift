@@ -112,6 +112,11 @@ final class NudgeHost {
     private var openWarrant: QueryWarrant?
     private var openWarrantAskedAt: Date?
     private var openRung: LadderRung?
+    /// The corrections the rung on the panel is offering, by `rawValue`, so a reading taken later
+    /// asks about the same set the panel was drawn with — the accusation's half of
+    /// `openQuestionActions`. Empty when the live rung is not on the panel, which is every
+    /// surface that has no actions to be out of reach.
+    private(set) var openRungPanelActions: [String] = []
 
     /// **Which surface the open question went to, and what that surface could be proven to
     /// show** (focus-kby, U-1).
@@ -171,6 +176,10 @@ final class NudgeHost {
         self.dateProvider = dateProvider
 
         panel.onDismiss = { [weak self] in self?.dismissWhateverIsOpen() }
+        // **The display can be replaced under a panel that is already up** (focus-56y). The panel
+        // re-measures and re-places itself for whatever is there now; this is the loop being told
+        // so it can read the result and decide what it means.
+        panel.onDisplaysChanged = { [weak self] in self?.displaysChanged() }
         notifications.onAction = { [weak self] action in
             self?.resolve(action.correction, snoozeDuration: nil)
         }
@@ -338,6 +347,7 @@ final class NudgeHost {
 
         slot = slot.offering(rung).slot ?? slot
         openRung = rung
+        openRungPanelActions = []
         openWarrant = nil
         // **The mandate reaches the ladder that persists** (focus-56y, R-80).
         //
@@ -388,6 +398,7 @@ final class NudgeHost {
             // wrong. An accusation you cannot answer back to is the anti-pattern the Court's
             // product boundary forbids, so it is a deferral: the ladder's clock stays stopped,
             // nothing is counted, and the rung is offered again.
+            openRungPanelActions = presentation.offeredActionIdentifiers
             let reading = panel.decisionSurfaceReading(
                 offering: presentation.offeredActionIdentifiers
             )
@@ -454,7 +465,7 @@ final class NudgeHost {
         openQuestionSurface = nil
         openQuestionReadingAtAsk = .unknowable
         openQuestionActions = []
-        openRung = nil
+        forgetOpenRung()
 
         let presentation = QueryPresentation(
             voice: preferences.voice,
@@ -795,14 +806,98 @@ final class NudgeHost {
         panel.withdrawForPresentation()
         slot = slot.released()
         forgetOpenQuestion()
-        openRung = nil
+        forgetOpenRung()
+    }
+
+    // MARK: - The display changed under something that was already up (focus-56y)
+
+    /// **A nudge is placed once; the display it was placed on is not** (focus-56y, U-1, R-81).
+    ///
+    /// Every reading this loop takes of the panel used to be taken at the show and never again
+    /// for an accusation — `accuse` at the guard below `panel.show(…)`, `ask` at the equivalent
+    /// one — so a rung was read once, counted delivered, and never revisited. A panel is
+    /// deliberately sticky (`hidesOnDeactivate` is `false`, R-89) precisely so it waits for an
+    /// answer, which means it is still there when somebody undocks, plugs in a projector, starts
+    /// Sidecar or changes resolution. Read in a clean clone: a recommitment placed at 380 × 772 on
+    /// 1920 × 1080, then the display became 800 × 600 — AppKit origin y = 600 − 30 − 772 = −202,
+    /// with the three snooze spans, Pause and Change priority off the bottom of the screen and the
+    /// Snooze label cut through. Five of six actions unreachable, on the one rung that demands an
+    /// explicit choice and does not auto-dismiss.
+    ///
+    /// By the time this runs the panel has already been re-measured and re-placed for the display
+    /// that is actually there, which is the repair that matters to the person: most of the time
+    /// the nudge simply moves and everything below is a no-op. What is left is the case where the
+    /// new display cannot hold it — the actions are behind a scroll, or off the edge — and R-81's
+    /// rule applies at this second moment exactly as it does at the show:
+    ///
+    /// * an **accusation** is un-delivered. The panel goes, the ladder is put back where it stood
+    ///   so the escalation clock stops and the same rung is offered again, and the withdrawal is
+    ///   written down as a deferral. Under U-1 a rung nobody can answer has not been delivered,
+    ///   whether it became unanswerable in the first millisecond or the first minute.
+    /// * a **question** is un-asked. Nothing is written — a receipt is immutable and `hasAsked(…)`
+    ///   is gate 11, so writing one here would spend the app's single licensed interruption on a
+    ///   surface that had gone — the slot is given back, and the subject stays askable.
+    private func displaysChanged() {
+        guard panel.isVisible else { return }
+
+        if let warrant = openWarrant, openQuestionSurface == .panel {
+            guard currentReadability() != .readable else { return }
+            let summary = panel.decisionSurfaceReading(offering: openQuestionActions).summary
+            logger.error(
+                """
+                the display changed under a question and its answers went out of reach; \
+                it is un-asked rather than counted: \(summary, privacy: .public)
+                """
+            )
+            let priorityID = activePriorityID()
+            panel.hide()
+            slot = slot.released()
+            forgetOpenQuestion()
+            openRecordID = nil
+            record(
+                deferral: .noSurfaceAvailable,
+                kind: .query,
+                subject: warrant.subject.identifier,
+                priorityID: priorityID
+            )
+            return
+        }
+
+        guard let rung = openRung, !openRungPanelActions.isEmpty else { return }
+        let reading = panel.decisionSurfaceReading(offering: openRungPanelActions)
+        guard !reading.everyActionIsReachable else { return }
+        logger.error(
+            "the display changed under a rung and stranded it: \(reading.summary, privacy: .public)"
+        )
+        panel.hide()
+        slot = slot.released()
+        openRecordID = nil
+        // Before the deferral is written, so the record and the ladder agree: the attempt ended
+        // as a deferral, and there is no delivery left standing for it to have escalated from.
+        ladder.undeliver(at: monotonicClock.elapsed)
+        record(
+            deferral: .noSurfaceAvailable,
+            kind: .accusation,
+            subject: rung.subject,
+            priorityID: activePriorityID()
+        )
+        forgetOpenRung()
     }
 
     private func closeSurfaces() {
         panel.hide()
         slot = slot.released()
         forgetOpenQuestion()
+        forgetOpenRung()
+    }
+
+    /// Forget the rung on the surface, and the corrections it was offering.
+    ///
+    /// One place, for the reason `forgetOpenQuestion()` is one place: a reading taken against a
+    /// stale action list is a reading of a nudge nobody is looking at.
+    private func forgetOpenRung() {
         openRung = nil
+        openRungPanelActions = []
     }
 
     /// Forget the open question **without writing anything**.
@@ -1056,7 +1151,7 @@ final class NudgeHost {
         // here, which is the whole of F-81: the person asked for their screen back, not to tell
         // the app anything, so the question is still unanswered and will be offered again.
         forgetOpenQuestion()
-        openRung = nil
+        forgetOpenRung()
         openRecordID = nil
     }
 
