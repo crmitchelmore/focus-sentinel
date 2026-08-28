@@ -650,6 +650,14 @@ check(
     "the handoff that arrived is the one that was sent",
     shell.get("handoffTask"),
 )
+# Refused on the way out, which is both the truthful end for a handoff no person asked for and
+# the thing that stops the probe leaving a sheet attached — a sheet still up when NSApp.terminate
+# runs is how a self-check turns into a hung gate stage.
+check(
+    shell.get("handoffWasDismissed") is True,
+    "the probe's handoff was refused again, leaving no sheet and no stored change",
+    shell.get("handoffWasDismissed"),
+)
 # Recorded, never asserted. `NSApp.delegate` is SwiftUI's own adaptor object rather than
 # `FocusAppDelegate` itself — it forwards, which is what `urlHandlerAnswersOpen` and the drive
 # above actually prove — and asserting the class would be asserting a SwiftUI implementation

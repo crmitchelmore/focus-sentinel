@@ -945,6 +945,15 @@ enum SelfCheck {
         report["handoffURL"] = handoff?.absoluteString ?? ""
         report["handoffWasShown"] = composition.cockpitState.pendingHandoff != nil
         report["handoffTask"] = composition.cockpitState.pendingHandoff?.task ?? ""
+        // **Refused on the way out, and this is load-bearing** (F-142).
+        //
+        // A shown handoff opens the cockpit's confirmation sheet, and a sheet still attached when
+        // `NSApp.terminate` runs is how a self-check turns into a hung gate stage — measured here,
+        // twice, at twenty minutes apiece. Cancelling is also the truthful end for a handoff no
+        // person asked for: `cancelHandoff()` is the *refuse* half of the surface, so this probe
+        // leaves the store exactly as it found it.
+        composition.priorityHost.cancelHandoff()
+        report["handoffWasDismissed"] = composition.cockpitState.pendingHandoff == nil
         // Re-read after the drive: `handoffReceived` can only be in here because the shell's own
         // URL wire ran.
         report["wiresFired"] = composition.shellWires.map(\.rawValue).sorted()
@@ -1271,6 +1280,14 @@ enum SelfCheck {
         return NSApp.mainMenu?.performKeyEquivalent(with: event) ?? false
     }
 
+    /// Take down every attached sheet, so nothing can block `NSApp.terminate`.
+    @MainActor
+    private static func dismissEverySheet() {
+        for window in NSApp.windows {
+            if let sheet = window.attachedSheet { window.endSheet(sheet) }
+        }
+    }
+
     /// The resolved status token table.
     ///
     /// Resolved, not declared: the `label` here is what the running app would actually
@@ -1443,18 +1460,21 @@ enum SelfCheck {
 
     @MainActor
     static func runAndTerminate(writingTo path: String, activation: Activation) {
-        // The key-equivalent probes perform real commands, and one of them can open a file
-        // importer. A sheet still up when `NSApp.terminate` runs is how a self-check turns into
-        // a hung gate stage, so every attached sheet is dismissed first.
-        for window in NSApp.windows {
-            if let sheet = window.attachedSheet { window.endSheet(sheet) }
-        }
+        // Dismissed **before and after** the report, and the second pass is the one that matters.
+        //
+        // A sheet still attached when `NSApp.terminate` runs is how a self-check turns into a hung
+        // gate stage — measured here, twice, at twenty minutes apiece. The sheets that can be up
+        // are the ones `report(activation:)` itself opens: the ⌘O probe's file importer and the
+        // handoff probe's confirmation surface. A pass that runs before it therefore cleans up
+        // after the *previous* launch and nothing else, which is what this used to be.
+        dismissEverySheet()
 
         do {
             let data = try JSONSerialization.data(
                 withJSONObject: report(activation: activation),
                 options: [.prettyPrinted, .sortedKeys]
             )
+            dismissEverySheet()
             try data.write(to: URL(fileURLWithPath: path), options: .atomic)
             print("SELF-CHECK WROTE \(path)")
             fflush(stdout)
