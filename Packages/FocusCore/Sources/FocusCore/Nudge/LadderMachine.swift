@@ -64,6 +64,14 @@ public struct LadderMachine: Sendable, Equatable {
     /// resolved by the next `.delivery` event.
     public private(set) var offered: LadderRung?
 
+    /// **Where the ladder was standing before the last delivery** (focus-56y).
+    ///
+    /// Kept so that a delivery which turns out not to have been one can be taken back exactly —
+    /// see `undeliver(at:)`. It is not a history and it is not an undo stack: one step, cleared
+    /// by anything that moves the ladder for a different reason, because a delivery that has been
+    /// ignored or de-escalated is no longer a delivery there is anything to take back.
+    private var stateBeforeDelivery: LadderState?
+
     public init(state: LadderState = .idle) {
         self.state = state
         self.liveMandate = state.rung?.mandate
@@ -147,6 +155,7 @@ public struct LadderMachine: Sendable, Equatable {
             state = .idle
             liveMandate = nil
             offered = nil
+            stateBeforeDelivery = nil
 
         case .tick:
             // Time passing changes no state. The reading it carries is what `candidate(…)`
@@ -168,6 +177,7 @@ public struct LadderMachine: Sendable, Equatable {
             // de-escalation.
             state = .idle
             offered = nil
+            stateBeforeDelivery = nil
         }
         liveMandate = mandate
     }
@@ -181,6 +191,10 @@ public struct LadderMachine: Sendable, Equatable {
         switch delivery {
         case .delivered:
             guard let attempted else { return }
+            // Remembered before it is overwritten, so `undeliver(at:)` can put the ladder back
+            // where it stood rather than guessing at it. There is nowhere else to recover it
+            // from: the state before a rung was delivered is not a function of the rung.
+            stateBeforeDelivery = state
             // The ignore count belongs to the run of unanswered rungs, not to the rung, so it
             // is carried across an escalation: three ignored rungs is three, whether they were
             // three glyphs or a glyph, a panel and a notification.
@@ -200,8 +214,46 @@ public struct LadderMachine: Sendable, Equatable {
         }
     }
 
+    /// **A rung that was delivered was not delivered after all** (focus-56y, R-81).
+    ///
+    /// R-81 says a rung nobody could see does not advance the ladder, and the show path enforces
+    /// it at the show: a panel whose corrections are out of reach is recorded as a deferral and
+    /// the escalation clock never starts. That rule has a second moment, and nothing enforced it
+    /// there. A panel is deliberately sticky — it waits for an answer rather than vanishing when
+    /// somebody clicks back into their work — so the display it was placed on can be **replaced
+    /// underneath it**: undocking, a projector, Sidecar, a resolution change. The rung was seen
+    /// for as long as that took and is unanswerable afterwards, and a ladder that escalated
+    /// through it would arrive at the loudest rung it has having shown the person nothing.
+    ///
+    /// So the delivery is taken back, exactly: the ladder returns to the state it was standing in
+    /// before it, which is the state whose `candidate(at:budgetPermits:)` offers **this same
+    /// rung** again — no `deliveredAt`, so fact 3 is unmet and there is nothing to escalate from,
+    /// and no climb-down, so the person is not sent back to the bottom for something the app did.
+    ///
+    /// Deliberately **not** an undo of anything else. It does nothing at `.idle` (there was no
+    /// delivery), nothing at `.heldAtAmbient` (the ladder has already stopped for a different and
+    /// stronger reason), and nothing once the rung has been ignored or de-escalated — by then the
+    /// delivery has been answered for, and taking it back would be rewriting history rather than
+    /// correcting it.
+    ///
+    /// - Parameter now: a reading of the injected monotonic clock. Unused by the transition and
+    ///   required anyway, so that every mutating entry point on this type has the same shape and
+    ///   none of them can quietly acquire a clock of its own (R-96i).
+    @discardableResult
+    public mutating func undeliver(at now: Duration) -> LadderState {
+        guard case .engaged = state, let before = stateBeforeDelivery else { return state }
+        _ = now
+        state = before
+        stateBeforeDelivery = nil
+        offered = nil
+        return state
+    }
+
     /// A delivered rung went unanswered — no correction, no snooze, no pause, no return.
     private mutating func ignore(now: Duration) {
+        // The delivery has been answered for. Whatever happens next, it is no longer a delivery
+        // there is anything to take back.
+        stateBeforeDelivery = nil
         guard case .engaged(let rung, let deliveredAt, let ignored) = state else { return }
 
         let count = ignored + 1

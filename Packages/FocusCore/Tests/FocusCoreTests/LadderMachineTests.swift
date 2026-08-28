@@ -405,4 +405,73 @@ struct LadderMachineTests {
 
         #expect(machine.state == .idle)
     }
+
+    // MARK: - A delivery that turned out not to be one (focus-56y)
+
+    /// **R-81 has a second moment, and the ladder can be told about it.**
+    ///
+    /// A panel is deliberately sticky, so the display it was placed on can be replaced underneath
+    /// it — undocking, a projector, Sidecar. The rung was on screen for as long as that took and
+    /// is unanswerable afterwards, and a ladder that escalated through it would arrive at the
+    /// loudest rung it has having shown the person nothing. So the delivery is taken back
+    /// **exactly**: not a climb-down to the bottom, which would punish somebody for something the
+    /// app did, and not a no-op, which is the defect.
+    @Test("un-delivering a rung offers that same rung again rather than the one above it")
+    func undeliveringOffersTheSameRungAgain() {
+        var machine = LadderMachine()
+        // Two real deliveries, so the ladder is standing at the panel rung with a history behind
+        // it — the case where "back to idle" and "back to where it was" are different answers.
+        let ambient = Self.delivering(&machine, mandate: Self.decoy, at: .seconds(0))
+        #expect(ambient?.kind == .ambient)
+
+        let at = RelevancePolicy.escalationDwell
+        machine.reduce(.mandate(Self.decoy), now: at)
+        let panel = machine.offer(at: at, budgetPermits: true)
+        #expect(panel?.kind == .panel)
+        machine.reduce(.delivery(.delivered(.panel)), now: at)
+        #expect(machine.state.rung?.kind == .panel)
+
+        // The display changes and the panel rung is stranded.
+        machine.undeliver(at: at + .seconds(30))
+
+        // Not idle: the ambient rung really was delivered and is not being re-shown.
+        #expect(machine.state.rung?.kind == .ambient)
+        #expect(
+            machine.candidate(at: at + .seconds(30), budgetPermits: true)?.kind == .panel,
+            "the ladder does not offer the stranded rung again"
+        )
+        // And no escalation clock is running from a delivery that did not happen: the next rung
+        // up is never offered on the strength of it.
+        #expect(machine.offered == nil)
+    }
+
+    /// **It is a correction, not an undo stack.** One step, and only while there is a delivery
+    /// standing that nothing else has already answered for.
+    @Test("un-delivering does nothing at idle, at a held ladder, or twice")
+    func undeliveringIsOneStepAndOnlyWhereThereIsADelivery() {
+        var idle = LadderMachine()
+        idle.reduce(.mandate(Self.decoy), now: .seconds(0))
+        #expect(idle.undeliver(at: .seconds(0)) == .idle)
+
+        // Twice is once: the second call has nothing left to take back.
+        var machine = LadderMachine()
+        _ = Self.delivering(&machine, mandate: Self.decoy, at: .seconds(0))
+        let at = RelevancePolicy.escalationDwell
+        machine.reduce(.mandate(Self.decoy), now: at)
+        machine.offer(at: at, budgetPermits: true)
+        machine.reduce(.delivery(.delivered(.panel)), now: at)
+        machine.undeliver(at: at)
+        #expect(machine.state.rung?.kind == .ambient)
+        machine.undeliver(at: at)
+        #expect(machine.state.rung?.kind == .ambient, "a second un-delivery unwound a delivery it had no claim on")
+
+        // A rung the person has already ignored has been answered for. Taking the delivery back
+        // afterwards would be rewriting history rather than correcting it.
+        var ignored = LadderMachine()
+        _ = Self.delivering(&ignored, mandate: Self.decoy, at: .seconds(0))
+        ignored.reduce(.rungIgnored, now: .seconds(10))
+        let after = ignored.state
+        ignored.undeliver(at: .seconds(20))
+        #expect(ignored.state == after)
+    }
 }
