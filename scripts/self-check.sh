@@ -513,9 +513,51 @@ print(f"note axIsProcessTrusted = {report.get('axIsProcessTrusted')!r} (recorded
 # The title is read from the item AppKit built and validated, not from the UndoManager's own
 # `undoMenuItemTitle`: F-93's claim is that the domain journal reaches the standard Edit menu
 # with no menu code of our own, and only the menu can witness that.
+#
+# ## The chain is asserted first, so a failure names its cause (focus-h6d, focus-icq)
+#
+# These two assertions used to fail on this machine — `menuItemTitle` came back `Undo`, once
+# `Undo Typing`, with `enabledAfterUndo` true — and the report said nothing about why. Measured
+# in the running app: `journalUndoManager === keyWindow.undoManager` is TRUE, so the wiring is
+# correct; the key window's first responder was a FIELD EDITOR, the shared NSTextView AppKit
+# installs for a focused `TextField`, and NSTextView answers `undoManager` with its own. The menu
+# was validating the text field's undo, which is macOS working — while somebody is editing text,
+# Undo undoes their typing.
+#
+# F-93's claim is about the other state, so the probe now ends editing before reading and the
+# three facts it depends on are checked here. A regression in the wiring fails on
+# `windowUndoManagerIsJournal`; a probe that read the menu mid-edit fails on
+# `firstResponderIsFieldEditor`; and only a genuine break in the menu integration reaches the
+# four title and enablement assertions below, which are unchanged.
 
 undo = report.get("undo") or {}
 check(undo.get("available") is True, "the cockpit window has an undo manager", undo)
+check(
+    undo.get("keyWindowIsCockpit") is True,
+    "the undo reading was taken through the cockpit's own window",
+    undo.get("keyWindowIsCockpit"),
+)
+check(
+    undo.get("windowUndoManagerIsJournal") is True,
+    "the journal registers on the manager the key window hands to the responder chain (F-93)",
+    undo.get("windowUndoManagerIsJournal"),
+)
+check(
+    undo.get("firstResponderIsFieldEditor") is False,
+    "no field editor stands between the Edit menu and the window's undo manager",
+    undo.get("firstResponderIsFieldEditor"),
+)
+check(
+    undo.get("responderUndoManagerIsJournal") is True,
+    "the responder chain the Edit menu is validated against resolves to the journal's manager",
+    undo.get("responderUndoManagerIsJournal"),
+)
+print(
+    "note the reading before editing ended: "
+    f"firstResponderWasFieldEditor={undo.get('firstResponderWasFieldEditor')!r}, "
+    f"menuItemTitleWhileEditing={undo.get('menuItemTitleWhileEditing')!r} "
+    "(recorded, never asserted — a focused text field owning Undo is macOS working)"
+)
 check(
     undo.get("menuItemTitle") == "Undo Change Priority",
     "the Edit menu reads 'Undo Change Priority' after one scripted mutation",

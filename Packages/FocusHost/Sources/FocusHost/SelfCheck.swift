@@ -895,6 +895,29 @@ enum SelfCheck {
     /// The mutation runs against an **in-memory** container, so a self-check can never touch
     /// the user's priority. The undo manager is the live one on purpose: a manager built for
     /// the occasion would prove nothing about the menu.
+    ///
+    /// ## The responder chain is reported, and it is why this used to fail (focus-h6d, focus-icq)
+    ///
+    /// This probe read the Edit menu without saying anything about the chain AppKit walks to
+    /// build it, and on this machine it was reading a different undo manager entirely. Measured
+    /// here, in the running app: `journalUndoManager === keyWindow.undoManager` is **true** — the
+    /// wiring F-93 claims is correct and always was — while the key window's first responder is a
+    /// **field editor**, an `NSTextView` AppKit installs for whichever `TextField` in the cockpit
+    /// takes focus, and `NSTextView` overrides `undoManager` to return its own. So the item the
+    /// menu validated belonged to the text field: `menuItemTitle` came back `Undo`, and on one run
+    /// `Undo Typing`, with `enabledAfterUndo` true because that manager still had something in it.
+    ///
+    /// That is not a defect in the journal and it is not a defect in the menu integration — it is
+    /// macOS behaving exactly as it should. While a person is editing text, Undo undoes their
+    /// typing; the document's undo is what they get back when they are not. F-93's claim is about
+    /// the latter, so the reading is taken in the latter state and **the state is asserted rather
+    /// than assumed**: the chain is reported before and after, editing is ended, and
+    /// `self-check.sh` fails on the wiring and on the responder rather than on the symptom.
+    ///
+    /// It also explains why this stage was intermittent — three gate runs on the same code passed
+    /// earlier the same day. Whether a field editor exists at all depends on what the cockpit is
+    /// drawing, which depends on the store: it is app state, not code, and reading it as a verdict
+    /// on the code is what a probe that does not state its preconditions invites.
     @MainActor
     static func undoReport() -> [String: Any] {
         var report: [String: Any] = [:]
@@ -909,6 +932,23 @@ enum SelfCheck {
         report["groupsByEvent"] = manager.groupsByEvent
         report["applicationIsActive"] = NSApp.isActive
         report["hasKeyWindow"] = NSApp.keyWindow != nil
+
+        // --- the chain this reading is taken through, before anything is done about it --------
+        let window = NSApp.keyWindow
+        report["keyWindowIsCockpit"] = window != nil && window === liveCockpitWindow()
+        // F-93's actual claim, and the one nothing asserted: the journal registers on the manager
+        // the key window hands to the responder chain.
+        report["windowUndoManagerIsJournal"] = window?.undoManager === manager
+        report["firstResponderWasFieldEditor"] = isFieldEditor(window?.firstResponder)
+        report["menuItemTitleWhileEditing"] = editMenuUndoItem()?.title ?? ""
+
+        // End text editing, the way clicking outside a field does. A person reaching for Undo to
+        // take back a priority change is not mid-word in a text field, and that is the state
+        // F-93 describes — so it is the state the reading is taken in, and it is checked.
+        let endedEditing = window?.makeFirstResponder(nil) ?? false
+        report["editingEnded"] = endedEditing
+        report["firstResponderIsFieldEditor"] = isFieldEditor(window?.firstResponder)
+        report["responderUndoManagerIsJournal"] = window?.firstResponder?.undoManager === manager
 
         do {
             let container = try FocusStore.makeContainer(kind: .inMemory)
@@ -937,6 +977,19 @@ enum SelfCheck {
         }
 
         return report
+    }
+
+    /// Whether this responder is a **field editor** — the shared `NSTextView` AppKit installs in
+    /// front of whichever text field has focus.
+    ///
+    /// It matters because `NSTextView` overrides `undoManager` to answer with its own, so a field
+    /// editor in the chain is the one thing that can stand between the Edit menu and the window's
+    /// manager. Named rather than inlined, because "the first responder is a text view" and "the
+    /// first responder is the text field's editor" are different claims and only the second one
+    /// explains the reading.
+    @MainActor
+    private static func isFieldEditor(_ responder: NSResponder?) -> Bool {
+        (responder as? NSTextView)?.isFieldEditor ?? false
     }
 
     /// The Edit menu's Undo item, after asking AppKit to validate the menu.
