@@ -149,6 +149,32 @@ final class NudgeHost {
     /// asks about the same set the panel was drawn with.
     private var openQuestionActions: [String] = []
 
+    /// **The commitment the open question was asked under** (focus-lmo, U-1).
+    ///
+    /// Captured when the question goes up, and it is the key every one of its endings is written
+    /// against: the receipt, the learned rule, and the deferral rows that stand in for a receipt
+    /// when the surface was lost.
+    ///
+    /// It has to be captured rather than fetched, because the panel is deliberately sticky —
+    /// `hidesOnDeactivate` is `false` (R-89) — so a question waits for an answer while the person
+    /// gets on with their day, and one of the things they may do in that interval is commit to a
+    /// **new** priority. Both resolution paths used to ask the store for the active task at the
+    /// moment the question *ended*: `answer(_:)` through `priorities.activeTask()` and
+    /// `expireOpenQuestion()` through `activePriorityID()`. Under U-1 that breaks the ruling in
+    /// both directions at once.
+    ///
+    /// * The **new** commitment is born carrying an immutable receipt about a question nobody put
+    ///   to it. `hasAsked(…)` is gate 11 of the suppression stack, so the app is permanently
+    ///   silent about a subject it never asked about under this priority.
+    /// * The **old** commitment keeps no receipt at all, so the very question the person just
+    ///   answered is asked again the next time they return to it — and *"repeat-asking is a
+    ///   defect"* is U-1's own sentence.
+    ///
+    /// The learned rule travels with it: `QueryLedger.answer(…)` scopes the rule to the task row
+    /// it is handed, so a live fetch attached what the person learned about the old commitment to
+    /// the new one.
+    private var openQuestionPriorityID: UUID?
+
     init(
         context: ModelContext,
         sessionRules: SessionRuleBox,
@@ -462,6 +488,9 @@ final class NudgeHost {
         slot = taken
         openWarrant = warrant
         openWarrantAskedAt = dateProvider.now
+        // The commitment as it stands **now**, at the ask. Everything this question ever writes
+        // is keyed to it (focus-lmo).
+        openQuestionPriorityID = priorityID
         openQuestionSurface = nil
         openQuestionReadingAtAsk = .unknowable
         openQuestionActions = []
@@ -612,7 +641,7 @@ final class NudgeHost {
         deliverQuestion(
             surface: .popoverBadge,
             warrant: warrant,
-            priorityID: activePriorityID(),
+            priorityID: openQuestionPriorityID,
             now: monotonicClock.elapsed
         )
     }
@@ -693,8 +722,12 @@ final class NudgeHost {
         let now = monotonicClock.elapsed
 
         do {
-            let task = try priorities.activeTask()
-            guard let priorityID = task?.id else { return }
+            // **The priority the question was asked under, not the one that happens to be
+            // active now** (focus-lmo). The task row is fetched *by that identifier*, so the
+            // rule the ledger writes in the same transaction is scoped to the commitment the
+            // person was answering about.
+            guard let priorityID = openQuestionPriorityID else { return }
+            let task = try priorities.task(id: priorityID)
             let outcome = try ledger.answer(
                 answer,
                 priorityID: priorityID,
@@ -849,7 +882,8 @@ final class NudgeHost {
                 it is un-asked rather than counted: \(summary, privacy: .public)
                 """
             )
-            let priorityID = activePriorityID()
+            // The question's own key, not the live pointer (focus-lmo).
+            let priorityID = openQuestionPriorityID
             panel.hide()
             slot = slot.released()
             forgetOpenQuestion()
@@ -908,6 +942,7 @@ final class NudgeHost {
     private func forgetOpenQuestion() {
         openWarrant = nil
         openWarrantAskedAt = nil
+        openQuestionPriorityID = nil
         openQuestionSurface = nil
         openQuestionReadingAtAsk = .unknowable
         openQuestionActions = []
@@ -915,7 +950,7 @@ final class NudgeHost {
 
     /// A question closed to make room for an accusation (R-84a).
     private func close(_ preempted: PreemptedQuery) {
-        guard let priorityID = activePriorityID() else { return }
+        guard let priorityID = openQuestionPriorityID else { return }
         // A question the person could never read is not a question that was asked, so
         // preempting it costs nothing and writes nothing (focus-kby). The ledger decides that,
         // not this host: it is handed the two readings and the end path, and it writes or
@@ -1054,7 +1089,10 @@ final class NudgeHost {
     /// on a surface nobody saw (focus-kby). That question is left unwritten, on purpose, and
     /// comes back.
     private func expireOpenQuestion() {
-        guard let warrant = openWarrant, let priorityID = activePriorityID() else { return }
+        // The ask-time key, for the reason `openQuestionPriorityID` exists: this is the path a
+        // priority change itself travels down, so reading the live pointer here would write the
+        // receipt against the commitment that has just replaced the one asked about (focus-lmo).
+        guard let warrant = openWarrant, let priorityID = openQuestionPriorityID else { return }
         recordQuestion(
             subjectKind: warrant.subject.kind,
             subject: warrant.subject.identifier,
