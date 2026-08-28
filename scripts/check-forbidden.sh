@@ -358,8 +358,13 @@ check "SC-8" "no DoNotDisturb plist poking" \
 check "SC-8" "no private-framework dlopen" \
     'dlopen\([[:space:]]*"/System/Library/PrivateFrameworks'
 
+# `=` and not `==`, because R-19 bans an **assignment** and `===` is a comparison. The old
+# pattern matched `window.undoManager === manager` — the identity check that proves the journal
+# registers on the manager the key window hands to the responder chain (F-93), which is the
+# opposite of the thing being banned. A lint that fires on the proof of a rule is a lint that
+# gets the rule turned off.
 check "R-19" "no ModelContext.undoManager assignment (undo is the PriorityStore journal)" \
-    '\.undoManager[[:space:]]*='
+    '\.undoManager[[:space:]]*=([^=]|$)'
 
 check "R-26" "no bare Date() outside DateProvider" \
     '\bDate\(\)' \
