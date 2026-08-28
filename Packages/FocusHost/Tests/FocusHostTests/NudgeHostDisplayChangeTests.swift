@@ -64,6 +64,20 @@ struct NudgeHostDisplayChangeTests {
         )
     ]
 
+    /// A laptop screen. Smaller than the desk in both axes and a different shape, so a panel
+    /// placed for the desk has to move — but big enough to hold a question with its three answers
+    /// in reach, which is what makes it the *surviving* case rather than the stranded one.
+    static let laptop = [
+        DisplayGeometry(
+            displayID: 4,
+            screenIndex: 0,
+            isPrimary: true,
+            frame: ScreenRect(x: 0, y: 0, width: 1440, height: 900),
+            visibleFrame: ScreenRect(x: 0, y: 0, width: 1440, height: 875),
+            backingScaleFactor: 2
+        )
+    ]
+
     /// A display that cannot hold a panel `height` points tall, however it is placed: its usable
     /// height is one panel margin short of what the content needs.
     ///
@@ -318,6 +332,80 @@ struct NudgeHostDisplayChangeTests {
                 on: fixture.log.today, priorityID: fixture.priorityID
             ).queriesForPriorityToday == 0,
             "a question nobody could answer is still charged to the day's query cap"
+        )
+    }
+
+    // MARK: - …and a question the new display can hold is left alone
+
+    /// **The question branch's other half, and the one nothing exercised** (focus-22m, S9).
+    ///
+    /// Every case above ends with the question being taken away. That leaves the branch's
+    /// **guard** — `guard currentReadability() != .readable else { return }` — unexercised: with
+    /// it deleted, every one of those tests still passes, and a question that merely *moved* onto
+    /// a display which can hold it perfectly well would be un-asked, deferred and taken off the
+    /// screen the person is looking at. That is the loop destroying its own licensed interruption
+    /// because a projector was plugged in.
+    ///
+    /// The last two lines are the ones that matter: the question is still there, and it is still
+    /// answerable. An un-asked question has no warrant left, so `answer(_:)` returns without
+    /// writing, and the receipt count says so.
+    @Test("a question the new display can hold is moved, not un-asked")
+    func aQuestionTheNewDisplayCanHoldSurvives() throws {
+        let fixture = try NudgeHostFixture()
+        defer { fixture.tearDown() }
+        fixture.panel.displays = { Self.desk }
+
+        fixture.host.consider(NudgeHostFixture.uncertainJudgement(subject: Self.subject))
+        NudgeHostFixture.settle()
+        #expect(fixture.host.deliveredCount == 1)
+        #expect(fixture.panel.isVisible)
+        let onTheDesk = fixture.panel.frame
+        let deferralsBefore = try fixture.interventions()
+            .count { $0.dispositionRaw == InterventionDisposition.deferred.rawValue }
+
+        // The desk display is unplugged and the laptop screen is the only one left. It is a
+        // different size and a different shape, so the panel really does have to be re-placed.
+        fixture.panel.displays = { Self.laptop }
+        Self.theDisplayConfigurationChanges()
+
+        #expect(
+            fixture.panel.isVisible,
+            "a question was withdrawn from a display that could hold it perfectly well"
+        )
+        let onTheLaptop = fixture.panel.frame
+        #expect(
+            onTheLaptop.x != onTheDesk.x || onTheLaptop.y != onTheDesk.y,
+            "the panel did not move: it is still placed for a display that is no longer there"
+        )
+        let reading = fixture.panel.decisionSurfaceReading(
+            offering: QueryPresentation.actionOrder.map(\.rawValue)
+        )
+        #expect(
+            reading.everyActionIsReachable,
+            "the fixture did not build a display that can hold the question: \(reading.summary)"
+        )
+
+        // Nothing was taken back, because nothing needed to be: no deferral, and the asking is
+        // still charged to the day exactly once.
+        #expect(
+            try fixture.interventions()
+                .count { $0.dispositionRaw == InterventionDisposition.deferred.rawValue }
+                == deferralsBefore,
+            "a question that simply moved was written down as a deferral"
+        )
+        #expect(fixture.host.deferredCount == 0)
+        #expect(
+            try fixture.log.budget(
+                on: fixture.log.today, priorityID: fixture.priorityID
+            ).queriesForPriorityToday == 1
+        )
+
+        // And the whole point: it is still the open question, and the person can still answer it.
+        #expect(fixture.host.deliveredCount == 1, "the question was delivered a second time")
+        fixture.host.answer(.yesAddIt)
+        #expect(
+            try fixture.receipts().count == 1,
+            "the question was un-asked behind the person's back, so their answer wrote nothing"
         )
     }
 

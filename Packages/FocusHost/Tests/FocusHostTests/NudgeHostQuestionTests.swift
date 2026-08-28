@@ -180,6 +180,67 @@ struct NudgeHostQuestionTests {
         )
     }
 
+    /// **…and it is delivered exactly once, however many times the popover is opened on it**
+    /// (focus-22m, S5).
+    ///
+    /// `popoverPresentedTheQuestion()` is wired to `MenuBarController.onPopoverDidShow`, which
+    /// fires on **every** open. The guard that makes a second open cost nothing is
+    /// `openQuestionReadingAtAsk != .readable`, and with it removed a person who closed the
+    /// popover and opened it again would have their one question delivered twice: two rows, two
+    /// units of the day's interruption budget spent on one asking, and the first row orphaned
+    /// forever because `openRecordID` is overwritten and `complete(_:)` can only ever fill in the
+    /// last one. Under U-1 that budget is what decides whether the app may speak again at all.
+    @Test("a badge question is delivered once however many times the popover is opened")
+    func aBadgeQuestionIsDeliveredOnce() throws {
+        let fixture = try NudgeHostFixture()
+        defer { fixture.tearDown() }
+        fixture.host.preferences = NudgePreferences(voice: .standard, reducedInterruption: true)
+
+        fixture.host.consider(NudgeHostFixture.uncertainJudgement(subject: Self.subject))
+        NudgeHostFixture.settle()
+        try #require(fixture.host.pendingPopoverQuery != nil)
+
+        try MenuBarStage.open(
+            fixture.menuBar,
+            showing: MenuBarPresentation(
+                status: .uncertain, pendingQuery: fixture.host.pendingPopoverQuery
+            ),
+            onDidShow: { fixture.host.popoverPresentedTheQuestion() }
+        )
+        try #require(fixture.host.deliveredCount == 1)
+
+        // The person closes the popover and opens it again — the ordinary thing to do with a
+        // menu-bar item, and the wire fires every time.
+        fixture.menuBar.closePopover()
+        NudgeHostFixture.settle(0.2)
+        for _ in 0..<6 where !fixture.menuBar.isPopoverShown {
+            fixture.menuBar.togglePopover()
+            NudgeHostFixture.settle(0.2)
+        }
+        try #require(fixture.menuBar.isPopoverShown, "the popover never re-opened")
+
+        #expect(
+            fixture.host.deliveredCount == 1,
+            "one question was counted as two askings because the popover was opened twice"
+        )
+        let delivered = try fixture.interventions()
+            .filter { $0.dispositionRaw == InterventionDisposition.delivered.rawValue }
+        #expect(delivered.count == 1, "one asking wrote two rows")
+
+        // …and the row that exists is the one the person's answer completes, rather than an
+        // orphan the first open left behind.
+        fixture.host.answer(.yesAddIt)
+        let completed = try fixture.interventions()
+            .filter { $0.outcomeRaw != nil }
+        #expect(completed.count == 1, "the delivered row was orphaned by a second delivery")
+        #expect(
+            try fixture.log.budget(
+                on: fixture.log.today, priorityID: fixture.priorityID
+            ).queriesForPriorityToday == 1,
+            "one question spent two units of the day's query cap"
+        )
+    }
+
     // MARK: - Mutation 3 — a surface that has gone cannot be re-read
 
     /// **A question whose surface has gone is not written down** (focus-kby).
