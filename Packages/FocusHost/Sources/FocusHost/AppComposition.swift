@@ -166,6 +166,15 @@ public final class AppComposition {
     /// The session the format was chosen for. A new session chooses again, from its own plan.
     private var menuBarTimerSessionID: UUID?
 
+    /// **The three transitions that end an open nudge** (focus-d0a).
+    ///
+    /// `NudgeHost.sessionEnded()`, `phaseLeftFocus()` and `priorityChanged()` had no caller
+    /// anywhere in the shipping graph, so the loop was never told any of them and an open
+    /// question stayed live and answerable long after the situation it was about had gone. The
+    /// facts arrive here as a level and the loop needs an edge; the watch is what turns one into
+    /// the other, and it is a value so that a test can drive it.
+    private var lifecycle = NudgeLifecycleWatch()
+
     /// - Parameter storeKind: where the data lives. `applicationSupport` is the application's
     ///   own store and is the default; the unit lane passes `inMemory`, because a test that
     ///   opened the real store would be a test that could change what the person sees. It is a
@@ -377,39 +386,8 @@ public final class AppComposition {
             self.priorityHost.setPriority(intent: result.intent, doneWhen: result.doneWhen)
         }
 
-        // The three hosts, joined. Assigned here rather than in `init` because each closure
-        // captures the composition root, which does not exist until `init` has returned.
-        //
-        // The chain is one-way and terminates: the graph changes the stored session, the session
-        // host re-projects it, and the projection is pushed into the value the cockpit draws —
-        // which is assigned only when it actually differs, so nothing here can oscillate.
-        sensingHost.onSessionChanged = { [weak self] in
-            self?.sessionHost.refresh()
-        }
-        sensingHost.onSensingChanged = { [weak self] in
-            self?.refreshCockpit()
-        }
-        sessionHost.onChange = { [weak self] in
-            self?.refreshCockpit()
-        }
-
-        // The relevance lane, joined to the two things that already happen.
-        //
-        // `onSnapshotInvalidated` fires on exactly the four events R-65 names — the priority
-        // changed, its revision changed, a rule was written, a context item moved — and on
-        // nothing else, so the store is read when a person did something rather than every five
-        // seconds. The session-rule closure is the only thing this host may ask the session
-        // host for: `SessionRuleBox` is the sole owner of the session authority (R-72.2), and a
-        // reference to the whole host would be a licence to reach for the rest of it.
-        priorityHost.onSnapshotInvalidated = { [weak self] in
-            self?.relevanceHost.invalidateSnapshot()
-        }
-        relevanceHost.sessionRules = { [weak sessionHost] priorityID in
-            sessionHost?.sessionRules(forPriority: priorityID) ?? []
-        }
+        joinHosts()
         relevanceHost.invalidateSnapshot()
-
-        startNudgeLoop()
 
         registerHotKey(storedHotKeySpec())
 
@@ -423,6 +401,44 @@ public final class AppComposition {
         // session, the live observer count and the capability matrix as the probe just read it —
         // rather than the placeholder values `init` could build before any of them existed.
         refreshCockpit()
+    }
+
+    /// **Every host joined to every other, and nothing started.**
+    ///
+    /// Assigned here rather than in `init` because each closure captures the composition root,
+    /// which does not exist until `init` has returned — and separate from the rest of `start()`
+    /// because the rest of `start()` registers a global hot key and attaches the observer graph,
+    /// which a test process has no business doing. `CompositionRootTests` calls this, so the
+    /// wires it drives are the shipping wires rather than closures a test installed.
+    ///
+    /// The chain is one-way and terminates: the graph changes the stored session, the session
+    /// host re-projects it, and the projection is pushed into the value the cockpit draws —
+    /// which is assigned only when it actually differs, so nothing here can oscillate.
+    func joinHosts() {
+        sensingHost.onSessionChanged = { [weak self] in
+            self?.sessionHost.refresh()
+        }
+        sensingHost.onSensingChanged = { [weak self] in
+            self?.refreshCockpit()
+        }
+        // Every session verb funnels through `SessionHost.refresh()`, so this is the one wire
+        // that carries a session ending and a phase leaving focus into the nudge loop
+        // (focus-d0a).
+        sessionHost.onChange = { [weak self] in
+            self?.refreshCockpit()
+        }
+
+        // The nudge lane, joined before the relevance lane: it owns
+        // `priorityHost.onSnapshotInvalidated`, which the relevance lane rides on, and a second
+        // assignment would silently replace it.
+        startNudgeLoop()
+
+        // The session-rule closure is the only thing the relevance host may ask the session host
+        // for: `SessionRuleBox` is the sole owner of the session authority (R-72.2), and a
+        // reference to the whole host would be a licence to reach for the rest of it.
+        relevanceHost.sessionRules = { [weak sessionHost] priorityID in
+            sessionHost?.sessionRules(forPriority: priorityID) ?? []
+        }
     }
 
     /// Join the nudge loop to the three things that already happen.
@@ -463,11 +479,55 @@ public final class AppComposition {
             self?.nudgeHost.consider(judgement)
         }
 
+        // **The loop is told when the world it was speaking about ends** (focus-d0a).
+        //
+        // `onSnapshotInvalidated` fires on exactly the four events R-65 names — the priority
+        // changed, its revision changed, a rule was written, a context item moved — and on
+        // nothing else, so the store is read when a person did something rather than every five
+        // seconds. It is the nudge lane's route to a priority change as well as the relevance
+        // lane's route to a stale snapshot, and it fires *before* `CockpitState` is reassigned,
+        // which is why the reading below is taken from `snapshotKey` rather than from `state`.
+        priorityHost.onSnapshotInvalidated = { [weak self] in
+            guard let self else { return }
+            self.relevanceHost.invalidateSnapshot()
+            self.noticeLifecycleTransitions()
+        }
+
         // Every command reaches the nudge loop as well as the cockpit, through **one** queue in
         // one order (F-145). The cockpit answers the capture and session verbs; the loop answers
         // the four nudge ones and ignores the rest.
         FocusCommandCenter.shared.observe { [weak self] command in
             self?.nudgeHost.perform(command)
+        }
+    }
+
+    /// **Tell the loop about anything that ended what it was speaking about** (focus-d0a).
+    ///
+    /// Called from `refreshCockpit()` — which already runs on every accepted activation, e03's
+    /// five-second corroboration tick and every session verb — and from
+    /// `priorityHost.onSnapshotInvalidated`, which is the only moment a priority change is
+    /// observable before the next tick. Under U-1 that difference is the whole point: the panel
+    /// is sticky, so between the commitment and the tick a person can answer a question about a
+    /// priority they have already left.
+    ///
+    /// Internal rather than private so `CompositionRootTests` can drive the real closure's far
+    /// end without also starting the observer graph.
+    func noticeLifecycleTransitions() {
+        let snapshot = sessionHost.snapshot
+        let transitions = lifecycle.observe(
+            sessionID: snapshot?.sessionID,
+            phase: snapshot?.phase,
+            // Read from the snapshot key rather than from `CockpitState`: `PriorityHost` fires
+            // `onSnapshotInvalidated` after moving the key and *before* assigning the state, so
+            // the state still describes the commitment that has just been replaced.
+            priorityID: priorityHost.snapshotKey.priorityID
+        )
+        for transition in transitions {
+            switch transition {
+            case .sessionEnded: nudgeHost.sessionEnded()
+            case .phaseLeftFocus: nudgeHost.phaseLeftFocus()
+            case .priorityChanged: nudgeHost.priorityChanged()
+            }
         }
     }
 
@@ -830,6 +890,10 @@ public final class AppComposition {
     /// the person happened to press something.
     public func refreshCockpit() {
         let snapshot = sessionHost.snapshot
+        // Before the judgement, so a question that belongs to a session which has just ended is
+        // written down and taken off screen rather than left standing for the next one to
+        // inherit (focus-d0a).
+        noticeLifecycleTransitions()
         judge(in: snapshot)
         refreshMenuBar(session: snapshot)
         priorityHost.update(
