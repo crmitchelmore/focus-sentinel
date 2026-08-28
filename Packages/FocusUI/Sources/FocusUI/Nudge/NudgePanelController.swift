@@ -226,6 +226,42 @@ public final class NudgePanelController {
     /// Escape, or the panel's own close affordance. Wired by whoever put content in the panel.
     public var onDismiss: (() -> Void)?
 
+    /// **The displays this panel is placed on, as a seam** (focus-56y).
+    ///
+    /// `currentScreens()` by default, which is `NSScreen.screens` — so the shipping app reads the
+    /// real display list and nothing about its behaviour changes. It is a property rather than a
+    /// static call so a test can hand the panel the display configuration it is about: a rig has
+    /// one screen and cannot be made to grow a second, unplug it, or shrink to 800 × 600, and the
+    /// defect this exists for is precisely what happens when it does.
+    ///
+    /// It is the *display list* that is injectable and nothing else. The panel is a real
+    /// `NSPanel`, the layout is the shipping layout, and the reading is
+    /// `DecisionSurfaceReachability`'s — a test swaps the world, never the answer.
+    public var displays: @MainActor () -> [DisplayGeometry] = { NudgePanelController.currentScreens() }
+
+    /// **The display configuration changed while this panel was up** (focus-56y).
+    ///
+    /// Called *after* the panel has been re-measured and re-placed for the displays that are
+    /// there now, so whoever is listening reads the panel as it currently is rather than as it
+    /// was. Whether what the panel is carrying survives that is not this object's decision — it
+    /// draws and it measures; the nudge loop decides what a reading means.
+    public var onDisplaysChanged: (@MainActor () -> Void)?
+
+    /// **The screen-parameters observation, in a box that can outlive the actor.**
+    ///
+    /// `deinit` is nonisolated, so it may not touch main-actor state — and an observation this
+    /// object registered must still be removed when it goes. The box owns the token and takes it
+    /// down in its own `deinit`, which runs when the controller's last reference does.
+    private final class ScreenObservation: @unchecked Sendable {
+        var token: (any NSObjectProtocol)?
+
+        deinit {
+            if let token { NotificationCenter.default.removeObserver(token) }
+        }
+    }
+
+    private let screenObservation = ScreenObservation()
+
     /// The readings taken immediately **before** the last show, so "unchanged" is checkable.
     public private(set) var readingsBeforeShow: FocusReadings?
     /// The readings taken immediately **after** the last show.
@@ -278,6 +314,49 @@ public final class NudgePanelController {
         layOutContent()
 
         panel.onCancel = { [weak self] in self?.onDismiss?() }
+
+        // **The one event a placement decision can go stale on** (focus-56y).
+        //
+        // Everything else about a nudge is decided at the show and stays decided, and that is
+        // correct: a panel is deliberately sticky, because a nudge that vanished when somebody
+        // clicked back into their work would disappear at the moment it was needed. But the
+        // *display it was placed on* is not a property of the nudge, it is a property of the
+        // machine — and undocking, a projector, Sidecar or a resolution change replaces it under
+        // a window that is already up. Nothing here observed that, so a recommitment placed at
+        // 380 × 772 on a 1920 × 1080 screen stayed at 380 × 772 when the screen became 800 × 600,
+        // at an AppKit origin of y = 600 − 30 − 772 = −202, with five of its six actions off the
+        // bottom of the display and the sixth cut in half.
+        //
+        // AppKit posts this from `NSApplication`; the observation is registered against any
+        // object so that a test can post the same notification rather than needing a second
+        // monitor. It is the *notification wiring itself* that is then under test, which is the
+        // half a direct call to the re-placement would leave unproven.
+        screenObservation.token = NotificationCenter.default.addObserver(
+            forName: NSApplication.didChangeScreenParametersNotification,
+            object: nil,
+            queue: nil
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.displayConfigurationChanged() }
+        }
+    }
+
+    /// **Re-place a live panel for the displays that are there now** (focus-56y).
+    ///
+    /// The same two calls `show(…)` makes, in the same order and for the same reason: the height
+    /// is measured against the display's own ceiling, so it is re-measured before it is re-placed
+    /// rather than the old size being moved about. A panel that is not on screen has no placement
+    /// to correct and is left entirely alone — including its layout, because re-laying out an
+    /// invisible panel would replace the frames a reading is about to be taken from.
+    ///
+    /// `onDisplaysChanged` is called **after** both, synchronously — `layOutContent()` ends in
+    /// `layoutIfNeeded()`, which is what makes the action frames readable in the same turn, and is
+    /// exactly what the show path already relies on when it takes its own reading one line after
+    /// `show(…)`.
+    private func displayConfigurationChanged() {
+        guard panel.isVisible else { return }
+        layOutContent()
+        position()
+        onDisplaysChanged?()
     }
 
     /// The size the window is built at, before anything has been measured. An empty panel's
@@ -348,7 +427,7 @@ public final class NudgePanelController {
         let measured = measurer.sizeThatFits(
             in: CGSize(width: Self.contentWidth, height: .greatestFiniteMagnitude)
         )
-        let ceiling = Self.maximumContentHeight(screens: Self.currentScreens())
+        let ceiling = Self.maximumContentHeight(screens: displays())
         let height = min(max(measured.height, Self.startingSize.height), ceiling)
         // A hair of slack, so a content that measures a fraction over the ceiling because of a
         // rounding difference does not acquire a scroll view it has no use for.
@@ -490,7 +569,7 @@ public final class NudgePanelController {
         DecisionSurfaceReachability.evaluate(
             isVisible: panel.isVisible,
             surfaceFrame: frame,
-            screens: Self.currentScreens(),
+            screens: displays(),
             contentBounds: ScreenRect(
                 x: 0,
                 y: 0,
@@ -592,7 +671,7 @@ public final class NudgePanelController {
         let placement = Self.placement(
             size: panel.frame.size,
             focusedWindowQuartzBounds: nil,
-            screens: Self.currentScreens()
+            screens: displays()
         )
         guard !placement.isEmpty else { return }
         panel.setFrameOrigin(NSPoint(x: placement.x, y: placement.y))
