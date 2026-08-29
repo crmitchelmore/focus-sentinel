@@ -115,11 +115,24 @@ struct AppCompositionConnectionTests {
     /// mutation this kills is the one that made the Privacy pane say nothing was being watched
     /// on a Mac that was watching.
     @Test("the settings connection carries the live graph, field by field")
-    func theSettingsConnectionIsLive() {
+    func theSettingsConnectionIsLive() throws {
         let root = Self.root()
         defer { root.stop() }
         root.perform(InterventionSettingsAction.setVoice(NudgeVoice.warm))
         root.appearance.preference = .dark
+        // The graph is attached and one real judgement is made, so the two Privacy-pane
+        // projections are something other than their empty defaults. Without that,
+        // `summary: .inactive` and `verdict: nil` are what the live graph says anyway and the
+        // two mutations that freeze them are invisible — which is the state the pane was in
+        // when it said nothing was being watched on a Mac that was watching.
+        root.sensingHost.start()
+        root.relevanceHost.observe(
+            JudgeableSubject(bundleIdentifier: "com.example.Reader", isSuppressed: false),
+            phase: .focus,
+            isUserIdle: false
+        )
+        try #require(root.sensingSummary != .inactive, "the graph never attached")
+        try #require(root.verdict != nil, "the engine never judged")
 
         let connection = root.settingsConnection()
 
