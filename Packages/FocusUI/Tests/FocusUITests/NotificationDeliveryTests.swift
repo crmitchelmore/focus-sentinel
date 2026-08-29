@@ -7,70 +7,30 @@ import Testing
 /// A notification centre that answers whatever the test tells it to.
 ///
 /// It exists so this whole suite runs **at zero grants, with no prompt and no notification
-/// centre** — which is what makes R-82's four rulings T1 claims rather than things that can only
-/// be checked on a machine somebody has clicked "Allow" on.
+/// centre**. Since focus-wy0 the seam it stands in for has one call left — the settings read —
+/// so this stub answers that and nothing else: there is no `setCategories` to count and no
+/// `add(_:)` to fail, because the app makes neither.
 @MainActor
 final class StubNotificationCentre: NotificationCentring {
     var status: Int
-    var addResult: NotificationAddResult
-    private(set) var registeredCategoryIdentifiers: Set<String> = []
-    private(set) var setCategoriesCallCount = 0
-    private(set) var addedTitles: [String] = []
-    private(set) var addedCategories: [String] = []
-    /// The `UNNotificationRequest` identifier each banner went out under — the delivery token the
-    /// loop mints so a press arriving an hour later can name the rung it belongs to (focus-zrs).
-    private(set) var addedIdentifiers: [String] = []
-    /// Whether the stub honours a `setCategories` call. P-134 measured the real centre silently
-    /// taking **zero** categories while unauthorised, so the stub can be told to do the same.
-    var acceptsCategories = true
 
-    init(status: Int, addResult: NotificationAddResult = .delivered) {
+    init(status: Int) {
         self.status = status
-        self.addResult = addResult
     }
 
     func authorizationStatus(_ completion: @escaping @MainActor (Int) -> Void) {
         completion(status)
     }
-
-    func setCategories(_ identifiers: Set<String>) {
-        setCategoriesCallCount += 1
-        guard acceptsCategories else { return }
-        registeredCategoryIdentifiers = identifiers
-    }
-
-    func add(
-        identifier: String,
-        title: String,
-        body: String,
-        categoryIdentifier: String,
-        completion: @escaping @MainActor (NotificationAddResult) -> Void
-    ) {
-        addedTitles.append(title)
-        addedCategories.append(categoryIdentifier)
-        addedIdentifiers.append(identifier)
-        completion(addResult)
-    }
 }
 
-/// **The denied path is the automated gate** (R-82, P-134, §4.5).
-@Suite("Notification delivery, and the route around every refusal")
+/// **What the notification boundary still does, and the three things it no longer does**
+/// (R-82, P-134, §4.5, U-2, focus-wy0).
+@Suite("The notification boundary, which now only listens")
 @MainActor
 struct NotificationDeliveryTests {
     /// The delivery token these drives mint. A fixed string rather than a `UUID`, so a failing
     /// line names something a person can read.
     private static let deliveryID = "the rung under test"
-
-    private static func presentation(voice: NudgeVoice = .standard) -> AccusationPresentation {
-        AccusationPresentation(
-            rung: .panel,
-            voice: voice,
-            task: "Write the Q3 proposal",
-            subject: "com.apple.Safari",
-            dwelled: .seconds(1_800),
-            returnTarget: "Pages"
-        )
-    }
 
     // MARK: - Every authorisation state, decoded by an exhaustive switch
 
@@ -84,12 +44,11 @@ struct NotificationDeliveryTests {
     }
 
     /// **An unknown status is never permission.** A future OS that adds a fifth case must not be
-    /// able to turn a silent app into a noisy one, so the default is the conservative reading.
+    /// able to turn a silent app into a noisy one, so the default is the conservative reading —
+    /// which matters for focus-5ab, when there is something to be noisy with again.
     @Test("an unrecognised status decodes to denied, never to a grant", arguments: [5, 99, -1])
     func unknownStatusIsNeverAGrant(raw: Int) {
-        let decoded = NotificationAuthorisation.decode(authorizationStatus: raw)
-        #expect(decoded == .denied)
-        #expect(!decoded.permitsDelivery)
+        #expect(NotificationAuthorisation.decode(authorizationStatus: raw) == .denied)
     }
 
     @Test("refreshing reads the state and never asks for it", arguments: [0, 1, 2, 3])
@@ -106,53 +65,31 @@ struct NotificationDeliveryTests {
         #expect(delivery.requestAuthorizationCallCount == 0)
     }
 
-    // MARK: - Categories after authorisation, never at launch (P-134)
+    // MARK: - Nothing is registered, at any grant (focus-wy0)
 
-    @Test("categories are not registered while unauthorised", arguments: [0, 1])
-    func noCategoriesWhileUnauthorised(raw: Int) {
-        let centre = StubNotificationCentre(status: raw)
-        let delivery = NotificationDelivery(centre: centre)
-
+    /// **The seam offers no way to register a category, so no grant can cause one.**
+    ///
+    /// It used to: registration ran on every launch that found a grant, and put three actions
+    /// onto a category no banner would ever carry, because U-2 had already removed the only rung
+    /// that posts one. This is the assertion that replaces "registered exactly once, and only
+    /// after a grant" — the honest count is now zero, at every grant, and it is enforced by the
+    /// protocol rather than by a branch somebody could restore.
+    @Test("the boundary can register nothing, whatever the grant says", arguments: [0, 1, 2, 3])
+    func nothingIsEverRegistered(raw: Int) {
+        let delivery = NotificationDelivery(centre: StubNotificationCentre(status: raw))
         delivery.refresh()
 
-        #expect(centre.setCategoriesCallCount == 0)
-        #expect(delivery.categoryRegistrationCount == 0)
-        #expect(!delivery.hasRegisteredActions)
-    }
-
-    @Test("categories are registered exactly once, and only after a grant", arguments: [2, 3])
-    func categoriesRegisteredOnceAfterAGrant(raw: Int) {
-        let centre = StubNotificationCentre(status: raw)
-        let delivery = NotificationDelivery(centre: centre)
-
-        delivery.refresh()
-        delivery.refresh()
-        delivery.refresh()
-
-        #expect(delivery.categoryRegistrationCount == 1)
-        #expect(centre.setCategoriesCallCount == 1)
-        #expect(delivery.hasRegisteredActions)
-        #expect(
-            centre.registeredCategoryIdentifiers == [NudgeNotificationCategory.identifier]
+        let calls = Set(
+            Mirror(reflecting: StubNotificationCentre(status: raw))
+                .children.compactMap(\.label)
         )
+        #expect(calls == ["status"], "the notification seam grew a capability: \(calls.sorted())")
+        #expect(delivery.requestAuthorizationCallCount == 0)
     }
 
-    /// P-134's exact measurement: `setNotificationCategories` **does not take** while
-    /// unauthorised. A centre that silently drops them must leave `hasRegisteredActions` false,
-    /// so the app never believes it has actions it does not have.
-    @Test("a centre that silently drops the categories is not believed")
-    func silentlyDroppedCategoriesAreNotBelieved() {
-        let centre = StubNotificationCentre(status: 2)
-        centre.acceptsCategories = false
-        let delivery = NotificationDelivery(centre: centre)
-
-        delivery.refresh()
-
-        #expect(centre.setCategoriesCallCount == 1)
-        #expect(!delivery.hasRegisteredActions)
-    }
-
-    @Test("the notification carries all three answerable actions")
+    /// The three actions are **kept** — focus-5ab needs them, and a press on a banner an earlier
+    /// build posted still has to decode to one so `NudgeHost` can refuse it.
+    @Test("the three answerable actions are still declared, and still decode")
     func threeActions() {
         #expect(NudgeNotificationAction.allCases.count == 3)
         #expect(Set(NudgeNotificationAction.allCases.map(\.identifier)).count == 3)
@@ -165,11 +102,10 @@ struct NotificationDeliveryTests {
         }
     }
 
-    // **The delivery section is gone** (U-2). `NotificationDelivery.deliver(…)` was removed with
-    // the recommitment rung it existed for: no rung routes to a notification any more, so there is
-    // no delivery to authorise, no failure to demote and no route change to assert. What remains
-    // below is the half that still runs — reading the authorisation, registering the categories,
-    // and decoding a press on a banner an earlier build posted.
+    // **The delivery section is gone** (U-2), and so is the registration section (focus-wy0).
+    // No rung routes to a notification, so there is no delivery to authorise, no failure to
+    // demote, no route change to assert and no category to put buttons on. What remains below is
+    // the half that still runs: decoding a press on a banner an earlier build posted.
 
     // MARK: - Taps come back as typed actions
 
@@ -215,22 +151,23 @@ struct NotificationDeliveryTests {
         #expect(seen.map(\.deliveryID) == ["the rung on screen", "a banner from an hour ago"])
     }
 
-    // MARK: - The whole matrix, in one place
+    // MARK: - What the boundary reads changes nothing about where a rung lands
 
-    /// **`denied` and `notRequested` are identical in delivery, in every cell** — asserted here
-    /// against the delivery object rather than only against the router, so the boundary cannot
-    /// be the place the identity is lost.
-    @Test("no unauthorised state ever reaches a notification", arguments: [0, 1])
-    func unauthorisedNeverReachesANotification(raw: Int) {
-        let centre = StubNotificationCentre(status: raw)
-        let delivery = NotificationDelivery(centre: centre)
+    /// **The reading and the routing have been disconnected, and this is what says so**
+    /// (focus-wy0).
+    ///
+    /// It used to assert that an unauthorised boundary still routed the rung in-app, by handing
+    /// `delivery.authorisation` to `SurfaceRouter.route(…)`. There is nowhere to hand it: the
+    /// router takes no authorisation. So the claim is made the only way left to make it — the
+    /// boundary reads all four states, and the panel rung lands on the panel throughout.
+    @Test("whatever the boundary reads, the rung lands in-app", arguments: [0, 1, 2, 3])
+    func theReadingDoesNotMoveTheRung(raw: Int) {
+        let delivery = NotificationDelivery(centre: StubNotificationCentre(status: raw))
         delivery.refresh()
+        #expect(delivery.authorisation == NotificationAuthorisation.decode(authorizationStatus: raw))
 
-        #expect(!delivery.authorisation.permitsDelivery)
-        // The router is what decides, and it sends the rung in-app.
         let route = SurfaceRouter.route(
             rung: .panel,
-            authorisation: delivery.authorisation,
             presentation: .notPresenting,
             media: .idle,
             reducedInterruption: false,
@@ -238,16 +175,6 @@ struct NotificationDeliveryTests {
             voice: .standard
         )
         #expect(route == .surface(.panel))
-        #expect(route.surface != .notification)
-    }
-
-    /// Only one of the two may *offer* to turn notifications on, and it is the one nobody has
-    /// asked yet (F-127's never-re-prompt policy).
-    @Test("only notRequested may offer to enable, and never inside a nudge")
-    func onlyNotRequestedMayOffer() {
-        #expect(NotificationAuthorisation.notRequested.mayOfferToEnable)
-        #expect(!NotificationAuthorisation.denied.mayOfferToEnable)
-        #expect(!NotificationAuthorisation.authorised.mayOfferToEnable)
-        #expect(!NotificationAuthorisation.provisional.mayOfferToEnable)
+        #expect(route.surface?.isInApp == true)
     }
 }

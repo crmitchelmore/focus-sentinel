@@ -616,8 +616,8 @@ scenario_ladder() {
 
     require_state "the app asked for no notification authorisation" \
         "report.get('requestAuthorizationCallCount') == 0" || return 0
-    require_state "every rung reaches an in-app surface at this Mac's authorisation" \
-        "report.get('everyRungIsInAppWhenNotRequested') is True" || return 0
+    require_state "every rung reaches an in-app surface, and no authorisation can move it" \
+        "report.get('everyRungIsInApp') is True" || return 0
 
     if ! prompt_operator "set the priority to “$PRIORITY_INTENT”, attach $CONTEXT_APP as a context chip, and add a rule marking “$DECOY_ID” unrelated (Settings ▸ Rules)."; then
         manual_required "03-decoy-foregrounded.png" \

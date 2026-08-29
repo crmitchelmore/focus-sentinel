@@ -757,13 +757,13 @@ public final class AppComposition {
         )
     }
 
-    /// Re-read `getNotificationSettings` after the settings pane's one sanctioned request.
+    /// Read `getNotificationSettings`, once, at launch.
     ///
-    /// The pane performs the request; this learns the answer. Nothing here can ask, which is
-    /// what keeps the routing path provably prompt-free (R-82.1, R-96g).
+    /// It never prompts (P-134), and since focus-wy0 nothing in this app decides on the answer:
+    /// no rung routes to a notification and no pane offers to change it. What the reading is for
+    /// is the `notification-denied` gate stage, which prints the grant state this Mac was
+    /// actually in while every rung still landed on an in-app surface.
     public func refreshNotificationAuthorisation() {
-        // The re-read alone: the loop takes the authorisation from this object rather than from a
-        // copy of it, so there is nothing to propagate (focus-zrs).
         notificationDelivery.refresh()
     }
 
@@ -1265,7 +1265,6 @@ public final class AppComposition {
             for: .settings
         )
         expect(.quietHours, ShellValueDigest.describe(intervention.quietHours), for: .settings)
-        expect(.notificationAuthorisation, intervention.authorisation.rawValue, for: .settings)
         expect(.interruptionUsage, ShellValueDigest.describe(intervention.usage), for: .settings)
         expect(
             .presentationExclusions,
@@ -1507,7 +1506,6 @@ public final class AppComposition {
             voice: nudgeHost.preferences.voice,
             reducedInterruption: nudgeHost.preferences.reducedInterruption,
             quietHours: InterventionPolicy.quietHoursDefault,
-            authorisation: nudgeHost.notificationAuthorisation,
             usage: nudgeHost.todaysUsage(),
             presentationExclusions: sensingHost.presentationExclusions.sorted()
         )
@@ -1515,9 +1513,11 @@ public final class AppComposition {
 
     /// What the Intervention pane asked for.
     ///
-    /// The one thing it is **not** allowed to do is ask for a permission: that call lives in
-    /// the pane's own file and nowhere else (R-96g), and this handler only learns that the
-    /// answer changed and re-reads it from `getNotificationSettings`, which never prompts.
+    /// The one thing it **cannot** ask for is a permission. It used to: a
+    /// `notificationAuthorisationChanged` case reported that the pane's own `requestAuthorization`
+    /// had returned, and this re-read the answer. Both are gone (focus-wy0) — this app posts no
+    /// notifications, so there is no permission for a person to grant it here and nothing to
+    /// re-read when they do.
     public func perform(_ action: InterventionSettingsAction) {
         switch action {
         case .setVoice(let voice):
@@ -1528,8 +1528,6 @@ public final class AppComposition {
             // Both are stored settings e05 does not yet persist a row for; the pane reports the
             // request and the store lands in a later task rather than being faked here.
             break
-        case .notificationAuthorisationChanged:
-            refreshNotificationAuthorisation()
         }
     }
 

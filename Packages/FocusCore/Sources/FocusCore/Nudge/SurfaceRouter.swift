@@ -3,35 +3,42 @@ import Foundation
 /// One cell of the committed routing table.
 ///
 /// R-82 requires the table to be a value rather than a shape buried in a function, for one
-/// concrete reason: the Intervention settings pane renders **this** to answer "what does this app
-/// do if I say no", so the copy cannot drift from the behaviour. A pane that described the
-/// routing in prose would be a pane somebody has to remember to edit.
+/// concrete reason: the Intervention settings pane renders **this** to answer "where does a nudge
+/// appear", so the copy cannot drift from the behaviour. A pane that described the routing in
+/// prose would be a pane somebody has to remember to edit.
+///
+/// **It carried an `authorisation` and no longer does** (focus-wy0). The column was the honest
+/// answer to *"what does this app do if I say no"* for as long as saying no could change an
+/// answer. Since U-2 took the notification rung out of the ladder it changed nothing, so the pane
+/// drew four identical rows per rung under four different headings — a table that looked like a
+/// consequence and was a repetition.
 public struct SurfaceRoutingRow: Sendable, Equatable, Hashable {
     public let rung: LadderRung.Kind
-    public let authorisation: NotificationAuthorisation
     public let route: SurfaceRoute
 
-    public init(rung: LadderRung.Kind, authorisation: NotificationAuthorisation, route: SurfaceRoute) {
+    public init(rung: LadderRung.Kind, route: SurfaceRoute) {
         self.rung = rung
-        self.authorisation = authorisation
         self.route = route
     }
 }
 
 /// **Which surface a rung reaches, and why none can** — a pure function of typed inputs (R-82).
 ///
-/// ## Four rulings live inside it
+/// ## Three rulings live inside it
 ///
-/// 1. **`requestAuthorization` is never on the routing path.** P-134 measured that
-///    `getNotificationSettings` is obtainable at zero grants, **never prompts**, and answers
-///    completely. Authorisation is requested only from an explicit user action in the settings
-///    pane (R-96g), which is why no acceptance criterion in this epic depends on a grant.
-/// 2. **No rung routes to a notification at all** (U-2). The notification was the recommitment
-///    rung's surface and nothing else's, so deferring that rung to focus-5ab took the whole system
-///    surface out of the ladder with it. `authorisation` no longer changes any cell of the table,
-///    which makes R-82.2's *"denied and notRequested behave identically"* trivially true rather
-///    than something the matrix has to prove point by point — and it means the ladder is entirely
-///    in-app, which is what discharges standing condition 5.
+/// 1. **This function does not take an authorisation, and that is now the ruling** (U-2,
+///    focus-wy0). The notification was the recommitment rung's surface and nothing else's, so
+///    deferring that rung to focus-5ab took the whole system surface out of the ladder with it.
+///    The parameter survived the cut and went on being passed, read by nothing — and three
+///    tables computed at `authorised`, `denied` and `notRequested` came back byte-identical in
+///    every gate run, which is what the settings pane was rendering as a *consequence*.
+///    Removing it makes R-82.2's *"denied and notRequested behave identically"* a fact about the
+///    type rather than a property a matrix has to re-prove, and no notification authorisation —
+///    granted, refused or never asked — can change where a nudge appears.
+/// 2. **`requestAuthorization` is nowhere in this repository** (focus-wy0). It used to be pinned
+///    to one file, the settings pane's enable button. That button asked for a permission this
+///    router could not spend, so it went with the rung it was for. R-96g's `count_at_most … 1`
+///    now passes at zero.
 /// 3. **Reduced interruption is a flag in here, not a second surface stack** (R-92, F-148).
 ///    Panel rungs become menu-bar badges and the question becomes a popover row. `silentVisual` is
 ///    the same mechanism spelled as a deck: `NudgeVoice.renderedRung(for:)` maps the panel rung
@@ -50,7 +57,6 @@ public struct SurfaceRouter: Sendable {
     ///
     /// - Parameters:
     ///   - rung: the ladder rung the machine decided on, *before* any deck remapping.
-    ///   - authorisation: from `getNotificationSettings`, which never prompts.
     ///   - presentation: e03's `PresentationState`, read through `suppressesOverlays`.
     ///   - media: e03's `MediaActivity`, read through `suppressesIntervention`. In practice gate
     ///     6 has already suppressed the interruption; this is the backstop that makes a panel
@@ -61,7 +67,6 @@ public struct SurfaceRouter: Sendable {
     ///   - voice: the deck. `silentVisual` is a **routing** deck, not a copy deck.
     public static func route(
         rung: LadderRung.Kind,
-        authorisation: NotificationAuthorisation,
         presentation: PresentationState,
         media: MediaActivity,
         reducedInterruption: Bool,
@@ -95,12 +100,14 @@ public struct SurfaceRouter: Sendable {
 
     /// **Where a question goes.**
     ///
-    /// It takes no `authorisation`, and that is the ruling rather than an omission: **a question
-    /// is never a notification.** U-1's affordance is "one click teaches the app", and a
-    /// notification's actions are the system's to collapse, defer and summarise — a question
+    /// **A question is never a notification.** U-1's affordance is "one click teaches the app",
+    /// and a notification's actions are the system's to collapse, defer and summarise — a question
     /// answered from a notification summary three hours later would be a question about a moment
     /// that has passed. The three in-app surfaces are also what make the `notification-denied`
     /// gate stage possible at zero grants.
+    ///
+    /// It has always taken no authorisation. Since focus-wy0 neither does `route(rung:…)`, so the
+    /// two are the same shape and the distinction this note used to draw no longer exists.
     public static func routeQuery(
         presentation: PresentationState,
         media: MediaActivity,
@@ -118,31 +125,30 @@ public struct SurfaceRouter: Sendable {
 
     // MARK: - The committed table
 
-    /// The whole rung × authorisation matrix, under the conditions a settings pane describes:
-    /// nothing presenting, no microphone running, the menu bar where it usually is.
+    /// One row per rung, under the conditions a settings pane describes: nothing presenting, no
+    /// microphone running, the menu bar where it usually is.
     ///
-    /// This is what the Intervention pane renders, and what a snapshot test pins — so "what
-    /// happens if I say no" is answered by the same value that decides it.
+    /// This is what the Intervention pane renders, and what a snapshot test pins — so "where does
+    /// a nudge appear" is answered by the same value that decides it.
+    ///
+    /// It was a rung × authorisation cross product (focus-wy0). Four rows per rung, and since U-2
+    /// the four were identical, because `route(…)` had already stopped reading the authorisation.
     public static func table(
         reducedInterruption: Bool = false,
         voice: NudgeVoice = .standard
     ) -> [SurfaceRoutingRow] {
-        LadderRung.Kind.allCases.flatMap { rung in
-            NotificationAuthorisation.allCases.map { authorisation in
-                SurfaceRoutingRow(
+        LadderRung.Kind.allCases.map { rung in
+            SurfaceRoutingRow(
+                rung: rung,
+                route: route(
                     rung: rung,
-                    authorisation: authorisation,
-                    route: route(
-                        rung: rung,
-                        authorisation: authorisation,
-                        presentation: .notPresenting,
-                        media: .idle,
-                        reducedInterruption: reducedInterruption,
-                        menuBarVisible: true,
-                        voice: voice
-                    )
+                    presentation: .notPresenting,
+                    media: .idle,
+                    reducedInterruption: reducedInterruption,
+                    menuBarVisible: true,
+                    voice: voice
                 )
-            }
+            )
         }
     }
 

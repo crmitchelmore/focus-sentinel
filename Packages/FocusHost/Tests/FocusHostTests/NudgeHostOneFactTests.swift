@@ -206,17 +206,20 @@ struct NudgeHostOneFactTests {
         #expect(host.activeCommitment == nil, "the cleared commitment survived in one of the three")
     }
 
-    /// **The notification authorisation, held twice** (focus-zrs).
+    /// **The notification authorisation, held twice and then held nowhere** (focus-zrs,
+    /// focus-wy0).
     ///
-    /// `NudgePreferences.authorisation` was a copy. `AppComposition` read it from
-    /// `NotificationDelivery` at launch and again after the settings pane's one sanctioned request,
-    /// and wrote it into the loop. But `NotificationDelivery.deliver(…)` sets its **own** to
-    /// `.denied` the moment a delivery actually fails — the route change R-82.4 requires — and
-    /// nothing told the copy. So `SurfaceRouter` went on being handed `.authorised` and went on
-    /// sending the next recommitment rung to a channel the boundary already knew was shut, while
-    /// the Settings pane, which reads the boundary, drew `.denied`. One question, two answers, in
-    /// two windows and a router.
-    @Test("what the loop routes on is what the notification boundary currently believes")
+    /// `NudgePreferences.authorisation` was a stored **copy**. `AppComposition` wrote it in at
+    /// launch, `NotificationDelivery.deliver(…)` moved its own to `.denied` on a failure, and
+    /// nothing told the copy — so `SurfaceRouter` went on aiming the recommitment rung at a
+    /// channel the boundary knew was shut while the Settings pane drew `.denied`. focus-zrs
+    /// repaired that by deriving the value, and this test asserted the two agreed.
+    ///
+    /// The field is now gone. U-2 removed the rung, so the router stopped reading the
+    /// authorisation, and a derived value carried to no reader is the same shape the copy was:
+    /// somewhere for a second answer to hide. **One place holds it — the boundary — and the loop
+    /// exposes it only for the self-check to report**, so there is no second reading to disagree.
+    @Test("only the notification boundary holds an authorisation, and the loop holds none")
     func theAuthorisationIsOneFact() throws {
         let fixture = try NudgeHostFixture()
         defer { fixture.tearDown() }
@@ -225,20 +228,20 @@ struct NudgeHostOneFactTests {
         fixture.notifications.refresh()
         NudgeHostFixture.settle(0.1)
 
-        #expect(
-            fixture.host.preferences.authorisation == fixture.notifications.authorisation,
-            """
-            the loop routes on \(fixture.host.preferences.authorisation) while the boundary \
-            believes \(fixture.notifications.authorisation)
-            """
-        )
         #expect(fixture.host.notificationAuthorisation == fixture.notifications.authorisation)
 
-        // What a person sets is still what a person set, and it does not disturb the other half.
+        // What the loop routes on holds no authorisation at all, so it cannot hold a stale one.
+        let fields = Mirror(reflecting: fixture.host.preferences)
+            .children.compactMap(\.label).sorted()
+        #expect(
+            fields == ["reducedInterruption", "voice"],
+            "the loop's preferences grew a second answer about notifications: \(fields)"
+        )
+
+        // What a person sets is still what a person set.
         fixture.host.choose(voice: .warm)
         fixture.host.choose(reducedInterruption: true)
         #expect(fixture.host.preferences.voice == .warm)
         #expect(fixture.host.preferences.reducedInterruption)
-        #expect(fixture.host.preferences.authorisation == fixture.notifications.authorisation)
     }
 }

@@ -129,9 +129,9 @@ public struct ShellSettingsConnection {
 
 /// **Every field of the Settings connection, bound to the receipt that echoes it** (focus-7ow).
 ///
-/// `intervention` descends, because the pane draws its seven fields as seven controls and five of
-/// them — quiet hours, authorisation, usage, the exclusion list, and whether Reduce Motion forced
-/// the switch — were carried into a window that reported two of them.
+/// `intervention` descends, because the pane draws its six fields as six controls and four of
+/// them — quiet hours, usage, the exclusion list, and whether Reduce Motion forced the switch —
+/// were carried into a window that reported two of them.
 extension ShellSettingsConnection: ShellDrawnConnection {
     public nonisolated static var connectionName: String { "ShellSettingsConnection" }
 
@@ -155,7 +155,6 @@ extension ShellSettingsConnection: ShellDrawnConnection {
             "intervention.reducedInterruption": .drawn([.reducedInterruption]),
             "intervention.reducedInterruptionIsForced": .drawn([.reducedInterruptionForced]),
             "intervention.quietHours": .drawn([.quietHours]),
-            "intervention.authorisation": .drawn([.notificationAuthorisation]),
             "intervention.usage": .drawn([.interruptionUsage]),
             "intervention.presentationExclusions": .drawn([.presentationExclusions]),
 

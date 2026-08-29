@@ -44,10 +44,10 @@ struct SettingsConnectionTotalityTests {
         #expect(reading.isTotal, "\(reading.summary)")
         // Non-vacuity, one level down and further: the walk descends into the intervention
         // settings rather than stopping at them — five of those seven fields were unreported —
-        // and now into the values *they* hold.
+        // and now into the values *they* hold. Six fields now: the notification authorisation
+        // went with the section that drew it (focus-wy0).
         for member in [
             "intervention.quietHours",
-            "intervention.authorisation",
             "intervention.usage",
             "intervention.presentationExclusions",
             "intervention.reducedInterruptionIsForced",

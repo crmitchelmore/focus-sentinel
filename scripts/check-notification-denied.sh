@@ -16,23 +16,27 @@
 #     setNotificationCategories      registered 0 categories — it does not take while unauthorised
 #     add(request)                   UNErrorDomain code 1, "Notifications are not allowed"
 #
-# `getNotificationSettings` is obtainable, answers completely and **never prompts**, so the whole
-# surface router can be decided from it. That is why `requestAuthorization` appears in exactly one
-# file in this repository — the Intervention settings pane's user-initiated button (lint R-96g) —
-# and why `requestAuthorizationCallCount == 0` is the number this stage really turns on.
+# `getNotificationSettings` is obtainable, answers completely and **never prompts**. It is now the
+# only thing this app ever asks the notification centre, and `requestAuthorization` appears in
+# **no** file of this repository (lint R-96g, which passes at zero files) — so
+# `requestAuthorizationCallCount == 0` is a fact about the call graph rather than a number
+# somebody remembered to leave alone.
 #
-# ## Why three routing tables are asserted and not one
+# ## Why ONE routing table is asserted, and not three (focus-wy0)
 #
-# This Mac's own authorisation is whatever a person set it to. A stage that asserted the in-app
-# path only when the machine happened to be in the degraded state would be a stage that silently
-# stopped asserting the moment somebody granted notifications — and F-73's promise is about the
-# person who says no, not about this particular Mac.
+# It used to be three. This Mac's own authorisation is whatever a person set it to, so the
+# self-check also asked `SurfaceRouter.route(…)` what it would do at `denied` and at
+# `notRequested` — otherwise a stage would silently stop asserting the degraded path the moment
+# somebody granted notifications.
 #
-# `SurfaceRouter.route(…)` is a pure function of typed inputs, so the self-check asks it what it
-# would do at `denied` and at `notRequested` as well as at the real reading. Those two tables are
-# asserted **unconditionally**: every rung reaches an in-app surface, the top rung lands on the
-# panel, and the two states deliver identically — R-82.2's ruling that `denied` and
-# `notRequested` differ in what the app may *offer* and never in what it may *deliver*.
+# That was the right shape while the authorisation was a routing input. U-2 removed the only rung
+# that could reach a notification, and from then on all three tables came back byte-identical in
+# every run: the same reading printed three times, which reads like corroboration and is
+# repetition. `SurfaceRouter.route(…)` no longer accepts an authorisation at all, so "denied,
+# notRequested and authorised deliver alike" is a fact about the function's type, and the thing
+# left to assert is the **shape of what the settings pane renders** — `routingRowFields`, read off
+# the compiled `SurfaceRoutingRow` with `Mirror`. A route reading could not catch the column
+# coming back, because every route would be identical; the row is what would change.
 #
 # ## Zero grants
 #
@@ -127,9 +131,9 @@ check(report.get("mode") == "nudge", "the app ran its nudge-only self-check", re
 
 # --- SC-5, and it is the number the whole epic turns on ----------------------------------------
 #
-# `requestAuthorization` appears in exactly one file in the repository and no routing path, no
-# host and no gate stage can reach it — so this is a property of the call graph rather than of a
-# counter somebody remembered to leave alone. The lint proves the shape; this proves the run.
+# `requestAuthorization` appears in NO file of the repository (focus-wy0), so no routing path, no
+# host, no settings pane and no gate stage can reach it. The lint proves the shape; this proves
+# the run.
 check(
     report.get("requestAuthorizationCallCount") == 0,
     "the application asked for no notification authorisation",
@@ -143,6 +147,17 @@ check(
 )
 print(f"note this Mac reports {report.get('notificationAuthorisation')!r}")
 
+# **The routing does not read it, and the pane does not draw it** (focus-wy0).
+#
+# `SurfaceRoutingRow` is what `SurfaceRouter.table(...)` is made of and what the Intervention pane
+# renders row for row. An authorisation column here is the defect returning: four rows per rung,
+# four headings, one route — a pane promising a consequence the router does not produce.
+check(
+    report.get("routingRowFields") == ["route", "rung"],
+    "a routing row the settings pane draws carries a rung and a route, and nothing else",
+    report.get("routingRowFields"),
+)
+
 # --- D-06 as amended by U-2: two rungs, no more and no fewer -----------------------------------
 check(
     report.get("ladderRungsDeclared") == 2,
@@ -150,57 +165,51 @@ check(
     report.get("ladderRungsDeclared"),
 )
 
-# --- the degraded path, asserted unconditionally ------------------------------------------------
+# --- the degraded path, which is now the ONLY path ---------------------------------------------
 #
-# Whatever this Mac says about notifications, a person who has said no — or who has never been
-# asked — must get both rungs on a surface they can actually see.
-for state in ("Denied", "NotRequested"):
-    table = report.get(f"routesWhen{state}")
-    label = "denied" if state == "Denied" else "notRequested"
-    check(bool(table), f"the router's table at {label} was reported", table)
-    if not table:
-        continue
+# Whatever this Mac says about notifications, both rungs land on a surface a person can see —
+# and there is no longer a second answer for them to land differently in.
+table = report.get("routes")
+check(bool(table), "the router's table was reported", table)
+if table:
     check(
         len(table) == 2,
-        f"at {label} the table covers both rungs",
+        "the table covers both rungs",
         [entry.get("rung") for entry in table],
     )
     check(
         all(entry.get("surface") for entry in table),
-        f"at {label} EVERY rung reaches a surface",
+        "EVERY rung reaches a surface",
         surfaces(table),
     )
     check(
-        report.get(f"everyRungIsInAppWhen{state}") is True,
-        f"at {label} every rung is delivered IN-APP",
+        report.get("everyRungIsInApp") is True,
+        "every rung is delivered IN-APP",
         surfaces(table),
     )
     check(
         all(entry.get("surface") != "notification" for entry in table),
-        f"at {label} no rung routes to a notification",
+        "no rung routes to a notification",
         surfaces(table),
     )
+    check(
+        report.get("surfacesARungCanReach") == ["menuBar", "panel"],
+        "the only surfaces any rung reaches are the glyph and the panel",
+        report.get("surfacesARungCanReach"),
+    )
     top = [entry for entry in table if entry.get("rung") == "panel"]
-    check(len(top) == 1, f"at {label} the ladder has a panel rung", table)
+    check(len(top) == 1, "the ladder has a panel rung", table)
     if top:
         check(
             top[0].get("surface") == "panel",
-            f"at {label} the top rung lands on the panel",
+            "the top rung lands on the panel",
             top[0],
         )
         check(
             top[0].get("rank") == 1,
-            f"at {label} the panel rung is the top of the ladder",
+            "the panel rung is the top of the ladder",
             top[0],
         )
-
-# R-82.2: two states, one delivery. A person who said "no" and a person who was never asked are
-# entitled to the same product; only what the settings pane may *offer* them differs.
-check(
-    report.get("deniedAndNotRequestedDeliverAlike") is True,
-    "denied and notRequested produce identical delivery in every cell",
-    (surfaces(report.get("routesWhenDenied")), surfaces(report.get("routesWhenNotRequested"))),
-)
 
 # A question is never a notification (R-82): its route takes no authorisation at all.
 check(

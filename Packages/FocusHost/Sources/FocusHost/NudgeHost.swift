@@ -70,35 +70,28 @@ final class NudgeHost {
     /// for the rest of it.
     var surroundings: (@MainActor () -> NudgeSurroundings)?
 
-    /// **What the person chose, and what the notification boundary currently believes**
-    /// (focus-zrs).
+    /// **What the person chose** — the two things, and only the two things, they set in a pane.
     ///
-    /// The authorisation used to be a **copy**: `AppComposition` read it from
-    /// `NotificationDelivery` at launch and again after the settings pane's one sanctioned
-    /// request, and wrote it in here. But `NotificationDelivery.deliver(…)` sets its own to
-    /// `.denied` the moment a delivery actually fails — the route change R-82.4 requires — and
-    /// nothing told the copy. So `SurfaceRouter` went on being handed `.authorised` and went on
-    /// sending the next recommitment rung to a channel the boundary already knew was shut, failing
-    /// and demoting each time, while the Settings pane (which reads the boundary directly) drew
-    /// `.denied`. One question, two answers, in two windows and a router.
-    ///
-    /// Derived now. The two halves a **person** sets are stored; the authorisation is read from
-    /// the object that owns it, every time this value is built.
+    /// It carried a third, the notification authorisation, and it carried it twice over two
+    /// rounds. First as a stored **copy** (focus-zrs): `AppComposition` wrote it in at launch,
+    /// `NotificationDelivery.deliver(…)` moved its own to `.denied` on a failure, and nothing told
+    /// the copy — so the router went on aiming at a channel the boundary knew was shut while the
+    /// Settings pane drew `.denied`. That was repaired by deriving it. Then as a derived value
+    /// nobody read (focus-wy0): U-2 took the notification rung out of the ladder, so
+    /// `SurfaceRouter` stopped consulting it, and this went on computing it for a router that
+    /// discarded it. The field is gone rather than derived, because a value carried to no reader
+    /// is the shape both defects lived in.
     var preferences: NudgePreferences {
         NudgePreferences(
             voice: chosenVoice,
-            reducedInterruption: chosenReducedInterruption,
-            authorisation: notifications.authorisation
+            reducedInterruption: chosenReducedInterruption
         )
     }
 
     private var chosenVoice: NudgeVoice = .standard
     private var chosenReducedInterruption = false
 
-    /// The two things the Intervention pane can set.
-    ///
-    /// Named verbs rather than a settable `preferences`, so there is no way to hand this object an
-    /// authorisation — a value it does not own and must not be able to hold a stale copy of.
+    /// The two things the Intervention pane can set — which are now the whole of `preferences`.
     func choose(voice: NudgeVoice) { chosenVoice = voice }
     func choose(reducedInterruption: Bool) { chosenReducedInterruption = reducedInterruption }
 
@@ -725,9 +718,10 @@ final class NudgeHost {
             // `SurfaceRouter` has no branch that can answer `.notification` for an accusation.
             //
             // This is a refusal rather than a deleted branch because the surface is still a
-            // declared one (the settings pane still reads and reports notification authorisation),
-            // and a routing bug that sent a rung here must be a loud deferral rather than a
-            // silently swallowed nudge.
+            // declared one — focus-5ab brings the rung back, and `resolveFromNotification(…)`
+            // must be able to name it in order to refuse a press on a banner an earlier build
+            // posted — and a routing bug that sent a rung here must be a loud deferral rather
+            // than a silently swallowed nudge.
             logger.fault("a rung was routed to a notification, which no rung reaches since U-2")
             record(
                 deferral: .noSurfaceAvailable,

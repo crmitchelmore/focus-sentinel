@@ -1,6 +1,5 @@
 import FocusCore
 import SwiftUI
-import UserNotifications
 
 /// **What the person has set, and what the app has spent** (R-98).
 ///
@@ -17,8 +16,6 @@ public struct InterventionSettings: Sendable, Equatable {
     public var reducedInterruptionIsForced: Bool
     /// The person's own window, or `nil` for off — which is what ships (R-85).
     public var quietHours: QuietHoursWindow?
-    /// From `getNotificationSettings`, which never prompts (P-134).
-    public var authorisation: NotificationAuthorisation
     /// Today's spend, from `InterventionLog.budget(on:priorityID:)`. Shown as usage over the
     /// cap — **information, never a score** (D-01).
     public var usage: InterruptionBudget
@@ -31,7 +28,6 @@ public struct InterventionSettings: Sendable, Equatable {
         reducedInterruption: Bool = false,
         reducedInterruptionIsForced: Bool = false,
         quietHours: QuietHoursWindow? = InterventionPolicy.quietHoursDefault,
-        authorisation: NotificationAuthorisation = .notRequested,
         usage: InterruptionBudget = .empty,
         presentationExclusions: [String] = []
     ) {
@@ -39,63 +35,47 @@ public struct InterventionSettings: Sendable, Equatable {
         self.reducedInterruption = reducedInterruption
         self.reducedInterruptionIsForced = reducedInterruptionIsForced
         self.quietHours = quietHours
-        self.authorisation = authorisation
         self.usage = usage
         self.presentationExclusions = presentationExclusions
     }
 }
 
 /// What the pane asks the composition root to do.
+///
+/// **There is no `notificationAuthorisationChanged`** (focus-wy0). It was the report that the
+/// pane's own `requestAuthorization` had returned, and both are gone: this app posts no
+/// notifications, so there is no permission for a person to grant it and nothing to re-read when
+/// they do.
 public enum InterventionSettingsAction: Sendable, Equatable {
     case setVoice(NudgeVoice)
     case setReducedInterruption(Bool)
     case setQuietHours(QuietHoursWindow?)
     case removePresentationExclusion(String)
-    /// The **one** user-initiated authorisation request in the repository (R-96g). The pane
-    /// performs the call itself — that is what makes the lint's "exactly one file" assertion
-    /// mean something — and reports the outcome so the root can re-read the settings.
-    case notificationAuthorisationChanged
-}
-
-/// **The only place in this repository that asks for a permission** (R-96g, SC-5).
-///
-/// It is a free function in this file rather than a method on a service, because R-96g asserts
-/// that `requestAuthorization(` appears in **exactly one source file** and that the file is the
-/// settings pane's action. A service would be a second file and the assertion would have to be
-/// weakened to accommodate it.
-///
-/// Everything else about notifications is decided from `getNotificationSettings`, which P-134
-/// measured never prompting — so no routing path, no host and no gate stage can reach this
-/// function, and `requestAuthorizationCallCount == 0` in every automated run is a property of
-/// the call graph rather than of a counter somebody remembered to leave alone.
-@MainActor
-public enum NotificationConsent {
-    /// Ask, once, because a person clicked a button that says so.
-    ///
-    /// Offered only when nobody has been asked yet (`NotificationAuthorisation.mayOfferToEnable`
-    /// is `notRequested` alone) — asking somebody who has already said no is the re-prompt
-    /// F-127's policy forbids.
-    public static func ask(_ completion: @escaping @MainActor (Bool) -> Void) {
-        UNUserNotificationCenter.current()
-            .requestAuthorization(options: [.alert]) { granted, _ in
-                Task { @MainActor in completion(granted) }
-            }
-    }
 }
 
 /// **The Intervention settings pane** (R-98, R-92, F-132, F-148).
 ///
-/// Six sections, and one of them is the honest answer to a question a person is entitled to ask:
+/// Five sections, and one of them is the honest answer to a question a person is entitled to ask:
 ///
 /// * the **voice**, five static decks and no sixth;
 /// * **reduced interruption**, which is a routing flag inside the existing router rather than a
 ///   second surface stack (R-92) — and which Reduce Motion forces on, as the pane says;
 /// * **quiet hours**, off by default and explicitly *not* the system Focus (R-85, P-137);
-/// * **notifications**, with the one sanctioned request and the never-re-prompt policy;
-/// * **what happens if I say no** — `SurfaceRouter.table(…)` rendered as a plain matrix, so the
+/// * **where a nudge appears** — `SurfaceRouter.table(…)` rendered as a plain matrix, so the
 ///   copy cannot drift from the behaviour, because it *is* the behaviour;
 /// * the **caps and thresholds**, as read-only mirrors of `InterventionPolicy` with today's
 ///   usage beside them.
+///
+/// **There was a sixth, and it asked for a system permission this app cannot use** (focus-wy0).
+/// It drew the notification authorisation, and a "Turn on notifications" button whenever nobody
+/// had been asked — which is every fresh install — under copy promising that *"the last step of a
+/// nudge appears in the app instead"*. That last step was the recommitment rung, deferred to
+/// focus-5ab by U-2; since then no rung has routed to a notification and the three routing tables
+/// the Release binary reports at `authorised`, `denied` and `notRequested` have been identical.
+/// The button therefore raised a real `UNUserNotificationCenter` prompt to buy nothing. Under
+/// this product's privacy tenets that is worse than a dead control, so the section, its copy, its
+/// action and the one `requestAuthorization` call site in the repository were deleted rather than
+/// disabled.
 ///
 /// The usage rows are **information, never a score** (D-01): "2 / 4 questions today" is a fact
 /// about what the app did, and there is no streak, no total and no trend anywhere on this pane
@@ -134,14 +114,17 @@ public struct InterventionSettingsView: View {
     /// window sizes itself to the tab's content instead.
     public var body: some View {
         VStack(alignment: .leading, spacing: DesignTokens.spacing(spacing, scale: textScale)) {
-            // **All seven fields of `InterventionSettings`, each reported beside the section that
+            // **All six fields of `InterventionSettings`, each reported beside the section that
             // draws it** (focus-7ow).
             //
-            // Two of the seven were reported before, from the Settings *window*, and the other
-            // five — quiet hours, the authorisation, today's spend, the exclusion list, and
-            // whether Reduce Motion forced the switch — could be replaced with anything at all
-            // while the whole nineteen-stage gate stayed green. They are what the person is
-            // shown when they ask "what will this app do, and when will it leave me alone".
+            // Two of them were reported before, from the Settings *window*, and the other four —
+            // quiet hours, today's spend, the exclusion list, and whether Reduce Motion forced
+            // the switch — could be replaced with anything at all while the whole nineteen-stage
+            // gate stayed green. They are what the person is shown when they ask "what will this
+            // app do, and when will it leave me alone".
+            //
+            // There were seven. The notification authorisation went with the section that drew
+            // it (focus-wy0).
             voiceSection
                 .shellRendered(.interventionVoice, settings.voice.rawValue)
             Divider()
@@ -156,9 +139,6 @@ public struct InterventionSettingsView: View {
             Divider()
             quietHoursSection
                 .shellRendered(.quietHours, ShellValueDigest.describe(settings.quietHours))
-            Divider()
-            notificationSection
-                .shellRendered(.notificationAuthorisation, settings.authorisation.rawValue)
             Divider()
             routingMatrix
             Divider()
@@ -290,8 +270,12 @@ public struct InterventionSettingsView: View {
 
             // **The sentence that keeps a capability claim honest.** The app makes no claim to
             // read the system Focus: P-137 measured the private route unreadable as well as
-            // forbidden, so what it honours is this window and — on the notification rung only —
-            // whatever `UNUserNotificationCenter` honours for free.
+            // forbidden, so what it honours is this window and nothing else.
+            //
+            // It used to add *"notifications still follow your Mac's Focus, because the system
+            // applies it for us"* — true of an app that posts notifications, and this one does
+            // not (focus-wy0). A true sentence about a capability the app has given up is still
+            // a claim a person will read as a capability.
             ShellText(.interventionQuietHoursExplanation, role: .footnote)
                 .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
                 .lineLimit(nil)
@@ -361,55 +345,7 @@ public struct InterventionSettingsView: View {
         String(format: "%02d:%02d", minuteOfDay / 60, minuteOfDay % 60)
     }
 
-    // MARK: - Notifications
-
-    private var notificationSection: some View {
-        VStack(alignment: .leading, spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
-            HStack(spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
-                ShellText(.interventionNotificationsLabel, role: .headline)
-                Spacer(minLength: 0)
-                ShellText(
-                    resource: ShellStrings.resource(
-                        Self.authorisationKey(settings.authorisation)
-                    ),
-                    role: .callout
-                )
-                .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
-            }
-
-            // **Offered once, to the one state that has never been asked.** Showing it to
-            // somebody who said no would be the re-prompt F-127 forbids, and showing it inside a
-            // nudge would be asking for a permission at the moment they are least inclined to
-            // think about it.
-            if settings.authorisation.mayOfferToEnable {
-                Button {
-                    NotificationConsent.ask { _ in
-                        onAction(.notificationAuthorisationChanged)
-                    }
-                } label: {
-                    ShellText(.interventionNotificationsEnable, role: .callout)
-                        .fixedSize(horizontal: true, vertical: false)
-                }
-                .buttonStyle(.bordered)
-            }
-
-            ShellText(.interventionNotificationsExplanation, role: .footnote)
-                .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
-                .lineLimit(nil)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-    }
-
-    nonisolated public static func authorisationKey(_ state: NotificationAuthorisation) -> ShellStringKey {
-        switch state {
-        case .authorised: .interventionAuthorisationAuthorised
-        case .denied: .interventionAuthorisationDenied
-        case .notRequested: .interventionAuthorisationNotRequested
-        case .provisional: .interventionAuthorisationProvisional
-        }
-    }
-
-    // MARK: - The routing matrix — the honest answer to "what if I say no"
+    // MARK: - The routing matrix — where a nudge actually appears
 
     /// **The rendered table is `SurfaceRouter.table(…)` itself**, not a description of it.
     ///
@@ -417,6 +353,11 @@ public struct InterventionSettingsView: View {
     /// pane that explained the routing in prose would be a pane somebody has to remember to
     /// edit. `InterventionSettingsTests` asserts the rendered rows equal the router's own, so
     /// the copy cannot drift from the behaviour because it is not copy.
+    ///
+    /// **Two columns, and it used to draw three** (focus-wy0). The middle one was the notification
+    /// authorisation, and the four rows it produced for each rung carried four different headings
+    /// over one identical route. A table whose extra column never changes an answer is a table
+    /// making a promise about consequence that the router does not keep.
     private var routingMatrix: some View {
         VStack(alignment: .leading, spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
             ShellText(.interventionRoutingHeading, role: .headline)
@@ -429,11 +370,6 @@ public struct InterventionSettingsView: View {
                 HStack(spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
                     ShellText(resource: row.rung.copyResource, role: .footnote)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                    ShellText(
-                        resource: ShellStrings.resource(Self.authorisationKey(row.authorisation)),
-                        role: .footnote
-                    )
-                    .frame(maxWidth: .infinity, alignment: .leading)
                     ShellText(
                         resource: ShellStrings.resource(Self.surfaceKey(row.route)),
                         role: .footnote

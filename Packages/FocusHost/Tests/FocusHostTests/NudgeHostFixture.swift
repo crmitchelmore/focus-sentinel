@@ -39,32 +39,14 @@ struct FixedDateProvider: DateProvider {
 ///
 /// The nudge host takes a `NotificationDelivery`, and building one against the system centre
 /// from a test bundle would be asking a permission boundary a question in a process that has no
-/// business asking it. Everything these suites assert is about the query and panel routes, so
-/// the centre answers "denied" and records nothing.
+/// business asking it. Since focus-wy0 the seam has one call, so this has one answer.
 @MainActor
 final class SilentNotificationCentre: NotificationCentring {
-    private(set) var addedTitles: [String] = []
-    private(set) var registeredCategoryIdentifiers: Set<String> = []
-
     func authorizationStatus(_ completion: @escaping @MainActor (Int) -> Void) {
-        // `UNAuthorizationStatus.denied`. The route around a refusal is R-82's own subject and
-        // is proved in `NotificationDeliveryTests`; here it is simply not this lane's business.
+        // `UNAuthorizationStatus.denied`. It reaches no decision — no rung routes to a
+        // notification and no pane offers to change it — so what it answers is immaterial, and
+        // "denied" is the posture that would once have mattered most.
         completion(1)
-    }
-
-    func setCategories(_ identifiers: Set<String>) {
-        registeredCategoryIdentifiers = identifiers
-    }
-
-    func add(
-        identifier: String,
-        title: String,
-        body: String,
-        categoryIdentifier: String,
-        completion: @escaping @MainActor (NotificationAddResult) -> Void
-    ) {
-        addedTitles.append(title)
-        completion(.delivered)
     }
 }
 

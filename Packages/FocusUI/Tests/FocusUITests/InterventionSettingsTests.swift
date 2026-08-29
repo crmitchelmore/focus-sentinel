@@ -6,13 +6,13 @@ import Testing
 @testable import FocusUI
 
 enum InterventionSettingsFixture {
-    /// The shipping default: nobody asked about notifications, quiet hours off, the Court's
-    /// deck, nothing spent today.
+    /// The shipping default: quiet hours off, the Court's deck, nothing spent today. **This is
+    /// the fresh-install state**, and the state the pane used to offer a system notification
+    /// prompt in (focus-wy0).
     static let fresh = InterventionSettings()
 
     /// A day partway through, so the usage rows have something to say.
     static let midDay = InterventionSettings(
-        authorisation: .notRequested,
         usage: InterruptionBudget(
             queriesForPriorityToday: 2,
             queriesAllPrioritiesToday: 3,
@@ -23,19 +23,24 @@ enum InterventionSettingsFixture {
     )
 
     static let quiet = InterventionSettings(
-        quietHours: InterventionSettingsView.startingWindow,
-        authorisation: .authorised
+        quietHours: InterventionSettingsView.startingWindow
     )
 
     static let reduced = InterventionSettings(
         voice: .silentVisual,
         reducedInterruption: true,
-        reducedInterruptionIsForced: true,
-        authorisation: .denied
+        reducedInterruptionIsForced: true
     )
 }
 
-/// **The pane that answers "what does this app do if I say no"** (R-98, R-82, R-92).
+/// **The pane that answers "where does a nudge appear, and when will it leave me alone"**
+/// (R-98, R-82, R-92).
+///
+/// It used to answer a third question — *"what does this app do if I say no about
+/// notifications"* — with a section, a "Turn on notifications" button and a routing column.
+/// focus-wy0 removed all three, because the honest answer had become "nothing, and it will never
+/// ask": no rung routes to a notification, so the button raised a real system prompt to buy a
+/// capability the router could not spend.
 @Suite("The Intervention settings pane")
 @MainActor
 struct InterventionSettingsTests {
@@ -57,22 +62,22 @@ struct InterventionSettingsTests {
         )
     }
 
-    @Test("every rung and every authorisation state has a row, and each pair exactly once")
+    /// **Every rung has exactly one row, and no rung has four** (focus-wy0).
+    ///
+    /// The matrix was a rung × authorisation cross product. Since U-2 the four rows a rung
+    /// produced were identical — same route, four headings — so the pane was drawing a
+    /// consequence the router does not produce. This fails if the column comes back.
+    @Test("every rung has a row, and exactly one")
     func matrixIsComplete() {
         let rows = InterventionSettingsView(settings: .init()).drawnRows
-        let pairs = rows.map { RungAuthorisationPair(rung: $0.rung, authorisation: $0.authorisation) }
 
-        #expect(rows.count == LadderRung.Kind.allCases.count * NotificationAuthorisation.allCases.count)
-        #expect(Set(pairs).count == rows.count)
-    }
-
-    private struct RungAuthorisationPair: Hashable {
-        let rung: LadderRung.Kind
-        let authorisation: NotificationAuthorisation
+        #expect(rows.count == LadderRung.Kind.allCases.count)
+        #expect(rows.map(\.rung) == LadderRung.Kind.allCases)
+        #expect(Set(rows.map(\.rung)).count == rows.count)
     }
 
     /// The honest answer the pane promises: **no rung has nowhere to go** in the conditions the
-    /// table describes, whatever the person said about notifications.
+    /// table describes.
     @Test("no row in the drawn matrix says a rung has nowhere to go")
     func everyRungHasSomewhereToGo() {
         for voice in NudgeVoice.allCases {
@@ -91,33 +96,37 @@ struct InterventionSettingsTests {
         }
     }
 
-    /// `denied` and `notRequested` are identical in delivery, and the pane says so — because
-    /// the pane is the table.
-    @Test("the matrix shows denied and not-asked reaching the same surface, in every rung")
-    func deniedAndNotRequestedLookTheSame() {
-        let rows = InterventionSettingsView(settings: .init()).drawnRows
-        for rung in LadderRung.Kind.allCases {
-            let denied = rows.first { $0.rung == rung && $0.authorisation == .denied }
-            let notRequested = rows.first { $0.rung == rung && $0.authorisation == .notRequested }
-            #expect(denied?.route == notRequested?.route)
-        }
+    /// **The pane cannot draw a notification authorisation, because it does not hold one**
+    /// (focus-wy0).
+    ///
+    /// This replaces "the matrix shows denied and not-asked reaching the same surface": that was
+    /// true because nothing read the value, and a pane asserting agreement between four headings
+    /// over one route is a pane certifying its own repetition. The claim that matters now is that
+    /// the field is not there to be drawn — so no state of it can reach a person, and no fresh
+    /// install can be shown an offer to change it.
+    @Test("nothing in what the pane is handed names a notification authorisation")
+    func thePaneHoldsNoAuthorisation() {
+        let fields = Mirror(reflecting: InterventionSettingsFixture.fresh)
+            .children.compactMap(\.label).sorted()
+
+        #expect(!fields.contains("authorisation"), "the pane got its authorisation back: \(fields)")
+        #expect(fields == [
+            "presentationExclusions", "quietHours", "reducedInterruption",
+            "reducedInterruptionIsForced", "usage", "voice"
+        ])
+        // …and the only requests it can make are the four that change a setting.
+        #expect(!InterventionSettingsView(settings: .init()).drawnRows.isEmpty)
     }
 
     // MARK: - Every closed vocabulary has a name in this pane
 
-    @Test("every voice, authorisation state and surface has a label")
+    @Test("every voice and every surface has a label")
     func vocabulariesAreTotal() {
         var keys: Set<ShellStringKey> = []
         for voice in NudgeVoice.allCases {
             keys.insert(InterventionSettingsView.voiceKey(voice))
         }
         #expect(keys.count == NudgeVoice.allCases.count)
-
-        keys.removeAll()
-        for state in NotificationAuthorisation.allCases {
-            keys.insert(InterventionSettingsView.authorisationKey(state))
-        }
-        #expect(keys.count == NotificationAuthorisation.allCases.count)
 
         keys.removeAll()
         for surface in NudgeSurface.allCases {
@@ -215,22 +224,31 @@ struct InterventionSettingsTests {
         #expect(InterventionPolicy.queryDwellThreshold * 2 == RelevancePolicy.sustainedDriftThreshold)
     }
 
-    // MARK: - The one request, offered to one state only
+    // MARK: - No control on this pane asks for a permission (focus-wy0)
 
-    /// F-127's never-re-prompt policy, as a property of the pane rather than of a habit: the
-    /// enable action is drawn only for the state nobody has asked yet.
-    @Test("the enable action is offered only where nobody has been asked")
-    func enableOfferedOnlyOnce() {
-        #expect(InterventionSettings(authorisation: .notRequested).authorisation.mayOfferToEnable)
-        for state in [
-            NotificationAuthorisation.denied, .authorised, .provisional
-        ] {
-            #expect(!InterventionSettings(authorisation: state).authorisation.mayOfferToEnable)
+    /// **The pane has no request that could reach a system permission dialog.**
+    ///
+    /// This replaces "the enable action is offered only where nobody has been asked", which was
+    /// F-127's never-re-prompt policy applied to a prompt that should not have existed at all:
+    /// `mayOfferToEnable` was `notRequested` alone, `notRequested` is what every fresh install
+    /// reports, and the button behind it called the real `UNUserNotificationCenter` for a
+    /// capability no rung could use. Every action this pane can raise is now a setting change,
+    /// and the vocabulary is closed — a case added here has to be justified against this test.
+    @Test("every request the pane can make changes a setting, and none asks for a permission")
+    func noControlAsksForAPermission() {
+        // A **total** switch, so a case added to the vocabulary is a compile error here rather
+        // than a control this test silently stops covering.
+        func changesASetting(_ action: InterventionSettingsAction) -> Bool {
+            switch action {
+            case .setVoice, .setReducedInterruption, .setQuietHours, .removePresentationExclusion:
+                true
+            }
         }
-    }
+        #expect(changesASetting(.setVoice(.warm)))
+        #expect(changesASetting(.setReducedInterruption(true)))
+        #expect(changesASetting(.setQuietHours(nil)))
+        #expect(changesASetting(.removePresentationExclusion("com.apple.Keynote")))
 
-    @Test("every pane control reports a typed request and performs nothing else")
-    func controlsReport() {
         var seen: [InterventionSettingsAction] = []
         let view = InterventionSettingsView(settings: InterventionSettingsFixture.midDay) {
             seen.append($0)
@@ -238,14 +256,14 @@ struct InterventionSettingsTests {
 
         view.onAction(.setVoice(.warm))
         view.onAction(.setReducedInterruption(true))
+        view.onAction(.setQuietHours(nil))
         view.onAction(.removePresentationExclusion("com.apple.Keynote"))
-        view.onAction(.notificationAuthorisationChanged)
 
         #expect(seen == [
             .setVoice(.warm),
             .setReducedInterruption(true),
-            .removePresentationExclusion("com.apple.Keynote"),
-            .notificationAuthorisationChanged
+            .setQuietHours(nil),
+            .removePresentationExclusion("com.apple.Keynote")
         ])
     }
 

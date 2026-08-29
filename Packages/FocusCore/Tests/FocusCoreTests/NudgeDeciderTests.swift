@@ -681,17 +681,18 @@ struct NudgeDeciderTests {
         #expect(decision.route == .surface(.popoverBadge))
     }
 
-    /// **No rung reaches a notification, in any authorisation state** (U-2).
+    /// **No rung reaches a notification** (U-2, focus-wy0).
     ///
     /// This used to assert that the top rung went to a notification wherever the system would
     /// carry one. The notification was the recommitment rung's surface and nothing else's, and
     /// that rung is deferred to focus-5ab — so the whole system surface left the ladder with it.
     ///
-    /// Asserted across every authorisation value rather than at one point, because that is what
-    /// makes R-82.2's *"denied and notRequested behave identically"* true by construction now: the
-    /// authorisation cannot change any cell, so the ladder is entirely in-app whatever the person
-    /// has or has not granted. That is what discharges standing condition 5.
-    @Test("no rung routes to a notification, whatever the authorisation says")
+    /// It then spent a round asserting the same thing four times, once per authorisation value,
+    /// on the argument that this is what made R-82.2 true by construction. It was true by
+    /// construction because `NudgePreferences` no longer reached a reader — the loop is entirely
+    /// in-app whatever the person has or has not granted, and there is now no value to pass in.
+    /// Once, is the honest count.
+    @Test("no rung routes to a notification")
     func noRungReachesANotification() {
         var ladder = LadderMachine()
         var at = Duration.seconds(10_000)
@@ -701,17 +702,14 @@ struct NudgeDeciderTests {
         ladder.reduce(.delivery(.delivered(.menuBar)), now: at)
         at = at + RelevancePolicy.escalationDwell
 
-        for authorisation in NotificationAuthorisation.allCases {
-            let decision = Self.decide(
-                Self.judgement(verdict: .unrelated),
-                surroundings: Self.surroundings(monotonic: at),
-                memory: NudgeMemory(ladder: ladder),
-                preferences: NudgePreferences(authorisation: authorisation)
-            )
-            #expect(decision.rung?.kind == .panel, "\(authorisation)")
-            #expect(decision.route?.surface?.isInApp == true, "\(authorisation)")
-            #expect(decision.route != .surface(.notification), "\(authorisation)")
-        }
+        let decision = Self.decide(
+            Self.judgement(verdict: .unrelated),
+            surroundings: Self.surroundings(monotonic: at),
+            memory: NudgeMemory(ladder: ladder)
+        )
+        #expect(decision.rung?.kind == .panel)
+        #expect(decision.route?.surface?.isInApp == true)
+        #expect(decision.route != .surface(.notification))
     }
 
     // MARK: - The invariant that outranks every other in the epic

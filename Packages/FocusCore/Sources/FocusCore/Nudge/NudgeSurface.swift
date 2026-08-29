@@ -17,10 +17,12 @@ public enum NudgeSurface: String, Sendable, CaseIterable, Codable, Hashable {
     /// key programmatically. Carries the whole correction economy, because a nudge you cannot
     /// answer back to is the anti-pattern the product boundary forbids.
     case panel
-    /// `UNUserNotificationCenter`. **Reachable only when authorisation is `authorised` or
-    /// `provisional`** — P-134 measured that at zero grants every setting reads `.notSupported`
-    /// and `add(_:)` fails with `UNErrorDomain` code 1, so a route here in any other state is a
-    /// route to nothing.
+    /// `UNUserNotificationCenter`. **Declared, and reached by nothing** (U-2, focus-wy0). It was
+    /// the recommitment rung's surface and that rung is deferred to focus-5ab, which needs this
+    /// case back; and `NudgeHost.resolveFromNotification(…)` must still be able to name the
+    /// surface a banner an earlier build posted came from, in order to refuse a press on it.
+    /// P-134 measured that at zero grants every setting reads `.notSupported` and `add(_:)` fails
+    /// with `UNErrorDomain` code 1 — which is why nothing routes here and nothing asks to.
     case notification
     /// A badge and a row in the menu-bar popover. Where the panel rungs and the query go when
     /// reduced interruption is on, or when the voice is `silentVisual` — quiet, legible, and
@@ -68,40 +70,32 @@ public enum NudgeSurface: String, Sendable, CaseIterable, Codable, Hashable {
 /// (T137), where the import is permitted; here it is four cases and their two rulings.
 ///
 /// P-134 settles the shape: `getNotificationSettings` is obtainable at zero grants, **never
-/// prompts**, and answers completely, so the whole surface router can be decided from it and
-/// `requestAuthorization` is never on the routing path (R-82.1, R-96g).
+/// prompts**, and answers completely — so what this app knows about notifications, it knows
+/// without ever asking anybody anything.
+///
+/// **It decides nothing, and that is the whole of its remaining job** (focus-wy0). This app posts
+/// no notifications: since U-2 no rung routes to one, and `SurfaceRouter` does not take this type
+/// at all. What is left is a *reading* — reported by the self-check so the `notification-denied`
+/// gate stage can say what grant state this Mac was actually in when it proved the app works
+/// without one. A reading is evidence. It is not a switch, and this type deliberately no longer
+/// offers one:
+///
+/// * `permitsDelivery` went with `deliver(…)`. An app that delivers nothing has no business
+///   publishing a belief about whether it may.
+/// * `mayOfferToEnable` went with the button it gated. It answered `true` for `notRequested`
+///   alone — which is **every fresh install** — so the pane offered a system permission prompt to
+///   everybody who had never seen one, for a capability the router could not spend.
 public enum NotificationAuthorisation: String, Sendable, CaseIterable, Codable, Hashable {
     /// The user said yes.
     case authorised
     /// The user said no.
     case denied
-    /// Nobody has asked. P-134 measured `authorizationStatus == 0` from an ad-hoc-signed
-    /// bundle that never called `requestAuthorization`, with every setting `.notSupported`.
+    /// Nobody has asked, and since focus-wy0 nothing in this app ever will. P-134 measured
+    /// `authorizationStatus == 0` from an ad-hoc-signed bundle that never called
+    /// `requestAuthorization`, with every setting `.notSupported`.
     case notRequested
     /// Provisional (quiet) delivery.
     case provisional
-
-    /// **Whether the app may deliver a notification.**
-    ///
-    /// `denied` and `notRequested` differ in what the app may *offer*, never in what it may
-    /// *deliver* (R-82.2) — so both answer `false` here, and both route rung 3 to the in-app
-    /// recommitment panel. A user who has never been asked and a user who said no get exactly
-    /// the same behaviour; the only difference is one line in a settings pane.
-    public var permitsDelivery: Bool {
-        switch self {
-        case .authorised, .provisional: true
-        case .denied, .notRequested: false
-        }
-    }
-
-    /// Whether the settings pane may show the one-line "you can turn notifications on"
-    /// affordance.
-    ///
-    /// `notRequested` **only**, and never inside a nudge. Offering it to somebody who has
-    /// already said no is the re-prompt F-127's policy forbids; offering it inside a nudge
-    /// would be asking for a permission at the moment a person is least inclined to think
-    /// about it.
-    public var mayOfferToEnable: Bool { self == .notRequested }
 }
 
 /// **Which surface a rung reaches, or why none can.**

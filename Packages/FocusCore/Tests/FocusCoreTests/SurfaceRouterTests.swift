@@ -3,17 +3,23 @@ import Testing
 
 @testable import FocusCore
 
-/// **The full matrix**, and the two properties that decide whether F-73's degraded path is real
+/// **The full matrix**, and the properties that decide whether F-73's degraded path is real
 /// (R-82, F-73, F-148).
 ///
-///     LadderRung.Kind (3) × NotificationAuthorisation (4) × presentation (2) × media (2)
-///         × reducedInterruption (2) × menuBarVisible (2) × NudgeVoice (5) = 960 cells
+///     LadderRung.Kind (2) × presentation (2) × media (2)
+///         × reducedInterruption (2) × menuBarVisible (2) × NudgeVoice (5) = 160 cells
 ///
-/// Two of them are asserted in **every** cell rather than at a chosen point: `denied` and
-/// `notRequested` deliver identically, and no cell reaches a notification unless the system will
-/// actually carry one. P-134 measured what happens otherwise — every setting `.notSupported` and
-/// `add(_:)` failing with `UNErrorDomain` code 1 — so a route to a notification in any other
-/// state is a route to nothing at all.
+/// **A `NotificationAuthorisation` dimension is missing, and its absence is the assertion**
+/// (focus-wy0). It used to multiply the matrix by four, and the headline property of the suite
+/// was that `denied` and `notRequested` agreed in all 640 cells. Since U-2 removed the only rung
+/// that could reach a notification, all four values agreed in every cell — and a property that
+/// holds because nothing reads the input is not a property, it is a tautology wearing 640
+/// assertions. `SurfaceRouter.route(…)` no longer accepts the parameter, so the identity is a
+/// fact about the function's type and this suite asserts the shape instead.
+///
+/// What is still asserted in **every** cell: no cell reaches a notification at all. P-134
+/// measured what a route there would be worth — every setting `.notSupported` and `add(_:)`
+/// failing with `UNErrorDomain` code 1.
 @Suite("Surface router")
 struct SurfaceRouterTests {
     static let presenting = PresentationState(
@@ -30,7 +36,6 @@ struct SurfaceRouterTests {
 
     static func route(
         rung: LadderRung.Kind,
-        authorisation: NotificationAuthorisation = .notRequested,
         presentation: PresentationState = .notPresenting,
         media: MediaActivity = .idle,
         reducedInterruption: Bool = false,
@@ -39,7 +44,6 @@ struct SurfaceRouterTests {
     ) -> SurfaceRoute {
         SurfaceRouter.route(
             rung: rung,
-            authorisation: authorisation,
             presentation: presentation,
             media: media,
             reducedInterruption: reducedInterruption,
@@ -51,31 +55,28 @@ struct SurfaceRouterTests {
     /// Every cell of the matrix, as a sequence a test can fold over.
     static func everyCell(
         _ body: (
-            LadderRung.Kind, NotificationAuthorisation, PresentationState, MediaActivity,
+            LadderRung.Kind, PresentationState, MediaActivity,
             Bool, Bool, NudgeVoice, SurfaceRoute
         ) -> Void
     ) {
         for rung in LadderRung.Kind.allCases {
-            for authorisation in NotificationAuthorisation.allCases {
-                for presentation in [PresentationState.notPresenting, presenting] {
-                    for media in [MediaActivity.idle, onACall] {
-                        for reduced in [false, true] {
-                            for menuBar in [true, false] {
-                                for voice in NudgeVoice.allCases {
-                                    let route = SurfaceRouter.route(
-                                        rung: rung,
-                                        authorisation: authorisation,
-                                        presentation: presentation,
-                                        media: media,
-                                        reducedInterruption: reduced,
-                                        menuBarVisible: menuBar,
-                                        voice: voice
-                                    )
-                                    body(
-                                        rung, authorisation, presentation, media,
-                                        reduced, menuBar, voice, route
-                                    )
-                                }
+            for presentation in [PresentationState.notPresenting, presenting] {
+                for media in [MediaActivity.idle, onACall] {
+                    for reduced in [false, true] {
+                        for menuBar in [true, false] {
+                            for voice in NudgeVoice.allCases {
+                                let route = SurfaceRouter.route(
+                                    rung: rung,
+                                    presentation: presentation,
+                                    media: media,
+                                    reducedInterruption: reduced,
+                                    menuBarVisible: menuBar,
+                                    voice: voice
+                                )
+                                body(
+                                    rung, presentation, media,
+                                    reduced, menuBar, voice, route
+                                )
                             }
                         }
                     }
@@ -84,41 +85,25 @@ struct SurfaceRouterTests {
         }
     }
 
-    // MARK: - The two matrix-wide properties
+    // MARK: - The matrix-wide properties
 
-    @Test("640 cells: denied and notRequested produce identical delivery in every one")
-    func deniedIsNotRequested() {
-        var cells = 0
-        for rung in LadderRung.Kind.allCases {
-            for presentation in [PresentationState.notPresenting, Self.presenting] {
-                for media in [MediaActivity.idle, Self.onACall] {
-                    for reduced in [false, true] {
-                        for menuBar in [true, false] {
-                            for voice in NudgeVoice.allCases {
-                                cells += 1
-                                let denied = Self.route(
-                                    rung: rung, authorisation: .denied,
-                                    presentation: presentation, media: media,
-                                    reducedInterruption: reduced, menuBarVisible: menuBar,
-                                    voice: voice
-                                )
-                                let notRequested = Self.route(
-                                    rung: rung, authorisation: .notRequested,
-                                    presentation: presentation, media: media,
-                                    reducedInterruption: reduced, menuBarVisible: menuBar,
-                                    voice: voice
-                                )
-                                #expect(
-                                    denied == notRequested,
-                                    "\(rung)/\(voice): denied \(denied) vs notRequested \(notRequested)"
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        #expect(cells == 160)
+    /// **The router does not read a notification authorisation, and this is what says so**
+    /// (focus-wy0).
+    ///
+    /// It replaces "640 cells: denied and notRequested produce identical delivery in every one",
+    /// which by the end was asserting that a function ignores an argument 640 times. The honest
+    /// form is the shape: one committed row per rung, whose fields are the rung and the route and
+    /// nothing else. Reintroducing the column — which is what would bring the defect back, since
+    /// every route would still be identical — fails here.
+    @Test("the committed row carries a rung and a route, and no authorisation")
+    func theRowHasNoAuthorisation() {
+        let row = SurfaceRoutingRow(rung: .ambient, route: .surface(.menuBar))
+        let fields = Mirror(reflecting: row).children.compactMap(\.label).sorted()
+
+        #expect(fields == ["route", "rung"])
+        // …and the table is one row per rung rather than a cross product with anything.
+        #expect(SurfaceRouter.table().count == LadderRung.Kind.allCases.count)
+        #expect(SurfaceRouter.table().map(\.rung) == LadderRung.Kind.allCases)
     }
 
     /// **No cell routes to a notification at all** (U-2).
@@ -127,8 +112,8 @@ struct SurfaceRouterTests {
     /// would carry one, and it ended with `#expect(notifications > 0)` to stop the whole check
     /// passing vacuously. The recommitment rung was the only rung that could reach a notification
     /// and it is deferred to focus-5ab, so the honest assertion is now the strong one: **zero**
-    /// cells, out of every rung × authorisation × presentation × media × reduced × menu-bar ×
-    /// voice combination there is.
+    /// cells, out of every rung × presentation × media × reduced × menu-bar × voice combination
+    /// there is.
     ///
     /// That is also what makes the ladder entirely in-app, which is what discharges standing
     /// condition 5 — and it is asserted here over the whole matrix rather than at the one point a
@@ -136,14 +121,14 @@ struct SurfaceRouterTests {
     @Test("no cell routes to a notification, in the whole matrix")
     func noCellReachesANotification() {
         var cells = 0
-        Self.everyCell { rung, authorisation, _, _, _, _, voice, route in
+        Self.everyCell { rung, _, _, _, _, voice, route in
             cells += 1
             #expect(
                 route.surface != .notification,
-                "\(rung)/\(authorisation)/\(voice) routed an accusation to a notification"
+                "\(rung)/\(voice) routed an accusation to a notification"
             )
         }
-        #expect(cells == 640)
+        #expect(cells == 160)
     }
 
     @Test("a question is never a notification, in any cell")
@@ -170,7 +155,7 @@ struct SurfaceRouterTests {
 
     @Test("every unavailable cell names a reason a person could be told")
     func everyUnavailableCellHasAReason() {
-        Self.everyCell { _, _, presentation, _, _, menuBar, _, route in
+        Self.everyCell { _, presentation, _, _, menuBar, _, route in
             guard case .unavailable(let reason) = route else { return }
             switch reason {
             case .menuBarHidden:
@@ -230,13 +215,12 @@ struct SurfaceRouterTests {
         #expect(Self.route(rung: .panel, media: Self.onACall) == .surface(.popoverBadge))
     }
 
-    @Test("every rung is deliverable in-app at zero grants, which is what the denied gate proves")
+    /// The claim the `notification-denied` gate stage turns on, and it no longer needs to name a
+    /// grant state to make it: **there is no grant state**. Every rung lands in-app, always.
+    @Test("every rung is deliverable in-app, which is what the denied gate proves")
     func everyRungIsDeliverableWithoutAGrant() {
         for rung in LadderRung.Kind.allCases {
-            for authorisation in [NotificationAuthorisation.denied, .notRequested] {
-                let route = Self.route(rung: rung, authorisation: authorisation)
-                #expect(route.surface?.isInApp == true, "\(rung)/\(authorisation)")
-            }
+            #expect(Self.route(rung: rung).surface?.isInApp == true, "\(rung)")
         }
     }
 
@@ -285,35 +269,25 @@ struct SurfaceRouterTests {
 
     // MARK: - The committed table
 
-    @Test("the table is the whole matrix, and it is what a settings pane may render")
+    @Test("the table is one row per rung, and it is what a settings pane may render")
     func theTableIsComplete() {
         let table = SurfaceRouter.table()
 
-        #expect(table.count
-            == LadderRung.Kind.allCases.count * NotificationAuthorisation.allCases.count)
+        #expect(table.count == LadderRung.Kind.allCases.count)
 
         for row in table {
-            #expect(row.route == Self.route(rung: row.rung, authorisation: row.authorisation))
+            #expect(row.route == Self.route(rung: row.rung))
         }
 
-        // The answer to "what does this app do if I say no", read out of the same value that
-        // decides it.
-        let denied = table.filter { $0.authorisation == .denied }.map(\.route)
-        let notRequested = table.filter { $0.authorisation == .notRequested }.map(\.route)
-        #expect(denied == notRequested)
-        #expect(denied == [.surface(.menuBar), .surface(.panel)])
+        // The answer to "where does a nudge appear", read out of the same value that decides it.
+        #expect(table.map(\.route) == [.surface(.menuBar), .surface(.panel)])
     }
 
     @Test("the reduced-interruption table is the same shape with quieter surfaces")
     func theReducedTable() {
         let table = SurfaceRouter.table(reducedInterruption: true)
-        let denied = table.filter { $0.authorisation == .denied }.map(\.route)
 
-        #expect(denied == [.surface(.menuBar), .surface(.popoverBadge)])
-        // And the authorised column is the same column: since U-2 the authorisation changes
-        // nothing, because no rung reaches a notification.
-        let authorised = table.filter { $0.authorisation == .authorised }.map(\.route)
-        #expect(authorised == denied)
+        #expect(table.map(\.route) == [.surface(.menuBar), .surface(.popoverBadge)])
     }
 
     @Test("routes turn into deliveries without a second opinion about what happened")

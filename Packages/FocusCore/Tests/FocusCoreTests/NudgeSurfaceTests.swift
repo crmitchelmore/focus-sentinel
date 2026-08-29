@@ -3,8 +3,8 @@ import Testing
 
 @testable import FocusCore
 
-/// The surfaces, the authorisation states, and the ruling that a refusal changes what the app
-/// *offers* and never what it *delivers* (R-82, F-73, P-134).
+/// The surfaces, and the notification authorisation reduced to what it now is: **four names for
+/// a reading, with no behaviour attached to any of them** (R-82, F-73, P-134, focus-wy0).
 @Suite("Nudge surfaces")
 struct NudgeSurfaceTests {
     @Test("there are exactly four surfaces, three of them in-app")
@@ -42,41 +42,30 @@ struct NudgeSurfaceTests {
         )
     }
 
-    /// **R-82.2, the ruling this suite exists for.** `denied` and `notRequested` are identical
-    /// in what may be delivered. A user who has never been asked and a user who said no get
-    /// exactly the same behaviour.
-    @Test("denied and notRequested deliver identically")
-    func deniedAndNotRequestedDeliverIdentically() {
-        #expect(
-            NotificationAuthorisation.denied.permitsDelivery
-                == NotificationAuthorisation.notRequested.permitsDelivery
+    /// **R-82.2 in its final form** (focus-wy0). The ruling was that `denied` and `notRequested`
+    /// are identical in what may be *delivered* and differ only in what may be *offered*. Both
+    /// halves are now vacuous by construction, and the type says so rather than a test asserting
+    /// it: nothing is delivered, so `permitsDelivery` is gone; nothing is offered, so
+    /// `mayOfferToEnable` is gone with the button it gated. All four states behave identically
+    /// because none of them reaches any behaviour at all.
+    ///
+    /// What is left is a name for a reading, and this is the assertion that keeps it that way: a
+    /// property added back here would be a decision taken on a value nothing is entitled to
+    /// decide on.
+    @Test("no authorisation state carries any behaviour, in any of the four")
+    func theAuthorisationDecidesNothing() {
+        let fields = Set(
+            NotificationAuthorisation.allCases.flatMap {
+                Mirror(reflecting: $0).children.compactMap(\.label)
+            }
         )
-        #expect(!NotificationAuthorisation.denied.permitsDelivery)
-        #expect(!NotificationAuthorisation.notRequested.permitsDelivery)
-        #expect(NotificationAuthorisation.authorised.permitsDelivery)
-        #expect(NotificationAuthorisation.provisional.permitsDelivery)
-    }
+        #expect(fields.isEmpty, "an authorisation state grew a stored fact: \(fields.sorted())")
 
-    /// …and differ in exactly one thing: whether a settings pane may show a one-line offer.
-    /// Never inside a nudge, and never to somebody who has already said no (F-127).
-    @Test("only notRequested may be offered an enable affordance")
-    func onlyNotRequestedMayBeOffered() {
-        let offerable = NotificationAuthorisation.allCases.filter(\.mayOfferToEnable)
-        #expect(offerable == [.notRequested])
-        #expect(!NotificationAuthorisation.denied.mayOfferToEnable)
-        #expect(!NotificationAuthorisation.authorised.mayOfferToEnable)
-        #expect(!NotificationAuthorisation.provisional.mayOfferToEnable)
-    }
-
-    /// The two states that permit delivery are the two the framework calls authorised and
-    /// provisional, and P-134's measured zero-grant state is neither.
-    @Test("the zero-grant state this Mac was measured in delivers nothing")
-    func measuredZeroGrantState() {
-        // P-134: authorizationStatus == 0 (.notDetermined), every setting .notSupported,
-        // add(_:) failing with UNErrorDomain code 1.
-        let measured = NotificationAuthorisation.notRequested
-        #expect(!measured.permitsDelivery)
-        #expect(measured.mayOfferToEnable)
+        // The one thing it still does: name itself, stably, for a report to print.
+        #expect(
+            NotificationAuthorisation.allCases.map(\.rawValue)
+                == ["authorised", "denied", "notRequested", "provisional"]
+        )
     }
 
     // MARK: - SurfaceRoute

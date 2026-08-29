@@ -287,7 +287,7 @@ public struct NudgeWorld: Sendable, Equatable {
     /// - Parameters:
     ///   - judgement: what the engine concluded, as the nudge sees it.
     ///   - surroundings: what the world was doing.
-    ///   - preferences: the person's deck and their notification authorisation.
+    ///   - preferences: the person's deck and their reduced-interruption flag.
     ///   - priorityID: the ledger's priority half. `nil` means there is no priority, and gate 1
     ///     will have suppressed the interruption anyway.
     ///   - decidable: what the app already held about this subject, for `queryOnDecidableCount`.

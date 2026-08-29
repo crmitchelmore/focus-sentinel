@@ -471,12 +471,14 @@ enum SelfCheck {
     ///    Reading 1 alone is what an earlier draft asserted, and P-139 measured a focus theft it
     ///    cannot see: `makeKeyAndOrderFront(nil)` flips `NSApp.isActive` to `true` and installs a
     ///    key window while the frontmost application never moves.
-    /// 2. **Every rung has a surface at whatever authorisation this Mac actually has.** Read
+    /// 2. **Every rung has a surface, and no notification authorisation can change which.** Read
     ///    from `SurfaceRouter` — the committed table the settings pane renders — so the report
-    ///    and the behaviour cannot be two different answers.
-    /// 3. **Nothing asked for a permission.** `requestAuthorizationCallCount` is published by
-    ///    the notification boundary, which contains no call that could increment it; the number
-    ///    is here so a gate can assert the fact rather than infer it from a lint.
+    ///    and the behaviour cannot be two different answers. Since focus-wy0 the router takes no
+    ///    authorisation, so this is one table rather than three.
+    /// 3. **Nothing asked for a permission, and nothing could.** `requestAuthorizationCallCount`
+    ///    is published by the notification boundary; `requestAuthorization(` appears in no file
+    ///    of this repository, so the number is a property of the call graph rather than of a
+    ///    counter somebody remembered to leave alone.
     @MainActor
     static func nudgeReport() -> [String: Any] {
         let composition = AppComposition.shared
@@ -494,8 +496,15 @@ enum SelfCheck {
         // that followed, and a question on the badge silencing every accusation.
         report["surfacesOfferingACorrection"] =
             NudgeSurface.allCases.filter(\.offersACorrection).map(\.rawValue).sorted()
+        // **What this Mac's grant state actually is, reported and acted on by nothing**
+        // (focus-wy0). It is the reading that makes the `notification-denied` stage a
+        // measurement: "this machine was at *x*, and every rung still landed in-app".
+        //
+        // `permitsNotificationDelivery` was published beside it and is gone. An application that
+        // posts no notifications has no business publishing a belief about whether it may — and
+        // it read `true` on this Mac in the same run that reported no rung can reach a
+        // notification, which is two lines of one report contradicting each other.
         report["notificationAuthorisation"] = host.notificationAuthorisation.rawValue
-        report["permitsNotificationDelivery"] = host.notificationAuthorisation.permitsDelivery
         report["requestAuthorizationCallCount"] = host.requestAuthorizationCallCount
 
         // **A question on the screen that the loop has forgotten** — always empty (focus-v0u).
@@ -534,67 +543,56 @@ enum SelfCheck {
         // Every rung, with nothing presenting and no call in progress — which is the state the
         // settings pane's matrix describes.
         //
-        // **Three tables, not one, and the two extra ones are what make the gate honest.** This
-        // Mac's own authorisation is whatever a person set it to, and the `notification-denied`
-        // stage has to prove F-73's degraded path *whatever that is* — a stage that asserted the
-        // in-app path only when the machine happened to be in the degraded state would be a stage
-        // that silently stopped asserting the moment somebody granted notifications. `route(…)` is
-        // a pure function of typed inputs, so asking it what it would do at `denied` and at
-        // `notRequested` costs nothing, prompts nothing and needs no grant (R-82, P-134).
-        func table(at authorisation: NotificationAuthorisation) -> [[String: Any]] {
-            LadderRung.Kind.allCases.map { rung in
-                let route = SurfaceRouter.route(
-                    rung: rung,
-                    authorisation: authorisation,
-                    presentation: .notPresenting,
-                    media: .idle,
-                    reducedInterruption: false,
-                    menuBarVisible: true,
-                    voice: .standard
-                )
-                return [
-                    "rung": rung.rawValue,
-                    "rank": rung.rank,
-                    "surface": route.surface?.rawValue ?? "",
-                    "deferralReason": route.deferralReason?.rawValue ?? "",
-                    "isInApp": route.surface?.isInApp ?? false
-                ]
-            }
+        // **One table, and it used to be three** (focus-wy0). The two extra ones asked `route(…)`
+        // what it would do at `denied` and at `notRequested`, so that the degraded path was
+        // asserted whatever this Mac's own grant state happened to be. They were the right answer
+        // to the question while the authorisation was an input. It stopped being one at U-2, and
+        // the three tables then came back byte-identical in every gate run — the same reading,
+        // printed three times under three headings, which reads like corroboration and is
+        // repetition. `SurfaceRouter.route(…)` no longer accepts an authorisation at all, so
+        // "denied, notRequested and authorised deliver alike" is now a fact about the function's
+        // type and there is no cell left for a gate to compare.
+        let routes: [[String: Any]] = LadderRung.Kind.allCases.map { rung in
+            let route = SurfaceRouter.route(
+                rung: rung,
+                presentation: .notPresenting,
+                media: .idle,
+                reducedInterruption: false,
+                menuBarVisible: true,
+                voice: .standard
+            )
+            return [
+                "rung": rung.rawValue,
+                "rank": rung.rank,
+                "surface": route.surface?.rawValue ?? "",
+                "deferralReason": route.deferralReason?.rawValue ?? "",
+                "isInApp": route.surface?.isInApp ?? false
+            ]
         }
-        func everyRungHasASurface(_ table: [[String: Any]]) -> Bool {
-            table.allSatisfy { !(($0["surface"] as? String) ?? "").isEmpty }
-        }
-        func everyRungIsInApp(_ table: [[String: Any]]) -> Bool {
-            table.allSatisfy { ($0["isInApp"] as? Bool) == true }
-        }
-
-        let routes = table(at: host.notificationAuthorisation)
         report["routes"] = routes
-        report["everyRungHasASurface"] = everyRungHasASurface(routes)
-        report["everyRungIsInApp"] = everyRungIsInApp(routes)
-        // **Every surface any rung can reach, in any authorisation state** (U-2). Since the
-        // recommitment rung was deferred to focus-5ab there is no rung a notification can carry,
-        // and this is the reading that says so from inside the running application rather than
-        // from a routing table a reader has to interpret.
+        report["everyRungHasASurface"] = routes.allSatisfy {
+            !(($0["surface"] as? String) ?? "").isEmpty
+        }
+        report["everyRungIsInApp"] = routes.allSatisfy { ($0["isInApp"] as? Bool) == true }
+        // **Every surface any rung can reach** (U-2). Since the recommitment rung was deferred to
+        // focus-5ab there is no rung a notification can carry, and this is the reading that says
+        // so from inside the running application rather than from a table a reader has to
+        // interpret. It was computed across four authorisation states; one is now the whole of it.
         report["surfacesARungCanReach"] = Set(
-            NotificationAuthorisation.allCases
-                .flatMap { table(at: $0) }
-                .compactMap { $0["surface"] as? String }
-                .filter { !$0.isEmpty }
+            routes.compactMap { $0["surface"] as? String }.filter { !$0.isEmpty }
         ).sorted()
-
-        let denied = table(at: .denied)
-        let notRequested = table(at: .notRequested)
-        report["routesWhenDenied"] = denied
-        report["routesWhenNotRequested"] = notRequested
-        report["everyRungIsInAppWhenDenied"] = everyRungIsInApp(denied)
-        report["everyRungIsInAppWhenNotRequested"] = everyRungIsInApp(notRequested)
-        // R-82.2: `denied` and `notRequested` differ in what the app may **offer** and never in
-        // what it may **deliver**. Two tables that had drifted apart would mean a person who said
-        // "no" and a person who was never asked were getting different products.
-        report["deniedAndNotRequestedDeliverAlike"] = denied.map {
-            ($0["surface"] as? String) ?? ""
-        } == notRequested.map { ($0["surface"] as? String) ?? "" }
+        // **The shape of a row the settings pane draws** (focus-wy0), read off the compiled type
+        // with `Mirror` rather than written down here.
+        //
+        // A route reading cannot catch the defect coming back. If an authorisation were
+        // reintroduced as a routing input, every cell would answer exactly what it answers now —
+        // that was the whole difficulty: three identical tables under three headings, and a pane
+        // rendering the repetition as a consequence. What *would* change is the row, because the
+        // pane renders `SurfaceRouter.table(…)` itself. So the row's own field names are the
+        // reading, and `notification-denied` asserts the set.
+        report["routingRowFields"] = Mirror(
+            reflecting: SurfaceRoutingRow(rung: .ambient, route: .surface(.menuBar))
+        ).children.compactMap(\.label).sorted()
 
         // The query's route, which takes no authorisation at all: **a question is never a
         // notification** (R-82).

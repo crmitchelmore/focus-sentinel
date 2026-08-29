@@ -94,9 +94,6 @@ public enum ShellRenderedField: String, Sendable, CaseIterable, Codable, Hashabl
     case reducedInterruptionForced
     /// The quiet-hours window the pane drew, or `"none"` for off (R-85).
     case quietHours
-    /// The notification authorisation the pane drew — which is what its whole "what happens if I
-    /// say no" section is about, and what `SurfaceRouter` routes on.
-    case notificationAuthorisation
     /// Today's spend over the cap, as the pane drew it (D-01: information, never a score).
     case interruptionUsage
     /// e03's presentation-exclusion list, as the pane drew it.

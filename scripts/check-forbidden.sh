@@ -384,16 +384,15 @@ check "R-22" "startAccessingSecurityScopedResource only in SecurityScopedBookmar
 # `AXIsProcessTrusted()` and `CGPreflightScreenCaptureAccess()` stay permitted — reading trust
 # state is not requesting it.
 #
-# **`requestAuthorization` has left this pattern, and it has been replaced by something
-# stronger, not weaker.** e03 banned it graph-wide and said in this paragraph that it would
-# narrow to a single named file when e05 shipped notification consent. That is what R-96g does
-# below, and it is a *bound plus an identity*: the call may appear in at most one file and that
-# file must be the Intervention settings pane's user-initiated action. A blanket ban here plus a
-# narrowed check there would have been the same assertion twice, with the blanket one failing on
-# the honest reporting name the self-check publishes — `requestAuthorizationCallCount`, the
-# number whose being zero is what §3.F.37 and the `notification-denied` gate stage actually
-# assert. A lint that made the app unable to *report* it had never asked would be a lint working
-# against the thing it exists to prove.
+# **`requestAuthorization` is banned by R-96g below rather than by this list**, and the ban is
+# back to graph-wide (focus-wy0). e03 banned it here; e05 narrowed it to one named file when it
+# shipped notification consent; that consent asked for a permission no rung could spend and was
+# deleted, so the bound went back to zero. It stays in R-96g rather than returning to this
+# pattern for one reason: the needle must carry a trailing `(`, or it fires on
+# `requestAuthorizationCallCount` — the honest reporting name the self-check publishes, and the
+# number whose being zero is what §3.F.37 and the `notification-denied` stage actually assert.
+# A lint that made the app unable to *report* it had never asked would be a lint working against
+# the thing it exists to prove.
 check "R-33" "no API that can raise a TCC prompt" \
     'AXIsProcessTrustedWithOptions|kAXTrustedCheckOptionPrompt|CGRequestScreenCaptureAccess|SCShareableContent|AVCaptureDevice\.requestAccess|requestAccess\(for:|CGRequestPostEventAccess|CGRequestListenEventAccess|IOHIDRequestAccess'
 
@@ -688,9 +687,11 @@ check_outside "R-70n" "no rule is constructed with the session scope" \
 # R-96f  No string under `nudge.*.query.*` matches the accusatory word list. D-11 made the
 #        copy static precisely so it could be checked; tone is the product.
 #
-# R-96g  `requestAuthorization(` appears in exactly one file, the Intervention settings
-#        pane's user-initiated action. P-134 proved the router needs only
-#        getNotificationSettings, which never prompts — so SC-5 is discharged structurally.
+# R-96g  `requestAuthorization(` appears in NO file (focus-wy0). It was pinned to one — the
+#        Intervention pane's enable button — until that button was found to be asking for a
+#        permission no rung can spend. P-134 proved the router needs only
+#        getNotificationSettings, which never prompts; the app now needs not even that to
+#        decide anything, so SC-5 is discharged by the call not existing.
 #
 # R-96h  `hidesOnDeactivate = true` and a `canBecomeMain` returning true are banned on any
 #        NSPanel subclass in the nudge module. Both are silent failures: the first makes
@@ -738,11 +739,10 @@ check_outside "R-70n" "no rule is constructed with the session scope" \
 #   * **R-96b** asks whether any ONE file contains two different things. An intersection, not
 #     a count, and getting it wrong in the safe-looking direction (two separate `check`s, each
 #     passing) would leave the adapter's home unguarded.
-#   * **R-96g** has to hold BEFORE its one sanctioned call site exists. A `count_files … 1`
-#     would fail today, when the count is legitimately zero, and the honest assertion is
-#     "at most one, and if there is one it is that file" — which is what `count_at_most`
-#     below says. It is a bound plus an identity, never a bare "at most", because "at most
-#     one call site, anywhere" would let the prompt move into a router.
+#   * **R-96g** is a plain ban now (focus-wy0), so it is a `check` rather than a count. It spent
+#     the epic as `count_at_most … 1` — a bound plus an identity, so the one sanctioned prompt
+#     could not migrate into a router. The prompt has been deleted, and a bound of one over an
+#     empty set is an invitation rather than a guard, so the bound is zero.
 #
 # The nudge module's search set is named once, in NUDGE_SOURCES, and paths that do not exist
 # yet are dropped rather than making grep error — Phase B lands before Phase E, so
@@ -766,8 +766,9 @@ PANEL_SHOW_FILE="Packages/FocusUI/Sources/FocusUI/Nudge/NudgePanelController.swi
 # The one file permitted to ADD `.fullScreenAuxiliary` to a collection behaviour (R-96n).
 PANEL_BEHAVIOUR_FILE="Packages/FocusUI/Sources/FocusUI/Nudge/NudgePanel.swift"
 
-# The one file permitted to ask for notification authorisation (R-96g). It arrives in T138.
-AUTHORISATION_ALLOWED_FILE="Packages/FocusUI/Sources/FocusUI/Scenes/InterventionSettingsView.swift"
+# **No file is permitted to ask for notification authorisation** (R-96g, focus-wy0), so there is
+# no `AUTHORISATION_ALLOWED_FILE` to name. It was the Intervention settings pane; the button it
+# held asked for a permission no rung could spend, and went with the section that drew it.
 
 # The String Catalog the decks live in (R-96f).
 NUDGE_CATALOG="Packages/FocusCore/Sources/FocusCore/Resources/Localizable.xcstrings"
@@ -806,48 +807,6 @@ check_not_both() {
         rc=1
     else
         print "ok   [$condition] $description"
-    fi
-}
-
-# count_at_most <condition> <description> <fixed-string> <max> <allowed-file> <path>…
-#
-# R-96g's shape: a bound plus an identity. Zero files is a pass and says so — the sanctioned
-# call site has not been written yet — one file is a pass only when it is the sanctioned one,
-# and two is a failure whatever they are.
-count_at_most() {
-    local condition="$1"
-    local description="$2"
-    local pattern="$3"
-    local maximum="$4"
-    local allowed="$5"
-    shift 5
-
-    local files count
-    files=$(grep -rlF --include='*.swift' --exclude-dir='.build' -- "$pattern" "$@" 2>/dev/null | sort -u)
-    count=$(print -r -- "$files" | grep -c '[^[:space:]]')
-
-    if (( count > maximum )); then
-        print -u2 "FAIL [$condition] $description — at most $maximum file(s), found $count"
-        print -u2 "$files" | sed 's/^/    /'
-        rc=1
-        return
-    fi
-
-    local file
-    for file in ${(f)files}; do
-        [[ -z "$file" ]] && continue
-        if [[ "$file" != "$allowed" ]]; then
-            print -u2 "FAIL [$condition] $description — found in $file"
-            print -u2 "    The only sanctioned location is $allowed"
-            rc=1
-            return
-        fi
-    done
-
-    if (( count == 0 )); then
-        print "ok   [$condition] $description (0 call sites; the sanctioned one is $allowed)"
-    else
-        print "ok   [$condition] $description ($count file: $allowed)"
     fi
 }
 
@@ -978,10 +937,19 @@ PYTHON
 tone_rc=$?
 (( tone_rc != 0 )) && rc=1
 
-# R-96g — the routing path must be provably prompt-free, and the assertion has to hold before
-# the one sanctioned call site is written.
-count_at_most "R-96g" "requestAuthorization appears only in the settings pane's action" \
-    'requestAuthorization(' 1 "$AUTHORISATION_ALLOWED_FILE" App Packages
+# R-96g — **nowhere, now** (focus-wy0). It was `count_at_most … 1`: the call was permitted in the
+# Intervention pane's user-initiated button and nowhere else. The button asked for a permission
+# this app cannot use — no rung has routed to a notification since U-2 — so it was deleted, and
+# the bound is tightened to zero rather than left at one with nothing under it. A bound of one
+# over an empty set is an invitation: the next round that wants a prompt finds the lint already
+# green and adds one. focus-5ab, which brings the recommitment rung back, must amend this line
+# deliberately and beside the rung that would justify it.
+#
+# The pattern keeps its trailing `(` so it cannot fire on `requestAuthorizationCallCount`, the
+# honest reporting name the self-check publishes and the number this whole condition exists to
+# make meaningful.
+check "R-96g" "requestAuthorization is called nowhere in the repository" \
+    'requestAuthorization\('
 
 # R-96n's two structural halves, which no grep over single lines can express.
 #

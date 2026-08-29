@@ -1036,15 +1036,17 @@ check(
     "the Settings pane the person had selected was put back",
     panes.get("restored"),
 )
-# The three fields that can ONLY come from inside a pane: the Privacy pane's store path and the
-# five Intervention fields that were carried into the window and reported by nothing. If the walk
+# The fields that can ONLY come from inside a pane: the Privacy pane's store path and the
+# Intervention fields that were carried into the window and reported by nothing. If the walk
 # silently stopped working these would be absent and the reading above would already be red — this
 # names them, so the failure says which pane stopped drawing rather than only that one did.
+#
+# `notificationAuthorisation` is not among them any more: the section that drew it asked for a
+# permission the app cannot use, and went (focus-wy0).
 reported_after_walk = set(panes.get("reportedAfterTheWalk") or [])
 for field in [
     "privacyStorePath",
     "quietHours",
-    "notificationAuthorisation",
     "interruptionUsage",
     "presentationExclusions",
     "reducedInterruptionForced",
@@ -1638,20 +1640,21 @@ check(
     nudge.get("surfacesARungCanReach"),
 )
 
-# 3 — **every rung reaches a surface, whatever this Mac says about notifications.** Since U-2 the
-# authorisation cannot change any route at all, which is F-73's degraded path made unconditional:
-# there is no grant-dependent cell left to degrade.
+# 3 — **every rung reaches an in-app surface, and no authorisation can change that.** Since U-2 no
+# rung routes to a notification, and since focus-wy0 `SurfaceRouter.route(…)` does not take an
+# authorisation at all — so F-73's degraded path is not a path, it is the whole product. The
+# in-app assertion is therefore unconditional rather than made only on a Mac that happens to be
+# in the degraded state.
 check(
     nudge.get("everyRungHasASurface") is True,
-    "every rung of the ladder reaches a surface at this Mac's real authorisation",
+    "every rung of the ladder reaches a surface",
     nudge.get("routes"),
 )
-if report.get("notificationAuthorisation") in ("denied", "notRequested"):
-    check(
-        nudge.get("everyRungIsInApp") is True,
-        "with notifications unauthorised every rung is delivered in-app",
-        nudge.get("routes"),
-    )
+check(
+    nudge.get("everyRungIsInApp") is True,
+    "every rung is delivered in-app, whatever this Mac says about notifications",
+    nudge.get("routes"),
+)
 # A question is never a notification (R-82): its route takes no authorisation at all.
 check(
     nudge.get("querySurface") in ("panel", "popoverBadge"),

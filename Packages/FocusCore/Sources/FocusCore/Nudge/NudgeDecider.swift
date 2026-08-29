@@ -248,24 +248,25 @@ extension NudgeMemory {
     }
 }
 
-/// **What the person set.**
+/// **What the person set** — two things, both of them chosen deliberately in a settings pane.
+///
+/// It carried a third, the notification authorisation, and that was never something the person
+/// *set* here (focus-wy0): it was a reading taken from the system and handed to `SurfaceRouter`,
+/// which since U-2 did not read it. A preferences value holding a fact nobody chose and nothing
+/// consulted is the shape a stale copy hides in — which is exactly what focus-zrs found the last
+/// time this field existed as a copy.
 public struct NudgePreferences: Sendable, Equatable {
     /// One of the five static decks. `silentVisual` is a routing deck, not a copy deck.
     public let voice: NudgeVoice
     /// F-148's flag, forced on by `accessibilityDisplayShouldReduceMotion`.
     public let reducedInterruption: Bool
-    /// From `getNotificationSettings`, which P-134 measured never prompts. **Never** from
-    /// `requestAuthorization`, which is not on this path at all (R-82.1, R-96g).
-    public let authorisation: NotificationAuthorisation
 
     public init(
         voice: NudgeVoice = .standard,
-        reducedInterruption: Bool = false,
-        authorisation: NotificationAuthorisation = .notRequested
+        reducedInterruption: Bool = false
     ) {
         self.voice = voice
         self.reducedInterruption = reducedInterruption
-        self.authorisation = authorisation
     }
 }
 
@@ -516,7 +517,6 @@ public struct NudgeDecider: Sendable {
 
         let route = SurfaceRouter.route(
             rung: rung.kind,
-            authorisation: preferences.authorisation,
             presentation: surroundings.presentation,
             media: surroundings.media,
             reducedInterruption: preferences.reducedInterruption,

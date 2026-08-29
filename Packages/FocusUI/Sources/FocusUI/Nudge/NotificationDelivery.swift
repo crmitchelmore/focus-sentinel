@@ -36,7 +36,14 @@ public enum NudgeNotificationAction: String, Sendable, CaseIterable, Hashable {
     }
 }
 
-/// The category the recommitment notification is registered under.
+/// The category a recommitment notification was delivered under.
+///
+/// **Kept, and deliberately not renamed** (focus-wy0). Nothing registers it any more — this app
+/// posts no notifications — but a banner an earlier build posted can still be sitting in
+/// Notification Centre with this identifier on it, for as long as the person leaves it there.
+/// Renaming it would orphan those banners: the press would arrive naming a category this build
+/// does not recognise, and `NudgeHost.resolveFromNotification(…)` could no longer say what it was
+/// refusing. focus-5ab, which brings the recommitment rung back, registers it again.
 public enum NudgeNotificationCategory {
     public static let identifier = "nudge.recommitment"
 }
@@ -89,69 +96,45 @@ extension NotificationAuthorisation {
     }
 }
 
-/// What a `UNUserNotificationCenter.add(_:)` came back with.
-public enum NotificationAddResult: Sendable, Equatable {
-    case delivered
-    /// P-134 measured `UNErrorDomain` code **1**, "Notifications are not allowed for this
-    /// application", arriving from `add(_:)` at zero grants. It can also arrive **after** a
-    /// positive settings read, because authorisation can be revoked between the two calls —
-    /// which is exactly why R-82.4 makes a failure a route change rather than a log line.
-    case failed(domain: String, code: Int)
-
-    public var isDelivered: Bool { self == .delivered }
-}
-
 /// The seam over `UNUserNotificationCenter`.
 ///
-/// A protocol, so the unit lane can drive every authorisation state, every category-registration
-/// order and the `UNErrorDomain` 1 failure **without a grant, a prompt or a notification centre**
-/// — which is what lets the whole of R-82 be a T1 claim.
+/// A protocol, so the unit lane can drive every authorisation state **without a grant, a prompt
+/// or a notification centre**. It described three calls; two of them — `setCategories` and
+/// `add(_:)`, with the `NotificationAddResult` the second answered in — went with the rung they
+/// served (focus-wy0), and a seam that still offered them would be a seam over a capability the
+/// app had stopped having.
 @MainActor
 public protocol NotificationCentring: AnyObject {
     /// `getNotificationSettings`, as a raw status.
     ///
     /// P-134 measured this obtainable at zero grants, **never prompting**, and answering
-    /// completely — which is the entire reason `requestAuthorization` is not on the routing path
-    /// (R-82.1) and why R-96g can pin it to one file that is not this one.
+    /// completely. It is the only thing this app ever asks the notification centre, and since
+    /// focus-wy0 the answer decides nothing: it is reported by the self-check so the
+    /// `notification-denied` gate stage can say what grant state this Mac was in while it proved
+    /// the product works without one.
     func authorizationStatus(_ completion: @escaping @MainActor (Int) -> Void)
-
-    /// Register the notification's actions.
-    func setCategories(_ identifiers: Set<String>)
-
-    /// What is registered right now. P-134 measured `setNotificationCategories` silently taking
-    /// **zero** categories while unauthorised, so this is read back rather than assumed.
-    var registeredCategoryIdentifiers: Set<String> { get }
-
-    func add(
-        identifier: String,
-        title: String,
-        body: String,
-        categoryIdentifier: String,
-        completion: @escaping @MainActor (NotificationAddResult) -> Void
-    )
 }
 
-/// **The top rung as a notification, and the route around every refusal** (R-82, P-134, F-58).
+/// **What is left of the notification boundary once the app stopped posting notifications**
+/// (U-2, focus-wy0, P-134).
 ///
-/// Four rulings live in here, and three of them are things P-134 measured rather than things the
-/// documentation says:
+/// It delivered the recommitment rung, and that rung is deferred to focus-5ab. Three things went
+/// with it, in two rounds:
 ///
-/// 1. **`requestAuthorization` is never called from this file.** The router reads
-///    `getNotificationSettings`, which never prompts. Authorisation is requested only from an
-///    explicit user action in the Intervention settings pane, which is the single call site
-///    R-96g pins — and it is why no acceptance criterion in this epic depends on a grant.
-/// 2. **Categories are registered *after* authorisation, never at launch.**
-///    `setNotificationCategories` silently takes zero categories while unauthorised, so an app
-///    that registered once at launch would ship a notification rung with no Return, no Snooze
-///    and no "This is relevant" — a notification a person could not answer, which is the
-///    anti-pattern the whole correction economy exists to avoid.
-/// 3. **A delivery failure is a route change.** `add(_:)`'s completion demotes the rung to the
-///    in-app recommitment surface through `SurfaceRouter.afterNotificationFailure(…)` and
-///    records `.deferred(.notificationDeliveryFailed)` — so nothing advances and nothing is
-///    spent, because nobody saw it (R-81).
-/// 4. **`denied` and `notRequested` are identical in delivery.** That is the router's ruling and
-///    this type never second-guesses it: it asks the router where the rung goes and does what it
-///    is told.
+/// 1. **`deliver(…)`** (U-2). No rung routes to a notification, so there is nothing to deliver,
+///    no `UNErrorDomain` 1 failure to demote, and no route change to record.
+/// 2. **The category registration** (focus-wy0). It ran at every launch that found a grant, and
+///    registered three actions — Return, Snooze, "This is relevant" — onto a category no banner
+///    would ever carry. An app that registers buttons for notifications it does not send is
+///    telling the system something untrue about itself.
+/// 3. **The permission request** (focus-wy0). It was never in this file; it was the settings
+///    pane's "Turn on notifications" button, offered to every fresh install. It is now nowhere in
+///    the repository, which is what makes `requestAuthorizationCallCount == 0` a fact about the
+///    call graph rather than about a counter somebody remembered to leave alone.
+///
+/// Two things remain, and both still have work to do: **reading** the authorisation, which P-134
+/// measured never prompts and which the `notification-denied` stage reports; and **decoding** a
+/// press on a banner an earlier build posted, which `NudgeHost` must be able to refuse.
 @MainActor
 public final class NotificationDelivery {
     private let centre: any NotificationCentring
@@ -163,14 +146,12 @@ public final class NotificationDelivery {
     /// which is the honest default: the app has not looked, and it has certainly not asked.
     public private(set) var authorisation: NotificationAuthorisation = .notRequested
 
-    /// **Must stay zero in every automated run** (§3.F.37, §4.5). Nothing in this file can
-    /// increment it, because nothing in this file calls the API that would — it is published
-    /// here so the self-check can report the number that proves it.
+    /// **Must stay zero in every automated run** (§3.F.37, §4.5), and since focus-wy0 it cannot
+    /// be anything else in any run at all: `requestAuthorization(` appears in **no** file of this
+    /// repository, so there is no code path — sanctioned, accidental or future — that could
+    /// increment it. Published so the self-check can report the number rather than a lint's
+    /// opinion of it.
     public private(set) var requestAuthorizationCallCount = 0
-
-    /// How many times the categories have actually been registered. Read by the unit lane:
-    /// "exactly once, and only after authorisation" is a count, not a promise.
-    public private(set) var categoryRegistrationCount = 0
 
     public init(centre: any NotificationCentring) {
         self.centre = centre
@@ -178,57 +159,21 @@ public final class NotificationDelivery {
 
     // MARK: - Reading the state, without ever asking for it
 
-    /// Re-read `getNotificationSettings` and register the categories if — and only if — the
-    /// answer permits delivery.
+    /// Re-read `getNotificationSettings`.
     ///
-    /// Called at launch and whenever the settings pane's one sanctioned `requestAuthorization`
-    /// returns, so a grant that arrives mid-session brings the actions with it.
+    /// Called once at launch. It never prompts (P-134), and what it learns changes nothing about
+    /// how the app behaves — it is the reading the `notification-denied` stage prints so that
+    /// "this Mac was at *x* and every rung still landed in-app" is one measurement rather than
+    /// two assumptions.
     public func refresh(_ completion: (@MainActor (NotificationAuthorisation) -> Void)? = nil) {
         centre.authorizationStatus { [weak self] raw in
             guard let self else { return }
             self.authorisation = NotificationAuthorisation.decode(authorizationStatus: raw)
-            self.registerCategoriesIfPermitted()
             completion?(self.authorisation)
         }
     }
 
-    /// P-134's second consequence, as code: registration happens **after** a positive read, and
-    /// only once.
-    private func registerCategoriesIfPermitted() {
-        guard authorisation.permitsDelivery else { return }
-        guard !centre.registeredCategoryIdentifiers.contains(NudgeNotificationCategory.identifier)
-        else { return }
-        centre.setCategories([NudgeNotificationCategory.identifier])
-        categoryRegistrationCount += 1
-    }
-
-    /// Whether the actions are actually installed. A notification rung offered without them
-    /// would be a sentence with no way to answer it.
-    public var hasRegisteredActions: Bool {
-        centre.registeredCategoryIdentifiers.contains(NudgeNotificationCategory.identifier)
-    }
-
-    // MARK: - Delivering, and routing around a refusal
-
-    /// Deliver the recommitment rung as a notification, and say what actually happened.
-    ///
-    /// - Parameters:
-    ///   - presentation: the same value the panel would have drawn, so the notification and the
-    ///     panel say the same sentence in the same deck.
-    ///   - surroundings: the facts the router needs to pick the fallback surface if this fails.
-    ///   - deliveryID: **the rung this banner belongs to**, minted by the caller and used as the
-    ///     `UNNotificationRequest` identifier (focus-zrs). It used to be `UUID().uuidString`
-    ///     generated here and thrown away, so nothing that came back could be tied to anything —
-    ///     and a press on a banner from an hour ago reached the live loop unchallenged. The caller
-    ///     mints it because the caller is the only object that knows when the rung is over.
-    /// - Returns: `.delivered(.notification)` when the system took it, or the **route change**
-    ///   R-82.4 requires — a `.deferred(.notificationDeliveryFailed)` record and a demotion to an
-    ///   in-app surface.
-    // **`deliver(…)` is gone** (U-2). The notification was the recommitment rung's surface and
-    // nothing else's, and that rung is deferred to focus-5ab — so this app posts no notifications
-    // at all. What is kept is the half that still has work to do: reading the authorisation for
-    // the settings pane, registering the action categories, and decoding a press on a banner that
-    // an earlier build posted and the person has not yet cleared.
+    // MARK: - A press on a banner an earlier build posted
 
     /// A tap came back from the notification centre.
     ///
@@ -244,33 +189,13 @@ public final class NotificationDelivery {
     }
 }
 
-/// The facts the router needs to choose a fallback, gathered once so `deliver(…)` does not have
-/// to reach for e03's types itself.
-public struct NotificationSurroundings: Sendable, Equatable {
-    public let presentation: PresentationState
-    public let media: MediaActivity
-    public let reducedInterruption: Bool
-    public let menuBarVisible: Bool
-
-    public init(
-        presentation: PresentationState = .notPresenting,
-        media: MediaActivity = .idle,
-        reducedInterruption: Bool = false,
-        menuBarVisible: Bool = true
-    ) {
-        self.presentation = presentation
-        self.media = media
-        self.reducedInterruption = reducedInterruption
-        self.menuBarVisible = menuBarVisible
-    }
-}
-
 /// The real `UNUserNotificationCenter`, behind the seam.
 ///
-/// The **only** file in the package that imports UserNotifications, and it contains no call that
-/// can raise a prompt: `getNotificationSettings`, `setNotificationCategories`, `add(_:)` and a
-/// delegate. `requestAuthorization` is not here — it is the settings pane's one user-initiated
-/// action, which is what makes SC-5 structural rather than observed (R-96g).
+/// The **only** file in the package that imports UserNotifications, and it now contains exactly
+/// two calls: `getNotificationSettings`, which P-134 measured never prompting, and a delegate
+/// that receives a press. Neither can raise a permission dialog, and neither can post a banner —
+/// `setNotificationCategories` and `add(_:)` went with the rung they served (focus-wy0), so the
+/// app's whole relationship with the notification centre is now *listening*.
 @MainActor
 public final class SystemNotificationCentre: NSObject, NotificationCentring {
     private let centre: UNUserNotificationCenter
@@ -278,16 +203,9 @@ public final class SystemNotificationCentre: NSObject, NotificationCentring {
     /// composition root. Both identifiers, because *which button* and *which banner* are two
     /// different facts and only the second one can tell a live press from a stale one (focus-zrs).
     public var onAction: ((_ actionIdentifier: String, _ requestIdentifier: String) -> Void)?
-    public private(set) var registeredCategoryIdentifiers: Set<String> = []
 
-    /// The deck the actions are titled from. The notification's buttons are registered once, so
-    /// they carry the deck in force at the moment authorisation was granted; changing the voice
-    /// re-registers them through `NotificationDelivery.refresh(_:)`.
-    private let voice: NudgeVoice
-
-    public init(voice: NudgeVoice = .standard) {
+    public override init() {
         self.centre = UNUserNotificationCenter.current()
-        self.voice = voice
         super.init()
         centre.delegate = self
     }
@@ -296,59 +214,6 @@ public final class SystemNotificationCentre: NSObject, NotificationCentring {
         centre.getNotificationSettings { settings in
             let raw = settings.authorizationStatus.rawValue
             Task { @MainActor in completion(raw) }
-        }
-    }
-
-    public func setCategories(_ identifiers: Set<String>) {
-        let categories: Set<UNNotificationCategory> = Set(
-            identifiers.map { identifier in
-                UNNotificationCategory(
-                    identifier: identifier,
-                    actions: NudgeNotificationAction.allCases.map { action in
-                        UNNotificationAction(
-                            identifier: action.identifier,
-                            title: NudgeCopy.string(
-                                voice: voice,
-                                action.copyKey,
-                                // The return action's template names the target; in a
-                                // notification there is no room for one, so the empty string is
-                                // substituted and the line reads as the bare verb it is.
-                                arguments: action == .returnToTask ? [""] : []
-                            ),
-                            options: [.foreground]
-                        )
-                    },
-                    intentIdentifiers: []
-                )
-            }
-        )
-        centre.setNotificationCategories(categories)
-        registeredCategoryIdentifiers = identifiers
-    }
-
-    public func add(
-        identifier: String,
-        title: String,
-        body: String,
-        categoryIdentifier: String,
-        completion: @escaping @MainActor (NotificationAddResult) -> Void
-    ) {
-        let content = UNMutableNotificationContent()
-        content.title = title
-        content.body = body
-        content.categoryIdentifier = categoryIdentifier
-        // No trigger: deliver now or not at all. A scheduled nudge is a nudge about a moment
-        // that has passed.
-        let request = UNNotificationRequest(identifier: identifier, content: content, trigger: nil)
-
-        centre.add(request) { error in
-            let result: NotificationAddResult
-            if let error = error as NSError? {
-                result = .failed(domain: error.domain, code: error.code)
-            } else {
-                result = .delivered
-            }
-            Task { @MainActor in completion(result) }
         }
     }
 }
