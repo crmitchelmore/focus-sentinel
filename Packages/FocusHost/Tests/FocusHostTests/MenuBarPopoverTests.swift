@@ -86,7 +86,7 @@ struct MenuBarPopoverTests {
     func aQuestionArrivingInAnOpenPopoverIsDelivered() throws {
         let fixture = try NudgeHostFixture()
         defer { fixture.tearDown() }
-        fixture.host.preferences = NudgePreferences(voice: .standard, reducedInterruption: true)
+        fixture.host.choose(reducedInterruption: true)
 
         // The popover is opened first, on nothing in particular.
         try MenuBarStage.open(

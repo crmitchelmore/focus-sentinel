@@ -126,9 +126,7 @@ struct CompositionRootWireTests {
         let (root, priorityID) = try Self.joinedRoot(clock: clock)
         defer { Self.tearDown(root) }
 
-        root.nudgeHost.preferences = NudgePreferences(
-            voice: .standard, reducedInterruption: true
-        )
+        root.nudgeHost.choose(reducedInterruption: true)
         root.relevanceHost.onJudgement?(
             NudgeHostFixture.uncertainJudgement(subject: Self.subject)
         )

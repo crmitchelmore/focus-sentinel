@@ -70,8 +70,37 @@ final class NudgeHost {
     /// for the rest of it.
     var surroundings: (@MainActor () -> NudgeSurroundings)?
 
-    /// What the person set. Re-read whenever the settings pane changes something.
-    var preferences = NudgePreferences()
+    /// **What the person chose, and what the notification boundary currently believes**
+    /// (focus-zrs).
+    ///
+    /// The authorisation used to be a **copy**: `AppComposition` read it from
+    /// `NotificationDelivery` at launch and again after the settings pane's one sanctioned
+    /// request, and wrote it in here. But `NotificationDelivery.deliver(…)` sets its own to
+    /// `.denied` the moment a delivery actually fails — the route change R-82.4 requires — and
+    /// nothing told the copy. So `SurfaceRouter` went on being handed `.authorised` and went on
+    /// sending the next recommitment rung to a channel the boundary already knew was shut, failing
+    /// and demoting each time, while the Settings pane (which reads the boundary directly) drew
+    /// `.denied`. One question, two answers, in two windows and a router.
+    ///
+    /// Derived now. The two halves a **person** sets are stored; the authorisation is read from
+    /// the object that owns it, every time this value is built.
+    var preferences: NudgePreferences {
+        NudgePreferences(
+            voice: chosenVoice,
+            reducedInterruption: chosenReducedInterruption,
+            authorisation: notifications.authorisation
+        )
+    }
+
+    private var chosenVoice: NudgeVoice = .standard
+    private var chosenReducedInterruption = false
+
+    /// The two things the Intervention pane can set.
+    ///
+    /// Named verbs rather than a settable `preferences`, so there is no way to hand this object an
+    /// authorisation — a value it does not own and must not be able to hold a stale copy of.
+    func choose(voice: NudgeVoice) { chosenVoice = voice }
+    func choose(reducedInterruption: Bool) { chosenReducedInterruption = reducedInterruption }
 
     /// A correction that has to be performed somewhere else — a persisted rule (which goes
     /// through `PriorityHost`, so it lands in the Rules pane with an undo registered), a pause
@@ -1288,13 +1317,18 @@ final class NudgeHost {
         }
 
         // **The slot is derived, so forgetting the question above has already released it**
-        // (focus-zrs) — except on the one exit that must *not* release it, `preempted`, where the
-        // accusation has taken the slot in the same turn by having assigned `openRung` first. That
-        // ordering is what `releasesTheSlot` used to say with an assignment; asserting it here
-        // keeps the enum load-bearing rather than decorative.
+        // (focus-zrs). `releasesTheSlot` was an assignment; what is left of it is a statement, and
+        // this is the one case where the statement can be wrong: `preempted` says the slot is
+        // **not** released because something else is taking it in the same turn, which is only
+        // true if `accuse(…)` assigned `openRung` before calling this. Every other exit
+        // short-circuits, because there is nothing left to be wrong about once the question is
+        // gone.
         assert(
-            exit.releasesTheSlot ? slot.openQuery == nil : true,
-            "an exit that releases the slot left a question holding it"
+            exit.releasesTheSlot || slot.openAccusation != nil,
+            """
+            a question ended by \(exit.rawValue) without releasing the slot, and with nothing \
+            holding it in its place
+            """
         )
     }
 

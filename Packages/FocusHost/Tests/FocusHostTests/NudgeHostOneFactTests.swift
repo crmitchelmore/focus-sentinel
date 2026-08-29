@@ -211,4 +211,40 @@ struct NudgeHostOneFactTests {
         #expect(host.commitmentDisagreements.isEmpty)
         #expect(host.activeCommitment == nil, "the cleared commitment survived in one of the three")
     }
+
+    /// **The notification authorisation, held twice** (focus-zrs).
+    ///
+    /// `NudgePreferences.authorisation` was a copy. `AppComposition` read it from
+    /// `NotificationDelivery` at launch and again after the settings pane's one sanctioned request,
+    /// and wrote it into the loop. But `NotificationDelivery.deliver(…)` sets its **own** to
+    /// `.denied` the moment a delivery actually fails — the route change R-82.4 requires — and
+    /// nothing told the copy. So `SurfaceRouter` went on being handed `.authorised` and went on
+    /// sending the next recommitment rung to a channel the boundary already knew was shut, while
+    /// the Settings pane, which reads the boundary, drew `.denied`. One question, two answers, in
+    /// two windows and a router.
+    @Test("what the loop routes on is what the notification boundary currently believes")
+    func theAuthorisationIsOneFact() throws {
+        let fixture = try NudgeHostFixture()
+        defer { fixture.tearDown() }
+
+        // The boundary reads the centre, which answers `denied` — the fixture's whole posture.
+        fixture.notifications.refresh()
+        NudgeHostFixture.settle(0.1)
+
+        #expect(
+            fixture.host.preferences.authorisation == fixture.notifications.authorisation,
+            """
+            the loop routes on \(fixture.host.preferences.authorisation) while the boundary \
+            believes \(fixture.notifications.authorisation)
+            """
+        )
+        #expect(fixture.host.notificationAuthorisation == fixture.notifications.authorisation)
+
+        // What a person sets is still what a person set, and it does not disturb the other half.
+        fixture.host.choose(voice: .warm)
+        fixture.host.choose(reducedInterruption: true)
+        #expect(fixture.host.preferences.voice == .warm)
+        #expect(fixture.host.preferences.reducedInterruption)
+        #expect(fixture.host.preferences.authorisation == fixture.notifications.authorisation)
+    }
 }

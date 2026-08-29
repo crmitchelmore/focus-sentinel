@@ -490,13 +490,11 @@ public final class AppComposition {
         menuBar.onPopoverDidShow = { [weak self] in self?.nudgeHost.popoverPresentedTheQuestion() }
         // Read once at launch, and again whenever the settings pane's one sanctioned request
         // returns. `getNotificationSettings` never prompts (P-134), so this costs no permission.
-        notificationDelivery.refresh { [weak self] authorisation in
-            self?.nudgeHost.preferences = NudgePreferences(
-                voice: self?.nudgeHost.preferences.voice ?? .standard,
-                reducedInterruption: self?.nudgeHost.preferences.reducedInterruption ?? false,
-                authorisation: authorisation
-            )
-        }
+        //
+        // **Nothing is copied out of it** (focus-zrs). This used to write the answer into
+        // `nudgeHost.preferences`, which meant the router read a copy that no delivery failure
+        // could update; the loop reads the boundary's own value now.
+        notificationDelivery.refresh()
 
         nudgeHost.surroundings = { [weak self] in
             self?.nudgeSurroundings() ?? AppComposition.emptySurroundings()
@@ -752,14 +750,9 @@ public final class AppComposition {
     /// The pane performs the request; this learns the answer. Nothing here can ask, which is
     /// what keeps the routing path provably prompt-free (R-82.1, R-96g).
     public func refreshNotificationAuthorisation() {
-        notificationDelivery.refresh { [weak self] authorisation in
-            guard let self else { return }
-            self.nudgeHost.preferences = NudgePreferences(
-                voice: self.nudgeHost.preferences.voice,
-                reducedInterruption: self.nudgeHost.preferences.reducedInterruption,
-                authorisation: authorisation
-            )
-        }
+        // The re-read alone: the loop takes the authorisation from this object rather than from a
+        // copy of it, so there is nothing to propagate (focus-zrs).
+        notificationDelivery.refresh()
     }
 
     /// Detach the observer graph without pausing the session.
@@ -1508,17 +1501,9 @@ public final class AppComposition {
     public func perform(_ action: InterventionSettingsAction) {
         switch action {
         case .setVoice(let voice):
-            nudgeHost.preferences = NudgePreferences(
-                voice: voice,
-                reducedInterruption: nudgeHost.preferences.reducedInterruption,
-                authorisation: nudgeHost.preferences.authorisation
-            )
+            nudgeHost.choose(voice: voice)
         case .setReducedInterruption(let reduced):
-            nudgeHost.preferences = NudgePreferences(
-                voice: nudgeHost.preferences.voice,
-                reducedInterruption: reduced,
-                authorisation: nudgeHost.preferences.authorisation
-            )
+            nudgeHost.choose(reducedInterruption: reduced)
         case .setQuietHours, .removePresentationExclusion:
             // Both are stored settings e05 does not yet persist a row for; the pane reports the
             // request and the store lands in a later task rather than being faked here.

@@ -115,7 +115,7 @@ struct NudgeHostQuestionTests {
         let fixture = try NudgeHostFixture()
         defer { fixture.tearDown() }
         // Reduced interruption is one of the three conditions that route a question to the badge.
-        fixture.host.preferences = NudgePreferences(voice: .standard, reducedInterruption: true)
+        fixture.host.choose(reducedInterruption: true)
 
         fixture.host.consider(NudgeHostFixture.uncertainJudgement(subject: Self.subject))
         NudgeHostFixture.settle()
@@ -157,7 +157,7 @@ struct NudgeHostQuestionTests {
     func aBadgeQuestionNobodySawStaysAskable() throws {
         let fixture = try NudgeHostFixture()
         defer { fixture.tearDown() }
-        fixture.host.preferences = NudgePreferences(voice: .standard, reducedInterruption: true)
+        fixture.host.choose(reducedInterruption: true)
 
         fixture.host.consider(NudgeHostFixture.uncertainJudgement(subject: Self.subject))
         NudgeHostFixture.settle()
@@ -194,7 +194,7 @@ struct NudgeHostQuestionTests {
     func aBadgeQuestionIsDeliveredOnce() throws {
         let fixture = try NudgeHostFixture()
         defer { fixture.tearDown() }
-        fixture.host.preferences = NudgePreferences(voice: .standard, reducedInterruption: true)
+        fixture.host.choose(reducedInterruption: true)
 
         fixture.host.consider(NudgeHostFixture.uncertainJudgement(subject: Self.subject))
         NudgeHostFixture.settle()

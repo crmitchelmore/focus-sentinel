@@ -320,9 +320,9 @@ public enum ShellConnectionTotality {
             return
         }
         guard isOurOwnStruct(value, mirror: mirror) else {
-            // A leaf: one datum, and nothing below it to declare. Recorded as pruned so that an
-            // echo somebody wrote for a member of a foreign type reads as stranded rather than
-            // as satisfied.
+            // A leaf: one datum, and nothing below it to declare. Deliberately **not** recorded as
+            // pruned — an echo somebody wrote for a member of a foreign type (`stamp.timeInterval…`)
+            // has no property to be about, and reading as stranded is the right answer.
             return
         }
         walk(value, prefix: path, echoes: echoes, reported: reported,
