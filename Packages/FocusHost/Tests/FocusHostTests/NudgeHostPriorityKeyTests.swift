@@ -122,4 +122,95 @@ struct NudgeHostPriorityKeyTests {
             ))
         )
     }
+
+    // MARK: - The rule half (focus-lmo)
+
+    /// **What the person taught the app about one commitment must not land on another.**
+    ///
+    /// The receipt half of focus-lmo was fixed by keying the open question to its ask-time
+    /// priority. The rule half was not, and it travels down a different surface: the
+    /// **accusation** panel, which is sticky for exactly the same reason (`hidesOnDeactivate` is
+    /// `false`, R-89). `NudgeHost` handed the correction outcome on with no key at all, and
+    /// `AppComposition.perform(_:)` scoped the row it wrote to
+    /// `priorityHost.state.priority?.id` — the priority as it stands when the person *clicks*.
+    ///
+    /// So: raise a real accusation under one commitment, commit to another while it waits, and
+    /// press "this is relevant". The rule belongs to the commitment the accusation was about.
+    @Test("a correction made after a new commitment is keyed to the accusation's priority")
+    func aCorrectionIsKeyedToTheAccusationsPriority() throws {
+        let fixture = try NudgeHostFixture()
+        defer { fixture.tearDown() }
+        let accused = fixture.priorityID
+
+        var performed: [(CorrectionOutcome, UUID?)] = []
+        fixture.host.onCorrection = { outcome, priorityID in
+            performed.append((outcome, priorityID))
+        }
+
+        // Climb to the panel rung, which is the one that offers corrections at all.
+        for _ in 0..<2 {
+            fixture.host.consider(NudgeHostFixture.unrelatedJudgement(subject: Self.subject))
+            NudgeHostFixture.settle()
+            fixture.clock.advance(by: RelevancePolicy.mandateCooldown + .seconds(1))
+        }
+        try #require(fixture.host.currentRung == .panel)
+        try #require(fixture.panel.isVisible)
+
+        // The person commits to something new while the accusation is still on screen.
+        let committed = try fixture.priorities.setPriority(intent: "Review the Acme contract")
+        try #require(committed != accused)
+        try #require(fixture.panel.isVisible, "the new commitment took the accusation off screen")
+
+        fixture.host.resolve(.thisIsRelevant, snoozeDuration: nil)
+
+        try #require(performed.count == 1, "the correction never reached the root")
+        guard case .rule(let rule) = performed[0].0 else {
+            Issue.record("'this is relevant' did not produce a rule: \(performed[0].0)")
+            return
+        }
+        #expect(rule.subject == Self.subject)
+        #expect(
+            performed[0].1 == accused,
+            """
+            the rule was handed to the root under the commitment the person had just moved to, \
+            not the one the app accused them about
+            """
+        )
+    }
+
+    /// The same claim for the **session-lived** rule "Not this time" writes.
+    ///
+    /// `SessionRuleBox` is keyed on the priority as well as the session, so a live read files the
+    /// excuse under a commitment the accusation was never about — where nothing looks for it —
+    /// and leaves the one it *was* about un-excused, so the app accuses again immediately.
+    @Test("a session-lived excuse is keyed to the accusation's priority")
+    func aSessionRuleIsKeyedToTheAccusationsPriority() throws {
+        let fixture = try NudgeHostFixture()
+        defer { fixture.tearDown() }
+        let accused = fixture.priorityID
+        let sessionID = UUID()
+        fixture.host.currentSessionID = { sessionID }
+
+        for _ in 0..<2 {
+            fixture.host.consider(NudgeHostFixture.unrelatedJudgement(subject: Self.subject))
+            NudgeHostFixture.settle()
+            fixture.clock.advance(by: RelevancePolicy.mandateCooldown + .seconds(1))
+        }
+        try #require(fixture.host.currentRung == .panel)
+
+        let committed = try fixture.priorities.setPriority(intent: "Review the Acme contract")
+        try #require(committed != accused)
+
+        fixture.host.resolve(.notThisTime, snoozeDuration: nil)
+
+        #expect(
+            fixture.sessionRules.rules(forSession: sessionID, priorityID: accused)
+                .map(\.subject) == [Self.subject],
+            "the excuse is invisible under the commitment it was made about"
+        )
+        #expect(
+            fixture.sessionRules.rules(forSession: sessionID, priorityID: committed).isEmpty,
+            "a commitment nobody was accused under inherited an excuse"
+        )
+    }
 }

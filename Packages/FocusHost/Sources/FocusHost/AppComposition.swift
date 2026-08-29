@@ -479,7 +479,9 @@ public final class AppComposition {
             self?.nudgeSurroundings() ?? AppComposition.emptySurroundings()
         }
         nudgeHost.currentSessionID = { [weak self] in self?.sessionHost.snapshot?.sessionID }
-        nudgeHost.onCorrection = { [weak self] outcome in self?.perform(outcome) }
+        nudgeHost.onCorrection = { [weak self] outcome, priorityID in
+            self?.perform(outcome, priorityID: priorityID)
+        }
 
         relevanceHost.onJudgement = { [weak self] judgement in
             self?.nudgeHost.consider(judgement)
@@ -586,7 +588,17 @@ public final class AppComposition {
     /// Internal rather than private for the reason `startNudgeLoop()` is: this is the function
     /// the duplicate-learned-rule regression lived in, and the only honest test of it is one
     /// that calls it with a real `CorrectionOutcome` and counts the rows afterwards.
-    func perform(_ outcome: CorrectionOutcome) {
+    ///
+    /// - Parameter priorityID: **the commitment the nudge was raised under**, captured by
+    ///   `NudgeHost` when the panel went up and carried here (focus-lmo, U-1). It used to be
+    ///   read *here*, live, from `priorityHost.state.priority?.id` — and the panel is
+    ///   deliberately sticky (`hidesOnDeactivate` is `false`, R-89), so a person can commit to
+    ///   something new and then press "this is relevant" on an accusation about the commitment
+    ///   they have left. The row that wrote was a `RuleAuthority.task` rule under the *new*
+    ///   task: the app learned a fact about work it was never told, and learned nothing about
+    ///   the work it was actually shown. That is the rule half of the same ruling whose receipt
+    ///   half `openQuestionPriorityID` fixed, and it is the half that survived.
+    func perform(_ outcome: CorrectionOutcome, priorityID: UUID?) {
         switch outcome {
         case .rule, .ruleAndReceipt:
             // **Who writes the row is decided by the outcome, not by this switch** (R-78).
@@ -602,7 +614,9 @@ public final class AppComposition {
             // case, so the only thing still owed is the undo the ledger's transaction had no
             // journal to register with.
             if let pending = outcome.ruleAwaitingPersistence {
-                guard let taskID = priorityHost.state.priority?.id else { return }
+                // The nudge's own key. A correction with no commitment to scope to is not a
+                // narrower rule, it is a global one, and it is refused rather than widened.
+                guard let taskID = priorityID else { return }
                 priorityHost.addRule(
                     taskID: taskID,
                     scope: pending.subjectKind == .domain ? .domain : .app,

@@ -80,7 +80,18 @@ final class NudgeHost {
     /// The host never writes a rule itself. `CorrectionAction.outcome(scope:at:)` decides
     /// **what** one click writes and this closure performs it, so there is still exactly one
     /// place a click becomes a write (R-86).
-    var onCorrection: (@MainActor (CorrectionOutcome) -> Void)?
+    ///
+    /// **It carries the commitment the nudge was raised under** (focus-lmo, U-1). The receipt
+    /// half of that ruling was fixed by keying the open question to its ask-time priority; the
+    /// *rule* half travelled on and was not. `AppComposition.perform(_:)` scoped the row it
+    /// wrote to `priorityHost.state.priority?.id` — the priority as it stands when the person
+    /// *clicks* — and both nudge surfaces are deliberately sticky (`hidesOnDeactivate` is
+    /// `false`, R-89), so a person can commit to something new and then answer a panel that was
+    /// raised about the old commitment. What they taught the app about one thing landed on
+    /// another: a `RuleAuthority.task` rule under a task the judgement never concerned, and
+    /// nothing at all under the task it did. The identifier is captured when the nudge goes up
+    /// and travels with the outcome.
+    var onCorrection: (@MainActor (CorrectionOutcome, UUID?) -> Void)?
 
     /// The session a session-lived rule belongs to. `nil` when there is no open session, in
     /// which case "Not this time" has no session to die with and is not offered.
@@ -112,6 +123,16 @@ final class NudgeHost {
     private var openWarrant: QueryWarrant?
     private var openWarrantAskedAt: Date?
     private var openRung: LadderRung?
+
+    /// **The commitment the open accusation was raised under** (focus-lmo, U-1).
+    ///
+    /// `openQuestionPriorityID`'s twin, and it exists for exactly the same reason: the panel is
+    /// sticky, so a person can commit to a new priority while an accusation waits and then
+    /// answer it. Everything the click writes is keyed to this — the persisted "this is
+    /// relevant" rule, the session-lived "not this time" rule, and the deferral row a display
+    /// change writes when it strands the rung — rather than to whatever the store happens to
+    /// call active at the moment of the click.
+    private var openRungPriorityID: UUID?
     /// The corrections the rung on the panel is offering, by `rawValue`, so a reading taken later
     /// asks about the same set the panel was drawn with — the accusation's half of
     /// `openQuestionActions`. Empty when the live rung is not on the panel, which is every
@@ -374,6 +395,9 @@ final class NudgeHost {
         slot = slot.offering(rung).slot ?? slot
         openRung = rung
         openRungPanelActions = []
+        // The commitment as it stands **now**, at the accusation. Everything this rung ever
+        // writes is keyed to it (focus-lmo).
+        openRungPriorityID = priorityID
         openWarrant = nil
         // **The mandate reaches the ladder that persists** (focus-56y, R-80).
         //
@@ -686,12 +710,16 @@ final class NudgeHost {
         let now = monotonicClock.elapsed
         let scope = openRung.map(\.mandate).flatMap(CorrectionScope.from)
 
+        // **The rung's own key, not the live pointer** (focus-lmo). Read before `apply(…)`,
+        // which is the function that hands the outcome to whoever writes it.
+        let priorityID = openRungPriorityID
+
         let outcome = action.outcome(
             scope: scope,
             at: dateProvider.now,
             snoozeDuration: snoozeDuration
         )
-        apply(outcome, action: action, now: now)
+        apply(outcome, action: action, now: now, priorityID: priorityID)
 
         if let interventionOutcome = Self.outcome(of: action) {
             complete(interventionOutcome)
@@ -737,7 +765,9 @@ final class NudgeHost {
                 askedAt: openWarrantAskedAt
             )
             if answer == .yesAddIt { correctedSubjects.insert(scope.subject) }
-            onCorrection?(outcome)
+            // The question's own key, so the undo the composition root registers belongs to the
+            // same commitment the ledger just wrote the rule under (focus-lmo).
+            onCorrection?(outcome, priorityID)
         } catch {
             logger.error(
                 "the query ledger refused an answer: \(error.localizedDescription, privacy: .public)"
@@ -761,17 +791,26 @@ final class NudgeHost {
         resolve(.dismiss, snoozeDuration: nil)
     }
 
-    private func apply(_ outcome: CorrectionOutcome, action: CorrectionAction, now: Duration) {
+    private func apply(
+        _ outcome: CorrectionOutcome,
+        action: CorrectionAction,
+        now: Duration,
+        priorityID: UUID?
+    ) {
         switch outcome {
         case .rule(let rule):
             // The subject leaves the accusable set immediately, so nothing gets through the gap
             // between the click and the next classification.
             correctedSubjects.insert(rule.subject)
-            onCorrection?(outcome)
+            onCorrection?(outcome, priorityID)
 
         case .sessionRule(let rule):
             guard let sessionID = currentSessionID?() else { return }
-            sessionRules.insert(rule, forSession: sessionID, priorityID: activePriorityID())
+            // The rung's commitment, not the live one (focus-lmo). `SessionRuleBox` is keyed on
+            // the priority as well as the session, so a live read would file "not this time"
+            // under a commitment the accusation was never about — and it would be invisible
+            // under the one it was.
+            sessionRules.insert(rule, forSession: sessionID, priorityID: priorityID)
 
         case .snooze(let subject, let duration):
             snoozes = snoozes.adding(
@@ -783,7 +822,7 @@ final class NudgeHost {
             ReturnToTask.perform(target, workspace: workspace) { _ in }
 
         case .pause, .priorityChangeRequested:
-            onCorrection?(outcome)
+            onCorrection?(outcome, priorityID)
 
         case .ruleAndReceipt, .receiptOnly:
             // Only `QueryLedger.answer(…)` may write these, and it does so atomically. A path
@@ -970,10 +1009,12 @@ final class NudgeHost {
         // `spendsBudget` reads, so the stranded nudge went on charging the day's interruption
         // budget — and under U-1 the budget is what decides whether the app may speak again.
         ladder.undeliver(at: monotonicClock.elapsed)
+        // The rung's own key, not the live pointer (focus-lmo): this row is a statement about
+        // the accusation that was stranded, and that accusation was about one commitment.
         undeliverOpenRecord(
             kind: .accusation,
             subject: rung.subject,
-            priorityID: activePriorityID()
+            priorityID: openRungPriorityID
         )
         forgetOpenRung()
     }
@@ -992,6 +1033,7 @@ final class NudgeHost {
     private func forgetOpenRung() {
         openRung = nil
         openRungPanelActions = []
+        openRungPriorityID = nil
     }
 
     /// Forget the open question **without writing anything**.

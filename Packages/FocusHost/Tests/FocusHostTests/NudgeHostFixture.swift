@@ -113,6 +113,9 @@ struct NudgeHostFixture {
     let log: InterventionLog
     let priorities: PriorityStore
     let priorityID: UUID
+    /// The session-lived rule box the host writes "Not this time" into. Exposed because the
+    /// rule it writes is keyed on a **priority** as well as a session (focus-lmo).
+    let sessionRules: SessionRuleBox
 
     static let decoy = "com.chrismitchelmore.FocusDecoy"
     static let reference = Date(timeIntervalSince1970: 1_767_225_600)   // 2026-01-01T00:00:00Z
@@ -146,9 +149,10 @@ struct NudgeHostFixture {
             calendar: Self.londonCalendar
         )
 
+        sessionRules = SessionRuleBox()
         host = NudgeHost(
             context: context,
-            sessionRules: SessionRuleBox(),
+            sessionRules: sessionRules,
             panel: panel,
             menuBar: menuBar,
             notifications: NotificationDelivery(centre: centre),

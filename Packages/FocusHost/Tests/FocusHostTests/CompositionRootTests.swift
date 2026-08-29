@@ -123,7 +123,7 @@ struct CompositionRootTests {
 
         // The root performs the outcome. The row is already written, so the only thing still
         // owed is the undo the ledger's transaction had no journal to register with.
-        root.perform(outcome)
+        root.perform(outcome, priorityID: taskID)
 
         #expect(
             try Self.rules(in: context, taskID: taskID).count == 1,
@@ -157,12 +157,57 @@ struct CompositionRootTests {
             Issue.record("'this is relevant' did not produce a rule: \(outcome)")
             return
         }
-        root.perform(outcome)
+        root.perform(outcome, priorityID: taskID)
 
         let written = try Self.rules(in: context, taskID: taskID)
         #expect(written.count == 1)
         #expect(written.first?.subject == "com.example.Reader")
         #expect(manager.canUndo)
+    }
+
+    /// **The rule half of focus-lmo, at the line it was wrong on.**
+    ///
+    /// This function used to scope the row to `priorityHost.state.priority?.id` — the priority as
+    /// it stands when the person clicks — and both nudge surfaces are deliberately sticky
+    /// (`hidesOnDeactivate` is `false`, R-89), so somebody can commit to a new priority and then
+    /// press "this is relevant" on a panel raised about the old one. The rule landed on the new
+    /// commitment: the app learned a fact about work it was never shown, and learned nothing
+    /// about the work it was.
+    ///
+    /// Restore the live read and the two expectations below swap over.
+    @Test("a correction is written under the commitment the nudge was raised about")
+    func aCorrectionIsScopedToTheNudgesPriority() throws {
+        let root = Self.root()
+        defer { root.stop() }
+        let context = root.modelContainer.mainContext
+        let priorities = PriorityStore(
+            context: context,
+            dateProvider: FixedDateProvider(now: NudgeHostFixture.reference)
+        )
+        let accused = try priorities.setPriority(intent: "Write the Q3 proposal for Acme")
+        root.refreshCockpit()
+
+        let outcome = CorrectionAction.thisIsRelevant.outcome(
+            scope: CorrectionScope.from(Self.warrant(subject: "com.example.Reader")),
+            at: NudgeHostFixture.reference
+        )
+
+        // The person moves on **before** they answer the panel that is still on screen.
+        let committed = try priorities.setPriority(intent: "Review the Acme contract")
+        try #require(committed != accused)
+        root.refreshCockpit()
+        try #require(root.cockpitState.priority?.id == committed)
+
+        root.perform(outcome, priorityID: accused)
+
+        #expect(
+            try Self.rules(in: context, taskID: accused).map(\.subject) == ["com.example.Reader"],
+            "what the person taught the app about one commitment was filed under another"
+        )
+        #expect(
+            try Self.rules(in: context, taskID: committed).isEmpty,
+            "a commitment the app never nudged about was taught a rule"
+        )
     }
 
     // MARK: - The verdict stream really is a stream
