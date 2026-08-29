@@ -688,7 +688,7 @@ enum SelfCheck {
             reason: .noNegativeBasis,
             dwelled: .seconds(62)
         )
-        panel.update(showing: .question, content: QueryPanelView(presentation: presentation))
+        panel.update(QueryPanelView(presentation: presentation))
 
         let before = panel.readings()
         panel.show(presentationIsClear: true)
@@ -1324,6 +1324,11 @@ enum SelfCheck {
         report["totalities"] = totalities
         report["connectionsThatAreTotal"] = totalSurfaces.sorted()
         report["surfacesDeclared"] = ShellThemedSurface.allCases.map(\.rawValue).sorted()
+        // **Every fact the shell holds in two places at once, and whether they agree**
+        // (focus-zrs). The totality readings above answer a question about *fields*; this answers
+        // the one this round is about — whether two live values that describe one thing have
+        // parted company. See `AppComposition.projectionDisagreements`.
+        report["projectionDisagreements"] = composition.projectionDisagreements
         // The values themselves, so a failing gate line can be read without re-running anything.
         report["rendered"] = Dictionary(
             uniqueKeysWithValues: ShellThemedSurface.allCases.map { surface in

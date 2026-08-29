@@ -313,8 +313,6 @@ public final class AppComposition {
                 storeIsReady: status.isReady,
                 isObservingActivity: !settings.sensingPaused,
                 session: sessions.snapshot,
-                sessionElapsedSeconds: sessions.snapshot?.elapsedWallSeconds(now: dateProvider.now),
-                lastActiveBundleID: sensing.lastForeignBundleIdentifier,
                 sensing: sensing.summary,
                 capabilities: sensing.capabilities
             )
@@ -466,6 +464,10 @@ public final class AppComposition {
         relevanceHost.sessionRules = { [weak sessionHost] priorityID in
             sessionHost?.sessionRules(forPriority: priorityID) ?? []
         }
+        // **The engine builds its snapshot for the commitment the app is acting under**
+        // (focus-zrs), rather than opening `PriorityStore` and deciding for itself which task is
+        // active — which was a fourth independent read of the fact gate 1 is decided by.
+        relevanceHost.activeCommitment = { [weak priorityHost] in priorityHost?.activeCommitment }
     }
 
     /// Join the nudge loop to the three things that already happen.
@@ -582,8 +584,7 @@ public final class AppComposition {
     /// somebody else already took, which is what keeps the nudge module free of every sensing
     /// API (R-96k).
     private func nudgeSurroundings() -> NudgeSurroundings {
-        let summary = sensingHost.summary
-        return NudgeSurroundings(
+        NudgeSurroundings(
             // **Gate 1 and the key are the same value** (focus-zrs). This was
             // `hasActivePriority: priorityHost.state.priority != nil` — a `Bool`, while the loop
             // opened `PriorityStore` itself to decide what the interruption it admitted was
@@ -732,7 +733,10 @@ public final class AppComposition {
         let elapsed = session?.elapsedWallSeconds(now: dateProvider.now)
         return MenuBarPresentation(
             status: currentStatus,
-            priorityIntent: priorityHost.state.priority?.intent,
+            // The commitment's own sentence, from the one place that states it (focus-zrs). It
+            // was `state.priority?.intent` — a second reading of the same fact, drawn beside a
+            // nudge whose receipt is keyed to the first.
+            priorityIntent: priorityHost.activeCommitment?.intent,
             elapsed: elapsed.map { Duration.seconds(Int($0)) },
             timerFormat: menuBarTimerFormat,
             snoozes: nudgeHost.activeSnoozes(),
@@ -867,6 +871,47 @@ public final class AppComposition {
     /// What is being watched, for the Privacy pane and the cockpit's status line — one answer
     /// rather than two opinions.
     public var sensingSummary: SensingSummary { sensingHost.summary }
+
+    /// **Every fact this app holds in two places at once, and whether the two agree** — and it is
+    /// always empty (focus-zrs).
+    ///
+    /// The sweep this round is really about found three pairs here that are *push projections*
+    /// rather than duplicate sources: `SensingHost` owns what is being watched and what this Mac
+    /// permits, `RelevanceHost` owns the snapshot the engine reasons from, and each is copied into
+    /// a value some window draws. Every copy has a wire that refreshes it synchronously when the
+    /// source moves — `onSensingChanged → refreshCockpit()`, `onSnapshotInvalidated →
+    /// invalidateSnapshot()` — so they *should* never differ.
+    ///
+    /// "Should" is the word six rounds of this epic have been spent on. Each line below is a
+    /// disagreement that cannot be argued about, and the gate reads them:
+    ///
+    /// * **the two windows** — the cockpit draws `state.sensing` / `state.capabilities` (the
+    ///   projection), the Privacy pane draws `sensingSummary` / `capabilities` (the source). A
+    ///   difference means the app told the truth in one window and something else in the other,
+    ///   which is a real, shippable defect.
+    /// * **the engine and the loop** — `RelevanceHost` builds its snapshot for one commitment and
+    ///   `NudgeHost` writes its receipts under another. The rebuild is asynchronous (it reads the
+    ///   rule store), so there is a genuine window here between a commitment changing and the
+    ///   snapshot catching up; what the identity fix removed is the *second opinion about which
+    ///   commitment*, not the latency of the rebuild. See the note on
+    ///   `RelevanceHost.activeCommitment`.
+    public var projectionDisagreements: [String] {
+        var disagreements: [String] = []
+        if cockpitState.sensing != sensingSummary {
+            disagreements.append("cockpit's sensing projection ≠ the graph's own summary")
+        }
+        if cockpitState.capabilities != capabilities {
+            disagreements.append("cockpit's capability projection ≠ the probe's own matrix")
+        }
+        if relevanceHost.snapshot.priorityID != priorityHost.activeCommitment?.id {
+            disagreements.append(
+                "the engine's snapshot is for \(relevanceHost.snapshot.priorityID?.uuidString ?? "none") "
+                    + "and the app is acting under "
+                    + "\(priorityHost.activeCommitment?.id.uuidString ?? "none")"
+            )
+        }
+        return disagreements
+    }
 
     /// What this Mac lets the app do, as the probe read it.
     public var capabilities: CapabilityMatrix { sensingHost.capabilities }
@@ -1084,11 +1129,16 @@ public final class AppComposition {
                 .rawValue,
             for: .cockpit
         )
-        // The banner is on screen when the state asks for it **and** a host can dismiss it —
-        // which is the conjunction the window draws, so it is the conjunction this expects.
+        // The banner is on screen when the state asks for it **and** a host can dismiss it.
+        // The window draws that conjunction and reports what it drew; this expects the half that
+        // can actually vary, because `cockpitActions` is non-optional — the root has no way to
+        // hand over a cockpit with no mutation host, and `state.showsRitualPrompt && actions !=
+        // nil` was a comparison the compiler could see was always true (focus-zrs). A connection
+        // built with `actions: nil` still reports "hidden" against this "shown", which is the
+        // asymmetry the check is for.
         expect(
             .ritualBanner,
-            state.showsRitualPrompt && actions != nil ? "shown" : "hidden",
+            state.showsRitualPrompt ? "shown" : "hidden",
             for: .cockpit
         )
         expect(.recentCount, String(state.recent.count), for: .cockpit)
@@ -1503,8 +1553,6 @@ public final class AppComposition {
                 storeIsReady: storeStatus.isReady,
                 isObservingActivity: sensingHost.isRunning,
                 session: snapshot,
-                sessionElapsedSeconds: snapshot?.elapsedWallSeconds(now: dateProvider.now),
-                lastActiveBundleID: sensingHost.lastForeignBundleIdentifier,
                 sensing: sensingHost.summary,
                 capabilities: sensingHost.capabilities,
                 verdict: relevanceHost.verdict

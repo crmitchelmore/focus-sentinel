@@ -115,6 +115,23 @@ final class RelevanceHost {
     /// the honest answer rather than an empty guess.
     var sessionRules: (@MainActor (UUID?) -> [ScopedRuleValue])?
 
+    /// **Which commitment to build the snapshot for** (focus-zrs).
+    ///
+    /// A closure for the reason `sessionRules` is one, and wired to `PriorityHost.activeCommitment`
+    /// — the app's single statement of the active priority. This host used to answer the question
+    /// itself, with a `PriorityStore.activeTask()` of its own: a **fourth** independent read of the
+    /// one fact gate 1 is decided by, the nudge loop keys its receipts to, and the lifecycle watch
+    /// edges on. Nothing compared them, so the engine could be reasoning about one commitment
+    /// while the loop wrote about another.
+    ///
+    /// The identity is handed in; the *row* is still fetched, because the snapshot needs a
+    /// revision, a definition of done and a context pack — but it is fetched **by that identifier**
+    /// rather than by asking the store which task is active, which is the same shape
+    /// `NudgeHost.answer(_:)` uses for exactly the same reason.
+    ///
+    /// `nil` means no wire, which yields no priority — the honest answer rather than a guess.
+    var activeCommitment: (@MainActor () -> ActiveCommitment?)?
+
     /// Everything a judgement needs, pre-fetched. Rebuilt on the four invalidations above.
     private(set) var snapshot: RuleSnapshot
 
@@ -288,8 +305,12 @@ final class RelevanceHost {
     }
 
     private func activeTask() -> FocusSchemaV3.PriorityTask? {
+        // The commitment's identifier from the one place that states it, and the row by that
+        // identifier (focus-zrs). Never `activeTask()`, which would be this host deciding for
+        // itself which commitment the app is working under.
+        guard let id = activeCommitment?()?.id else { return nil }
         do {
-            return try priorities.activeTask()
+            return try priorities.task(id: id)
         } catch {
             logger.error(
                 "the priority store refused a read: \(error.localizedDescription, privacy: .public)"

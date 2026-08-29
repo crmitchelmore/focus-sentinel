@@ -566,7 +566,7 @@ final class NudgeHost {
             settleOrExpire(displaced, rung: rung, deliveredOn: surface)
 
         case .panel:
-            panel.update(showing: .accusation, content: AccusationPanelView(presentation: presentation) { [weak self] action, span in
+            panel.update(AccusationPanelView(presentation: presentation) { [weak self] action, span in
                 self?.resolve(action, snoozeDuration: span)
             })
             panel.show(
@@ -701,7 +701,7 @@ final class NudgeHost {
 
         switch surface {
         case .panel:
-            panel.update(showing: .question, content: QueryPanelView(presentation: presentation) { [weak self] answer in
+            panel.update(QueryPanelView(presentation: presentation) { [weak self] answer in
                 self?.answer(answer)
             })
             panel.show(

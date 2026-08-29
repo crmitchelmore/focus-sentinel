@@ -966,10 +966,22 @@ for surface, floor in [("cockpit", 18), ("settings", 15), ("help", 2)]:
 # known failure, because it does not know what the failure is — it knows only what the type has.
 # Add a field and report nothing, and this goes red naming the field.
 
+# **And the walk now goes to the leaves** (focus-cxs). Round 6 closed the boundary at the
+# connection struct and named its own residue in the same breath — "deeper structs are leaves,
+# covered by a whole-value digest that does not participate in the comparison" — and a three-line
+# residue mutant then gave 19/19 PASS, 303 ok against 303 and an EMPTY ok-assertion diff while
+# three drawn things lied. A `.drawn` binding no longer stops the walk: it descends into every
+# value type of this programme's own, so a field invented inside `PrioritySnapshot` or
+# `InterventionSettings` is an unmapped path rather than an invisible one.
+#
+# The floors below are the live app's own counts, which are LOWER than the unit lane's: a nil
+# optional has no members to walk, and the running app has no pending handoff. The type-level
+# question is `ShellConnectionTotalityTests`', asked of a value with every branch filled in; this
+# is the value-level one, asked of whatever is really on the screen.
 totalities = rendering.get("totalities") or {}
 for surface, connection, floor in [
-    ("cockpit", "CockpitConnection", 19),
-    ("settings", "ShellSettingsConnection", 20),
+    ("cockpit", "CockpitConnection", 30),
+    ("settings", "ShellSettingsConnection", 40),
 ]:
     totality = totalities.get(surface) or {}
     check(
@@ -990,6 +1002,18 @@ check(
     set(rendering.get("connectionsThatAreTotal") or []) == {"cockpit", "settings"},
     "both scene connections are total",
     rendering.get("connectionsThatAreTotal"),
+)
+
+# **Two live values describing one thing, disagreeing** (focus-zrs). The totality readings above
+# are about FIELDS — is every property bound to a receipt. This is about VALUES: the cockpit draws
+# a projection of what is being watched and the Privacy pane draws the graph's own summary; the
+# engine builds its snapshot for one commitment and the nudge loop writes its receipts under
+# another. Each pair has a wire that keeps it honest, and each wire is a thing somebody could
+# delete. This is the reading that would say so.
+check(
+    rendering.get("projectionDisagreements") == [],
+    "no fact the shell holds twice is held two different ways",
+    rendering.get("projectionDisagreements"),
 )
 
 # --- the structural residue round 5 named, closed (focus-7ow) ----------------------------------

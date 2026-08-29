@@ -386,6 +386,25 @@ public final class NudgePanelController {
     /// The hosting view is built once, in `init`, and its root view is replaced — so showing a
     /// nudge is a state change on objects that already exist, exactly as the capture panel's
     /// 34 ms depends on (P-57) and for the same reason.
+    /// **The two shipping contents, each naming its own kind** (focus-zrs).
+    ///
+    /// `showing` and `content` are two statements about one thing, and `update(showing:content:)`
+    /// lets a caller make them disagree — a panel drawing an accusation while reporting a
+    /// question, which is precisely the contradiction `NudgeHost.orphanedQuestionSurfaces` exists
+    /// to catch and would then be catching a lie about. The shipping loop uses these two, where
+    /// the kind is derived from the type of the view rather than restated beside it, and there is
+    /// no argument to get wrong.
+    ///
+    /// The general form below stays, for the snapshot lane and the panel's own suites, which put
+    /// arbitrary content in a real window to measure it.
+    public func update(_ content: QueryPanelView, traits: AppearanceTraits = .systemDefault) {
+        update(showing: .question, content: content, traits: traits)
+    }
+
+    public func update(_ content: AccusationPanelView, traits: AppearanceTraits = .systemDefault) {
+        update(showing: .accusation, content: content, traits: traits)
+    }
+
     public func update(
         showing: NudgePanelKind,
         content: some View,

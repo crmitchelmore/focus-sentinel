@@ -41,12 +41,16 @@ final class PriorityHost: PriorityActing {
         var isObservingActivity: Bool
         /// The session the person is in, projected by `SessionHost`. `nil` when there is none.
         var session: SessionSnapshot?
-        /// How long that session has been running on the wall clock, read at the moment the
-        /// environment was built. There is no timer here or anywhere: the figure is a value,
-        /// not a subscription.
-        var sessionElapsedSeconds: Double?
-        /// The last application in front that was not this one, as a bundle identifier (F-101).
-        var lastActiveBundleID: String?
+        //
+        // **`sessionElapsedSeconds` and `lastActiveBundleID` used to be here, and were read by
+        // nobody** (focus-zrs). `refresh()` builds `CockpitState` without them, and the window
+        // gets both from `AppComposition` directly — `sessionElapsedSeconds` from the wall clock
+        // at the moment the connection is built, `lastActiveBundleID` from
+        // `sensingHost.lastForeignBundleIdentifier`. Two copies of two facts, written on every
+        // corroboration tick from three call sites, that nothing anywhere consulted: a second
+        // representation with no reader is still a second representation, and the next person to
+        // need one of these would have found two.
+        //
         /// What the observer graph is doing, including when the answer is "nothing".
         var sensing: SensingSummary = .inactive
         /// What this Mac lets the app do, as the probe last read it.

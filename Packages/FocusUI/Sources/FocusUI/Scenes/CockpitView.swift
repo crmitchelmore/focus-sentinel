@@ -230,12 +230,16 @@ public struct CockpitView: View {
         // has landed in before reading the priority out of it.
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text(ShellStrings.resource(.cockpitHeading)))
-        .onAppear {
-            doneWhenDraft = state.priority?.doneWhen ?? ""
-            commandCenter.register(perform(_:))
-        }
+        .onAppear { commandCenter.register(perform(_:)) }
         .onDisappear { commandCenter.unregister() }
-        .onChange(of: state.priority?.id) {
+        // **One statement, not an `.onAppear` beside an `.onChange` doing the same thing**
+        // (focus-zrs). The draft is an edit buffer — a second representation of
+        // `state.priority?.doneWhen`, which is the point of it — and it was seeded from *three*
+        // places: here on appear, here on a new commitment, and below on a new definition of
+        // done. Round 3 of this epic removed exactly this shape from `FocusSentinelApp` and it
+        // was still here. `initial: true` is the appear, so the buffer has one seeding rule per
+        // reason it needs re-seeding and no fourth place for the two to drift apart in.
+        .onChange(of: state.priority?.id, initial: true) {
             doneWhenDraft = state.priority?.doneWhen ?? ""
             // A different commitment is not the one that was being re-worded.
             isEditingIntent = false
