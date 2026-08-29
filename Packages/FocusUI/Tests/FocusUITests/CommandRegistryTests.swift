@@ -342,4 +342,24 @@ struct CommandRegistryTests {
         #expect(ShellWindow.allCases.map(\.id) == ["cockpit", "help"])
         #expect(Set(ShellWindow.allCases.map(\.titleKey)).count == ShellWindow.allCases.count)
     }
+
+    /// **The cockpit's opening size, where a test can read it** (focus-2er).
+    ///
+    /// It was two literals in the scene, and `App/` is not a package: a number nobody can reach
+    /// is a number nobody can defend. The height is the measured one — with e03's session
+    /// controls and sensing status added the cockpit outgrew the 704-point window e02 shipped
+    /// and clipped its footer — so it is asserted to be at least that, rather than pinned to a
+    /// value a later epic may legitimately grow.
+    @Test("the cockpit opens tall enough for the column it draws")
+    func theCockpitHasAMeasuredDefaultSize() throws {
+        let size = try #require(ShellWindow.cockpit.defaultSize)
+        #expect(size.width == 560)
+        #expect(
+            size.height >= 900,
+            "the cockpit opens shorter than the window that was measured to clip its footer"
+        )
+        // The reference window sizes itself to one column of rows whose length the person's own
+        // type settings decide, so choosing a frame for it would be choosing for them.
+        #expect(ShellWindow.help.defaultSize == nil)
+    }
 }

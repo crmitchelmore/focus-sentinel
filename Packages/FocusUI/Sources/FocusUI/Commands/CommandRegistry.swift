@@ -54,6 +54,25 @@ public enum ShellWindow: String, Sendable, CaseIterable, Hashable, Identifiable 
         case .help: .helpWindowTitle
         }
     }
+
+    /// **The size a window opens at when nothing has been saved for it**, in points
+    /// (focus-2er).
+    ///
+    /// Here rather than as two literals in the scene, because `App/` is not a package and a
+    /// number nobody can read is a number nobody can defend. Measured against the real window:
+    /// with e03's session controls and sensing status added, the cockpit outgrew the 704-point
+    /// window e02 shipped and the footer was clipped below the fold. A window whose last two
+    /// lines are unreachable is a defect however good the lines are.
+    ///
+    /// `nil` for a window whose content sizes itself — the Keyboard Shortcuts reference is one
+    /// column of rows, and giving it a fixed frame would mean choosing a size for text whose
+    /// length the person's own type settings decide.
+    public var defaultSize: (width: Double, height: Double)? {
+        switch self {
+        case .cockpit: (width: 560, height: 900)
+        case .help: nil
+        }
+    }
 }
 
 /// What an action does.

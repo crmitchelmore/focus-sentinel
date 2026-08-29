@@ -37,14 +37,15 @@ struct FocusSentinelApp: App {
     /// Hosts the zero-grant `--focus-self-check` mode. Nothing else.
     @NSApplicationDelegateAdaptor(FocusAppDelegate.self) private var appDelegate
 
-    @State private var composition = AppComposition.shared
-
-    /// The Mac's live appearance and accessibility settings.
+    /// The composition root, and the only object this file names.
     ///
-    /// Held in `@State` because SwiftUI's observation of it is what redraws these windows when
-    /// the person switches to dark mode or turns on Reduce Motion. The **instance** is the
-    /// composition root's, so `AppearanceObserverTests` drives the same object the shell does.
-    @State private var appearance = AppComposition.shared.appearance
+    /// There is deliberately no second `@State` here for the appearance observer. It used to be
+    /// one — `AppearanceObserver()`, built by the scene — and a scene that builds its own would
+    /// theme the cockpit from one object while the composition root themed the quick-capture
+    /// panel from another, which no lane in the programme can see. The observer is the root's,
+    /// reached through it, and SwiftUI's observation follows the property access wherever it is
+    /// read from (focus-2er).
+    @State private var composition = AppComposition.shared
 
     /// Builds the quick-capture panel, registers the global hot key, **reconciles whatever
     /// session was running**, and attaches the observer graph — at launch.
@@ -64,15 +65,16 @@ struct FocusSentinelApp: App {
 
     var body: some Scene {
         Window(Text(ShellStrings.resource(ShellWindow.cockpit.titleKey)), id: ShellWindow.cockpit.id) {
-            CockpitHost(composition: composition, appearance: appearance)
+            CockpitHost(composition: composition)
                 .appearanceTraits(composition.appearanceTraits(for: .cockpit))
         }
         .commands { ShellCommands() }
-        // Tall enough for the whole column at the default text size, measured against the real
-        // window: with e03's session controls and sensing status added, the cockpit outgrew the
-        // 704-point window e02 shipped and the footer was clipped below the fold. A window whose
-        // last two lines are unreachable is a defect however good the lines are.
-        .defaultSize(width: 560, height: 900)
+        // The measured size, read from the one place it is written down. Two literals in a
+        // scene are two numbers no test can reach (focus-2er); `ShellWindowTests` holds these.
+        .defaultSize(
+            width: ShellWindow.cockpit.defaultSize?.width ?? 0,
+            height: ShellWindow.cockpit.defaultSize?.height ?? 0
+        )
         .modelContainer(composition.modelContainer)
 
         Window(Text(ShellStrings.resource(ShellWindow.help.titleKey)), id: ShellWindow.help.id) {
@@ -102,7 +104,6 @@ struct FocusSentinelApp: App {
 ///   mutation that does not pass through a person pressing Replace (F-142).
 private struct CockpitHost: View {
     let composition: AppComposition
-    let appearance: AppearanceObserver
 
     @Environment(\.undoManager) private var undoManager
 
@@ -155,7 +156,7 @@ private struct CockpitHost: View {
             .onChange(of: undoManager, initial: true) { _, manager in
                 composition.undoManagerChanged(manager)
             }
-            .onChange(of: appearance.traits, initial: true) { _, traits in
+            .onChange(of: composition.appearance.traits, initial: true) { _, traits in
                 composition.appearanceChanged(traits)
             }
             // F-142's handoff. It parses and **shows**: there is no route from here to a stored
