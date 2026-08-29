@@ -380,6 +380,20 @@ final class NudgeHost {
         )
     }
 
+    /// **The question is taken off the books, and not yet settled** (focus-7w3, U-1).
+    ///
+    /// This function used to begin `if let preempted { close(preempted) }`, and closing meant
+    /// *settling*: the receipt was written with `ending: .preempted`, which
+    /// `QuestionEnding.settlesTheQuestion` allows, so the question was never asked again for the
+    /// life of the commitment. It ran first, before this code knew whether a surface was even
+    /// available, before the panel's actions were checked for reach, and before the notification
+    /// had been delivered or suppressed — and nothing anywhere compared the accusation's subject
+    /// with the question's. Every preemption settled, including one the person never saw.
+    ///
+    /// Everything the write needs is captured **here**, because the accusation is about to take
+    /// the surface and the readings taken afterwards would be readings of the accusation. The
+    /// write happens at whichever terminal path is reached, with the ending the accusation
+    /// actually earned.
     private func accuse(
         rung: LadderRung,
         route: SurfaceRoute,
@@ -387,11 +401,26 @@ final class NudgeHost {
         surroundings: NudgeSurroundings,
         priorityID: UUID?
     ) {
-        // The question that was on screen is **closed**, not dropped: its receipt is written so
-        // it is never asked again. Losing the asking because something more urgent happened is
-        // exactly the bug never-ask-twice exists to prevent, and it would be invisible.
-        if let preempted { close(preempted) }
+        accuse(
+            rung: rung,
+            route: route,
+            displaced: preempted.flatMap(displacedQuestion(from:)),
+            surroundings: surroundings,
+            priorityID: priorityID
+        )
+    }
 
+    /// The same, with the displaced question already captured.
+    ///
+    /// Separate so the demotion path can carry it to the rung's new surface: re-capturing there
+    /// would find nothing, because the first pass has already cleared the open question's fields.
+    private func accuse(
+        rung: LadderRung,
+        route: SurfaceRoute,
+        displaced: DisplacedQuestion?,
+        surroundings: NudgeSurroundings,
+        priorityID: UUID?
+    ) {
         slot = slot.offering(rung).slot ?? slot
         openRung = rung
         openRungPanelActions = []
@@ -424,6 +453,8 @@ final class NudgeHost {
                 subject: rung.subject,
                 priorityID: priorityID
             )
+            // Nothing reached the person, so nothing richer was offered in the question's place.
+            settleOrExpire(displaced, rung: rung, deliveredOn: nil)
             return
         }
 
@@ -432,6 +463,9 @@ final class NudgeHost {
             // The glyph and the badge are drawn by the composition root's own menu-bar refresh;
             // nothing here has to raise a window for them.
             delivered(surface: surface, rung: rung, priorityID: priorityID)
+            // Delivered, but onto something with nothing to press: `NudgeSurface.offersACorrection`
+            // is `false` for both, so this does not settle the question it displaced (R-84a).
+            settleOrExpire(displaced, rung: rung, deliveredOn: surface)
 
         case .panel:
             panel.update(content: AccusationPanelView(presentation: presentation) { [weak self] action, span in
@@ -463,9 +497,15 @@ final class NudgeHost {
                     subject: rung.subject,
                     priorityID: priorityID
                 )
+                // A rung whose corrections are out of reach was not delivered, and the panel has
+                // just been hidden — so the question was replaced by an empty screen.
+                settleOrExpire(displaced, rung: rung, deliveredOn: nil)
                 return
             }
             delivered(surface: .panel, rung: rung, priorityID: priorityID)
+            // The one path R-84a actually describes: an accusation on the panel, with the whole
+            // correction ladder on it, every action within reach.
+            settleOrExpire(displaced, rung: rung, deliveredOn: .panel)
 
         case .notification:
             notifications.deliver(
@@ -481,6 +521,7 @@ final class NudgeHost {
                 switch recorded {
                 case .delivered:
                     self.delivered(surface: .notification, rung: rung, priorityID: priorityID)
+                    self.settleOrExpire(displaced, rung: rung, deliveredOn: .notification)
                 case .deferred(let reason):
                     // **A route change, not a log line.** The failed attempt is a deferral, and
                     // the rung is re-offered on the surface the router demoted it to.
@@ -488,15 +529,22 @@ final class NudgeHost {
                         deferral: reason, kind: .accusation, subject: rung.subject,
                         priorityID: priorityID
                     )
+                    // **The displaced question travels with the rung to its new surface**
+                    // (focus-7w3). It used to be dropped here — `preempted: nil` — which meant a
+                    // demoted accusation left the question closed by the line at the top of this
+                    // function and then had no chance to earn it. Carrying it means the question
+                    // is settled if and only if wherever the rung finally lands earns it.
                     self.accuse(
                         rung: rung,
                         route: demotedTo,
-                        preempted: nil,
+                        displaced: displaced,
                         surroundings: surroundings,
                         priorityID: priorityID
                     )
                 case .suppressed:
-                    break
+                    // Nothing was shown. The question was taken off the screen and replaced with
+                    // nothing, which is the case U-1 forbids spending the ask on.
+                    self.settleOrExpire(displaced, rung: rung, deliveredOn: nil)
                 }
             }
         }
@@ -905,7 +953,16 @@ final class NudgeHost {
     }
 
     private func complete(_ outcome: InterventionOutcome) {
-        guard let id = openRecordID else { return }
+        complete(outcome, recordID: openRecordID)
+        openRecordID = nil
+    }
+
+    /// Complete one named row, whichever row happens to be open.
+    ///
+    /// A preemption needs this: its write happens after the accusation has been delivered, and
+    /// delivery assigns `openRecordID` to the accusation's row (focus-7w3).
+    private func complete(_ outcome: InterventionOutcome, recordID: UUID?) {
+        guard let id = recordID else { return }
         do {
             try log.complete(id, outcome: outcome)
         } catch {
@@ -913,7 +970,6 @@ final class NudgeHost {
                 "the intervention log refused a completion: \(error.localizedDescription, privacy: .public)"
             )
         }
-        openRecordID = nil
     }
 
     /// Withdraw whatever is on screen because a presentation has claimed the display (R-84).
@@ -1050,25 +1106,120 @@ final class NudgeHost {
         openQuestionActions = []
     }
 
-    /// A question closed to make room for an accusation (R-84a).
-    private func close(_ preempted: PreemptedQuery) {
-        guard let priorityID = openQuestionPriorityID else { return }
-        // A question the person could never read is not a question that was asked, so
-        // preempting it costs nothing and writes nothing (focus-kby). The ledger decides that,
-        // not this host: it is handed the two readings and the end path, and it writes or
-        // refuses. The surface is left either way, because the accusation needs it.
-        let wrote = recordQuestion(
-            subjectKind: preempted.warrant.subject.kind,
-            subject: preempted.warrant.subject.identifier,
-            reason: preempted.warrant.reason,
-            outcome: preempted.outcome,
-            ending: .preempted,
-            priorityID: priorityID
-        )
-        complete(.dismissed)
-        guard wrote else { return }
-        fatigue.reduce(.queryResolved(preempted.outcome), now: monotonicClock.elapsed)
+    /// **A question that an accusation is about to displace, read before the surface changes**
+    /// (focus-7w3).
+    ///
+    /// Every field is taken at the moment of displacement and carried to whichever terminal path
+    /// the accusation reaches, because by then the panel is showing the accusation: asking
+    /// `currentReadability()` there would be asking whether the *accusation* is readable, using
+    /// the question's action identifiers, and the honest answer to that is always `notReadable`.
+    /// A question the person could read perfectly well would then be refused a receipt for a
+    /// reason that has nothing to do with it.
+    private struct DisplacedQuestion {
+        let preempted: PreemptedQuery
+        let priorityID: UUID
+        let askedAt: Date?
+        /// **The question's own row in the intervention log**, captured here for the same reason
+        /// the readings are. `delivered(surface:rung:priorityID:)` assigns `openRecordID` to the
+        /// *accusation's* new row, and it runs before the settle does — so completing "the open
+        /// record" at the end would mark the accusation dismissed and leave the question's row
+        /// open for ever.
+        let recordID: UUID?
+        let surface: NudgeSurface?
+        let readingAtAsk: SurfaceReadability
+        /// What the question's own surface said at the instant the accusation took it. This is
+        /// the `readingNow` the ledger is given, and taking it here is the whole reason this type
+        /// exists.
+        let readingAtDisplacement: SurfaceReadability
     }
+
+    /// Read the open question, and take it off the screen without writing anything.
+    ///
+    /// Nothing is recorded here. Whether the asking is written down at all, and whether it
+    /// **settles**, are decided at the end of the accusation by `settleOrExpire(_:rung:deliveredOn:)`.
+    private func displacedQuestion(from preempted: PreemptedQuery) -> DisplacedQuestion? {
+        guard let priorityID = openQuestionPriorityID else { return nil }
+        return DisplacedQuestion(
+            preempted: preempted,
+            priorityID: priorityID,
+            askedAt: openWarrantAskedAt,
+            recordID: openRecordID,
+            surface: openQuestionSurface,
+            readingAtAsk: openQuestionReadingAtAsk,
+            readingAtDisplacement: currentReadability()
+        )
+    }
+
+    /// **Settle the displaced question only if the accusation earned it** (focus-7w3, R-84a, U-1).
+    ///
+    /// R-84a's argument for settling on a preemption is that the person was handed something
+    /// *richer* about the *same subject*: an accusation with "this is relevant" on it. That
+    /// argument was enforced nowhere — so this is where it becomes a precondition the code checks.
+    /// `PreemptionCredit` is the rule, and it is a pure function in `FocusCore` for the reason
+    /// `QuestionLedgerPolicy` is: a rule that lived in a host as a private method had a source
+    /// scan for a regression test, and an adversarial lens replaced its body with `return true`
+    /// while every test stayed green.
+    ///
+    /// Where the credit is refused the question ends as `expired`, which is not a lesser record —
+    /// it is the correct one. `QuestionLedgerPolicy` still writes the asking down if the person
+    /// could read it at both ends, `askedCount(…)` still counts it, and the question **comes
+    /// back**, because an interruption the person never saw must not spend the one ask.
+    private func settleOrExpire(
+        _ displaced: DisplacedQuestion?,
+        rung: LadderRung,
+        deliveredOn surface: NudgeSurface?
+    ) {
+        guard let displaced else { return }
+
+        let credit = PreemptionCredit.decide(
+            questionSubject: displaced.preempted.warrant.subject.identifier,
+            accusationSubject: rung.subject,
+            deliveredOn: surface
+        )
+        let ending = PreemptionCredit.ending(for: credit)
+        lastPreemptionCredit = credit
+
+        if credit != .credited {
+            logger.notice(
+                """
+                a preemption did not earn its settle (\(credit.rawValue, privacy: .public)), \
+                so the question stays askable
+                """
+            )
+        }
+
+        // A question the person could never read is not a question that was asked, so preempting
+        // it costs nothing and writes nothing (focus-kby). The ledger decides that, not this
+        // host: it is handed the two readings and the end path, and it writes or refuses.
+        let wrote = recordQuestion(
+            subjectKind: displaced.preempted.warrant.subject.kind,
+            subject: displaced.preempted.warrant.subject.identifier,
+            reason: displaced.preempted.warrant.reason,
+            // `.declined` settles and `.expired` does not, and the two have to agree with the
+            // ending or `QueryLedger` refuses the write outright — `endingContradictsOutcome`.
+            outcome: ending == .preempted ? displaced.preempted.outcome : .expired,
+            ending: ending,
+            priorityID: displaced.priorityID,
+            askedAt: displaced.askedAt,
+            surface: displaced.surface,
+            readingAtAsk: displaced.readingAtAsk,
+            readingNow: displaced.readingAtDisplacement
+        )
+        // The question's own row, not whichever row is open now: the accusation's delivery has
+        // already replaced `openRecordID`.
+        complete(.dismissed, recordID: displaced.recordID)
+        guard wrote else { return }
+        fatigue.reduce(
+            .queryResolved(ending == .preempted ? displaced.preempted.outcome : .expired),
+            now: monotonicClock.elapsed
+        )
+    }
+
+    /// Why the last preemption did or did not settle the question it displaced.
+    ///
+    /// Read by `--focus-self-check` and by the unit lane. `nil` until one has happened, which is
+    /// what tells "no preemption yet" from "one happened and was refused".
+    private(set) var lastPreemptionCredit: PreemptionCreditReason?
 
     // MARK: - Transitions that end everything
 
@@ -1141,13 +1292,24 @@ final class NudgeHost {
     ///
     /// - Returns: whether a receipt was written.
     @discardableResult
+    /// - Parameters:
+    ///   - askedAt, surface, readingAtAsk, readingNow: defaulted to the open question's own,
+    ///     which is what every caller wants **except** a preemption. A preemption's write happens
+    ///     after the accusation has taken the surface, so its four readings are captured at the
+    ///     moment of displacement and passed in; re-reading them there would be reading the
+    ///     accusation and answering `notReadable` for a question the person could see perfectly
+    ///     well (focus-7w3).
     private func recordQuestion(
         subjectKind: RuleSubjectKind,
         subject: String,
         reason: QueryableUncertainty,
         outcome: AskedQuestionOutcome,
         ending: QuestionEnding,
-        priorityID: UUID
+        priorityID: UUID,
+        askedAt: Date? = nil,
+        surface: NudgeSurface? = nil,
+        readingAtAsk: SurfaceReadability? = nil,
+        readingNow: SurfaceReadability? = nil
     ) -> Bool {
         do {
             let action = try ledger.recordResolution(
@@ -1156,10 +1318,10 @@ final class NudgeHost {
                 subject: subject,
                 reason: reason,
                 outcome: outcome,
-                askedAt: openWarrantAskedAt,
-                surface: openQuestionSurface,
-                readingAtAsk: openQuestionReadingAtAsk,
-                readingNow: currentReadability(),
+                askedAt: askedAt ?? openWarrantAskedAt,
+                surface: surface ?? openQuestionSurface,
+                readingAtAsk: readingAtAsk ?? openQuestionReadingAtAsk,
+                readingNow: readingNow ?? currentReadability(),
                 ending: ending
             )
             if case .stayAskable(let reason) = action {
