@@ -34,16 +34,68 @@ struct PreemptionCreditTests {
             accusationSubject: Self.subject,
             deliveredOn: surface
         )
-        if surface.offersACorrection {
+        if surface.offersACorrection, surface.deliveryIsReadable {
             #expect(credit == .credited)
             #expect(PreemptionCredit.ending(for: credit) == .preempted)
-        } else {
+        } else if !surface.offersACorrection {
             #expect(credit == .surfaceOffersNoCorrection)
             #expect(
                 PreemptionCredit.ending(for: credit) == .expired,
                 "a glyph with nothing on it to press is not a richer affordance"
             )
+        } else {
+            // The notification: it really does carry the correction, and nothing here can prove
+            // anybody saw it (focus-bxt).
+            #expect(credit == .deliveryCouldNotBeRead)
+            #expect(PreemptionCredit.ending(for: credit) == .expired)
         }
+    }
+
+    /// **A notification nobody saw must not settle the question** (focus-bxt, U-1).
+    ///
+    /// The only evidence behind the settle was that `UNUserNotificationCenter.add(_:)` returned
+    /// success, and that is not evidence that anybody saw anything: the system Focus suppresses
+    /// the banner while `add(_:)` still succeeds, and `SurfaceRouter.route` sends the recommitment
+    /// rung to a notification for `.provisional` too — which is quiet by design.
+    ///
+    /// Only the panel earns it, because only the panel can be **read**:
+    /// `DecisionSurfaceReachability` says the window is on a screen and every action it is
+    /// offering is somewhere a person could click. There is no such reading of a banner.
+    @Test("a notification carries the correction and cannot prove it was seen")
+    func aNotificationCannotEarnTheSettle() {
+        #expect(
+            NudgeSurface.notification.offersACorrection,
+            "the notification's Return, Snooze and This-is-relevant buttons are real"
+        )
+        #expect(!NudgeSurface.notification.deliveryIsReadable)
+
+        let credit = PreemptionCredit.decide(
+            questionSubject: Self.subject,
+            accusationSubject: Self.subject,
+            deliveredOn: .notification
+        )
+        #expect(
+            credit == .deliveryCouldNotBeRead,
+            "a notification the app cannot prove was seen spent the person's one ask"
+        )
+        #expect(
+            PreemptionCredit.ending(for: credit) == .expired,
+            "the question must come back, because nothing established that it was replaced"
+        )
+    }
+
+    /// The panel is the only readable delivery, and that is a committed table for the reason the
+    /// correction table is one: a surface added later has to state its answer.
+    @Test("which deliveries the app can actually read is a committed table")
+    func theReadabilityTableIsCommitted() {
+        #expect(NudgeSurface.panel.deliveryIsReadable)
+        #expect(!NudgeSurface.notification.deliveryIsReadable)
+        #expect(!NudgeSurface.menuBar.deliveryIsReadable)
+        #expect(!NudgeSurface.popoverBadge.deliveryIsReadable)
+        #expect(
+            NudgeSurface.allCases.filter(\.deliveryIsReadable).count == 1,
+            "exactly one surface in this app can be read after the fact"
+        )
     }
 
     /// The panel and the notification draw the rung's actions; the glyph and the badge do not.

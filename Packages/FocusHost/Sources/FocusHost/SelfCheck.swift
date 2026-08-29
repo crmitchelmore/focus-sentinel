@@ -486,6 +486,13 @@ enum SelfCheck {
         report["interventionDigest"] = InterventionPolicy.digestHex
         report["interventionVersion"] = InterventionPolicy.version
         report["ladderRungsDeclared"] = LadderRung.Kind.allCases.count
+        // Which surfaces can settle a question by preemption, and which merely *look* as though
+        // they can (focus-bxt). A notification carries the correction and cannot be proven to
+        // have reached anybody, so it is on the first list and not the second.
+        report["surfacesOfferingACorrection"] =
+            NudgeSurface.allCases.filter(\.offersACorrection).map(\.rawValue).sorted()
+        report["surfacesWithAReadableDelivery"] =
+            NudgeSurface.allCases.filter(\.deliveryIsReadable).map(\.rawValue).sorted()
         report["notificationAuthorisation"] = host.notificationAuthorisation.rawValue
         report["permitsNotificationDelivery"] = host.notificationAuthorisation.permitsDelivery
         report["requestAuthorizationCallCount"] = host.requestAuthorizationCallCount

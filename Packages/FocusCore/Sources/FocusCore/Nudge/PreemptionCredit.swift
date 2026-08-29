@@ -16,6 +16,9 @@ public enum PreemptionCreditReason: String, Sendable, CaseIterable, Codable, Has
     /// It was delivered somewhere that offers no correction — the menu-bar glyph, the popover
     /// badge. There is nothing on it to press, so nothing richer was offered.
     case surfaceOffersNoCorrection
+    /// It went to a **notification**, which does offer the correction and cannot be proven to
+    /// have reached anybody (focus-bxt). See `NudgeSurface.deliveryIsReadable`.
+    case deliveryCouldNotBeRead
     /// It named a different subject, or named nobody. A mixed accusation names nobody by
     /// construction.
     case aDifferentSubject
@@ -67,6 +70,10 @@ public enum PreemptionCredit {
     ) -> PreemptionCreditReason {
         guard let surface else { return .accusationWasNotDelivered }
         guard surface.offersACorrection else { return .surfaceOffersNoCorrection }
+        // **A delivery the app cannot read cannot spend the person's one ask** (focus-bxt, U-1).
+        // Checked after `offersACorrection` and separately from it, because the two are different
+        // facts and a notification is only false about one of them.
+        guard surface.deliveryIsReadable else { return .deliveryCouldNotBeRead }
         guard let accusationSubject, !accusationSubject.isEmpty else { return .aDifferentSubject }
         guard accusationSubject == questionSubject else { return .aDifferentSubject }
         return .credited
@@ -100,6 +107,62 @@ extension NudgeSurface {
         switch self {
         case .panel, .notification: true
         case .menuBar, .popoverBadge: false
+        }
+    }
+
+    /// **Whether this app can take a reading of what the person was actually shown**
+    /// (focus-bxt, U-1).
+    ///
+    /// ## The defect, and why it is not the same one as `offersACorrection`
+    ///
+    /// `NudgeSurface.notification.offersACorrection` is `true`, and it is **right**: the
+    /// recommitment notification really does carry Return, Snooze and *"This is relevant"* as
+    /// system buttons. So R-84a's *"something richer was offered"* clause is satisfied on paper,
+    /// and a preemption onto a notification settled the question — permanently, for the life of
+    /// the commitment, because the receipt is immutable and gate 11 reads it before any warrant is
+    /// built.
+    ///
+    /// The only evidence behind that settle was that `UNUserNotificationCenter.add(_:)` returned
+    /// success. That is not evidence that anybody saw anything:
+    ///
+    /// * `add(_:)` succeeding means the request was **accepted**, not presented. The system Focus
+    ///   suppresses the banner and `add(_:)` still succeeds — this repository's own routing
+    ///   comment concedes exactly that, and calls it the one Focus claim the app makes.
+    /// * `SurfaceRouter.route` sends the recommitment rung to a notification whenever
+    ///   `authorisation.permitsDelivery`, and that **includes `.provisional`** — which is quiet by
+    ///   design: delivered silently to the Notification Centre, with no banner at all.
+    ///
+    /// ## Why the ruling is here rather than in `offersACorrection` or in the router
+    ///
+    /// Three fixes were available and two of them are wrong.
+    ///
+    /// *Dropping `.notification` from `offersACorrection`* would make the type say something
+    /// false — the actions are real — and would report the failure under a reason that names the
+    /// wrong thing, which is precisely the mistake `PreemptionCreditReason` exists to avoid.
+    ///
+    /// *Requiring a reading the app can take* was measured against what the framework will
+    /// actually answer. `getDeliveredNotifications` says a request reached the Notification
+    /// Centre; it does not distinguish a banner somebody read from a row filed silently under a
+    /// Focus, which is the only distinction that matters here. A reading that cannot tell the two
+    /// apart is not the reading this needs.
+    ///
+    /// So the third: **the route does not settle.** The rung still goes to the notification —
+    /// that is R-82's ruling and it is untouched, because a notification is a perfectly good place
+    /// for the top rung — and the displaced question ends as `expired` instead of `preempted`.
+    /// `QuestionLedgerPolicy` already handles that correctly: the asking is written down if the
+    /// person could read it at both ends, `askedCount(…)` counts it, and the question **comes
+    /// back**. The app pays one more question; the person keeps the chance to teach it.
+    ///
+    /// | surface | delivery readable | what the app can prove |
+    /// |---|---|---|
+    /// | `panel` | **yes** | `decisionSurfaceReading` — the window is on a screen and every action is somewhere a person can click |
+    /// | `notification` | no | `add(_:)` returned success. The system decided the rest |
+    /// | `menuBar` | no | it never gets this far: nothing on it to press |
+    /// | `popoverBadge` | no | likewise |
+    public var deliveryIsReadable: Bool {
+        switch self {
+        case .panel: true
+        case .notification, .menuBar, .popoverBadge: false
         }
     }
 }

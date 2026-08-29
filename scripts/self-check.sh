@@ -1562,6 +1562,29 @@ check(
     report.get("ladderRungsDeclared"),
 )
 
+# 2b — **a notification cannot settle a question** (focus-bxt).
+#
+# `NudgeSurface.notification.offersACorrection` is true and RIGHT: Return, Snooze and "This is
+# relevant" are real buttons. The only evidence behind the settle was that
+# `UNUserNotificationCenter.add(_:)` returned success — which is not evidence anybody saw
+# anything. The system Focus suppresses the banner while add() still succeeds, and the router
+# sends the recommitment rung there for `.provisional` too, which is quiet by design. So the
+# route still carries the rung and no longer earns the settle: exactly one surface in this app
+# can be read after the fact, and it is the panel.
+check(
+    nudge.get("surfacesWithAReadableDelivery") == ["panel"],
+    "only the panel's delivery can be read, so only the panel can settle a question",
+    (
+        nudge.get("surfacesWithAReadableDelivery"),
+        nudge.get("surfacesOfferingACorrection"),
+    ),
+)
+check(
+    "notification" in (nudge.get("surfacesOfferingACorrection") or []),
+    "the notification still carries the correction — what it cannot do is prove it was seen",
+    nudge.get("surfacesOfferingACorrection"),
+)
+
 # 3 — **every rung reaches a surface, whatever this Mac says about notifications.** This is
 # F-73's degraded path observed in the shipping product: at zero grants the top rung routes to
 # the in-app recommitment panel rather than to nothing.
