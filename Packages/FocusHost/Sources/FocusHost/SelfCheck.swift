@@ -507,6 +507,26 @@ enum SelfCheck {
         report["orphanedQuestionSurfaces"] = host.orphanedQuestionSurfaces.map(\.rawValue).sorted()
         report["questionExitsDeclared"] = QuestionExit.allCases.map(\.rawValue).sorted()
 
+        // **Two readings of one fact, disagreeing** — always zero and always empty (focus-zrs).
+        //
+        // `orphanedQuestionSurfaces` above reads empty throughout the defect this round is about,
+        // which is exactly why these exist: an invariant can only see the contradictions it was
+        // built to look for. These four say whether the *active priority* is still one fact.
+        //
+        // * `commitmentDisagreements` is `PriorityHost` checking its own three statements of it.
+        // * `mandatesWithoutACommitment` is the loop being told to speak with no key to write
+        //   under — gate 1 and the key having parted company, which is defect A's signature.
+        // * `preemptionsNamingNoQuestion` is the interruption slot naming a question the loop is
+        //   not holding, which is defect B's.
+        // * `staleNotificationActions` is a press on a banner belonging to a rung that is over,
+        //   which is defect C's — and unlike the other three this one is *expected* to be
+        //   reachable in the wild, because a person really can press a day-old notification. It is
+        //   zero in an automated run because nothing here presses one.
+        report["commitmentDisagreements"] = composition.priorityHost.commitmentDisagreements
+        report["mandatesWithoutACommitment"] = host.mandatesWithoutACommitment
+        report["preemptionsNamingNoQuestion"] = host.preemptionsNamingNoQuestion
+        report["staleNotificationActions"] = host.staleNotificationActions
+
         // Every rung, with nothing presenting and no call in progress — which is the state the
         // settings pane's matrix describes.
         //

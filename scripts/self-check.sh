@@ -1554,6 +1554,42 @@ check(
     nudge.get("questionExitsDeclared"),
 )
 
+# **The active priority is still one fact** (focus-zrs).
+#
+# The invariant above reads EMPTY throughout the defect this round is about, which is the whole
+# lesson: an invariant sees only the contradiction it was built for. Round 7's finding was the
+# ACTIVE PRIORITY held twice — gate 1 decided by `priorityHost.state.priority != nil`, the whole
+# lifecycle of the interruption that gate admitted keyed to a SECOND, live `PriorityStore` read
+# inside the loop. Measured on a divergence: panel visible showing .question, every offered action
+# reachable, rules written 0, receipts [], settled false, RE-ASKED FIVE TIMES — and one function
+# on, `displacedQuestion(from:)` answered nil so `PreemptionCredit` was never consulted at all.
+#
+# These four are the readings that would have seen it, taken off the shipping graph.
+check(
+    nudge.get("commitmentDisagreements") == [],
+    "every statement of the active commitment agrees with every other",
+    nudge.get("commitmentDisagreements"),
+)
+check(
+    nudge.get("mandatesWithoutACommitment") == 0,
+    "no interruption was mandated without the commitment it would be written under",
+    nudge.get("mandatesWithoutACommitment"),
+)
+check(
+    nudge.get("preemptionsNamingNoQuestion") == 0,
+    "no preemption named a question the loop was not holding",
+    nudge.get("preemptionsNamingNoQuestion"),
+)
+# A person really can press a day-old banner, so this is not zero by construction — it is zero
+# because nothing in an automated run presses one. What it proves is that the refusal is wired and
+# reporting: a run in which a stale press was OBEYED would leave this at zero too, which is why the
+# unit lane drives the refusal and this only watches for it happening unbidden.
+check(
+    nudge.get("staleNotificationActions") == 0,
+    "no notification action from a rung that is over reached the loop",
+    nudge.get("staleNotificationActions"),
+)
+
 # D-06: three rungs, no more and no fewer — asserted in the running application as well as in
 # the policy manifest and the evaluation report.
 check(

@@ -101,7 +101,6 @@ final class NudgeHost {
 
     private(set) var ladder = LadderMachine()
     private(set) var fatigue = FatigueController()
-    private(set) var slot = InterruptionSlot.open
     private(set) var snoozes = SnoozeBook.none
     /// Subjects a "this is relevant" correction has taken out of the accusable set this session.
     /// The **rule** is the mechanism; this is the backstop for the moment between the click and
@@ -120,81 +119,114 @@ final class NudgeHost {
 
     /// The log row for whatever is on screen, so the person's answer can complete it.
     private var openRecordID: UUID?
-    private var openWarrant: QueryWarrant?
-    private var openWarrantAskedAt: Date?
-    private var openRung: LadderRung?
 
-    /// **The commitment the open accusation was raised under** (focus-lmo, U-1).
+    /// **The question on screen, as one value** (focus-zrs).
     ///
-    /// `openQuestionPriorityID`'s twin, and it exists for exactly the same reason: the panel is
-    /// sticky, so a person can commit to a new priority while an accusation waits and then
-    /// answer it. Everything the click writes is keyed to this — the persisted "this is
-    /// relevant" rule, the session-lived "not this time" rule, and the deferral row a display
-    /// change writes when it strands the rung — rather than to whatever the store happens to
-    /// call active at the moment of the click.
-    private var openRungPriorityID: UUID?
+    /// It was six independent stored properties — the warrant, the ask time, the priority
+    /// identifier, the surface, the reading taken at the ask and the answer identifiers — set on
+    /// one line each and cleared on another. Every one of them is a statement about the *same*
+    /// question, and each of the last five rounds found a path where some of them had moved and
+    /// some had not. The `nil` this round is about is the sixth: `openQuestionPriorityID` came
+    /// from a store read that could disagree with the gate that admitted the question, and every
+    /// consumer of it opened with `guard let … else { return }` — so a divergence silently
+    /// dropped the person's click, and one function on made `displacedQuestion(from:)` answer
+    /// `nil` and `PreemptionCredit` go unconsulted.
+    ///
+    /// One optional cannot be half-set. `priorityID` is **not** optional inside it, because a
+    /// question that does not know what commitment it is about is not a question this loop is
+    /// allowed to have raised: `ask(…)` refuses to raise one, loudly, rather than raising it with
+    /// a `nil` key.
+    private struct OpenQuestion {
+        let warrant: QueryWarrant
+        /// **The commitment it was asked under** (focus-lmo, U-1) — captured, never fetched,
+        /// because the panel is sticky (`hidesOnDeactivate` is `false`, R-89) and a person can
+        /// commit to something new while a question waits. It is the key the receipt, the learned
+        /// rule and every deferral row that stands in for a receipt are written against.
+        let priorityID: UUID
+        let askedAt: Date
+        /// **Which surface the question went to**, and, below, what that surface could be *proven*
+        /// to show (focus-kby, U-1). Both, rather than one `Bool`, because the `Bool` was the
+        /// defect: it was set outside the `if surface == .panel` branch, so a question routed to
+        /// the popover badge was marked presentable having read nothing — and the popover opens
+        /// only when a person clicks the status item.
+        ///
+        /// `nil` while the ask has chosen no surface at all, which is the deferral path.
+        var surface: NudgeSurface?
+        /// | surface | readable means |
+        /// |---|---|
+        /// | `panel` | on screen, on a display, and every answer in reach |
+        /// | `popoverBadge` | the popover is **open and showing this question** |
+        ///
+        /// Nothing infers readability from having called `show(…)`, and nothing infers it from
+        /// falling through a branch. A *settling* receipt about a question nobody saw does not
+        /// merely mis-record history — `isSettled(…)` is gate 11, so it permanently silences that
+        /// question.
+        var readingAtAsk: SurfaceReadability = .unknowable
+        /// The answers the question is offering, by `rawValue`, so a reading taken as it ends asks
+        /// about the same set the panel was drawn with.
+        var actions: [String] = []
+    }
+
+    private var openQuestion: OpenQuestion?
+
+    /// **The rung on screen, as one value** (focus-zrs) — `OpenQuestion`'s twin, for the twin
+    /// reason.
+    ///
+    /// The rung, the commitment it was raised under, the corrections it is offering and the
+    /// notification delivery it went out on are four statements about one interruption, and they
+    /// were four properties. The last of them is this round's defect C: a notification's buttons
+    /// stay live in Notification Centre indefinitely, and `notifications.onAction` reached
+    /// `resolve(…)` with **no check that the rung the button belongs to is still open**.
+    private struct OpenRung {
+        let rung: LadderRung
+        /// The commitment it was raised under: the persisted "this is relevant" rule, the
+        /// session-lived "not this time" rule and the deferral row a display change writes when it
+        /// strands the rung are all keyed to this rather than to whatever the store happens to
+        /// call active at the moment of the click (focus-lmo).
+        let priorityID: UUID
+        /// Empty when the live rung is not on the panel, which is every surface that has no
+        /// actions to be out of reach.
+        var panelActions: [String] = []
+        /// **The notification request this rung was delivered under**, when it went to one
+        /// (focus-zrs). A notification action names its delivery; an action naming any other
+        /// delivery is a click on a banner from a rung that is over, and is refused.
+        var notificationDeliveryID: String?
+    }
+
+    private var openRung: OpenRung?
+
+    /// **One open interruption at a time, derived rather than stored** (R-84a, focus-zrs).
+    ///
+    /// `slot` was a stored `InterruptionSlot` mutated on eleven lines beside the fields above —
+    /// a second representation of *which interruption is on screen*, and the one the **decider**
+    /// reads. `NudgeDecider.accuse(…)` computes `preempted` from `memory.slot.offering(rung)`, so
+    /// a slot that said "a question holds this" while the host held none produced a
+    /// `PreemptedQuery` naming a question `displacedQuestion(from:)` could not find — which is
+    /// this round's defect B, arriving from the other side.
+    ///
+    /// Derived, the two cannot part company: the value the decider is handed *is* the question and
+    /// the rung this object is holding. `InterruptionSlot` keeps the ruling (the accusation wins,
+    /// and the reverse never happens); this keeps the bookkeeping honest.
+    var slot: InterruptionSlot {
+        if let openRung { return InterruptionSlot(holder: .accusation(openRung.rung)) }
+        if let openQuestion { return InterruptionSlot(holder: .query(openQuestion.warrant)) }
+        return .open
+    }
+
+    /// **Every refusal this host has had to make because two readings of one fact disagreed.**
+    ///
+    /// Stated as counts rather than as comments, so the unit lane and `--focus-self-check` can
+    /// read them and a regression is a number rather than an argument. All three must be zero in
+    /// every automated run; a non-zero one is the class this round exists to end, recurring.
     /// The corrections the rung on the panel is offering, by `rawValue`, so a reading taken later
-    /// asks about the same set the panel was drawn with — the accusation's half of
-    /// `openQuestionActions`. Empty when the live rung is not on the panel, which is every
-    /// surface that has no actions to be out of reach.
-    private(set) var openRungPanelActions: [String] = []
+    /// asks about the same set the panel was drawn with. Derived from the open rung rather than
+    /// stored beside it (focus-zrs): empty is *"no rung, or a rung on a surface with nothing to
+    /// press"*, and there is no third state it can drift into.
+    var openRungPanelActions: [String] { openRung?.panelActions ?? [] }
 
-    /// **Which surface the open question went to, and what that surface could be proven to
-    /// show** (focus-kby, U-1).
-    ///
-    /// Three facts rather than one `Bool`, because the `Bool` was the defect. It was set outside
-    /// the `if surface == .panel` branch, so a question routed to the popover badge was marked
-    /// presentable having read **nothing** — and the popover opens only when a person clicks it,
-    /// so the reading it never took would have been `false`. The router sends questions there on
-    /// three ordinary conditions: the `silentVisual` deck, reduced interruption (forced on by
-    /// Reduce Motion), and a live microphone or camera — which is to say, anybody on a call.
-    ///
-    /// Every receipt in `QueryLedger` is immutable and `isSettled(…)` is gate 11 of the
-    /// suppression stack, so a *settling* receipt about a question nobody saw does not merely
-    /// mis-record history — it permanently silences that question. U-1 licenses the app to interrupt on
-    /// `uncertain` precisely because the interruption is one cheap click that teaches it;
-    /// spending that click on a surface the person never read is the app burning its licence.
-    ///
-    /// The reading is **per surface** and is taken by the surface itself:
-    ///
-    /// | surface | readable means |
-    /// |---|---|
-    /// | `panel` | on screen, on a display, and every answer in reach — `decisionSurfaceReading` |
-    /// | `popoverBadge` | the popover is **open and showing this question** |
-    ///
-    /// Nothing infers readability from having called `show(…)`, and nothing infers it from
-    /// falling through a branch.
-    private var openQuestionSurface: NudgeSurface?
-    private var openQuestionReadingAtAsk: SurfaceReadability = .unknowable
-    /// The answers the open question is offering, by `rawValue`, so the reading taken as it ends
-    /// asks about the same set the panel was drawn with.
-    private var openQuestionActions: [String] = []
-
-    /// **The commitment the open question was asked under** (focus-lmo, U-1).
-    ///
-    /// Captured when the question goes up, and it is the key every one of its endings is written
-    /// against: the receipt, the learned rule, and the deferral rows that stand in for a receipt
-    /// when the surface was lost.
-    ///
-    /// It has to be captured rather than fetched, because the panel is deliberately sticky —
-    /// `hidesOnDeactivate` is `false` (R-89) — so a question waits for an answer while the person
-    /// gets on with their day, and one of the things they may do in that interval is commit to a
-    /// **new** priority. Both resolution paths used to ask the store for the active task at the
-    /// moment the question *ended*: `answer(_:)` through `priorities.activeTask()` and
-    /// `expireOpenQuestion()` through `activePriorityID()`. Under U-1 that breaks the ruling in
-    /// both directions at once.
-    ///
-    /// * The **new** commitment is born carrying an immutable receipt about a question nobody put
-    ///   to it. `isSettled(…)` is gate 11 of the suppression stack, so the app is permanently
-    ///   silent about a subject it never asked about under this priority.
-    /// * The **old** commitment keeps no receipt at all, so the very question the person just
-    ///   answered is asked again the next time they return to it — and *"repeat-asking is a
-    ///   defect"* is U-1's own sentence.
-    ///
-    /// The learned rule travels with it: `QueryLedger.answer(…)` scopes the rule to the task row
-    /// it is handed, so a live fetch attached what the person learned about the old commitment to
-    /// the new one.
-    private var openQuestionPriorityID: UUID?
+    private(set) var mandatesWithoutACommitment = 0
+    private(set) var preemptionsNamingNoQuestion = 0
+    private(set) var staleNotificationActions = 0
 
     init(
         context: ModelContext,
@@ -227,8 +259,17 @@ final class NudgeHost {
         // re-measures and re-places itself for whatever is there now; this is the loop being told
         // so it can read the result and decide what it means.
         panel.onDisplaysChanged = { [weak self] in self?.displaysChanged() }
-        notifications.onAction = { [weak self] action in
-            self?.resolve(action.correction, snoozeDuration: nil)
+        // **An action names the delivery it belongs to, and a stale one is refused** (focus-zrs).
+        //
+        // This was `resolve(action.correction, snoozeDuration: nil)` with no check of any kind. A
+        // notification's buttons stay live in Notification Centre indefinitely — long after the
+        // rung has been answered, escalated past, withdrawn or replaced — so a click on an hour-old
+        // banner reached the live loop and closed whatever happened to be on screen. Driven while a
+        // **question** was on the panel it turned `query/delivered/nil` into
+        // `query/delivered/corrected` and took the panel away: a falsified row, and a question the
+        // person never answered recorded as an answer.
+        notifications.onAction = { [weak self] response in
+            self?.resolveFromNotification(response)
         }
     }
 
@@ -265,7 +306,13 @@ final class NudgeHost {
         rememberAnchor(judgement)
 
         let subject = NudgeDecider.querySubject(for: judgement)
-        let priorityID = activePriorityID()
+        // **The commitment gate 1 is decided by, and the key everything this judgement writes is
+        // scoped to — one value, read once** (focus-zrs). It was two: `surroundings`' own
+        // `hasActivePriority` decided whether the app might speak, and a *second*, live
+        // `priorities.activeTask()` decided what the interruption was about. Nothing enforced
+        // that they agreed, and on a divergence the app spoke and then dropped the answer.
+        let commitment = surroundings.commitment
+        let priorityID = commitment?.id
 
         let memory: NudgeMemory
         do {
@@ -300,7 +347,12 @@ final class NudgeHost {
         lastDecision = decision
         decisionCount += 1
 
-        perform(decision, judgement: judgement, surroundings: surroundings, priorityID: priorityID)
+        perform(
+            decision,
+            judgement: judgement,
+            surroundings: surroundings,
+            commitment: commitment
+        )
     }
 
     /// The last application the engine called real work.
@@ -321,7 +373,7 @@ final class NudgeHost {
         _ decision: NudgeDecision,
         judgement: NudgeJudgement,
         surroundings: NudgeSurroundings,
-        priorityID: UUID?
+        commitment: ActiveCommitment?
     ) {
         switch decision {
         case .silent:
@@ -334,21 +386,57 @@ final class NudgeHost {
                 deferral: reason,
                 kind: judgement.eligibility.mandate != nil ? .accusation : .query,
                 subject: judgement.subject,
-                priorityID: priorityID
+                priorityID: commitment?.id
             )
 
         case .accuse(let rung, let route, let preempted):
+            guard let commitment = mandated(commitment, kind: .accusation, subject: rung.subject)
+            else { return }
             accuse(
                 rung: rung,
                 route: route,
                 preempted: preempted,
                 surroundings: surroundings,
-                priorityID: priorityID
+                commitment: commitment
             )
 
         case .ask(let warrant, let route):
-            ask(warrant: warrant, route: route, surroundings: surroundings, priorityID: priorityID)
+            guard let commitment = mandated(
+                commitment, kind: .query, subject: warrant.subject.identifier
+            ) else { return }
+            ask(
+                warrant: warrant,
+                route: route,
+                surroundings: surroundings,
+                commitment: commitment
+            )
         }
+    }
+
+    /// **Gate 1 said yes; this insists it said yes about something** (focus-zrs).
+    ///
+    /// `NudgeDecider` mandates an interruption only through `SuppressionStack`, whose first gate is
+    /// `hasActivePriority` — which is now `commitment != nil` on the very value passed in here, so
+    /// this cannot fire. It is written down anyway, and loudly, because the whole subject of this
+    /// round is that "cannot" was a belief about two values nobody compared. If a future edit
+    /// re-opens a second door to the active priority, the app **defers** rather than raising an
+    /// interruption it has no key for — and the count says it happened rather than a `nil` doing it
+    /// in silence.
+    private func mandated(
+        _ commitment: ActiveCommitment?,
+        kind: InterruptionKind,
+        subject: String?
+    ) -> ActiveCommitment? {
+        if let commitment { return commitment }
+        mandatesWithoutACommitment += 1
+        logger.fault(
+            """
+            the decider mandated a \(kind.rawValue, privacy: .public) with no commitment: \
+            gate 1 and the key it writes disagree, so nothing is raised
+            """
+        )
+        record(deferral: .noSurfaceAvailable, kind: kind, subject: subject, priorityID: nil)
+        return nil
     }
 
     /// **R-81, at the point it costs something.** A rung nobody could see is written down as a
@@ -399,14 +487,14 @@ final class NudgeHost {
         route: SurfaceRoute,
         preempted: PreemptedQuery?,
         surroundings: NudgeSurroundings,
-        priorityID: UUID?
+        commitment: ActiveCommitment
     ) {
         accuse(
             rung: rung,
             route: route,
             displaced: preempted.flatMap(displacedQuestion(from:)),
             surroundings: surroundings,
-            priorityID: priorityID
+            commitment: commitment
         )
     }
 
@@ -419,14 +507,16 @@ final class NudgeHost {
         route: SurfaceRoute,
         displaced: DisplacedQuestion?,
         surroundings: NudgeSurroundings,
-        priorityID: UUID?
+        commitment: ActiveCommitment
     ) {
-        slot = slot.offering(rung).slot ?? slot
-        openRung = rung
-        openRungPanelActions = []
-        // The commitment as it stands **now**, at the accusation. Everything this rung ever
-        // writes is keyed to it (focus-lmo).
-        openRungPriorityID = priorityID
+        let priorityID = commitment.id
+        // The rung takes the slot, which — because `slot` is derived from exactly this — is what
+        // assigning it *means*. `InterruptionSlot.offering(_ rung:)` is always admitted (R-84a's
+        // asymmetry: the accusation wins and the reverse never happens), and the question it
+        // displaces has already been read out of the slot by the decider and handed in as
+        // `displaced`. The commitment travels with the rung: everything it ever writes is keyed
+        // to it (focus-lmo).
+        openRung = OpenRung(rung: rung, priorityID: priorityID)
         // **The question comes off the screen, not only off the books** (focus-v0u).
         //
         // This was `openWarrant = nil` and nothing else, and the panel was touched on the
@@ -453,7 +543,7 @@ final class NudgeHost {
         ladder.reduce(.mandate(rung.mandate), now: surroundings.monotonic)
         ladder.offer(at: surroundings.monotonic, budgetPermits: true)
 
-        let presentation = accusationPresentation(for: rung)
+        let presentation = accusationPresentation(for: rung, commitment: commitment)
         guard let surface = route.surface else {
             record(
                 deferral: route.deferralReason ?? .noSurfaceAvailable,
@@ -490,7 +580,7 @@ final class NudgeHost {
             // wrong. An accusation you cannot answer back to is the anti-pattern the Court's
             // product boundary forbids, so it is a deferral: the ladder's clock stays stopped,
             // nothing is counted, and the rung is offered again.
-            openRungPanelActions = presentation.offeredActionIdentifiers
+            openRung?.panelActions = presentation.offeredActionIdentifiers
             let reading = panel.decisionSurfaceReading(
                 offering: presentation.offeredActionIdentifiers
             )
@@ -516,6 +606,13 @@ final class NudgeHost {
             settleOrExpire(displaced, rung: rung, deliveredOn: .panel)
 
         case .notification:
+            // **The delivery this rung is going out on** (focus-zrs). A notification's buttons
+            // outlive everything about the moment they were raised in, so the banner has to be
+            // able to say *which* rung it belongs to when somebody presses one an hour later.
+            // Minted here, held on the open rung, and gone the moment the rung is forgotten —
+            // which is what makes a click on any other banner refusable rather than obeyed.
+            let deliveryID = UUID().uuidString
+            openRung?.notificationDeliveryID = deliveryID
             notifications.deliver(
                 presentation,
                 surroundings: NotificationSurroundings(
@@ -523,7 +620,8 @@ final class NudgeHost {
                     media: surroundings.media,
                     reducedInterruption: preferences.reducedInterruption,
                     menuBarVisible: surroundings.menuBarVisible
-                )
+                ),
+                deliveryID: deliveryID
             ) { [weak self] recorded, demotedTo in
                 guard let self else { return }
                 switch recorded {
@@ -547,7 +645,7 @@ final class NudgeHost {
                         route: demotedTo,
                         displaced: displaced,
                         surroundings: surroundings,
-                        priorityID: priorityID
+                        commitment: commitment
                     )
                 case .suppressed:
                     // Nothing was shown. The question was taken off the screen and replaced with
@@ -562,23 +660,28 @@ final class NudgeHost {
         warrant: QueryWarrant,
         route: SurfaceRoute,
         surroundings: NudgeSurroundings,
-        priorityID: UUID?
+        commitment: ActiveCommitment
     ) {
-        guard case .admitted(let taken, _) = slot.offering(warrant) else { return }
-        slot = taken
-        openWarrant = warrant
-        openWarrantAskedAt = dateProvider.now
-        // The commitment as it stands **now**, at the ask. Everything this question ever writes
-        // is keyed to it (focus-lmo).
-        openQuestionPriorityID = priorityID
-        openQuestionSurface = nil
-        openQuestionReadingAtAsk = .unknowable
-        openQuestionActions = []
+        let priorityID = commitment.id
+        // The slot's own rule, still the slot's: a question is admitted only against an empty
+        // slot, including against another question. `slot` is derived from the two values below,
+        // so taking it *is* assigning them (focus-zrs).
+        guard case .admitted = slot.offering(warrant) else { return }
+        // One value, set once. The commitment as it stands **now**, at the ask, travels inside it:
+        // everything this question ever writes is keyed to that and never to a later store read
+        // (focus-lmo, focus-zrs).
+        openQuestion = OpenQuestion(
+            warrant: warrant,
+            priorityID: priorityID,
+            askedAt: dateProvider.now
+        )
         forgetOpenRung()
 
         let presentation = QueryPresentation(
             voice: preferences.voice,
-            task: activeIntent() ?? "",
+            // The commitment's own sentence, carried in with it rather than fetched again — so the
+            // question on the screen names the task the receipt will be written against.
+            task: commitment.intent,
             subject: warrant.subject.identifier,
             reason: warrant.reason,
             dwelled: warrant.dwelled
@@ -593,8 +696,8 @@ final class NudgeHost {
             )
             return
         }
-        openQuestionSurface = surface
-        openQuestionActions = presentation.offeredAnswerIdentifiers
+        openQuestion?.surface = surface
+        openQuestion?.actions = presentation.offeredAnswerIdentifiers
 
         switch surface {
         case .panel:
@@ -625,9 +728,11 @@ final class NudgeHost {
             // `forgetOpenQuestion()`, which overwrote the constant with `.unknowable` on its way
             // out. One derivation, one gate: a question is delivered only if the value the ledger
             // will later be handed says it could be read.
-            let reading = panel.decisionSurfaceReading(offering: openQuestionActions)
-            openQuestionReadingAtAsk = reading.everyActionIsReachable ? .readable : .notReadable
-            guard openQuestionReadingAtAsk == .readable else {
+            let reading = panel.decisionSurfaceReading(
+                offering: openQuestion?.actions ?? []
+            )
+            openQuestion?.readingAtAsk = reading.everyActionIsReachable ? .readable : .notReadable
+            guard openQuestion?.readingAtAsk == .readable else {
                 logger.error(
                     """
                     a question was put on a panel nobody could answer and was left unwritten: \
@@ -654,8 +759,8 @@ final class NudgeHost {
             // (`popoverPresentedTheQuestion()`). Until then nothing is counted and nothing is
             // written, which is what stops a question burning its one asking behind a click that
             // opens it.
-            openQuestionReadingAtAsk = popoverReadability()
-            guard openQuestionReadingAtAsk == .readable else { return }
+            openQuestion?.readingAtAsk = popoverReadability()
+            guard openQuestion?.readingAtAsk == .readable else { return }
 
         case .menuBar, .notification:
             // A question is never a notification (R-82), and the glyph has no answer affordance.
@@ -708,17 +813,17 @@ final class NudgeHost {
     /// nudge loop both exist. This is the moment a badge question stops being an invitation and
     /// becomes an asking — and it is the only moment at which one may be counted as delivered.
     func popoverPresentedTheQuestion() {
-        guard let warrant = openWarrant,
-              openQuestionSurface == .popoverBadge,
-              openQuestionReadingAtAsk != .readable,
+        guard let question = openQuestion,
+              question.surface == .popoverBadge,
+              question.readingAtAsk != .readable,
               popoverReadability() == .readable
         else { return }
 
-        openQuestionReadingAtAsk = .readable
+        openQuestion?.readingAtAsk = .readable
         deliverQuestion(
             surface: .popoverBadge,
-            warrant: warrant,
-            priorityID: openQuestionPriorityID,
+            warrant: question.warrant,
+            priorityID: question.priorityID,
             now: monotonicClock.elapsed
         )
     }
@@ -761,11 +866,11 @@ final class NudgeHost {
     /// makes the ladder, the fatigue controller and the log agree about what just happened.
     func resolve(_ action: CorrectionAction, snoozeDuration: Duration?) {
         let now = monotonicClock.elapsed
-        let scope = openRung.map(\.mandate).flatMap(CorrectionScope.from)
+        let scope = openRung.map(\.rung.mandate).flatMap(CorrectionScope.from)
 
         // **The rung's own key, not the live pointer** (focus-lmo). Read before `apply(…)`,
         // which is the function that hands the outcome to whoever writes it.
-        let priorityID = openRungPriorityID
+        let priorityID = openRung?.priorityID
 
         let outcome = action.outcome(
             scope: scope,
@@ -793,6 +898,32 @@ final class NudgeHost {
         closeSurfaces(endingAnyQuestionAs: .worldMovedOn)
     }
 
+    /// **A press on a notification's button, checked against the rung it belongs to** (focus-zrs).
+    ///
+    /// A banner is not a window: it does not close when the moment it was about ends, and its
+    /// buttons stay live in Notification Centre for as long as the person leaves it there. So the
+    /// only honest question to ask of one is *which delivery is this?* — and the only honest
+    /// answer to a delivery this loop is no longer holding is to refuse it.
+    ///
+    /// Refused rather than re-interpreted: there is no correct thing to do with a correction aimed
+    /// at a rung that is over. Obeying it closed whatever was on screen instead — measured turning
+    /// a live question's `query/delivered/nil` row into `query/delivered/corrected` and taking the
+    /// panel away, which records an answer the person never gave and loses the one they were about
+    /// to.
+    private func resolveFromNotification(_ response: NudgeNotificationResponse) {
+        guard let open = openRung, open.notificationDeliveryID == response.deliveryID else {
+            staleNotificationActions += 1
+            logger.error(
+                """
+                a notification action named a delivery this loop is not holding \
+                (\(response.deliveryID, privacy: .public)); it is refused
+                """
+            )
+            return
+        }
+        resolve(response.action.correction, snoozeDuration: nil)
+    }
+
     /// One click on the question.
     ///
     /// **R-78's atomic transaction**, performed by the ledger: the rule and the immutable
@@ -801,8 +932,14 @@ final class NudgeHost {
     func answer(_ answer: QueryAnswer) {
         defer { closeSurfaces(endingAnyQuestionAs: .answered) }
 
-        guard let warrant = openWarrant else { return }
-        let scope = CorrectionScope.from(warrant)
+        // **One guard, because there is one value** (focus-zrs). This was two — the warrant, then
+        // `guard let priorityID = openQuestionPriorityID else { return }` inside the `do` — and
+        // the second one is where the person's click went when the two readings of the active
+        // priority disagreed: dropped in silence, with the `defer` above tidying the panel away.
+        // A question that exists knows what commitment it is about, because it cannot be
+        // constructed without one.
+        guard let question = openQuestion else { return }
+        let scope = CorrectionScope.from(question.warrant)
         let now = monotonicClock.elapsed
 
         do {
@@ -810,20 +947,19 @@ final class NudgeHost {
             // active now** (focus-lmo). The task row is fetched *by that identifier*, so the
             // rule the ledger writes in the same transaction is scoped to the commitment the
             // person was answering about.
-            guard let priorityID = openQuestionPriorityID else { return }
-            let task = try priorities.task(id: priorityID)
+            let task = try priorities.task(id: question.priorityID)
             let outcome = try ledger.answer(
                 answer,
-                priorityID: priorityID,
+                priorityID: question.priorityID,
                 task: task,
                 scope: scope,
-                reason: warrant.reason,
-                askedAt: openWarrantAskedAt
+                reason: question.warrant.reason,
+                askedAt: question.askedAt
             )
             if answer == .yesAddIt { correctedSubjects.insert(scope.subject) }
             // The question's own key, so the undo the composition root registers belongs to the
             // same commitment the ledger just wrote the rule under (focus-lmo).
-            onCorrection?(outcome, priorityID)
+            onCorrection?(outcome, question.priorityID)
         } catch {
             logger.error(
                 "the query ledger refused an answer: \(error.localizedDescription, privacy: .public)"
@@ -840,7 +976,7 @@ final class NudgeHost {
     /// treating that as "nothing happened" is what makes an app ask again tomorrow — and
     /// `.dismissed` for an accusation, which writes nothing and is allowed to (D-07).
     private func dismissWhateverIsOpen() {
-        if openWarrant != nil {
+        if openQuestion != nil {
             answer(.notNow)
             return
         }
@@ -996,8 +1132,9 @@ final class NudgeHost {
         // surface as it was while the question was still on it.
         expireOpenQuestion()
         panel.withdrawForPresentation()
+        // The slot is released by these two and by nothing else: it is derived from the question
+        // and the rung, so forgetting them **is** giving it back (focus-zrs).
         endOpenQuestion(.worldMovedOn, replacedOn: nil)
-        slot = slot.released()
         forgetOpenRung()
     }
 
@@ -1033,35 +1170,33 @@ final class NudgeHost {
     private func displaysChanged() {
         guard panel.isVisible else { return }
 
-        if let warrant = openWarrant, openQuestionSurface == .panel {
+        if let question = openQuestion, question.surface == .panel {
             guard currentReadability() != .readable else { return }
-            let summary = panel.decisionSurfaceReading(offering: openQuestionActions).summary
+            let summary = panel.decisionSurfaceReading(offering: question.actions).summary
             logger.error(
                 """
                 the display changed under a question and its answers went out of reach; \
                 it is un-asked rather than counted: \(summary, privacy: .public)
                 """
             )
-            // The question's own key, not the live pointer (focus-lmo).
-            let priorityID = openQuestionPriorityID
             endOpenQuestion(.surfaceWentOutOfReach, replacedOn: nil)
-            // The delivery is taken off the budget as well as off the screen (focus-mfc).
+            // The delivery is taken off the budget as well as off the screen (focus-mfc), against
+            // the question's own key rather than the live pointer (focus-lmo).
             undeliverOpenRecord(
                 kind: .query,
-                subject: warrant.subject.identifier,
-                priorityID: priorityID
+                subject: question.warrant.subject.identifier,
+                priorityID: question.priorityID
             )
             return
         }
 
-        guard let rung = openRung, !openRungPanelActions.isEmpty else { return }
-        let reading = panel.decisionSurfaceReading(offering: openRungPanelActions)
+        guard let open = openRung, !open.panelActions.isEmpty else { return }
+        let reading = panel.decisionSurfaceReading(offering: open.panelActions)
         guard !reading.everyActionIsReachable else { return }
         logger.error(
             "the display changed under a rung and stranded it: \(reading.summary, privacy: .public)"
         )
         panel.hide()
-        slot = slot.released()
         // Before the deferral is written, so the record and the ladder agree: the attempt ended
         // as a deferral, and there is no delivery left standing for it to have escalated from.
         //
@@ -1075,8 +1210,8 @@ final class NudgeHost {
         // the accusation that was stranded, and that accusation was about one commitment.
         undeliverOpenRecord(
             kind: .accusation,
-            subject: rung.subject,
-            priorityID: openRungPriorityID
+            subject: open.rung.subject,
+            priorityID: open.priorityID
         )
         forgetOpenRung()
     }
@@ -1085,7 +1220,6 @@ final class NudgeHost {
     private func closeSurfaces(endingAnyQuestionAs exit: QuestionExit) {
         endOpenQuestion(exit, replacedOn: nil)
         panel.hide()
-        slot = slot.released()
         forgetOpenRung()
     }
 
@@ -1113,15 +1247,13 @@ final class NudgeHost {
     ///   it is only when the accusation replacing it is going onto that same panel; anything else
     ///   takes it down.
     private func endOpenQuestion(_ exit: QuestionExit, replacedOn replacement: NudgeSurface?) {
-        guard openWarrant != nil || openQuestionSurface != nil else { return }
-        let surface = openQuestionSurface
+        guard let question = openQuestion else { return }
+        let surface = question.surface
 
-        openWarrant = nil
-        openWarrantAskedAt = nil
-        openQuestionPriorityID = nil
-        openQuestionSurface = nil
-        openQuestionReadingAtAsk = .unknowable
-        openQuestionActions = []
+        // One assignment, because the question is one value. It used to be six lines, and the
+        // whole of this round's defect A was that a path could take some of them and not others —
+        // or, worse, that one of them was `nil` from the beginning (focus-zrs).
+        openQuestion = nil
 
         let handsOver = exit.mayHandOverItsSurface && replacement == surface
         switch surface {
@@ -1142,17 +1274,25 @@ final class NudgeHost {
             break
         }
 
-        if exit.releasesTheSlot { slot = slot.released() }
+        // **The slot is derived, so forgetting the question above has already released it**
+        // (focus-zrs) — except on the one exit that must *not* release it, `preempted`, where the
+        // accusation has taken the slot in the same turn by having assigned `openRung` first. That
+        // ordering is what `releasesTheSlot` used to say with an assignment; asserting it here
+        // keeps the enum load-bearing rather than decorative.
+        assert(
+            exit.releasesTheSlot ? slot.openQuery == nil : true,
+            "an exit that releases the slot left a question holding it"
+        )
     }
 
-    /// Forget the rung on the surface, and the corrections it was offering.
+    /// Forget the rung on the surface, the corrections it was offering, and the notification
+    /// delivery it went out on.
     ///
-    /// One place, for the reason `forgetOpenQuestion()` is one place: a reading taken against a
-    /// stale action list is a reading of a nudge nobody is looking at.
+    /// One assignment, for the reason `endOpenQuestion(_:replacedOn:)` is one: a reading taken
+    /// against a stale action list is a reading of a nudge nobody is looking at, and a delivery
+    /// token that outlived its rung is a banner whose buttons still work.
     private func forgetOpenRung() {
         openRung = nil
-        openRungPanelActions = []
-        openRungPriorityID = nil
     }
 
     /// **A question the person can still see and answer that this host has forgotten** — and it
@@ -1164,7 +1304,7 @@ final class NudgeHost {
     /// answers that `answer(_:)` will drop in a `guard`, and a question that will therefore be
     /// asked again.
     var orphanedQuestionSurfaces: [NudgeSurface] {
-        guard openWarrant == nil else { return [] }
+        guard openQuestion == nil else { return [] }
         var orphans: [NudgeSurface] = []
         if panel.isVisible, panel.showing == .question { orphans.append(.panel) }
         if menuBar.isShowingQuery { orphans.append(.popoverBadge) }
@@ -1189,7 +1329,7 @@ final class NudgeHost {
     private struct DisplacedQuestion {
         let preempted: PreemptedQuery
         let priorityID: UUID
-        let askedAt: Date?
+        let askedAt: Date
         /// **The question's own row in the intervention log**, captured here for the same reason
         /// the readings are. `delivered(surface:rung:priorityID:)` assigns `openRecordID` to the
         /// *accusation's* new row, and it runs before the settle does — so completing "the open
@@ -1208,15 +1348,30 @@ final class NudgeHost {
     ///
     /// Nothing is recorded here. Whether the asking is written down at all, and whether it
     /// **settles**, are decided at the end of the accusation by `settleOrExpire(_:rung:deliveredOn:)`.
+    ///
+    /// **It answers `nil` only when the slot and this object disagree** (focus-zrs), which is why
+    /// the disagreement is now impossible: `slot` is *derived* from `openQuestion`, so the
+    /// `PreemptedQuery` the decider computed from it names the very warrant held here. This used
+    /// to open `guard let priorityID = openQuestionPriorityID else { return nil }` against a
+    /// separate store read, and on a divergence it answered `nil` — `settleOrExpire(…)` returned
+    /// on its first line, `PreemptionCredit` was never consulted, and the question's own log row
+    /// stayed open for ever while the warrant had already been cleared. The count below is what
+    /// makes "impossible" a reading rather than a claim.
     private func displacedQuestion(from preempted: PreemptedQuery) -> DisplacedQuestion? {
-        guard let priorityID = openQuestionPriorityID else { return nil }
+        guard let question = openQuestion else {
+            preemptionsNamingNoQuestion += 1
+            logger.fault(
+                "a preemption named a question this loop is not holding; nothing could be weighed"
+            )
+            return nil
+        }
         return DisplacedQuestion(
             preempted: preempted,
-            priorityID: priorityID,
-            askedAt: openWarrantAskedAt,
+            priorityID: question.priorityID,
+            askedAt: question.askedAt,
             recordID: openRecordID,
-            surface: openQuestionSurface,
-            readingAtAsk: openQuestionReadingAtAsk,
+            surface: question.surface,
+            readingAtAsk: question.readingAtAsk,
             readingAtDisplacement: currentReadability()
         )
     }
@@ -1332,10 +1487,10 @@ final class NudgeHost {
     /// `answer(_:)` and `QueryLedger.answer(…)`, which is a different path with a different
     /// end — `.answered`, which always writes.
     private func currentReadability() -> SurfaceReadability {
-        switch openQuestionSurface {
+        switch openQuestion?.surface {
         case .panel:
             guard panel.isVisible else { return .unknowable }
-            return panel.decisionSurfaceReading(offering: openQuestionActions)
+            return panel.decisionSurfaceReading(offering: openQuestion?.actions ?? [])
                 .everyActionIsReachable ? .readable : .notReadable
         case .popoverBadge:
             return popoverReadability()
@@ -1389,9 +1544,9 @@ final class NudgeHost {
                 subject: subject,
                 reason: reason,
                 outcome: outcome,
-                askedAt: askedAt ?? openWarrantAskedAt,
-                surface: surface ?? openQuestionSurface,
-                readingAtAsk: readingAtAsk ?? openQuestionReadingAtAsk,
+                askedAt: askedAt ?? openQuestion?.askedAt,
+                surface: surface ?? openQuestion?.surface,
+                readingAtAsk: readingAtAsk ?? openQuestion?.readingAtAsk ?? .unknowable,
                 readingNow: readingNow ?? currentReadability(),
                 ending: ending
             )
@@ -1431,10 +1586,12 @@ final class NudgeHost {
     /// anything at all about a question that never reached a readable surface (focus-kby); that
     /// row would be a fact about an asking nobody experienced.
     private func expireOpenQuestion() {
-        // The ask-time key, for the reason `openQuestionPriorityID` exists: this is the path a
-        // priority change itself travels down, so reading the live pointer here would write the
-        // receipt against the commitment that has just replaced the one asked about (focus-lmo).
-        guard let warrant = openWarrant, let priorityID = openQuestionPriorityID else { return }
+        // The ask-time key, for the reason `OpenQuestion` carries one: this is the path a priority
+        // change itself travels down, so reading the live pointer here would write the receipt
+        // against the commitment that has just replaced the one asked about (focus-lmo).
+        guard let question = openQuestion else { return }
+        let warrant = question.warrant
+        let priorityID = question.priorityID
         recordQuestion(
             subjectKind: warrant.subject.kind,
             subject: warrant.subject.identifier,
@@ -1460,13 +1617,16 @@ final class NudgeHost {
         // was the second one, so a question the panel had just deferred appeared in the popover
         // as though it had been routed there — and would have been read as a badge question by
         // anything that asked.
-        guard let warrant = openWarrant, openQuestionSurface == .popoverBadge else { return nil }
+        guard let question = openQuestion, question.surface == .popoverBadge else { return nil }
         return QueryPresentation(
             voice: preferences.voice,
-            task: activeIntent() ?? "",
-            subject: warrant.subject.identifier,
-            reason: warrant.reason,
-            dwelled: warrant.dwelled
+            // The commitment the app is acting under, from the one place that states it. It was
+            // `activeIntent()` — a third read of the priority store, which could name a different
+            // commitment from the one the receipt will be keyed to (focus-zrs).
+            task: activeCommitment()?.intent ?? "",
+            subject: question.warrant.subject.identifier,
+            reason: question.warrant.reason,
+            dwelled: question.warrant.dwelled
         )
     }
 
@@ -1521,7 +1681,6 @@ final class NudgeHost {
     func hideOverlays() {
         panel.hide()
         menuBar.closePopover()
-        slot = slot.released()
         // **The open question goes with the screen it was on** (focus-kby, F-81).
         //
         // It used to survive: the panel went away and the warrant and its readability stayed,
@@ -1539,8 +1698,13 @@ final class NudgeHost {
     var currentRung: LadderRung.Kind? { ladder.state.rung?.kind }
 
     /// Today's spend, for the settings pane's usage rows.
+    ///
+    /// Keyed to the same commitment every row it is summing was written against — read from the
+    /// surroundings, which is the one statement of it, rather than from a store read of this
+    /// host's own (focus-zrs). A budget summed under a different key from the rows it is about is
+    /// a cap that silently stops applying.
     func todaysUsage() -> InterruptionBudget {
-        (try? log.budget(on: log.today, priorityID: activePriorityID())) ?? .empty
+        (try? log.budget(on: log.today, priorityID: activeCommitment()?.id)) ?? .empty
     }
 
     /// The four grant-free focus readings from the last time the panel was shown (R-89, §4.5).
@@ -1555,32 +1719,33 @@ final class NudgeHost {
 
     // MARK: - Helpers
 
-    private func activePriorityID() -> UUID? {
-        activeTask()?.id
+    /// **The one statement of the active commitment this host has** (focus-zrs).
+    ///
+    /// It reads the surroundings closure — the value the composition root builds from
+    /// `PriorityHost`, which is the object that owns the projection — rather than opening
+    /// `PriorityStore` again. There were three store reads here (`activePriorityID()`,
+    /// `activeIntent()`, `activeTask()`), and each of them was a second opinion about the fact
+    /// gate 1 had already been decided by.
+    ///
+    /// Used only where no judgement is in flight — the settings pane's usage rows and the
+    /// popover's redraw. Every path that *writes* takes the commitment handed to it by
+    /// `consider(_:)`, so a receipt can never be keyed to a reading taken later than the ask.
+    private func activeCommitment() -> ActiveCommitment? {
+        surroundings?().commitment
     }
 
-    private func activeIntent() -> String? {
-        activeTask()?.intent
-    }
-
-    private func activeTask() -> FocusSchemaV3.PriorityTask? {
-        do {
-            return try priorities.activeTask()
-        } catch {
-            logger.error(
-                "the priority store refused a read: \(error.localizedDescription, privacy: .public)"
-            )
-            return nil
-        }
-    }
-
-    private func accusationPresentation(for rung: LadderRung) -> AccusationPresentation {
+    private func accusationPresentation(
+        for rung: LadderRung,
+        commitment: ActiveCommitment
+    ) -> AccusationPresentation {
         let target = ReturnToTask.target(anchor: returnAnchor, workspace: workspace)
         let subject = rung.subject
         return AccusationPresentation(
             rung: rung.kind,
             voice: preferences.voice,
-            task: activeIntent() ?? "",
+            // The commitment the rung was raised under, carried in — so the sentence on the panel
+            // names the task the click will be written against (focus-zrs, focus-lmo).
+            task: commitment.intent,
             subject: subject,
             dwelled: rung.mandate.sustainedFor,
             returnTarget: target?.displayName,

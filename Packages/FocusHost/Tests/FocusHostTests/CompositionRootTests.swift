@@ -64,7 +64,9 @@ struct CompositionRootTests {
         let judgement = NudgeHostFixture.uncertainJudgement(subject: subject)
         guard case .ask(let warrant, _) = NudgeDecider.decide(
             judgement,
-            surroundings: NudgeHostFixture.surroundings(monotonic: .seconds(10_000)),
+            surroundings: NudgeHostFixture.surroundings(
+                monotonic: .seconds(10_000), commitment: NudgeHostFixture.anyCommitment
+            ),
             memory: NudgeMemory(),
             preferences: NudgePreferences()
         ) else {

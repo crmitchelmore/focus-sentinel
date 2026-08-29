@@ -113,11 +113,26 @@ struct NudgeHostFixture {
     let log: InterventionLog
     let priorities: PriorityStore
     let priorityID: UUID
+    /// The notification boundary the host is wired to. Exposed because a press on a banner is one
+    /// of the two ways a correction reaches the loop, and the other one — the panel's buttons —
+    /// is reachable from a test only because the panel is real (focus-zrs).
+    let notifications: NotificationDelivery
+    /// **The one commitment this fixture's loop is acting under** (focus-zrs). The same value the
+    /// composition root builds from `PriorityHost.activeCommitment`: gate 1 is `commitment != nil`
+    /// and every receipt, rule and budget key is `commitment.id`, so a test cannot accidentally
+    /// drive a loop that speaks about one thing and writes about another.
+    let commitment: ActiveCommitment
     /// The session-lived rule box the host writes "Not this time" into. Exposed because the
     /// rule it writes is keyed on a **priority** as well as a session (focus-lmo).
     let sessionRules: SessionRuleBox
 
     static let decoy = "com.chrismitchelmore.FocusDecoy"
+    /// A commitment for the handful of callers that need gate 1 open and never look at the key —
+    /// the pure-decider drives, which have no store behind them at all.
+    static let anyCommitment = ActiveCommitment(
+        id: UUID(uuidString: "A11C0117-0000-4000-8000-000000000001")!,
+        intent: "Write the Q3 proposal for Acme"
+    )
     static let reference = Date(timeIntervalSince1970: 1_767_225_600)   // 2026-01-01T00:00:00Z
 
     static var londonCalendar: Calendar {
@@ -150,18 +165,26 @@ struct NudgeHostFixture {
         )
 
         sessionRules = SessionRuleBox()
+        notifications = NotificationDelivery(centre: centre)
         host = NudgeHost(
             context: context,
             sessionRules: sessionRules,
             panel: panel,
             menuBar: menuBar,
-            notifications: NotificationDelivery(centre: centre),
+            notifications: notifications,
             workspace: workspace,
             monotonicClock: clock,
             dateProvider: dateProvider,
             calendar: Self.londonCalendar
         )
-        host.surroundings = { [clock] in Self.surroundings(monotonic: clock.elapsed) }
+        // The commitment the loop is acting under, as one value — the same shape the composition
+        // root builds from `PriorityHost.activeCommitment` (focus-zrs). Captured from the locals
+        // rather than from `self`, which is not yet whole.
+        let commitment = ActiveCommitment(id: priorityID, intent: intent)
+        self.commitment = commitment
+        host.surroundings = { [clock] in
+            Self.surroundings(monotonic: clock.elapsed, commitment: commitment)
+        }
     }
 
     /// Take every surface down and the status item out of the menu bar. A test that left one
@@ -189,12 +212,13 @@ struct NudgeHostFixture {
 
     static func surroundings(
         monotonic: Duration,
+        commitment: ActiveCommitment,
         presentation: PresentationState = .notPresenting,
         media: MediaActivity = .idle,
         menuBarVisible: Bool = true
     ) -> NudgeSurroundings {
         NudgeSurroundings(
-            hasActivePriority: true,
+            commitment: commitment,
             sensitivity: sensitivity(decoy),
             idle: IdleReading(hardwareSeconds: 0, sessionSeconds: 0),
             idleThresholdSeconds: 120,

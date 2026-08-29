@@ -81,6 +81,27 @@ final class PriorityHost: PriorityActing {
     /// The four facts as they last stood.
     private(set) var snapshotKey = SnapshotKey()
 
+    /// **The one thing the person has committed to — this object's single statement of it**
+    /// (focus-zrs).
+    ///
+    /// This host held the active priority in two places that anything outside could read, and the
+    /// nudge lane read one of them while keying its writes to a third:
+    ///
+    /// | reading | what used it |
+    /// |---|---|
+    /// | `state.priority?.id` | `AppComposition.nudgeSurroundings()`, i.e. **gate 1** |
+    /// | `snapshotKey.priorityID` | `AppComposition.noticeLifecycleTransitions()` |
+    /// | `PriorityStore.activeTask()`, opened again inside `NudgeHost` | **every receipt, rule
+    ///   and budget key the interruption wrote** |
+    ///
+    /// All three are now one: `refresh()` fetches once and builds the projection, the snapshot key
+    /// **and** this from the same `activeTask`, and the two consumers above read this. The third
+    /// is gone — `NudgeHost` has no `PriorityStore` read of the active task at all; the commitment
+    /// travels to it as a value on `NudgeSurroundings`.
+    ///
+    /// `commitmentDisagreements` below is the reading that says so, rather than this comment.
+    private(set) var activeCommitment: ActiveCommitment?
+
     /// Called when — and only when — `snapshotKey` actually moved.
     ///
     /// The composition root wires it to `RelevanceHost.invalidateSnapshot()`. It is deliberately
@@ -368,8 +389,11 @@ final class PriorityHost: PriorityActing {
         var recent: [RecentPriority] = state.recent
         // Seeded with what it already is, so a fetch that throws cannot be read as "the person
         // cleared their priority" — which would invalidate the engine's snapshot for a reason
-        // that never happened.
+        // that never happened. `nextCommitment` is seeded for exactly the same reason, and from
+        // the same instant, so the three readings below cannot part company over a store failure
+        // (focus-zrs) — which is precisely the divergence that produced this round's defect A.
         var nextKey = snapshotKey
+        var nextCommitment = activeCommitment
 
         do {
             let activeTask = try store.activeTask()
@@ -384,8 +408,13 @@ final class PriorityHost: PriorityActing {
                     assessment: IntentValidator.assess(task.intent, locale: locale)
                 )
             }
+            // One fetch, three derivations. Every one of them takes its identifier from
+            // `nextCommitment`, so there is nowhere for a second opinion to come from.
+            nextCommitment = activeTask.map {
+                ActiveCommitment(id: $0.id, intent: $0.intent)
+            }
             nextKey = SnapshotKey(
-                priorityID: activeTask?.id,
+                priorityID: nextCommitment?.id,
                 revision: activeTask?.revision ?? 0,
                 contextItems: items,
                 rules: rules
@@ -409,6 +438,22 @@ final class PriorityHost: PriorityActing {
             capabilities: environment.capabilities
         )
 
+        activeCommitment = nextCommitment
+
+        // Assigned only when it actually changed. From e03 this projection is rebuilt on the
+        // five-second corroboration tick as well as on every mutation, and `@Observable` reports
+        // a write rather than a difference — so an unconditional assignment would redraw the
+        // window twelve times a minute to show the same picture.
+        if next != state { state = next }
+
+        // **Everything is assigned before anything is announced** (focus-zrs). The invalidation
+        // used to fire *between* moving `snapshotKey` and assigning `state`, which left a window —
+        // the whole of the callback — in which this object told two different stories about which
+        // commitment was active. `AppComposition.noticeLifecycleTransitions()` carried a comment
+        // explaining which of the two to read, which is the shape of every defect this round is
+        // about: a rule for living with a disagreement rather than the removal of it. Closing the
+        // window means an observer sees one consistent object however deeply it looks.
+        //
         // The engine's snapshot is invalidated here rather than by each verb, so there is no
         // mutation that can change one of the four facts without passing this comparison —
         // including an undo, which does not go through a verb at all.
@@ -416,14 +461,39 @@ final class PriorityHost: PriorityActing {
             snapshotKey = nextKey
             onSnapshotInvalidated?()
         }
-
-        // Assigned only when it actually changed. From e03 this projection is rebuilt on the
-        // five-second corroboration tick as well as on every mutation, and `@Observable` reports
-        // a write rather than a difference — so an unconditional assignment would redraw the
-        // window twelve times a minute to show the same picture.
-        guard next != state else { return }
-        state = next
     }
+
+    /// **Every way this host states the active commitment, and whether they agree** — and it is
+    /// always empty (focus-zrs).
+    ///
+    /// A reading rather than a comment, for the reason `NudgeHost.orphanedQuestionSurfaces` is
+    /// one: an invariant nobody can take a reading of is a belief. `refresh()` derives all three
+    /// from one fetch and assigns them before it announces anything, so a non-empty answer means a
+    /// second door to the active priority has been opened somewhere — which is the class this
+    /// round exists to close, recurring.
+    var commitmentDisagreements: [String] {
+        var disagreements: [String] = []
+        if snapshotKey.priorityID != activeCommitment?.id {
+            disagreements.append(
+                "snapshotKey.priorityID \(describe(snapshotKey.priorityID)) "
+                    + "≠ activeCommitment \(describe(activeCommitment?.id))"
+            )
+        }
+        if state.priority?.id != activeCommitment?.id {
+            disagreements.append(
+                "state.priority.id \(describe(state.priority?.id)) "
+                    + "≠ activeCommitment \(describe(activeCommitment?.id))"
+            )
+        }
+        if state.priority?.intent != activeCommitment?.intent {
+            disagreements.append(
+                "state.priority.intent ≠ activeCommitment.intent"
+            )
+        }
+        return disagreements
+    }
+
+    private func describe(_ id: UUID?) -> String { id?.uuidString ?? "none" }
 
     /// How many previous commitments the history offers. F-15 is a recent list, not a backlog:
     /// a scrolling archive would be the second commitment F-02 exists to refuse.

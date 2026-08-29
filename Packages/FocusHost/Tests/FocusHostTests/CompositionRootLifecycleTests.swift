@@ -57,7 +57,10 @@ struct CompositionRootLifecycleTests {
         let priorityID = try priorities.setPriority(intent: intent)
         // The surroundings read the same clock the host does, so a test that advances time
         // advances it everywhere rather than in half the graph.
-        root.nudgeHost.surroundings = { NudgeHostFixture.surroundings(monotonic: clock.elapsed) }
+        let commitment = ActiveCommitment(id: priorityID, intent: intent)
+        root.nudgeHost.surroundings = {
+            NudgeHostFixture.surroundings(monotonic: clock.elapsed, commitment: commitment)
+        }
         // The baseline reading: from here, anything the watch reports is a change a person made.
         root.refreshCockpit()
         return (root, priorityID)

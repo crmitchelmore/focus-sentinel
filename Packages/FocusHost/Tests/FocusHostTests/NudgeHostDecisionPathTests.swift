@@ -115,7 +115,9 @@ struct NudgeHostDecisionPathTests {
         let subject = NudgeDecider.querySubject(for: judgement)
         let expected = NudgeDecider.decide(
             judgement,
-            surroundings: NudgeHostFixture.surroundings(monotonic: fixture.clock.elapsed),
+            surroundings: NudgeHostFixture.surroundings(
+                monotonic: fixture.clock.elapsed, commitment: fixture.commitment
+            ),
             memory: try Self.memory(fixture, subject: subject),
             preferences: fixture.host.preferences
         )

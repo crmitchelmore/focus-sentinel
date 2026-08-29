@@ -87,8 +87,10 @@ struct NudgeHostLadderTests {
         defer { fixture.tearDown() }
 
         // No menu bar: the glyph has nowhere to appear, which is a deferral and never a delivery.
-        fixture.host.surroundings = { [clock = fixture.clock] in
-            NudgeHostFixture.surroundings(monotonic: clock.elapsed, menuBarVisible: false)
+        fixture.host.surroundings = { [clock = fixture.clock, commitment = fixture.commitment] in
+            NudgeHostFixture.surroundings(
+                monotonic: clock.elapsed, commitment: commitment, menuBarVisible: false
+            )
         }
         fixture.host.consider(NudgeHostFixture.unrelatedJudgement(subject: Self.subject))
         NudgeHostFixture.settle()
@@ -102,8 +104,8 @@ struct NudgeHostLadderTests {
 
         // The menu bar comes back after long enough for an escalation to have been possible.
         fixture.clock.advance(by: RelevancePolicy.mandateCooldown + .seconds(1))
-        fixture.host.surroundings = { [clock = fixture.clock] in
-            NudgeHostFixture.surroundings(monotonic: clock.elapsed)
+        fixture.host.surroundings = { [clock = fixture.clock, commitment = fixture.commitment] in
+            NudgeHostFixture.surroundings(monotonic: clock.elapsed, commitment: commitment)
         }
         fixture.host.consider(NudgeHostFixture.unrelatedJudgement(subject: Self.subject))
         NudgeHostFixture.settle()

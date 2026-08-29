@@ -306,8 +306,12 @@ struct NudgeHostQuestionTests {
             isUserExcluded: false,
             isPresenting: true
         )
-        fixture.host.surroundings = { [clock = fixture.clock] in
-            NudgeHostFixture.surroundings(monotonic: clock.elapsed, presentation: presenting)
+        fixture.host.surroundings = { [clock = fixture.clock, commitment = fixture.commitment] in
+            NudgeHostFixture.surroundings(
+                monotonic: clock.elapsed,
+                commitment: commitment,
+                presentation: presenting
+            )
         }
         fixture.host.consider(NudgeHostFixture.uncertainJudgement(subject: Self.subject))
         NudgeHostFixture.settle()

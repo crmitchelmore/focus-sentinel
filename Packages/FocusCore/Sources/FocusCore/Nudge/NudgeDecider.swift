@@ -68,7 +68,19 @@ public struct NudgeJudgement: Sendable, Equatable {
 /// and has no business reaching for a sensing API, and `check-boundaries.sh` proves on the
 /// object that it could not (R-96k).
 public struct NudgeSurroundings: Sendable, Equatable {
-    public let hasActivePriority: Bool
+    /// **The one thing the person has committed to, and the only statement of it** (focus-zrs).
+    ///
+    /// It was a `Bool`, and the identifier every receipt, rule and budget key was written against
+    /// came from a *second*, live read of `PriorityStore` inside `NudgeHost`. Nothing enforced
+    /// that the two agreed, and the projection this `Bool` was built from is deliberately seeded
+    /// with the last good value when the store refuses a read — so the app could pass gate 1 on
+    /// one commitment and key the whole interruption to `nil`. See `ActiveCommitment`.
+    ///
+    /// The gate and the key are now the same optional. `hasActivePriority` is derived from it and
+    /// is not stored, so there is no second value to disagree with.
+    public let commitment: ActiveCommitment?
+    /// Gate 1, derived. There is exactly one fact behind it.
+    public var hasActivePriority: Bool { commitment != nil }
     /// F-119's one global switch.
     public let sensingPaused: Bool
     /// e03's `SensitivityGate` answer, already made. The subject is never named through it.
@@ -95,7 +107,7 @@ public struct NudgeSurroundings: Sendable, Equatable {
     public let monotonic: Duration
 
     public init(
-        hasActivePriority: Bool,
+        commitment: ActiveCommitment?,
         sensingPaused: Bool = false,
         sensitivity: SensitiveScreenDecision,
         phase: SessionPhase = .focus,
@@ -110,7 +122,7 @@ public struct NudgeSurroundings: Sendable, Equatable {
         calendar: Calendar,
         monotonic: Duration
     ) {
-        self.hasActivePriority = hasActivePriority
+        self.commitment = commitment
         self.sensingPaused = sensingPaused
         self.sensitivity = sensitivity
         self.phase = phase

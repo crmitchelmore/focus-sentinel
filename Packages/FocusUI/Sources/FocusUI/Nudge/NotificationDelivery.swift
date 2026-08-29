@@ -41,6 +41,31 @@ public enum NudgeNotificationCategory {
     public static let identifier = "nudge.recommitment"
 }
 
+/// **A press on a notification's button, with the delivery it belongs to** (focus-zrs).
+///
+/// The action alone was not enough, and the reason is a property of the surface rather than of the
+/// code: a banner is not a window. It does not close when the moment it was about ends, and its
+/// buttons stay live in Notification Centre for as long as the person leaves it there — hours,
+/// days, across a relaunch. `NotificationDelivery.onAction` handed the loop a bare
+/// `NudgeNotificationAction`, so *"return to task"* pressed on an hour-old banner was
+/// indistinguishable from the same press a second after delivery, and reached
+/// `NudgeHost.resolve(…)` with nothing to check it against.
+///
+/// `deliveryID` is the `UNNotificationRequest` identifier the banner was delivered under. It is
+/// minted by the loop when the rung goes out, held for exactly as long as that rung is open, and
+/// compared here on the way back: a press naming any other delivery is a click on a rung that is
+/// over, and there is no correct thing to do with it but refuse it.
+public struct NudgeNotificationResponse: Sendable, Equatable, Hashable {
+    public let action: NudgeNotificationAction
+    /// The `UNNotificationRequest` identifier: **which delivery** this press came from.
+    public let deliveryID: String
+
+    public init(action: NudgeNotificationAction, deliveryID: String) {
+        self.action = action
+        self.deliveryID = deliveryID
+    }
+}
+
 /// **The mapping from the framework's status to the app's**, at the boundary and nowhere else.
 ///
 /// `FocusCore` imports no UserNotifications — the package matrix forbids it — so
@@ -130,9 +155,9 @@ public protocol NotificationCentring: AnyObject {
 @MainActor
 public final class NotificationDelivery {
     private let centre: any NotificationCentring
-    /// What the person tapped. Wired by the composition root, exactly as every other surface's
-    /// callback is.
-    public var onAction: ((NudgeNotificationAction) -> Void)?
+    /// What the person tapped, **and which delivery they tapped it on** (focus-zrs). Wired by the
+    /// composition root, exactly as every other surface's callback is.
+    public var onAction: ((NudgeNotificationResponse) -> Void)?
 
     /// The last status read from `getNotificationSettings`. `notRequested` until the first read,
     /// which is the honest default: the app has not looked, and it has certainly not asked.
@@ -191,12 +216,18 @@ public final class NotificationDelivery {
     ///   - presentation: the same value the panel would have drawn, so the notification and the
     ///     panel say the same sentence in the same deck.
     ///   - surroundings: the facts the router needs to pick the fallback surface if this fails.
+    ///   - deliveryID: **the rung this banner belongs to**, minted by the caller and used as the
+    ///     `UNNotificationRequest` identifier (focus-zrs). It used to be `UUID().uuidString`
+    ///     generated here and thrown away, so nothing that came back could be tied to anything —
+    ///     and a press on a banner from an hour ago reached the live loop unchallenged. The caller
+    ///     mints it because the caller is the only object that knows when the rung is over.
     /// - Returns: `.delivered(.notification)` when the system took it, or the **route change**
     ///   R-82.4 requires — a `.deferred(.notificationDeliveryFailed)` record and a demotion to an
     ///   in-app surface.
     public func deliver(
         _ presentation: AccusationPresentation,
         surroundings: NotificationSurroundings,
+        deliveryID: String,
         completion: @escaping @MainActor (RungDelivery, SurfaceRoute) -> Void
     ) {
         let title = NudgeCopy.string(
@@ -213,7 +244,7 @@ public final class NotificationDelivery {
         } ?? ""
 
         centre.add(
-            identifier: UUID().uuidString,
+            identifier: deliveryID,
             title: title,
             body: body,
             categoryIdentifier: NudgeNotificationCategory.identifier
@@ -242,11 +273,16 @@ public final class NotificationDelivery {
     }
 
     /// A tap came back from the notification centre.
-    public func handle(actionIdentifier: String) {
+    ///
+    /// - Parameter requestIdentifier: `UNNotificationResponse.notification.request.identifier` —
+    ///   which banner was pressed. Passed through untouched: this boundary decodes, it never
+    ///   decides, and whether the delivery is still open is the loop's question to answer
+    ///   (focus-zrs).
+    public func handle(actionIdentifier: String, requestIdentifier: String) {
         guard let action = NudgeNotificationAction.allCases.first(
             where: { $0.identifier == actionIdentifier }
         ) else { return }
-        onAction?(action)
+        onAction?(NudgeNotificationResponse(action: action, deliveryID: requestIdentifier))
     }
 }
 
@@ -280,8 +316,10 @@ public struct NotificationSurroundings: Sendable, Equatable {
 @MainActor
 public final class SystemNotificationCentre: NSObject, NotificationCentring {
     private let centre: UNUserNotificationCenter
-    /// Forwarded to `NotificationDelivery.handle(actionIdentifier:)` by the composition root.
-    public var onActionIdentifier: ((String) -> Void)?
+    /// Forwarded to `NotificationDelivery.handle(actionIdentifier:requestIdentifier:)` by the
+    /// composition root. Both identifiers, because *which button* and *which banner* are two
+    /// different facts and only the second one can tell a live press from a stale one (focus-zrs).
+    public var onAction: ((_ actionIdentifier: String, _ requestIdentifier: String) -> Void)?
     public private(set) var registeredCategoryIdentifiers: Set<String> = []
 
     /// The deck the actions are titled from. The notification's buttons are registered once, so
@@ -363,7 +401,12 @@ extension SystemNotificationCentre: UNUserNotificationCenterDelegate {
         didReceive response: UNNotificationResponse
     ) async {
         let identifier = response.actionIdentifier
-        await MainActor.run { self.onActionIdentifier?(identifier) }
+        // Which banner, not only which button (focus-zrs). The request identifier is the delivery
+        // token the loop minted when the rung went out; without it a press on a banner the person
+        // left in Notification Centre yesterday is indistinguishable from one on the rung that is
+        // actually on screen.
+        let request = response.notification.request.identifier
+        await MainActor.run { self.onAction?(identifier, request) }
     }
 
     /// Show the nudge even while the app is frontmost.

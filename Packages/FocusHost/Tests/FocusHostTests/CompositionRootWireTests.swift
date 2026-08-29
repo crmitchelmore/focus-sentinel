@@ -63,7 +63,10 @@ struct CompositionRootWireTests {
             dateProvider: FixedDateProvider(now: NudgeHostFixture.reference)
         )
         let priorityID = try priorities.setPriority(intent: "Write the Q3 proposal for Acme")
-        root.nudgeHost.surroundings = { NudgeHostFixture.surroundings(monotonic: clock.elapsed) }
+        let commitment = ActiveCommitment(id: priorityID, intent: "Write the Q3 proposal for Acme")
+        root.nudgeHost.surroundings = {
+            NudgeHostFixture.surroundings(monotonic: clock.elapsed, commitment: commitment)
+        }
         root.refreshCockpit()
         return (root, priorityID)
     }

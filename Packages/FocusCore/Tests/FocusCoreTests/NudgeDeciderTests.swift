@@ -131,6 +131,13 @@ struct NudgeDeciderTests {
         )
     }
 
+    /// The one commitment every decider drive runs under. Fixed, so nothing in these suites is a
+    /// function of which identifier the run happened to mint.
+    static let commitment = ActiveCommitment(
+        id: UUID(uuidString: "DEC1DE00-0000-4000-8000-000000000001")!,
+        intent: "Write the Q3 proposal for Acme"
+    )
+
     static func surroundings(
         hasActivePriority: Bool = true,
         sensingPaused: Bool = false,
@@ -146,7 +153,9 @@ struct NudgeDeciderTests {
         monotonic: Duration = .seconds(10_000)
     ) -> NudgeSurroundings {
         NudgeSurroundings(
-            hasActivePriority: hasActivePriority,
+            // Gate 1 is `commitment != nil` and there is no second reading (focus-zrs); the
+            // decider never looks at the identifier, so the suite still says "is there one?".
+            commitment: hasActivePriority ? NudgeDeciderTests.commitment : nil,
             sensingPaused: sensingPaused,
             sensitivity: sensitivity,
             phase: phase,

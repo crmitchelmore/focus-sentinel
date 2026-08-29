@@ -364,8 +364,11 @@ public final class AppComposition {
         )
         // One click on a notification's own button. Only the system centre has one; a supplied
         // centre delivers its actions however it likes and this wire has nothing to say about it.
-        (centre as? FocusUI.SystemNotificationCentre)?.onActionIdentifier = { [weak notifications] identifier in
-            notifications?.handle(actionIdentifier: identifier)
+        (centre as? FocusUI.SystemNotificationCentre)?.onAction = {
+            [weak notifications] identifier, request in
+            // Both halves cross the boundary: which button, and which banner (focus-zrs). The
+            // second is what lets the loop refuse a press on a rung that is over.
+            notifications?.handle(actionIdentifier: identifier, requestIdentifier: request)
         }
     }
 
@@ -555,10 +558,13 @@ public final class AppComposition {
         let transitions = lifecycle.observe(
             sessionID: snapshot?.sessionID,
             phase: snapshot?.phase,
-            // Read from the snapshot key rather than from `CockpitState`: `PriorityHost` fires
-            // `onSnapshotInvalidated` after moving the key and *before* assigning the state, so
-            // the state still describes the commitment that has just been replaced.
-            priorityID: priorityHost.snapshotKey.priorityID
+            // **The same value gate 1 is decided by** (focus-zrs). This used to read
+            // `snapshotKey.priorityID` — deliberately, because `PriorityHost` fired
+            // `onSnapshotInvalidated` between moving the key and assigning the state, so the two
+            // disagreed for the length of the callback and this was a rule for choosing between
+            // them. `PriorityHost` now assigns everything before it announces anything, and states
+            // the commitment once; both readers take it from there.
+            priorityID: priorityHost.activeCommitment?.id
         )
         for transition in transitions {
             switch transition {
@@ -578,7 +584,12 @@ public final class AppComposition {
     private func nudgeSurroundings() -> NudgeSurroundings {
         let summary = sensingHost.summary
         return NudgeSurroundings(
-            hasActivePriority: priorityHost.state.priority != nil,
+            // **Gate 1 and the key are the same value** (focus-zrs). This was
+            // `hasActivePriority: priorityHost.state.priority != nil` — a `Bool`, while the loop
+            // opened `PriorityStore` itself to decide what the interruption it admitted was
+            // *about*. The commitment travels whole, from the object that owns the projection, so
+            // the app can no longer speak about one thing and write about another.
+            commitment: priorityHost.activeCommitment,
             sensingPaused: !sensingHost.isRunning,
             sensitivity: sensingHost.sensitivityDecision,
             phase: sessionHost.snapshot?.phase ?? .focus,
@@ -599,7 +610,7 @@ public final class AppComposition {
     /// suppresses everything — the safest possible reading of "this object is being torn down".
     private static func emptySurroundings() -> NudgeSurroundings {
         NudgeSurroundings(
-            hasActivePriority: false,
+            commitment: nil,
             // Suppressed, not cleared: an object being torn down has looked at nothing, and
             // "we did not look" must never read as "we looked and it was fine".
             sensitivity: .suppressed(reason: .unbundled),

@@ -17,6 +17,9 @@ final class StubNotificationCentre: NotificationCentring {
     private(set) var setCategoriesCallCount = 0
     private(set) var addedTitles: [String] = []
     private(set) var addedCategories: [String] = []
+    /// The `UNNotificationRequest` identifier each banner went out under — the delivery token the
+    /// loop mints so a press arriving an hour later can name the rung it belongs to (focus-zrs).
+    private(set) var addedIdentifiers: [String] = []
     /// Whether the stub honours a `setCategories` call. P-134 measured the real centre silently
     /// taking **zero** categories while unauthorised, so the stub can be told to do the same.
     var acceptsCategories = true
@@ -45,6 +48,7 @@ final class StubNotificationCentre: NotificationCentring {
     ) {
         addedTitles.append(title)
         addedCategories.append(categoryIdentifier)
+        addedIdentifiers.append(identifier)
         completion(addResult)
     }
 }
@@ -53,6 +57,10 @@ final class StubNotificationCentre: NotificationCentring {
 @Suite("Notification delivery, and the route around every refusal")
 @MainActor
 struct NotificationDeliveryTests {
+    /// The delivery token these drives mint. A fixed string rather than a `UUID`, so a failing
+    /// line names something a person can read.
+    private static let deliveryID = "the rung under test"
+
     private static func presentation(voice: NudgeVoice = .standard) -> AccusationPresentation {
         AccusationPresentation(
             rung: .recommitment,
@@ -169,12 +177,16 @@ struct NotificationDeliveryTests {
         var route: SurfaceRoute?
         delivery.deliver(
             Self.presentation(),
-            surroundings: NotificationSurroundings()
+            surroundings: NotificationSurroundings(),
+            deliveryID: Self.deliveryID
         ) { recorded = $0; route = $1 }
 
         #expect(recorded == .delivered(.notification))
         #expect(route == .surface(.notification))
         #expect(centre.addedCategories == [NudgeNotificationCategory.identifier])
+        // **The banner goes out under the identifier the loop minted** (focus-zrs), which is the
+        // only thing a press arriving an hour later can be checked against.
+        #expect(centre.addedIdentifiers == [Self.deliveryID])
     }
 
     /// **The measured failure**: `UNErrorDomain` code 1, arriving after a positive settings read.
@@ -194,7 +206,8 @@ struct NotificationDeliveryTests {
         var route: SurfaceRoute?
         delivery.deliver(
             Self.presentation(),
-            surroundings: NotificationSurroundings()
+            surroundings: NotificationSurroundings(),
+            deliveryID: Self.deliveryID
         ) { recorded = $0; route = $1 }
 
         #expect(recorded == .deferred(.notificationDeliveryFailed))
@@ -224,7 +237,9 @@ struct NotificationDeliveryTests {
         delivery.refresh()
 
         var route: SurfaceRoute?
-        delivery.deliver(Self.presentation(), surroundings: surroundings) { _, produced in
+        delivery.deliver(
+            Self.presentation(), surroundings: surroundings, deliveryID: Self.deliveryID
+        ) { _, produced in
             route = produced
         }
 
@@ -245,16 +260,43 @@ struct NotificationDeliveryTests {
     @Test("a tap on a registered action reports it, and anything else reports nothing")
     func tapsReportTypedActions() {
         let delivery = NotificationDelivery(centre: StubNotificationCentre(status: 2))
-        var seen: [NudgeNotificationAction] = []
+        var seen: [NudgeNotificationResponse] = []
         delivery.onAction = { seen.append($0) }
 
         for action in NudgeNotificationAction.allCases {
-            delivery.handle(actionIdentifier: action.identifier)
+            delivery.handle(
+                actionIdentifier: action.identifier, requestIdentifier: Self.deliveryID
+            )
         }
-        delivery.handle(actionIdentifier: "com.apple.UNNotificationDefaultActionIdentifier")
-        delivery.handle(actionIdentifier: "")
+        delivery.handle(
+            actionIdentifier: "com.apple.UNNotificationDefaultActionIdentifier",
+            requestIdentifier: Self.deliveryID
+        )
+        delivery.handle(actionIdentifier: "", requestIdentifier: Self.deliveryID)
 
-        #expect(seen == NudgeNotificationAction.allCases)
+        #expect(seen.map(\.action) == NudgeNotificationAction.allCases)
+        // **Which banner, carried through untouched** (focus-zrs). This boundary decodes; whether
+        // the delivery is still open is the loop's question, and it cannot ask it without this.
+        #expect(seen.allSatisfy { $0.deliveryID == Self.deliveryID })
+    }
+
+    /// A press names its own delivery, and two deliveries are two different presses.
+    @Test("two banners produce two distinguishable presses")
+    func pressesNameTheirOwnDelivery() {
+        let delivery = NotificationDelivery(centre: StubNotificationCentre(status: 2))
+        var seen: [NudgeNotificationResponse] = []
+        delivery.onAction = { seen.append($0) }
+
+        delivery.handle(
+            actionIdentifier: NudgeNotificationAction.snooze.identifier,
+            requestIdentifier: "the rung on screen"
+        )
+        delivery.handle(
+            actionIdentifier: NudgeNotificationAction.snooze.identifier,
+            requestIdentifier: "a banner from an hour ago"
+        )
+
+        #expect(seen.map(\.deliveryID) == ["the rung on screen", "a banner from an hour ago"])
     }
 
     // MARK: - The whole matrix, in one place

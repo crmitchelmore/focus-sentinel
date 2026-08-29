@@ -61,6 +61,13 @@ public enum NudgeLane {
         isPresenting: true
     )
 
+    /// The commitment every replayed day is run under. Fixed, because a replay that keyed its
+    /// receipts to a fresh identifier on every run would not be a replay.
+    public static let replayedCommitmentID = UUID(
+        uuidString: "5E1F0C1A-0000-4000-8000-000000000005"
+    )!
+    public static let replayedCommitmentIntent = "the replayed day's one commitment"
+
     /// The surroundings one replayed observation happens in.
     ///
     /// Every field is a value produced by the package that owns it. Nothing here is fetched: the
@@ -76,7 +83,11 @@ public enum NudgeLane {
         monotonic: Duration
     ) -> NudgeSurroundings {
         NudgeSurroundings(
-            hasActivePriority: hasActivePriority,
+            // The replayed day's one commitment, named so the fixture drives the same gate the
+            // app does — gate 1 is `commitment != nil` and there is no second reading (focus-zrs).
+            commitment: hasActivePriority
+                ? ActiveCommitment(id: replayedCommitmentID, intent: replayedCommitmentIntent)
+                : nil,
             sensingPaused: false,
             sensitivity: sensitivity(of: subject),
             phase: phase,
