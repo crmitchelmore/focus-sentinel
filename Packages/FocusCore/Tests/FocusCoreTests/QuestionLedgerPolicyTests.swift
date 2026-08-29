@@ -16,8 +16,8 @@ import Testing
 ///
 /// So the decision moved into `FocusCore` as a pure function, `QueryLedger` consults it at the
 /// write, and this suite instantiates the real thing over its whole input space. Mutate
-/// `QuestionLedgerPolicy.decide(…)` to `return .writeReceipt` and `noBurnWithoutAReading` and
-/// `everyBurnPathIsClosed` go red on the first cell they reach.
+/// `QuestionLedgerPolicy.decide(…)` to `return .settle` and `noBurnWithoutAReading`,
+/// `everyBurnPathIsClosed` and `anExpiryIsNotAnAnswer` go red on the first cell they reach.
 @Suite("A question is written down only if somebody could read it")
 struct QuestionLedgerPolicyTests {
     /// Every surface a route can name, plus "it reached none at all".
@@ -63,8 +63,9 @@ struct QuestionLedgerPolicyTests {
             Self.decide(.popoverBadge, .notReadable, .unknowable, .preempted)
                 == .stayAskable(.neverReachedAReadableSurface)
         )
-        // …and one the person did open, and read, and left open, is.
-        #expect(Self.decide(.popoverBadge, .readable, .readable, .expired) == .writeReceipt)
+        // …and one the person did open, and read, and left open, is written down — as an
+        // asking that happened and was never answered (focus-qds).
+        #expect(Self.decide(.popoverBadge, .readable, .readable, .expired) == .recordUnanswered)
     }
 
     /// **Hole 2.** `guard panel.isVisible else { return true }` answered *readable* exactly when
@@ -109,8 +110,70 @@ struct QuestionLedgerPolicyTests {
     /// back. This is the cell that stops the rule collapsing into "never write anything".
     @Test("a question that was readable at both ends is written down")
     func aReadableQuestionIsRecorded() {
-        #expect(Self.decide(.panel, .readable, .readable, .expired) == .writeReceipt)
-        #expect(Self.decide(.panel, .readable, .readable, .preempted) == .writeReceipt)
+        #expect(Self.decide(.panel, .readable, .readable, .expired) == .recordUnanswered)
+        #expect(Self.decide(.panel, .readable, .readable, .preempted) == .settle)
+    }
+
+    // MARK: - focus-qds · what each ending means for askability
+
+    /// **An expiry is not an answer** (focus-qds, U-1).
+    ///
+    /// The regression this epic introduced, at the level it was introduced: wiring
+    /// `sessionEnded()`, `phaseLeftFocus()` and `priorityChanged()` gave the expiry path its
+    /// first callers, and the policy settled on it. Taking a break therefore answered a
+    /// question the person never answered, permanently, because the receipt is immutable and
+    /// gate 11 reads it before any warrant is built.
+    ///
+    /// Written down and **not** settled is the whole distinction. Mutate
+    /// `QuestionEnding.settlesTheQuestion` to `true` for `.expired` and this dies.
+    @Test("a question the world ended is recorded and stays askable, whatever the readings")
+    func anExpiryIsNotAnAnswer() {
+        for (surface, atAsk, now, _) in Self.everyCell {
+            let action = Self.decide(surface, atAsk, now, .expired)
+            #expect(
+                !action.settlesTheQuestion,
+                """
+                an expiry settled a question on \(String(describing: surface)) \
+                read \(atAsk) at the ask and \(now) at the end
+                """
+            )
+        }
+        // Non-vacuous in the other direction: the asking is still written down when somebody
+        // could read it, so the day's record is not silently short of an interruption.
+        #expect(Self.decide(.panel, .readable, .readable, .expired).writesAReceipt)
+    }
+
+    /// The two endings that **do** settle, and the reason each does.
+    ///
+    /// An answer is the person's own choice — including "Not now", which Escape writes. A
+    /// preemption replaced the question with an accusation about the same subject on the same
+    /// surface, offering a richer correction than the question did (R-84a), and it is only
+    /// written at all when the surface was proven readable at both ends.
+    @Test("an answer settles a question, and so does an accusation that replaced it")
+    func theEndingsThatSettle() {
+        #expect(QuestionEnding.answered.settlesTheQuestion)
+        #expect(QuestionEnding.preempted.settlesTheQuestion)
+        #expect(!QuestionEnding.expired.settlesTheQuestion)
+
+        #expect(Self.decide(.panel, .readable, .readable, .preempted).settlesTheQuestion)
+        #expect(Self.decide(.panel, .readable, .readable, .answered).settlesTheQuestion)
+    }
+
+    /// The store-level half of the same ruling, on the value gate 11 actually reads.
+    ///
+    /// `QueryLedger.isSettled(…)` reads the receipt's **outcome**, not the branch that wrote it,
+    /// so the two vocabularies have to agree — and this is where they are checked against each
+    /// other rather than in a comment.
+    @Test("the outcomes that settle are exactly the three a person can produce")
+    func theOutcomesThatSettle() {
+        #expect(AskedQuestionOutcome.answeredRelevant.settlesTheQuestion)
+        #expect(AskedQuestionOutcome.answeredUnrelated.settlesTheQuestion)
+        #expect(AskedQuestionOutcome.declined.settlesTheQuestion)
+        #expect(!AskedQuestionOutcome.expired.settlesTheQuestion)
+        #expect(
+            AskedQuestionOutcome.allCases.filter(\.settlesTheQuestion).count == 3,
+            "a new outcome arrived without a ruling on what it means for askability"
+        )
     }
 
     /// **An answer is its own proof.** A person cannot click a button they cannot see, and this
@@ -120,7 +183,7 @@ struct QuestionLedgerPolicyTests {
     func anAnswerAlwaysCounts() {
         for (surface, atAsk, now, _) in Self.everyCell {
             #expect(
-                Self.decide(surface, atAsk, now, .answered) == .writeReceipt,
+                Self.decide(surface, atAsk, now, .answered) == .settle,
                 "an answer was lost for \(String(describing: surface)) \(atAsk)/\(now)"
             )
         }
@@ -138,7 +201,7 @@ struct QuestionLedgerPolicyTests {
             let action = Self.decide(surface, atAsk, now, ending)
             guard atAsk == .readable, now == .readable, surface?.canCarryAQuestion == true else {
                 #expect(
-                    action != .writeReceipt,
+                    !action.writesAReceipt,
                     """
                     a receipt was written about a question on \(String(describing: surface)) \
                     read \(atAsk) at the ask and \(now) at the \(ending)
@@ -146,7 +209,7 @@ struct QuestionLedgerPolicyTests {
                 )
                 continue
             }
-            #expect(action == .writeReceipt)
+            #expect(action.writesAReceipt)
         }
     }
 
@@ -159,7 +222,7 @@ struct QuestionLedgerPolicyTests {
         var receipts = 0
         for (surface, atAsk, now, ending) in Self.everyCell {
             switch Self.decide(surface, atAsk, now, ending) {
-            case .writeReceipt: receipts += 1
+            case .settle, .recordUnanswered: receipts += 1
             case .stayAskable(let reason): seen.insert(reason)
             }
         }

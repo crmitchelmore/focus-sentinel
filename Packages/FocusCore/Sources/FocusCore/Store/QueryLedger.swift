@@ -19,6 +19,11 @@ public enum QueryLedgerError: Error, Equatable, Sendable {
     /// one commitment and the receipt under another would leave the app able to learn an answer
     /// and forget the asking — the exact state R-78's transaction exists to make impossible.
     case priorityMismatch
+    /// The way the question ended and the outcome the receipt would carry disagree about
+    /// whether the asking is over (focus-qds). Gate 11 reads the *stored outcome*, so a receipt
+    /// whose row says "settled" written from an ending the policy refused to settle would burn
+    /// the question anyway — and one written the other way would re-ask an answered question.
+    case endingContradictsOutcome(ending: QuestionEnding, outcome: AskedQuestionOutcome)
 }
 
 /// **The record of every question this app has asked, and the reason it is separate from the
@@ -29,7 +34,7 @@ public enum QueryLedgerError: Error, Equatable, Sendable {
 /// | record | what it is | authority over | lifetime |
 /// |---|---|---|---|
 /// | the **rule** — a `ScopedRuleValue` at `RuleAuthority.task` | visible, editable, deletable, undoable | **future classification**: the cascade answers at the `taskRule` rung and no `uncertain` verdict is produced | until the user deletes it or the priority dies |
-/// | the **receipt** — an `AskedQuestion` row | invisible, **immutable**, never user-editable | **never-ask-twice**: `hasAsked(…)` is consulted *before* any warrant is offered | dies with its priority, and with nothing else |
+/// | the **receipt** — an `AskedQuestion` row | invisible, **immutable**, never user-editable | **never-ask-twice**: `isSettled(…)` is consulted *before* any warrant is offered | dies with its priority, and with nothing else |
 ///
 /// ## Why two records and not one
 ///
@@ -52,6 +57,23 @@ public enum QueryLedgerError: Error, Equatable, Sendable {
 /// A receipt is written when a question is resolved — answered, declined or expired — and
 /// never touched again. That is what makes it something the never-ask-twice invariant can rest
 /// on: an immutable record has no state for a later bug to move.
+///
+/// ## What a receipt settles, and what it merely records (focus-qds, U-1)
+///
+/// Immutability is what makes the *settling* row safe, and it is also what made the old reading
+/// of these rows dangerous. `hasAsked(…)` was `receipt(…) != nil` — any row, whatever it said —
+/// so the row written when somebody went for lunch with a question on screen silenced the
+/// subject exactly as hard as an answer did, for the life of the commitment, with no way back.
+/// That path had no callers until this epic wired `sessionEnded()`, `phaseLeftFocus()` and
+/// `priorityChanged()`, at which point taking a break became the most ordinary way a question
+/// ends.
+///
+/// So the two jobs are separated. **Every asking that reached somebody is written down** — it
+/// happened, and `askedCount(…)` and `receipts(priorityID:)` are facts about the day. **Only an
+/// outcome the person produced ends the asking**: `AskedQuestionOutcome.settlesTheQuestion`, read
+/// by `isSettled(…)`, which is what gate 11 consults. One key may therefore carry several rows,
+/// of which at most one settles it, and `refuseIfSettled(…)` is what keeps that "at most one"
+/// true.
 ///
 /// ## The key
 ///
@@ -83,25 +105,45 @@ public final class QueryLedger {
     // MARK: - Reading
 
     /// **Gate 11 of R-84's suppression stack.** Whether this exact question has been asked for
-    /// this priority.
+    /// this priority **and settled**.
     ///
     /// Consulted **before a warrant is constructed**, and it reads the **receipt** — never the
     /// rule. Whatever the person answered, and whether or not the rule that answer wrote still
     /// exists, the question is not asked again.
-    public func hasAsked(
+    ///
+    /// ## Why this reads the outcome, and used to not (focus-qds, U-1)
+    ///
+    /// It was `receipt(…) != nil`: any row at all, whatever it recorded. Under that reading a
+    /// receipt written because somebody went to lunch with a question on screen was
+    /// indistinguishable from one written because they answered it — and since a receipt is
+    /// immutable and this is gate 11, taking a break permanently silenced the subject for the
+    /// life of the commitment. That channel became the *ordinary* one the moment
+    /// `sessionEnded()`, `phaseLeftFocus()` and `priorityChanged()` acquired callers.
+    ///
+    /// Never-ask-twice was a promise about **answered** questions, so this asks whether one of
+    /// the receipts on file answers it: `AskedQuestionOutcome.settlesTheQuestion`. The asking is
+    /// still remembered — `askedCount(…)` and `receipts(priorityID:)` see every row — and the
+    /// question comes back, which is what the person was owed.
+    public func isSettled(
         priorityID: UUID,
         subjectKind: RuleSubjectKind,
         subject: String
     ) throws -> Bool {
-        try receipt(priorityID: priorityID, subjectKind: subjectKind, subject: subject) != nil
+        try settledReceipt(
+            priorityID: priorityID, subjectKind: subjectKind, subject: subject
+        ) != nil
     }
 
-    /// The receipt for one question, if it has been asked.
-    public func receipt(
+    /// Every receipt on file for one question, oldest first.
+    ///
+    /// **More than one is legal now, and at most one of them settles.** A question the world
+    /// interrupted is written down without being settled, so it may legitimately be asked — and
+    /// written down — again. `refuseIfSettled(…)` is what keeps the settling row unique.
+    public func receipts(
         priorityID: UUID,
         subjectKind: RuleSubjectKind,
         subject: String
-    ) throws -> FocusSchemaV4.AskedQuestion? {
+    ) throws -> [FocusSchemaV4.AskedQuestion] {
         let kindRaw = subjectKind.rawValue
         let descriptor = FetchDescriptor<FocusSchemaV4.AskedQuestion>(
             predicate: #Predicate {
@@ -110,7 +152,34 @@ public final class QueryLedger {
                     && $0.subject == subject
             }
         )
-        return try context.fetch(descriptor).first
+        return try context.fetch(descriptor).sorted(by: Self.chronological)
+    }
+
+    /// The receipt that **ended** this question, if one has.
+    public func settledReceipt(
+        priorityID: UUID,
+        subjectKind: RuleSubjectKind,
+        subject: String
+    ) throws -> FocusSchemaV4.AskedQuestion? {
+        try receipts(priorityID: priorityID, subjectKind: subjectKind, subject: subject)
+            .first { $0.outcome.settlesTheQuestion }
+    }
+
+    /// The receipt for one question, if it has been asked.
+    ///
+    /// The **settling** one when there is one, because that is the row every caller of this
+    /// method is actually asking about; otherwise the most recent asking. Picking whichever row
+    /// the store returned first would make "what happened to this question?" a different answer
+    /// on different runs.
+    public func receipt(
+        priorityID: UUID,
+        subjectKind: RuleSubjectKind,
+        subject: String
+    ) throws -> FocusSchemaV4.AskedQuestion? {
+        let rows = try receipts(
+            priorityID: priorityID, subjectKind: subjectKind, subject: subject
+        )
+        return rows.first { $0.outcome.settlesTheQuestion } ?? rows.last
     }
 
     /// Every receipt for one priority, oldest first.
@@ -163,7 +232,7 @@ public final class QueryLedger {
             // would not be one transaction.
             throw QueryLedgerError.noPriorityToScopeTo
         }
-        try refuseIfAsked(priorityID: priorityID, subjectKind: subjectKind, subject: subject)
+        try refuseIfSettled(priorityID: priorityID, subjectKind: subjectKind, subject: subject)
 
         let now = instant ?? dateProvider.now
         let receipt = FocusSchemaV4.AskedQuestion(
@@ -212,6 +281,16 @@ public final class QueryLedger {
             ending: ending
         )
         guard action.writesAReceipt else { return action }
+        // **The row and the ruling must agree** (focus-qds). Gate 11 reads the stored outcome,
+        // not the code path that produced it, so a caller that ended a question one way and
+        // labelled the receipt another would settle a question the policy just refused to settle
+        // — or the reverse. That is a caller bug and it is thrown, in the shape every other error
+        // on this type has.
+        guard action.settlesTheQuestion == outcome.settlesTheQuestion else {
+            throw QueryLedgerError.endingContradictsOutcome(
+                ending: ending, outcome: outcome
+            )
+        }
 
         try record(
             priorityID: priorityID,
@@ -256,7 +335,11 @@ public final class QueryLedger {
         at instant: Date? = nil,
         ruleID: UUID = UUID()
     ) throws -> CorrectionOutcome {
-        try refuseIfAsked(
+        // Refused only when an **answer** is already on file. A question the world interrupted
+        // left an unsettled receipt behind and legitimately came back; answering it now is the
+        // whole point, and it writes the settling row beside the record of the earlier asking
+        // (focus-qds).
+        try refuseIfSettled(
             priorityID: priorityID, subjectKind: scope.kind, subject: scope.subject
         )
 
@@ -357,12 +440,17 @@ public final class QueryLedger {
 
     // MARK: - Helpers
 
-    private func refuseIfAsked(
+    /// Refuse a second **settling** receipt for one question.
+    ///
+    /// The uniqueness the never-ask-twice invariant needs is uniqueness of the *answer*, not of
+    /// the row: a question that expired unanswered is written down and asked again, so a key
+    /// may legitimately carry several rows of which at most one settles it (focus-qds).
+    private func refuseIfSettled(
         priorityID: UUID,
         subjectKind: RuleSubjectKind,
         subject: String
     ) throws {
-        if try hasAsked(priorityID: priorityID, subjectKind: subjectKind, subject: subject) {
+        if try isSettled(priorityID: priorityID, subjectKind: subjectKind, subject: subject) {
             throw QueryLedgerError.alreadyAsked(subject: subject)
         }
     }

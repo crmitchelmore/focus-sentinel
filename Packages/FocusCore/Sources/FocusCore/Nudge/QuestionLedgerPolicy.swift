@@ -30,6 +30,31 @@ public enum QuestionEnding: String, Sendable, CaseIterable, Codable, Hashable {
     /// The session ended, the phase left focus, the priority changed, or a presentation claimed
     /// the display.
     case expired
+
+    /// **What this ending means for askability** (focus-qds, U-1).
+    ///
+    /// Never-ask-twice is a promise about questions that were **answered**, and this is where
+    /// the programme says so instead of leaving it to be inferred from which branch a receipt
+    /// happened to be written down.
+    ///
+    /// | ending | settles | why |
+    /// |---|---|---|
+    /// | `answered` | **yes** | the person chose. "Yes, add it", "No", and "Not now" are all choices, and Escape is "Not now". U-1: *"every answered question is remembered"*. |
+    /// | `preempted` | **yes** | the app replaced the question with an accusation **about the same subject**, on the same surface, offering *"this is relevant"* — a strictly richer affordance than the question's. The chance to be taught was escalated, not lost, and a receipt is only written here at all when the surface was proven readable at both ends (R-84a). |
+    /// | `expired` | **no** | the world ended it. A break, a session ending, a new commitment, a projector. **An expiry is not an answer**, and settling on one would spend the app's single licensed interruption on a question the person never saw the end of — permanently, because the receipt is immutable and gate 11 reads it before any warrant is built. |
+    ///
+    /// The frequency argument is what makes the third row urgent rather than theoretical.
+    /// `sessionEnded()`, `phaseLeftFocus()` and `priorityChanged()` acquired their first callers
+    /// in this epic, so the expiry channel went from unreachable to *the most ordinary way a
+    /// question ends*: taking a break settles it. That is the burn U-1 names — the app spends its
+    /// one chance to ask and never asks again — arriving through the path a person walks several
+    /// times a day.
+    public var settlesTheQuestion: Bool {
+        switch self {
+        case .answered, .preempted: true
+        case .expired: false
+        }
+    }
 }
 
 /// Why a question was **not** written down, and therefore comes back.
@@ -43,13 +68,36 @@ public enum QuestionStaysAskableReason: String, Sendable, CaseIterable, Codable,
 }
 
 /// What the ledger does about a question that has ended.
+///
+/// **Three outcomes, not two, and the third is focus-qds** (U-1). "Was it written down?" and
+/// "is it still askable?" used to be the same question, and they are not: a question the person
+/// saw and did not answer *happened* — it belongs in the record of the day — and it is still
+/// unanswered. Collapsing the two meant every expiry silenced its subject for the life of the
+/// commitment.
 public enum QuestionLedgerAction: Sendable, Equatable, Hashable {
-    /// Write the immutable receipt. The question is never asked again for this priority.
-    case writeReceipt
-    /// Write nothing. The question stays askable, on purpose.
+    /// Write the immutable receipt **and settle the question**: it is never asked again for
+    /// this priority. Reached only from an ending `QuestionEnding.settlesTheQuestion` allows.
+    case settle
+    /// Write a receipt that records the asking and **leaves the question askable**.
+    ///
+    /// The person could read it at both ends — so the asking is a fact, and `askedCount(…)`
+    /// counts it — and they never answered it. An expiry is not an answer.
+    case recordUnanswered
+    /// Write nothing at all. Nobody could be shown the question, so nothing about it happened
+    /// that is worth remembering, and it stays askable.
     case stayAskable(QuestionStaysAskableReason)
 
-    public var writesAReceipt: Bool { self == .writeReceipt }
+    /// Whether a row is inserted.
+    public var writesAReceipt: Bool {
+        switch self {
+        case .settle, .recordUnanswered: true
+        case .stayAskable: false
+        }
+    }
+
+    /// Whether the row that is inserted ends the asking. `false` for every action that writes
+    /// nothing, and for the one that writes an unanswered receipt.
+    public var settlesTheQuestion: Bool { self == .settle }
 }
 
 extension NudgeSurface {
@@ -86,10 +134,13 @@ extension NudgeSurface {
 /// function over typed inputs, `QueryLedger` consults it at the write, and the tests instantiate
 /// the real thing over the whole cross product.
 ///
-/// ## The rule, in one sentence
+/// ## The rule, in two sentences
 ///
 /// A person's own answer always counts; anything else is written down only when the surface was
-/// **proven readable when the question went up and proven readable when it came down**.
+/// **proven readable when the question went up and proven readable when it came down**. And
+/// writing it down is not the same as settling it: only an ending
+/// `QuestionEnding.settlesTheQuestion` allows ends the asking, so a question the world
+/// interrupted is remembered *and* comes back (focus-qds).
 public enum QuestionLedgerPolicy {
     /// - Parameters:
     ///   - surface: where the question was routed, or `nil` if it never reached one.
@@ -107,7 +158,7 @@ public enum QuestionLedgerPolicy {
         // path also writes the *rule*, so refusing the receipt here would leave the app having
         // learned the answer and forgotten the asking — the one state R-78's transaction exists
         // to make impossible.
-        if ending == .answered { return .writeReceipt }
+        if ending == .answered { return .settle }
 
         guard let surface, surface.canCarryAQuestion else {
             return .stayAskable(.neverReachedAQuestionSurface)
@@ -118,6 +169,10 @@ public enum QuestionLedgerPolicy {
         guard readingNow == .readable else {
             return .stayAskable(.readabilityCouldNotBeProven)
         }
-        return .writeReceipt
+        // Readable at both ends, so the asking is a fact and is written down. Whether it also
+        // **ends** the asking is a different question with a different answer, and this is the
+        // line focus-qds turns on: an accusation that replaced the question escalated it, and a
+        // break did not.
+        return ending.settlesTheQuestion ? .settle : .recordUnanswered
     }
 }

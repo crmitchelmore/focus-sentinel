@@ -153,8 +153,15 @@ public struct NudgeMemory: Sendable, Equatable {
     public let snoozes: SnoozeBook
     /// Subjects a "this is relevant" correction has taken out of the accusable set.
     public let correctedSubjects: Set<String>
-    /// Gate 11: whether this exact question has already been asked for this priority. **Read
-    /// from the ledger, never from the rules store.**
+    /// Gate 11: whether this exact question has already been asked **and settled** for this
+    /// priority. **Read from the ledger, never from the rules store** — and read through
+    /// `QueryLedger.isSettled(…)`, which looks at the receipt's *outcome*.
+    ///
+    /// The outcome is the whole of it (focus-qds). A receipt is written whenever a question
+    /// reached somebody, including when the world ended it — a break, a session, a new
+    /// commitment — and an expiry is not an answer. Gate 11 is the promise about answers, so a
+    /// question the person never answered is still askable however many times it has been
+    /// written down.
     public let hasAsked: Bool
     /// Where the ladder has got to.
     public let ladder: LadderMachine
@@ -207,7 +214,10 @@ extension NudgeMemory {
     ) throws -> NudgeMemory {
         var hasAsked = false
         if let priorityID, let subject {
-            hasAsked = try ledger.hasAsked(
+            // **Settled, not merely written down** (focus-qds, U-1). The receipt left behind by
+            // a question the world interrupted records that the asking happened; it is not an
+            // answer, and gate 11 is the promise about answers.
+            hasAsked = try ledger.isSettled(
                 priorityID: priorityID,
                 subjectKind: subject.kind,
                 subject: subject.identifier

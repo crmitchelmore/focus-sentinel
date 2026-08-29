@@ -128,9 +128,9 @@ final class NudgeHost {
     /// three ordinary conditions: the `silentVisual` deck, reduced interruption (forced on by
     /// Reduce Motion), and a live microphone or camera — which is to say, anybody on a call.
     ///
-    /// Every receipt in `QueryLedger` is immutable and `hasAsked(…)` is gate 11 of the
-    /// suppression stack, so a receipt about a question nobody saw does not merely mis-record
-    /// history — it permanently silences that question. U-1 licenses the app to interrupt on
+    /// Every receipt in `QueryLedger` is immutable and `isSettled(…)` is gate 11 of the
+    /// suppression stack, so a *settling* receipt about a question nobody saw does not merely
+    /// mis-record history — it permanently silences that question. U-1 licenses the app to interrupt on
     /// `uncertain` precisely because the interruption is one cheap click that teaches it;
     /// spending that click on a surface the person never read is the app burning its licence.
     ///
@@ -164,7 +164,7 @@ final class NudgeHost {
     /// both directions at once.
     ///
     /// * The **new** commitment is born carrying an immutable receipt about a question nobody put
-    ///   to it. `hasAsked(…)` is gate 11 of the suppression stack, so the app is permanently
+    ///   to it. `isSettled(…)` is gate 11 of the suppression stack, so the app is permanently
     ///   silent about a subject it never asked about under this priority.
     /// * The **old** commitment keeps no receipt at all, so the very question the person just
     ///   answered is asked again the next time they return to it — and *"repeat-asking is a
@@ -923,9 +923,10 @@ final class NudgeHost {
     ///   so the escalation clock stops and the same rung is offered again, and the withdrawal is
     ///   written down as a deferral. Under U-1 a rung nobody can answer has not been delivered,
     ///   whether it became unanswerable in the first millisecond or the first minute.
-    /// * a **question** is un-asked. Nothing is written — a receipt is immutable and `hasAsked(…)`
-    ///   is gate 11, so writing one here would spend the app's single licensed interruption on a
-    ///   surface that had gone — the slot is given back, and the subject stays askable.
+    /// * a **question** is un-asked. Nothing is written — a receipt is immutable and
+    ///   `isSettled(…)` is gate 11, so writing one here would spend the app's single licensed
+    ///   interruption on a surface that had gone — the slot is given back, and the subject stays
+    ///   askable.
     private func displaysChanged() {
         guard panel.isVisible else { return }
 
@@ -1139,14 +1140,21 @@ final class NudgeHost {
 
     /// A question that was on screen when the world changed under it.
     ///
-    /// Written down as `expired` rather than left unrecorded: the asking happened, and a
-    /// question whose receipt was never written is a question that comes back.
+    /// Written down as `expired` rather than left unrecorded: the asking happened, and the
+    /// record of the day should say so.
     ///
-    /// **Unless the asking did not happen.** A receipt is immutable and `hasAsked(…)` is gate 11,
-    /// so writing one about a question that never reached a readable surface would silence that
-    /// question for the life of the priority — the app spending its single licensed interruption
-    /// on a surface nobody saw (focus-kby). That question is left unwritten, on purpose, and
-    /// comes back.
+    /// **And written down is not settled** (focus-qds, U-1). This is the path a break, a session
+    /// ending, a new commitment and a projector all travel down, and until this epic it had no
+    /// callers at all. Wiring the three lifecycle callbacks turned it into the most ordinary way
+    /// a question ends — so if an `expired` receipt silenced its subject, *taking a break* would
+    /// permanently answer a question the person never saw the end of, and gate 11 would never let
+    /// the app ask again for the life of the commitment. `QuestionEnding.expired` therefore does
+    /// not settle, `AskedQuestionOutcome.expired` does not settle, and `isSettled(…)` reads the
+    /// stored outcome. The question comes back.
+    ///
+    /// **Unless the asking did not happen.** `QuestionLedgerPolicy` still refuses to write
+    /// anything at all about a question that never reached a readable surface (focus-kby); that
+    /// row would be a fact about an asking nobody experienced.
     private func expireOpenQuestion() {
         // The ask-time key, for the reason `openQuestionPriorityID` exists: this is the path a
         // priority change itself travels down, so reading the live pointer here would write the

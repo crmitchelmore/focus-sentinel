@@ -171,7 +171,7 @@ struct NudgeHostQuestionTests {
             "a receipt was written about a question nobody was ever shown"
         )
         #expect(
-            !(try fixture.ledger.hasAsked(
+            !(try fixture.ledger.isSettled(
                 priorityID: fixture.priorityID,
                 subjectKind: .app,
                 subject: Self.subject

@@ -123,7 +123,7 @@ struct QueryLedgerTests {
         #expect(receipt.outcome == .answeredRelevant)
         #expect(receipt.reason == .noNegativeBasis)
         #expect(receipt.answeredAt == Self.instant)
-        #expect(try ledger.hasAsked(priorityID: task.id, subjectKind: .app, subject: Self.decoy2))
+        #expect(try ledger.isSettled(priorityID: task.id, subjectKind: .app, subject: Self.decoy2))
     }
 
     /// "No" writes the same pair, with the rule's verdict reversed. The *next* appearance of
@@ -172,7 +172,7 @@ struct QueryLedgerTests {
             try ledger.receipt(priorityID: task.id, subjectKind: .app, subject: Self.decoy2)
         )
         #expect(receipt.outcome == .declined)
-        #expect(try ledger.hasAsked(priorityID: task.id, subjectKind: .app, subject: Self.decoy2))
+        #expect(try ledger.isSettled(priorityID: task.id, subjectKind: .app, subject: Self.decoy2))
     }
 
     /// **The atomicity test.** A failure injected between the two writes leaves **neither**
@@ -202,7 +202,7 @@ struct QueryLedgerTests {
         )
         #expect(try ledger.count() == 0, "the receipt survived a torn transaction")
         #expect(
-            try !ledger.hasAsked(priorityID: task.id, subjectKind: .app, subject: Self.decoy2),
+            try !ledger.isSettled(priorityID: task.id, subjectKind: .app, subject: Self.decoy2),
             "the app remembered asking a question it never recorded an answer to"
         )
 
@@ -272,7 +272,7 @@ struct QueryLedgerTests {
         undo.undo()
         #expect(try context.fetch(FetchDescriptor<FocusSchemaV3.RelevanceRule>()).isEmpty)
         #expect(
-            try ledger.hasAsked(
+            try ledger.isSettled(
                 priorityID: task.id, subjectKind: .app, subject: Self.decoy2
             ),
             "undoing the learned rule dissolved the receipt, so the question would come back"
@@ -309,7 +309,7 @@ struct QueryLedgerTests {
 
         // The subject is uncertain again — and still already asked.
         #expect(
-            try ledger.hasAsked(priorityID: task.id, subjectKind: .app, subject: Self.decoy2),
+            try ledger.isSettled(priorityID: task.id, subjectKind: .app, subject: Self.decoy2),
             "deleting a rule dissolved the receipt, and the question would be asked again"
         )
 
@@ -328,7 +328,7 @@ struct QueryLedgerTests {
             status: .uncertain,
             isUserIdle: false,
             hasActivePriority: true,
-            hasAsked: try ledger.hasAsked(
+            hasAsked: try ledger.isSettled(
                 priorityID: task.id, subjectKind: .app, subject: Self.decoy2
             ),
             budgetPermits: true,
@@ -377,7 +377,7 @@ struct QueryLedgerTests {
             context: reopened.mainContext, dateProvider: FixedDateProvider(now: Self.instant)
         )
         #expect(
-            try ledger.hasAsked(priorityID: priorityID, subjectKind: .app, subject: Self.decoy2),
+            try ledger.isSettled(priorityID: priorityID, subjectKind: .app, subject: Self.decoy2),
             "a declined question came back after a relaunch"
         )
         #expect(try ledger.receipt(
@@ -398,19 +398,19 @@ struct QueryLedgerTests {
             reason: .noNegativeBasis
         )
 
-        #expect(try ledger.hasAsked(priorityID: task.id, subjectKind: .app, subject: Self.decoy2))
+        #expect(try ledger.isSettled(priorityID: task.id, subjectKind: .app, subject: Self.decoy2))
         // A different priority: a new commitment makes old answers irrelevant, and that is
         // correct.
-        #expect(try !ledger.hasAsked(
+        #expect(try !ledger.isSettled(
             priorityID: UUID(), subjectKind: .app, subject: Self.decoy2
         ))
         // A different subject.
-        #expect(try !ledger.hasAsked(
+        #expect(try !ledger.isSettled(
             priorityID: task.id, subjectKind: .app, subject: "com.apple.Safari"
         ))
         // A different narrowness: e07 will ask about a site inside an app it already asked
         // about, and that is a different question.
-        #expect(try !ledger.hasAsked(
+        #expect(try !ledger.isSettled(
             priorityID: task.id, subjectKind: .domain, subject: Self.decoy2
         ))
     }
@@ -435,7 +435,7 @@ struct QueryLedgerTests {
 
         #expect(task.revision == 2)
         #expect(
-            try ledger.hasAsked(priorityID: task.id, subjectKind: .app, subject: Self.decoy2),
+            try ledger.isSettled(priorityID: task.id, subjectKind: .app, subject: Self.decoy2),
             "an edit to the wording re-opened a question the person had answered"
         )
     }
@@ -564,8 +564,8 @@ struct QueryLedgerTests {
         #expect(try ledger.count() == 2)
 
         #expect(try ledger.purge(priorityID: task.id) == 1)
-        #expect(try !ledger.hasAsked(priorityID: task.id, subjectKind: .app, subject: Self.decoy2))
-        #expect(try ledger.hasAsked(priorityID: other.id, subjectKind: .app, subject: Self.decoy2))
+        #expect(try !ledger.isSettled(priorityID: task.id, subjectKind: .app, subject: Self.decoy2))
+        #expect(try ledger.isSettled(priorityID: other.id, subjectKind: .app, subject: Self.decoy2))
         #expect(try ledger.count() == 1)
 
         // Purging a priority with no receipts is a no-op, not an error.
@@ -596,7 +596,7 @@ struct QueryLedgerTests {
 
         #expect(try ledger.purgeOrphans(livingPriorityIDs: [task.id]) == 1)
         #expect(try ledger.count() == 1)
-        #expect(try ledger.hasAsked(priorityID: task.id, subjectKind: .app, subject: Self.decoy2))
+        #expect(try ledger.isSettled(priorityID: task.id, subjectKind: .app, subject: Self.decoy2))
 
         #expect(try ledger.purgeAll() == 1)
         #expect(try ledger.count() == 0)
@@ -638,7 +638,7 @@ struct QueryLedgerTests {
         let (ledger, _, task, container) = try Self.makeLedger()
         defer { withExtendedLifetime(container) {} }
 
-        #expect(!(try ledger.hasAsked(priorityID: task.id, subjectKind: .app, subject: Self.decoy2)))
+        #expect(!(try ledger.isSettled(priorityID: task.id, subjectKind: .app, subject: Self.decoy2)))
 
         let action = try ledger.recordResolution(
             priorityID: task.id,
@@ -655,7 +655,7 @@ struct QueryLedgerTests {
         #expect(!action.writesAReceipt)
         #expect(try ledger.count() == 0)
         // Gate 11's own reading: the subject is still askable, which is the whole point.
-        #expect(!(try ledger.hasAsked(priorityID: task.id, subjectKind: .app, subject: Self.decoy2)))
+        #expect(!(try ledger.isSettled(priorityID: task.id, subjectKind: .app, subject: Self.decoy2)))
 
         // …and the question really can be asked again and answered, which is what the person
         // was owed all along.
@@ -663,15 +663,19 @@ struct QueryLedgerTests {
             .yesAddIt, priorityID: task.id, task: task, scope: Self.scope,
             reason: .noNegativeBasis
         )
-        #expect(try ledger.hasAsked(priorityID: task.id, subjectKind: .app, subject: Self.decoy2))
+        #expect(try ledger.isSettled(priorityID: task.id, subjectKind: .app, subject: Self.decoy2))
     }
 
-    /// The other direction, and it is exactly as load-bearing: a question the person *did* see
-    /// and did not answer is written down, or it comes back tomorrow and the app becomes the
-    /// thing U-1 exists to stop it being.
-    @Test("a question that was readable at both ends is written down and never asked again")
+    /// The other direction: a question the person *did* see is written down. The asking
+    /// happened and the record of the day says so.
+    ///
+    /// **And it is not settled** (focus-qds). This is the cell the regression lived in. An
+    /// expiry is the session ending, the phase leaving focus, the priority changing or a
+    /// projector arriving — none of which is the person answering — so the row goes in and gate
+    /// 11 still lets the question be asked again.
+    @Test("a question the world ended is written down and still askable")
     @MainActor
-    func aReadableQuestionSpendsItsAsking() throws {
+    func aReadableExpiryIsRecordedWithoutSettling() throws {
         let (ledger, _, task, container) = try Self.makeLedger()
         defer { withExtendedLifetime(container) {} }
 
@@ -687,12 +691,169 @@ struct QueryLedgerTests {
             ending: .expired
         )
 
-        #expect(action == .writeReceipt)
+        #expect(action == .recordUnanswered)
+        #expect(action.writesAReceipt)
+        #expect(!action.settlesTheQuestion)
         #expect(try ledger.count() == 1)
-        #expect(try ledger.hasAsked(priorityID: task.id, subjectKind: .app, subject: Self.decoy2))
+        #expect(!(try ledger.isSettled(
+            priorityID: task.id, subjectKind: .app, subject: Self.decoy2
+        )))
         #expect(try ledger.receipt(
             priorityID: task.id, subjectKind: .app, subject: Self.decoy2
         )?.outcome == .expired)
+    }
+
+    /// A preemption **does** settle: the accusation that replaced the question names the same
+    /// subject on the same surface and offers a richer correction (R-84a).
+    @Test("a question an accusation replaced is written down and never asked again")
+    @MainActor
+    func aPreemptedQuestionSpendsItsAsking() throws {
+        let (ledger, _, task, container) = try Self.makeLedger()
+        defer { withExtendedLifetime(container) {} }
+
+        let action = try ledger.recordResolution(
+            priorityID: task.id,
+            subjectKind: .app,
+            subject: Self.decoy2,
+            reason: .noNegativeBasis,
+            outcome: .declined,
+            surface: .panel,
+            readingAtAsk: .readable,
+            readingNow: .readable,
+            ending: .preempted
+        )
+
+        #expect(action == .settle)
+        #expect(try ledger.count() == 1)
+        #expect(try ledger.isSettled(priorityID: task.id, subjectKind: .app, subject: Self.decoy2))
+    }
+
+    // MARK: - focus-qds · a break is not an answer, and an answer is for ever
+
+    /// **The burn this epic introduced, driven end to end through the real store.**
+    ///
+    /// Wiring the three lifecycle callbacks gave `expireOpenQuestion()` its first callers, so
+    /// the sequence below is what a person walking away from their desk produces: a question up,
+    /// readable, and a break. Under the old reading the immutable row that wrote settled the
+    /// subject for the life of the commitment and the app never asked again.
+    ///
+    /// Mutate `AskedQuestionOutcome.settlesTheQuestion` to `true` for `.expired`, or
+    /// `QuestionEnding.settlesTheQuestion` to `true` for `.expired`, and this dies.
+    @Test("a question open when a break starts is still askable afterwards")
+    @MainActor
+    func aBreakLeavesTheQuestionAskable() throws {
+        let (ledger, _, task, container) = try Self.makeLedger()
+        defer { withExtendedLifetime(container) {} }
+
+        // The break. The panel was readable when the question went up and when it came down.
+        let expiry = try ledger.recordResolution(
+            priorityID: task.id,
+            subjectKind: .app,
+            subject: Self.decoy2,
+            reason: .noNegativeBasis,
+            outcome: .expired,
+            surface: .panel,
+            readingAtAsk: .readable,
+            readingNow: .readable,
+            ending: .expired
+        )
+        #expect(expiry.writesAReceipt, "the asking was not recorded at all")
+        #expect(!(try ledger.isSettled(
+            priorityID: task.id, subjectKind: .app, subject: Self.decoy2
+        )), "a break answered a question the person never answered")
+
+        // …and the second expiry, because breaks happen twice. Both askings are on file.
+        _ = try ledger.recordResolution(
+            priorityID: task.id,
+            subjectKind: .app,
+            subject: Self.decoy2,
+            reason: .noNegativeBasis,
+            outcome: .expired,
+            surface: .panel,
+            readingAtAsk: .readable,
+            readingNow: .readable,
+            ending: .expired
+        )
+        #expect(try ledger.count() == 2, "the second asking was refused as a duplicate")
+        #expect(!(try ledger.isSettled(
+            priorityID: task.id, subjectKind: .app, subject: Self.decoy2
+        )))
+
+        // …and when the person finally answers, the answer lands, writes its rule, and settles.
+        let outcome = try ledger.answer(
+            .yesAddIt, priorityID: task.id, task: task, scope: Self.scope,
+            reason: .noNegativeBasis
+        )
+        #expect(outcome.persistedRule != nil, "the answer taught the app nothing")
+        #expect(try ledger.isSettled(priorityID: task.id, subjectKind: .app, subject: Self.decoy2))
+        #expect(
+            try ledger.receipt(
+                priorityID: task.id, subjectKind: .app, subject: Self.decoy2
+            )?.outcome == .answeredRelevant,
+            "the settling receipt is not the one the reader is handed"
+        )
+    }
+
+    /// The other half of the ruling, and the one U-1 states in its own sentence: **an answered
+    /// question is never re-asked.** Every answer, including "Not now".
+    @Test(
+        "an answered question is never askable again",
+        arguments: [QueryAnswer.yesAddIt, .no, .notNow]
+    )
+    @MainActor
+    func anAnsweredQuestionIsNeverAskedAgain(answer: QueryAnswer) throws {
+        let (ledger, _, task, container) = try Self.makeLedger()
+        defer { withExtendedLifetime(container) {} }
+
+        _ = try ledger.answer(
+            answer, priorityID: task.id, task: task, scope: Self.scope,
+            reason: .noNegativeBasis
+        )
+        #expect(try ledger.isSettled(priorityID: task.id, subjectKind: .app, subject: Self.decoy2))
+
+        // A break afterwards cannot un-settle it, and cannot write a second row either.
+        #expect(throws: QueryLedgerError.alreadyAsked(subject: Self.decoy2)) {
+            try ledger.recordResolution(
+                priorityID: task.id,
+                subjectKind: .app,
+                subject: Self.decoy2,
+                reason: .noNegativeBasis,
+                outcome: .expired,
+                surface: .panel,
+                readingAtAsk: .readable,
+                readingNow: .readable,
+                ending: .expired
+            )
+        }
+        #expect(try ledger.count() == 1)
+        #expect(try ledger.isSettled(priorityID: task.id, subjectKind: .app, subject: Self.decoy2))
+    }
+
+    /// The row and the ruling have to agree, because gate 11 reads the **stored outcome** and
+    /// not the branch that wrote it. A caller that ended a question one way and labelled the
+    /// receipt another is refused rather than quietly settling — or quietly failing to.
+    @Test("an ending and an outcome that disagree about settling are refused")
+    @MainActor
+    func aContradictoryReceiptIsRefused() throws {
+        let (ledger, _, task, container) = try Self.makeLedger()
+        defer { withExtendedLifetime(container) {} }
+
+        #expect(throws: QueryLedgerError.endingContradictsOutcome(
+            ending: .expired, outcome: .declined
+        )) {
+            try ledger.recordResolution(
+                priorityID: task.id,
+                subjectKind: .app,
+                subject: Self.decoy2,
+                reason: .noNegativeBasis,
+                outcome: .declined,
+                surface: .panel,
+                readingAtAsk: .readable,
+                readingNow: .readable,
+                ending: .expired
+            )
+        }
+        #expect(try ledger.count() == 0)
     }
 
     /// A question routed to the menu-bar badge that nobody ever opened the popover on. The
@@ -717,7 +878,7 @@ struct QueryLedgerTests {
 
         #expect(action == .stayAskable(.neverReachedAReadableSurface))
         #expect(try ledger.count() == 0)
-        #expect(!(try ledger.hasAsked(priorityID: task.id, subjectKind: .app, subject: Self.decoy2)))
+        #expect(!(try ledger.isSettled(priorityID: task.id, subjectKind: .app, subject: Self.decoy2)))
     }
 
     /// What `dailyQueryCap` reads: questions asked for one priority on one **local** day, in

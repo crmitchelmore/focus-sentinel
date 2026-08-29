@@ -70,13 +70,13 @@ struct NudgeHostPriorityKeyTests {
 
         // …which is the same statement read through gate 11, where it costs something.
         #expect(
-            try fixture.ledger.hasAsked(
+            try fixture.ledger.isSettled(
                 priorityID: asked, subjectKind: .app, subject: Self.subject
             ),
             "the old priority will re-ask a question that was answered"
         )
         #expect(
-            !(try fixture.ledger.hasAsked(
+            !(try fixture.ledger.isSettled(
                 priorityID: committed, subjectKind: .app, subject: Self.subject
             )),
             "gate 11 now silences a subject the new commitment was never asked about"
@@ -117,7 +117,7 @@ struct NudgeHostPriorityKeyTests {
             "the commitment that replaced it inherited the asking"
         )
         #expect(
-            !(try fixture.ledger.hasAsked(
+            !(try fixture.ledger.isSettled(
                 priorityID: committed, subjectKind: .app, subject: Self.subject
             ))
         )

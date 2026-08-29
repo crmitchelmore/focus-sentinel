@@ -17,8 +17,12 @@ public enum AskedQuestionOutcome: String, Sendable, CaseIterable, Codable, Hasha
     /// record — but the asking still happened and is still remembered, which is what stops the
     /// question coming back.
     case declined
-    /// The question was never seen: the session ended, the phase changed, or the subject went
-    /// away while the panel was still on screen.
+    /// **The world ended the question; the person did not.** The session ended, the phase left
+    /// focus, the priority changed, or a presentation claimed the display while the panel was
+    /// still on screen.
+    ///
+    /// This outcome is written down and it does **not** settle the question — see
+    /// `settlesTheQuestion`.
     case expired
 
     /// Whether this outcome wrote a rule as well as a receipt.
@@ -35,6 +39,33 @@ public enum AskedQuestionOutcome: String, Sendable, CaseIterable, Codable, Hasha
     /// consecutive questions that were **not** answered, because two unanswered questions is the
     /// point at which the app is talking to itself.
     public var isAnswer: Bool { wroteRule }
+
+    /// **Whether a receipt carrying this outcome ends the asking for good** (focus-qds, U-1).
+    ///
+    /// The store-level half of the ruling `QuestionEnding.settlesTheQuestion` states. It is a
+    /// property of the *stored* value rather than of the code path that wrote it, because
+    /// `QueryLedger.isSettled(…)` is gate 11 and gate 11 reads rows, not call stacks — a row
+    /// written by a path nobody thought about must still answer this question correctly.
+    ///
+    /// Three of the four settle, and they are exactly the three a **person** can produce:
+    /// "Yes, add it", "No", and "Not now" (which Escape and a preemption both write). U-1's
+    /// sentence is *"every **answered** question is remembered"*, and closing the panel is an
+    /// answer — treating a dismissal as nothing happened is what makes an app ask again
+    /// tomorrow.
+    ///
+    /// `expired` is the one that does not, and it is the whole of focus-qds. Going for lunch is
+    /// not an answer. A receipt is immutable and gate 11 is consulted before any warrant is
+    /// constructed, so settling on an expiry would mean the app spends its single licensed
+    /// interruption every time somebody takes a break with a question on screen — and then never
+    /// asks again for the life of the commitment. The asking is still written down, because it
+    /// happened and `askedCount(…)` is a fact about the day; what it no longer does is answer
+    /// the question on the person's behalf.
+    public var settlesTheQuestion: Bool {
+        switch self {
+        case .answeredRelevant, .answeredUnrelated, .declined: true
+        case .expired: false
+        }
+    }
 }
 
 /// A question that was on screen when an accusation arrived.

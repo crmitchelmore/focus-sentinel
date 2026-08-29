@@ -311,7 +311,7 @@ struct NudgeHostDisplayChangeTests {
             "a receipt was written about a question the display took away"
         )
         #expect(
-            !(try fixture.ledger.hasAsked(
+            !(try fixture.ledger.isSettled(
                 priorityID: fixture.priorityID,
                 subjectKind: .app,
                 subject: Self.subject
