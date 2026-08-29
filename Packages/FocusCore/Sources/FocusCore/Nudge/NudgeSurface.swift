@@ -27,6 +27,28 @@ public enum NudgeSurface: String, Sendable, CaseIterable, Codable, Hashable {
     /// still answerable.
     case popoverBadge
 
+    /// **Whether a nudge placed here offers the person something to press.**
+    ///
+    /// | surface | offers a correction | what is actually drawn |
+    /// |---|---|---|
+    /// | `panel` | **yes** | `AccusationPanelView`, with the rung's full action set |
+    /// | `notification` | **yes** | the presentation's actions, as notification buttons |
+    /// | `menuBar` | no | a glyph. There is nothing on it to press |
+    /// | `popoverBadge` | no | a badge row. It carries a *question*, not the correction ladder |
+    ///
+    /// It arrived as `PreemptionCredit`'s test for whether a displaced question had been handed
+    /// something richer in its place, and it outlived preemption because it answers a question the
+    /// interruption slot needs answered too: **a rung standing on a surface with nothing to press
+    /// is not occupying the screen** (focus-k42). Nothing can ever take an ambient glyph down —
+    /// it carries no actions, so `resolve(…)` is unreachable from it — so a glyph that held the
+    /// slot would hold it for the life of the session.
+    public var offersACorrection: Bool {
+        switch self {
+        case .panel, .notification: true
+        case .menuBar, .popoverBadge: false
+        }
+    }
+
     /// Whether this surface belongs to the application itself rather than to the system.
     ///
     /// The three in-app surfaces are what make the `notification-denied` gate stage possible:

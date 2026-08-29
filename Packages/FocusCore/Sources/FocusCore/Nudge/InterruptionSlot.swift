@@ -2,8 +2,7 @@ import Foundation
 
 /// What became of a question that was asked.
 ///
-/// Declared here because the slot is the **first** thing in the programme that can close a
-/// question, and a preemption has to be able to say which outcome it wrote. `QueryAnswer`
+/// Declared here beside the slot, which is where a question's life is arbitrated. `QueryAnswer`
 /// (T119), the `AskedQuestion` row (T126) and `QueryLedger` (T127) all consume this one
 /// vocabulary rather than restating it; the persisted column is its raw value, decoded through
 /// an exhaustive switch in the shape e03's R-49 established.
@@ -13,9 +12,9 @@ public enum AskedQuestionOutcome: String, Sendable, CaseIterable, Codable, Hasha
     case answeredRelevant
     /// "No" — the same pair, with rule verdict `unrelated`.
     case answeredUnrelated
-    /// "Not now", Escape, or a preemption. **No rule is written** — there is no answer to
-    /// record — but the asking still happened and is still remembered, which is what stops the
-    /// question coming back.
+    /// "Not now" or Escape. **No rule is written** — there is no answer to record — but the
+    /// asking still happened and is still remembered, which is what stops the question coming
+    /// back.
     case declined
     /// **The world ended the question; the person did not.** The session ended, the phase left
     /// focus, the priority changed, or a presentation claimed the display while the panel was
@@ -48,7 +47,7 @@ public enum AskedQuestionOutcome: String, Sendable, CaseIterable, Codable, Hasha
     /// written by a path nobody thought about must still answer this question correctly.
     ///
     /// Three of the four settle, and they are exactly the three a **person** can produce:
-    /// "Yes, add it", "No", and "Not now" (which Escape and a preemption both write). U-1's
+    /// "Yes, add it", "No", and "Not now" (which Escape writes). U-1's
     /// sentence is *"every **answered** question is remembered"*, and closing the panel is an
     /// answer — treating a dismissal as nothing happened is what makes an app ask again
     /// tomorrow.
@@ -68,44 +67,18 @@ public enum AskedQuestionOutcome: String, Sendable, CaseIterable, Codable, Hasha
     }
 }
 
-/// A question that was on screen when an accusation arrived.
-///
-/// It is **closed**, not dropped: the receipt is written with `outcome == .declined`, so the
-/// person is never asked it again. Losing the asking because something more urgent happened
-/// would be exactly the bug never-ask-twice exists to prevent — and it would be invisible,
-/// because the symptom is a question that comes back weeks later.
-public struct PreemptedQuery: Sendable, Equatable, Hashable {
-    public let warrant: QueryWarrant
-    /// Always `.declined`. A preemption is not an answer, and the type says so by having no
-    /// other value to carry.
-    public let outcome: AskedQuestionOutcome
-
-    fileprivate init(warrant: QueryWarrant) {
-        self.warrant = warrant
-        self.outcome = .declined
-    }
-}
-
 /// What happened when an interruption was offered the slot.
 public enum SlotOutcome: Sendable, Equatable, Hashable {
-    /// It takes the slot. `preempted` names the question that was closed to make room, when
-    /// there was one.
-    case admitted(slot: InterruptionSlot, preempted: PreemptedQuery?)
-    /// The slot is held by something that outranks this. Always `.interruptionInFlight`; the
-    /// case carries the full reason type so that a surface draws it from the same stack every
-    /// other silence comes from.
+    /// It takes the slot.
+    case admitted(slot: InterruptionSlot)
+    /// The slot is held by something else. Always `.interruptionInFlight`; the case carries the
+    /// full reason type so that a surface draws it from the same stack every other silence comes
+    /// from.
     case withheld(NudgeSuppressionReason)
 
     public var slot: InterruptionSlot? {
         switch self {
-        case .admitted(let slot, _): slot
-        case .withheld: nil
-        }
-    }
-
-    public var preempted: PreemptedQuery? {
-        switch self {
-        case .admitted(_, let preempted): preempted
+        case .admitted(let slot): slot
         case .withheld: nil
         }
     }
@@ -118,24 +91,35 @@ public enum SlotOutcome: Sendable, Equatable, Hashable {
     }
 }
 
-/// **One open interruption at a time**, and the accusation wins (R-84a).
+/// **One open interruption at a time, and whoever got there first keeps it** (R-84a as amended
+/// by U-2).
 ///
-/// A value type with pure transitions, like every other machine in this programme. The
-/// asymmetry is the whole ruling:
+/// A value type with pure transitions, like every other machine in this programme.
 ///
 /// | offered | slot open | slot held by a query | slot held by an accusation |
 /// |---|---|---|---|
-/// | a **query** | admitted | withheld | **withheld** |
-/// | an **accusation** | admitted | admitted, **closing the query as `declined`** | admitted (the ladder's own escalation) |
+/// | a **query** | admitted | withheld | withheld |
+/// | an **accusation** | admitted | **withheld** | admitted (the ladder's own escalation) |
 ///
-/// Two reasons, and neither is about tidiness. *"You are off task"* outranks *"is this part of
-/// it?"* — a person who has drifted needs the more important sentence, and a question about
-/// the very application they have drifted into would be the app arguing with itself. And two
-/// panels on screen at once is the behaviour that makes people uninstall.
+/// ## The asymmetry this table used to have, and why it is gone
 ///
-/// **The reverse never happens.** There is no code path by which a question closes an
-/// accusation, which is a fourth small structural fact beside R-76's four: even the surface
-/// arbitration runs one way.
+/// The accusation used to win. An accusation offered against an open question was *always*
+/// admitted, closing the question as `declined` and reporting it as a `PreemptedQuery` — on the
+/// argument that *"you are off task"* outranks *"is this part of it?"*, and that a question about
+/// the very application somebody had drifted into would be the app arguing with itself.
+///
+/// Seven repair rounds found roughly **eleven** defects living in that one interaction, and the
+/// user ruled the mechanism out rather than patching its eleventh instance (U-2). Preemption is
+/// gone: a question that is on the screen keeps the slot, and **the accusation waits**. It is not
+/// lost — the ladder holds its rung, the mandate is still live, and the next judgement offers it
+/// again the moment the question is answered or expires.
+///
+/// It is also better product than the rule it replaces. The person is not interrupted twice about
+/// two different things in the same moment, and the cheap teaching interaction U-1 licensed the
+/// app to interrupt for is never taken off the screen half-answered.
+///
+/// What survives unchanged is the reason the slot exists at all: two panels on screen at once is
+/// the behaviour that makes people uninstall.
 public struct InterruptionSlot: Sendable, Equatable, Hashable {
     /// Who holds the slot.
     public enum Holder: Sendable, Equatable, Hashable {
@@ -178,7 +162,7 @@ public struct InterruptionSlot: Sendable, Equatable, Hashable {
     public func offering(_ warrant: QueryWarrant) -> SlotOutcome {
         switch holder {
         case .nobody:
-            .admitted(slot: InterruptionSlot(holder: .query(warrant)), preempted: nil)
+            .admitted(slot: InterruptionSlot(holder: .query(warrant)))
         case .query, .accusation:
             .withheld(.interruptionInFlight)
         }
@@ -186,16 +170,20 @@ public struct InterruptionSlot: Sendable, Equatable, Hashable {
 
     /// Offer the slot to an **accusation rung**.
     ///
-    /// Always admitted. An open question is closed as `declined` and reported, so its receipt
-    /// is written and it is never asked again; an open accusation is simply replaced, because
-    /// that is the ladder escalating and `LadderMachine` decides whether it may.
+    /// Admitted against an empty slot, and against an accusation — that second case is the ladder
+    /// escalating onto its own rung, and `LadderMachine` is what decides whether it may.
+    ///
+    /// **Withheld against an open question** (U-2). This is where preemption used to happen and
+    /// the single most important line of the scope cut: the accusation does not displace the
+    /// question, it waits for it. The rung is not consumed by being withheld — `LadderMachine`
+    /// records no delivery, the escalation clock does not start, and the next judgement offers the
+    /// same rung again.
     public func offering(_ rung: LadderRung) -> SlotOutcome {
-        let taken = InterruptionSlot(holder: .accusation(rung))
         switch holder {
         case .nobody, .accusation:
-            return .admitted(slot: taken, preempted: nil)
-        case .query(let warrant):
-            return .admitted(slot: taken, preempted: PreemptedQuery(warrant: warrant))
+            .admitted(slot: InterruptionSlot(holder: .accusation(rung)))
+        case .query:
+            .withheld(.interruptionInFlight)
         }
     }
 

@@ -302,11 +302,10 @@ public struct NudgeSilence: Sendable, Equatable, Hashable {
 public enum NudgeDecision: Sendable, Equatable {
     /// Say "you are off task", at this rung, on this surface.
     ///
-    /// `preempting` names the question that was closed as `declined` to make room, when there
-    /// was one (R-84a). It is carried on the decision rather than left to the host to notice,
-    /// because losing the asking would be exactly the bug never-ask-twice exists to prevent —
-    /// and it would be invisible, since the symptom is a question that comes back weeks later.
-    case accuse(rung: LadderRung, route: SurfaceRoute, preempting: PreemptedQuery?)
+    /// It used to carry a `preempting:` question — the one closed as `declined` to make room.
+    /// U-2 deleted the mechanism: an accusation offered against an open question is now
+    /// **withheld**, so there is never a displaced question to name.
+    case accuse(rung: LadderRung, route: SurfaceRoute)
     /// Ask "is this part of it?", on this surface.
     case ask(QueryWarrant, SurfaceRoute)
     /// Say nothing, and this is why.
@@ -322,7 +321,7 @@ public enum NudgeDecision: Sendable, Equatable {
 
     public var rung: LadderRung? {
         switch self {
-        case .accuse(let rung, _, _): rung
+        case .accuse(let rung, _): rung
         case .ask, .silent, .deferred: nil
         }
     }
@@ -336,7 +335,7 @@ public enum NudgeDecision: Sendable, Equatable {
 
     public var route: SurfaceRoute? {
         switch self {
-        case .accuse(_, let route, _), .ask(_, let route): route
+        case .accuse(_, let route), .ask(_, let route): route
         case .silent, .deferred: nil
         }
     }
@@ -352,14 +351,6 @@ public enum NudgeDecision: Sendable, Equatable {
         switch self {
         case .deferred(let reason): reason
         case .accuse, .ask, .silent: nil
-        }
-    }
-
-    /// The question closed to make room for an accusation, when one was.
-    public var preempted: PreemptedQuery? {
-        switch self {
-        case .accuse(_, _, let preempted): preempted
-        case .ask, .silent, .deferred: nil
         }
     }
 
@@ -389,13 +380,14 @@ public enum NudgeDecision: Sendable, Equatable {
 /// | `uncertain` | **a question**, if the question is answerable, unasked and affordable |
 /// | `unrelated` | **the ladder**, one rung at a time |
 ///
-/// ## The accusation is considered first, and that is R-84a
+/// ## The accusation is considered first, and that is still R-84a
 ///
-/// *"You are off task"* outranks *"is this part of it?"*. A person who has drifted needs the
-/// more important sentence, and a question about the very application they have drifted into
-/// would be the app arguing with itself. So a live mandate takes the path, and it takes the
-/// interruption slot — closing an open question as `declined` rather than dropping it. **The
-/// reverse never happens**, and there is no code below by which it could.
+/// *"You are off task"* outranks *"is this part of it?"*, so a live mandate takes the path
+/// before the query affordance is even consulted. What it no longer does is take the screen off
+/// a question that is already on it: under U-2 an accusation offered against an open question is
+/// withheld as `interruptionInFlight` and **waits**. The rung is not spent by waiting — no
+/// delivery is recorded, the escalation clock does not start, and the next judgement offers the
+/// same rung again.
 ///
 /// ## An uncertain verdict cannot reach `.accuse`, and not because of a check
 ///
@@ -483,9 +475,9 @@ public struct NudgeDecider: Sendable {
             now: surroundings.monotonic
         )
 
-        // The slot, read through the type that owns the asymmetry rather than restated here.
-        // An accusation is always admitted; what varies is whether a question is closed to make
-        // room. `InterruptionSlotTests` is where that rule is asserted.
+        // The slot, read through the type that owns the ruling rather than restated here. Since
+        // U-2 an accusation is admitted against an empty slot and against another accusation, and
+        // **withheld against an open question**. `InterruptionSlotTests` is where that is asserted.
         let slot = memory.slot.offering(rung)
 
         let outcome = SuppressionStack.evaluate(
@@ -539,7 +531,7 @@ public struct NudgeDecider: Sendable {
             return .deferred(route.deferralReason ?? .noSurfaceAvailable)
         }
 
-        return .accuse(rung: rung, route: route, preempting: slot.preempted)
+        return .accuse(rung: rung, route: route)
     }
 
     // MARK: - The question

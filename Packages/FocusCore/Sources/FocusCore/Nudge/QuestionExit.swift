@@ -34,19 +34,21 @@ public enum NudgePanelKind: String, Sendable, CaseIterable, Codable, Hashable {
 /// things have to happen together** — the record, the slot, and the surface — and each repair
 /// fixed the two the author was thinking about.
 ///
+/// **Two of those five rows were the same exit** — a preemption — and U-2 deleted it. An
+/// accusation can no longer take a question's ask or its surface, so the door it went through is
+/// gone rather than guarded, and with it the only exit that did not release the slot and the only
+/// one that handed its surface to somebody else in the same turn. What is left is four exits that
+/// all mean the same three things: write the record, release the slot, take the surface down.
+///
 /// `QuestionEnding` already answers the first: what the ledger writes and whether it settles. This
 /// answers the other two, and its real work is being `CaseIterable`: `NudgeHost` has exactly one
 /// door out of an open question, every case of this enum is a way through that door, and a test
-/// walks `allCases` and drives each one. A sixth exit added without a driver is a non-exhaustive
+/// walks `allCases` and drives each one. A fifth exit added without a driver is a non-exhaustive
 /// switch, which is a compile error rather than a sixth round.
 public enum QuestionExit: String, Sendable, CaseIterable, Codable, Hashable {
     /// The person clicked one of the three answers, or pressed Escape — which is *"Not now"*, and
     /// is an answer.
     case answered
-    /// An accusation took the ask. Whether that **settles** the question is `PreemptionCredit`'s
-    /// decision and not this type's; what is decided here is that the question comes off the
-    /// screen either way.
-    case preempted
     /// The session ended, the phase left focus, or the commitment changed.
     case worldMovedOn
     /// The display changed under the question and its answers went out of reach.
@@ -54,25 +56,4 @@ public enum QuestionExit: String, Sendable, CaseIterable, Codable, Hashable {
     /// The ask gave itself up before it reached anybody: an unreadable panel, or a route to a
     /// surface that cannot carry a question at all.
     case neverDelivered
-
-    /// **Whether the interruption slot goes back to the pool.**
-    ///
-    /// `preempted` is the one that does not, and it is not an oversight: the accusation has taken
-    /// the slot in the same turn, and releasing it here would hand back something somebody else is
-    /// already holding. Every other exit ends the interruption outright.
-    public var releasesTheSlot: Bool {
-        switch self {
-        case .preempted: false
-        case .answered, .worldMovedOn, .surfaceWentOutOfReach, .neverDelivered: true
-        }
-    }
-
-    /// **Whether something else is taking the question's surface over in the same turn.**
-    ///
-    /// Only a preemption can, and only onto the surface the accusation is actually routed to.
-    /// This is the whole of focus-v0u: `accuse(…)` cleared the open question and then touched the
-    /// panel **on the `.panel` branch alone**, so a question displaced by a glyph, a badge or a
-    /// notification was left on the screen — and the ladder's entry rung is the glyph, which makes
-    /// that the commonest displacement there is.
-    public var mayHandOverItsSurface: Bool { self == .preempted }
 }

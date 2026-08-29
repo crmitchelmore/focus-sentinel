@@ -104,7 +104,7 @@ public enum NudgeExpectation: Sendable, Equatable, Hashable {
     /// than only what was wrong.
     public static func observed(_ decision: NudgeDecision) -> NudgeExpectation {
         switch decision {
-        case .accuse(let rung, _, _): .accuse(rung.kind)
+        case .accuse(let rung, _): .accuse(rung.kind)
         case .ask(let warrant, _): .ask(warrant.reason)
         case .silent(let silence): .silent(silence.reason)
         case .deferred(let reason): .deferred(reason)

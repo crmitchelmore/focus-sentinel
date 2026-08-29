@@ -25,8 +25,6 @@ public enum SurfaceReadability: String, Sendable, CaseIterable, Codable, Hashabl
 public enum QuestionEnding: String, Sendable, CaseIterable, Codable, Hashable {
     /// The person clicked one of the three answers, or pressed Escape (which is "Not now").
     case answered
-    /// An accusation took the surface the question was on (R-84a).
-    case preempted
     /// The session ended, the phase left focus, the priority changed, or a presentation claimed
     /// the display.
     case expired
@@ -40,7 +38,6 @@ public enum QuestionEnding: String, Sendable, CaseIterable, Codable, Hashable {
     /// | ending | settles | why |
     /// |---|---|---|
     /// | `answered` | **yes** | the person chose. "Yes, add it", "No", and "Not now" are all choices, and Escape is "Not now". U-1: *"every answered question is remembered"*. |
-    /// | `preempted` | **yes** | the app replaced the question with an accusation **about the same subject**, on the same surface, offering *"this is relevant"* — a strictly richer affordance than the question's. The chance to be taught was escalated, not lost, and a receipt is only written here at all when the surface was proven readable at both ends (R-84a). |
     /// | `expired` | **no** | the world ended it. A break, a session ending, a new commitment, a projector. **An expiry is not an answer**, and settling on one would spend the app's single licensed interruption on a question the person never saw the end of — permanently, because the receipt is immutable and gate 11 reads it before any warrant is built. |
     ///
     /// The frequency argument is what makes the third row urgent rather than theoretical.
@@ -51,7 +48,7 @@ public enum QuestionEnding: String, Sendable, CaseIterable, Codable, Hashable {
     /// times a day.
     public var settlesTheQuestion: Bool {
         switch self {
-        case .answered, .preempted: true
+        case .answered: true
         case .expired: false
         }
     }

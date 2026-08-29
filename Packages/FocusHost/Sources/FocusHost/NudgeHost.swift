@@ -226,6 +226,14 @@ final class NudgeHost {
         /// strands the rung are all keyed to this rather than to whatever the store happens to
         /// call active at the moment of the click (focus-lmo).
         let priorityID: UUID
+        /// **The surface this rung actually reached** (focus-k42).
+        ///
+        /// Not optional, and that is the whole repair. An `OpenRung` is constructed only at a
+        /// landing, so a rung that exists is a rung that is somewhere; a rung that reached nobody
+        /// is not a quieter `OpenRung` with a `nil` surface, it is **no** `OpenRung` at all.
+        /// Together with `holdsTheInterruptionSlot` below, this is what stops *which rung this is*
+        /// and *whether the screen is occupied* from being the same fact.
+        let landedOn: NudgeSurface
         /// Empty when the live rung is not on the panel, which is every surface that has no
         /// actions to be out of reach.
         var panelActions: [String] = []
@@ -233,6 +241,15 @@ final class NudgeHost {
         /// (focus-zrs). A notification action names its delivery; an action naming any other
         /// delivery is a click on a banner from a rung that is over, and is refused.
         var notificationDeliveryID: String?
+
+        /// **Whether this rung is occupying the thing the slot is about: an answerable screen.**
+        ///
+        /// R-84a's argument for a single slot is that *"two panels on screen at once is the
+        /// behaviour that makes people uninstall"*. A glyph and a badge are not panels: they carry
+        /// no sentence and offer nothing to press, which is exactly what
+        /// `NudgeSurface.offersACorrection` already says. A glyph that held the slot would hold it
+        /// for ever, because nothing can take an ambient rung down.
+        var holdsTheInterruptionSlot: Bool { landedOn.offersACorrection }
     }
 
     private var openRung: OpenRung?
@@ -247,10 +264,23 @@ final class NudgeHost {
     /// this round's defect B, arriving from the other side.
     ///
     /// Derived, the two cannot part company: the value the decider is handed *is* the question and
-    /// the rung this object is holding. `InterruptionSlot` keeps the ruling (the accusation wins,
-    /// and the reverse never happens); this keeps the bookkeeping honest.
+    /// the rung this object is holding. `InterruptionSlot` keeps the ruling; this keeps the
+    /// bookkeeping honest.
+    ///
+    /// **Derived from the right thing, which is not the same as derived** (focus-k42). This read
+    /// `openRung != nil`, which made *"a rung exists"* and *"the screen is occupied"* one
+    /// statement — so a rung that reached nobody, and a rung sitting on the ambient glyph, both
+    /// withheld every interruption that followed. Measured on the shipping loop: one `unrelated`
+    /// judgement lights the glyph, and from that moment every `uncertain` judgement for the rest of
+    /// the session answers `silent(interruptionInFlight)`. That is U-1's question affordance dead
+    /// for the session after a single drift, with no symptom but silence.
+    ///
+    /// It asks `holdsTheInterruptionSlot` now, which is a fact about **where the rung landed**
+    /// rather than about whether this object is holding one.
     var slot: InterruptionSlot {
-        if let openRung { return InterruptionSlot(holder: .accusation(openRung.rung)) }
+        if let openRung, openRung.holdsTheInterruptionSlot {
+            return InterruptionSlot(holder: .accusation(openRung.rung))
+        }
         if let openQuestion { return InterruptionSlot(holder: .query(openQuestion.warrant)) }
         return .open
     }
@@ -258,8 +288,8 @@ final class NudgeHost {
     /// **Every refusal this host has had to make because two readings of one fact disagreed.**
     ///
     /// Stated as counts rather than as comments, so the unit lane and `--focus-self-check` can
-    /// read them and a regression is a number rather than an argument. All three must be zero in
-    /// every automated run; a non-zero one is the class this round exists to end, recurring.
+    /// read them and a regression is a number rather than an argument. Both must be zero in
+    /// every automated run; a non-zero one is the class these rounds exist to end, recurring.
     /// The corrections the rung on the panel is offering, by `rawValue`, so a reading taken later
     /// asks about the same set the panel was drawn with. Derived from the open rung rather than
     /// stored beside it (focus-zrs): empty is *"no rung, or a rung on a surface with nothing to
@@ -267,7 +297,6 @@ final class NudgeHost {
     var openRungPanelActions: [String] { openRung?.panelActions ?? [] }
 
     private(set) var mandatesWithoutACommitment = 0
-    private(set) var preemptionsNamingNoQuestion = 0
     private(set) var staleNotificationActions = 0
 
     init(
@@ -431,13 +460,12 @@ final class NudgeHost {
                 priorityID: commitment?.id
             )
 
-        case .accuse(let rung, let route, let preempted):
+        case .accuse(let rung, let route):
             guard let commitment = mandated(commitment, kind: .accusation, subject: rung.subject)
             else { return }
             accuse(
                 rung: rung,
                 route: route,
-                preempted: preempted,
                 surroundings: surroundings,
                 commitment: commitment
             )
@@ -510,64 +538,39 @@ final class NudgeHost {
         )
     }
 
-    /// **The question is taken off the books, and not yet settled** (focus-7w3, U-1).
+    /// **Raise one rung, and take the slot only if it actually lands** (U-2, focus-k42).
     ///
-    /// This function used to begin `if let preempted { close(preempted) }`, and closing meant
-    /// *settling*: the receipt was written with `ending: .preempted`, which
-    /// `QuestionEnding.settlesTheQuestion` allows, so the question was never asked again for the
-    /// life of the commitment. It ran first, before this code knew whether a surface was even
-    /// available, before the panel's actions were checked for reach, and before the notification
-    /// had been delivered or suppressed — and nothing anywhere compared the accusation's subject
-    /// with the question's. Every preemption settled, including one the person never saw.
+    /// ## What this function no longer does
     ///
-    /// Everything the write needs is captured **here**, because the accusation is about to take
-    /// the surface and the readings taken afterwards would be readings of the accusation. The
-    /// write happens at whichever terminal path is reached, with the ending the accusation
-    /// actually earned.
+    /// It used to open by closing whatever question was on screen — and closing meant *settling*,
+    /// so the question was never asked again for the life of the commitment. That ran before the
+    /// code knew whether a surface was available, before the panel's actions were checked for
+    /// reach, and before the notification had been delivered or suppressed. Seven rounds of
+    /// repairs to that one interaction, and U-2 deleted it: `InterruptionSlot.offering(_ rung:)`
+    /// now **withholds** against an open question, so by the time control reaches here there is no
+    /// question to displace and nothing to settle.
+    ///
+    /// ## Ownership is established by landing, not by intent
+    ///
+    /// `openRung` used to be assigned on the first line — before anything knew where the rung was
+    /// going — and released on no deferral path at all. Because `slot` read `openRung != nil`,
+    /// *"a rung is being raised"* and *"the screen is occupied"* were the same statement, so a rung
+    /// that reached nobody went on holding the one interruption slot for the rest of the session.
+    ///
+    /// The rung is therefore recorded **only where it lands**, carrying the surface it landed on.
+    /// Every path that reaches nobody calls `forgetOpenRung()` instead: a rung with no surface is
+    /// not a quieter interruption, it is not an interruption at all.
     private func accuse(
         rung: LadderRung,
         route: SurfaceRoute,
-        preempted: PreemptedQuery?,
-        surroundings: NudgeSurroundings,
-        commitment: ActiveCommitment
-    ) {
-        accuse(
-            rung: rung,
-            route: route,
-            displaced: preempted.flatMap(displacedQuestion(from:)),
-            surroundings: surroundings,
-            commitment: commitment
-        )
-    }
-
-    /// The same, with the displaced question already captured.
-    ///
-    /// Separate so the demotion path can carry it to the rung's new surface: re-capturing there
-    /// would find nothing, because the first pass has already cleared the open question's fields.
-    private func accuse(
-        rung: LadderRung,
-        route: SurfaceRoute,
-        displaced: DisplacedQuestion?,
         surroundings: NudgeSurroundings,
         commitment: ActiveCommitment
     ) {
         let priorityID = commitment.id
-        // The rung takes the slot, which — because `slot` is derived from exactly this — is what
-        // assigning it *means*. `InterruptionSlot.offering(_ rung:)` is always admitted (R-84a's
-        // asymmetry: the accusation wins and the reverse never happens), and the question it
-        // displaces has already been read out of the slot by the decider and handed in as
-        // `displaced`. The commitment travels with the rung: everything it ever writes is keyed
-        // to it (focus-lmo).
-        openRung = OpenRung(rung: rung, priorityID: priorityID)
-        // **The question comes off the screen, not only off the books** (focus-v0u).
+        // Nothing is displaced here any more. The decider offered this rung to the slot and the
+        // slot withheld it if a question was open, so control only reaches this line when the
+        // screen is the accusation's to take (U-2).
         //
-        // This was `openWarrant = nil` and nothing else, and the panel was touched on the
-        // `.panel` branch alone — so a question displaced onto the glyph, the badge or a
-        // notification was left drawn and clickable while this object had forgotten it. The
-        // ladder's ENTRY rung is the menu-bar glyph, which makes that the commonest displacement
-        // there is. The route is known here, so the one exit knows whether anything is taking the
-        // question's surface over.
-        endOpenQuestion(.preempted, replacedOn: route.surface)
         // **The mandate reaches the ladder that persists** (focus-56y, R-80).
         //
         // `NudgeDecider.accuse(…)` folds the mandate into a **copy** of this machine to work out
@@ -593,8 +596,9 @@ final class NudgeHost {
                 subject: rung.subject,
                 priorityID: priorityID
             )
-            // Nothing reached the person, so nothing richer was offered in the question's place.
-            settleOrExpire(displaced, rung: rung, deliveredOn: nil)
+            // Reached nobody at all, so there is no rung on any surface — and nothing may go on
+            // holding the interruption slot in its name (focus-k42).
+            forgetOpenRung()
             return
         }
 
@@ -602,10 +606,14 @@ final class NudgeHost {
         case .menuBar, .popoverBadge:
             // The glyph and the badge are drawn by the composition root's own menu-bar refresh;
             // nothing here has to raise a window for them.
+            //
+            // It landed, so the rung is recorded against the surface it landed on — but
+            // `offersACorrection` is `false` for both of these, so it does not hold the
+            // interruption slot. Nothing can ever take an ambient glyph down, and a rung that held
+            // the slot from a glyph would silence the question affordance for the rest of the
+            // session (focus-k42).
+            openRung = OpenRung(rung: rung, priorityID: priorityID, landedOn: surface)
             delivered(surface: surface, rung: rung, priorityID: priorityID)
-            // Delivered, but onto something with nothing to press: `NudgeSurface.offersACorrection`
-            // is `false` for both, so this does not settle the question it displaced (R-84a).
-            settleOrExpire(displaced, rung: rung, deliveredOn: surface)
 
         case .panel:
             panel.update(AccusationPanelView(presentation: presentation) { [weak self] action, span in
@@ -622,7 +630,11 @@ final class NudgeHost {
             // wrong. An accusation you cannot answer back to is the anti-pattern the Court's
             // product boundary forbids, so it is a deferral: the ladder's clock stays stopped,
             // nothing is counted, and the rung is offered again.
-            openRung?.panelActions = presentation.offeredActionIdentifiers
+            //
+            // The reading is taken against the presentation's own action list rather than against
+            // a list written onto the open rung first: the rung is not recorded at all until it is
+            // known to have landed somewhere answerable, so there is no half-built rung for this
+            // guard to have to unwind (focus-k42).
             let reading = panel.decisionSurfaceReading(
                 offering: presentation.offeredActionIdentifiers
             )
@@ -637,15 +649,20 @@ final class NudgeHost {
                     subject: rung.subject,
                     priorityID: priorityID
                 )
-                // A rung whose corrections are out of reach was not delivered, and the panel has
-                // just been hidden — so the question was replaced by an empty screen.
-                settleOrExpire(displaced, rung: rung, deliveredOn: nil)
+                // The panel has just been hidden, so this rung is on no surface at all. It gives
+                // the slot back and stops offering corrections nobody can see (focus-k42).
+                forgetOpenRung()
                 return
             }
+            // Landed, answerable, and therefore genuinely occupying the one interruption slot —
+            // the case R-84a is actually about.
+            openRung = OpenRung(
+                rung: rung,
+                priorityID: priorityID,
+                landedOn: .panel,
+                panelActions: presentation.offeredActionIdentifiers
+            )
             delivered(surface: .panel, rung: rung, priorityID: priorityID)
-            // The one path R-84a actually describes: an accusation on the panel, with the whole
-            // correction ladder on it, every action within reach.
-            settleOrExpire(displaced, rung: rung, deliveredOn: .panel)
 
         case .notification:
             // **The delivery this rung is going out on** (focus-zrs). A notification's buttons
@@ -654,7 +671,6 @@ final class NudgeHost {
             // Minted here, held on the open rung, and gone the moment the rung is forgotten —
             // which is what makes a click on any other banner refusable rather than obeyed.
             let deliveryID = UUID().uuidString
-            openRung?.notificationDeliveryID = deliveryID
             notifications.deliver(
                 presentation,
                 surroundings: NotificationSurroundings(
@@ -668,8 +684,13 @@ final class NudgeHost {
                 guard let self else { return }
                 switch recorded {
                 case .delivered:
+                    self.openRung = OpenRung(
+                        rung: rung,
+                        priorityID: priorityID,
+                        landedOn: .notification,
+                        notificationDeliveryID: deliveryID
+                    )
                     self.delivered(surface: .notification, rung: rung, priorityID: priorityID)
-                    self.settleOrExpire(displaced, rung: rung, deliveredOn: .notification)
                 case .deferred(let reason):
                     // **A route change, not a log line.** The failed attempt is a deferral, and
                     // the rung is re-offered on the surface the router demoted it to.
@@ -677,22 +698,15 @@ final class NudgeHost {
                         deferral: reason, kind: .accusation, subject: rung.subject,
                         priorityID: priorityID
                     )
-                    // **The displaced question travels with the rung to its new surface**
-                    // (focus-7w3). It used to be dropped here — `preempted: nil` — which meant a
-                    // demoted accusation left the question closed by the line at the top of this
-                    // function and then had no chance to earn it. Carrying it means the question
-                    // is settled if and only if wherever the rung finally lands earns it.
                     self.accuse(
                         rung: rung,
                         route: demotedTo,
-                        displaced: displaced,
                         surroundings: surroundings,
                         commitment: commitment
                     )
                 case .suppressed:
-                    // Nothing was shown. The question was taken off the screen and replaced with
-                    // nothing, which is the case U-1 forbids spending the ask on.
-                    self.settleOrExpire(displaced, rung: rung, deliveredOn: nil)
+                    // Nothing was shown, so this rung is on no surface and holds nothing.
+                    self.forgetOpenRung()
                 }
             }
         }
@@ -781,7 +795,7 @@ final class NudgeHost {
                     \(reading.summary, privacy: .public)
                     """
                 )
-                endOpenQuestion(.neverDelivered, replacedOn: nil)
+                endOpenQuestion(.neverDelivered)
                 record(
                     deferral: .noSurfaceAvailable,
                     kind: .query,
@@ -807,7 +821,7 @@ final class NudgeHost {
         case .menuBar, .notification:
             // A question is never a notification (R-82), and the glyph has no answer affordance.
             // Reaching either would be a routing bug; it is a deferral, never a receipt.
-            endOpenQuestion(.neverDelivered, replacedOn: nil)
+            endOpenQuestion(.neverDelivered)
             record(
                 deferral: .noSurfaceAvailable,
                 kind: .query,
@@ -1176,7 +1190,7 @@ final class NudgeHost {
         panel.withdrawForPresentation()
         // The slot is released by these two and by nothing else: it is derived from the question
         // and the rung, so forgetting them **is** giving it back (focus-zrs).
-        endOpenQuestion(.worldMovedOn, replacedOn: nil)
+        endOpenQuestion(.worldMovedOn)
         forgetOpenRung()
     }
 
@@ -1221,7 +1235,7 @@ final class NudgeHost {
                 it is un-asked rather than counted: \(summary, privacy: .public)
                 """
             )
-            endOpenQuestion(.surfaceWentOutOfReach, replacedOn: nil)
+            endOpenQuestion(.surfaceWentOutOfReach)
             // The delivery is taken off the budget as well as off the screen (focus-mfc), against
             // the question's own key rather than the live pointer (focus-lmo).
             undeliverOpenRecord(
@@ -1260,7 +1274,7 @@ final class NudgeHost {
 
     /// Everything comes down, and any open question ends by the named exit.
     private func closeSurfaces(endingAnyQuestionAs exit: QuestionExit) {
-        endOpenQuestion(exit, replacedOn: nil)
+        endOpenQuestion(exit)
         panel.hide()
         forgetOpenRung()
     }
@@ -1269,8 +1283,8 @@ final class NudgeHost {
     ///
     /// Three things have to happen when a question ends — the record, the slot, and the
     /// **surface** — and five consecutive rounds of this epic each found a different exit that did
-    /// two of the three. The record is `settleOrExpire(…)` and `recordQuestion(…)`; this is the
-    /// other two, and it is the only place in this object that forgets a question.
+    /// two of the three. The record is `recordQuestion(…)`; this is the other two, and it is the
+    /// only place in this object that forgets a question.
     ///
     /// The surface clause is the one that was missing. `accuse(…)` used to clear `openWarrant` on
     /// its own line and then touch the panel **on the `.panel` branch alone** — so a question
@@ -1284,11 +1298,11 @@ final class NudgeHost {
     /// in this epic was the app silencing itself; this one is the app ignoring the person and
     /// asking again, which is U-1's repeat-asking clause broken from the other side.
     ///
-    /// - Parameter replacement: the surface something else is about to occupy in this same turn,
-    ///   for the one exit allowed to hand its surface over. A question on the panel is left where
-    ///   it is only when the accusation replacing it is going onto that same panel; anything else
-    ///   takes it down.
-    private func endOpenQuestion(_ exit: QuestionExit, replacedOn replacement: NudgeSurface?) {
+    /// Since U-2 there is no exit that hands its surface to somebody else in the same turn: an
+    /// accusation can no longer displace a question, so **every** ending takes the question's
+    /// surface down. The `replacedOn:` parameter that used to carry the accusation's route went
+    /// with the mechanism.
+    private func endOpenQuestion(_ exit: QuestionExit) {
         guard let question = openQuestion else { return }
         let surface = question.surface
 
@@ -1297,19 +1311,15 @@ final class NudgeHost {
         // or, worse, that one of them was `nil` from the beginning (focus-zrs).
         openQuestion = nil
 
-        let handsOver = exit.mayHandOverItsSurface && replacement == surface
         switch surface {
         case .panel:
-            // The panel is taken down unless the accusation is going onto it, in which case
-            // `accuse(…)` replaces the content in this same turn and hiding it would be a flicker
-            // between two things the person is meant to read one after the other.
-            if !handsOver { panel.hide() }
+            panel.hide()
         case .popoverBadge:
             // `pendingPopoverQuery` reads `openWarrant`, which is now `nil` — but the popover on
             // screen is an `NSHostingController` built from the presentation the menu bar was
             // last handed, and it does not rebuild itself. The composition root is the only
             // object that knows the menu bar and the nudge loop both exist, so it redraws.
-            if !handsOver { onQuestionSurfacesChanged?() }
+            onQuestionSurfacesChanged?()
         case .menuBar, .notification, nil:
             // Neither can carry a question; reaching one is a routing bug that `ask(…)` already
             // records as a deferral. There is nothing on screen to take down.
@@ -1317,25 +1327,18 @@ final class NudgeHost {
         }
 
         // **The slot is derived, so forgetting the question above has already released it**
-        // (focus-zrs). `releasesTheSlot` was an assignment; what is left of it is a statement, and
-        // this is the one case where the statement can be wrong: `preempted` says the slot is
-        // **not** released because something else is taking it in the same turn, which is only
-        // true if `accuse(…)` assigned `openRung` before calling this. Every other exit
-        // short-circuits, because there is nothing left to be wrong about once the question is
-        // gone.
+        // (focus-zrs). Every exit releases it now — the one that did not was `preempted`, and it
+        // is gone (U-2) — so this is a statement with no remaining exception.
         assert(
-            exit.releasesTheSlot || slot.openAccusation != nil,
-            """
-            a question ended by \(exit.rawValue) without releasing the slot, and with nothing \
-            holding it in its place
-            """
+            openQuestion == nil,
+            "a question ended by \(exit.rawValue) and is somehow still open"
         )
     }
 
     /// Forget the rung on the surface, the corrections it was offering, and the notification
     /// delivery it went out on.
     ///
-    /// One assignment, for the reason `endOpenQuestion(_:replacedOn:)` is one: a reading taken
+    /// One assignment, for the reason `endOpenQuestion(_:)` is one: a reading taken
     /// against a stale action list is a reading of a nudge nobody is looking at, and a delivery
     /// token that outlived its rung is a banner whose buttons still work.
     private func forgetOpenRung() {
@@ -1345,7 +1348,7 @@ final class NudgeHost {
     /// **A question the person can still see and answer that this host has forgotten** — and it
     /// is always empty (focus-v0u).
     ///
-    /// The invariant `endOpenQuestion(_:replacedOn:)` exists to keep, stated as a reading rather
+    /// The invariant `endOpenQuestion(_:)` exists to keep, stated as a reading rather
     /// than as a comment so the unit lane can drive every exit and the self-check can report it.
     /// A non-empty answer is the defect itself: a live panel or an open popover offering three
     /// answers that `answer(_:)` will drop in a `guard`, and a question that will therefore be
@@ -1363,136 +1366,6 @@ final class NudgeHost {
     /// popover on screen is a hosting controller built from the presentation the menu bar was
     /// last handed and does not rebuild itself.
     var onQuestionSurfacesChanged: (@MainActor () -> Void)?
-
-    /// **A question that an accusation is about to displace, read before the surface changes**
-    /// (focus-7w3).
-    ///
-    /// Every field is taken at the moment of displacement and carried to whichever terminal path
-    /// the accusation reaches, because by then the panel is showing the accusation: asking
-    /// `currentReadability()` there would be asking whether the *accusation* is readable, using
-    /// the question's action identifiers, and the honest answer to that is always `notReadable`.
-    /// A question the person could read perfectly well would then be refused a receipt for a
-    /// reason that has nothing to do with it.
-    private struct DisplacedQuestion {
-        let preempted: PreemptedQuery
-        let priorityID: UUID
-        let askedAt: Date
-        /// **The question's own row in the intervention log**, captured here for the same reason
-        /// the readings are. `delivered(surface:rung:priorityID:)` assigns `openRecordID` to the
-        /// *accusation's* new row, and it runs before the settle does — so completing "the open
-        /// record" at the end would mark the accusation dismissed and leave the question's row
-        /// open for ever.
-        let recordID: UUID?
-        let surface: NudgeSurface?
-        let readingAtAsk: SurfaceReadability
-        /// What the question's own surface said at the instant the accusation took it. This is
-        /// the `readingNow` the ledger is given, and taking it here is the whole reason this type
-        /// exists.
-        let readingAtDisplacement: SurfaceReadability
-    }
-
-    /// Read the open question, and take it off the screen without writing anything.
-    ///
-    /// Nothing is recorded here. Whether the asking is written down at all, and whether it
-    /// **settles**, are decided at the end of the accusation by `settleOrExpire(_:rung:deliveredOn:)`.
-    ///
-    /// **It answers `nil` only when the slot and this object disagree** (focus-zrs), which is why
-    /// the disagreement is now impossible: `slot` is *derived* from `openQuestion`, so the
-    /// `PreemptedQuery` the decider computed from it names the very warrant held here. This used
-    /// to open `guard let priorityID = openQuestionPriorityID else { return nil }` against a
-    /// separate store read, and on a divergence it answered `nil` — `settleOrExpire(…)` returned
-    /// on its first line, `PreemptionCredit` was never consulted, and the question's own log row
-    /// stayed open for ever while the warrant had already been cleared. The count below is what
-    /// makes "impossible" a reading rather than a claim.
-    private func displacedQuestion(from preempted: PreemptedQuery) -> DisplacedQuestion? {
-        guard let question = openQuestion else {
-            preemptionsNamingNoQuestion += 1
-            logger.fault(
-                "a preemption named a question this loop is not holding; nothing could be weighed"
-            )
-            return nil
-        }
-        return DisplacedQuestion(
-            preempted: preempted,
-            priorityID: question.priorityID,
-            askedAt: question.askedAt,
-            recordID: openRecordID,
-            surface: question.surface,
-            readingAtAsk: question.readingAtAsk,
-            readingAtDisplacement: currentReadability()
-        )
-    }
-
-    /// **Settle the displaced question only if the accusation earned it** (focus-7w3, R-84a, U-1).
-    ///
-    /// R-84a's argument for settling on a preemption is that the person was handed something
-    /// *richer* about the *same subject*: an accusation with "this is relevant" on it. That
-    /// argument was enforced nowhere — so this is where it becomes a precondition the code checks.
-    /// `PreemptionCredit` is the rule, and it is a pure function in `FocusCore` for the reason
-    /// `QuestionLedgerPolicy` is: a rule that lived in a host as a private method had a source
-    /// scan for a regression test, and an adversarial lens replaced its body with `return true`
-    /// while every test stayed green.
-    ///
-    /// Where the credit is refused the question ends as `expired`, which is not a lesser record —
-    /// it is the correct one. `QuestionLedgerPolicy` still writes the asking down if the person
-    /// could read it at both ends, `askedCount(…)` still counts it, and the question **comes
-    /// back**, because an interruption the person never saw must not spend the one ask.
-    private func settleOrExpire(
-        _ displaced: DisplacedQuestion?,
-        rung: LadderRung,
-        deliveredOn surface: NudgeSurface?
-    ) {
-        guard let displaced else { return }
-
-        let credit = PreemptionCredit.decide(
-            questionSubject: displaced.preempted.warrant.subject.identifier,
-            accusationSubject: rung.subject,
-            deliveredOn: surface
-        )
-        let ending = PreemptionCredit.ending(for: credit)
-        lastPreemptionCredit = credit
-
-        if credit != .credited {
-            logger.notice(
-                """
-                a preemption did not earn its settle (\(credit.rawValue, privacy: .public)), \
-                so the question stays askable
-                """
-            )
-        }
-
-        // A question the person could never read is not a question that was asked, so preempting
-        // it costs nothing and writes nothing (focus-kby). The ledger decides that, not this
-        // host: it is handed the two readings and the end path, and it writes or refuses.
-        let wrote = recordQuestion(
-            subjectKind: displaced.preempted.warrant.subject.kind,
-            subject: displaced.preempted.warrant.subject.identifier,
-            reason: displaced.preempted.warrant.reason,
-            // `.declined` settles and `.expired` does not, and the two have to agree with the
-            // ending or `QueryLedger` refuses the write outright — `endingContradictsOutcome`.
-            outcome: ending == .preempted ? displaced.preempted.outcome : .expired,
-            ending: ending,
-            priorityID: displaced.priorityID,
-            askedAt: displaced.askedAt,
-            surface: displaced.surface,
-            readingAtAsk: displaced.readingAtAsk,
-            readingNow: displaced.readingAtDisplacement
-        )
-        // The question's own row, not whichever row is open now: the accusation's delivery has
-        // already replaced `openRecordID`.
-        complete(.dismissed, recordID: displaced.recordID)
-        guard wrote else { return }
-        fatigue.reduce(
-            .queryResolved(ending == .preempted ? displaced.preempted.outcome : .expired),
-            now: monotonicClock.elapsed
-        )
-    }
-
-    /// Why the last preemption did or did not settle the question it displaced.
-    ///
-    /// Read by `--focus-self-check` and by the unit lane. `nil` until one has happened, which is
-    /// what tells "no preemption yet" from "one happened and was refused".
-    private(set) var lastPreemptionCredit: PreemptionCreditReason?
 
     // MARK: - Transitions that end everything
 
@@ -1736,7 +1609,7 @@ final class NudgeHost {
         // the reading it read was the `isVisible` fallback's cheerful `true`. Nothing is written
         // here, which is the whole of F-81: the person asked for their screen back, not to tell
         // the app anything, so the question is still unanswered and will be offered again.
-        endOpenQuestion(.worldMovedOn, replacedOn: nil)
+        endOpenQuestion(.worldMovedOn)
         forgetOpenRung()
         openRecordID = nil
     }
