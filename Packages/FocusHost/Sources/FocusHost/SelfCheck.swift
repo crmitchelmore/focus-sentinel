@@ -1213,6 +1213,17 @@ enum SelfCheck {
         let composition = AppComposition.shared
         var report: [String: Any] = [:]
 
+        // **Every Settings pane is put in front, in turn** (focus-7ow).
+        //
+        // A macOS `TabView` builds only the selected pane. Measured on the first run of this
+        // mechanism: the Privacy pane's own receipts never arrived, because nobody had clicked
+        // Privacy — so every Settings value had to be reported from the *window*, out of the
+        // argument it was about to pass in, and a defect **inside** an unselected pane was
+        // invisible to every lane in the programme. The selection is the composition root's now,
+        // so this walks all three and each pane reports what it drew. They accumulate against one
+        // issue of the connection, which is what `generation` establishes.
+        report["settingsPanesWalked"] = walkSettingsPanes()
+
         report["driveSetPreference"] = driveAppearanceSink()
         report["driveInterventionSink"] = driveInterventionSink()
 
@@ -1259,6 +1270,22 @@ enum SelfCheck {
         }
         report["readings"] = readings
         report["surfacesThatDrewWhatTheAppKnows"] = drewWhatTheAppKnows.sorted()
+
+        // **The prior question, answered here so the gate can fail on it by name** (focus-7ow).
+        //
+        // The readings above answer "did the window draw what it was handed", and they can only
+        // answer it about fields somebody thought to list. This is the audit that says there is
+        // no field of either connection which **no receipt covers at all** — walked with `Mirror`
+        // over the compiled type, so it cannot be written to a known failure.
+        var totalities: [String: Any] = [:]
+        var totalSurfaces: [String] = []
+        for surface in [ShellThemedSurface.cockpit, .settings] {
+            let reading = composition.shellTotalityReading(of: surface)
+            totalities[surface.rawValue] = reading.dictionary
+            if reading.isTotal { totalSurfaces.append(surface.rawValue) }
+        }
+        report["totalities"] = totalities
+        report["connectionsThatAreTotal"] = totalSurfaces.sorted()
         report["surfacesDeclared"] = ShellThemedSurface.allCases.map(\.rawValue).sorted()
         // The values themselves, so a failing gate line can be read without re-running anything.
         report["rendered"] = Dictionary(
@@ -1323,6 +1350,50 @@ enum SelfCheck {
         composition.appearance.preference = observedBefore
         report["restored"] = composition.storedAppearancePreference() == storedBefore
         return report
+    }
+
+    /// **Put every Settings pane in front, in turn, and let each report what it drew**
+    /// (focus-7ow).
+    ///
+    /// The structural residue round 5 named, closed. A macOS `TabView` builds only the selected
+    /// pane, so reporting from inside a pane was measured to produce nothing at all for the two
+    /// panes nobody had clicked — which is why every Settings value used to be reported from the
+    /// *window*, out of the argument it was about to hand over. That bought coverage of the
+    /// arguments at the price of the panes: a mutation **inside** the Privacy pane, printing `/`
+    /// as the place the person's data lives, was reported as the truth by a window stamping its
+    /// own `storeURL`.
+    ///
+    /// The selection is the composition root's now. This drives it through the same verb a click
+    /// takes, gives the run loop a turn so the pane is actually built, and puts it back. The
+    /// reports accumulate against one issue of the connection, so the reading at the end holds
+    /// what all three panes said.
+    ///
+    /// Grant-free: one property write per tab and a run-loop turn.
+    @MainActor
+    static func walkSettingsPanes() -> [String: Any] {
+        let composition = AppComposition.shared
+        let before = composition.settingsTab
+        var visited: [String] = []
+
+        for tab in SettingsTab.allCases {
+            composition.selectSettingsTab(tab)
+            settle(forSeconds: renderSettleSeconds)
+            visited.append(tab.rawValue)
+        }
+
+        composition.selectSettingsTab(before)
+        settle(forSeconds: renderSettleSeconds)
+
+        return [
+            "declared": SettingsTab.allCases.map(\.rawValue).sorted(),
+            "visited": visited,
+            "restored": composition.settingsTab == before,
+            // What each pane reported, keyed by the tab that was in front when it arrived. Read
+            // as evidence rather than asserted: the assertion is that the accumulated reading is
+            // complete, and this is what a person reads when it is not.
+            "reportedAfterTheWalk":
+                (composition.shellRenderings[.settings] ?? .nothing).values.keys.sorted()
+        ]
     }
 
     /// **Press the Intervention pane's controls without a grant** (focus-h7h, focus-cp2 M3).

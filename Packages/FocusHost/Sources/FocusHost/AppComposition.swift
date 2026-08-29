@@ -928,8 +928,75 @@ public final class AppComposition {
     /// Late reports are kept rather than dropped: the reading compares the generation itself, so
     /// a stale one has to survive to be reported as stale. Dropping it here would turn "drawing
     /// from a replaced connection" back into "reported nothing", which is a different defect.
+    ///
+    /// **Reports accumulate forwards and a stale one replaces** (focus-7ow).
+    ///
+    /// The Settings window's panes are drawn one at a time — a macOS `TabView` builds only the
+    /// selected one, and choosing a different one re-evaluates the window body and therefore
+    /// takes a fresh issue of the connection. So a reading taken after the self-check has walked
+    /// all three panes has to hold what each of them said, and each of them said it under a
+    /// different issue number.
+    ///
+    /// That is the **same** rule `expect(_:_:for:)` and `nextGeneration(for:)` already follow on
+    /// the other side of the comparison: expectations are additive and are deliberately not
+    /// cleared when a new issue is taken, because the traits injection and the connection are two
+    /// separate wires evaluated at two separate moments of one pass. What each side holds is
+    /// therefore the same thing — the latest answer for every field, from whichever pass produced
+    /// it — and the two are comparable field by field.
+    ///
+    /// A report carrying an **older** issue than the one already recorded still replaces the
+    /// whole reading rather than merging into it. That is a window drawing from a connection this
+    /// object has already replaced, it is its own defect, and merging it would turn "drawing from
+    /// something stale" into "everything is fine".
     private func record(_ values: ShellRenderedValues, for surface: ShellThemedSurface) {
-        shellRenderings[surface] = values
+        guard var existing = shellRenderings[surface], values.generation >= existing.generation
+        else {
+            shellRenderings[surface] = values
+            return
+        }
+        existing.values.merge(values.values) { _, latest in latest }
+        existing.generation = values.generation
+        shellRenderings[surface] = existing
+    }
+
+    // MARK: - Totality: every field of every connection, echoed by a receipt (focus-7ow)
+
+    /// What each connection's audit said, taken at the moment the connection was built.
+    private var shellTotalities: [ShellThemedSurface: ShellTotalityReading] = [:]
+
+    /// **Whether the receipts for this window's connection are total.**
+    ///
+    /// The reading that ends the enumeration. `ShellRenderReading` answers "did the window draw
+    /// what it was handed", and it can only answer it about fields somebody thought to list —
+    /// which is how a residue mutant reproduced the round-3 invisibility signature verbatim while
+    /// four drawn things lied. This answers the prior question: **is there a field of this
+    /// connection that no receipt covers at all.**
+    public func shellTotalityReading(of surface: ShellThemedSurface) -> ShellTotalityReading {
+        shellTotalities[surface]
+            ?? ShellTotalityReading(
+                connection: surface.rawValue,
+                walkedPaths: [],
+                unmappedPaths: [],
+                strandedPaths: [],
+                unreportedPaths: []
+            )
+    }
+
+    /// Walk the connection this object has just built, against the expectations it has just
+    /// recorded.
+    ///
+    /// Run here rather than in a test fixture because this is the only place that holds both
+    /// halves at once: the value with all its fields, and the set of fields this object has an
+    /// opinion about. A field with no echo, or an echo pointing at a field nothing expects, is a
+    /// hole in the boundary and the self-check fails on it by name.
+    private func audit<Connection: ShellDrawnConnection>(
+        _ connection: Connection,
+        for surface: ShellThemedSurface
+    ) {
+        shellTotalities[surface] = ShellConnectionTotality.audit(
+            connection,
+            reported: Set(shellExpectations[surface, default: [:]].keys)
+        )
     }
 
     /// Take the next issue number for a window.
@@ -983,16 +1050,69 @@ public final class AppComposition {
         let generation = nextGeneration(for: .cockpit)
 
         expect(.priorityIntent, state.priority?.intent ?? "", for: .cockpit)
+        expect(.priorityDetail, ShellValueDigest.describe(state.priority), for: .cockpit)
         expect(.status, state.status.rawValue, for: .cockpit)
+        // The **string key** the footer's label was given, not the flag behind it. A boolean flip
+        // told the person their store was unavailable when it was fine, and the flag alone would
+        // have been reported truthfully by a footer drawing the opposite sentence (focus-7ow).
+        expect(
+            .storeStatus,
+            (state.storeIsReady ? ShellStringKey.cockpitStoreReady : .cockpitStoreUnavailable)
+                .rawValue,
+            for: .cockpit
+        )
+        // The banner is on screen when the state asks for it **and** a host can dismiss it —
+        // which is the conjunction the window draws, so it is the conjunction this expects.
+        expect(
+            .ritualBanner,
+            state.showsRitualPrompt && actions != nil ? "shown" : "hidden",
+            for: .cockpit
+        )
         expect(.recentCount, String(state.recent.count), for: .cockpit)
+        expect(.recentDigest, ShellValueDigest.describe(state.recent), for: .cockpit)
         expect(.handoffTask, state.pendingHandoff?.task ?? "", for: .cockpit)
-        expect(.sessionPhase, state.session?.phase.rawValue ?? "none", for: .cockpit)
+        expect(.handoffDetail, ShellValueDigest.describe(state.pendingHandoff), for: .cockpit)
+        // **The commitment sections, which the window draws only while there is one.** The window
+        // reports `noCommitment` for each of them when there is not, so a section somebody
+        // deleted and a section there was nothing to draw stay two different readings.
+        let hasCommitment = state.priority != nil
+        expect(
+            .priorityDoneWhen,
+            hasCommitment
+                ? (state.priority?.doneWhen ?? "")
+                : ShellRenderedValues.noCommitment,
+            for: .cockpit
+        )
+        expect(
+            .sessionPhase,
+            hasCommitment
+                ? (state.session?.phase.rawValue ?? "none")
+                : ShellRenderedValues.noCommitment,
+            for: .cockpit
+        )
+        expect(
+            .sessionDetail,
+            hasCommitment
+                ? ShellValueDigest.describe(state.session)
+                : ShellRenderedValues.noCommitment,
+            for: .cockpit
+        )
         expect(
             .sessionElapsedSeconds,
-            elapsed.map { String(Int($0)) } ?? "none",
+            hasCommitment
+                ? (elapsed.map { String(Int($0)) } ?? "none")
+                : ShellRenderedValues.noCommitment,
+            for: .cockpit
+        )
+        expect(
+            .lastActiveApp,
+            hasCommitment
+                ? (lastActiveBundleID ?? "none")
+                : ShellRenderedValues.noCommitment,
             for: .cockpit
         )
         expect(.capabilityStates, state.capabilities.renderedDescription, for: .cockpit)
+        expect(.sensingDetail, ShellValueDigest.describe(state.sensing), for: .cockpit)
         expect(
             .sensingSummary,
             SensingStatusView.renderedDescription(
@@ -1006,7 +1126,7 @@ public final class AppComposition {
         // disabled and no capture field at all — a window that looks finished and does nothing.
         expect(.mutationHostsAttached, "priority/session", for: .cockpit)
 
-        return CockpitConnection(
+        let connection = CockpitConnection(
             state: state,
             actions: actions,
             sessionActions: sessions,
@@ -1016,6 +1136,8 @@ public final class AppComposition {
             didRender: { [weak self] in self?.shellWires.insert(.cockpitRendered) },
             didDraw: { [weak self] values in self?.record(values, for: .cockpit) }
         )
+        audit(connection, for: .cockpit)
+        return connection
     }
 
     /// **Everything the Settings window draws and every verb it can perform**, in the same shape
@@ -1040,15 +1162,42 @@ public final class AppComposition {
         let intervention = interventionSettings
         let generation = nextGeneration(for: .settings)
 
+        let storeURL = FocusStore.applicationSupportURL
+
         expect(.appearancePreference, preference.rawValue, for: .settings)
         expect(.privacyCapabilities, matrix.renderedDescription, for: .settings)
+        // Where the Privacy pane tells the person their data lives, and what its Reveal in Finder
+        // button opens. A mutation printed `/` and nothing anywhere noticed (focus-7ow).
+        expect(.privacyStorePath, storeURL.path(percentEncoded: false), for: .settings)
         expect(.verdictBand, currentVerdict?.band?.rawValue ?? "none", for: .settings)
+        expect(.verdictDetail, ShellValueDigest.describe(currentVerdict), for: .settings)
+        expect(.sensingDetail, ShellValueDigest.describe(summary), for: .settings)
+        // **All seven fields of `InterventionSettings`** (focus-7ow). Two were expected before;
+        // the other five could be replaced with anything at all while the gate stayed green, and
+        // they are what the person is shown when they ask what this app will do to them.
         expect(.interventionVoice, intervention.voice.rawValue, for: .settings)
         expect(
             .reducedInterruption,
             intervention.reducedInterruption ? "on" : "off",
             for: .settings
         )
+        expect(
+            .reducedInterruptionForced,
+            intervention.reducedInterruptionIsForced ? "forced" : "chosen",
+            for: .settings
+        )
+        expect(.quietHours, ShellValueDigest.describe(intervention.quietHours), for: .settings)
+        expect(.notificationAuthorisation, intervention.authorisation.rawValue, for: .settings)
+        expect(.interruptionUsage, ShellValueDigest.describe(intervention.usage), for: .settings)
+        expect(
+            .presentationExclusions,
+            ShellValueDigest.describe(intervention.presentationExclusions),
+            for: .settings
+        )
+        // Which pane is in front. The window reports it, and it is what makes the other readings
+        // legible: a value missing because its pane was never selected is a different thing from
+        // a value missing because the pane drew nothing.
+        expect(.settingsTab, settingsTab.rawValue, for: .settings)
         // The Privacy pane draws the working as well as the sentence, which is what
         // `showsDetail` turns on — and it is what tells this field apart from the cockpit's.
         expect(
@@ -1061,17 +1210,19 @@ public final class AppComposition {
             for: .settings
         )
 
-        return ShellSettingsConnection(
+        let connection = ShellSettingsConnection(
             preference: preference,
             setPreference: { [weak self] preference in
                 self?.applyAppearancePreference(preference)
             },
-            storeURL: FocusStore.applicationSupportURL,
+            storeURL: storeURL,
             summary: summary,
             capabilities: matrix,
             verdict: currentVerdict,
             intervention: intervention,
             onInterventionAction: { [weak self] action in self?.perform(action) },
+            selectedTab: settingsTab,
+            selectTab: { [weak self] tab in self?.selectSettingsTab(tab) },
             generation: generation,
             didRender: { [weak self] in self?.shellWires.insert(.settingsRendered) },
             didDraw: { [weak self] rendering in
@@ -1085,6 +1236,30 @@ public final class AppComposition {
                 self.settingsSinks = rendering
             }
         )
+        audit(connection, for: .settings)
+        return connection
+    }
+
+    /// **Which Settings pane is on screen** (focus-7ow).
+    ///
+    /// Held here rather than as a `@State` in the window, for the reason the appearance
+    /// preference is: a macOS `TabView` builds only the selected pane, so before this existed
+    /// every receipt inside an unselected pane simply never arrived — measured, on the first run
+    /// of the render receipts: the Privacy pane's stamps were absent because nobody had clicked
+    /// Privacy. A defect inside an unselected pane was invisible to every lane in the programme.
+    /// The self-check walks all three.
+    /// An `@Observable` box rather than a stored property, and that is a measurement: this object
+    /// is a plain `final class`, so writing a property on it invalidates no SwiftUI body. Driven
+    /// from a stored property here, all three tabs moved and the window went on reporting the
+    /// General pane's one value. See `SettingsTabSelection`.
+    public let settingsTabSelection = SettingsTabSelection()
+
+    public var settingsTab: SettingsTab { settingsTabSelection.tab }
+
+    /// A tab was chosen — by a person clicking it, or by the self-check walking the panes.
+    public func selectSettingsTab(_ tab: SettingsTab) {
+        settingsTabSelection.tab = tab
+        expect(.settingsTab, tab.rawValue, for: .settings)
     }
 
     /// **What the Settings window's controls will actually reach**, as the window handed it back

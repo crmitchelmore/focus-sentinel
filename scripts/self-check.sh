@@ -940,13 +940,95 @@ check(
 # NON-VACUITY. A field the root has no opinion about is skipped rather than failed, so a root that
 # recorded nothing at all would make every assertion above pass for a window drawing anything.
 # These floors are the same job `len(declared) >= 12` does for the wire enumeration.
-for surface, floor in [("cockpit", 9), ("settings", 7), ("help", 2)]:
+for surface, floor in [("cockpit", 18), ("settings", 15), ("help", 2)]:
     reading = readings.get(surface) or {}
     check(
         isinstance(reading.get("expectedFieldCount"), int)
         and reading["expectedFieldCount"] >= floor,
         f"the composition root recorded at least {floor} values it handed the {surface} window",
         reading.get("expectedFieldCount"),
+    )
+
+# --- TOTALITY: the boundary, not the enumeration (focus-7ow) -----------------------------------
+#
+# THE DOCTRINE FAILURE THIS BLOCK EXISTS TO END. The block above answers "did the window draw what
+# it was handed", and for five consecutive rounds it could only answer it about fields somebody had
+# thought to list. `ShellRenderedField` had a case for every value the round-3 mutant touched and
+# for nothing else, so a residue mutant built out of four values nobody had enumerated — two of
+# them boolean FLIPS — reproduced the round-3 invisibility signature verbatim: 286 ok against 286,
+# an EMPTY ok-assertion diff, a full nineteen-stage PASS, and four things on the screen saying
+# something false. The cockpit's footer told the person their store was unavailable when it was
+# fine; the Privacy pane printed `/` as where their data lives, with Reveal in Finder wired to
+# open it.
+#
+# So the composition root now walks each connection with `Mirror` and asserts that EVERY STORED
+# PROPERTY is bound to a receipt the root records an expectation for. It cannot be written to a
+# known failure, because it does not know what the failure is — it knows only what the type has.
+# Add a field and report nothing, and this goes red naming the field.
+
+totalities = rendering.get("totalities") or {}
+for surface, connection, floor in [
+    ("cockpit", "CockpitConnection", 19),
+    ("settings", "ShellSettingsConnection", 20),
+]:
+    totality = totalities.get(surface) or {}
+    check(
+        totality.get("isTotal") is True,
+        f"every field of {connection} is echoed by a receipt",
+        totality.get("summary"),
+    )
+    # NON-VACUITY, and it is the same job the field-count floors above do: an audit that walked
+    # nothing has an empty `unmappedPaths` and would pass every clause for a connection nobody
+    # looked at.
+    check(
+        isinstance(totality.get("fieldCount"), int) and totality["fieldCount"] >= floor,
+        f"the audit of {connection} walked at least {floor} fields",
+        (totality.get("fieldCount"), totality.get("walkedPaths")),
+    )
+
+check(
+    set(rendering.get("connectionsThatAreTotal") or []) == {"cockpit", "settings"},
+    "both scene connections are total",
+    rendering.get("connectionsThatAreTotal"),
+)
+
+# --- the structural residue round 5 named, closed (focus-7ow) ----------------------------------
+#
+# A macOS TabView builds only the selected pane. Measured: the Privacy pane's own receipts never
+# arrived, because nobody had clicked Privacy — so every Settings value had to be reported from
+# the WINDOW, out of the argument it was about to hand a pane, and a defect INSIDE an unselected
+# pane was invisible to every lane in the programme. The selection is driven from the composition
+# root now and the self-check walks all three panes; these assert that the walk happened, that it
+# put the person's tab back, and that the panes between them reported the values only they can.
+
+panes = rendering.get("settingsPanesWalked") or {}
+check(
+    panes.get("visited") == panes.get("declared"),
+    "the self-check put every declared Settings pane in front",
+    (panes.get("visited"), panes.get("declared")),
+)
+check(
+    panes.get("restored") is True,
+    "the Settings pane the person had selected was put back",
+    panes.get("restored"),
+)
+# The three fields that can ONLY come from inside a pane: the Privacy pane's store path and the
+# five Intervention fields that were carried into the window and reported by nothing. If the walk
+# silently stopped working these would be absent and the reading above would already be red — this
+# names them, so the failure says which pane stopped drawing rather than only that one did.
+reported_after_walk = set(panes.get("reportedAfterTheWalk") or [])
+for field in [
+    "privacyStorePath",
+    "quietHours",
+    "notificationAuthorisation",
+    "interruptionUsage",
+    "presentationExclusions",
+    "reducedInterruptionForced",
+]:
+    check(
+        field in reported_after_walk,
+        f"a Settings pane reported {field}, which no window-level stamp can produce",
+        sorted(reported_after_walk),
     )
 
 # The cockpit drew the LIVE handoff rather than a placeholder's empty one. The handoff probe puts
