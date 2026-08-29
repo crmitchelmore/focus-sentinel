@@ -1570,10 +1570,16 @@ check(
     "no surface is offering a question the nudge loop has forgotten",
     nudge.get("orphanedQuestionSurfaces"),
 )
-# The exits are enumerated, and the unit lane walks every one of them. Asserted here so a sixth
-# exit added to the enum is visible in the gate log rather than only in a test file.
+# The exits are enumerated, and the unit lane walks every one of them. Asserted here so an exit
+# added to the enum is visible in the gate log rather than only in a test file.
+#
+# **Four, not five** (U-2). The fifth was `preempted`, and it went with the mechanism: an accusation
+# can no longer take a question's ask or its surface, so the door it went through is gone rather
+# than guarded. Exact equality rather than the `>= 5` this used to be — a floor could not see an
+# exit being *removed*, which is precisely the edit that has just happened, and a count that only
+# fails upward is half a lint.
 check(
-    len(nudge.get("questionExitsDeclared") or []) >= 5,
+    len(nudge.get("questionExitsDeclared") or []) == 4,
     "every way an open question can end is enumerated",
     nudge.get("questionExitsDeclared"),
 )
