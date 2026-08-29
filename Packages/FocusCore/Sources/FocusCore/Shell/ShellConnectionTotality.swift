@@ -184,12 +184,30 @@ public enum ShellConnectionTotality {
         var walked: [String] = []
         var unmapped: [String] = []
         var unreported: [String] = []
+        var pruned: Set<String> = []
 
         walk(value, prefix: "", echoes: echoes, reported: reported,
-             walked: &walked, unmapped: &unmapped, unreported: &unreported)
+             walked: &walked, unmapped: &unmapped, unreported: &unreported, pruned: &pruned)
 
         let reachedPaths = Set(walked)
-        let stranded = echoes.keys.filter { !reachedPaths.contains($0) }.sorted()
+        // **A path under a `nil` is not a stranded echo** (focus-cxs).
+        //
+        // `strandedPaths` answers *"the map names a property the type no longer has"*, and the
+        // deep walk gave it a second way to fire that means nothing of the sort: the live cockpit
+        // has no pending handoff, so `state.pendingHandoff` is `nil`, so `state.pendingHandoff.task`
+        // is never reached — an absence of a **value**, not of a property.
+        //
+        // So the walk records where it pruned, and an echo below a pruned prefix is neither
+        // stranded nor satisfied: it is simply not applicable to this value. The type-level
+        // question — *does this property still exist?* — is asked by the unit lane, of a value
+        // with every optional populated, where nothing is pruned and every declared path is
+        // either reached or genuinely stranded.
+        let stranded = echoes.keys
+            .filter { path in
+                !reachedPaths.contains(path)
+                    && !pruned.contains(where: { path.hasPrefix($0 + ".") })
+            }
+            .sorted()
 
         return ShellTotalityReading(
             connection: connectionName,
@@ -207,7 +225,8 @@ public enum ShellConnectionTotality {
         reported: Set<ShellRenderedField>,
         walked: inout [String],
         unmapped: inout [String],
-        unreported: inout [String]
+        unreported: inout [String],
+        pruned: inout Set<String>
     ) {
         for child in Mirror(reflecting: value).children {
             guard let label = child.label else { continue }
@@ -221,6 +240,10 @@ public enum ShellConnectionTotality {
 
             switch echo {
             case .undrawn:
+                // The subtree is pruned, and that is a decision rather than an oversight: nothing
+                // *under* a value this window does not draw is drawn either. The exemption is
+                // written down at the parent, where a reviewer can argue with it.
+                pruned.insert(path)
                 continue
 
             case .drawn(let fields):
@@ -233,6 +256,16 @@ public enum ShellConnectionTotality {
                 for field in fields where !reported.contains(field) {
                     unreported.append("\(path) → \(field.rawValue)")
                 }
+                // **And then descend anyway** (focus-cxs). This is the round-6 residue, named by
+                // round 6 itself: *"deeper structs are leaves"*. A `.drawn` binding stopped the
+                // walk, so a field invented **inside** `PrioritySnapshot` or `InterventionSettings`
+                // was reached by nothing — and the whole-value digest that was supposed to cover it
+                // is computed on both sides from the same input, so it does not participate in the
+                // comparison either. A three-line residue mutant gave 19/19 PASS, 303 ok against
+                // 303 and an empty ok-assertion diff while three drawn things lied.
+                descend(child.value, path: path, echoes: echoes, reported: reported,
+                        walked: &walked, unmapped: &unmapped, unreported: &unreported,
+                        pruned: &pruned)
 
             case .composite:
                 // Descend through an optional's wrapper so `parent.child` is the path either way.
@@ -245,6 +278,7 @@ public enum ShellConnectionTotality {
                 if mirror.displayStyle == .optional {
                     guard let wrapped = mirror.children.first?.value else {
                         unreported.append("\(path) → (composite is nil, nothing could be walked)")
+                        pruned.insert(path)
                         continue
                     }
                     inner = wrapped
@@ -252,8 +286,73 @@ public enum ShellConnectionTotality {
                     inner = child.value
                 }
                 walk(inner, prefix: path, echoes: echoes, reported: reported,
-                     walked: &walked, unmapped: &unmapped, unreported: &unreported)
+                     walked: &walked, unmapped: &unmapped, unreported: &unreported,
+                     pruned: &pruned)
             }
         }
+    }
+
+    /// Walk into a `.drawn` value if it is one of **ours** and has members of its own.
+    ///
+    /// A `nil` optional is simply nothing to walk — unlike a `nil` `.composite`, which is a hole,
+    /// because a `.drawn` value has already bound itself to a receipt and the members underneath
+    /// are additional detail rather than the whole of it.
+    private static func descend(
+        _ value: Any,
+        path: String,
+        echoes: [String: ShellFieldEcho],
+        reported: Set<ShellRenderedField>,
+        walked: inout [String],
+        unmapped: inout [String],
+        unreported: inout [String],
+        pruned: inout Set<String>
+    ) {
+        let mirror = Mirror(reflecting: value)
+        if mirror.displayStyle == .optional {
+            guard let wrapped = mirror.children.first?.value else {
+                // Nothing to walk, and nothing wrong: the value is absent, not the property.
+                pruned.insert(path)
+                return
+            }
+            descend(wrapped, path: path, echoes: echoes, reported: reported,
+                    walked: &walked, unmapped: &unmapped, unreported: &unreported,
+                    pruned: &pruned)
+            return
+        }
+        guard isOurOwnStruct(value, mirror: mirror) else {
+            // A leaf: one datum, and nothing below it to declare. Recorded as pruned so that an
+            // echo somebody wrote for a member of a foreign type reads as stranded rather than
+            // as satisfied.
+            return
+        }
+        walk(value, prefix: path, echoes: echoes, reported: reported,
+             walked: &walked, unmapped: &unmapped, unreported: &unreported, pruned: &pruned)
+    }
+
+    /// **Where the walk stops, decided by ownership rather than by a list of exceptions**
+    /// (focus-cxs).
+    ///
+    /// A value type declared in one of this programme's own modules is *a bag of facts we are
+    /// responsible for drawing*, so the walk goes into it and every member must be bound. Anything
+    /// else — `UUID`, `Date`, `URL`, `Duration`, `Data`, an array, a set, a dictionary, an enum —
+    /// is **one datum**, and is where a path ends.
+    ///
+    /// The rule is ownership and not a denylist on purpose. This repository has been taught twice
+    /// what curating a list against a known failure is worth: round 4 enumerated the nine values
+    /// one mutant touched and round 5 lied about four more. A denylist of "scalar-like Foundation
+    /// types" would be the same instrument again — and it would also be wrong, because `Date`'s
+    /// `Mirror` exposes `timeIntervalSinceReferenceDate` and `Duration`'s exposes `_low`/`_high`,
+    /// which are storage details no window draws and no table should have to name.
+    ///
+    /// Enums stop the walk whatever module they come from: a case with a payload reflects as a
+    /// child named after the case, so the *path* would depend on the value, and a table keyed by
+    /// path could not name it. `ShellValueDigest` is what reads inside those.
+    private static func isOurOwnStruct(_ value: Any, mirror: Mirror) -> Bool {
+        guard mirror.displayStyle == .struct, !mirror.children.isEmpty else { return false }
+        // `String(reflecting:)` on a metatype is the fully-qualified name — `FocusCore.CockpitState`,
+        // `Foundation.Date` — so the module is everything before the first dot.
+        let qualified = String(reflecting: type(of: value))
+        guard let module = qualified.split(separator: ".").first else { return false }
+        return module.hasPrefix("Focus")
     }
 }

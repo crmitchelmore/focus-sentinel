@@ -152,8 +152,87 @@ extension CockpitConnection: ShellDrawnConnection {
             "state.sensing": .drawn([.sensingSummary, .sensingDetail]),
             // e04's verdict inspector is a Settings surface. The cockpit draws a `status` badge,
             // never the verdict itself — `grep state.verdict CockpitView.swift` finds nothing.
+            // `.undrawn` prunes the subtree with it, which is the decision it is meant to be:
+            // nothing *inside* a value this window does not draw is drawn either.
             "state.verdict": .undrawn(.notDrawnOnThisSurface),
-            "state.capabilities": .drawn([.capabilityStates])
+            "state.capabilities": .drawn([.capabilityStates]),
+
+            // --- one level down (focus-cxs) -----------------------------------------------
+            //
+            // Round 6 closed the boundary at this struct and named its own residue in the same
+            // breath: *"deeper structs are leaves"*. A `.drawn` binding stopped the walk, so a
+            // field invented inside `PrioritySnapshot` was reached by nothing — and the
+            // whole-value digest that was supposed to cover it is computed on **both** sides from
+            // the same input, so it does not participate in the comparison either. A three-line
+            // residue mutant gave 19/19 PASS, 303 ok against 303 and an empty ok-assertion diff
+            // while three drawn things lied.
+            //
+            // Most of these bind to the digest, and that is an honest claim rather than a
+            // shrug: `ShellValueDigest.describe` is `Mirror` to the leaves, so every field below
+            // genuinely is in the string the window reports. What the entries buy is **totality**
+            // — a field added tomorrow has no line here, and a path with no line is a failure.
+            "state.priority.id": .drawn([.priorityDetail]),
+            "state.priority.intent": .drawn([.priorityIntent, .priorityDetail]),
+            "state.priority.doneWhen": .drawn([.priorityDoneWhen, .priorityDetail]),
+            "state.priority.createdAt": .drawn([.priorityDetail]),
+            "state.priority.lastActivatedAt": .drawn([.priorityDetail]),
+            "state.priority.timeboxSeconds": .drawn([.priorityDetail]),
+            "state.priority.startedAt": .drawn([.priorityDetail]),
+            "state.priority.timebox": .drawn([.priorityDetail]),
+            "state.priority.contextItems": .drawn([.priorityDetail]),
+            "state.priority.rules": .drawn([.priorityDetail]),
+            "state.priority.assessment": .drawn([.priorityDetail]),
+
+            "state.pendingHandoff.verb": .drawn([.handoffDetail]),
+            "state.pendingHandoff.task": .drawn([.handoffTask, .handoffDetail]),
+            "state.pendingHandoff.doneWhen": .drawn([.handoffDetail]),
+            "state.pendingHandoff.flags": .drawn([.handoffDetail]),
+
+            "state.session.sessionID": .drawn([.sessionDetail]),
+            "state.session.taskID": .drawn([.sessionDetail]),
+            "state.session.phase": .drawn([.sessionPhase, .sessionDetail]),
+            "state.session.pauseCauses": .drawn([.sessionDetail]),
+            "state.session.resumeTo": .drawn([.sessionDetail]),
+            "state.session.kind": .drawn([.sessionDetail]),
+            "state.session.startedAt": .drawn([.sessionDetail]),
+            "state.session.endedAt": .drawn([.sessionDetail]),
+            "state.session.plannedSeconds": .drawn([.sessionDetail]),
+            "state.session.deadlineAt": .drawn([.sessionDetail]),
+            "state.session.notes": .drawn([.sessionDetail]),
+
+            // The footer's *sentence* is a projection of three of these — `headlineKey(for:)`
+            // reads `isWatching`, which is `isObserving && liveObserverCount > 0`, and
+            // `isPausedByUser`. The other seven reach the sentence not at all, which is exactly
+            // why `sensingDetail` exists and why they are bound to it alone.
+            "state.sensing.isObserving": .drawn([.sensingSummary, .sensingDetail]),
+            "state.sensing.isPausedByUser": .drawn([.sensingSummary, .sensingDetail]),
+            "state.sensing.liveObserverCount": .drawn([.sensingSummary, .sensingDetail]),
+            "state.sensing.redundantActivations": .drawn([.sensingDetail]),
+            "state.sensing.lifecycle": .drawn([.sensingDetail]),
+            "state.sensing.isUserIdle": .drawn([.sensingDetail]),
+            "state.sensing.media": .drawn([.sensingDetail]),
+            "state.sensing.cameraReason": .drawn([.sensingDetail]),
+            "state.sensing.presentation": .drawn([.sensingDetail]),
+            "state.sensing.isOnSecondaryDisplay": .drawn([.sensingDetail]),
+            // Two levels down, and the walk keeps going because these are our own value types
+            // too. The Privacy pane draws the microphone row and the presentation quorum's three
+            // inputs; the cockpit's footer draws neither, and both are in the digest.
+            "state.sensing.media.microphoneRunning": .drawn([.sensingDetail]),
+            "state.sensing.media.cameraRunning": .drawn([.sensingDetail]),
+            "state.sensing.presentation.signals": .drawn([.sensingDetail]),
+            "state.sensing.presentation.isUserExcluded": .drawn([.sensingDetail]),
+            "state.sensing.presentation.isPresenting": .drawn([.sensingDetail]),
+            // Three levels down, and this is where the walk stops of its own accord: three `Bool`s
+            // have no members. The Privacy pane draws the quorum's working — each signal whether
+            // the answer is yes or no — and the digest carries all three.
+            "state.sensing.presentation.signals.frontmostWindowFillsAScreen": .drawn([.sensingDetail]),
+            "state.sensing.presentation.signals.presentationOptionsSayFullScreen": .drawn([.sensingDetail]),
+            "state.sensing.presentation.signals.menuBarHidden": .drawn([.sensingDetail]),
+
+            // The matrix's one stored property. `CapabilityMatrix.renderedDescription` is a
+            // hand-written whole-value line — the order and the spelling are load-bearing in a
+            // gate log — and it names every capability and its state.
+            "state.capabilities.observations": .drawn([.capabilityStates])
         ]
     }
 }

@@ -16,38 +16,51 @@ import Testing
 @Suite("Totality: the Settings connection")
 @MainActor
 struct SettingsConnectionTotalityTests {
-    @Test("every field of ShellSettingsConnection is bound to a receipt")
+    /// ## Why every optional is populated (focus-cxs)
+    ///
+    /// Because a `nil` has no members to walk. Round 6 closed this boundary at the connection
+    /// struct and named its own residue in the same breath — *"deeper structs are leaves"* — so a
+    /// field invented inside `InterventionSettings`' `usage` or `quietHours` was reached by
+    /// nothing. The walk now descends into every value type of ours it meets; asking it the
+    /// question about the **type** means handing it a value with every branch filled in.
+    @Test("every field of ShellSettingsConnection, to the leaves, is bound to a receipt")
     func theSettingsConnectionIsTotal() {
         let reading = ShellConnectionTotality.audit(
             ShellSettingsConnection(
                 preference: .matchSystem,
                 setPreference: { _ in },
                 storeURL: URL(fileURLWithPath: "/tmp/focus"),
-                summary: .inactive,
+                summary: SensingSummary(isObserving: true, liveObserverCount: 3),
                 capabilities: CapabilityMatrix(),
-                verdict: nil,
-                intervention: InterventionSettings(),
+                verdict: Self.verdict,
+                intervention: InterventionSettings(
+                    quietHours: QuietHoursWindow(startMinuteOfDay: 22 * 60, endMinuteOfDay: 7 * 60)
+                ),
                 onInterventionAction: { _ in }
             ),
             reported: Set(ShellRenderedField.allCases)
         )
 
         #expect(reading.isTotal, "\(reading.summary)")
-        // Non-vacuity: the walk descended into the intervention settings rather than stopping at
-        // them, which is the whole point — five of those seven fields were unreported.
+        // Non-vacuity, one level down and further: the walk descends into the intervention
+        // settings rather than stopping at them — five of those seven fields were unreported —
+        // and now into the values *they* hold.
         for member in [
             "intervention.quietHours",
             "intervention.authorisation",
             "intervention.usage",
             "intervention.presentationExclusions",
-            "intervention.reducedInterruptionIsForced"
+            "intervention.reducedInterruptionIsForced",
+            "intervention.usage.accusationsToday",
+            "intervention.quietHours.startMinuteOfDay",
+            "summary.isOnSecondaryDisplay",
+            "capabilities.observations"
         ] {
-            #expect(reading.walkedPaths.contains(member), "the walk never reached \(member)")
+            let reached = reading.walkedPaths.contains(member)
+            #expect(reached, "the walk never reached \(member)")
         }
-        #expect(
-            reading.walkedPaths.count >= 20,
-            "the walk reached only \(reading.walkedPaths.count) fields: \(reading.walkedPaths)"
-        )
+        let count = reading.walkedPaths.count
+        #expect(count >= 35, "the walk reached only \(count) fields: \(reading.walkedPaths)")
     }
 
     /// **Nothing may be bound to a field no window ever stamps.** The audit chains into
@@ -82,6 +95,23 @@ struct SettingsConnectionTotalityTests {
     /// exists** for each bound field — the render half is `ShellRenderFidelity`'s, and it runs in
     /// the app where the windows are real. This is the cheap half, and it is the half that
     /// catches a binding added without a stamp.
+    /// A verdict with every member filled in, so the walk has something to reach at each path
+    /// `VerdictSnapshot` declares (focus-cxs).
+    static let verdict = VerdictSnapshot(
+        status: .unrelated,
+        stage: .heuristic,
+        band: .high,
+        drift: .aligned,
+        eligibility: .suppressed(.noActivePriority),
+        explanation: Explanation.make(
+            stage: .heuristic,
+            band: .high,
+            clauses: [.sustainedDwell(seconds: 180)],
+            stamp: .current
+        ),
+        stampKey: EngineStamp.current.cacheKey
+    )
+
     static func shellSourceFiles() throws -> [String] {
         var directory = URL(fileURLWithPath: #filePath)
         // …/Tests/FocusUITests/<this file> → the package root, then Sources.

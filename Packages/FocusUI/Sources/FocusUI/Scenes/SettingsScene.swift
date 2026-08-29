@@ -157,7 +157,73 @@ extension ShellSettingsConnection: ShellDrawnConnection {
             "intervention.quietHours": .drawn([.quietHours]),
             "intervention.authorisation": .drawn([.notificationAuthorisation]),
             "intervention.usage": .drawn([.interruptionUsage]),
-            "intervention.presentationExclusions": .drawn([.presentationExclusions])
+            "intervention.presentationExclusions": .drawn([.presentationExclusions]),
+
+            // --- one level down, and then to the leaves (focus-cxs) ------------------------
+            //
+            // Round 6 closed this boundary at the connection struct and named its own residue:
+            // *"deeper structs are leaves"*. A `.drawn` binding stopped the walk, so a field
+            // invented inside `InterventionSettings.usage` or inside `VerdictSnapshot` was reached
+            // by nothing — and the whole-value digest that was meant to cover it is computed on
+            // both sides from the same input, so it does not participate in the comparison either.
+            //
+            // The digest genuinely does contain every field below (`ShellValueDigest.describe` is
+            // `Mirror` to the leaves), so these bindings are true. What they buy is **totality**:
+            // a field added tomorrow has no line here, and a path with no line is a failure.
+            "summary.isObserving": .drawn([.privacySummary, .sensingDetail]),
+            "summary.isPausedByUser": .drawn([.privacySummary, .sensingDetail]),
+            "summary.liveObserverCount": .drawn([.privacySummary, .sensingDetail]),
+            "summary.redundantActivations": .drawn([.sensingDetail]),
+            "summary.lifecycle": .drawn([.sensingDetail]),
+            "summary.isUserIdle": .drawn([.sensingDetail]),
+            "summary.media": .drawn([.sensingDetail]),
+            "summary.media.microphoneRunning": .drawn([.sensingDetail]),
+            "summary.media.cameraRunning": .drawn([.sensingDetail]),
+            "summary.cameraReason": .drawn([.sensingDetail]),
+            "summary.presentation": .drawn([.sensingDetail]),
+            "summary.presentation.signals": .drawn([.sensingDetail]),
+            "summary.presentation.signals.frontmostWindowFillsAScreen": .drawn([.sensingDetail]),
+            "summary.presentation.signals.presentationOptionsSayFullScreen": .drawn([.sensingDetail]),
+            "summary.presentation.signals.menuBarHidden": .drawn([.sensingDetail]),
+            "summary.presentation.isUserExcluded": .drawn([.sensingDetail]),
+            "summary.presentation.isPresenting": .drawn([.sensingDetail]),
+            "summary.isOnSecondaryDisplay": .drawn([.sensingDetail]),
+
+            // The matrix's one stored property. `CapabilityMatrix.renderedDescription` names every
+            // capability and the state the pane drew it in.
+            "capabilities.observations": .drawn([.privacyCapabilities]),
+
+            // The inspector draws the band as its own row and the rest through the digest.
+            "verdict.status": .drawn([.verdictDetail]),
+            "verdict.stage": .drawn([.verdictDetail]),
+            "verdict.band": .drawn([.verdictBand, .verdictDetail]),
+            "verdict.drift": .drawn([.verdictDetail]),
+            "verdict.eligibility": .drawn([.verdictDetail]),
+            "verdict.explanation": .drawn([.verdictDetail]),
+            // The inspector draws the explanation clause by clause; the digest carries the whole
+            // of it, including which rung and which band produced the sentence.
+            "verdict.explanation.stage": .drawn([.verdictDetail]),
+            "verdict.explanation.band": .drawn([.verdictDetail]),
+            "verdict.explanation.clauses": .drawn([.verdictDetail]),
+            "verdict.explanation.stamp": .drawn([.verdictDetail]),
+            // The engine stamp's seven components. `verdict.stampKey` above is the *cache key* it
+            // reduces to — a different value, and one that can agree while a component underneath
+            // it does not, which is why both are bound rather than one standing in for the other.
+            "verdict.explanation.stamp.schemaVersion": .drawn([.verdictDetail]),
+            "verdict.explanation.stamp.policyVersion": .drawn([.verdictDetail]),
+            "verdict.explanation.stamp.lexiconVersion": .drawn([.verdictDetail]),
+            "verdict.explanation.stamp.embeddingRevision": .drawn([.verdictDetail]),
+            "verdict.explanation.stamp.promptVersion": .drawn([.verdictDetail]),
+            "verdict.explanation.stamp.interventionVersion": .drawn([.verdictDetail]),
+            "verdict.explanation.stamp.interventionDigest": .drawn([.verdictDetail]),
+            "verdict.stampKey": .drawn([.verdictDetail]),
+
+            "intervention.quietHours.startMinuteOfDay": .drawn([.quietHours]),
+            "intervention.quietHours.endMinuteOfDay": .drawn([.quietHours]),
+            "intervention.usage.queriesForPriorityToday": .drawn([.interruptionUsage]),
+            "intervention.usage.queriesAllPrioritiesToday": .drawn([.interruptionUsage]),
+            "intervention.usage.accusationsToday": .drawn([.interruptionUsage]),
+            "intervention.usage.interruptionsToday": .drawn([.interruptionUsage])
         ]
     }
 }

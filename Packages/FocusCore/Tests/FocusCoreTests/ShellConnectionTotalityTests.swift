@@ -166,35 +166,186 @@ struct ShellConnectionTotalityTests {
         #expect(reading.walkedPaths.contains("inner.shown"))
     }
 
-    // MARK: - The real connection
+    // MARK: - Descent past a `.drawn` binding (focus-cxs)
 
-    /// `CockpitConnection`'s own table, against `CockpitConnection` itself.
+    private struct DeeperStill {
+        let named: String
+    }
+
+    private struct Deep {
+        let shown: String
+        /// A struct inside a struct: the level round 6 could not see.
+        let deeper: DeeperStill
+    }
+
+    /// A connection whose one field is `.drawn` — bound to a receipt, exactly as
+    /// `CockpitConnection.state.priority` was — and which holds a value with members of its own.
+    private struct DrawnCompositeConnection: ShellDrawnConnection {
+        let priority: Deep
+
+        static var connectionName: String { "DrawnCompositeConnection" }
+        static var fieldEchoes: [String: ShellFieldEcho] {
+            [
+                "priority": .drawn([.priorityDetail]),
+                "priority.shown": .drawn([.priorityIntent]),
+                "priority.deeper": .drawn([.priorityDetail])
+                // `priority.deeper.named` is deliberately absent: the invented field, two levels
+                // below the connection struct.
+            ]
+        }
+    }
+
+    /// **A `.drawn` binding no longer stops the walk** (focus-cxs).
     ///
-    /// This is the test the invented-field proof is run against: add a stored property to
-    /// `CockpitConnection`, say nothing about it, and this goes red naming the property.
-    @Test("every field of CockpitConnection is bound to a receipt")
-    @MainActor
-    func theCockpitConnectionIsTotal() {
+    /// This is round 6's own named residue, driven: *"deeper structs are leaves, covered by a
+    /// whole-value digest that does not participate in the comparison"*. A field bound to a receipt
+    /// used to be the end of the path, so a property invented inside the value it named was reached
+    /// by nothing at all — and the digest cannot catch it, because the composition root and the
+    /// window both compute the digest from the same input.
+    @Test("a field bound to a receipt still descends, and an unbound member two levels down fails")
+    func drawnValuesDescendToTheirLeaves() {
         let reading = ShellConnectionTotality.audit(
-            CockpitConnection(
-                state: .ready,
-                actions: nil,
-                sessionActions: nil,
-                sessionElapsedSeconds: nil,
-                lastActiveBundleID: nil
+            DrawnCompositeConnection(priority: Deep(shown: "x", deeper: DeeperStill(named: "y"))),
+            reported: Set(ShellRenderedField.allCases)
+        )
+
+        #expect(!reading.isTotal, "a field invented two levels down passed the audit")
+        #expect(reading.unmappedPaths == ["priority.deeper.named"])
+        #expect(reading.walkedPaths.contains("priority.deeper"))
+    }
+
+    /// The other half of the rule, and the reason it is ownership rather than a list of exceptions:
+    /// a foreign value is **one datum**, whatever its `Mirror` happens to expose. `Date` reflects
+    /// as `timeIntervalSinceReferenceDate` and `Duration` as `_low`/`_high` — storage details no
+    /// window draws and no table should have to name.
+    private struct ForeignLeafConnection: ShellDrawnConnection {
+        let stamp: Date
+        let span: Duration
+        let identifier: UUID
+        let location: URL
+
+        static var connectionName: String { "ForeignLeafConnection" }
+        static var fieldEchoes: [String: ShellFieldEcho] {
+            [
+                "stamp": .drawn([.priorityDetail]),
+                "span": .drawn([.priorityDetail]),
+                "identifier": .drawn([.priorityDetail]),
+                "location": .drawn([.privacyStorePath])
+            ]
+        }
+    }
+
+    @Test("a value from another module is one datum, and the walk stops there")
+    func foreignValuesAreLeaves() {
+        let reading = ShellConnectionTotality.audit(
+            ForeignLeafConnection(
+                stamp: Date(timeIntervalSince1970: 0),
+                span: .seconds(3),
+                identifier: UUID(),
+                location: URL(fileURLWithPath: "/tmp/focus")
             ),
             reported: Set(ShellRenderedField.allCases)
         )
 
         #expect(reading.isTotal, "\(reading.summary)")
-        // Non-vacuity: the walk has to have reached the state's members, not stopped at `state`.
-        #expect(reading.walkedPaths.contains("state.storeIsReady"))
-        #expect(reading.walkedPaths.contains("state.showsRitualPrompt"))
-        #expect(
-            reading.walkedPaths.count >= 19,
-            "the walk reached only \(reading.walkedPaths.count) fields: \(reading.walkedPaths)"
-        )
+        #expect(reading.walkedPaths == ["stamp", "span", "identifier", "location"])
     }
+
+    // MARK: - The real connection
+
+    /// `CockpitConnection`'s own table, against `CockpitConnection` itself.
+    ///
+    /// This is the test the invented-field proof is run against: add a stored property to
+    /// `CockpitConnection` — **or to anything it holds** — say nothing about it, and this goes red
+    /// naming the path.
+    ///
+    /// ## Why every optional is populated
+    ///
+    /// Because a `nil` has no members to walk (focus-cxs). The composition root audits the **live**
+    /// connection, where `pendingHandoff` is `nil` almost always and `priority` is `nil` before a
+    /// person has committed to anything — so the live audit answers a question about the values of
+    /// the moment. The question about the **type** is this one, and it can only be asked of a value
+    /// that has every branch of itself filled in.
+    @Test("every field of CockpitConnection, to the leaves, is bound to a receipt")
+    @MainActor
+    func theCockpitConnectionIsTotal() {
+        let reading = ShellConnectionTotality.audit(
+            CockpitConnection(
+                state: Self.fullyPopulatedState,
+                actions: nil,
+                sessionActions: nil,
+                sessionElapsedSeconds: 42,
+                lastActiveBundleID: "com.apple.Safari"
+            ),
+            reported: Set(ShellRenderedField.allCases)
+        )
+
+        #expect(reading.isTotal, "\(reading.summary)")
+        // Non-vacuity, **one level down**: round 6 closed the boundary at the connection struct and
+        // named its own residue — *"deeper structs are leaves"* — so a field invented inside
+        // `PrioritySnapshot` was reached by nothing while a three-line mutant gave 19/19 PASS with
+        // an empty ok-assertion diff. These are the paths that were unreachable.
+        for member in [
+            "state.storeIsReady",
+            "state.showsRitualPrompt",
+            "state.priority.intent",
+            "state.priority.timebox",
+            "state.priority.assessment",
+            "state.session.phase",
+            "state.session.pauseCauses",
+            "state.pendingHandoff.flags",
+            "state.sensing.isOnSecondaryDisplay",
+            "state.capabilities.observations"
+        ] {
+            let reached = reading.walkedPaths.contains(member)
+            #expect(reached, "the walk never reached \(member)")
+        }
+        let count = reading.walkedPaths.count
+        #expect(count >= 45, "the walk reached only \(count) fields: \(reading.walkedPaths)")
+    }
+
+    /// Every optional filled in and every composite non-empty, so the walk has something to reach
+    /// at every path the type declares.
+    static let fullyPopulatedState = CockpitState(
+        status: .relevant,
+        storeIsReady: true,
+        isObservingActivity: true,
+        priority: PrioritySnapshot(
+            id: UUID(uuidString: "70741117-0000-4000-8000-000000000001")!,
+            intent: "Write the Q3 proposal for Acme",
+            doneWhen: "the draft is sent",
+            createdAt: Date(timeIntervalSince1970: 1_767_225_600),
+            lastActivatedAt: Date(timeIntervalSince1970: 1_767_229_200),
+            timeboxSeconds: 1_800,
+            startedAt: Date(timeIntervalSince1970: 1_767_229_200),
+            timebox: .none,
+            contextItems: [],
+            rules: [],
+            assessment: .notAssessable
+        ),
+        recent: [
+            RecentPriority(
+                id: UUID(uuidString: "70741117-0000-4000-8000-000000000002")!,
+                intent: "Review the compliance pack"
+            )
+        ],
+        pendingHandoff: HandoffRequest(
+            verb: .start,
+            task: "Draft the incident note",
+            doneWhen: "it is posted",
+            flags: []
+        ),
+        showsRitualPrompt: true,
+        session: SessionSnapshot(
+            sessionID: UUID(uuidString: "70741117-0000-4000-8000-000000000003")!,
+            taskID: UUID(uuidString: "70741117-0000-4000-8000-000000000001")!,
+            phase: .focus,
+            startedAt: Date(timeIntervalSince1970: 1_767_229_200)
+        ),
+        sensing: SensingSummary(isObserving: true, liveObserverCount: 4),
+        verdict: nil,
+        capabilities: CapabilityMatrix()
+    )
 }
 
 /// **The digest, which is the other half of "not enumerated"** (focus-7ow).
