@@ -42,8 +42,24 @@ public struct ShortcutsHelpView: View {
     @Environment(\.appearanceTraits) private var traits
     @ScaledMetric(relativeTo: .body) private var spacing: CGFloat = 12
 
+    /// What the view reports when its body is evaluated. `nil` for every caller that builds it
+    /// for a snapshot or a preview; the composition root's receipt for the scene in `App/`.
+    ///
+    /// The Keyboard Shortcuts window's content is otherwise unobservable from the one lane that
+    /// can see `App/`: replacing `ShortcutsHelpView()` with `EmptyView()` left a window with a
+    /// correct title, a correct identifier, correct appearance traits and nothing inside it, and
+    /// the whole gate stayed green (focus-2er).
+    private let didRender: (@MainActor () -> Void)?
+
     public init(registry: CommandRegistry = .shell) {
         self.registry = registry
+        self.didRender = nil
+    }
+
+    /// The application scene's initialiser: the same window, with a receipt.
+    public init(registry: CommandRegistry = .shell, didRender: @escaping @MainActor () -> Void) {
+        self.registry = registry
+        self.didRender = didRender
     }
 
     /// The groups the window renders, in menu-bar order.
@@ -64,6 +80,7 @@ public struct ShortcutsHelpView: View {
     }
 
     public var body: some View {
+        let _ = didRender?()
         // The scroll view is the *window's* affordance: at the largest accessibility text
         // size the reference can outgrow a small window, and scrolling is how a Mac window
         // handles that. The content itself is a separate view so the snapshot lane can

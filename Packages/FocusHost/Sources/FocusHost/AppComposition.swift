@@ -912,6 +912,16 @@ public final class AppComposition {
         )
     }
 
+    /// **The Keyboard Shortcuts window drew its reference.**
+    ///
+    /// The window has no connection to carry a receipt, because it reads nothing from the graph
+    /// — it renders `CommandRegistry.shell`, a committed value. So the receipt is a verb the
+    /// view calls from its body, which is the one thing that distinguishes the shipping window
+    /// from a correctly titled empty one.
+    public func helpWindowRendered() {
+        shellWires.insert(.helpRendered)
+    }
+
     /// **The live traits, for one named window's environment** (focus-2er).
     ///
     /// Three scenes inject `AppearanceTraits`, and each injection is its own wire: a shell that

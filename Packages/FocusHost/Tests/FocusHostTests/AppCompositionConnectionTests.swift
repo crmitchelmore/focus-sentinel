@@ -212,6 +212,7 @@ struct AppCompositionConnectionTests {
         root.priorityHost.cancelHandoff()
         root.cockpitConnection().didRender()
         root.settingsConnection().didRender()
+        root.helpWindowRendered()
         root.settingsWindowAppeared()
         for surface in ShellThemedSurface.allCases { _ = root.appearanceTraits(for: surface) }
 

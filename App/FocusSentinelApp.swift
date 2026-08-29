@@ -78,7 +78,10 @@ struct FocusSentinelApp: App {
         .modelContainer(composition.modelContainer)
 
         Window(Text(ShellStrings.resource(ShellWindow.help.titleKey)), id: ShellWindow.help.id) {
-            ShortcutsHelpView()
+            // The reference reads nothing from the graph — it draws the committed
+            // `CommandRegistry` — so the only thing distinguishing this window from a correctly
+            // titled empty one is that the view says it drew (focus-2er).
+            ShortcutsHelpView(didRender: composition.helpWindowRendered)
                 .appearanceTraits(composition.appearanceTraits(for: .help))
         }
 

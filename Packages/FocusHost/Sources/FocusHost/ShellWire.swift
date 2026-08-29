@@ -69,6 +69,11 @@ public enum ShellWire: String, CaseIterable, Sendable {
     /// may be opened long after launch, and the observer was built before the person last chose.
     case settingsAppeared
 
+    /// The Keyboard Shortcuts reference reached its window. Its `.appearanceTraits` injection
+    /// fires whatever is inside the scene, so without this a window with a correct title and
+    /// nothing in it is indistinguishable from the shipping one.
+    case helpRendered
+
     /// The cockpit scene injected the live `AppearanceTraits` into its window's environment.
     /// Without it the cockpit ignores dark mode and every accessibility setting.
     case cockpitThemed

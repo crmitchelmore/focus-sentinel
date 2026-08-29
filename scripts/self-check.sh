@@ -697,6 +697,15 @@ check(
     "the cockpit scene injected the live appearance traits into its window",
     sorted(fired),
 )
+# The scroll view is the scene's, not the view's: a ScrollView reports no intrinsic height, so a
+# view inside one rasterises as a blank rectangle under ImageRenderer and every committed cockpit
+# baseline would become a picture of nothing. That puts it in App/, where dropping it left a
+# window whose last lines are unreachable at the default text size — and the whole gate green.
+check(
+    shell.get("cockpitContentScrolls") is True,
+    "the cockpit's content is inside a scroll view, so its footer is reachable",
+    shell.get("cockpitContentScrolls"),
+)
 
 # --- the appearance observer, live (focus-2er) ------------------------------------------------
 #
@@ -822,6 +831,7 @@ for wire, sentence in [
     ("cockpitConnected", "the cockpit scene's request for its live connection"),
     ("cockpitRendered", "the cockpit connection reaching CockpitView's body"),
     ("cockpitThemed", "the cockpit window's appearance-traits injection"),
+    ("helpRendered", "the Keyboard Shortcuts reference reaching its window"),
     ("helpThemed", "the Keyboard Shortcuts window's appearance-traits injection"),
     ("settingsThemed", "the Settings window's appearance-traits injection"),
     ("settingsConnected", "the Settings scene's request for its live connection"),
@@ -832,7 +842,7 @@ for wire, sentence in [
 
 # Non-vacuity: the set assertion above would pass if ShellWire were emptied. It is not.
 check(
-    len(declared) >= 11,
+    len(declared) >= 12,
     "App/ still declares every wire this epic enumerated",
     sorted(declared),
 )

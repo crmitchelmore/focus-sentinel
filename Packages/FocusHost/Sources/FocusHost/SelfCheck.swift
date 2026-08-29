@@ -934,6 +934,19 @@ enum SelfCheck {
             composition.priorityHost.journalUndoManager === NSApp.keyWindow?.undoManager
         report["capturePanelTraitsAdopted"] = composition.quickCapturePanel.adoptedTraits != nil
 
+        // **The cockpit's content is somewhere a person can scroll** (focus-2er).
+        //
+        // The `ScrollView` is the *scene's* rather than the view's, deliberately: a `ScrollView`
+        // reports no intrinsic height, so a view inside one rasterises as a blank rectangle under
+        // `ImageRenderer` and every committed cockpit baseline would become a picture of nothing.
+        // That puts it in `App/`, where dropping it left a window whose last lines are
+        // unreachable at the default text size and the whole gate green. AppKit backs a SwiftUI
+        // `ScrollView` with a real `NSScrollView`, and this process may read its own view
+        // hierarchy at no grant at all.
+        report["cockpitContentScrolls"] = liveCockpitWindow()
+            .flatMap(\.contentView)
+            .map(containsScrollView) ?? false
+
         // **The appearance observer is attached to the Mac, and the shell reads it** (focus-2er).
         //
         // `refreshCount` is the observable half of "these registrations were made": it is `1`
@@ -987,6 +1000,16 @@ enum SelfCheck {
         report["wiresFired"] = composition.shellWires.map(\.rawValue).sorted()
 
         return report
+    }
+
+    /// Whether an `NSScrollView` is anywhere beneath this view.
+    ///
+    /// A read of this process's own view hierarchy, which needs no permission of any kind — it is
+    /// the same kind of reading `NudgePanelController` takes of its own panel.
+    @MainActor
+    static func containsScrollView(_ view: NSView) -> Bool {
+        if view is NSScrollView { return true }
+        return view.subviews.contains(where: containsScrollView)
     }
 
     /// How long to let the run loop turn after ⌘, and ⌘? have opened their windows.
