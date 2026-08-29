@@ -217,6 +217,18 @@ enum SelfCheck {
         // a different screen.
         let relevance = relevanceReport()
         let surfaces = authorisationSurfaceReport()
+        // **Read the menu bar for an alert, then press it** (focus-h7h).
+        //
+        // `menuTree()` above called `update()` on every submenu, which is AppKit's last chance to
+        // re-install its automatic Help item before ⌘? is performed — and performing that item
+        // runs `-[NSAlert runModal]`, takes the main thread and this report is never written.
+        // Measured twice at HEAD, in isolation, killed at ten minutes both times.
+        //
+        // So the reading is taken and the item is taken down in the same call, immediately before
+        // the probe. The count is reported rather than swallowed: `0` is *"the registry's action
+        // was already the only ⌘?"*, and anything else says AppKit put one back after launch,
+        // which is a fact about this build's menu bar and not a detail of the instrument.
+        let reinstalledHelpItems = ShellHelpMenu.detachAutomaticItem()
         let claims = keyEquivalentClaims()
         // **After the key probes, and that is the point** (focus-2er). ⌘, opens the Settings
         // window and ⌘? opens the Keyboard Shortcuts window, so the wires those two scenes carry
@@ -232,6 +244,18 @@ enum SelfCheck {
             as? String ?? ""
         root["menuBarTitles"] = menu.compactMap { $0["title"] as? String }
         root["menu"] = menu
+        // **Which menus still hold an item that opens an alert** (focus-h7h).
+        //
+        // Empty is the claim: ⌘? reaches the Keyboard Shortcuts window, because the registry's
+        // action is the only ⌘? left in the menu bar. A non-empty list names the menu whose first
+        // item would run `-[NSAlert runModal]` and take the main thread — which is what hung this
+        // very report, twice, before `ShellHelpMenu` existed.
+        root["menusWithAnAutomaticHelpItem"] =
+            ShellHelpMenu.automaticItemsRemaining(in: NSApp.mainMenu)
+        // How many AppKit had put back between launch and the probes. Recorded beside the list
+        // above so a reader can tell "there was never one" from "there was one and it was taken
+        // down in time".
+        root["automaticHelpItemsReinstalled"] = reinstalledHelpItems
         root["windows"] = windows
         root["cockpitWindow"] = cockpit ?? [:]
         root["keyEquivalentClaims"] = claims
@@ -1583,6 +1607,23 @@ enum SelfCheck {
 @MainActor
 public final class FocusAppDelegate: NSObject, NSApplicationDelegate {
     public override init() { super.init() }
+
+    /// **Take AppKit's alert out of the Help menu, once there is a Help menu** (focus-h7h).
+    ///
+    /// Here rather than in `applicationDidFinishLaunching`, and the difference is not stylistic.
+    /// SwiftUI installs `NSApp.mainMenu` *after* that notification, and reading the property
+    /// before it does forces AppKit to build a default menu bar which SwiftUI then leaves alone:
+    /// measured here, in the running app, the File menu disappeared outright and ⌘N, ⌘O, ⌘W and
+    /// ⌘? were all unclaimed. Becoming active is the first moment the menu bar is the one the
+    /// person will actually use, and it is also the moment AppKit installs its automatic item —
+    /// so this is both late enough to be safe and early enough to be in time.
+    ///
+    /// It runs in the ordinary app as well as under `--focus-self-check`, because the defect is
+    /// the person's: two identically titled *"Focus Sentinel Help"* items, and the first one
+    /// opens an alert saying help is not available.
+    public func applicationDidBecomeActive(_ notification: Notification) {
+        ShellHelpMenu.detachAutomaticItem()
+    }
 
     public func applicationDidFinishLaunching(_ notification: Notification) {
         guard let path = SelfCheck.requestedOutputPath else { return }

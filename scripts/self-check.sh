@@ -855,6 +855,25 @@ check(
     titles,
 )
 
+# --- the Help menu holds nothing that opens an alert (focus-h7h) -------------------------------
+#
+# AppKit installs its own "<App> Help" item, bound to showHelp: and to Cmd-?, beside the registry's
+# action — which is titled the same thing. showHelp: on an application with no help book runs a
+# MODAL ALERT, and this script performs Cmd-? as one of its five key-equivalent probes. Measured
+# twice, in isolation: the app took the main thread inside -[NSAlert runModal] and never wrote its
+# report, and the lane had to be killed after ten minutes. A mutation-testing lane whose failure
+# mode is a hang is a lane that cannot be used for mutation testing.
+check(
+    (report.get("menusWithAnAutomaticHelpItem") or []) == [],
+    "no menu in the menu bar holds an item that would open a help alert",
+    report.get("menusWithAnAutomaticHelpItem"),
+)
+print(
+    "note AppKit re-installed "
+    f"{report.get('automaticHelpItemsReinstalled')!r} automatic help item(s) after launch "
+    "(recorded, never asserted)"
+)
+
 # F-29 / SC-1: seven keys, and not one of them names a window.
 EXPECTED_WINDOW_KEYS = [
     "kCGWindowOwnerName",
