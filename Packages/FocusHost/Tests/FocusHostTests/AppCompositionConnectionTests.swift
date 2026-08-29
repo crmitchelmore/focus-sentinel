@@ -43,6 +43,17 @@ struct AppCompositionConnectionTests {
             dateProvider: FixedDateProvider(now: NudgeHostFixture.reference)
         )
         _ = try priorities.setPriority(intent: "Write the Q3 proposal for Acme")
+        root.refreshCockpit()
+
+        // **With no session open the timer reads nothing, not zero** — which is the shape the
+        // "session timer always reads zero" mutation cannot take. A frozen `0` is a number about
+        // a session that does not exist, and it is indistinguishable from a real one the instant
+        // a session starts, so this is the reading that tells them apart.
+        #expect(
+            root.cockpitConnection().sessionElapsedSeconds == nil,
+            "the cockpit reports an elapsed time for a session nobody started"
+        )
+
         root.sessionActions.startSession(kind: .openEnded, plannedSeconds: nil, deadlineAt: nil)
         root.refreshCockpit()
 
@@ -69,6 +80,11 @@ struct AppCompositionConnectionTests {
             "the session timer reads nothing while a session is open"
         )
         #expect(connection.sessionElapsedSeconds == root.sessionElapsedSeconds)
+        // Named residue (focus-2er). Both sides are `nil` in a test process, because the observer
+        // graph is not attached and nothing has activated: substituting `nil` for this field
+        // survives here. What it costs is one line of the interruption sheet — "what was I
+        // doing" — and the live lane reads it. Closing it needs an injectable workspace
+        // notification centre threaded from this initialiser down to `SensingHost`.
         #expect(connection.lastActiveBundleID == root.lastActiveBundleID)
     }
 
