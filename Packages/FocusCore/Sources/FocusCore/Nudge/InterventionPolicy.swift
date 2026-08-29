@@ -104,13 +104,35 @@ public enum InterventionPolicy {
     /// 1 / 2 / 3. F-63's "back off when ignored", with the ambient rung retained because going
     /// fully silent would lose the one channel the person has not objected to.
     ///
-    /// **It moved with the rung count, and it had to** (U-2). This was 3, which was exactly the
-    /// three-rung ladder saying everything it could and being ignored each time. `candidate(…)`
-    /// answers `nil` at the top rung, so with the ladder cut to two rungs a third delivery can
-    /// never happen — the constant could not have tripped, and `LadderState.heldAtAmbient` would
-    /// have become an unreachable state rather than a quieter one. That is precisely the failure
-    /// `InterventionPolicyTests` exists to catch: a set of constants each defensible alone that
-    /// together produce a cap which never bites.
+    /// **It moved with the rung count** (U-2), and the reason it was given at the time was wrong
+    /// in a way worth writing down (focus-yxb).
+    ///
+    /// The stated argument was: `candidate(…)` answers `nil` at the top rung, so with the ladder
+    /// cut to two rungs a third delivery can never happen, so a backoff of 3 could never trip.
+    /// **That argument is about the ladder, and this constant has two consumers with differently
+    /// scoped counters.** Measured, driving the loop's own sequence — drift, glyph, panel,
+    /// dismiss — over four different subjects:
+    ///
+    ///     round 1  ladder.consecutiveIgnored=1  engaged  | fatigue.count=1  held=false
+    ///     round 2  ladder.consecutiveIgnored=1  engaged  | fatigue.count=0  held=TRUE
+    ///     round 3  ladder.consecutiveIgnored=1  engaged  | fatigue.count=1  held=true
+    ///
+    /// * **`FatigueController`'s run is session-wide.** Nothing but an answered accusation resets
+    ///   it, so a subject change carries it forward and the second dismissal of the session trips
+    ///   the hold — whatever it was about. This constant fires, and `NudgeReachabilityTests`
+    ///   drives the sequence that fires it. A backoff of 3 would have tripped too, on the third
+    ///   subject; the old rationale was false, not merely unlucky.
+    /// * **`LadderMachine`'s run is per subject.** `arrive(_:)` resets to `.idle` for a different
+    ///   drift, and `candidate(…)` answers `nil` for the same one once it has been ignored, so
+    ///   the ladder's own count cannot pass 1 — measured above, in every round. From
+    ///   `NudgeHost`'s events, `LadderState.heldAtAmbient` is therefore unreachable and the
+    ///   ladder is quiet for a subject by arithmetic rather than by decision. The replay model
+    ///   is not so limited: `seq-0023` scripts an ignored **ambient** rung, which the host offers
+    ///   no way to produce, and reaches the ladder's own hold in two. That divergence is pinned
+    ///   by `NudgeReachabilityTests` and belongs to the round that owns the corpus.
+    ///
+    /// So the number stands, on the consumer that can reach it: two ignored accusations in a
+    /// session is the point at which the app is talking to itself. Boundary triple 1 / 2 / 3.
     public static let ignoredAccusationBackoff = 2
 
     /// **B.** How long questions stay suspended after `ignoredQueryBackoff` trips. Boundary
@@ -358,8 +380,12 @@ public enum InterventionPolicy {
         "U-2 — ladderRungCount 3 -> 2 and ignoredAccusationBackoff 3 -> 2. D-06's third rung, "
             + "explicit recommitment, is deferred to epic focus-5ab and removed from the shipping "
             + "product; the ladder is the ambient glyph and a single panel nudge. The backoff "
-            + "moved with it because candidate(...) answers nil at the top rung, so a third "
-            + "delivery can never happen and a backoff of 3 could never trip"
+            + "moved with it. NOTE (focus-yxb): the reason recorded here for the backoff was "
+            + "false — 'candidate(...) answers nil at the top rung so a backoff of 3 could never "
+            + "trip' is true of LadderMachine, whose run resets with the drift subject, and false "
+            + "of FatigueController, whose run is session-wide and would have reached 3 on a "
+            + "third subject. Measured: the hold trips on the second dismissal of a session. The "
+            + "value is unchanged and the digest with it; only the claim about it is corrected"
     ]
 
     /// `EngineStamp.interventionVersion`'s value: the count of `revisions`, so a version that

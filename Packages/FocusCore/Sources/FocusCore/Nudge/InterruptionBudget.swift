@@ -181,6 +181,16 @@ public struct FatigueState: Sendable, Equatable, Hashable {
     public let consecutiveUnansweredQueries: Int
     /// Delivered accusation rungs with no correction, snooze, pause or return, in a row. At
     /// `InterventionPolicy.ignoredAccusationBackoff` the ladder drops to `.ambient` and holds.
+    ///
+    /// **This is the run that can reach the backoff**, and the reason is its scope: it is a fact
+    /// about the *session*, so a person who dismisses a nudge about one thing and then dismisses
+    /// a nudge about another has ignored two. `LadderMachine`'s own count is scoped to a single
+    /// drift subject and resets when the subject changes, so it cannot pass one from anything the
+    /// host can do (focus-yxb).
+    ///
+    /// It is **zeroed by the trip**, not left standing at the threshold — see
+    /// `FatigueController.resolvingAccusation(_:unanswered:now:)` — so `accusationsHeldAtAmbient`
+    /// below is the only honest way to ask whether the hold is on.
     public let consecutiveIgnoredAccusations: Int
     /// When the query backoff lifts, on the monotonic clock. `nil` when no backoff is running.
     public let queriesSuspendedUntil: Duration?
@@ -257,8 +267,18 @@ public struct FatigueState: Sendable, Equatable, Hashable {
         consecutiveUnansweredQueries >= InterventionPolicy.ignoredQueryBackoff
     }
 
-    /// Whether the ignored-rung count has reached the ladder's hold threshold.
-    public var hasReachedAccusationBackoff: Bool {
-        consecutiveIgnoredAccusations >= InterventionPolicy.ignoredAccusationBackoff
-    }
+    // **`hasReachedAccusationBackoff` is gone, and it was never once true** (focus-yxb).
+    //
+    // It read `consecutiveIgnoredAccusations >= ignoredAccusationBackoff`, and
+    // `FatigueController.resolvingAccusation(…)` writes `trips ? 0 : run` — so the moment the run
+    // reaches the threshold the counter is *zeroed* and the hold is recorded in
+    // `accusationsHeldAtAmbient` instead. The stored count therefore never exceeds
+    // `backoff - 1`, and the predicate answered `false` for **every** state the controller can
+    // produce. Nothing in the app read it; two tests did, and both hand-built a state by passing
+    // the threshold straight into the initialiser — a value the producer never writes, so the
+    // tests agreed with themselves.
+    //
+    // `hasReachedQueryBackoff` above is kept because it is not the same shape: the query run is
+    // not zeroed on the trip, `queriesSuspendedUntil` is set beside it, and the count really can
+    // stand at the threshold.
 }

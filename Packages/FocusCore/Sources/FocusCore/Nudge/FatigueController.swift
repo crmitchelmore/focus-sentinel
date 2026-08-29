@@ -333,9 +333,15 @@ public struct FatigueController: Sendable, Equatable {
     /// change — ends the run. A dismissal and an ignore extend it, and at
     /// `ignoredAccusationBackoff` the ladder is held at `.ambient` for the rest of the session.
     ///
+    /// **This is the consumer of that constant that can actually reach it** (focus-yxb). The run
+    /// is a fact about the session and survives a change of drift subject, so two dismissals
+    /// about two different things trip it — measured, driving the loop's own sequence, in
+    /// `NudgeReachabilityTests`. `LadderMachine`'s run is scoped to one subject and cannot pass
+    /// one from anything the host can do, so this hold is the one a person actually meets.
+    ///
     /// **The hold is not lifted by a later correction**, which is R-83 read literally: "for the
-    /// rest of the session". A person who ignored three rungs and then corrected the fourth
-    /// subject has told the app two things, and the quieter of them is the one that stands.
+    /// rest of the session". A person who ignored two rungs and then corrected the third subject
+    /// has told the app two things, and the quieter of them is the one that stands.
     private static func resolvingAccusation(
         _ state: FatigueState,
         unanswered: Bool,

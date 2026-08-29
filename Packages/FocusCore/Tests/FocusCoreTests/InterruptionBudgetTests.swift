@@ -207,7 +207,6 @@ struct InterruptionBudgetTests {
         #expect(fresh.permits(.query, now: .zero))
         #expect(fresh.permits(.accusation, now: .zero))
         #expect(!fresh.hasReachedQueryBackoff)
-        #expect(!fresh.hasReachedAccusationBackoff)
         #expect(!fresh.accusationsHeldAtAmbient)
     }
 
@@ -250,13 +249,16 @@ struct InterruptionBudgetTests {
     /// The accusation backoff does **not** silence the ladder — it holds it at the ambient
     /// rung, because going fully silent would lose the one channel the person has not objected
     /// to (F-63, F-146).
-    @Test("three ignored rungs hold the ladder at ambient rather than silencing it")
+    ///
+    /// **The hold is read from `accusationsHeldAtAmbient`, and from nothing else** (focus-yxb).
+    /// This used to assert `hasReachedAccusationBackoff` beside it, on a state built by passing
+    /// the threshold straight into the initialiser — a state `FatigueController` never writes,
+    /// because it zeroes the run at the moment it trips. The predicate was `false` for every
+    /// state the producer can build, so the assertion held only because the test supplied its own
+    /// input. The reachable version of this claim lives in `NudgeReachabilityTests`.
+    @Test("an ignored-accusation hold keeps the glyph rather than silencing it")
     func accusationBackoffHoldsRatherThanSilences() {
-        let ignored = FatigueState(
-            consecutiveIgnoredAccusations: InterventionPolicy.ignoredAccusationBackoff,
-            accusationsHeldAtAmbient: true
-        )
-        #expect(ignored.hasReachedAccusationBackoff)
+        let ignored = FatigueState(accusationsHeldAtAmbient: true)
         #expect(ignored.accusationsHeldAtAmbient)
         // Not a veto: the glyph still tells the truth.
         #expect(!ignored.isBackedOff(.accusation, now: .seconds(10_000)))
