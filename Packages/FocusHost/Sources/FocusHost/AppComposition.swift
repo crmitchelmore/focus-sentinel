@@ -137,6 +137,16 @@ public final class AppComposition {
     /// panel is: showing it is a state change on objects that already exist.
     let nudgePanel: NudgePanelController
 
+    /// **The Mac's live appearance and accessibility settings, as a value** (focus-2er).
+    ///
+    /// Owned here rather than by the `App` struct. It used to be a `@State` value in `App/`,
+    /// which is not a package — so the object that decides whether the whole shell honours dark
+    /// mode, Increase Contrast, Reduce Transparency, Reduce Motion and Differentiate Without
+    /// Colour had no test anywhere in the programme. It is still held in `@State` by the scene,
+    /// because SwiftUI's observation is what redraws the windows when it republishes; the
+    /// *instance* is this one.
+    public let appearance = AppearanceObserver()
+
     /// The menu-bar command centre. Installed in `start()`, because it touches `NSStatusBar`.
     let menuBar: MenuBarController
 
@@ -851,6 +861,88 @@ public final class AppComposition {
     /// Read by `--focus-self-check`. Not cleared: a wire that fires once has been proved to
     /// exist, and there is no question this answers that a *current* reading would answer better.
     public private(set) var shellWires: Set<ShellWire> = []
+
+    /// **Everything the cockpit window draws, as one value the scene cannot fabricate**
+    /// (focus-2er).
+    ///
+    /// The scene used to read five properties off this object and pass them as five arguments,
+    /// each of which was a compiling one-line no-op away from a frozen placeholder in a file no
+    /// test bundle can import. Now it asks once. The five reads are here, where
+    /// `AppCompositionConnectionTests` asserts every one of them against the live host, and the
+    /// call itself is recorded — so a scene that stops asking fails the gate by name.
+    public func cockpitConnection() -> CockpitConnection {
+        shellWires.insert(.cockpitConnected)
+        return CockpitConnection(
+            state: cockpitState,
+            actions: cockpitActions,
+            // The session host is the app's only `SessionActing`, and it is what the cockpit's
+            // session controls and the four e03 menu commands both call — one code path for a
+            // click and for a key equivalent.
+            sessionActions: sessionActions,
+            sessionElapsedSeconds: sessionElapsedSeconds,
+            lastActiveBundleID: lastActiveBundleID,
+            didRender: { [weak self] in self?.shellWires.insert(.cockpitRendered) }
+        )
+    }
+
+    /// **Everything the Settings window draws and every verb it can perform**, in the same shape
+    /// and for the same reason (focus-2er).
+    ///
+    /// Two of the epic's four acceptance mutations lived in the arguments this replaces:
+    /// `onInterventionAction` gutted to `{ _ in }`, which under U-1 is what decides whether the
+    /// app may speak, and the appearance store write deleted from a `Binding`'s setter written
+    /// by hand in a scene body. Both are verbs on this object now.
+    public func settingsConnection() -> ShellSettingsConnection {
+        shellWires.insert(.settingsConnected)
+        return ShellSettingsConnection(
+            preference: appearance.preference,
+            setPreference: { [weak self] preference in
+                self?.applyAppearancePreference(preference)
+            },
+            storeURL: FocusStore.applicationSupportURL,
+            // What is being watched, and what this Mac lets the app do — read from the graph
+            // rather than probed again for the occasion, so the Privacy pane and the cockpit's
+            // status line are one answer rather than two opinions.
+            summary: sensingSummary,
+            capabilities: capabilities,
+            verdict: verdict,
+            intervention: interventionSettings,
+            onInterventionAction: { [weak self] action in self?.perform(action) },
+            didRender: { [weak self] in self?.shellWires.insert(.settingsRendered) }
+        )
+    }
+
+    /// **The live traits, for one named window's environment** (focus-2er).
+    ///
+    /// Three scenes inject `AppearanceTraits`, and each injection is its own wire: a shell that
+    /// stopped theming its Settings window while still theming its cockpit is a real, shippable
+    /// defect, and one shared receipt would hide it. The surface says which window is asking.
+    public func appearanceTraits(for surface: ShellThemedSurface) -> AppearanceTraits {
+        shellWires.insert(surface.wire)
+        return appearance.traits
+    }
+
+    /// **The Settings window appeared.**
+    ///
+    /// It may be opened long after launch, so the stored preference is re-read rather than
+    /// assumed to still match what the observer was built with. The read *and* the assignment
+    /// are here: the scene's `.task` used to perform the assignment itself, which is a statement
+    /// in `App/` that nothing could observe.
+    public func settingsWindowAppeared() {
+        shellWires.insert(.settingsAppeared)
+        appearance.preference = storedAppearancePreference()
+    }
+
+    /// **The person chose an appearance.** Update the observer, then persist it.
+    ///
+    /// The observer first, so the shell re-renders immediately even if the write fails: a store
+    /// that cannot be written is a reason to tell the user, never a reason to ignore what they
+    /// just chose. Both halves are here rather than in a `Binding` setter in `App/`, which is
+    /// where the write was when deleting it left the whole gate green (focus-cp2 M4).
+    public func applyAppearancePreference(_ preference: AppearancePreference) {
+        appearance.preference = preference
+        setAppearancePreference(preference)
+    }
 
     /// **The window's undo manager arrived, or changed.**
     ///

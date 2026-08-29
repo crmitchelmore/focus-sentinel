@@ -5,6 +5,19 @@ import Foundation
 /// Turns the Mac's live appearance and accessibility settings into an `AppearanceTraits`
 /// value, and republishes when the user changes one.
 ///
+/// ## Why it lives in the composition layer (focus-2er)
+///
+/// It was in `App/`, and `App/` is not a package: no test bundle can import it, so every one of
+/// this object's behaviours — the preference resolving into a colour scheme, the four
+/// accessibility flags, the two notification registrations that make it *live* — was asserted by
+/// nothing at all. Deleting `startObserving()` left the whole gate green: the app stopped
+/// reacting to the person switching to dark mode or turning on Reduce Motion, and no lane could
+/// see it.
+///
+/// It reads `AppKit` and publishes a value, which is what this layer is for; it declares no view
+/// and imports no SwiftUI, so the boundary matrix is unchanged. `AppearanceObserverTests` drives
+/// it by posting the real notifications.
+///
 /// The four accessibility flags come from `NSWorkspace`, which reports them without any
 /// permission prompt. The colour scheme comes from the application's effective appearance,
 /// resolved against the user's own preference (Match System / Light / Dark).
@@ -15,14 +28,14 @@ import Foundation
 /// developer's System Settings.
 @Observable
 @MainActor
-final class AppearanceObserver {
+public final class AppearanceObserver {
     /// The user's stored choice. Setting it recomputes `traits`.
-    var preference: AppearancePreference {
+    public var preference: AppearancePreference {
         didSet { refresh() }
     }
 
     /// The current traits, as a value ready to inject into the environment.
-    private(set) var traits: AppearanceTraits
+    public private(set) var traits: AppearanceTraits
 
     /// Holds the notification tokens and unregisters them when this observer goes away.
     ///
@@ -32,7 +45,7 @@ final class AppearanceObserver {
     /// clean-up legal instead of merely omitted.
     private let tokens = NotificationTokens()
 
-    init(preference: AppearancePreference = .matchSystem) {
+    public init(preference: AppearancePreference = .matchSystem) {
         self.preference = preference
         self.traits = Self.currentTraits(preference: preference)
         startObserving()
@@ -40,9 +53,17 @@ final class AppearanceObserver {
 
     /// Recompute from the live system. Called on every relevant notification, and callable
     /// directly when the user changes their preference.
-    func refresh() {
+    public func refresh() {
         traits = Self.currentTraits(preference: preference)
+        refreshCount += 1
     }
+
+    /// How many times the live system has been re-read.
+    ///
+    /// The observable half of "this object is attached to the Mac" (focus-2er). A registration
+    /// that was never made and a notification that never arrives are the same reading without
+    /// it, so `AppearanceObserverTests` posts the real notifications and watches this move.
+    public private(set) var refreshCount = 0
 
     private func startObserving() {
         // Increase Contrast / Reduce Transparency / Reduce Motion / Differentiate Without
@@ -74,7 +95,7 @@ final class AppearanceObserver {
     }
 
     /// What the system currently reports, before the user's preference is applied.
-    static var systemColorScheme: AppearanceColorScheme {
+    public static var systemColorScheme: AppearanceColorScheme {
         let match = NSApplication.shared.effectiveAppearance
             .bestMatch(from: [.aqua, .darkAqua])
         return match == .darkAqua ? .dark : .light

@@ -668,6 +668,58 @@ print(
     "(recorded, never asserted)"
 )
 
+# --- the cockpit scene's connection (focus-2er) -----------------------------------------------
+#
+# The scene used to pass five arguments read off the composition root — the state, both mutation
+# hosts, the elapsed figure, the last foreign bundle identifier — and each was one compiling
+# line away from a frozen placeholder. `state:` alone emptied the window: no priority, no
+# session, no recents, no verdict, no capabilities, no handoff sheet. The gate stayed at PASS.
+#
+# It is one argument now, and the pair of receipts below is why that is worth something.
+# `cockpitConnected` says the scene asked the composition root; `cockpitRendered` is recorded by
+# `CockpitView.body` through a closure only the root can supply, so a scene that asked and then
+# drew something else fails as loudly as one that never asked. What the connection *carries* is
+# asserted in `AppCompositionConnectionTests`, which can hold the live hosts up beside it — the
+# division of labour is deliberate: this lane proves the scene ran the wire, the unit lane proves
+# the wire carried the truth.
+check(
+    "cockpitConnected" in fired,
+    "the cockpit scene asked the composition root for its live connection",
+    sorted(fired),
+)
+check(
+    "cockpitRendered" in fired,
+    "that connection reached CockpitView's body rather than a placeholder",
+    sorted(fired),
+)
+check(
+    "cockpitThemed" in fired,
+    "the cockpit scene injected the live appearance traits into its window",
+    sorted(fired),
+)
+
+# --- the appearance observer, live (focus-2er) ------------------------------------------------
+#
+# It lived in `App/` where nothing could reach it, so the object that decides whether the shell
+# honours dark mode and the four accessibility settings had no test in the programme. It is in
+# `FocusHost` now and `AppearanceObserverTests` drives it; what this lane adds is that the
+# **running application** resolved its traits against the Mac it is on rather than against a
+# constant.
+check(
+    shell.get("appearanceTraitsMatchTheSystem") is True,
+    "the shell's appearance traits are the person's preference resolved against this Mac",
+    (
+        shell.get("appearancePreference"),
+        shell.get("appearanceColorScheme"),
+        shell.get("appearanceSystemColorScheme"),
+    ),
+)
+print(
+    f"note appearance preference={shell.get('appearancePreference')!r} "
+    f"stored={shell.get('storedAppearancePreference')!r} "
+    f"refreshCount={shell.get('appearanceRefreshCount')!r} (recorded, never asserted)"
+)
+
 # --- e02 · the quick-capture panel (F-06) -----------------------------------------------------
 
 panel = report.get("capturePanel") or {}
@@ -737,6 +789,60 @@ check(
     report.get("settingSensingPausedAfterKeyProbes") == sensing.get("settingSensingPaused"),
     "the key-equivalent probes left the stored watching switch exactly as they found it",
     (sensing.get("settingSensingPaused"), report.get("settingSensingPausedAfterKeyProbes")),
+)
+
+# --- every wire in App/, after all three windows have existed (focus-2er) ---------------------
+#
+# The block above reads the shell while the cockpit is the only window open. The Settings and
+# Keyboard Shortcuts windows do not exist until Cmd-comma and Cmd-question have been pressed, so
+# their wires are read here, afterwards, with a turn of the run loop in between.
+#
+# The acceptance criterion for this boundary is an **enumeration**, not a list of fixes: every
+# closure, binding, environment injection, observer registration and preference read that crosses
+# out of App/ has a declared name, and the assertion is that the fired set equals the declared
+# set. A wire gutted stops arriving; a wire declared and never wired never arrives; a wire added
+# later without a receipt cannot be added at all, because ShellWire is what App/ calls.
+after = report.get("shellAfterProbes") or {}
+after_fired = set(after.get("wiresFired") or [])
+declared = set(after.get("wiresDeclared") or [])
+check(
+    bool(declared) and after_fired >= declared,
+    "every wire App/ declares actually fired in the running application",
+    {
+        "notFired": after.get("wiresNotFired"),
+        "windows": after.get("windowTitles"),
+    },
+)
+# Named individually as well as as a set, so a failure says which line stopped working rather
+# than "one of eleven".
+for wire, sentence in [
+    ("undoManagerChanged", "the cockpit scene's undo-manager wire"),
+    ("appearanceChanged", "the cockpit scene's appearance wire"),
+    ("handoffReceived", "the cockpit scene's onOpenURL wire"),
+    ("cockpitConnected", "the cockpit scene's request for its live connection"),
+    ("cockpitRendered", "the cockpit connection reaching CockpitView's body"),
+    ("cockpitThemed", "the cockpit window's appearance-traits injection"),
+    ("helpThemed", "the Keyboard Shortcuts window's appearance-traits injection"),
+    ("settingsThemed", "the Settings window's appearance-traits injection"),
+    ("settingsConnected", "the Settings scene's request for its live connection"),
+    ("settingsRendered", "the Settings connection reaching ShellSettingsView's body"),
+    ("settingsAppeared", "the Settings window's stored-appearance re-read on appear"),
+]:
+    check(wire in after_fired, f"{sentence} ran", sorted(after_fired))
+
+# Non-vacuity: the set assertion above would pass if ShellWire were emptied. It is not.
+check(
+    len(declared) >= 11,
+    "App/ still declares every wire this epic enumerated",
+    sorted(declared),
+)
+# The three windows the wires belong to really existed when the reading was taken, so a wire
+# that fired is a wire a window actually ran.
+titles = after.get("windowTitles") or []
+check(
+    any("Keyboard Shortcuts" in t for t in titles),
+    "the Keyboard Shortcuts window was open when the wire reading was taken",
+    titles,
 )
 
 # F-29 / SC-1: seven keys, and not one of them names a window.

@@ -87,6 +87,13 @@ public struct CockpitView: View {
     @ScaledMetric(relativeTo: .body) private var rowSpacing: CGFloat = 12
     @ScaledMetric(relativeTo: .largeTitle) private var sectionSpacing: CGFloat = 20
 
+    /// What the view reports when its body is evaluated.
+    ///
+    /// `nil` for every caller that builds the view out of loose values — the snapshot lane, the
+    /// preview, the unit tests — and the composition root's own receipt for the one caller that
+    /// matters, the scene in `App/` (focus-2er).
+    private let didRender: (@MainActor () -> Void)?
+
     public init(
         state: CockpitState,
         actions: (any PriorityActing)? = nil,
@@ -101,6 +108,25 @@ public struct CockpitView: View {
         self.sessionElapsedSeconds = sessionElapsedSeconds
         self.lastActiveBundleID = lastActiveBundleID
         self.commandCenter = commandCenter
+        self.didRender = nil
+    }
+
+    /// **The application scene's initialiser, and the only one it can reach** (focus-2er).
+    ///
+    /// One argument instead of five, because five arguments read off the composition root are
+    /// five independently guttable one-line no-ops in a file no test bundle can import — and all
+    /// five survived a nineteen-stage gate byte for byte. `CockpitConnection` is assembled in
+    /// `FocusHost`, where `AppCompositionTests` asserts it field by field, and cannot be
+    /// fabricated in a scene: it needs the app's one `PriorityActing` and its one
+    /// `SessionActing`.
+    public init(connection: CockpitConnection, commandCenter: FocusCommandCenter = .shared) {
+        self.state = connection.state
+        self.actions = connection.actions
+        self.sessionActions = connection.sessionActions
+        self.sessionElapsedSeconds = connection.sessionElapsedSeconds
+        self.lastActiveBundleID = connection.lastActiveBundleID
+        self.commandCenter = commandCenter
+        self.didRender = connection.didRender
     }
 
     /// Every verb this window can perform, built from the host and the current priority.
@@ -112,6 +138,12 @@ public struct CockpitView: View {
     }
 
     public var body: some View {
+        // The far end of the scene's one wire (focus-2er). A connection that never reached a
+        // view body reports nothing, so a scene that asked the composition root and then drew
+        // something else is caught by the same assertion that catches a scene that never asked.
+        // Idempotent: the root records it in a `Set`, and this view holds no state it could
+        // disturb.
+        let _ = didRender?()
         VStack(alignment: .leading, spacing: sectionSpacing) {
             if state.showsRitualPrompt, let dismissRitual = wiring.dismissRitual {
                 RitualBanner(

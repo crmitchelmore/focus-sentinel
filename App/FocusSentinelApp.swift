@@ -21,13 +21,30 @@ import SwiftUI
 /// No custom title bar, no `.windowStyle(.hiddenTitleBar)`, no borderless main window, and
 /// no `NavigationSplitView`: a sidebar ships when it has a last real destination to point
 /// at, not before.
+///
+/// ## Every statement in this file is one the gate can see (focus-2er)
+///
+/// `App/` is not a package: no test bundle can import it, and the only instrument that can
+/// observe it is `--focus-self-check`, which runs this scene graph in the shipping process. So
+/// the rule this file is now written to is that **there is nothing here for a lane to miss**.
+/// Every value handed to a view is one `AppComposition` call, not five property reads; every
+/// call is recorded as a named `ShellWire` and asserted by name; and no statement in this file
+/// computes anything. What was here before — five cockpit arguments, seven settings arguments, a
+/// hand-built `Binding` with a store write inside it, an `AppearanceObserver` nothing could
+/// reach — is in `FocusHost` and `FocusUI`, under test targets.
 @main
 struct FocusSentinelApp: App {
     /// Hosts the zero-grant `--focus-self-check` mode. Nothing else.
     @NSApplicationDelegateAdaptor(FocusAppDelegate.self) private var appDelegate
 
     @State private var composition = AppComposition.shared
-    @State private var appearance = AppearanceObserver()
+
+    /// The Mac's live appearance and accessibility settings.
+    ///
+    /// Held in `@State` because SwiftUI's observation of it is what redraws these windows when
+    /// the person switches to dark mode or turns on Reduce Motion. The **instance** is the
+    /// composition root's, so `AppearanceObserverTests` drives the same object the shell does.
+    @State private var appearance = AppComposition.shared.appearance
 
     /// Builds the quick-capture panel, registers the global hot key, **reconciles whatever
     /// session was running**, and attaches the observer graph — at launch.
@@ -48,7 +65,7 @@ struct FocusSentinelApp: App {
     var body: some Scene {
         Window(Text(ShellStrings.resource(ShellWindow.cockpit.titleKey)), id: ShellWindow.cockpit.id) {
             CockpitHost(composition: composition, appearance: appearance)
-                .appearanceTraits(appearance.traits)
+                .appearanceTraits(composition.appearanceTraits(for: .cockpit))
         }
         .commands { ShellCommands() }
         // Tall enough for the whole column at the default text size, measured against the real
@@ -60,12 +77,12 @@ struct FocusSentinelApp: App {
 
         Window(Text(ShellStrings.resource(ShellWindow.help.titleKey)), id: ShellWindow.help.id) {
             ShortcutsHelpView()
-                .appearanceTraits(appearance.traits)
+                .appearanceTraits(composition.appearanceTraits(for: .help))
         }
 
         Settings {
-            SettingsHost(appearance: appearance, composition: composition)
-                .appearanceTraits(appearance.traits)
+            SettingsHost(composition: composition)
+                .appearanceTraits(composition.appearanceTraits(for: .settings))
         }
         .modelContainer(composition.modelContainer)
     }
@@ -109,93 +126,77 @@ private struct CockpitHost: View {
     }
 
     private var cockpit: some View {
-        CockpitView(
-            state: composition.cockpitState,
-            actions: composition.cockpitActions,
-            // The session host is the app's only `SessionActing`, and it is what the cockpit's
-            // session controls and the four e03 menu commands both call — one code path for a
-            // click and for a key equivalent.
-            sessionActions: composition.sessionActions,
-            sessionElapsedSeconds: composition.sessionElapsedSeconds,
-            lastActiveBundleID: composition.lastActiveBundleID
-        )
-        // **Three wires, each of which says its own name, and each of which fires** (focus-cp2).
+        // **One argument, and it cannot be replaced with a placeholder** (focus-2er).
         //
-        // `App/` is not a package, so nothing in the unit lane can reach a closure in this file —
-        // and four no-op mutations to the wiring that stood here survived the whole nineteen-stage
-        // gate byte for byte. Two things fix that, and both are visible in the shape below.
-        //
-        // Each wire calls **one named verb** on the composition root, which remembers that it was
-        // called; `--focus-self-check` reports the set beside the effect each wire was supposed to
-        // have, so a dead wire fails the gate by its own name rather than by a symptom three
-        // objects away.
-        //
-        // And there is no longer an `.onAppear` beside each `.onChange` doing the same thing.
-        // `initial: true` is exactly what that pair was emulating — run now, and again whenever
-        // the value moves — and collapsing them is not tidiness: two statements with one effect
-        // are two statements no lane can tell apart, so gutting either was unobservable however
-        // hard the gate looked. `@Environment(\.undoManager)` is still `nil` until there is a
-        // window, and this still adopts it when it arrives.
-        .onChange(of: undoManager, initial: true) { _, manager in
-            composition.undoManagerChanged(manager)
-        }
-        .onChange(of: appearance.traits, initial: true) { _, traits in
-            composition.appearanceChanged(traits)
-        }
-        // F-142's handoff. It parses and **shows**: there is no route from here to a stored
-        // priority that does not pass through a person pressing Replace.
-        .onOpenURL { url in
-            composition.receive(url)
-        }
+        // This used to be five arguments read off the composition root, each an independently
+        // guttable one-line no-op: `state:` alone froze the whole window — priority, session,
+        // recents, verdict, capabilities, handoff sheet — and the nineteen-stage gate stayed at
+        // PASS with an empty ok-assertion diff. `CockpitConnection` is assembled in `FocusHost`,
+        // where every field is asserted against the live host, and a scene cannot build one: it
+        // needs the app's only `PriorityActing` and its only `SessionActing`. The call is
+        // recorded as `cockpitConnected`, and `CockpitView.body` records `cockpitRendered`
+        // through a closure only the root supplies — so asking and drawing something else fails
+        // as loudly as never asking.
+        CockpitView(connection: composition.cockpitConnection())
+            // **Three wires, each of which says its own name, and each of which fires**
+            // (focus-cp2).
+            //
+            // Each calls **one named verb** on the composition root, which remembers that it was
+            // called; `--focus-self-check` reports the set beside the effect each wire was
+            // supposed to have, so a dead wire fails the gate by its own name rather than by a
+            // symptom three objects away.
+            //
+            // And there is no longer an `.onAppear` beside each `.onChange` doing the same
+            // thing. `initial: true` is exactly what that pair was emulating — run now, and
+            // again whenever the value moves — and collapsing them is not tidiness: two
+            // statements with one effect are two statements no lane can tell apart, so gutting
+            // either was unobservable however hard the gate looked. `@Environment(\.undoManager)`
+            // is still `nil` until there is a window, and this still adopts it when it arrives.
+            .onChange(of: undoManager, initial: true) { _, manager in
+                composition.undoManagerChanged(manager)
+            }
+            .onChange(of: appearance.traits, initial: true) { _, traits in
+                composition.appearanceChanged(traits)
+            }
+            // F-142's handoff. It parses and **shows**: there is no route from here to a stored
+            // priority that does not pass through a person pressing Replace.
+            .onOpenURL { url in
+                composition.receive(url)
+            }
     }
 }
 
-/// Persists the appearance preference the Settings window edits.
+/// The Settings window, connected to the graph.
 ///
-/// This is glue, not a screen, and it holds **no logic of its own** (focus-cp2). It reads one
-/// value and calls two verbs, both of which live on the composition root where
-/// `AppCompositionSettingsTests` drives them. That matters because the Settings pane's controls
-/// need a click: `App/` is not a package, and no lane in this programme holds the Accessibility
-/// grant it would take to press a button in a headless run — so what is achievable here is not
-/// "the wire is asserted" but "there is nothing in the wire left to assert".
+/// This is glue, not a screen, and it holds **no logic of its own** (focus-cp2, focus-2er). It
+/// asks the composition root for one value and tells it when the window appears; both verbs live
+/// on the root, under `AppCompositionSettingsTests`.
+///
+/// That matters because the Settings pane's controls need a click, and no lane in this programme
+/// holds the Accessibility grant it would take to press a button in a headless run. What was
+/// achievable before was "there is nothing in the wire left to assert"; what is achievable now is
+/// stronger — the two mutations that survived the last round, `onInterventionAction` gutted to
+/// `{ _ in }` and the appearance store write deleted, are no longer statements in this file at
+/// all. They are `FocusHost` verbs with tests over them, reached through a value this scene
+/// cannot fabricate.
 private struct SettingsHost: View {
-    let appearance: AppearanceObserver
-    /// The live graph, so the Privacy pane draws what is actually attached, the verdict
-    /// inspector draws what the engine actually concluded (R-71), and the Intervention pane's
-    /// usage rows show today's real spend.
     let composition: AppComposition
 
     var body: some View {
-        ShellSettingsView(
-            preference: preferenceBinding,
-            storeURL: FocusStore.applicationSupportURL,
-            // What is being watched, and what this Mac lets the app do — read from the graph
-            // rather than probed again here, so the Privacy pane and the cockpit's status line
-            // are one answer rather than two opinions.
-            summary: composition.sensingSummary,
-            capabilities: composition.capabilities,
-            verdict: composition.verdict,
-            intervention: composition.interventionSettings,
-            onInterventionAction: composition.perform(_:)
-        )
-        .task {
-            // The window may be opened long after launch, so the stored value is read rather
-            // than assumed to still match what the observer was built with. The read itself is
-            // the composition root's — this is the assignment.
-            appearance.preference = composition.storedAppearancePreference()
-        }
-    }
-
-    private var preferenceBinding: Binding<AppearancePreference> {
-        Binding(
-            get: { appearance.preference },
-            set: { newValue in
-                // The observer is updated first so the shell re-renders immediately even if
-                // the write fails; a store that cannot be written is a reason to tell the
-                // user, never a reason to ignore what they just chose.
-                appearance.preference = newValue
-                composition.setAppearancePreference(newValue)
+        ShellSettingsView(connection: composition.settingsConnection())
+            // The window may be opened long after launch, so the stored appearance preference is
+            // re-read rather than assumed to still match what the observer was built with. The
+            // read **and** the assignment are the composition root's; this is the trigger.
+            //
+            // `.onAppear` rather than `.task`, and the reason is the boundary this file is
+            // written to (focus-2er). Measured here, in the built app: the Settings scene's
+            // `.task` does not run in the self-check's process — ⌘, opens the window, the body
+            // is evaluated, `settingsRendered` arrives, and the task's receipt never does, on a
+            // run loop given a turn and a half of a second. A wire the only lane able to observe
+            // `App/` cannot see is a wire nobody can defend, and there is nothing asynchronous
+            // to do here: one stored read on the main actor.
+            .onAppear {
+                composition.settingsWindowAppeared()
             }
-        )
     }
 }

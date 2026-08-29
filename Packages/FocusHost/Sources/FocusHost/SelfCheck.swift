@@ -218,6 +218,13 @@ enum SelfCheck {
         let relevance = relevanceReport()
         let surfaces = authorisationSurfaceReport()
         let claims = keyEquivalentClaims()
+        // **After the key probes, and that is the point** (focus-2er). ⌘, opens the Settings
+        // window and ⌘? opens the Keyboard Shortcuts window, so the wires those two scenes carry
+        // — their connections, their `.task`, their appearance-traits injections — cannot have
+        // fired before this line. The run loop is given a turn first, because `.task` is
+        // asynchronous and a report written in the same tick would describe the moment before it.
+        settle(forSeconds: sceneSettleSeconds)
+        let shellAfterProbes = shellWireReport()
 
         var root: [String: Any] = [:]
         root["bundleIdentifier"] = Bundle.main.bundleIdentifier ?? ""
@@ -263,6 +270,10 @@ enum SelfCheck {
         // — `true`, `false`, `true`. A shortcut that quietly changes a stored setting somebody
         // else owns is exactly the kind of thing a menu bar can do without anyone seeing it, so
         // the check stays even though the collision is gone.
+        // Every scene's wires, re-read once each of the three windows has had the chance to
+        // exist. `shell` above describes the cockpit alone, which is the only window open when
+        // it runs.
+        root["shellAfterProbes"] = shellAfterProbes
         root["settingSensingPausedAfterKeyProbes"] =
             AppComposition.shared.sensingHost.settings.sensingPaused
         root["bootIdentity"] = AppComposition.shared.bootIdentity
@@ -923,6 +934,23 @@ enum SelfCheck {
             composition.priorityHost.journalUndoManager === NSApp.keyWindow?.undoManager
         report["capturePanelTraitsAdopted"] = composition.quickCapturePanel.adoptedTraits != nil
 
+        // **The appearance observer is attached to the Mac, and the shell reads it** (focus-2er).
+        //
+        // `refreshCount` is the observable half of "these registrations were made": it is `1`
+        // after `init` and moves on every notification. The traits beside it are what the three
+        // scenes inject, so a shell that stopped injecting them is a shell whose windows ignore
+        // dark mode and every accessibility setting — which is what the mutation this block
+        // exists for actually does.
+        let traits = composition.appearance.traits
+        report["appearancePreference"] = composition.appearance.preference.rawValue
+        report["appearanceRefreshCount"] = composition.appearance.refreshCount
+        report["appearanceColorScheme"] = traits.colorScheme.rawValue
+        report["appearanceSystemColorScheme"] = AppearanceObserver.systemColorScheme.rawValue
+        report["appearanceTraitsMatchTheSystem"] =
+            traits.colorScheme == composition.appearance.preference
+                .resolvedColorScheme(system: AppearanceObserver.systemColorScheme)
+        report["storedAppearancePreference"] = composition.storedAppearancePreference().rawValue
+
         // **The handoff, driven through the shell's own delivery point** (F-142).
         //
         // `application(_:open:)` on `NSApp.delegate` is where AppKit hands a `kAEGetURL` event
@@ -959,6 +987,45 @@ enum SelfCheck {
         report["wiresFired"] = composition.shellWires.map(\.rawValue).sorted()
 
         return report
+    }
+
+    /// How long to let the run loop turn after ⌘, and ⌘? have opened their windows.
+    ///
+    /// A SwiftUI `.task` is asynchronous, and the Settings window's is what re-reads the stored
+    /// appearance preference. Measured here rather than guessed: with no turn at all the wire
+    /// report is written in the same tick the window was created in and the task has not run.
+    static let sceneSettleSeconds: TimeInterval = 1.5
+
+    /// Give the run loop a turn without blocking it. `CFRunLoopRunInMode` rather than
+    /// `Thread.sleep`, because everything this report is about happens on the main run loop.
+    @MainActor
+    static func settle(forSeconds seconds: TimeInterval) {
+        CFRunLoopRunInMode(.defaultMode, seconds, false)
+    }
+
+    /// **Which of `App/`'s wires have fired, and which have not** (focus-2er).
+    ///
+    /// Read twice: once while the cockpit is the only window, and once after the key-equivalent
+    /// probes have opened the Settings and Keyboard Shortcuts windows. The declared set is
+    /// reported beside the fired one so a wire nobody wired at all is a **missing name** rather
+    /// than a silent absence.
+    @MainActor
+    static func shellWireReport() -> [String: Any] {
+        let composition = AppComposition.shared
+        let fired = composition.shellWires
+        return [
+            "wiresDeclared": ShellWire.allCases.map(\.rawValue).sorted(),
+            "wiresFired": fired.map(\.rawValue).sorted(),
+            "wiresNotFired": ShellWire.allCases
+                .filter { !fired.contains($0) }
+                .map(\.rawValue)
+                .sorted(),
+            "themedSurfacesDeclared": ShellThemedSurface.allCases.map(\.rawValue).sorted(),
+            // Which windows exist at the moment of the reading. A wire that belongs to a window
+            // nobody opened has not failed; it has not been given the chance, and the difference
+            // has to be legible in the report rather than guessed at from a missing name.
+            "windowTitles": NSApp.windows.filter(\.isVisible).map(\.title).sorted()
+        ]
     }
 
     // MARK: - e02 · undo through the system Edit menu (F-93)
