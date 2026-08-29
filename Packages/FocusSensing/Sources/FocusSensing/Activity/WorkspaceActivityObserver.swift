@@ -220,6 +220,24 @@ public final class WorkspaceActivityObserver: ActivityObserving {
     /// somebody else's job and a different type.
     public var onActivation: ((FrontmostActivation) -> Void)?
 
+    /// **A stutter happened, and the counters moved** (focus-37b).
+    ///
+    /// A redundant activation deliberately emits no activation event: the clock is untouched and
+    /// nothing about drift advances. But it *does* increment `redundantActivations`, which is a
+    /// field of `SensingSummary` and is drawn in the Privacy pane — so a fact the shell projects
+    /// changed with no wire to carry it.
+    ///
+    /// The consequence was a gate that could not be reproduced.
+    /// `AppComposition.projectionDisagreements` compares the cockpit's *stored* projection against
+    /// the graph's *live* summary, and every other input to that summary changes through a path
+    /// that refreshes the projection. This one did not, so whether the gate was green depended on
+    /// whether the window server happened to stutter between the last refresh and the self-check's
+    /// read — measured firing at one full gate run in three, on unmodified HEAD, in Release.
+    ///
+    /// It is **not** `onActivation` under another name and must never be wired to the drift
+    /// machine: this says *"a counter moved, redraw what you project"*, and that is all.
+    public var onRedundantActivation: (() -> Void)?
+
     public init(
         centre: any NotificationObserving,
         dateProvider: any DateProvider,
@@ -324,7 +342,12 @@ public final class WorkspaceActivityObserver: ActivityObserving {
         if let current, current.isSameSubject(as: candidate) {
             // Not a new dwell. The clock is untouched, no event is emitted, and the stutter
             // is counted so that it is visible in the self-check rather than merely absorbed.
+            //
+            // The count is a projected fact, so whoever draws it is told it moved (focus-37b).
+            // Announced after the increment, so a reader that asks during the callback sees the
+            // new value rather than the one it is being told is stale.
             redundantActivations += 1
+            onRedundantActivation?()
             return nil
         }
 

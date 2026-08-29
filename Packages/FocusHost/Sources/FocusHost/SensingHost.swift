@@ -165,6 +165,13 @@ final class SensingHost {
         activity.onActivation = { [weak self] activation in
             self?.receive(activation)
         }
+        // A stutter changes `redundantActivations`, which `summary` carries and the cockpit
+        // projects, so the projection is refreshed even though nothing about drift moved
+        // (focus-37b). Without this the projection and the summary disagreed for however long it
+        // took something else to happen, and the gate that reads them was a coin toss.
+        activity.onRedundantActivation = { [weak self] in
+            self?.onSensingChanged?()
+        }
         lifecycle.onChange = { [weak self] from, to in
             self?.lifecycleChanged(from: from.conditions, to: to.conditions)
         }

@@ -199,6 +199,58 @@ struct WorkspaceActivityObserverTests {
         #expect(seen.last?.dwellSeconds == 15)
     }
 
+    /// **A projected counter that moves must announce that it moved** (focus-37b).
+    ///
+    /// `redundantActivations` is a field of `SensingSummary`, the cockpit stores a projection of
+    /// that summary, and `AppComposition.projectionDisagreements` compares the two. Every other
+    /// input to the summary changes through a path that refreshes the projection; this one
+    /// deliberately emits no activation event, so it changed with no wire at all.
+    ///
+    /// The result was a gate nobody could reproduce: whether `projectionDisagreements` was empty
+    /// depended on whether the window server stuttered between the last refresh and the
+    /// self-check's read. Measured on unmodified HEAD, in the Release binary, firing at **one full
+    /// gate run in three**. A flaky green gate certifies nothing.
+    ///
+    /// Asserted as *one announcement per increment*, in both directions: an announcement without
+    /// an increment would refresh the shell for nothing, and an increment without an announcement
+    /// is the defect.
+    @Test("a stutter announces itself, once per increment, and never as an activation")
+    func aStutterAnnouncesItself() {
+        let centre = RecordingNotificationCentre()
+        let observer = Self.makeObserver(centre: centre)
+
+        var activations = 0
+        var announcements = 0
+        observer.onActivation = { _ in activations += 1 }
+        observer.onRedundantActivation = { announcements += 1 }
+        observer.start()
+
+        centre.post(NSWorkspace.didActivateApplicationNotification, bundleIdentifier: "com.a")
+        #expect(activations == 1)
+        #expect(announcements == 0, "an accepted activation announced a stutter")
+        #expect(observer.redundantActivations == 0)
+
+        // The stutter, twice, in the shape probe P-82 measured it.
+        centre.post(NSWorkspace.didActivateApplicationNotification, bundleIdentifier: "com.a")
+        centre.post(NSWorkspace.didActivateApplicationNotification, bundleIdentifier: "com.a")
+
+        #expect(observer.redundantActivations == 2)
+        #expect(
+            announcements == observer.redundantActivations,
+            """
+            the stutter counter moved to \(observer.redundantActivations) and announced \
+            \(announcements) times: a fact the shell projects changed with no wire to carry it
+            """
+        )
+        #expect(activations == 1, "a stutter was delivered as an activation")
+
+        // And a real change is still an activation and still not a stutter.
+        centre.post(NSWorkspace.didActivateApplicationNotification, bundleIdentifier: "com.b")
+        #expect(activations == 2)
+        #expect(announcements == 2)
+        #expect(observer.redundantActivations == 2)
+    }
+
     @Test("The redundant counter starts at zero and only the stutter moves it")
     func redundantCounterOnlyCountsStutter() {
         let centre = RecordingNotificationCentre()
