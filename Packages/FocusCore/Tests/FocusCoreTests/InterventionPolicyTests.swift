@@ -16,7 +16,7 @@ struct InterventionPolicyTests {
     /// The committed digest. **Re-record this only together with a row appended to
     /// `InterventionPolicy.revisions`**, and only after the constant that moved has a boundary
     /// triple and a witness that would notice.
-    static let committedDigest: UInt64 = 0xd31c_9f53_518e_42d9
+    static let committedDigest: UInt64 = 0x6019_a443_3b8d_c261
 
     @Test("the intervention digest equals its committed literal")
     func digestIsCommitted() {
@@ -184,11 +184,12 @@ struct InterventionPolicyTests {
 
     // MARK: - The structural sets
 
-    /// D-06's ladder, as a number. `LadderVocabularyTests` asserts the same value against
-    /// `LadderRung.Kind.allCases.count`, so the constant and the enum cannot drift.
-    @Test("the ladder is three rungs")
-    func ladderIsThreeRungs() {
-        #expect(InterventionPolicy.ladderRungCount == 3)
+    /// D-06's ladder as amended by U-2, as a number. `LadderVocabularyTests` asserts the same
+    /// value against `LadderRung.Kind.allCases.count`, so the constant and the enum cannot drift.
+    /// The third rung — recommitment — is deferred to focus-5ab.
+    @Test("the ladder is two rungs")
+    func ladderIsTwoRungs() {
+        #expect(InterventionPolicy.ladderRungCount == 2)
     }
 
     @Test("the snooze durations are F-61's three, shortest first")
@@ -226,7 +227,7 @@ struct InterventionPolicyTests {
     @Test("the version is the count of revisions, and every revision says what moved")
     func versionTracksTheRevisions() {
         #expect(InterventionPolicy.version == InterventionPolicy.revisions.count)
-        #expect(InterventionPolicy.version == 1)
+        #expect(InterventionPolicy.version == 2)
         for revision in InterventionPolicy.revisions {
             #expect(!revision.isEmpty, "a policy revision with no reason is a version churning")
         }

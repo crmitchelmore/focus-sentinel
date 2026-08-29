@@ -3,9 +3,14 @@ import Foundation
 /// **One rung of the accusation ladder**, and the type that makes "a query cannot escalate
 /// into an accusation" a fact rather than a promise.
 ///
-/// The Court ruled three stages (D-06) and e05 ships three, no more and no fewer. What makes
-/// this type load-bearing is not the count but the **provenance**: a rung is the accusation's
-/// unit of escalation, so where a rung can come from *is* the no-escalation invariant.
+/// The Court ruled three stages (D-06) and e05 shipped three. **U-2 amended that ruling to two**:
+/// the ambient glyph and a single panel nudge. The third rung — explicit recommitment, and the
+/// escalation from the panel to it — is deferred to epic focus-5ab, to be designed cleanly rather
+/// than repaired, and is removed from the shipping product rather than left behind a flag.
+///
+/// What makes this type load-bearing is not the count but the **provenance**: a rung is the
+/// accusation's unit of escalation, so where a rung can come from *is* the no-escalation
+/// invariant.
 ///
 /// * The memberwise initialiser is `fileprivate`, and this file holds exactly two producers —
 ///   `entry(for:)` and `escalated()` — both of which start from an `InterventionMandate`.
@@ -19,7 +24,7 @@ import Foundation
 /// Together with `QueryWarrant`'s own single producer and the ban on a shared protocol
 /// (R-96d), that is the third of R-76's four structural facts.
 public struct LadderRung: Sendable, Equatable, Hashable {
-    /// The three stages, in escalation order.
+    /// The two stages, in escalation order.
     ///
     /// Rank is derived from `allCases`, exactly as `CascadeStage.rank` and `EvidenceBand.rank`
     /// are, so the order is a property of the declaration and no numeric literal appears
@@ -30,20 +35,17 @@ public struct LadderRung: Sendable, Equatable, Hashable {
         /// only. e08 adds the notch as a second renderer of this same rung.
         case ambient
         /// Rank 1. The non-activating `NSPanel` with the full correction economy — the first
-        /// thing that asks for attention.
+        /// thing that asks for attention, and now the last. The ladder tops out here.
         case panel
-        /// Rank 2. A notification where authorised, **otherwise the panel in recommitment
-        /// form**. Requires an explicit choice and does not auto-dismiss — and is still
-        /// dismissible, because D-07 forbids compulsion.
-        case recommitment
 
-        /// Where this rung sits. 0, 1, 2 — derived, never written down.
+        /// Where this rung sits. 0, 1 — derived, never written down.
         public var rank: Int {
             Self.allCases.firstIndex(of: self) ?? Self.allCases.count
         }
 
-        /// The rung above this one, or `nil` at the top. The ladder tops out at explicit
-        /// recommitment; there is no fourth stage and no coercion above it (D-07, R-99).
+        /// The rung above this one, or `nil` at the top. The ladder tops out at the panel; the
+        /// recommitment rung above it is deferred to focus-5ab, and there was never any coercion
+        /// above that either (D-07, R-99).
         public var next: Kind? {
             let index = rank + 1
             return index < Self.allCases.count ? Self.allCases[index] : nil
@@ -55,7 +57,6 @@ public struct LadderRung: Sendable, Equatable, Hashable {
             switch self {
             case .ambient: "nudge.rung.ambient"
             case .panel: "nudge.rung.panel"
-            case .recommitment: "nudge.rung.recommitment"
             }
         }
 

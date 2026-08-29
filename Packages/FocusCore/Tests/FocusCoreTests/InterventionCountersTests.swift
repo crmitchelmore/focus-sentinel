@@ -151,9 +151,9 @@ struct InterventionCountersTests {
                 )
             )
         }
-        #expect(counters.byRung == [.ambient: 1, .panel: 1, .recommitment: 1])
-        #expect(counters.bySurface == [.menuBar: 1, .panel: 2])
-        #expect(counters.delivered(.accusation) == 3)
+        #expect(counters.byRung == [.ambient: 1, .panel: 1])
+        #expect(counters.bySurface == [.menuBar: 1, .panel: 1])
+        #expect(counters.delivered(.accusation) == 2)
     }
 
     // MARK: - The reported share

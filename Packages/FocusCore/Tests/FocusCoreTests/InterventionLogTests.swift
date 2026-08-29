@@ -370,16 +370,16 @@ struct InterventionLogTests {
         )
 
         let counters = try log.counters(on: log.today)
-        #expect(counters.total == 5)
-        #expect(counters.byRung == [.ambient: 2, .panel: 1, .recommitment: 1])
-        #expect(counters.bySurface == [.menuBar: 1, .panel: 3])
-        #expect(counters.byDisposition == [.delivered: 4, .deferred: 1])
-        #expect(counters.delivered(.accusation) == 3)
+        #expect(counters.total == 4)
+        #expect(counters.byRung == [.ambient: 2, .panel: 1])
+        #expect(counters.bySurface == [.menuBar: 1, .panel: 2])
+        #expect(counters.byDisposition == [.delivered: 3, .deferred: 1])
+        #expect(counters.delivered(.accusation) == 2)
         #expect(counters.delivered(.query) == 1)
-        #expect(counters.deferredRungShare == 0.2)
+        #expect(counters.deferredRungShare == 0.25)
 
         // …and the whole log reads the same when there is only one day in it.
-        #expect(try log.counters().total == 5)
+        #expect(try log.counters().total == 4)
     }
 
     /// **Nothing here claims an intervention helped.** The stored row has no field for it and

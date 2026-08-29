@@ -160,7 +160,6 @@ struct NudgeVoiceTests {
         #expect(NudgeVoice.silentVisual.isRoutingDeck)
         #expect(NudgeVoice.silentVisual.renderedRung(for: .panel) == .ambient)
         #expect(NudgeVoice.silentVisual.renderedRung(for: .ambient) == .ambient)
-        #expect(NudgeVoice.silentVisual.renderedRung(for: .recommitment) == .recommitment)
         #expect(NudgeVoice.silentVisual.querySurface == .popoverBadge)
 
         for voice in NudgeVoice.allCases where voice != .silentVisual {

@@ -3301,18 +3301,6 @@
         }
       }
     },
-    "shell.nudge.recommitment" : {
-      "comment" : "The one line that distinguishes the top rung: it asks for a choice and does not take one away.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Choose what happens next."
-          }
-        }
-      }
-    },
     "shell.nudge.snoozeCountdown" : {
       "comment" : "Spoken form of the nudge panel's snooze countdown. %@ is a rendered duration.",
       "extractionState" : "manual",

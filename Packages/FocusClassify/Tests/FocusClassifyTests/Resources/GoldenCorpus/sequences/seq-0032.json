@@ -1,6 +1,6 @@
 {
   "id": "seq-0032",
-  "note": "R-84a, and the asymmetry that makes it safe. A question is on screen when a mandate arrives; the accusation takes the slot and the question is CLOSED as declined rather than dropped, so its receipt is written and it is never asked again. 'You are off task' outranks 'is this part of it?' — a person who has drifted needs the more important sentence, and two panels on screen at once is the behaviour that makes people uninstall. The reverse never happens, and there is no code path by which it could.",
+  "note": "U-2, and the rule that replaced R-84a's asymmetry. A question is on screen when a mandate arrives; the accusation is WITHHELD as interruptionInFlight and WAITS. The question is not closed, not declined and not settled - the person finishes answering the cheap teaching question, and only then does the accusation arrive, at the ambient glyph. Preemption was where roughly eleven defects across seven repair rounds lived, and deleting it is also better product: the person is not interrupted twice about two different things in the same moment. The rung is not lost by waiting - no delivery is recorded and the escalation clock does not start, so the same rung is offered again on the next judgement.",
   "snapshot": {
     "priority": {
       "intent": "Write the Q3 proposal for Acme",
@@ -52,21 +52,31 @@
       "expect": {
         "verdict": "unrelated",
         "drift": "sustained",
-        "nudge": "accuse:ambient",
-        "accumulatedSeconds": 92
+        "nudge": "silent:interruptionInFlight"
       },
       "then": {
-        "accusationOutcome": "returned"
+        "answer": "notNow"
       }
     },
     {
-      "advanceSeconds": 0,
-      "bundleID": "com.microsoft.Excel",
+      "advanceSeconds": 601,
+      "bundleID": "com.valvesoftware.steam",
       "expect": {
-        "verdict": "uncertain",
-        "drift": "cooldown",
-        "nudge": "silent:budgetExhausted",
-        "accumulatedSeconds": 0
+        "verdict": "unrelated",
+        "drift": "grace",
+        "nudge": "silent:verdictDoesNotAuthorise"
+      }
+    },
+    {
+      "advanceSeconds": 92,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "sustained",
+        "nudge": "accuse:ambient"
+      },
+      "then": {
+        "accusationOutcome": "returned"
       }
     },
     {
@@ -75,12 +85,11 @@
       "expect": {
         "verdict": "uncertain",
         "drift": "cooldown",
-        "nudge": "silent:alreadyAsked",
-        "accumulatedSeconds": 0
+        "nudge": "silent:alreadyAsked"
       }
     }
   ],
-  "expectMandates": 1,
+  "expectMandates": 2,
   "expectQueries": 1,
   "expectAccusations": 1
 }

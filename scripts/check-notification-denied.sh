@@ -4,7 +4,7 @@
 #   scripts/check-notification-denied.sh <path to FocusSentinel.app>
 #
 # **This is what discharges standing condition 5 for e05.** The whole epic's headline behaviour —
-# a three-rung ladder that reaches somebody — must work on a Mac that has granted the app nothing,
+# a two-rung ladder that reaches somebody — must work on a Mac that has granted the app nothing,
 # and must reach that state without ever putting a permission dialog on the screen.
 #
 # ## What P-134 measured, and why the router needs no grant
@@ -30,8 +30,8 @@
 #
 # `SurfaceRouter.route(…)` is a pure function of typed inputs, so the self-check asks it what it
 # would do at `denied` and at `notRequested` as well as at the real reading. Those two tables are
-# asserted **unconditionally**: every rung reaches an in-app surface, rung 3 lands on the panel in
-# recommitment form, and the two states deliver identically — R-82.2's ruling that `denied` and
+# asserted **unconditionally**: every rung reaches an in-app surface, the top rung lands on the
+# panel, and the two states deliver identically — R-82.2's ruling that `denied` and
 # `notRequested` differ in what the app may *offer* and never in what it may *deliver*.
 #
 # ## Zero grants
@@ -143,17 +143,17 @@ check(
 )
 print(f"note this Mac reports {report.get('notificationAuthorisation')!r}")
 
-# --- D-06: three rungs, no more and no fewer ---------------------------------------------------
+# --- D-06 as amended by U-2: two rungs, no more and no fewer -----------------------------------
 check(
-    report.get("ladderRungsDeclared") == 3,
-    "the ladder declares exactly three rungs",
+    report.get("ladderRungsDeclared") == 2,
+    "the ladder declares exactly two rungs",
     report.get("ladderRungsDeclared"),
 )
 
 # --- the degraded path, asserted unconditionally ------------------------------------------------
 #
 # Whatever this Mac says about notifications, a person who has said no — or who has never been
-# asked — must get all three rungs on a surface they can actually see.
+# asked — must get both rungs on a surface they can actually see.
 for state in ("Denied", "NotRequested"):
     table = report.get(f"routesWhen{state}")
     label = "denied" if state == "Denied" else "notRequested"
@@ -161,8 +161,8 @@ for state in ("Denied", "NotRequested"):
     if not table:
         continue
     check(
-        len(table) == 3,
-        f"at {label} the table covers all three rungs",
+        len(table) == 2,
+        f"at {label} the table covers both rungs",
         [entry.get("rung") for entry in table],
     )
     check(
@@ -180,17 +180,17 @@ for state in ("Denied", "NotRequested"):
         f"at {label} no rung routes to a notification",
         surfaces(table),
     )
-    top = [entry for entry in table if entry.get("rung") == "recommitment"]
-    check(len(top) == 1, f"at {label} the ladder has a recommitment rung", table)
+    top = [entry for entry in table if entry.get("rung") == "panel"]
+    check(len(top) == 1, f"at {label} the ladder has a panel rung", table)
     if top:
         check(
             top[0].get("surface") == "panel",
-            f"at {label} rung 3 lands on the panel in recommitment form",
+            f"at {label} the top rung lands on the panel",
             top[0],
         )
         check(
-            top[0].get("rank") == 2,
-            f"at {label} the recommitment rung is the top of the ladder",
+            top[0].get("rank") == 1,
+            f"at {label} the panel rung is the top of the ladder",
             top[0],
         )
 

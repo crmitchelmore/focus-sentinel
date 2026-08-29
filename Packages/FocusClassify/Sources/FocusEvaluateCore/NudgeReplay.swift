@@ -342,8 +342,8 @@ public struct NudgeWorld: Sendable, Equatable {
         now: Duration
     ) {
         switch decision {
-        case .accuse(let rung, let route, let preempted):
-            recordAccusation(rung: rung, route: route, preempted: preempted, now: now)
+        case .accuse(let rung, let route):
+            recordAccusation(rung: rung, route: route, now: now)
         case .ask(let warrant, let route):
             recordQuery(
                 warrant: warrant,
@@ -383,7 +383,6 @@ public struct NudgeWorld: Sendable, Equatable {
     private mutating func recordAccusation(
         rung: LadderRung,
         route: SurfaceRoute,
-        preempted: PreemptedQuery?,
         now: Duration
     ) {
         // Where the ladder stood before this rung, so an escalation that followed a rung nobody
@@ -392,27 +391,6 @@ public struct NudgeWorld: Sendable, Equatable {
 
         ladder.reduce(.mandate(rung.mandate), now: now)
         ladder.offer(at: now, budgetPermits: true)
-
-        if let preempted {
-            // R-84a: the question is **closed**, not dropped. Its receipt is written, so it is
-            // never asked again — losing the asking because something more urgent happened would
-            // be exactly the bug never-ask-twice exists to prevent, and its symptom is a question
-            // that comes back weeks later.
-            if let openKey = openQueryKey { ledger.insert(openKey) }
-            openQueryKey = nil
-            fatigue = FatigueController.reduce(
-                fatigue, event: .queryResolved(preempted.outcome), now: now
-            )
-            counters.record(
-                InterventionEvent(
-                    kind: .query,
-                    subject: preempted.warrant.subject.identifier,
-                    disposition: .delivered,
-                    outcome: .dismissed,
-                    queryReason: preempted.warrant.reason
-                )
-            )
-        }
 
         // Switched over the **route**, which has exactly two cases, rather than over the delivery
         // it becomes, which has three. `SurfaceRoute.delivery` is the one sanctioned bridge and it
@@ -425,7 +403,13 @@ public struct NudgeWorld: Sendable, Equatable {
             accusationsToday += 1
             interruptionsToday += 1
             fatigue = FatigueController.reduce(fatigue, event: .delivered(.accusation), now: now)
-            slot = InterruptionSlot(holder: .accusation(rung))
+            // **Only a surface with something to press occupies the slot** (focus-k42, U-2), the
+            // same rule `NudgeHost` applies. A glyph or a badge is a delivery and not an
+            // occupation: nothing can take an ambient rung down, so a glyph that held the slot
+            // would withhold every question for the rest of the replayed day.
+            if surface.offersACorrection {
+                slot = InterruptionSlot(holder: .accusation(rung))
+            }
             deliveredAccusations += 1
             counters.record(
                 InterventionEvent(
@@ -534,10 +518,18 @@ public struct NudgeWorld: Sendable, Equatable {
     ///
     /// Anything the person actually **did** — a correction, a snooze, a pause, a return, a
     /// priority change — de-escalates the ladder totally and immediately (R-80). A dismissal and
-    /// an ignore do not: they extend the run that `ignoredAccusationBackoff` counts, and at three
+    /// an ignore do not: they extend the run that `ignoredAccusationBackoff` counts, and at two
     /// the ladder drops back to the ambient rung and holds there for the rest of the session.
+    ///
+    /// **The rung comes from the ladder, not from the slot** (focus-k42, U-2). This opened
+    /// `guard let rung = slot.openAccusation else { return }`, which was the same conflation of
+    /// *which rung this is* with *whether the screen is occupied* that the host was carrying: once
+    /// a glyph stopped holding the interruption slot, resolving an ambient rung became a silent
+    /// no-op — no de-escalation, no ignore counted, no row written. R-80's "de-escalation is total
+    /// and re-entry is at the bottom" then failed on the commonest rung there is, because the
+    /// ladder was never told the person had answered.
     public mutating func resolveAccusation(_ outcome: InterventionOutcome, now: Duration) {
-        guard let rung = slot.openAccusation else { return }
+        guard let rung = ladder.state.rung else { return }
         slot = slot.released()
         fatigue = FatigueController.reduce(
             fatigue, event: .accusationResolved(outcome), now: now

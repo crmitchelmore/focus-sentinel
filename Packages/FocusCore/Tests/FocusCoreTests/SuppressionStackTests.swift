@@ -265,7 +265,7 @@ struct SuppressionStackTests {
         #expect(ambient.suppressionReason == nil, "a deferral was reported as a suppression")
         #expect(ambient.deferralReason == .menuBarHidden)
 
-        for rung in [LadderRung.Kind.panel, .recommitment] {
+        for rung in [LadderRung.Kind.panel] {
             #expect(
                 Self.evaluate(kind: .accusation, rung: rung, presentation: Self.presenting)
                     == .suppressed(.presentationActive)

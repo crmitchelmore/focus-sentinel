@@ -1,6 +1,6 @@
 {
   "id": "seq-0023",
-  "note": "ignoredAccusationBackoff, and the whole three-rung ladder on its way there. The glyph, the panel and the recommitment surface are delivered in order, each one ignored, and after the third the ladder drops back to the ambient rung and holds there for the rest of the session — F-63's 'back off when ignored', with the quietest channel RETAINED, because going fully silent would lose the one channel the person has not objected to. The fourth mandate is live, the engine still says unrelated, and the app shows nothing new.",
+  "note": "ignoredAccusationBackoff, and the whole two-rung ladder on its way there (U-2). The glyph and the panel are delivered in order, each one ignored, and after the second the ladder drops back to the ambient rung and holds there for the rest of the session - F-63's 'back off when ignored', with the quietest channel RETAINED, because going fully silent would lose the one channel the person has not objected to. The third mandate is live, the engine still says unrelated, and the app shows nothing new. Re-based from three rungs to two: the recommitment rung is deferred to epic focus-5ab, and ignoredAccusationBackoff moved 3 -> 2 with it so that the hold is still reachable.",
   "snapshot": {
     "priority": {
       "intent": "Write the Q3 proposal for Acme",
@@ -79,35 +79,12 @@
       "expect": {
         "verdict": "unrelated",
         "drift": "sustained",
-        "nudge": "accuse:recommitment",
-        "accumulatedSeconds": 92
-      },
-      "then": {
-        "accusationOutcome": "ignored"
-      }
-    },
-    {
-      "advanceSeconds": 601,
-      "bundleID": "com.valvesoftware.steam",
-      "expect": {
-        "verdict": "unrelated",
-        "drift": "grace",
-        "nudge": "silent:verdictDoesNotAuthorise",
-        "accumulatedSeconds": 0
-      }
-    },
-    {
-      "advanceSeconds": 92,
-      "bundleID": "com.valvesoftware.steam",
-      "expect": {
-        "verdict": "unrelated",
-        "drift": "sustained",
         "nudge": "silent:budgetExhausted",
         "accumulatedSeconds": 92
       }
     }
   ],
-  "expectMandates": 4,
+  "expectMandates": 3,
   "expectQueries": 0,
-  "expectAccusations": 3
+  "expectAccusations": 2
 }

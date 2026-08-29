@@ -18,7 +18,7 @@ import Testing
 /// means it is still on screen when the display underneath it is replaced: undocking, a projector,
 /// Sidecar, a resolution change.
 ///
-/// Read in a clean clone at `b96b82c`: a recommitment placed at 380 × 772 on 1920 × 1080, then the
+/// Read in a clean clone at `b96b82c`: a top rung placed at 380 × 772 on 1920 × 1080, then the
 /// display became 800 × 600. The window stayed 380 × 772 at an AppKit origin of
 /// y = 600 − 30 − 772 = −202, and the captures showed only "Back to TextEdit", "This is relevant",
 /// "Not this time" and half a Snooze label. The three snooze spans, Pause and Change priority were
@@ -107,15 +107,16 @@ struct NudgeHostDisplayChangeTests {
         NudgeHostFixture.settle()
     }
 
-    /// Drive the ladder to the top rung, on the panel — the one the bead is about.
+    /// Drive the ladder to the top rung, which since U-2 is the panel — the one the bead is
+    /// about.
     ///
-    /// The ambient rung is the menu-bar glyph and raises no window, so reaching the recommitment
+    /// The ambient rung is the menu-bar glyph and raises no window, so reaching the panel rung
     /// means climbing the whole ladder: one delivery, then `escalationDwell` of continued drift,
     /// then the next. Each turn is an ordinary corroboration tick, which is the cadence the
     /// shipping loop runs at, and every rung is delivered by the shipping loop rather than
     /// installed by the test.
     ///
-    /// The recommitment is `LadderRung.Kind.recommitment`: an explicit choice that does not
+    /// The top rung is `LadderRung.Kind.panel`: a nudge that does not
     /// auto-dismiss, routed to the panel because this fixture's notification centre answers
     /// `denied` — which is the ordinary state of a Mac nobody has granted notifications on.
     @discardableResult
@@ -123,7 +124,7 @@ struct NudgeHostDisplayChangeTests {
         for _ in 0..<6 {
             fixture.host.consider(NudgeHostFixture.unrelatedJudgement(subject: subject))
             NudgeHostFixture.settle()
-            if fixture.host.currentRung == .recommitment, fixture.panel.isVisible {
+            if fixture.host.currentRung == .panel, fixture.panel.isVisible {
                 return fixture.host.currentRung
             }
             fixture.clock.advance(by: RelevancePolicy.mandateCooldown + .seconds(1))
@@ -147,7 +148,7 @@ struct NudgeHostDisplayChangeTests {
         fixture.panel.displays = { Self.desk }
 
         let rung = Self.escalateToTheRecommitment(fixture)
-        #expect(rung == .recommitment, "the ladder never reached the recommitment on the panel")
+        #expect(rung == .panel, "the ladder never reached the panel rung")
         #expect(fixture.panel.isVisible)
 
         let onTheDesk = fixture.panel.frame
@@ -209,7 +210,7 @@ struct NudgeHostDisplayChangeTests {
         fixture.panel.displays = { Self.desk }
 
         let rung = Self.escalateToTheRecommitment(fixture)
-        #expect(rung == .recommitment)
+        #expect(rung == .panel)
         #expect(fixture.panel.isVisible)
         let engagedRung = fixture.host.ladder.state.rung
         #expect(engagedRung != nil, "the ladder is not engaged, so there is no delivery to take back")

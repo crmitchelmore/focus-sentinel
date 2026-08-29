@@ -3,8 +3,13 @@ import Testing
 
 @testable import FocusCore
 
-/// The ladder's vocabulary: three rungs, one provenance, and a delivery result that is not a
-/// `Bool` (R-80, R-81, D-06, F-57).
+/// The ladder's vocabulary: **two** rungs, one provenance, and a delivery result that is not a
+/// `Bool` (R-80, R-81, D-06 as amended by U-2, F-57).
+///
+/// The bijection below is re-pointed at the new count rather than relaxed. It still fails on drift
+/// in both directions — a rung added without amending the policy constant, or the constant moved
+/// without the enum — which is the whole reason it was written. What U-2 changed is which number
+/// is correct, not whether the number is checked.
 @Suite("Ladder vocabulary")
 struct LadderVocabularyTests {
     static let stamp = EngineStamp.current
@@ -43,31 +48,32 @@ struct LadderVocabularyTests {
         return mandate
     }
 
-    // MARK: - Three rungs, ranked 0…2, exactly once each
+    // MARK: - Two rungs, ranked 0…1, exactly once each
 
-    @Test("there are exactly three rungs, ranked 0, 1 and 2, each once")
-    func threeRanksExactlyOnce() {
-        #expect(LadderRung.Kind.allCases.count == 3)
-        #expect(LadderRung.Kind.allCases.count == InterventionPolicy.ladderRungCount)
+    @Test("there are exactly two rungs, ranked 0 and 1, each once")
+    func twoRanksExactlyOnce() {
+        #expect(LadderRung.Kind.allCases.count == 2)
+        #expect(
+            LadderRung.Kind.allCases.count == InterventionPolicy.ladderRungCount,
+            "the enum and the policy constant have drifted apart"
+        )
 
         let ranks = LadderRung.Kind.allCases.map(\.rank)
-        #expect(ranks == [0, 1, 2])
+        #expect(ranks == [0, 1])
         #expect(Set(ranks).count == ranks.count, "two rungs share a rank")
 
         #expect(LadderRung.Kind.ambient.rank == 0)
         #expect(LadderRung.Kind.panel.rank == 1)
-        #expect(LadderRung.Kind.recommitment.rank == 2)
         #expect(LadderRung.Kind.ambient < LadderRung.Kind.panel)
-        #expect(LadderRung.Kind.panel < LadderRung.Kind.recommitment)
     }
 
-    /// The ladder tops out at explicit recommitment. There is no fourth stage, and nothing
-    /// above it — no dimming, no blocking, no quitting, no friction timer (D-07, R-99).
-    @Test("the rungs form one chain that ends at recommitment")
+    /// The ladder tops out at the panel. The recommitment rung above it is deferred to focus-5ab,
+    /// and there was never anything above *that* either — no dimming, no blocking, no quitting, no
+    /// friction timer (D-07, R-99).
+    @Test("the rungs form one chain that ends at the panel")
     func rungsFormOneChain() {
         #expect(LadderRung.Kind.ambient.next == .panel)
-        #expect(LadderRung.Kind.panel.next == .recommitment)
-        #expect(LadderRung.Kind.recommitment.next == nil)
+        #expect(LadderRung.Kind.panel.next == nil)
     }
 
     // MARK: - Provenance: a rung comes from a mandate and from nothing else
@@ -96,12 +102,12 @@ struct LadderVocabularyTests {
             rung = next
         }
 
-        #expect(visited == [.ambient, .panel, .recommitment])
+        #expect(visited == [.ambient, .panel])
     }
 
     /// **The ladder never re-enters at the rung it left.** A person who came back and drifted
-    /// again starts at the silent glyph, because starting at the notification would punish them
-    /// for having complied once.
+    /// again starts at the silent glyph, because starting at the panel would punish them for
+    /// having complied once.
     @Test("a fresh mandate always enters at the ambient rung")
     func entryIsAlwaysAmbient() {
         for subject in ["com.apple.Safari", "com.chrismitchelmore.FocusDecoy"] {
@@ -109,8 +115,9 @@ struct LadderVocabularyTests {
         }
         // Including after a full climb: a new entry starts over, it does not resume.
         let mandate = Self.mandate()
-        let top = LadderRung.entry(for: mandate).escalated()?.escalated()
-        #expect(top?.kind == .recommitment)
+        let top = LadderRung.entry(for: mandate).escalated()
+        #expect(top?.kind == .panel)
+        #expect(top?.escalated() == nil, "the ladder climbed past the panel")
         #expect(LadderRung.entry(for: mandate).kind == .ambient)
     }
 

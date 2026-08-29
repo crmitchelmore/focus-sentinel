@@ -86,7 +86,7 @@ struct SurfaceRouterTests {
 
     // MARK: - The two matrix-wide properties
 
-    @Test("960 cells: denied and notRequested produce identical delivery in every one")
+    @Test("640 cells: denied and notRequested produce identical delivery in every one")
     func deniedIsNotRequested() {
         var cells = 0
         for rung in LadderRung.Kind.allCases {
@@ -118,21 +118,32 @@ struct SurfaceRouterTests {
                 }
             }
         }
-        #expect(cells == 240)
+        #expect(cells == 160)
     }
 
-    @Test("no cell routes to a notification unless the system will carry one")
-    func noUnauthorisedNotification() {
+    /// **No cell routes to a notification at all** (U-2).
+    ///
+    /// This used to assert the weaker property that a notification appeared only where the system
+    /// would carry one, and it ended with `#expect(notifications > 0)` to stop the whole check
+    /// passing vacuously. The recommitment rung was the only rung that could reach a notification
+    /// and it is deferred to focus-5ab, so the honest assertion is now the strong one: **zero**
+    /// cells, out of every rung × authorisation × presentation × media × reduced × menu-bar ×
+    /// voice combination there is.
+    ///
+    /// That is also what makes the ladder entirely in-app, which is what discharges standing
+    /// condition 5 — and it is asserted here over the whole matrix rather than at the one point a
+    /// gate script pokes.
+    @Test("no cell routes to a notification, in the whole matrix")
+    func noCellReachesANotification() {
         var cells = 0
-        var notifications = 0
-        Self.everyCell { _, authorisation, _, _, _, _, _, route in
+        Self.everyCell { rung, authorisation, _, _, _, _, voice, route in
             cells += 1
-            guard route.surface == .notification else { return }
-            notifications += 1
-            #expect(authorisation.permitsDelivery, "a notification under \(authorisation)")
+            #expect(
+                route.surface != .notification,
+                "\(rung)/\(authorisation)/\(voice) routed an accusation to a notification"
+            )
         }
-        #expect(cells == 960)
-        #expect(notifications > 0, "the matrix never reached a notification at all")
+        #expect(cells == 640)
     }
 
     @Test("a question is never a notification, in any cell")
@@ -219,87 +230,12 @@ struct SurfaceRouterTests {
         #expect(Self.route(rung: .panel, media: Self.onACall) == .surface(.popoverBadge))
     }
 
-    // MARK: - The recommitment rung — F-73's degraded path
-
-    @Test("the top rung is a notification where authorised, and the in-app panel where not")
-    func theRecommitmentRung() {
-        #expect(Self.route(rung: .recommitment, authorisation: .authorised)
-            == .surface(.notification))
-        #expect(Self.route(rung: .recommitment, authorisation: .provisional)
-            == .surface(.notification))
-        #expect(Self.route(rung: .recommitment, authorisation: .denied) == .surface(.panel))
-        #expect(Self.route(rung: .recommitment, authorisation: .notRequested) == .surface(.panel))
-    }
-
-    @Test("an authorised notification is not demoted by a presentation or a call")
-    func theNotificationIsAlreadyQuiet() {
-        #expect(Self.route(
-            rung: .recommitment, authorisation: .authorised, presentation: Self.presenting
-        ) == .surface(.notification))
-        #expect(Self.route(rung: .recommitment, authorisation: .authorised, media: Self.onACall)
-            == .surface(.notification))
-        #expect(Self.route(
-            rung: .recommitment, authorisation: .authorised, reducedInterruption: true
-        ) == .surface(.notification))
-    }
-
-    @Test("the silent deck keeps the top rung out of a window even when it must stay in the app")
-    func theSilentDeckDemotesTheRecommitment() {
-        #expect(Self.route(rung: .recommitment, authorisation: .denied, voice: .silentVisual)
-            == .surface(.popoverBadge))
-        #expect(Self.route(
-            rung: .recommitment, authorisation: .denied, reducedInterruption: true
-        ) == .surface(.popoverBadge))
-    }
-
     @Test("every rung is deliverable in-app at zero grants, which is what the denied gate proves")
     func everyRungIsDeliverableWithoutAGrant() {
         for rung in LadderRung.Kind.allCases {
             for authorisation in [NotificationAuthorisation.denied, .notRequested] {
                 let route = Self.route(rung: rung, authorisation: authorisation)
                 #expect(route.surface?.isInApp == true, "\(rung)/\(authorisation)")
-            }
-        }
-    }
-
-    // MARK: - The delivery failure
-
-    @Test("a delivery failure is a route change, recorded as a deferral")
-    func aDeliveryFailureIsARouteChange() {
-        let failure = SurfaceRouter.afterNotificationFailure(
-            rung: .recommitment,
-            presentation: .notPresenting,
-            media: .idle,
-            reducedInterruption: false,
-            menuBarVisible: true,
-            voice: .standard
-        )
-
-        #expect(failure.recorded == .deferred(.notificationDeliveryFailed))
-        #expect(failure.demotedTo == .surface(.panel))
-
-        // The record's disposition is a deferral, so nothing is spent and nothing advances.
-        #expect(failure.recorded.surface == nil)
-        #expect(failure.recorded.deferralReason == .notificationDeliveryFailed)
-    }
-
-    @Test("a failed notification demotes exactly as a refusal routes")
-    func theDemotionIsTheDeniedRoute() {
-        for reduced in [false, true] {
-            for voice in NudgeVoice.allCases {
-                let failure = SurfaceRouter.afterNotificationFailure(
-                    rung: .recommitment,
-                    presentation: .notPresenting,
-                    media: .idle,
-                    reducedInterruption: reduced,
-                    menuBarVisible: true,
-                    voice: voice
-                )
-                let denied = Self.route(
-                    rung: .recommitment, authorisation: .denied,
-                    reducedInterruption: reduced, voice: voice
-                )
-                #expect(failure.demotedTo == denied, "\(voice)/\(reduced)")
             }
         }
     }
@@ -365,7 +301,7 @@ struct SurfaceRouterTests {
         let denied = table.filter { $0.authorisation == .denied }.map(\.route)
         let notRequested = table.filter { $0.authorisation == .notRequested }.map(\.route)
         #expect(denied == notRequested)
-        #expect(denied == [.surface(.menuBar), .surface(.panel), .surface(.panel)])
+        #expect(denied == [.surface(.menuBar), .surface(.panel)])
     }
 
     @Test("the reduced-interruption table is the same shape with quieter surfaces")
@@ -373,11 +309,11 @@ struct SurfaceRouterTests {
         let table = SurfaceRouter.table(reducedInterruption: true)
         let denied = table.filter { $0.authorisation == .denied }.map(\.route)
 
-        #expect(denied == [
-            .surface(.menuBar), .surface(.popoverBadge), .surface(.popoverBadge)
-        ])
-        #expect(table.first { $0.authorisation == .authorised && $0.rung == .recommitment }?.route
-            == .surface(.notification))
+        #expect(denied == [.surface(.menuBar), .surface(.popoverBadge)])
+        // And the authorised column is the same column: since U-2 the authorisation changes
+        // nothing, because no rung reaches a notification.
+        let authorised = table.filter { $0.authorisation == .authorised }.map(\.route)
+        #expect(authorised == denied)
     }
 
     @Test("routes turn into deliveries without a second opinion about what happened")

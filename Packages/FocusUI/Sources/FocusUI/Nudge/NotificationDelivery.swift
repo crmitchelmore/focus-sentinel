@@ -224,53 +224,11 @@ public final class NotificationDelivery {
     /// - Returns: `.delivered(.notification)` when the system took it, or the **route change**
     ///   R-82.4 requires — a `.deferred(.notificationDeliveryFailed)` record and a demotion to an
     ///   in-app surface.
-    public func deliver(
-        _ presentation: AccusationPresentation,
-        surroundings: NotificationSurroundings,
-        deliveryID: String,
-        completion: @escaping @MainActor (RungDelivery, SurfaceRoute) -> Void
-    ) {
-        let title = NudgeCopy.string(
-            voice: presentation.voice,
-            .accusationPanelTitle,
-            arguments: [presentation.task]
-        )
-        let body = presentation.subject.map { subject in
-            NudgeCopy.string(
-                voice: presentation.voice,
-                .accusationPanelBody,
-                arguments: [subject, NudgeCopy.duration(presentation.dwelled)]
-            )
-        } ?? ""
-
-        centre.add(
-            identifier: deliveryID,
-            title: title,
-            body: body,
-            categoryIdentifier: NudgeNotificationCategory.identifier
-        ) { [weak self] result in
-            guard let self else { return }
-            switch result {
-            case .delivered:
-                completion(.delivered(.notification), .surface(.notification))
-            case .failed:
-                // Not a log line. The rung is re-routed exactly as if the authorisation had been
-                // `denied` — because as far as this delivery is concerned it was — and the
-                // failed attempt is written down as a deferral, so the ladder does not advance
-                // and no cap is spent.
-                let failure = SurfaceRouter.afterNotificationFailure(
-                    rung: .recommitment,
-                    presentation: surroundings.presentation,
-                    media: surroundings.media,
-                    reducedInterruption: surroundings.reducedInterruption,
-                    menuBarVisible: surroundings.menuBarVisible,
-                    voice: presentation.voice
-                )
-                self.authorisation = .denied
-                completion(failure.recorded, failure.demotedTo)
-            }
-        }
-    }
+    // **`deliver(…)` is gone** (U-2). The notification was the recommitment rung's surface and
+    // nothing else's, and that rung is deferred to focus-5ab — so this app posts no notifications
+    // at all. What is kept is the half that still has work to do: reading the authorisation for
+    // the settings pane, registering the action categories, and decoding a press on a banner that
+    // an earlier build posted and the person has not yet cleared.
 
     /// A tap came back from the notification centre.
     ///

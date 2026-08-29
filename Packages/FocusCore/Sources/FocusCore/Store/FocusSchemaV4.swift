@@ -255,11 +255,16 @@ extension InterruptionKind {
 extension LadderRung.Kind {
     /// Unreadable ⇒ `.ambient`, the quietest rung. A ladder position this build cannot read
     /// resumes at the silent glyph, which is also where de-escalation always re-enters (R-80).
+    ///
+    /// **This is also the migration for U-2's scope cut**, and it needs no new code. A row written
+    /// by an earlier build with `"recommitment"` falls through to `default` and resumes at the
+    /// ambient glyph — which is exactly what the rule above already promised for a rung this build
+    /// cannot read, and the quiet direction to fail in. When focus-5ab restores the rung, old rows
+    /// start decoding again on their own.
     public static func decode(_ raw: String) -> LadderRung.Kind {
         switch raw {
         case "ambient": .ambient
         case "panel": .panel
-        case "recommitment": .recommitment
         default: .ambient
         }
     }

@@ -1021,18 +1021,6 @@
         }
       }
     },
-    "nudge.rung.recommitment" : {
-      "comment" : "Ladder rung 3: a notification where authorised, otherwise the panel in recommitment form.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "A prompt that asks you to choose"
-          }
-        }
-      }
-    },
     "nudge.silentVisual.accusation.action.notNow" : {
       "comment" : "[silentVisual] Accusation action: a session-lived rule that dies with the session.",
       "extractionState" : "manual",

@@ -63,7 +63,7 @@ struct NotificationDeliveryTests {
 
     private static func presentation(voice: NudgeVoice = .standard) -> AccusationPresentation {
         AccusationPresentation(
-            rung: .recommitment,
+            rung: .panel,
             voice: voice,
             task: "Write the Q3 proposal",
             subject: "com.apple.Safari",
@@ -165,95 +165,11 @@ struct NotificationDeliveryTests {
         }
     }
 
-    // MARK: - Delivery, and the route change on failure (R-82.4)
-
-    @Test("an authorised delivery reaches the notification surface", arguments: [2, 3])
-    func authorisedDelivery(raw: Int) {
-        let centre = StubNotificationCentre(status: raw)
-        let delivery = NotificationDelivery(centre: centre)
-        delivery.refresh()
-
-        var recorded: RungDelivery?
-        var route: SurfaceRoute?
-        delivery.deliver(
-            Self.presentation(),
-            surroundings: NotificationSurroundings(),
-            deliveryID: Self.deliveryID
-        ) { recorded = $0; route = $1 }
-
-        #expect(recorded == .delivered(.notification))
-        #expect(route == .surface(.notification))
-        #expect(centre.addedCategories == [NudgeNotificationCategory.identifier])
-        // **The banner goes out under the identifier the loop minted** (focus-zrs), which is the
-        // only thing a press arriving an hour later can be checked against.
-        #expect(centre.addedIdentifiers == [Self.deliveryID])
-    }
-
-    /// **The measured failure**: `UNErrorDomain` code 1, arriving after a positive settings read.
-    /// It is a route change, not a log line — and the record is a **deferral**, so the ladder
-    /// does not advance and no cap is spent (R-81).
-    @Test("a UNErrorDomain 1 completion demotes to the panel and records a deferral")
-    func deliveryFailureIsARouteChange() {
-        let centre = StubNotificationCentre(
-            status: 2,
-            addResult: .failed(domain: "UNErrorDomain", code: 1)
-        )
-        let delivery = NotificationDelivery(centre: centre)
-        delivery.refresh()
-        #expect(delivery.authorisation == .authorised)
-
-        var recorded: RungDelivery?
-        var route: SurfaceRoute?
-        delivery.deliver(
-            Self.presentation(),
-            surroundings: NotificationSurroundings(),
-            deliveryID: Self.deliveryID
-        ) { recorded = $0; route = $1 }
-
-        #expect(recorded == .deferred(.notificationDeliveryFailed))
-        #expect(route == .surface(.panel))
-        // The app stops believing it may deliver, so the *next* rung routes in-app without
-        // having to fail first.
-        #expect(delivery.authorisation == .denied)
-        #expect(!delivery.authorisation.permitsDelivery)
-    }
-
-    /// The failure route is the router's own answer for `denied`, in every surrounding — so the
-    /// demotion cannot disagree with what the settings pane's matrix promised.
-    @Test(
-        "the demotion equals the router's denied route in every surrounding",
-        arguments: [false, true], [false, true]
-    )
-    func demotionMatchesTheDeniedRoute(reduced: Bool, menuBarVisible: Bool) {
-        let surroundings = NotificationSurroundings(
-            reducedInterruption: reduced,
-            menuBarVisible: menuBarVisible
-        )
-        let centre = StubNotificationCentre(
-            status: 2,
-            addResult: .failed(domain: "UNErrorDomain", code: 1)
-        )
-        let delivery = NotificationDelivery(centre: centre)
-        delivery.refresh()
-
-        var route: SurfaceRoute?
-        delivery.deliver(
-            Self.presentation(), surroundings: surroundings, deliveryID: Self.deliveryID
-        ) { _, produced in
-            route = produced
-        }
-
-        let expected = SurfaceRouter.route(
-            rung: .recommitment,
-            authorisation: .denied,
-            presentation: surroundings.presentation,
-            media: surroundings.media,
-            reducedInterruption: reduced,
-            menuBarVisible: menuBarVisible,
-            voice: .standard
-        )
-        #expect(route == expected)
-    }
+    // **The delivery section is gone** (U-2). `NotificationDelivery.deliver(…)` was removed with
+    // the recommitment rung it existed for: no rung routes to a notification any more, so there is
+    // no delivery to authorise, no failure to demote and no route change to assert. What remains
+    // below is the half that still runs — reading the authorisation, registering the categories,
+    // and decoding a press on a banner an earlier build posted.
 
     // MARK: - Taps come back as typed actions
 
@@ -313,7 +229,7 @@ struct NotificationDeliveryTests {
         #expect(!delivery.authorisation.permitsDelivery)
         // The router is what decides, and it sends the rung in-app.
         let route = SurfaceRouter.route(
-            rung: .recommitment,
+            rung: .panel,
             authorisation: delivery.authorisation,
             presentation: .notPresenting,
             media: .idle,

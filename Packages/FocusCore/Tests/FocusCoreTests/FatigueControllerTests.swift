@@ -290,23 +290,27 @@ struct FatigueControllerTests {
             == .permitted)
         #expect(Self.decide(kind: .accusation, rung: .panel, fatigue: controller.state)
             == .refused(.heldAtAmbient))
-        #expect(Self.decide(kind: .accusation, rung: .recommitment, fatigue: controller.state)
+        #expect(Self.decide(kind: .accusation, rung: .panel, fatigue: controller.state)
             == .refused(.heldAtAmbient))
 
         // And a question is not held by an accusation's backoff.
         #expect(Self.decide(kind: .query, fatigue: controller.state) == .permitted)
     }
 
+    /// Asserted on the run **or** the hold, because with `ignoredAccusationBackoff == 2` (U-2)
+    /// a second ignore does not merely lengthen the run — it completes it, which zeroes the
+    /// counter and sets `accusationsHeldAtAmbient`. Reading only the counter would call that
+    /// "the person ended the run", which is the opposite of what happened.
     @Test("anything the person actually did ends the accusation run")
     func whatEndsTheAccusationRun() {
         for outcome in InterventionOutcome.allCases {
             var controller = FatigueController()
             controller.reduce(.accusationResolved(.ignored), now: .seconds(0))
             controller.reduce(.accusationResolved(outcome), now: .seconds(0))
-            #expect(
-                (controller.state.consecutiveIgnoredAccusations > 0) == outcome.isUnanswered,
-                "\(outcome)"
-            )
+
+            let stillIgnoring = controller.state.consecutiveIgnoredAccusations > 0
+                || controller.state.accusationsHeldAtAmbient
+            #expect(stillIgnoring == outcome.isUnanswered, "\(outcome)")
         }
     }
 

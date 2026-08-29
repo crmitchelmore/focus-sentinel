@@ -236,14 +236,13 @@ struct NudgeDeciderTests {
     func unrelatednessAccuses() {
         let decision = Self.decide(Self.judgement(verdict: .unrelated))
 
-        guard case .accuse(let rung, let route, let preempted) = decision else {
+        guard case .accuse(let rung, let route) = decision else {
             Issue.record("a mandate did not reach the ladder: \(decision)")
             return
         }
         #expect(rung.kind == .ambient)
         #expect(rung.mandate.subject == Self.decoy)
         #expect(route == .surface(.menuBar))
-        #expect(preempted == nil)
         #expect(decision.kind == .accusation)
     }
 
@@ -563,7 +562,7 @@ struct NudgeDeciderTests {
             at = at + RelevancePolicy.escalationDwell
         }
 
-        #expect(rungs == [.ambient, .panel, .recommitment])
+        #expect(rungs == [.ambient, .panel])
     }
 
     @Test("a rung nobody could see does not become the rung below it on the next observation")
@@ -613,15 +612,21 @@ struct NudgeDeciderTests {
         #expect(decision.silence?.reason == .budgetExhausted)
     }
 
-    // MARK: - The slot's asymmetry, at the decider's level
+    // MARK: - Neither interruption displaces the other, at the decider's level
 
-    @Test("an accusation closes an open question as declined and takes the slot")
-    func anAccusationPreemptsAQuestion() {
+    /// **An accusation offered while a question is open is withheld, and waits** (U-2).
+    ///
+    /// The decider used to answer `.accuse` here, carrying the question it had closed. Preemption
+    /// is gone: the slot withholds, the stack reports `interruptionInFlight`, and the ladder is
+    /// untouched — so the same rung is offered again on the next judgement, once the person has
+    /// dealt with the question in front of them.
+    @Test("an accusation raised over an open question is withheld rather than preempting it")
+    func anAccusationWaitsForAnOpenQuestion() {
         let asked = Self.decide(
             Self.judgement(verdict: .uncertain, uncertainty: .noNegativeBasis, subject: Self.neutral)
         )
         guard let warrant = asked.warrant else {
-            Issue.record("the question that was supposed to be preempted was never asked")
+            Issue.record("the question the accusation was supposed to wait for was never asked")
             return
         }
 
@@ -630,35 +635,18 @@ struct NudgeDeciderTests {
             memory: NudgeMemory(slot: InterruptionSlot(holder: .query(warrant)))
         )
 
-        #expect(decision.rung?.kind == .ambient)
-        #expect(decision.preempted?.warrant == warrant)
-        #expect(
-            decision.preempted?.outcome == .declined,
-            """
-            A preempted question must be CLOSED, never dropped. Losing the asking is the bug \
-            never-ask-twice exists to prevent, and it would be invisible, because the symptom \
-            is a question that comes back weeks later (R-84a).
-            """
-        )
+        #expect(decision.rung == nil, "the accusation was raised over an open question")
+        #expect(decision.isSpeaking == false)
+        #expect(decision.silence?.reason == .interruptionInFlight)
     }
 
-    @Test("a deferred accusation leaves the open question exactly where it was")
-    func aDeferredAccusationPreemptsNothing() {
-        let asked = Self.decide(
-            Self.judgement(verdict: .uncertain, uncertainty: .noNegativeBasis, subject: Self.neutral)
-        )
-        guard let warrant = asked.warrant else { return }
-
-        let decision = Self.decide(
-            Self.judgement(verdict: .unrelated),
-            surroundings: Self.surroundings(
-                presentation: Self.presenting, menuBarVisible: false
-            ),
-            memory: NudgeMemory(slot: InterruptionSlot(holder: .query(warrant)))
-        )
-
-        #expect(decision == .deferred(.menuBarHidden))
-        #expect(decision.preempted == nil)
+    /// And with nothing in the slot at all, the very same judgement does speak — so the test
+    /// above is about the question and not about a judgement that could never accuse.
+    @Test("the same judgement accuses freely once the slot is empty")
+    func theSameJudgementAccusesAgainstAnEmptySlot() {
+        let decision = Self.decide(Self.judgement(verdict: .unrelated))
+        #expect(decision.rung?.kind == .ambient)
+        #expect(decision.isSpeaking)
     }
 
     // MARK: - Voices and surfaces
@@ -693,16 +681,25 @@ struct NudgeDeciderTests {
         #expect(decision.route == .surface(.popoverBadge))
     }
 
-    @Test("the top rung reaches a notification only where the system will carry one")
-    func theTopRungAndItsAuthorisation() {
+    /// **No rung reaches a notification, in any authorisation state** (U-2).
+    ///
+    /// This used to assert that the top rung went to a notification wherever the system would
+    /// carry one. The notification was the recommitment rung's surface and nothing else's, and
+    /// that rung is deferred to focus-5ab — so the whole system surface left the ladder with it.
+    ///
+    /// Asserted across every authorisation value rather than at one point, because that is what
+    /// makes R-82.2's *"denied and notRequested behave identically"* true by construction now: the
+    /// authorisation cannot change any cell, so the ladder is entirely in-app whatever the person
+    /// has or has not granted. That is what discharges standing condition 5.
+    @Test("no rung routes to a notification, whatever the authorisation says")
+    func noRungReachesANotification() {
         var ladder = LadderMachine()
         var at = Duration.seconds(10_000)
-        for _ in 0..<2 {
-            ladder.reduce(.mandate(Self.ambientRung().mandate), now: at)
-            ladder.offer(at: at, budgetPermits: true)
-            ladder.reduce(.delivery(.delivered(.panel)), now: at)
-            at = at + RelevancePolicy.escalationDwell
-        }
+        // One delivered rung, so the next offer is the panel — which is the top of the ladder now.
+        ladder.reduce(.mandate(Self.ambientRung().mandate), now: at)
+        ladder.offer(at: at, budgetPermits: true)
+        ladder.reduce(.delivery(.delivered(.menuBar)), now: at)
+        at = at + RelevancePolicy.escalationDwell
 
         for authorisation in NotificationAuthorisation.allCases {
             let decision = Self.decide(
@@ -711,14 +708,9 @@ struct NudgeDeciderTests {
                 memory: NudgeMemory(ladder: ladder),
                 preferences: NudgePreferences(authorisation: authorisation)
             )
-            #expect(decision.rung?.kind == .recommitment, "\(authorisation)")
-            if authorisation.permitsDelivery {
-                #expect(decision.route == .surface(.notification), "\(authorisation)")
-            } else {
-                // F-73's degraded path, and the whole of the `notification-denied` gate stage:
-                // every rung is delivered on an in-app surface at zero grants.
-                #expect(decision.route?.surface?.isInApp == true, "\(authorisation)")
-            }
+            #expect(decision.rung?.kind == .panel, "\(authorisation)")
+            #expect(decision.route?.surface?.isInApp == true, "\(authorisation)")
+            #expect(decision.route != .surface(.notification), "\(authorisation)")
         }
     }
 

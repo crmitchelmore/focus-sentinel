@@ -23,18 +23,6 @@ enum AccusationFixture {
         )
     }
 
-    /// Rung 3. The same economy, plus the line that asks for a choice — and nothing taken away.
-    static func recommitment(voice: NudgeVoice = .standard) -> AccusationPresentation {
-        AccusationPresentation(
-            rung: .recommitment,
-            voice: voice,
-            task: "Write the Q3 proposal",
-            subject: "com.apple.Safari",
-            dwelled: .seconds(1_800),
-            returnTarget: "Pages"
-        )
-    }
-
     /// Drift across several applications. There is no single subject, so the body line and the
     /// two rule-writing actions are withdrawn rather than filled in with a guess.
     static let mixed = AccusationPresentation(
@@ -144,7 +132,6 @@ struct AccusationPanelTests {
     @Test("the primary action is the way back to work whenever there is one")
     func primaryActionIsTheWayBack() {
         #expect(AccusationFixture.rungTwo().primaryAction == .returnToTask)
-        #expect(AccusationFixture.recommitment().primaryAction == .returnToTask)
         #expect(AccusationFixture.mixed.primaryAction == .returnToTask)
     }
 
@@ -281,7 +268,6 @@ struct AccusationPanelSnapshotTests {
     @Test("the three states that change what the panel offers", arguments: ["light", "dark"])
     func statefulVariants(variant: String) throws {
         let cases: [(String, AccusationPresentation)] = [
-            ("recommitment", AccusationFixture.recommitment()),
             ("mixed", AccusationFixture.mixed),
             ("noReturnTarget", AccusationFixture.noReturnTarget),
             ("snoozed", AccusationFixture.snoozed)
@@ -296,20 +282,4 @@ struct AccusationPanelSnapshotTests {
         }
     }
 
-    @Test("rung 2 and rung 3 are different pictures")
-    func rungsDiffer() throws {
-        let two = try SnapshotHarness.render(
-            AccusationPanelView(presentation: AccusationFixture.rungTwo()),
-            traits: SnapshotHarness.variantTraits(named: "light"),
-            width: Self.panelWidth,
-            name: "accusationPanel.distinctness.rungTwo"
-        )
-        let three = try SnapshotHarness.render(
-            AccusationPanelView(presentation: AccusationFixture.recommitment()),
-            traits: SnapshotHarness.variantTraits(named: "light"),
-            width: Self.panelWidth,
-            name: "accusationPanel.distinctness.recommitment"
-        )
-        #expect(PNGCompare.areDistinct(two.pixels, three.pixels))
-    }
 }

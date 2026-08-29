@@ -3,7 +3,14 @@ import Testing
 
 @testable import FocusCore
 
-/// One open interruption at a time, and the accusation wins — in one direction only (R-84a).
+/// **One open interruption at a time, and whoever got there first keeps it** (R-84a as amended by
+/// U-2).
+///
+/// The asymmetry this suite used to assert — an accusation always admitted, closing an open
+/// question as `declined` — is gone. Seven repair rounds found roughly eleven defects inside that
+/// one interaction and the user ruled the mechanism out rather than patching the eleventh. What is
+/// asserted here now is the rule that replaced it: **an accusation offered against an open question
+/// is withheld, and waits.**
 @Suite("Interruption slot")
 struct InterruptionSlotTests {
     static let stamp = EngineStamp.current
@@ -74,51 +81,52 @@ struct InterruptionSlotTests {
 
         let asked = InterruptionSlot.open.offering(Self.warrant())
         #expect(asked.slot?.openQuery == Self.warrant())
-        #expect(asked.preempted == nil)
         #expect(asked.slot?.isOpen == false)
 
         let accused = InterruptionSlot.open.offering(Self.rung())
         #expect(accused.slot?.openAccusation == Self.rung())
-        #expect(accused.preempted == nil)
     }
 
-    // MARK: - The asymmetry
+    // MARK: - Neither displaces the other
 
-    /// **An accusation takes the slot from a question, and the question is closed as
-    /// `declined` rather than dropped.** Losing the asking because something more urgent
-    /// happened would be exactly the bug never-ask-twice exists to prevent, and it would be
-    /// invisible — the symptom is a question that comes back weeks later.
-    @Test("an accusation preempts an open question and closes it as declined")
-    func accusationPreemptsAQuestion() throws {
+    /// **An accusation offered against an open question waits** (U-2).
+    ///
+    /// This is the single most important line of the scope cut. The question keeps the screen, the
+    /// accusation is withheld as `interruptionInFlight`, and nothing about the question is written,
+    /// settled or forgotten — the person finishes answering the cheap teaching question, and the
+    /// accusation arrives on the next judgement.
+    @Test("an accusation offered against an open question is withheld, and the question stands")
+    func accusationWaitsForAQuestion() throws {
         let held = try #require(InterruptionSlot.open.offering(Self.warrant()).slot)
         #expect(held.openQuery != nil)
 
         let outcome = held.offering(Self.rung())
-        let preempted = try #require(outcome.preempted, "the question was dropped, not closed")
-        #expect(preempted.warrant == Self.warrant())
         #expect(
-            preempted.outcome == .declined,
-            "a preempted question must be remembered as declined so it is never asked again"
+            outcome.slot == nil,
+            "an accusation took the slot from an open question: preemption is supposed to be gone"
         )
-        #expect(!preempted.outcome.wroteRule, "a preemption is not an answer and writes no rule")
-        #expect(!preempted.outcome.isAnswer)
+        #expect(outcome.withholdingReason == .interruptionInFlight)
 
-        let taken = try #require(outcome.slot)
-        #expect(taken.openAccusation == Self.rung())
-        #expect(taken.openQuery == nil)
-        #expect(outcome.withholdingReason == nil)
+        // The question is exactly where it was — not closed, not declined, not expired.
+        #expect(held.openQuery == Self.warrant())
+        #expect(held.openAccusation == nil)
+
+        // …against every rung, not just the panel.
+        for kind in LadderRung.Kind.allCases {
+            #expect(
+                held.offering(Self.rung(kind: kind)).withholdingReason == .interruptionInFlight,
+                "the \(kind.rawValue) rung displaced an open question"
+            )
+        }
     }
 
-    /// **The reverse never happens.** There is no code path by which a question closes an
-    /// accusation: "you are off task" outranks "is this part of it?", and a question about the
-    /// very application somebody has drifted into would be the app arguing with itself.
+    /// The direction that was already withheld, and still is.
     @Test("a question offered against a live accusation is withheld")
     func questionNeverPreemptsAnAccusation() throws {
         let held = try #require(InterruptionSlot.open.offering(Self.rung()).slot)
 
         let outcome = held.offering(Self.warrant())
         #expect(outcome.slot == nil, "a question took the slot from an accusation")
-        #expect(outcome.preempted == nil)
         #expect(outcome.withholdingReason == .interruptionInFlight)
 
         // The accusation is exactly where it was.
@@ -143,16 +151,15 @@ struct InterruptionSlotTests {
     }
 
     /// An accusation replacing an accusation is the ladder escalating, and whether it *may* is
-    /// `LadderMachine`'s question, not the slot's. Nothing is preempted, because nothing was
-    /// closed — the same mandate simply moved up a rung.
-    @Test("an accusation replaces an accusation with nothing preempted")
+    /// `LadderMachine`'s question, not the slot's — the same mandate simply moved up a rung.
+    @Test("an accusation replaces an accusation, which is the ladder escalating")
     func accusationReplacesAccusation() throws {
         let held = try #require(
             InterruptionSlot.open.offering(Self.rung(kind: .ambient)).slot
         )
         let escalated = held.offering(Self.rung(kind: .panel))
-        #expect(escalated.preempted == nil, "an accusation was reported as a closed question")
         #expect(escalated.slot?.openAccusation?.kind == .panel)
+        #expect(escalated.withholdingReason == nil)
     }
 
     @Test("releasing the slot opens it again for either kind")

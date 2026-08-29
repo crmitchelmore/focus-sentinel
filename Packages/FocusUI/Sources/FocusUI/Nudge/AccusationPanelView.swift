@@ -178,12 +178,6 @@ public struct AccusationPanelView: View {
                 .lineLimit(nil)
                 .fixedSize(horizontal: false, vertical: true)
             }
-            if presentation.rung == .recommitment {
-                ShellText(.nudgeRecommitment, role: .footnote)
-                    .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
-                    .lineLimit(nil)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
             if let remaining = presentation.snoozeRemaining {
                 snoozeCountdown(remaining)
             }
@@ -205,7 +199,7 @@ public struct AccusationPanelView: View {
                 .accusationPanelTitle,
                 voice: presentation.voice,
                 arguments: [presentation.task],
-                role: presentation.rung == .recommitment ? .title3 : .headline
+                role: .headline
             )
             .foregroundStyle(DesignTokens.Palette.primaryText)
             .lineLimit(nil)

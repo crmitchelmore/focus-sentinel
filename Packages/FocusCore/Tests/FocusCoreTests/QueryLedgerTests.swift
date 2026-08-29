@@ -703,31 +703,6 @@ struct QueryLedgerTests {
         )?.outcome == .expired)
     }
 
-    /// A preemption **does** settle: the accusation that replaced the question names the same
-    /// subject on the same surface and offers a richer correction (R-84a).
-    @Test("a question an accusation replaced is written down and never asked again")
-    @MainActor
-    func aPreemptedQuestionSpendsItsAsking() throws {
-        let (ledger, _, task, container) = try Self.makeLedger()
-        defer { withExtendedLifetime(container) {} }
-
-        let action = try ledger.recordResolution(
-            priorityID: task.id,
-            subjectKind: .app,
-            subject: Self.decoy2,
-            reason: .noNegativeBasis,
-            outcome: .declined,
-            surface: .panel,
-            readingAtAsk: .readable,
-            readingNow: .readable,
-            ending: .preempted
-        )
-
-        #expect(action == .settle)
-        #expect(try ledger.count() == 1)
-        #expect(try ledger.isSettled(priorityID: task.id, subjectKind: .app, subject: Self.decoy2))
-    }
-
     // MARK: - focus-qds · a break is not an answer, and an answer is for ever
 
     /// **The burn this epic introduced, driven end to end through the real store.**

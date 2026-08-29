@@ -58,7 +58,7 @@ struct SnoozeStateTests {
             "a snooze silenced the glyph, which is the one channel nobody objected to"
         )
         #expect(book.suppresses(rung: .panel, subject: Self.decoy, at: .seconds(60)))
-        #expect(book.suppresses(rung: .recommitment, subject: Self.decoy, at: .seconds(60)))
+        #expect(book.suppresses(rung: .panel, subject: Self.decoy, at: .seconds(60)))
 
         // …and no rung is suppressed for a subject nobody snoozed.
         for rung in LadderRung.Kind.allCases {

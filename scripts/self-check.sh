@@ -1558,10 +1558,10 @@ check(
 # menu-bar glyph, the popover badge or a notification was left on screen, fully drawn and fully
 # clickable, while the host had forgotten it. `answer(_:)` hit `guard let warrant = openWarrant
 # else { return }` and dropped the click; `defer { closeSurfaces() }` tidied the evidence away.
-# Measured: before visible=true reachable=true, ordinary glyph preemption, after visible=true
+# Measured on the loop that still had preemption: before visible=true reachable=true, after
 # reachable=true and "every offered action is reachable" — the person clicks "Yes, add it", ZERO
 # rules are written, the receipt says "expired", and the question is asked AGAIN. The ladder's
-# entry rung is the glyph, which makes that the commonest preemption there is.
+# entry rung is the glyph, which made that the commonest displacement there was.
 #
 # Every earlier finding in this epic was the app silencing itself. That one was the app ignoring
 # the person and asking again, which is U-1's repeat-asking clause broken from the other side.
@@ -1599,11 +1599,6 @@ check(
     "no interruption was mandated without the commitment it would be written under",
     nudge.get("mandatesWithoutACommitment"),
 )
-check(
-    nudge.get("preemptionsNamingNoQuestion") == 0,
-    "no preemption named a question the loop was not holding",
-    nudge.get("preemptionsNamingNoQuestion"),
-)
 # A person really can press a day-old banner, so this is not zero by construction — it is zero
 # because nothing in an automated run presses one. What it proves is that the refusal is wired and
 # reporting: a run in which a stale press was OBEYED would leave this at zero too, which is why the
@@ -1614,40 +1609,32 @@ check(
     nudge.get("staleNotificationActions"),
 )
 
-# D-06: three rungs, no more and no fewer — asserted in the running application as well as in
-# the policy manifest and the evaluation report.
+# D-06 as amended by U-2: two rungs, no more and no fewer — asserted in the running application
+# as well as in the policy manifest and the evaluation report. The third rung, explicit
+# recommitment, is deferred to epic focus-5ab. Amended rather than relaxed: it still fails on drift
+# in either direction.
 check(
-    report.get("ladderRungsDeclared") == 3,
-    "the ladder declares exactly three rungs",
+    report.get("ladderRungsDeclared") == 2,
+    "the ladder declares exactly two rungs",
     report.get("ladderRungsDeclared"),
 )
 
-# 2b — **a notification cannot settle a question** (focus-bxt).
+# 2b — **no rung is delivered by notification at all** (U-2).
 #
-# `NudgeSurface.notification.offersACorrection` is true and RIGHT: Return, Snooze and "This is
-# relevant" are real buttons. The only evidence behind the settle was that
-# `UNUserNotificationCenter.add(_:)` returned success — which is not evidence anybody saw
-# anything. The system Focus suppresses the banner while add() still succeeds, and the router
-# sends the recommitment rung there for `.provisional` too, which is quiet by design. So the
-# route still carries the rung and no longer earns the settle: exactly one surface in this app
-# can be read after the fact, and it is the panel.
+# This used to be a subtler claim: the notification carried the correction but its delivery could
+# not be read, so it was allowed to carry the top rung and not allowed to settle the question it
+# displaced. Both halves are gone. There is no preemption to settle anything, and the recommitment
+# rung the notification existed to carry is deferred to focus-5ab — so the surfaces a rung can
+# reach are the app's own, and that is asserted in the running application rather than argued.
 check(
-    nudge.get("surfacesWithAReadableDelivery") == ["panel"],
-    "only the panel's delivery can be read, so only the panel can settle a question",
-    (
-        nudge.get("surfacesWithAReadableDelivery"),
-        nudge.get("surfacesOfferingACorrection"),
-    ),
-)
-check(
-    "notification" in (nudge.get("surfacesOfferingACorrection") or []),
-    "the notification still carries the correction — what it cannot do is prove it was seen",
-    nudge.get("surfacesOfferingACorrection"),
+    "notification" not in (nudge.get("surfacesARungCanReach") or []),
+    "no rung reaches a notification: the ladder is entirely in-app",
+    nudge.get("surfacesARungCanReach"),
 )
 
-# 3 — **every rung reaches a surface, whatever this Mac says about notifications.** This is
-# F-73's degraded path observed in the shipping product: at zero grants the top rung routes to
-# the in-app recommitment panel rather than to nothing.
+# 3 — **every rung reaches a surface, whatever this Mac says about notifications.** Since U-2 the
+# authorisation cannot change any route at all, which is F-73's degraded path made unconditional:
+# there is no grant-dependent cell left to degrade.
 check(
     nudge.get("everyRungHasASurface") is True,
     "every rung of the ladder reaches a surface at this Mac's real authorisation",

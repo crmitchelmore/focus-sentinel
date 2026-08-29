@@ -237,11 +237,6 @@ final class NudgeHost {
         /// Empty when the live rung is not on the panel, which is every surface that has no
         /// actions to be out of reach.
         var panelActions: [String] = []
-        /// **The notification request this rung was delivered under**, when it went to one
-        /// (focus-zrs). A notification action names its delivery; an action naming any other
-        /// delivery is a click on a banner from a rung that is over, and is refused.
-        var notificationDeliveryID: String?
-
         /// **Whether this rung is occupying the thing the slot is about: an answerable screen.**
         ///
         /// R-84a's argument for a single slot is that *"two panels on screen at once is the
@@ -665,50 +660,23 @@ final class NudgeHost {
             delivered(surface: .panel, rung: rung, priorityID: priorityID)
 
         case .notification:
-            // **The delivery this rung is going out on** (focus-zrs). A notification's buttons
-            // outlive everything about the moment they were raised in, so the banner has to be
-            // able to say *which* rung it belongs to when somebody presses one an hour later.
-            // Minted here, held on the open rung, and gone the moment the rung is forgotten —
-            // which is what makes a click on any other banner refusable rather than obeyed.
-            let deliveryID = UUID().uuidString
-            notifications.deliver(
-                presentation,
-                surroundings: NotificationSurroundings(
-                    presentation: surroundings.presentation,
-                    media: surroundings.media,
-                    reducedInterruption: preferences.reducedInterruption,
-                    menuBarVisible: surroundings.menuBarVisible
-                ),
-                deliveryID: deliveryID
-            ) { [weak self] recorded, demotedTo in
-                guard let self else { return }
-                switch recorded {
-                case .delivered:
-                    self.openRung = OpenRung(
-                        rung: rung,
-                        priorityID: priorityID,
-                        landedOn: .notification,
-                        notificationDeliveryID: deliveryID
-                    )
-                    self.delivered(surface: .notification, rung: rung, priorityID: priorityID)
-                case .deferred(let reason):
-                    // **A route change, not a log line.** The failed attempt is a deferral, and
-                    // the rung is re-offered on the surface the router demoted it to.
-                    self.record(
-                        deferral: reason, kind: .accusation, subject: rung.subject,
-                        priorityID: priorityID
-                    )
-                    self.accuse(
-                        rung: rung,
-                        route: demotedTo,
-                        surroundings: surroundings,
-                        commitment: commitment
-                    )
-                case .suppressed:
-                    // Nothing was shown, so this rung is on no surface and holds nothing.
-                    self.forgetOpenRung()
-                }
-            }
+            // **No rung routes here any more** (U-2). The notification was the recommitment rung's
+            // surface and nothing else's, and that rung is deferred to focus-5ab — so
+            // `SurfaceRouter` has no branch that can answer `.notification` for an accusation.
+            //
+            // This is a refusal rather than a deleted branch because the surface is still a
+            // declared one (the settings pane still reads and reports notification authorisation),
+            // and a routing bug that sent a rung here must be a loud deferral rather than a
+            // silently swallowed nudge.
+            logger.fault("a rung was routed to a notification, which no rung reaches since U-2")
+            record(
+                deferral: .noSurfaceAvailable,
+                kind: .accusation,
+                subject: rung.subject,
+                priorityID: priorityID
+            )
+            forgetOpenRung()
+
         }
     }
 
@@ -954,7 +922,7 @@ final class NudgeHost {
         closeSurfaces(endingAnyQuestionAs: .worldMovedOn)
     }
 
-    /// **A press on a notification's button, checked against the rung it belongs to** (focus-zrs).
+    /// **A press on a notification's button, always refused** (focus-zrs, U-2).
     ///
     /// A banner is not a window: it does not close when the moment it was about ends, and its
     /// buttons stay live in Notification Centre for as long as the person leaves it there. So the
@@ -966,18 +934,20 @@ final class NudgeHost {
     /// a live question's `query/delivered/nil` row into `query/delivered/corrected` and taking the
     /// panel away, which records an answer the person never gave and loses the one they were about
     /// to.
+    ///
+    /// Since U-2 **no rung is delivered by notification at all**, so this loop never holds a
+    /// notification delivery and every press is refused. It is kept rather than deleted because
+    /// the banners themselves outlive the code: somebody upgrading with a recommitment notification
+    /// still sitting in Notification Centre can press it, and this is what makes that press
+    /// harmless rather than a correction applied to whatever happens to be on screen.
     private func resolveFromNotification(_ response: NudgeNotificationResponse) {
-        guard let open = openRung, open.notificationDeliveryID == response.deliveryID else {
-            staleNotificationActions += 1
-            logger.error(
-                """
-                a notification action named a delivery this loop is not holding \
-                (\(response.deliveryID, privacy: .public)); it is refused
-                """
-            )
-            return
-        }
-        resolve(response.action.correction, snoozeDuration: nil)
+        staleNotificationActions += 1
+        logger.error(
+            """
+            a notification action named a delivery this loop is not holding \
+            (\(response.deliveryID, privacy: .public)); it is refused
+            """
+        )
     }
 
     /// One click on the question.

@@ -10,7 +10,7 @@ import Testing
 ///
 /// ## The defect this suite found
 ///
-/// `LadderMachineTests` proves the reducer escalates `ambient → panel → recommitment` on a
+/// `LadderMachineTests` proves the reducer escalates `ambient → panel` on a
 /// transcript. `NudgeDeciderTests` proves the decision does. Neither could see that the running
 /// loop's ladder was **never told about the mandate**: `NudgeDecider.accuse(…)` folds it into a
 /// *copy* of the machine to work out which rung is next, and that copy dies with the decision.
@@ -18,8 +18,8 @@ import Testing
 /// survives — so `candidate(at:budgetPermits:)` answered `nil`, `offer(…)` recorded nothing,
 /// `reduce(.delivery(.delivered(_)))` found no attempt to resolve, and the state never left
 /// `.idle`. Every judgement re-entered at `LadderRung.entry(for:)`, and **the app could not
-/// escalate past the ambient glyph however long somebody drifted**: the panel and recommitment
-/// rungs were unreachable in the shipping loop.
+/// escalate past the ambient glyph however long somebody drifted**: the panel rung was
+/// unreachable in the shipping loop.
 ///
 /// It was invisible because every existing proof of R-80 drove the reducer or the decider
 /// directly with a ladder the test had already put into the state it wanted. This drives the loop
@@ -37,41 +37,40 @@ struct NudgeHostLadderTests {
     /// ticks past both of the two intervals that gate an escalation: `escalationDwell`, which is
     /// fact 3 of the four, and `mandateCooldown`, which is the longer of the two and therefore the
     /// one to step over. The rungs, the surfaces and the log rows are all what the loop decided.
-    @Test("sustained drift climbs ambient, then the panel, then the recommitment")
+    @Test("sustained drift climbs ambient, then the panel")
     func theLoopClimbsTheWholeLadder() throws {
         let fixture = try NudgeHostFixture()
         defer { fixture.tearDown() }
 
         var rungs: [LadderRung.Kind] = []
         var surfaces: [String] = []
-        for _ in 0..<3 {
+        for _ in 0..<2 {
             fixture.host.consider(NudgeHostFixture.unrelatedJudgement(subject: Self.subject))
             NudgeHostFixture.settle()
             if let rung = fixture.host.currentRung { rungs.append(rung) }
-            if case .accuse(_, .surface(let surface), _) = fixture.host.lastDecision {
+            if case .accuse(_, .surface(let surface)) = fixture.host.lastDecision {
                 surfaces.append(surface.rawValue)
             }
             fixture.clock.advance(by: RelevancePolicy.mandateCooldown + .seconds(1))
         }
 
         #expect(
-            rungs == [.ambient, .panel, .recommitment],
+            rungs == [.ambient, .panel],
             "the loop's ladder did not climb: it reached \(rungs)"
         )
-        // The ambient rung is the menu-bar glyph and raises no window; the two above it are the
-        // panel, because this fixture's notification centre answers `denied` — the ordinary state
-        // of a Mac nobody has granted notifications on (R-82).
-        #expect(surfaces == ["menuBar", "panel", "panel"])
+        // The ambient rung is the menu-bar glyph and raises no window; the one above it is the
+        // panel, which is now the top of the ladder (U-2).
+        #expect(surfaces == ["menuBar", "panel"])
         #expect(fixture.panel.isVisible)
-        #expect(fixture.host.deliveredCount == 3)
+        #expect(fixture.host.deliveredCount == 2)
 
-        // Three delivered rows, each naming the rung it carried: the climb is legible in the
+        // Two delivered rows, each naming the rung it carried: the climb is legible in the
         // record rather than only in memory. Compared as a sorted set, because this fixture's
-        // clock is fixed on purpose and three rows stamped with one instant have no order to
+        // clock is fixed on purpose and rows stamped with one instant have no order to
         // assert — a receipt's time is not what this is about.
         let rows = try fixture.interventions()
             .filter { $0.dispositionRaw == InterventionDisposition.delivered.rawValue }
-        #expect(rows.compactMap(\.rungRaw).sorted() == ["ambient", "panel", "recommitment"])
+        #expect(rows.compactMap(\.rungRaw).sorted() == ["ambient", "panel"])
     }
 
     /// **A rung that was only deferred is not a rung the ladder climbed past** (R-81).

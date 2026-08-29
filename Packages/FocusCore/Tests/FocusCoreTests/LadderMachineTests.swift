@@ -183,11 +183,11 @@ struct LadderMachineTests {
             at = at + RelevancePolicy.escalationDwell
         }
 
-        #expect(climbed == [.ambient, .panel, .recommitment])
+        #expect(climbed == [.ambient, .panel])
         #expect(climbed.count == InterventionPolicy.ladderRungCount)
 
-        // Nothing above recommitment. D-07 forbids compulsion, so the ladder tops out at an
-        // explicit choice and there is no rung that could be a coercion.
+        // Nothing above the panel. The recommitment rung is deferred to focus-5ab, and D-07
+        // forbids compulsion above it in any case, so the ladder tops out here.
         machine.reduce(.mandate(Self.decoy), now: at)
         #expect(machine.candidate(at: at, budgetPermits: true) == nil)
     }
@@ -207,7 +207,7 @@ struct LadderMachineTests {
                 machine.reduce(.delivery(.delivered(.panel)), now: at)
                 at = at + RelevancePolicy.escalationDwell
             }
-            #expect(machine.state.rung?.kind == .recommitment, "\(cause)")
+            #expect(machine.state.rung?.kind == .panel, "\(cause)")
 
             machine.reduce(.deEscalated(cause), now: at)
 

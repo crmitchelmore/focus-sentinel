@@ -5,9 +5,9 @@ import Testing
 
 @testable import FocusHost
 
-/// **The app must never ignore an answer it asked for** (focus-v0u, U-1).
+/// **The app must never ignore an answer it asked for** (focus-v0u, U-1, U-2).
 ///
-/// ## The defect these drive
+/// ## The defect these used to drive, and why three of them are gone
 ///
 /// `accuse(…)` cleared `openWarrant` on one line and then touched the panel on the `.panel`
 /// branch **alone**. On `.menuBar`, `.popoverBadge` and `.notification` the question's panel was
@@ -20,24 +20,25 @@ import Testing
 /// person clicks **"Yes, add it"**. Rules written: **0**. Receipts: `["expired"]`. And the
 /// question is asked again.
 ///
-/// The ladder's entry rung is the menu-bar glyph, so this is not an edge: it is what the most
-/// common preemption of all did. Every earlier finding in this epic was the app silencing itself;
-/// this is the app ignoring the person and then asking them the same thing again, which is U-1's
-/// repeat-asking clause broken from the other side.
+/// Every one of those readings was taken **through a preemption**, and U-2 deleted preemption. A
+/// question can no longer be displaced by anything, so the orphaned-surface class has no way in
+/// from that direction at all. What is left here is the half that still has to hold: the four
+/// remaining exits, walked exhaustively, and the new rule in place of the old one — an accusation
+/// raised over an open question **waits**, and the question it did not displace is untouched.
 @MainActor
 struct NudgeHostQuestionExitTests {
     static let subject = NudgeHostFixture.decoy
 
-    /// **The measurement, as an assertion.**
+    /// **The accusation waits, and the question is exactly as it was** (U-2).
     ///
-    /// Reverting `endOpenQuestion(.preempted, replacedOn: route.surface)` in `accuse(…)` to the
-    /// `openWarrant = nil` it replaced turns this red on the first `#expect`: the panel is still
-    /// visible, still carrying the question, and `orphanedQuestionSurfaces` names it.
+    /// This replaces three tests that each asserted a different consequence of displacement. The
+    /// ladder's entry rung is the menu-bar glyph, so the drift below is the commonest accusation
+    /// there is — and on the unfixed loop it took the question off the screen.
     @Test(
-        "a question displaced onto the glyph does not stay clickable on the panel",
+        "an accusation raised over an open question leaves the question alone",
         .enabled(if: LocalizationLane.catalogsAreCompiled)
     )
-    func aDisplacedQuestionLeavesTheScreen() throws {
+    func anAccusationDoesNotDisplaceAQuestion() throws {
         let fixture = try NudgeHostFixture()
         defer { fixture.tearDown() }
 
@@ -46,65 +47,46 @@ struct NudgeHostQuestionExitTests {
         #expect(fixture.panel.isVisible, "no question was on screen to displace")
         #expect(fixture.panel.showing == .question)
 
-        // The ordinary preemption: the ladder's entry rung is the menu-bar glyph.
-        fixture.host.consider(NudgeHostFixture.unrelatedJudgement(subject: Self.subject))
-        NudgeHostFixture.settle()
-        guard case .accuse(_, .surface(.menuBar), _) = fixture.host.lastDecision else {
-            Issue.record(
-                "this test is about the glyph: \(String(describing: fixture.host.lastDecision))"
-            )
-            return
-        }
-
-        #expect(
-            fixture.host.orphanedQuestionSurfaces.isEmpty,
-            """
-            the question is still on screen and the host has forgotten it: \
-            \(fixture.host.orphanedQuestionSurfaces.map(\.rawValue))
-            """
-        )
-        #expect(
-            fixture.panel.showing != .question,
-            "the panel is still carrying a question nobody is listening for"
-        )
-    }
-
-    /// **The click itself.** The reading above says the affordance is gone; this says what used
-    /// to happen when it was not. On the unfixed loop the person's answer wrote nothing at all,
-    /// and the only record of the whole episode was an `expired` receipt.
-    @Test(
-        "a person cannot press an answer the loop would silently drop",
-        .enabled(if: LocalizationLane.catalogsAreCompiled)
-    )
-    func anAnswerIsNeverDropped() throws {
-        let fixture = try NudgeHostFixture()
-        defer { fixture.tearDown() }
-
-        fixture.host.consider(NudgeHostFixture.uncertainJudgement(subject: Self.subject))
-        NudgeHostFixture.settle()
-        #expect(fixture.panel.isVisible)
-
         fixture.host.consider(NudgeHostFixture.unrelatedJudgement(subject: Self.subject))
         NudgeHostFixture.settle()
 
-        // Whatever is on screen now, it is not a question. A person who clicks what they can see
-        // is answering the accusation, and the accusation's actions write.
+        // The accusation was withheld rather than raised.
+        #expect(
+            fixture.host.lastDecision?.silence?.reason == .interruptionInFlight,
+            """
+            an accusation was raised over an open question: \
+            \(String(describing: fixture.host.lastDecision))
+            """
+        )
+        // The question is still on the screen, still owned, still answerable.
+        #expect(fixture.panel.isVisible && fixture.panel.showing == .question)
+        #expect(fixture.host.slot.openQuery != nil, "the question lost the slot it was holding")
         #expect(fixture.host.orphanedQuestionSurfaces.isEmpty)
 
-        // …and the question is not settled, so the app will ask again properly rather than having
-        // silently consumed the person's click (focus-7w3's clause, still holding).
+        // Nothing was written about it, and it certainly was not settled.
         let settling = try fixture.ledger.settledReceipt(
             priorityID: fixture.priorityID, subjectKind: .app, subject: Self.subject
         )
-        #expect(settling == nil, "an unseen preemption settled the question")
+        #expect(settling == nil, "an accusation that never appeared settled the question")
+
+        // And the person's answer still reaches the loop.
+        fixture.host.answer(.yesAddIt)
+        NudgeHostFixture.settle()
+        #expect(fixture.host.orphanedQuestionSurfaces.isEmpty)
+        #expect(
+            try fixture.ledger.settledReceipt(
+                priorityID: fixture.priorityID, subjectKind: .app, subject: Self.subject
+            ) != nil,
+            "the person answered and the loop dropped the click"
+        )
     }
 
     /// **The class, not the instance** (focus-v0u).
     ///
     /// Five rounds each found a different exit individually wrong. `QuestionExit` enumerates every
-    /// one of them, `endOpenQuestion(_:replacedOn:)` is the only door, and this walks `allCases`
-    /// and drives each through the real loop. The `switch` is exhaustive by construction: a sixth
-    /// exit added without a driver here is a compile error rather than a sixth round.
+    /// one of them, `endOpenQuestion(_:)` is the only door, and this walks `allCases` and drives
+    /// each through the real loop. The `switch` is exhaustive by construction: a fifth exit added
+    /// without a driver here is a compile error rather than a sixth round.
     @Test(
         "every exit from an open question takes it off every surface it was on",
         .enabled(if: LocalizationLane.catalogsAreCompiled),
@@ -125,10 +107,6 @@ struct NudgeHostQuestionExitTests {
         switch exit {
         case .answered:
             fixture.host.answer(.yesAddIt)
-
-        case .preempted:
-            fixture.host.consider(NudgeHostFixture.unrelatedJudgement(subject: Self.subject))
-            NudgeHostFixture.settle()
 
         case .worldMovedOn:
             fixture.host.sessionEnded()
@@ -164,45 +142,5 @@ struct NudgeHostQuestionExitTests {
             \(fixture.host.orphanedQuestionSurfaces.map(\.rawValue))
             """
         )
-    }
-
-    /// The one exit that is **allowed** to leave the panel up, and only because something else is
-    /// putting its own content on it in the same turn. Without this the fix would be "hide the
-    /// panel always", which would flicker between two things a person is meant to read one after
-    /// the other — and would break the one preemption R-84a actually describes.
-    @Test(
-        "an accusation routed to the panel keeps the panel, and it is carrying the accusation",
-        .enabled(if: LocalizationLane.catalogsAreCompiled)
-    )
-    func aPanelAccusationTakesTheSurfaceOver() throws {
-        let fixture = try NudgeHostFixture()
-        defer { fixture.tearDown() }
-
-        // Climb to the panel rung, exactly as `NudgeHostPreemptionTests` does.
-        fixture.host.consider(NudgeHostFixture.unrelatedJudgement(subject: Self.subject))
-        NudgeHostFixture.settle()
-        fixture.clock.advance(by: RelevancePolicy.mandateCooldown + .seconds(1))
-        fixture.host.hideOverlays()
-
-        fixture.host.consider(NudgeHostFixture.uncertainJudgement(subject: Self.subject))
-        NudgeHostFixture.settle()
-        #expect(fixture.panel.showing == .question)
-
-        fixture.clock.advance(by: RelevancePolicy.mandateCooldown + .seconds(1))
-        fixture.host.consider(NudgeHostFixture.unrelatedJudgement(subject: Self.subject))
-        NudgeHostFixture.settle()
-        guard case .accuse(_, .surface(.panel), _) = fixture.host.lastDecision else {
-            Issue.record(
-                "the accusation did not reach the panel: \(String(describing: fixture.host.lastDecision))"
-            )
-            return
-        }
-
-        #expect(fixture.panel.isVisible, "the accusation was put on a panel that is not on screen")
-        #expect(
-            fixture.panel.showing == .accusation,
-            "the panel kept the question after an accusation took it over"
-        )
-        #expect(fixture.host.orphanedQuestionSurfaces.isEmpty)
     }
 }

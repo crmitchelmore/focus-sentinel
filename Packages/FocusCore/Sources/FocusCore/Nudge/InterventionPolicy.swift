@@ -99,11 +99,19 @@ public enum InterventionPolicy {
     /// Two unanswered questions is the point at which the app is talking to itself.
     public static let ignoredQueryBackoff = 2
 
-    /// **B.** Three delivered accusation rungs with no correction, snooze, pause or return
+    /// **B.** Two delivered accusation rungs with no correction, snooze, pause or return
     /// drop the ladder back to `.ambient` for the rest of the session. Boundary triple
-    /// 2 / 3 / 4. F-63's "back off when ignored", with the ambient rung retained because going
+    /// 1 / 2 / 3. F-63's "back off when ignored", with the ambient rung retained because going
     /// fully silent would lose the one channel the person has not objected to.
-    public static let ignoredAccusationBackoff = 3
+    ///
+    /// **It moved with the rung count, and it had to** (U-2). This was 3, which was exactly the
+    /// three-rung ladder saying everything it could and being ignored each time. `candidate(…)`
+    /// answers `nil` at the top rung, so with the ladder cut to two rungs a third delivery can
+    /// never happen — the constant could not have tripped, and `LadderState.heldAtAmbient` would
+    /// have become an unreachable state rather than a quieter one. That is precisely the failure
+    /// `InterventionPolicyTests` exists to catch: a set of constants each defensible alone that
+    /// together produce a cap which never bites.
+    public static let ignoredAccusationBackoff = 2
 
     /// **B.** How long questions stay suspended after `ignoredQueryBackoff` trips. Boundary
     /// triple 3599 / 3600 / 3601 — one hour, which is long enough to be a real rest and short
@@ -161,12 +169,16 @@ public enum InterventionPolicy {
         .fixed(.seconds(900)), .untilTime, .restOfDay
     ]
 
-    /// **S.** D-06's ladder is three rungs, no more and no fewer.
+    /// **S.** The ladder is two rungs, no more and no fewer — D-06 as amended by U-2.
     ///
-    /// `LadderVocabularyTests` asserts this equals `LadderRung.Kind.allCases.count`, so the
-    /// constant and the enum cannot drift apart, and `nudge.ladderRungsDeclared == 3` asserts
-    /// the same fact as a number in the evaluation report.
-    public static let ladderRungCount = 3
+    /// D-06 ruled three stages and e05 shipped three. The user amended it: the ambient glyph and a
+    /// single panel nudge ship; the third rung, explicit recommitment, is deferred to focus-5ab to
+    /// be designed cleanly rather than repaired. The number is **amended rather than evaded** —
+    /// this is still a lint, `LadderVocabularyTests` still asserts it equals
+    /// `LadderRung.Kind.allCases.count`, and `nudge.ladderRungsDeclared == 2` still asserts the
+    /// same fact as a number in the evaluation report. Adding or losing a rung by accident is a
+    /// red run exactly as it was before; what changed is which number is right.
+    public static let ladderRungCount = 2
 
     /// **S.** R-85: the shipped default is **off**, with no bundled window.
     ///
@@ -299,7 +311,7 @@ public enum InterventionPolicy {
             name: "ladderRungCount",
             kind: .structural,
             encoded: "\(ladderRungCount)",
-            justification: "D-06"
+            justification: "D-06 as amended by U-2"
         ),
         PolicyConstant(
             name: "quietHoursDefault",
@@ -342,7 +354,12 @@ public enum InterventionPolicy {
     /// an intervention digest six months from now actually needs.
     public static let revisions: [String] = [
         "T113 — the fifteen constants of R-95's table, digested and classed B/C/S, in the "
-            + "nudge's own manifest so that a cooldown cannot invalidate a verdict cache"
+            + "nudge's own manifest so that a cooldown cannot invalidate a verdict cache",
+        "U-2 — ladderRungCount 3 -> 2 and ignoredAccusationBackoff 3 -> 2. D-06's third rung, "
+            + "explicit recommitment, is deferred to epic focus-5ab and removed from the shipping "
+            + "product; the ladder is the ambient glyph and a single panel nudge. The backoff "
+            + "moved with it because candidate(...) answers nil at the top rung, so a third "
+            + "delivery can never happen and a backoff of 3 could never trip"
     ]
 
     /// `EngineStamp.interventionVersion`'s value: the count of `revisions`, so a version that

@@ -335,7 +335,6 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     // the top rung wants an answer.
     case nudgeDismiss = "shell.nudge.dismiss"
     case nudgeSnoozeCountdown = "shell.nudge.snoozeCountdown"
-    case nudgeRecommitment = "shell.nudge.recommitment"
 
     // The menu-bar command centre (F-82, F-83, R-91).
     //

@@ -379,16 +379,6 @@ struct NudgePanelTests {
         returnTarget: "com.apple.TextEdit"
     )
 
-    /// Rung 3. The rung that asks for an explicit choice and does not auto-dismiss — so a
-    /// clipped action here is an action the person is being *required* to reach and cannot.
-    private static let recommitmentPresentation = AccusationPresentation(
-        rung: .recommitment,
-        task: "Write the Q3 proposal for Acme",
-        subject: "com.chrismitchelmore.FocusDecoy",
-        dwelled: .seconds(600),
-        returnTarget: "com.apple.TextEdit"
-    )
-
     /// The shipped tolerance, read from the type under test rather than restated here — a test
     /// that carried its own copy could go green while the app used a looser one.
     private static let sizeTolerance = NudgePanelController.sizeTolerance
@@ -425,16 +415,6 @@ struct NudgePanelTests {
                             .shellTextScale(scale)
                     ),
                     showing: .accusation
-                ),
-                PanelCase(
-                    name: "recommitment.\(size.rawValue)",
-                    scale: scale,
-                    offered: recommitmentPresentation.offeredActionIdentifiers,
-                    content: AnyView(
-                        AccusationPanelView(presentation: recommitmentPresentation)
-                            .shellTextScale(scale)
-                    ),
-                    showing: .accusation
                 )
             ]
         }
@@ -442,7 +422,7 @@ struct NudgePanelTests {
 
     /// **THE assertion of this epic, over the whole cross product** (focus-vpu, focus-kby).
     ///
-    /// `{query, accusation, recommitment} × {standard, accessibilityLarge}`, on the real window,
+    /// `{query, accusation} × {standard, accessibilityLarge}`, on the real window,
     /// with the real views and the compiled String Catalog, after the run loop has turned. The
     /// claim is not that the frame equals a constant — that claim passed a panel at y = −1186 and
     /// passed a panel whose Pause row was below the clip. It is that **every action the
@@ -524,7 +504,7 @@ struct NudgePanelTests {
 
         #expect(Set(heights.values).count > 1, "every panel is the same height: \(heights)")
         // The accessibility size is the same content in a bigger typeface. It cannot be shorter.
-        for panel in ["query", "accusation", "recommitment"] {
+        for panel in ["query", "accusation"] {
             let standard = heights["\(panel).standard"] ?? 0
             let large = heights["\(panel).accessibilityLarge"] ?? 0
             #expect(large > standard, "\(panel) did not grow with its text: \(heights)")
@@ -658,7 +638,7 @@ struct NudgePanelTests {
         // from `InterventionPolicy` by the shipping app and are injectable here, so twenty of
         // them at the largest text size is a real layout rather than a contrived view.
         let enormous = AccusationPresentation(
-            rung: .recommitment,
+            rung: .panel,
             task: "Write the Q3 proposal for Acme",
             subject: "com.chrismitchelmore.FocusDecoy",
             dwelled: .seconds(600),
@@ -751,7 +731,7 @@ struct NudgePanelTests {
     @Test("a new content that reports no frames does not inherit the last nudge's")
     func framesFromAReplacedLayoutAreRefused() {
         let presentation = AccusationPresentation(
-            rung: .recommitment,
+            rung: .panel,
             task: "Write the Q3 proposal for Acme",
             subject: "com.chrismitchelmore.FocusDecoy",
             dwelled: .seconds(600),

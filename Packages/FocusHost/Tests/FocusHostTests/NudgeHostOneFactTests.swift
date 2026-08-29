@@ -72,20 +72,23 @@ struct NudgeHostOneFactTests {
         )
     }
 
-    /// **The same nil key, one function further on** (focus-zrs B).
+    /// **The same nil key, one function further on — and the whole path is gone** (focus-zrs B,
+    /// U-2).
     ///
     /// `displacedQuestion(from:)` opened with `guard let priorityID = openQuestionPriorityID else
-    /// { return nil }`, so on the divergent key it answered `nil` — and `settleOrExpire(…)`
-    /// returns on its first line for a `nil` displacement. By then
-    /// `endOpenQuestion(.preempted, replacedOn:)` had already cleared the warrant, so the question
-    /// was off the screen, un-weighed and unrecorded: `PreemptionCredit` — the entire substance of
-    /// two previous rounds — was never consulted, and the question's own log row stayed open for
-    /// ever because `openRecordID` had been overwritten by the accusation's.
+    /// { return nil }`, so on the divergent key it answered `nil`, and `settleOrExpire(…)` returned
+    /// on its first line. By then the warrant had already been cleared, so the question was off the
+    /// screen, un-weighed and unrecorded, and its own log row stayed open for ever because
+    /// `openRecordID` had been overwritten by the accusation's.
+    ///
+    /// There is no displacement to weigh any more: an accusation offered against an open question
+    /// is withheld. What this drives now is that the divergent key — no active priority at all —
+    /// cannot make the loop lose a question it is holding.
     @Test(
-        "a displaced question is always weighed, and its own row is always closed",
+        "a question survives an accusation raised under a divergent key",
         .enabled(if: LocalizationLane.catalogsAreCompiled)
     )
-    func theDisplacedQuestionIsAlwaysWeighed() throws {
+    func theOpenQuestionSurvivesADivergentKey() throws {
         let fixture = try NudgeHostFixture()
         defer { fixture.tearDown() }
 
@@ -93,26 +96,17 @@ struct NudgeHostOneFactTests {
 
         fixture.host.consider(NudgeHostFixture.uncertainJudgement(subject: Self.subject))
         NudgeHostFixture.settle()
-        #expect(fixture.panel.isVisible, "no question was on screen to displace")
+        #expect(fixture.panel.isVisible, "no question was on screen")
 
         fixture.host.consider(NudgeHostFixture.unrelatedJudgement(subject: Self.subject))
         NudgeHostFixture.settle()
 
         #expect(
-            fixture.host.lastPreemptionCredit != nil,
-            "the accusation took the question off the screen without weighing it"
+            fixture.panel.showing == .question,
+            "the question was taken off the screen by an accusation that should have waited"
         )
-
-        let rows = try fixture.interventions()
-        let questions = rows.filter { $0.kindRaw == InterruptionKind.query.rawValue }
-        #expect(questions.count == 1, "expected one question row, got \(rows.map(\.kindRaw))")
-        #expect(
-            questions.first?.outcomeRaw == InterventionOutcome.dismissed.rawValue,
-            """
-            the question's row was left open for ever: \
-            \(String(describing: questions.first?.outcomeRaw))
-            """
-        )
+        #expect(fixture.host.orphanedQuestionSurfaces.isEmpty)
+        #expect(fixture.host.slot.openQuery != nil)
     }
 
     /// **A notification's buttons stay live in Notification Centre indefinitely** (focus-zrs C).

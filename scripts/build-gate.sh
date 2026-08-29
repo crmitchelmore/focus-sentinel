@@ -703,7 +703,7 @@ gate() {
     # 9b — notification-denied (§4.5, R-82, P-134). **This discharges standing condition 5.**
     #
     # Zero grants, no prompt of any kind, and the whole ladder still reaches somebody: every rung
-    # in-app at both unauthorised states, rung 3 on the panel in recommitment form, and
+    # in-app at both unauthorised states, the top rung on the panel, and
     # `requestAuthorizationCallCount == 0`.
     FOCUS_NOTIFICATION_DENIED_JSON="$LOG_DIR/focus-notification-denied.json" \
         run_stage "notification-denied" "$LOG_DIR/focus-notification-denied.log" \

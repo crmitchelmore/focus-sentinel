@@ -59,10 +59,6 @@ struct QuestionLedgerPolicyTests {
             Self.decide(.popoverBadge, .notReadable, .unknowable, .expired)
                 == .stayAskable(.neverReachedAReadableSurface)
         )
-        #expect(
-            Self.decide(.popoverBadge, .notReadable, .unknowable, .preempted)
-                == .stayAskable(.neverReachedAReadableSurface)
-        )
         // …and one the person did open, and read, and left open, is written down — as an
         // asking that happened and was never answered (focus-qds).
         #expect(Self.decide(.popoverBadge, .readable, .readable, .expired) == .recordUnanswered)
@@ -81,10 +77,6 @@ struct QuestionLedgerPolicyTests {
             Self.decide(.panel, .unknowable, .unknowable, .expired)
                 == .stayAskable(.neverReachedAReadableSurface)
         )
-        #expect(
-            Self.decide(.panel, .unknowable, .readable, .preempted)
-                == .stayAskable(.neverReachedAReadableSurface)
-        )
     }
 
     /// A question can only be carried by a surface that has an answer affordance. The glyph has
@@ -92,7 +84,9 @@ struct QuestionLedgerPolicyTests {
     @Test("no receipt for a question routed somewhere it could not have been answered")
     func onlyAQuestionSurfaceCanEndAQuestion() {
         for surface in [NudgeSurface.menuBar, .notification] {
-            for ending in [QuestionEnding.expired, .preempted] {
+            // Not `.answered`: a person cannot press an answer on a glyph, so that combination
+            // does not arise, and the policy settles on an answer whatever surface it names.
+            for ending in [QuestionEnding.expired] {
                 #expect(
                     Self.decide(surface, .readable, .readable, ending)
                         == .stayAskable(.neverReachedAQuestionSurface)
@@ -105,13 +99,13 @@ struct QuestionLedgerPolicyTests {
         )
     }
 
-    /// The panel a person read, still on screen, ended by a preemption or a session end: the
-    /// asking happened, and a question whose receipt was never written is a question that comes
-    /// back. This is the cell that stops the rule collapsing into "never write anything".
+    /// The panel a person read, still on screen, ended by a session end: the asking happened, and
+    /// a question whose receipt was never written is a question that comes back. This is the cell
+    /// that stops the rule collapsing into "never write anything".
     @Test("a question that was readable at both ends is written down")
     func aReadableQuestionIsRecorded() {
         #expect(Self.decide(.panel, .readable, .readable, .expired) == .recordUnanswered)
-        #expect(Self.decide(.panel, .readable, .readable, .preempted) == .settle)
+        #expect(Self.decide(.panel, .readable, .readable, .answered) == .settle)
     }
 
     // MARK: - focus-qds · what each ending means for askability
@@ -143,19 +137,20 @@ struct QuestionLedgerPolicyTests {
         #expect(Self.decide(.panel, .readable, .readable, .expired).writesAReceipt)
     }
 
-    /// The two endings that **do** settle, and the reason each does.
+    /// **The one ending that settles a question is the person answering it** (U-2).
     ///
-    /// An answer is the person's own choice — including "Not now", which Escape writes. A
-    /// preemption replaced the question with an accusation about the same subject on the same
-    /// surface, offering a richer correction than the question did (R-84a), and it is only
-    /// written at all when the surface was proven readable at both ends.
-    @Test("an answer settles a question, and so does an accusation that replaced it")
+    /// There were two. The other was a preemption, on the argument that the app had replaced the
+    /// question with an accusation about the same subject offering a richer correction — and that
+    /// argument justified spending somebody's single licensed interruption on a question they had
+    /// not answered. U-2 deleted the mechanism, so the vocabulary is two endings and exactly one
+    /// of them settles.
+    @Test("only an answer settles a question")
     func theEndingsThatSettle() {
+        #expect(QuestionEnding.allCases.count == 2)
         #expect(QuestionEnding.answered.settlesTheQuestion)
-        #expect(QuestionEnding.preempted.settlesTheQuestion)
         #expect(!QuestionEnding.expired.settlesTheQuestion)
+        #expect(QuestionEnding.allCases.filter(\.settlesTheQuestion) == [.answered])
 
-        #expect(Self.decide(.panel, .readable, .readable, .preempted).settlesTheQuestion)
         #expect(Self.decide(.panel, .readable, .readable, .answered).settlesTheQuestion)
     }
 
