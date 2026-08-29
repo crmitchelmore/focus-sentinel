@@ -215,7 +215,7 @@ public struct CockpitView: View {
         }
         .padding(sectionSpacing)
         .frame(minWidth: 420, minHeight: 260, alignment: .topLeading)
-        .background(DesignTokens.Palette.windowBackground)
+        .background(DesignTokens.Palette.windowBackground(for: traits))
         // **The traits this window resolved out of its own environment** (focus-h7h).
         //
         // Read here rather than taken from the connection, and that is the whole point: this is

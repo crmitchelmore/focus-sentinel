@@ -94,7 +94,7 @@ public struct ContextChip: View {
         }
         .padding(.horizontal, spacing)
         .padding(.vertical, spacing / 2)
-        .shellSurface(DesignTokens.material(for: traits), in: Capsule())
+        .shellSurface(DesignTokens.material(for: traits), in: Capsule(), traits: traits)
         .overlay {
             Capsule()
                 .strokeBorder(
@@ -180,7 +180,7 @@ public struct ContextChip: View {
 
     private var borderColor: Color {
         item.availability == .available
-            ? DesignTokens.Palette.separator
+            ? DesignTokens.Palette.separator(for: traits)
             : Color(nsColor: .systemOrange)
     }
 

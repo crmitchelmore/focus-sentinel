@@ -44,7 +44,7 @@ public struct SessionPhaseBadge: View {
         return HStack(spacing: spacing) {
             Image(systemName: Self.symbolName(for: phase))
                 .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(DesignTokens.tint(for: phase))
+                .foregroundStyle(DesignTokens.tint(for: phase, traits: traits))
                 .font(DesignTokens.font(.title3, scale: textScale))
                 .frame(
                     width: DesignTokens.spacing(glyphSize, scale: textScale),
@@ -59,11 +59,11 @@ public struct SessionPhaseBadge: View {
         }
         .padding(.horizontal, spacing)
         .padding(.vertical, spacing / 2)
-        .shellSurface(DesignTokens.material(for: traits), in: Capsule())
+        .shellSurface(DesignTokens.material(for: traits), in: Capsule(), traits: traits)
         .overlay {
             Capsule()
                 .strokeBorder(
-                    DesignTokens.Palette.separator.opacity(emphasis.outlineOpacity),
+                    DesignTokens.Palette.separator(for: traits).opacity(emphasis.outlineOpacity),
                     lineWidth: emphasis.borderWidth
                 )
         }

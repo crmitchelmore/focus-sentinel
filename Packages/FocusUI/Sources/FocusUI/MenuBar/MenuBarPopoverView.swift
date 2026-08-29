@@ -158,7 +158,7 @@ public struct MenuBarPopoverView: View {
                         onAction(.cancelSnooze(subject: snooze.subject))
                     } label: {
                         ShellText(.menuBarCancelSnooze, role: .footnote)
-                            .foregroundStyle(DesignTokens.Palette.accent)
+                            .foregroundStyle(DesignTokens.Palette.accent(for: traits))
                     }
                     .buttonStyle(.plain)
                 }

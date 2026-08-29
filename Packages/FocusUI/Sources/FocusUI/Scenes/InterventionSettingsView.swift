@@ -575,7 +575,7 @@ public struct InterventionSettingsView: View {
                             onAction(.removePresentationExclusion(subject))
                         } label: {
                             ShellText(.interventionExclusionsRemove, role: .footnote)
-                                .foregroundStyle(DesignTokens.Palette.accent)
+                                .foregroundStyle(DesignTokens.Palette.accent(for: traits))
                         }
                         .buttonStyle(.plain)
                     }

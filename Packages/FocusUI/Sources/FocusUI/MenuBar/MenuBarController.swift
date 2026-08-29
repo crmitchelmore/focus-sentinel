@@ -297,7 +297,16 @@ public final class MenuBarController {
     public func update(_ presentation: MenuBarPresentation, traits: AppearanceTraits? = nil) {
         let hadQuery = self.presentation.pendingQuery != nil
         self.presentation = presentation
-        if let traits { self.traits = traits }
+        if let traits {
+            self.traits = traits
+            // The popover and the status item draw AppKit chrome, which resolves against their
+            // own appearance and not against SwiftUI's environment (focus-pq8).
+            let appearance = NSAppearance(
+                named: traits.colorScheme == .dark ? .darkAqua : .aqua
+            )
+            popover.appearance = appearance
+            statusItem?.button?.appearance = appearance
+        }
         redraw(force: false)
         guard popover.isShown else { return }
         popover.contentViewController = popoverController()

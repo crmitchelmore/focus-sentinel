@@ -94,7 +94,7 @@ public struct HandoffConfirmationSheet: View {
         }
         .padding(spacing * 2)
         .frame(minWidth: 480, alignment: .leading)
-        .background(DesignTokens.Palette.windowBackground)
+        .background(DesignTokens.Palette.windowBackground(for: traits))
         .defaultFocus($focus, .handoffCancel)
         .onExitCommand(perform: cancel)
     }

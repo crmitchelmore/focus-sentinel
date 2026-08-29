@@ -93,7 +93,7 @@ public struct CompletionSheet: View {
         }
         .padding(spacing * 2)
         .frame(minWidth: 420, alignment: .leading)
-        .background(DesignTokens.Palette.windowBackground)
+        .background(DesignTokens.Palette.windowBackground(for: traits))
         .defaultFocus($focus, .completionShipped)
     }
 

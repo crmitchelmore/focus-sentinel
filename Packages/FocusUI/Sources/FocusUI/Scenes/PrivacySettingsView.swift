@@ -99,12 +99,13 @@ public struct PrivacySettingsView: View {
             // the fill goes opaque, and the border thickens.
             .shellSurface(
                 DesignTokens.material(for: traits),
-                in: RoundedRectangle(cornerRadius: spacing / 2, style: .continuous)
+                in: RoundedRectangle(cornerRadius: spacing / 2, style: .continuous),
+                traits: traits
             )
             .overlay {
                 RoundedRectangle(cornerRadius: spacing / 2, style: .continuous)
                     .strokeBorder(
-                        DesignTokens.Palette.separator
+                        DesignTokens.Palette.separator(for: traits)
                             .opacity(DesignTokens.emphasis(for: traits).outlineOpacity),
                         lineWidth: DesignTokens.emphasis(for: traits).borderWidth
                     )

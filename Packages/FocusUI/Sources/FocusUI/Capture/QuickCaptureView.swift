@@ -66,7 +66,7 @@ public struct QuickCaptureView: View {
         }
         .padding(spacing * 2)
         .frame(minWidth: 520, alignment: .leading)
-        .background(DesignTokens.Palette.windowBackground)
+        .background(DesignTokens.Palette.windowBackground(for: model.traits))
         .appearanceTraits(model.traits)
         .onExitCommand { model.onCancel?() }
         .defaultFocus($focus, .quickCaptureField)

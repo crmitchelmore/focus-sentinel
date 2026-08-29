@@ -1,3 +1,4 @@
+import AppKit
 import FocusCore
 import Foundation
 import SwiftUI
@@ -92,13 +93,38 @@ enum SnapshotHarness {
             .fixedSize(horizontal: width == nil, vertical: true)
             // Painted last, so the whole frame is filled rather than leaving an unpainted
             // margin around a dark render.
-            .background(DesignTokens.Palette.windowBackground)
+            .background(DesignTokens.Palette.windowBackground(for: traits))
 
         let renderer = ImageRenderer(content: subject)
         renderer.scale = scale
         renderer.isOpaque = true
 
-        guard let image = renderer.cgImage else {
+        // **Render under the traits' own AppKit appearance** (focus-pq8).
+        //
+        // `appearanceTraits(_:)` sets SwiftUI's `colorScheme`, and the tokens that are SwiftUI
+        // semantic colours — `.primary`, `.secondary` — follow it. The ones that wrap AppKit
+        // dynamic system colours do not: `Color(nsColor: .windowBackgroundColor)` resolves
+        // against `NSAppearance.current`, which in a test process is whatever the machine is set
+        // to and has never heard of the injected value.
+        //
+        // So a "dark" render was white text on a light background — and because a baseline is
+        // whatever the code drew on the day it was recorded, the blank was recorded as the
+        // baseline and every run since compared blank against blank and passed.
+        //
+        // The app's own fix is that the panel and the menu bar set their window's `appearance`
+        // from the same traits; this is that fix for a renderer with no window, and it is what
+        // makes the snapshot lane able to see the defect at all.
+        let appearance = NSAppearance(
+            named: traits.colorScheme == .dark ? .darkAqua : .aqua
+        )
+        var rendered: CGImage?
+        if let appearance {
+            appearance.performAsCurrentDrawingAppearance { rendered = renderer.cgImage }
+        } else {
+            rendered = renderer.cgImage
+        }
+
+        guard let image = rendered else {
             throw SnapshotFailure.renderProducedNothing(name)
         }
 
@@ -158,6 +184,22 @@ enum SnapshotHarness {
         }
 
         let baseline = try PNGCompare.decode(baselineData)
+
+        // **A blank render is a failure, and so is a blank baseline** (focus-pq8).
+        //
+        // The committed dark baselines for the three nudge surfaces were white-on-white — the
+        // panels really were drawing invisible text — so this lane compared a blank render against
+        // a blank baseline and passed, for every run since the day they were recorded. A snapshot
+        // test that cannot tell a picture from an empty rectangle is not asserting anything.
+        //
+        // Both sides are checked, and separately: a blank *render* is today's regression, and a
+        // blank *baseline* is a regression somebody recorded earlier and which would otherwise go
+        // on certifying itself for ever. Ink is measured against the render's own top-left pixel
+        // (see `PNGCompare.inkPixels`), so a legitimately dark picture is ink and a flat field of
+        // any colour is not.
+        try requireInk(snapshot.pixels, in: snapshot.name, side: "render")
+        try requireInk(baseline, in: snapshot.name, side: "baseline")
+
         let comparison = PNGCompare.compare(snapshot.pixels, baseline)
 
         if !comparison.isWithinTolerance {
@@ -166,6 +208,28 @@ enum SnapshotHarness {
             Attachment.record(Attachment(snapshot.data, named: "\(snapshot.name).candidate.png"))
             throw SnapshotFailure.mismatch(snapshot.name, comparison.summary)
         }
+    }
+
+    /// The share of a render that must be ink rather than background.
+    ///
+    /// Deliberately tiny. This is not a judgement about design — it is the line between "a
+    /// picture" and "an empty rectangle", and the committed blanks it exists to catch scored
+    /// **zero**: not a low number, but no ink at all outside their accent-coloured buttons. The
+    /// sparsest legitimate component in this lane, a status badge, is an order of magnitude above
+    /// it. A threshold that tried to say more than "something was drawn" would fail honest
+    /// redesigns, which is how a lint gets deleted.
+    nonisolated static let minimumInkShare = 0.002
+
+    /// Fail loudly when a picture has nothing in it.
+    private static func requireInk(
+        _ pixels: PixelBuffer,
+        in name: String,
+        side: String
+    ) throws {
+        guard !pixels.isEmpty else { throw SnapshotFailure.blank(name, side, 0) }
+        let share = Double(PNGCompare.inkPixels(pixels)) / Double(pixels.width * pixels.height)
+        guard share < minimumInkShare else { return }
+        throw SnapshotFailure.blank(name, side, share)
     }
 
     /// Render and verify in one step.
@@ -221,11 +285,20 @@ enum SnapshotFailure: Error, CustomStringConvertible {
     case renderProducedNothing(String)
     case missingBaseline(String, String)
     case mismatch(String, String)
+    /// A render or a committed baseline with nothing in it (focus-pq8).
+    case blank(String, String, Double)
 
     var description: String {
         switch self {
         case .renderProducedNothing(let name):
             "ImageRenderer produced no image for \(name)"
+        case .blank(let name, let side, let share):
+            """
+            the \(side) for \(name) is blank: \(String(format: "%.4f", share)) of it is ink, \
+            below the required \(SnapshotHarness.minimumInkShare). A picture with nothing in it \
+            cannot be compared against anything — if this is the baseline, it was recorded from a \
+            render that was already broken
+            """
         case .missingBaseline(let name, let path):
             "no committed baseline for \(name): the candidate has been written to \(path) — read it, then re-run"
         case .mismatch(let name, let summary):

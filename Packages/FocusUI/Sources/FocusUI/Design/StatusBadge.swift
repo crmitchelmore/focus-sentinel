@@ -116,11 +116,11 @@ public struct StatusBadge: View {
         }
         .padding(.horizontal, spacing)
         .padding(.vertical, spacing / 2)
-        .shellSurface(DesignTokens.material(for: traits), in: Capsule())
+        .shellSurface(DesignTokens.material(for: traits), in: Capsule(), traits: traits)
         .overlay {
             Capsule()
                 .strokeBorder(
-                    DesignTokens.Palette.separator.opacity(emphasis.outlineOpacity),
+                    DesignTokens.Palette.separator(for: traits).opacity(emphasis.outlineOpacity),
                     lineWidth: emphasis.borderWidth
                 )
         }

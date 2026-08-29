@@ -216,6 +216,14 @@ public final class NudgePanelController {
     private var content: AnyView = AnyView(EmptyView())
     private var traits: AppearanceTraits = .systemDefault
 
+    /// **The traits this panel was last drawn with** (focus-pq8).
+    ///
+    /// A reading rather than a private field, for the reason every other reading on this
+    /// controller is one: the defect was that the panel drew in `AppearanceTraits.systemDefault`
+    /// for the life of the process while the Mac said something else, and nothing outside could
+    /// tell. `--focus-self-check` and the unit lane can both ask now.
+    public var appliedTraits: AppearanceTraits { traits }
+
     /// **What is on the panel right now, as something anybody can read** (focus-v0u).
     ///
     /// `AnyView` is opaque: nothing outside this object could tell a panel carrying a question
@@ -405,6 +413,23 @@ public final class NudgePanelController {
         update(showing: .accusation, content: content, traits: traits)
     }
 
+    /// **Re-draw whatever is up under new appearance traits** (focus-pq8).
+    ///
+    /// The Mac's appearance can change while a nudge is on the screen — a person switching to dark
+    /// mode, or the automatic switch at sunset — and the panel is sticky (`hidesOnDeactivate` is
+    /// `false`, R-89), so it really can still be there. Without this the traits would only reach a
+    /// panel raised *after* the change.
+    ///
+    /// It re-lays out only when something is up: applying traits to an empty panel would be a
+    /// layout pass for nothing.
+    public func update(traits: AppearanceTraits) {
+        guard self.traits != traits else { return }
+        self.traits = traits
+        panel.appearance = NSAppearance(named: traits.colorScheme == .dark ? .darkAqua : .aqua)
+        guard showing != nil else { return }
+        layOutContent()
+    }
+
     public func update(
         showing: NudgePanelKind,
         content: some View,
@@ -413,6 +438,12 @@ public final class NudgePanelController {
         self.content = AnyView(content)
         self.showing = showing
         self.traits = traits
+        // **The window's own appearance follows the traits too** (focus-pq8). SwiftUI's
+        // `colorScheme` is set by `appearanceTraits(_:)` inside `layOutContent()`, but the panel's
+        // AppKit chrome and any `NSColor`-derived fill resolve against the *window's* appearance.
+        // Leaving that at the system's while the content was told something else is what drew a
+        // panel half in one scheme and half in the other.
+        panel.appearance = NSAppearance(named: traits.colorScheme == .dark ? .darkAqua : .aqua)
         layOutContent()
     }
 

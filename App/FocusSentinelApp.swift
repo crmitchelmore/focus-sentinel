@@ -109,6 +109,9 @@ private struct CockpitHost: View {
     let composition: AppComposition
 
     @Environment(\.undoManager) private var undoManager
+    /// The live traits, so the window's own background is drawn in the scheme the shell was
+    /// injected with rather than in whatever `NSAppearance.current` happens to be (focus-pq8).
+    @Environment(\.appearanceTraits) private var traits
 
     /// The cockpit, in a scroll view.
     ///
@@ -126,7 +129,7 @@ private struct CockpitHost: View {
             cockpit
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .background(DesignTokens.Palette.windowBackground)
+        .background(DesignTokens.Palette.windowBackground(for: traits))
     }
 
     private var cockpit: some View {

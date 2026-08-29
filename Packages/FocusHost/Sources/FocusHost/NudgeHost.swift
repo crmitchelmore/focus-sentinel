@@ -209,6 +209,20 @@ final class NudgeHost {
         var actions: [String] = []
     }
 
+    /// **The appearance the person is actually running in** (focus-pq8).
+    ///
+    /// A seam, like `surroundings`, and for the same reason: this object must not read
+    /// `NSWorkspace` or the store directly, and the snapshot lane must be able to drive every
+    /// variant without touching System Settings. The composition root wires it to
+    /// `AppearanceObserver.traits`.
+    ///
+    /// Its absence *was* the defect. `panel.update(…)` and `menuBar.update(…)` were called with
+    /// the default argument, which is `AppearanceTraits.systemDefault` — light, every accessibility
+    /// setting off — so the nudge panel and the popover were pinned to light for the life of the
+    /// process while the window around them followed the Mac. In dark mode that is a panel whose
+    /// text is drawn for a light background on a dark one.
+    var appearanceTraits: @MainActor () -> AppearanceTraits = { .systemDefault }
+
     private var openQuestion: OpenQuestion?
 
     /// **The rung on screen, as one value** (focus-zrs) — `OpenQuestion`'s twin, for the twin
@@ -611,9 +625,12 @@ final class NudgeHost {
             delivered(surface: surface, rung: rung, priorityID: priorityID)
 
         case .panel:
-            panel.update(AccusationPanelView(presentation: presentation) { [weak self] action, span in
-                self?.resolve(action, snoozeDuration: span)
-            })
+            panel.update(
+                AccusationPanelView(presentation: presentation) { [weak self] action, span in
+                    self?.resolve(action, snoozeDuration: span)
+                },
+                traits: appearanceTraits()
+            )
             panel.show(
                 presentationIsClear: !surroundings.presentation.suppressesOverlays,
                 announcement: presentation.announcement()
@@ -725,9 +742,12 @@ final class NudgeHost {
 
         switch surface {
         case .panel:
-            panel.update(QueryPanelView(presentation: presentation) { [weak self] answer in
-                self?.answer(answer)
-            })
+            panel.update(
+                QueryPanelView(presentation: presentation) { [weak self] answer in
+                    self?.answer(answer)
+                },
+                traits: appearanceTraits()
+            )
             panel.show(
                 presentationIsClear: !surroundings.presentation.suppressesOverlays,
                 announcement: presentation.announcement()

@@ -147,7 +147,7 @@ public struct TaskRulesView: View {
                         ShellText(Self.scopeKey(candidate), role: .caption)
                     }
                     .buttonStyle(.bordered)
-                    .tint(scope == candidate ? DesignTokens.Palette.accent : nil)
+                    .tint(scope == candidate ? DesignTokens.Palette.accent(for: traits) : nil)
                 }
 
                 Spacer(minLength: 0)

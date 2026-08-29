@@ -92,7 +92,7 @@ public struct TimeboxControl: View {
                 .font(DesignTokens.font(.callout, scale: textScale))
         }
         .buttonStyle(.bordered)
-        .tint(timeboxSeconds == seconds ? DesignTokens.Palette.accent : nil)
+        .tint(timeboxSeconds == seconds ? DesignTokens.Palette.accent(for: traits) : nil)
         .disabled(choose == nil)
 
         if isFirst {

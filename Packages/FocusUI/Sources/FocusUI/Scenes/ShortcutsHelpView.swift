@@ -105,7 +105,7 @@ public struct ShortcutsHelpView: View {
             ShortcutsHelpContent(registry: registry)
         }
         .frame(minWidth: 360, minHeight: 240)
-        .background(DesignTokens.Palette.windowBackground)
+        .background(DesignTokens.Palette.windowBackground(for: traits))
         // **How many rows it actually drew, and which traits reached it** (focus-h7h).
         //
         // The row count is the value that tells the shipping window from an empty one. It is

@@ -279,7 +279,7 @@ public struct SessionControls: View {
             ShellText(key, role: .callout)
         }
         .buttonStyle(.bordered)
-        .tint(DesignTokens.Palette.accent)
+        .tint(DesignTokens.Palette.accent(for: traits))
         .focused($focus, equals: .cockpitSessionPrimary)
         .disabled(actions == nil || !isEnabled)
     }

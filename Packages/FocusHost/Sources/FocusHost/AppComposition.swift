@@ -499,6 +499,12 @@ public final class AppComposition {
         nudgeHost.surroundings = { [weak self] in
             self?.nudgeSurroundings() ?? AppComposition.emptySurroundings()
         }
+        // The appearance the nudge surfaces are drawn in, read at the moment one is raised
+        // rather than captured once (focus-pq8). A person can switch to dark mode between two
+        // nudges, and the panel is sticky enough to still be up when they do.
+        nudgeHost.appearanceTraits = { [weak self] in
+            self?.appearance.traits ?? .systemDefault
+        }
         nudgeHost.currentSessionID = { [weak self] in self?.sessionHost.snapshot?.sessionID }
         nudgeHost.onCorrection = { [weak self] outcome, priorityID in
             self?.perform(outcome, priorityID: priorityID)
@@ -704,7 +710,7 @@ public final class AppComposition {
     /// title is written once a minute, and there is no timer anywhere for anybody to leak.
     private func refreshMenuBar(session: SessionSnapshot?) {
         chooseMenuBarTimerFormat(for: session)
-        menuBar.update(menuBarPresentation())
+        menuBar.update(menuBarPresentation(), traits: appearance.traits)
     }
 
     /// Choose the timer's shape **once per session**, and widen it at most once thereafter.
@@ -741,7 +747,13 @@ public final class AppComposition {
             pendingQuery: nudgeHost.pendingPopoverQuery,
             rung: nudgeHost.currentRung,
             band: relevanceHost.verdict?.band,
-            sensingPaused: !sensingHost.isRunning
+            sensingPaused: !sensingHost.isRunning,
+            // **F-146's channel, actually connected** (focus-pq8). This argument was never passed,
+            // so it took its default of `false` and the status item never drew the short label
+            // beside the glyph — for a person who has turned Differentiate Without Colour on, the
+            // menu bar was telling them the app's state in hue alone, which is the one thing that
+            // setting exists to stop.
+            differentiateWithoutColor: appearance.traits.differentiateWithoutColor
         )
     }
 
@@ -1412,6 +1424,14 @@ public final class AppComposition {
     public func appearanceChanged(_ traits: AppearanceTraits) {
         shellWires.insert(.appearanceChanged)
         updateCapturePanelTraits(traits)
+        // **The nudge surfaces are shell surfaces too** (focus-pq8). This wire reached the quick
+        // capture panel and nothing else, so the two surfaces a person meets *because the app
+        // interrupted them* — the nudge panel and the menu-bar popover — kept
+        // `AppearanceTraits.systemDefault` for the life of the process. Light, with every
+        // accessibility setting off, whatever the Mac was actually set to: the app drew the wrong
+        // thing in dark mode, and `differentiateWithoutColor` never reached the status item at all.
+        nudgePanel.update(traits: traits)
+        menuBar.update(menuBarPresentation(), traits: traits)
     }
 
     /// The window's own `UndoManager`, handed to both journals.

@@ -221,15 +221,43 @@ public enum DesignTokens {
     /// on its own.
     public enum Palette {
         /// Primary label colour.
+        ///
+        /// A SwiftUI semantic colour, so it resolves against the environment's `colorScheme` —
+        /// which `appearanceTraits(_:)` sets. It needs no traits argument because it already
+        /// follows the injected value.
         public static var primaryText: Color { .primary }
-        /// Supporting label colour.
+        /// Supporting label colour. SwiftUI semantic, as above.
         public static var secondaryText: Color { .secondary }
-        /// The user's own accent colour. Never overridden by an asset-catalog accent.
-        public static var accent: Color { Color(nsColor: .controlAccentColor) }
+
+        /// **The AppKit-backed colours, resolved against the injected traits** (focus-pq8).
+        ///
+        /// These three wrap AppKit *dynamic* system colours, and a dynamic `NSColor` resolves
+        /// against `NSAppearance.current` at draw time — not against SwiftUI's `colorScheme`, and
+        /// so not against `AppearanceTraits` at all. That split is the defect: under `.dark`
+        /// traits the labels above went white while `windowBackgroundColor` stayed light, and the
+        /// nudge surfaces drew **white text on a white background**.
+        ///
+        /// It is not only a test-lane artefact. The rule this file states at the top is that every
+        /// appearance value is read from injected traits and never from the system; these were the
+        /// three that quietly read the system, so the moment the app's own traits and the window's
+        /// `NSAppearance` disagreed — which is exactly what happened while the nudge panel was
+        /// pinned to `.systemDefault` — the person got a panel drawn half in one scheme and half
+        /// in the other.
+        ///
+        /// Taking the traits is what makes them obey the same rule as everything else.
+        public static func accent(for traits: AppearanceTraits) -> Color {
+            Color(nsColor: NSColor.controlAccentColor.resolved(for: traits))
+        }
+
         /// The window's own background.
-        public static var windowBackground: Color { Color(nsColor: .windowBackgroundColor) }
+        public static func windowBackground(for traits: AppearanceTraits) -> Color {
+            Color(nsColor: NSColor.windowBackgroundColor.resolved(for: traits))
+        }
+
         /// The system separator.
-        public static var separator: Color { Color(nsColor: .separatorColor) }
+        public static func separator(for traits: AppearanceTraits) -> Color {
+            Color(nsColor: NSColor.separatorColor.resolved(for: traits))
+        }
     }
 
     /// The colour for supporting text under these traits.
@@ -262,9 +290,9 @@ public enum DesignTokens {
     /// takes the user's own accent colour because it is the state the app exists to protect;
     /// every other phase takes a system colour rather than a shade of it, so the six are told
     /// apart by hue as well as by glyph for anyone who does use colour.
-    public static func tint(for phase: SessionPhase) -> Color {
+    public static func tint(for phase: SessionPhase, traits: AppearanceTraits) -> Color {
         switch phase {
-        case .focus: Palette.accent
+        case .focus: Palette.accent(for: traits)
         case .intentionalDetour: Color(nsColor: .systemOrange)
         case .onBreak: Color(nsColor: .systemTeal)
         case .paused: Color(nsColor: .systemGray)
@@ -295,12 +323,38 @@ extension View {
     /// tweak: `.regularMaterial` blurs what is behind it, and the point of the opaque branch
     /// is that nothing shows through at all.
     @ViewBuilder
-    public func shellSurface(_ fill: SurfaceFill, in shape: some Shape) -> some View {
+    public func shellSurface(
+        _ fill: SurfaceFill,
+        in shape: some Shape,
+        traits: AppearanceTraits
+    ) -> some View {
         switch fill {
         case .material:
             background(.regularMaterial, in: shape)
         case .opaque:
-            background(DesignTokens.Palette.windowBackground, in: shape)
+            background(DesignTokens.Palette.windowBackground(for: traits), in: shape)
         }
+    }
+}
+
+extension NSColor {
+    /// **This dynamic colour, resolved for the scheme the traits name** (focus-pq8).
+    ///
+    /// `NSAppearance.performAsCurrentDrawingAppearance` makes the appearance current for the
+    /// duration of the block, and reading `cgColor` inside it collapses a dynamic colour to the
+    /// concrete one that appearance would draw. Round-tripping that through `NSColor(cgColor:)`
+    /// is what produces a colour that no longer depends on whatever appearance happens to be
+    /// current when SwiftUI later rasterises it.
+    ///
+    /// Falls back to `self` when the appearance cannot be made or the round trip fails: an
+    /// unresolvable colour is better drawn in the system's own scheme than not at all.
+    func resolved(for traits: AppearanceTraits) -> NSColor {
+        let name: NSAppearance.Name = traits.colorScheme == .dark ? .darkAqua : .aqua
+        guard let appearance = NSAppearance(named: name) else { return self }
+        var resolved: NSColor?
+        appearance.performAsCurrentDrawingAppearance {
+            resolved = NSColor(cgColor: self.cgColor)
+        }
+        return resolved ?? self
     }
 }
