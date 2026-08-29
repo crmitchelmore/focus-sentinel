@@ -10,10 +10,33 @@ public enum ShellRenderedField: String, Sendable, CaseIterable, Codable, Hashabl
     // --- the cockpit ---------------------------------------------------------------------
     /// The sentence the hero drew, or the empty string where it drew the placeholder prompt.
     case priorityIntent
+    /// The **definition of done** the hero's second line drew, or `""` (F-08). Separate from
+    /// `priorityDetail` because it is the one field of the priority that has its own control and
+    /// its own two draw sites — read-only text and an editable field — and a defect in either is
+    /// a sentence the person wrote coming back wrong.
+    case priorityDoneWhen
+    /// The whole commitment, as `ShellValueDigest`. Derived rather than enumerated: a field added
+    /// to `PrioritySnapshot` is in this string the moment it is added, with nobody editing
+    /// anything (focus-7ow).
+    case priorityDetail
     /// The status the badge drew.
     case status
+    /// Which line the footer drew about the store — `cockpitStoreReady` or
+    /// `cockpitStoreUnavailable`, by the **string key the label was actually given**.
+    ///
+    /// A boolean flip here tells the person their work is not being saved when it is, or the
+    /// reverse. It was drawn from `state.storeIsReady` and reported nowhere (focus-7ow).
+    case storeStatus
+    /// Whether the start-of-day ritual banner is on the screen: `"shown"` or `"hidden"`.
+    ///
+    /// The banner appears when `showsRitualPrompt` **and** a mutation host is attached, so this
+    /// is the conjunction the window actually drew rather than either half of it.
+    case ritualBanner
     /// How many rows the recent-priorities list drew.
     case recentCount
+    /// **What is in those rows** (focus-7ow). `recentCount` alone was satisfied by a list of the
+    /// right length holding somebody else's history.
+    case recentDigest
     /// The elapsed figure the session controls were given, formatted to whole seconds.
     ///
     /// `"none"` when there is no figure. A session timer that reads nothing and one that reads
@@ -21,10 +44,24 @@ public enum ShellRenderedField: String, Sendable, CaseIterable, Codable, Hashabl
     case sessionElapsedSeconds
     /// The phase the session badge drew, or `"none"`.
     case sessionPhase
+    /// The whole session, as `ShellValueDigest` — the phase is one field of several.
+    case sessionDetail
+    /// The application the session controls named as the one to return to, or `"none"` (F-101).
+    ///
+    /// Reported by `SessionControls` itself, from the identifier it will hand the interruption
+    /// sheet: a sheet that names an application which does not exist is what a mutation to this
+    /// argument produces, and nothing reported it.
+    case lastActiveApp
     /// The task named by the handoff sheet the window is showing, or `""`.
     case handoffTask
+    /// The whole handoff, as `ShellValueDigest`: the task is one field of a request that also
+    /// carries where it came from.
+    case handoffDetail
     /// The sensing sentence the footer drew.
     case sensingSummary
+    /// The whole `SensingSummary` behind that sentence, as `ShellValueDigest`. The sentence is a
+    /// projection of six facts, and five of them could move without it changing.
+    case sensingDetail
     /// Every capability and the state the window drew it in.
     case capabilityStates
     /// Which mutation hosts the window was given. A cockpit handed neither draws every control
@@ -38,14 +75,41 @@ public enum ShellRenderedField: String, Sendable, CaseIterable, Codable, Hashabl
     case privacySummary
     /// Every capability, as the Privacy pane's matrix drew it.
     case privacyCapabilities
+    /// **Where the Privacy pane told the person their data lives** — the path it actually drew,
+    /// which is also what its Reveal in Finder button opens. A mutation printed `/` (focus-7ow).
+    case privacyStorePath
     /// The band the verdict inspector drew, or `"none"`.
     case verdictBand
+    /// The whole verdict, as `ShellValueDigest`. The band is one field: a verdict about a
+    /// different subject, with a different confidence and a different explanation, has the same
+    /// band.
+    case verdictDetail
     /// The voice the Intervention pane's picker drew as selected.
     case interventionVoice
     /// Whether the Intervention pane's Reduced-Interruption switch drew as on.
     case reducedInterruption
+    /// Whether that switch drew as **forced** by Reduce Motion rather than as a preference
+    /// (F-148). The pane says which, and saying the wrong one tells a person they can change
+    /// something they cannot, or the reverse.
+    case reducedInterruptionForced
+    /// The quiet-hours window the pane drew, or `"none"` for off (R-85).
+    case quietHours
+    /// The notification authorisation the pane drew — which is what its whole "what happens if I
+    /// say no" section is about, and what `SurfaceRouter` routes on.
+    case notificationAuthorisation
+    /// Today's spend over the cap, as the pane drew it (D-01: information, never a score).
+    case interruptionUsage
+    /// e03's presentation-exclusion list, as the pane drew it.
+    case presentationExclusions
     /// The appearance the General pane's picker drew as selected.
     case appearancePreference
+    /// **Which pane is on screen** (focus-7ow).
+    ///
+    /// A macOS `TabView` builds only the selected pane, so before this existed every stamp inside
+    /// an unselected pane simply never arrived and a defect in one was invisible. The selection
+    /// is driven from the composition root now, and this is how a reading says which pane it is a
+    /// reading *of*.
+    case settingsTab
 
     // --- the Keyboard Shortcuts window ------------------------------------------------------
     /// How many shortcut rows the reference actually drew. `0` is the empty window.
@@ -95,6 +159,16 @@ public struct ShellRenderedValues: Sendable, Equatable, Hashable, Codable {
     /// counter over it would only ever reach one, and a reader would have to work out that this
     /// was by construction rather than by accident. One named constant says so instead.
     public static let singleIssue = 1
+
+    /// **What a cockpit with nothing committed to reports for the sections it does not draw**
+    /// (focus-7ow).
+    ///
+    /// The commitment sections — the definition of done, the session controls, the application to
+    /// return to — exist only while there is a priority, and a field nobody reported is
+    /// indistinguishable from a section somebody deleted. So the window reports this instead, the
+    /// composition root expects exactly this under the same condition, and "there was nothing to
+    /// draw" stays a reading rather than becoming a silence.
+    public static let noCommitment = "no-commitment"
 
     public subscript(field: ShellRenderedField) -> String? {
         get { values[field.rawValue] }

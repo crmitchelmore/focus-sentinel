@@ -109,3 +109,51 @@ public struct CockpitConnection {
         self.didDraw = didDraw
     }
 }
+
+/// **Every field of this connection, bound to the receipt that echoes it** (focus-7ow).
+///
+/// Nothing here is optional and nothing is defaulted: `ShellConnectionTotality` walks the type
+/// with `Mirror` and a property with no entry in this table is a **failure**, whatever anybody
+/// intended. That is the whole difference between this and the enumeration it replaces — round 4
+/// listed the nine values a known mutant touched, and round 5's residue mutant lied about four
+/// more that nobody had thought of. This table cannot fail to think of a field, because it is
+/// checked against the type rather than against a memory of it.
+///
+/// `state` descends: the cockpit draws its members one at a time — the footer's store line, the
+/// ritual banner, the recents list — so a receipt for "the state" as one blob would be satisfied
+/// by a window that drew nine of eleven fields correctly and lied about two.
+extension CockpitConnection: ShellDrawnConnection {
+    public nonisolated static var connectionName: String { "CockpitConnection" }
+
+    public nonisolated static var fieldEchoes: [String: ShellFieldEcho] {
+        [
+            "generation": .undrawn(.generation),
+            "state": .composite,
+            // Both hosts decide whether every control in the window is live or disabled, and one
+            // field reports the pair: a cockpit handed neither looks finished and does nothing.
+            "actions": .drawn([.mutationHostsAttached]),
+            "sessionActions": .drawn([.mutationHostsAttached]),
+            "sessionElapsedSeconds": .drawn([.sessionElapsedSeconds]),
+            "lastActiveBundleID": .drawn([.lastActiveApp]),
+            "didRender": .undrawn(.receipt),
+            "didDraw": .undrawn(.receipt),
+
+            "state.status": .drawn([.status]),
+            "state.storeIsReady": .drawn([.storeStatus]),
+            // The cockpit's footer draws `sensing`; this flag reaches no label in the window.
+            // Written down as an exemption rather than left unlisted, because unlisted is a
+            // failure and an exemption is a diff somebody can argue with.
+            "state.isObservingActivity": .undrawn(.notDrawnOnThisSurface),
+            "state.priority": .drawn([.priorityIntent, .priorityDoneWhen, .priorityDetail]),
+            "state.recent": .drawn([.recentCount, .recentDigest]),
+            "state.pendingHandoff": .drawn([.handoffTask, .handoffDetail]),
+            "state.showsRitualPrompt": .drawn([.ritualBanner]),
+            "state.session": .drawn([.sessionPhase, .sessionDetail]),
+            "state.sensing": .drawn([.sensingSummary, .sensingDetail]),
+            // e04's verdict inspector is a Settings surface. The cockpit draws a `status` badge,
+            // never the verdict itself — `grep state.verdict CockpitView.swift` finds nothing.
+            "state.verdict": .undrawn(.notDrawnOnThisSurface),
+            "state.capabilities": .drawn([.capabilityStates])
+        ]
+    }
+}
