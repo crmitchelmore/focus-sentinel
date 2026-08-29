@@ -114,6 +114,19 @@ final class NudgeHost {
     /// than a claim.
     private(set) var lastDecision: NudgeDecision?
     private(set) var decisionCount = 0
+
+    /// **Attempts this process made, not the day's spend** (focus-zrs).
+    ///
+    /// Written down because the two are a pair that is *meant* to differ and would otherwise read
+    /// as one fact held twice. These count what this object did since launch; the spend is
+    /// `InterventionLog.budget(on:priorityID:)`, summed from persisted rows on `spendsBudget`, and
+    /// it is the only figure any cap is decided by (R-83).
+    ///
+    /// They part company at exactly one place, deliberately: `undeliverOpenRecord(…)` takes a
+    /// delivery off the budget when a rung is stranded or a question's answers go out of reach,
+    /// and does **not** decrement `deliveredCount` — because the app really did put something on
+    /// the screen, and a counter of attempts that forgot it would be describing a different day
+    /// from the one that happened.
     private(set) var deliveredCount = 0
     private(set) var deferredCount = 0
 
