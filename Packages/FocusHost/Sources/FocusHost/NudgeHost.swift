@@ -161,11 +161,10 @@ final class NudgeHost {
     /// identifier, the surface, the reading taken at the ask and the answer identifiers — set on
     /// one line each and cleared on another. Every one of them is a statement about the *same*
     /// question, and each of the last five rounds found a path where some of them had moved and
-    /// some had not. The `nil` this round is about is the sixth: `openQuestionPriorityID` came
+    /// some had not. The one that produced this type was the sixth: `openQuestionPriorityID` came
     /// from a store read that could disagree with the gate that admitted the question, and every
     /// consumer of it opened with `guard let … else { return }` — so a divergence silently
-    /// dropped the person's click, and one function on made `displacedQuestion(from:)` answer
-    /// `nil` and `PreemptionCredit` go unconsulted.
+    /// dropped the person's click.
     ///
     /// One optional cannot be half-set. `priorityID` is **not** optional inside it, because a
     /// question that does not know what commitment it is about is not a question this loop is
@@ -255,9 +254,9 @@ final class NudgeHost {
     ///
     /// The rung, the commitment it was raised under, the corrections it is offering and the
     /// notification delivery it went out on are four statements about one interruption, and they
-    /// were four properties. The last of them is this round's defect C: a notification's buttons
-    /// stay live in Notification Centre indefinitely, and `notifications.onAction` reached
-    /// `resolve(…)` with **no check that the rung the button belongs to is still open**.
+    /// were four properties. The last of them is why `deliveryID` is in here: a notification's
+    /// buttons stay live in Notification Centre indefinitely, and `notifications.onAction`
+    /// reached `resolve(…)` with **no check that the rung the button belongs to is still open**.
     private struct OpenRung {
         let rung: LadderRung
         /// The commitment it was raised under: the persisted "this is relevant" rule, the
@@ -292,10 +291,8 @@ final class NudgeHost {
     ///
     /// `slot` was a stored `InterruptionSlot` mutated on eleven lines beside the fields above —
     /// a second representation of *which interruption is on screen*, and the one the **decider**
-    /// reads. `NudgeDecider.accuse(…)` computes `preempted` from `memory.slot.offering(rung)`, so
-    /// a slot that said "a question holds this" while the host held none produced a
-    /// `PreemptedQuery` naming a question `displacedQuestion(from:)` could not find — which is
-    /// this round's defect B, arriving from the other side.
+    /// reads. A stored slot could say "a question holds this" while this object held none, and
+    /// the decider had no way to tell.
     ///
     /// Derived, the two cannot part company: the value the decider is handed *is* the question and
     /// the rung this object is holding. `InterruptionSlot` keeps the ruling; this keeps the
@@ -1372,8 +1369,8 @@ final class NudgeHost {
         let surface = question.surface
 
         // One assignment, because the question is one value. It used to be six lines, and the
-        // whole of this round's defect A was that a path could take some of them and not others —
-        // or, worse, that one of them was `nil` from the beginning (focus-zrs).
+        // whole of focus-zrs was that a path could take some of them and not others — or, worse,
+        // that one of them was `nil` from the beginning.
         openQuestion = nil
 
         switch surface {

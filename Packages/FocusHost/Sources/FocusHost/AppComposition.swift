@@ -883,9 +883,17 @@ public final class AppComposition {
     /// The sweep this round is really about found three pairs here that are *push projections*
     /// rather than duplicate sources: `SensingHost` owns what is being watched and what this Mac
     /// permits, `RelevanceHost` owns the snapshot the engine reasons from, and each is copied into
-    /// a value some window draws. Every copy has a wire that refreshes it synchronously when the
-    /// source moves — `onSensingChanged → refreshCockpit()`, `onSnapshotInvalidated →
-    /// invalidateSnapshot()` — so they *should* never differ.
+    /// a value some window draws. Every copy has a wire that refreshes it when the source moves —
+    /// `onSensingChanged → refreshCockpit()`, `onSnapshotInvalidated → invalidateSnapshot()`.
+    ///
+    /// **Two of the three wires are synchronous. The third is not, and this used to say they all
+    /// were** (focus-37b's record, corrected). The two sensing projections are refreshed inside
+    /// the call that moved the source, so a reader between them is impossible. The engine's
+    /// snapshot is rebuilt from the rule *store*, asynchronously, so there is a real window
+    /// between a commitment changing and the snapshot catching up — as the third bullet below
+    /// has always said. A blanket "synchronously" is the kind of sentence that makes the third
+    /// check look like an invariant when it is a race with a settle point in front of it, and
+    /// commit 33fb0df reasoned from the blanket form.
     ///
     /// "Should" is the word six rounds of this epic have been spent on. Each line below is a
     /// disagreement that cannot be argued about, and the gate reads them:
