@@ -700,7 +700,52 @@ enum SelfCheck {
             reason: .noNegativeBasis,
             dwelled: .seconds(62)
         )
-        panel.update(QueryPanelView(presentation: presentation))
+
+        // **The probe draws in the appearance it is probing** (focus-7wy).
+        //
+        // This line was `panel.update(QueryPanelView(presentation:))` with no `traits:`, so it
+        // took the parameter's default — `AppearanceTraits.systemDefault`, which is *light* with
+        // every accessibility setting off. focus-pq8 fixed the panel, which really had been
+        // drawing in the default appearance whatever the Mac was set to; and the instrument that
+        // was supposed to be able to see that regression came back was built light-pinned, so it
+        // would have reported a healthy panel on a dark Mac drawing white on white. That is the
+        // white-on-white lesson one layer up: the baseline was not blank this time, the *probe*
+        // was.
+        //
+        // **And it is driven to DARK first, or the reading proves nothing** (focus-7wy).
+        //
+        // `AppearanceTraits.systemDefault` is light with every accessibility setting off, which
+        // is exactly what an untouched Mac reports — so on a light Mac a panel that honours the
+        // injection and one that ignores it draw the *same* traits, and no observation can tell
+        // them apart. `shellReport()` already learned this and drives the preference before it
+        // reads its windows; the nudge surfaces were left out of that lesson.
+        //
+        // The observer is moved directly rather than through `applyAppearancePreference`, so
+        // nothing is written to the person's store, and `appearanceChanged(_:)` is the shipping
+        // wire — the same call the real appearance notification makes, which is what carries
+        // traits into this panel and the menu bar. Put back below.
+        let originalPreference = composition.appearance.preference
+        composition.appearance.preference = .dark
+        let liveTraits = composition.appearance.traits
+        composition.appearanceChanged(liveTraits)
+        panel.update(QueryPanelView(presentation: presentation), traits: liveTraits)
+
+        // **Reported so the gate can fail when the traits are ABSENT, rather than defaulting.**
+        //
+        // `traits:` has a default argument, which is exactly how the probe lost them without
+        // anybody noticing — the call still compiled and the panel still drew. So the report
+        // carries what the panel actually applied, what the app believes the Mac is set to, and
+        // whether the two differ from the default at all; `self-check.sh` fails on any of the
+        // three being wrong or missing. A probe that silently falls back to a light default is a
+        // probe that cannot fail.
+        report["appearanceTraits"] = panel.appliedTraits.renderedDescription
+        report["liveAppearanceTraits"] = liveTraits.renderedDescription
+        report["panelDrewTheLiveAppearance"] = panel.appliedTraits == liveTraits
+        report["defaultAppearanceTraits"] = AppearanceTraits.systemDefault.renderedDescription
+        // Non-vacuity, asserted by the gate: if the driven traits ever equalled the default, the
+        // line above would pass for a panel that ignores the injection entirely.
+        report["drivenTraitsDifferFromTheDefault"] = liveTraits != .systemDefault
+        report["panelIsDark"] = panel.appliedTraits.colorScheme == .dark
 
         let before = panel.readings()
         panel.show(presentationIsClear: true)
@@ -778,6 +823,14 @@ enum SelfCheck {
         report["hiddenAfter"] = !panel.isVisible
         report["propertiesAreCorrect"] = panel.properties.isCorrect
         report["windowNumber"] = panel.windowNumber
+
+        // **The appearance is put back**, through the same wire that moved it, so this stage
+        // leaves the surfaces as it found them. The panel is already hidden; the menu bar is not,
+        // and it took the driven traits too.
+        composition.appearance.preference = originalPreference
+        composition.appearanceChanged(composition.appearance.traits)
+        report["appearanceRestored"] = composition.appearance.preference == originalPreference
+
         return report
     }
 

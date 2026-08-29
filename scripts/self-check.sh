@@ -1715,6 +1715,38 @@ check(
     "the nudge panel really appeared, so the readings are about something",
     panel.get("wasVisible"),
 )
+
+# --- the dark-mode probe, which used to be light-pinned itself (focus-7wy) ----------------------
+#
+# `panelReport()` built the panel with no `traits:` argument, so it took the default —
+# `AppearanceTraits.systemDefault`, which is LIGHT. focus-pq8's fix is real; the instrument that
+# was supposed to notice it regressing could not see one, because it always drew in the
+# appearance it was meant to be checking against.
+#
+# Four assertions, and the last two are what stop the first two being a coincidence: the probe
+# drives the appearance to dark before it renders, so the live traits differ from the default
+# whatever this Mac is set to. `.get(...) is True` fails on an ABSENT key as well as a false one,
+# which is the point — the defect was a value quietly defaulting, not a value reading false.
+check(
+    panel.get("drivenTraitsDifferFromTheDefault") is True,
+    "the probe drove the appearance away from the light default, so its reading is a claim",
+    (panel.get("liveAppearanceTraits"), panel.get("defaultAppearanceTraits")),
+)
+check(
+    panel.get("panelIsDark") is True,
+    "the nudge panel was built in the DARK appearance the probe drove it to",
+    panel.get("appearanceTraits"),
+)
+check(
+    panel.get("panelDrewTheLiveAppearance") is True,
+    "the nudge panel drew the traits the app holds, rather than a default it fell back to",
+    (panel.get("appearanceTraits"), panel.get("liveAppearanceTraits")),
+)
+check(
+    panel.get("appearanceRestored") is True,
+    "the probe put the appearance preference back where it found it",
+    panel.get("appearanceRestored"),
+)
 check(
     bool(before.get("frontmostBundleIdentifier"))
     and before.get("frontmostBundleIdentifier") == after.get("frontmostBundleIdentifier"),
