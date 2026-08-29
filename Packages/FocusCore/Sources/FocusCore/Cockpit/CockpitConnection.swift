@@ -30,8 +30,34 @@ import Foundation
 /// from. A connection that never reached a view body says nothing, and a fabricated connection
 /// carries somebody else's closure. The receipt names *which* wire; the live projections beside
 /// it in the report say *whether* it carried anything.
+///
+/// ## `didDraw`, and why `didRender` was not enough (focus-h7h)
+///
+/// It was not enough, and the measurement is unambiguous. A mutant that kept **every** receipt
+/// firing and replaced only the values — this type rebuilt field by field from the live one, with
+/// `state:` a placeholder and `sessionElapsedSeconds:` `nil` — passed the whole nineteen-stage
+/// gate: 262 ok-assertions against 262, and an empty diff between the clean run's assertion list
+/// and the mutant's. A receipt that fires when a closure runs cannot distinguish a closure that
+/// produced the right value from one that produced a constant.
+///
+/// So the view reports the **values it drew**, through the preference channel
+/// `ShellRenderedValuesKey` — the mechanism `DecisionSurfaceReachability` already proved on the
+/// nudge panel — and `didDraw` is where they arrive. The composition root records what it put in
+/// this connection at the moment it built it, and compares. `generation` is what makes the
+/// comparison exact rather than a race against the wall clock: it is *what I handed you* against
+/// *what you drew*, not two reads taken a second apart.
 @MainActor
 public struct CockpitConnection {
+    /// **Which issue of this connection the window is drawing from** (focus-h7h).
+    ///
+    /// Stamped by `AppComposition`, injected into the view's environment, and carried back in
+    /// every reported value. Two jobs, both taken from `NudgeActionFrameSet.generation`: it makes
+    /// two identical layouts two distinguishable readings, so a window drawn twice with the same
+    /// content is not silently dropped by `onPreferenceChange`; and a report stamped with an
+    /// issue the root has already replaced is a window drawing from something stale, which is its
+    /// own defect and is legible as one.
+    public let generation: Int
+
     /// Everything the window draws.
     public let state: CockpitState
 
@@ -54,19 +80,32 @@ public struct CockpitConnection {
     /// SwiftUI evaluates many times reports the same fact many times and changes nothing.
     public let didRender: @MainActor () -> Void
 
+    /// **What the window put on the screen**, delivered from the preference channel every
+    /// reporting site below `CockpitView` publishes into (focus-h7h).
+    ///
+    /// Separate from `didRender` because the two answer different questions and both are needed:
+    /// the receipt says the body ran, and this says what the body drew. A no-op default, like
+    /// `didRender`'s, so the snapshot lane and the previews report to nobody — which is right,
+    /// because nothing is claiming anything about a layout that is not in the app.
+    public let didDraw: @MainActor (ShellRenderedValues) -> Void
+
     public init(
         state: CockpitState,
         actions: (any PriorityActing)?,
         sessionActions: (any SessionActing)?,
         sessionElapsedSeconds: Double?,
         lastActiveBundleID: String?,
-        didRender: @escaping @MainActor () -> Void = {}
+        generation: Int = 0,
+        didRender: @escaping @MainActor () -> Void = {},
+        didDraw: @escaping @MainActor (ShellRenderedValues) -> Void = { _ in }
     ) {
         self.state = state
         self.actions = actions
         self.sessionActions = sessionActions
         self.sessionElapsedSeconds = sessionElapsedSeconds
         self.lastActiveBundleID = lastActiveBundleID
+        self.generation = generation
         self.didRender = didRender
+        self.didDraw = didDraw
     }
 }

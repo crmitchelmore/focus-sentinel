@@ -28,7 +28,15 @@ public final class AppComposition {
     /// cannot shorten. And `--focus-self-check` has to report on the *live* panel and the
     /// *live* hot-key registration rather than on a second set built for the occasion, or the
     /// report would describe something the user never gets.
-    public static let shared = AppComposition()
+    ///
+    /// `storeKind` is `.applicationSupport` in every ordinary launch — `--focus-store` is the
+    /// only thing that changes it, and nothing but the self-check lane passes it. It exists
+    /// because one boundary value, the session's elapsed figure, cannot be observed in a launch
+    /// with no session: the mutation that guts it writes `nil`, a Mac with no session hands the
+    /// window `nil` too, and the two programs are then identical. Running the check against a
+    /// store somebody seeded is the only way to make that value exist without writing a session
+    /// into the person's own store — a fact about their day that never happened (focus-h7h).
+    public static let shared = AppComposition(storeKind: SelfCheck.requestedStoreKind)
 
     private let logger = Logger(
         subsystem: FocusStore.bundleIdentifier,
@@ -862,6 +870,93 @@ public final class AppComposition {
     /// exist, and there is no question this answers that a *current* reading would answer better.
     public private(set) var shellWires: Set<ShellWire> = []
 
+    // MARK: - What each window drew, beside what it was handed (focus-h7h)
+    //
+    // The receipts above say **which** wire fired. They were measured to say nothing about what
+    // travelled down it: an eight-part mutation that kept every receipt firing and replaced every
+    // value with a constant passed the whole nineteen-stage gate, 262 ok-assertions against 262,
+    // with an empty diff between the clean run's list and the mutant's. The cockpit showed a
+    // frozen placeholder, the session timer read nothing, the Privacy pane always said nothing
+    // was watched, three windows ignored dark mode and every accessibility setting, and the
+    // Keyboard Shortcuts window was empty.
+    //
+    // So each window reports the values it put on the screen, through the preference channel
+    // `ShellRenderedValuesKey` — `DecisionSurfaceReachability`'s mechanism, pointed at the
+    // windows — and this is where they arrive. Beside them is what **this object put into the
+    // connection**, recorded at the moment it built it.
+    //
+    // The expectation is recorded here rather than re-derived at the reading, and that is not an
+    // optimisation. A comparison against a fresh read would be two reads taken a second apart,
+    // and the session's elapsed figure moves between them: it would fail on the passage of time
+    // rather than on a defect. What is asserted is exactly *what I handed you* against *what you
+    // drew*, and `generation` is what keeps the two the same issue.
+
+    /// What each window says it drew, latest report per surface.
+    public private(set) var shellRenderings: [ShellThemedSurface: ShellRenderedValues] = [:]
+
+    /// What this object handed that window, recorded when it handed it over.
+    private var shellExpectations: [ShellThemedSurface: [ShellRenderedField: String]] = [:]
+
+    /// How many connections this object has issued for each window. Stamped into the connection,
+    /// carried back in every reported value, and compared: a report from an older issue is a
+    /// window drawing from something this object has already replaced.
+    private var shellGenerations: [ShellThemedSurface: Int] = [:]
+
+    /// The issue number a window's report must carry to be current.
+    public func shellGeneration(of surface: ShellThemedSurface) -> Int {
+        shellGenerations[surface] ?? 0
+    }
+
+    /// **The reading for one window**: what it drew, held up beside what it was handed.
+    ///
+    /// The whole of focus-h7h's acceptance in one value. `drewWhatTheAppKnows` is false for a
+    /// window that reported nothing, for one drawing from a replaced connection, and for one that
+    /// drew a constant where a live value was handed to it — three different defects, named
+    /// separately, because a caller that could not tell them apart would report "wrong" for all
+    /// of them.
+    public func shellRenderReading(of surface: ShellThemedSurface) -> ShellRenderReading {
+        ShellRenderFidelity.evaluate(
+            surface: surface.rawValue,
+            rendered: shellRenderings[surface] ?? .nothing,
+            expected: shellExpectations[surface] ?? [:],
+            expectedGeneration: shellGeneration(of: surface)
+        )
+    }
+
+    /// One window's report, as it arrived from the preference channel.
+    ///
+    /// Late reports are kept rather than dropped: the reading compares the generation itself, so
+    /// a stale one has to survive to be reported as stale. Dropping it here would turn "drawing
+    /// from a replaced connection" back into "reported nothing", which is a different defect.
+    private func record(_ values: ShellRenderedValues, for surface: ShellThemedSurface) {
+        shellRenderings[surface] = values
+    }
+
+    /// Take the next issue number for a window.
+    ///
+    /// It deliberately does **not** clear that window's expectations. The traits injection and
+    /// the connection are two separate wires evaluated at two separate moments of one pass —
+    /// `.appearanceTraits(composition.appearanceTraits(for: .cockpit))` is an argument to a scene
+    /// modifier and runs first, `CockpitHost.body` calls `cockpitConnection()` and runs second —
+    /// so clearing here would throw away the traits this object had just recorded handing over.
+    /// Every field is overwritten by the pass that hands it over again, which is what keeps the
+    /// dictionary current without a reset that races the scene.
+    private func nextGeneration(for surface: ShellThemedSurface) -> Int {
+        let next = shellGeneration(of: surface) + 1
+        shellGenerations[surface] = next
+        return next
+    }
+
+    /// Record one value this object is handing to a window.
+    ///
+    /// Additive, because the traits injection and the connection are two separate wires evaluated
+    /// at two separate moments in one pass of the scene's body: the traits arrive first, the
+    /// connection second, and a recording that replaced the dictionary would drop whichever came
+    /// before it.
+    private func expect(_ field: ShellRenderedField, _ value: String, for surface: ShellThemedSurface) {
+        shellExpectations[surface, default: [:]][field] = value
+    }
+
     /// **Everything the cockpit window draws, as one value the scene cannot fabricate**
     /// (focus-2er).
     ///
@@ -872,16 +967,54 @@ public final class AppComposition {
     /// call itself is recorded — so a scene that stops asking fails the gate by name.
     public func cockpitConnection() -> CockpitConnection {
         shellWires.insert(.cockpitConnected)
+
+        // Read once, into local values, and hand the **same** values to the window and to the
+        // expectation (focus-h7h). Reading them twice — once for the connection and once for the
+        // record — would make the comparison a race: `sessionElapsedSeconds` is taken from the
+        // wall clock at the moment somebody asks, so two reads a few microseconds apart can
+        // differ by a whole second at a boundary, and the gate would fail on the passage of time.
+        let state = cockpitState
+        let elapsed = sessionElapsedSeconds
+        let actions = cockpitActions
+        // The session host is the app's only `SessionActing`, and it is what the cockpit's
+        // session controls and the four e03 menu commands both call — one code path for a click
+        // and for a key equivalent.
+        let sessions = sessionActions
+        let generation = nextGeneration(for: .cockpit)
+
+        expect(.priorityIntent, state.priority?.intent ?? "", for: .cockpit)
+        expect(.status, state.status.rawValue, for: .cockpit)
+        expect(.recentCount, String(state.recent.count), for: .cockpit)
+        expect(.handoffTask, state.pendingHandoff?.task ?? "", for: .cockpit)
+        expect(.sessionPhase, state.session?.phase.rawValue ?? "none", for: .cockpit)
+        expect(
+            .sessionElapsedSeconds,
+            elapsed.map { String(Int($0)) } ?? "none",
+            for: .cockpit
+        )
+        expect(.capabilityStates, state.capabilities.renderedDescription, for: .cockpit)
+        expect(
+            .sensingSummary,
+            SensingStatusView.renderedDescription(
+                summary: state.sensing,
+                capabilities: state.capabilities,
+                showsReducedCapabilities: true
+            ),
+            for: .cockpit
+        )
+        // Both hosts are handed over, always. A cockpit given neither draws every control
+        // disabled and no capture field at all — a window that looks finished and does nothing.
+        expect(.mutationHostsAttached, "priority/session", for: .cockpit)
+
         return CockpitConnection(
-            state: cockpitState,
-            actions: cockpitActions,
-            // The session host is the app's only `SessionActing`, and it is what the cockpit's
-            // session controls and the four e03 menu commands both call — one code path for a
-            // click and for a key equivalent.
-            sessionActions: sessionActions,
-            sessionElapsedSeconds: sessionElapsedSeconds,
+            state: state,
+            actions: actions,
+            sessionActions: sessions,
+            sessionElapsedSeconds: elapsed,
             lastActiveBundleID: lastActiveBundleID,
-            didRender: { [weak self] in self?.shellWires.insert(.cockpitRendered) }
+            generation: generation,
+            didRender: { [weak self] in self?.shellWires.insert(.cockpitRendered) },
+            didDraw: { [weak self] values in self?.record(values, for: .cockpit) }
         )
     }
 
@@ -894,23 +1027,73 @@ public final class AppComposition {
     /// by hand in a scene body. Both are verbs on this object now.
     public func settingsConnection() -> ShellSettingsConnection {
         shellWires.insert(.settingsConnected)
+
+        // The same values into the window and into the record, for the reason
+        // `cockpitConnection()` reads its own once (focus-h7h).
+        let preference = appearance.preference
+        // What is being watched, and what this Mac lets the app do — read from the graph rather
+        // than probed again for the occasion, so the Privacy pane and the cockpit's status line
+        // are one answer rather than two opinions.
+        let summary = sensingSummary
+        let matrix = capabilities
+        let currentVerdict = verdict
+        let intervention = interventionSettings
+        let generation = nextGeneration(for: .settings)
+
+        expect(.appearancePreference, preference.rawValue, for: .settings)
+        expect(.privacyCapabilities, matrix.renderedDescription, for: .settings)
+        expect(.verdictBand, currentVerdict?.band?.rawValue ?? "none", for: .settings)
+        expect(.interventionVoice, intervention.voice.rawValue, for: .settings)
+        expect(
+            .reducedInterruption,
+            intervention.reducedInterruption ? "on" : "off",
+            for: .settings
+        )
+        // The Privacy pane draws the working as well as the sentence, which is what
+        // `showsDetail` turns on — and it is what tells this field apart from the cockpit's.
+        expect(
+            .privacySummary,
+            SensingStatusView.renderedDescription(
+                summary: summary,
+                capabilities: matrix,
+                showsReducedCapabilities: false
+            ),
+            for: .settings
+        )
+
         return ShellSettingsConnection(
-            preference: appearance.preference,
+            preference: preference,
             setPreference: { [weak self] preference in
                 self?.applyAppearancePreference(preference)
             },
             storeURL: FocusStore.applicationSupportURL,
-            // What is being watched, and what this Mac lets the app do — read from the graph
-            // rather than probed again for the occasion, so the Privacy pane and the cockpit's
-            // status line are one answer rather than two opinions.
-            summary: sensingSummary,
-            capabilities: capabilities,
-            verdict: verdict,
-            intervention: interventionSettings,
+            summary: summary,
+            capabilities: matrix,
+            verdict: currentVerdict,
+            intervention: intervention,
             onInterventionAction: { [weak self] action in self?.perform(action) },
-            didRender: { [weak self] in self?.shellWires.insert(.settingsRendered) }
+            generation: generation,
+            didRender: { [weak self] in self?.shellWires.insert(.settingsRendered) },
+            didDraw: { [weak self] rendering in
+                guard let self else { return }
+                self.record(rendering.values, for: .settings)
+                // **The two sinks the pane is actually holding**, kept so the self-check can
+                // drive them and watch this object's own graph move. They cannot be pressed:
+                // no lane in this programme holds the Accessibility grant it would take to
+                // click a picker, which is exactly why `{ _ in }` in their place survived two
+                // rounds of gates.
+                self.settingsSinks = rendering
+            }
         )
     }
+
+    /// **What the Settings window's controls will actually reach**, as the window handed it back
+    /// (focus-h7h).
+    ///
+    /// `nil` until the window has drawn once. Read by `--focus-self-check`, which drives both
+    /// sinks with a probe value and puts the world back, because the alternative — asserting that
+    /// the closure *is* the right one — is not something anything can check about a closure.
+    public private(set) var settingsSinks: ShellSettingsRendering?
 
     /// **The Keyboard Shortcuts window drew its reference.**
     ///
@@ -918,8 +1101,22 @@ public final class AppComposition {
     /// — it renders `CommandRegistry.shell`, a committed value. So the receipt is a verb the
     /// view calls from its body, which is the one thing that distinguishes the shipping window
     /// from a correctly titled empty one.
-    public func helpWindowRendered() {
+    public func helpWindowRendered(_ values: ShellRenderedValues) {
         shellWires.insert(.helpRendered)
+        record(values, for: .help)
+        // **The one issue.** The reference reads nothing from the graph, so there is no
+        // connection for it to draw from and nothing for it to become stale against: it draws
+        // `CommandRegistry.shell`, which cannot change while the process lives. The expectation
+        // is therefore the committed table's own row count, counted through the same function the
+        // window draws from — one derivation, two consumers, rather than a number written twice.
+        shellGenerations[.help] = ShellRenderedValues.singleIssue
+        expect(
+            .shortcutRowCount,
+            String(
+                ShortcutsHelpView.groups(for: .shell).reduce(0) { $0 + $1.rows.count }
+            ),
+            for: .help
+        )
     }
 
     /// **The live traits, for one named window's environment** (focus-2er).
@@ -929,7 +1126,14 @@ public final class AppComposition {
     /// defect, and one shared receipt would hide it. The surface says which window is asking.
     public func appearanceTraits(for surface: ShellThemedSurface) -> AppearanceTraits {
         shellWires.insert(surface.wire)
-        return appearance.traits
+        let traits = appearance.traits
+        // **What is handed over is recorded, and the window reports what it resolved**
+        // (focus-h7h). The receipt says the injection ran; this says which traits arrived. A
+        // scene that asked for the live traits and then injected `AppearanceTraits.systemDefault`
+        // fires the receipt and leaves the window ignoring dark mode and every accessibility
+        // setting — which is precisely one of the eight mutations that survived the last gate.
+        expect(.appearanceTraits, traits.renderedDescription, for: surface)
+        return traits
     }
 
     /// **The Settings window appeared.**

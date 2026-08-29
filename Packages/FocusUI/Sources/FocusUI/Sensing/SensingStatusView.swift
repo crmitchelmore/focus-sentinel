@@ -105,6 +105,22 @@ public struct SensingStatusView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text(ShellStrings.resource(.sensingHeading)))
+        // **What this view actually said, reported from where it said it** (focus-h7h).
+        //
+        // The cockpit's footer is the one place this reaches the report: the Privacy pane's copy
+        // of it lives inside a `TabView` that builds only the pane a person selected, so the
+        // Settings window reports its own sensing line from `ShellSettingsView` instead. The two
+        // fields are separate — `sensingSummary` and `privacySummary` — because a shell that told
+        // the truth in one window and not in the other is a real defect and one shared name would
+        // be satisfied by whichever drew first.
+        .shellRendered(
+            .sensingSummary,
+            Self.renderedDescription(
+                summary: summary,
+                capabilities: capabilities,
+                showsReducedCapabilities: showsReducedCapabilities
+            )
+        )
     }
 
     // MARK: - The one line that must always be true
@@ -128,6 +144,33 @@ public struct SensingStatusView: View {
     nonisolated public static func headlineKey(for summary: SensingSummary) -> ShellStringKey {
         if summary.isWatching { return .sensingStatusWatching }
         return summary.isPausedByUser ? .sensingStatusPaused : .sensingStatusDetached
+    }
+
+    /// **What this view puts on the screen, as one comparable line** (focus-h7h).
+    ///
+    /// One function with two callers — this view, which reports it as the value it drew, and
+    /// `AppComposition`, which computes what it expects from the live graph — for the reason
+    /// `headlineKey(for:)` is shared with the tests: a second derivation written out beside the
+    /// first is a second thing to keep in step, and a comparison between two drifting
+    /// derivations proves nothing about the window.
+    ///
+    /// It carries the sentence *and* the capabilities the view names beneath it, because the two
+    /// mutations this field exists to catch differ in the second: a Privacy pane handed
+    /// `SensingSummary.inactive` draws a different sentence, and one handed an unprobed
+    /// `CapabilityMatrix` draws the same sentence over a different list.
+    nonisolated public static func renderedDescription(
+        summary: SensingSummary,
+        capabilities: CapabilityMatrix,
+        showsReducedCapabilities: Bool
+    ) -> String {
+        var line = headlineKey(for: summary).rawValue
+        if showsReducedCapabilities, summary.isWatching {
+            let named = capabilities.allStates
+                .filter { sensingCapabilities.contains($0.capability) && !$0.state.isUsable }
+                .map { "\($0.capability.rawValue)=\($0.state.rawValue)" }
+            line += "|" + named.joined(separator: ",")
+        }
+        return line
     }
 
     // MARK: - The working

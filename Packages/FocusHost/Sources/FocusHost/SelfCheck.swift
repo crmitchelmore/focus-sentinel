@@ -79,9 +79,136 @@ enum SelfCheck {
     /// Whether this process was asked for the nudge block alone.
     static var wantsNudgeOnly: Bool { CommandLine.arguments.contains(nudgeArgument) }
 
+    /// **Open a store somebody else seeded, as the whole application** (focus-h7h).
+    ///
+    /// Not the same thing as `--focus-session-restore`, which builds one `SessionStore` and reads
+    /// it. This makes the **composition root** open it, so the shipping scene graph draws a state
+    /// this lane chose — and it exists for exactly one reason.
+    ///
+    /// `sessionElapsedSeconds` is the one boundary value that cannot be observed in an ordinary
+    /// launch. The mutation that guts it writes `nil`, and a Mac with no session running hands the
+    /// window `nil` too: the mutant and the shipping code are then extensionally identical, and no
+    /// instrument whatsoever can tell them apart. That is a theorem about the two programs, not a
+    /// limitation of the mechanism — so the only fix is to run the check where the value is not
+    /// `nil`, which means a launch with a session in it.
+    ///
+    /// A store of the caller's own, at a path they chose, so this can never touch the person's:
+    /// the alternative was starting a session in the real store, which would write a fact about
+    /// their day that never happened.
+    static let storeArgument = "--focus-store"
+
+    /// Which store `AppComposition.shared` opens.
+    ///
+    /// Read from the command line at static-initialisation time, which is before any scene exists
+    /// — the composition root is first touched by `FocusSentinelApp.init()`. The ordinary launch
+    /// passes nothing and gets `.applicationSupport`, which is the only behaviour the shipping app
+    /// has ever had.
+    public static var requestedStoreKind: FocusStore.Kind {
+        guard let path = value(after: storeArgument) else { return .applicationSupport }
+        return .temporary(URL(fileURLWithPath: path))
+    }
+
+    /// **The cockpit-rendering block alone, against a seeded store** (focus-h7h).
+    ///
+    /// Comes forward, because a window that is not on screen has not drawn; reports what the
+    /// cockpit put on the screen and nothing else, because every other claim in the ordinary
+    /// report is about the person's own store and would be answering a different question here.
+    static let cockpitArgument = "--focus-self-check-cockpit"
+
+    static var wantsCockpitOnly: Bool { CommandLine.arguments.contains(cockpitArgument) }
+
     /// How far back the seeded session's `startedAt` is dated. Ninety minutes, which is what
     /// §4.6 asserts the restoring launch reports to within two seconds.
     static let seedBackdateSeconds: Double = 5_400
+
+    /// The commitment the seeded store carries.
+    ///
+    /// A sentence no person would type, for the reason the handoff probe's is: it has to be a
+    /// value a frozen placeholder could not be carrying by coincidence.
+    static let seededPriorityIntent = "Self-check seeded commitment"
+
+    /// **What the cockpit drew, against a store somebody seeded** (focus-h7h).
+    ///
+    /// One block, and one reason for it. The elapsed figure is the only boundary value that
+    /// cannot be observed in an ordinary launch: the mutation that guts it hands the window
+    /// `nil`, and a Mac with no session running hands it `nil` too, so the mutant and the
+    /// shipping code are extensionally identical and nothing can separate them. Here there is a
+    /// session — ninety minutes old, in a store this lane wrote — so `nil` is a value the app
+    /// never produces and drawing it is a defect the gate can name.
+    ///
+    /// It reports the cockpit and nothing else. Every other claim in the ordinary report is about
+    /// the person's own store, and answering it against a fixture would be answering a different
+    /// question.
+    @MainActor
+    static func cockpitRenderingReport() -> [String: Any] {
+        let composition = AppComposition.shared
+
+        // **Open the cockpit the way a person does, because it may not be open.**
+        //
+        // Measured here: this launch came forward with no cockpit at all — `NSApp.windows` held
+        // only the menu-bar item — and waited out the whole deadline reporting nothing drawn. A
+        // SwiftUI `Window` scene restores whether it was open, and the *previous* launch in this
+        // script is the ordinary self-check, whose ⌘W probe closes it. So the state this lane
+        // inherits is "closed", and a window nobody opened has correctly drawn nothing.
+        //
+        // ⌘N is the File menu's New Priority, whose effect opens the cockpit and puts the cursor
+        // in the capture field — the same key equivalent the ordinary report probes, reaching the
+        // same `openWindow(id:)`. Pressing it is what a person would do, and it costs nothing.
+        _ = claims(characters: "n", modifiers: .command)
+
+        // **Wait until the window has really drawn, and time out loudly rather than early.**
+        //
+        // The same doctrine `comeForward` is built on, and for the same measured reason. A fixed
+        // delay here reported an empty rendering with `generation: 0` — the cockpit's scene body
+        // had run, so the appearance-traits injection had been recorded, but `CockpitHost.body`
+        // had not, so no connection had been issued and nothing had been drawn. A reading taken
+        // then describes a window that has not been asked to draw yet, and it is indistinguishable
+        // from a window that refused to.
+        let drewInMilliseconds = settle(untilCockpitDrewFor: composition)
+
+        let reading = composition.shellRenderReading(of: .cockpit)
+        let drawn = composition.shellRenderings[.cockpit] ?? .nothing
+        let session = composition.sessionHost.snapshot
+
+        return [
+            "mode": "cockpit",
+            "reading": reading.dictionary,
+            "drewWhatTheAppKnows": reading.drewWhatTheAppKnows,
+            "rendered": drawn.dictionary,
+            // The two facts that say the fixture actually arrived. Without them the reading above
+            // would pass on a launch whose store failed to open, by comparing two absences.
+            "liveSessionElapsedSeconds": composition.sessionElapsedSeconds ?? -1,
+            "livePriorityIntent": composition.cockpitState.priority?.intent ?? "",
+            "drawnSessionElapsedSeconds": drawn[.sessionElapsedSeconds] ?? "",
+            "drawnPriorityIntent": drawn[.priorityIntent] ?? "",
+            "seededPriorityIntent": seededPriorityIntent,
+            "drewInMilliseconds": drewInMilliseconds,
+            "windowTitles": NSApp.windows.filter(\.isVisible).map(\.title).sorted()
+        ]
+    }
+
+    /// How long to wait for the cockpit to draw before reading what it drew.
+    static let cockpitDrawDeadline: TimeInterval = 8.0
+
+    /// Turn the run loop until the cockpit has reported drawing from the connection the
+    /// composition root has most recently issued, or until the deadline.
+    ///
+    /// Reaching the deadline is a **reported failure**, not a fallback: the report carries the
+    /// elapsed figure and the visible window titles, so a machine that never draws the cockpit
+    /// fails as "the window never drew" rather than later, in the value comparison, for a reason
+    /// that looks like a defect in the values.
+    @MainActor
+    static func settle(untilCockpitDrewFor composition: AppComposition) -> Double {
+        let started = ProcessInfo.processInfo.systemUptime
+        while ProcessInfo.processInfo.systemUptime - started < cockpitDrawDeadline {
+            let issued = composition.shellGeneration(of: .cockpit)
+            if issued > 0, composition.shellRenderings[.cockpit]?.generation == issued {
+                break
+            }
+            settle(forSeconds: 0.05)
+        }
+        return (ProcessInfo.processInfo.systemUptime - started) * 1_000
+    }
 
     /// The value that follows a flag on the command line, or `nil` when the flag is absent or
     /// carries nothing after it.
@@ -237,6 +364,13 @@ enum SelfCheck {
         // asynchronous and a report written in the same tick would describe the moment before it.
         settle(forSeconds: sceneSettleSeconds)
         let shellAfterProbes = shellWireReport()
+        // **Last, because it needs all three windows and it moves the world** (focus-h7h).
+        //
+        // The Settings and Keyboard Shortcuts windows do not exist until ⌘, and ⌘? have been
+        // pressed, so neither can have reported what it drew before this line; and the block
+        // drives the appearance and both of the Settings pane's sinks, which changes what every
+        // reading above describes. It puts all three back.
+        let rendering = shellRenderingReport()
 
         var root: [String: Any] = [:]
         root["bundleIdentifier"] = Bundle.main.bundleIdentifier ?? ""
@@ -298,6 +432,8 @@ enum SelfCheck {
         // exist. `shell` above describes the cockpit alone, which is the only window open when
         // it runs.
         root["shellAfterProbes"] = shellAfterProbes
+        // What the three windows actually drew, beside what the composition root handed them.
+        root["shellRendering"] = rendering
         root["settingSensingPausedAfterKeyProbes"] =
             AppComposition.shared.sensingHost.settings.sensingPaused
         root["bootIdentity"] = AppComposition.shared.bootIdentity
@@ -1010,6 +1146,23 @@ enum SelfCheck {
         report["handoffURL"] = handoff?.absoluteString ?? ""
         report["handoffWasShown"] = composition.cockpitState.pendingHandoff != nil
         report["handoffTask"] = composition.cockpitState.pendingHandoff?.task ?? ""
+
+        // **What the cockpit drew while the handoff was up** (focus-h7h).
+        //
+        // The three lines above read the *store's* answer, and a window showing a frozen
+        // placeholder passes all three: the handoff really did reach `CockpitState`, and the
+        // window really did draw something else. This is the difference, and the handoff is the
+        // right moment to take it — it puts a sentence into the live state that no placeholder
+        // could be carrying, because no person would ever type it.
+        //
+        // A turn of the run loop first: SwiftUI redraws on the next one, so a reading taken here
+        // without it describes the window as it was before the URL arrived.
+        settle(forSeconds: renderSettleSeconds)
+        let withHandoff = composition.shellRenderReading(of: .cockpit)
+        report["cockpitRenderingWithHandoff"] = withHandoff.dictionary
+        report["cockpitDrewnHandoffTask"] =
+            composition.shellRenderings[.cockpit]?[.handoffTask] ?? ""
+        report["cockpitDrewTheHandoff"] = withHandoff.drewWhatTheAppKnows
         // **Refused on the way out, and this is load-bearing** (F-142).
         //
         // A shown handoff opens the cockpit's confirmation sheet, and a sheet still attached when
@@ -1023,6 +1176,196 @@ enum SelfCheck {
         // URL wire ran.
         report["wiresFired"] = composition.shellWires.map(\.rawValue).sorted()
 
+        return report
+    }
+
+    /// How long to let the run loop turn after driving something the windows must redraw from.
+    ///
+    /// A SwiftUI window redraws on the next turn, and the report is written from this one — so a
+    /// reading taken without this line describes the moment *before* the drive. Measured here, in
+    /// the built app: with no turn at all the three windows report the traits they were drawn
+    /// with before the appearance was moved, which reads as a defect in every one of them.
+    static let renderSettleSeconds: TimeInterval = 0.6
+
+    // MARK: - What the windows drew, beside what they were handed (focus-h7h)
+
+    /// **The reading this whole task exists to make possible.**
+    ///
+    /// Every wire in `App/` says its own name when it fires, and that was measured to be worth
+    /// nothing on its own: an eight-part mutation that kept every receipt firing and replaced
+    /// every value with a constant passed the whole nineteen-stage gate, 262 ok-assertions
+    /// against 262, with an empty diff between the clean run's assertion list and the mutant's.
+    /// A receipt that fires when a closure runs cannot distinguish a closure that produced the
+    /// right value from one that produced a constant.
+    ///
+    /// So this asks the three windows what they put on the screen and holds it up beside what the
+    /// composition root handed them. Two of the eight mutations cannot be reached that way at all,
+    /// because what they break is not a value but a **click** — the Appearance picker's writer and
+    /// the Intervention pane's action sink — and no lane in this programme holds the Accessibility
+    /// grant it would take to press one. Those are driven instead: the window hands back the
+    /// closures its controls are actually holding, this calls them, and the composition root's own
+    /// graph is watched for the change. Everything is put back.
+    ///
+    /// Every reading is grant-free and in-process: a SwiftUI preference, three property reads and
+    /// four function calls on objects this process already owns.
+    @MainActor
+    static func shellRenderingReport() -> [String: Any] {
+        let composition = AppComposition.shared
+        var report: [String: Any] = [:]
+
+        report["driveSetPreference"] = driveAppearanceSink()
+        report["driveInterventionSink"] = driveInterventionSink()
+
+        // **The appearance is moved, and that is what makes the traits reading mean anything.**
+        //
+        // `AppearanceTraits.systemDefault` is a light appearance with every accessibility setting
+        // off — which is exactly what an untouched Mac reports. So on a light Mac a window that
+        // ignores the injection and one that honours it draw the *same* traits, and no
+        // observation whatsoever can tell them apart. Driving the preference to `.dark` makes the
+        // live traits differ from the default whatever this Mac is set to, which is the condition
+        // under which the reading is a claim rather than a coincidence.
+        //
+        // The observer is moved directly rather than through `applyAppearancePreference`, so
+        // nothing is written to the person's store: this changes what the windows are drawn with
+        // for two-thirds of a second and puts it back.
+        let originalPreference = composition.appearance.preference
+        composition.appearance.preference = .dark
+        settle(forSeconds: renderSettleSeconds)
+
+        report["drivenAppearancePreference"] = AppearancePreference.dark.rawValue
+        report["drivenTraits"] = composition.appearance.traits.renderedDescription
+        report["defaultTraits"] = AppearanceTraits.systemDefault.renderedDescription
+        // Non-vacuity, asserted by the gate: if the driven traits ever equalled the default, the
+        // three traits assertions below would pass for a shell that ignores the injection.
+        report["drivenTraitsDifferFromTheDefault"] =
+            composition.appearance.traits != .systemDefault
+
+        // **The quick-capture panel followed the live change, or it did not** (focus-h7h).
+        //
+        // `capturePanelTraitsAdopted` was a sentinel — "somebody told the panel something" — and
+        // a scene that told it `AppearanceTraits.systemDefault` satisfied it exactly as well as
+        // one that told it the truth. This is the value.
+        report["capturePanelTraits"] =
+            composition.quickCapturePanel.adoptedTraits?.renderedDescription ?? ""
+        report["capturePanelFollowedTheLiveTheme"] =
+            composition.quickCapturePanel.adoptedTraits == composition.appearance.traits
+
+        var readings: [String: Any] = [:]
+        var drewWhatTheAppKnows: [String] = []
+        for surface in ShellThemedSurface.allCases {
+            let reading = composition.shellRenderReading(of: surface)
+            readings[surface.rawValue] = reading.dictionary
+            if reading.drewWhatTheAppKnows { drewWhatTheAppKnows.append(surface.rawValue) }
+        }
+        report["readings"] = readings
+        report["surfacesThatDrewWhatTheAppKnows"] = drewWhatTheAppKnows.sorted()
+        report["surfacesDeclared"] = ShellThemedSurface.allCases.map(\.rawValue).sorted()
+        // The values themselves, so a failing gate line can be read without re-running anything.
+        report["rendered"] = Dictionary(
+            uniqueKeysWithValues: ShellThemedSurface.allCases.map { surface in
+                (surface.rawValue, (composition.shellRenderings[surface] ?? .nothing).dictionary)
+            }
+        )
+
+        composition.appearance.preference = originalPreference
+        settle(forSeconds: renderSettleSeconds)
+        report["appearancePreferenceRestored"] =
+            composition.appearance.preference == originalPreference
+
+        return report
+    }
+
+    /// **Press the Appearance picker without a grant** (focus-h7h, focus-cp2 M4).
+    ///
+    /// Deleting the store write from the picker's binding survived two gates: the person's choice
+    /// was forgotten the moment they quit, and nothing anywhere noticed. It cannot be reached by a
+    /// value — what broke is what happens on a *click* — and it cannot be clicked, because this
+    /// programme's lanes hold no Accessibility grant. So the window hands back the closure its
+    /// picker writes through, this calls it, and both halves of the effect are read: the observer
+    /// the shell re-renders from, and the row on disk.
+    ///
+    /// Reversible by construction. Whatever was stored is read first and written back through the
+    /// composition root's own verb, so a self-check leaves the person's appearance exactly as it
+    /// found it — and `restored` says so rather than leaving it to be assumed.
+    @MainActor
+    static func driveAppearanceSink() -> [String: Any] {
+        let composition = AppComposition.shared
+        var report: [String: Any] = [:]
+
+        guard let sinks = composition.settingsSinks else {
+            // Not a silent skip. The Settings window is opened by the ⌘, probe, so no sinks means
+            // the window never drew — which is a failure of a different wire, and the gate has to
+            // be able to say which.
+            report["available"] = false
+            return report
+        }
+        report["available"] = true
+
+        let storedBefore = composition.storedAppearancePreference()
+        let observedBefore = composition.appearance.preference
+        // Anything the picker is not already showing. Two candidates so the probe is never a
+        // no-op: writing the value that is already there would prove nothing about the writer.
+        let probe: AppearancePreference = storedBefore == .dark ? .light : .dark
+
+        sinks.setPreference(probe)
+
+        report["probe"] = probe.rawValue
+        report["storedBefore"] = storedBefore.rawValue
+        report["observerAfter"] = composition.appearance.preference.rawValue
+        report["storedAfter"] = composition.storedAppearancePreference().rawValue
+        // Both halves, because they are two different defects. A picker that updates the observer
+        // and never writes is the mutation that survived; one that writes and never updates the
+        // observer would leave the shell drawing the old appearance until relaunch.
+        report["reachedTheObserver"] = composition.appearance.preference == probe
+        report["reachedTheStore"] = composition.storedAppearancePreference() == probe
+
+        composition.applyAppearancePreference(storedBefore)
+        composition.appearance.preference = observedBefore
+        report["restored"] = composition.storedAppearancePreference() == storedBefore
+        return report
+    }
+
+    /// **Press the Intervention pane's controls without a grant** (focus-h7h, focus-cp2 M3).
+    ///
+    /// `onInterventionAction` gutted to `{ _ in }` is, under U-1, the wire that decides whether
+    /// the app may speak at all — and it survived two gates for the same reason the one above
+    /// did. Both of the pane's controls are driven, because they write different fields and a
+    /// sink that carried one and dropped the other would be a real defect.
+    ///
+    /// Nothing here touches the store: `NudgePreferences` lives in the running loop, so the whole
+    /// probe is a pair of in-memory writes and their read-back, put back through the composition
+    /// root's own verb rather than through the sink under test.
+    @MainActor
+    static func driveInterventionSink() -> [String: Any] {
+        let composition = AppComposition.shared
+        var report: [String: Any] = [:]
+
+        guard let sinks = composition.settingsSinks else {
+            report["available"] = false
+            return report
+        }
+        report["available"] = true
+
+        let voiceBefore = composition.nudgeHost.preferences.voice
+        let reducedBefore = composition.nudgeHost.preferences.reducedInterruption
+        let voiceProbe: NudgeVoice = voiceBefore == .standard ? .silentVisual : .standard
+        let reducedProbe = !reducedBefore
+
+        sinks.onInterventionAction(.setVoice(voiceProbe))
+        report["voiceProbe"] = voiceProbe.rawValue
+        report["voiceAfter"] = composition.nudgeHost.preferences.voice.rawValue
+        report["voiceReachedTheLoop"] = composition.nudgeHost.preferences.voice == voiceProbe
+
+        sinks.onInterventionAction(.setReducedInterruption(reducedProbe))
+        report["reducedProbe"] = reducedProbe
+        report["reducedAfter"] = composition.nudgeHost.preferences.reducedInterruption
+        report["reducedReachedTheLoop"] =
+            composition.nudgeHost.preferences.reducedInterruption == reducedProbe
+
+        composition.perform(.setVoice(voiceBefore))
+        composition.perform(.setReducedInterruption(reducedBefore))
+        report["restored"] = composition.nudgeHost.preferences.voice == voiceBefore
+            && composition.nudgeHost.preferences.reducedInterruption == reducedBefore
         return report
     }
 
@@ -1374,7 +1717,7 @@ enum SelfCheck {
     }
 
     @MainActor
-    private static func claims(characters: String, modifiers: NSEvent.ModifierFlags) -> Bool {
+    static func claims(characters: String, modifiers: NSEvent.ModifierFlags) -> Bool {
         guard
             let event = NSEvent.keyEvent(
                 with: .keyDown,
@@ -1452,6 +1795,18 @@ enum SelfCheck {
         let uptimeNow = uptimeClock.uptimeSeconds
         let startedAt = wallNow.addingTimeInterval(-seedBackdateSeconds)
 
+        // **A commitment as well as a session** (focus-h7h).
+        //
+        // The cockpit draws its session controls only where there is a priority — a session is
+        // always about one, and offering to time nothing would be a control with nothing behind
+        // it. So a store seeded with a session and no priority produces a window that draws no
+        // elapsed figure at all, which is exactly the state the figure cannot be observed in.
+        // Harmless to the two-launch reconciliation proof, which reads the session row and has
+        // never had an opinion about what was committed to.
+        let priorities = PriorityStore(context: context)
+        let taskID = try priorities.createTask(intent: seededPriorityIntent)
+        try priorities.activate(taskID: taskID, undo: nil)
+
         let store = SessionStore(
             context: context,
             dateProvider: FixedDateProvider(now: startedAt),
@@ -1464,6 +1819,7 @@ enum SelfCheck {
             "mode": "seed",
             "store": storePath,
             "sessionID": sessionID.uuidString,
+            "priorityIntent": seededPriorityIntent,
             // ISO-8601 with fractional seconds, so "byte-identical `startedAt`" is a string
             // comparison the checker can make rather than a float it has to round.
             "startedAt": iso8601(startedAt),
@@ -1659,6 +2015,23 @@ public final class FocusAppDelegate: NSObject, NSApplicationDelegate {
                 var report = SelfCheck.nudgeReport()
                 report["mode"] = "nudge"
                 return report
+            }
+            return
+        }
+
+        // **The cockpit block alone, against whatever store `--focus-store` named** (focus-h7h).
+        //
+        // It comes forward, unlike the other reduced modes, because a window that is not on
+        // screen has not drawn — and what this block reports is what the window drew.
+        if SelfCheck.wantsCockpitOnly {
+            SelfCheck.comeForward { _ in
+                DispatchQueue.main.asyncAfter(deadline: .now() + SelfCheck.settleDelay) {
+                    MainActor.assumeIsolated {
+                        SelfCheck.runModeAndTerminate(writingTo: path) {
+                            SelfCheck.cockpitRenderingReport()
+                        }
+                    }
+                }
             }
             return
         }

@@ -137,16 +137,52 @@ if (( restore_rc != 0 )); then
     exit 1
 fi
 
+# --- the cockpit, drawn against a store this script seeded (focus-h7h) ------------------------
+#
+# A fourth launch, and it exists for exactly one boundary value. `sessionElapsedSeconds` is what
+# the cockpit's timer reads, and the mutation that guts it hands the window `nil` — which is also
+# what a Mac with no session running hands it. The mutant and the shipping code are then
+# extensionally identical, and no instrument can separate them: that is a fact about the two
+# programs, not a shortcoming of the reading. So the check is run where the value exists.
+#
+# A store of its own, seeded with a ninety-minute session and a commitment, in the temporary
+# directory this script removes on the way out. `--focus-store` makes the composition root open it
+# instead of the person's, so nothing anywhere writes a session into their day that never happened.
+
+COCKPIT_STORE="$SESSION_DIR/cockpit.store"
+COCKPIT_SEED_JSON="$SESSION_DIR/cockpit-seed.json"
+COCKPIT_JSON="$SESSION_DIR/cockpit.json"
+
+print
+print "== $BINARY --focus-session-seed $COCKPIT_STORE"
+"$BINARY" --focus-self-check "$COCKPIT_SEED_JSON" --focus-session-seed "$COCKPIT_STORE"
+cockpit_seed_rc=$?
+print "cockpit seed EXIT=$cockpit_seed_rc"
+if (( cockpit_seed_rc != 0 )); then
+    print -u2 "FAIL: the cockpit-fixture seeding launch exited $cockpit_seed_rc"
+    exit 1
+fi
+
+print "== $BINARY --focus-self-check-cockpit --focus-store $COCKPIT_STORE"
+"$BINARY" --focus-self-check "$COCKPIT_JSON" --focus-self-check-cockpit --focus-store "$COCKPIT_STORE"
+cockpit_rc=$?
+print "cockpit EXIT=$cockpit_rc"
+if (( cockpit_rc != 0 )); then
+    print -u2 "FAIL: the cockpit-rendering launch exited $cockpit_rc"
+    exit 1
+fi
+
 if [[ -n "${FOCUS_EVIDENCE_DIR:-}" ]]; then
     cp -- "$SEED_JSON" "$FOCUS_EVIDENCE_DIR/session-seed.json"
     cp -- "$RESTORE_JSON" "$FOCUS_EVIDENCE_DIR/session-restore.json"
+    cp -- "$COCKPIT_JSON" "$FOCUS_EVIDENCE_DIR/cockpit-rendering.json"
     print "evidence: $FOCUS_EVIDENCE_DIR/session-seed.json, $FOCUS_EVIDENCE_DIR/session-restore.json"
 fi
 
 print
 print "== assertions"
 python3 - "$OUT" "$SEED_JSON" "$RESTORE_JSON" "$COMMITTED_STAMP" "$COMMITTED_DIGEST" \
-    "$COMMITTED_INTERVENTION_DIGEST" <<'PYTHON'
+    "$COMMITTED_INTERVENTION_DIGEST" "$COCKPIT_JSON" <<'PYTHON'
 import json
 import sys
 
@@ -157,6 +193,8 @@ with open(sys.argv[2]) as handle:
     seed = json.load(handle)
 with open(sys.argv[3]) as handle:
     restore = json.load(handle)
+with open(sys.argv[7]) as handle:
+    seeded_cockpit = json.load(handle)
 committed_stamp = sys.argv[4]
 committed_digest = sys.argv[5]
 committed_intervention_digest = sys.argv[6]
@@ -853,6 +891,178 @@ check(
     any("Keyboard Shortcuts" in t for t in titles),
     "the Keyboard Shortcuts window was open when the wire reading was taken",
     titles,
+)
+
+# --- what the three windows actually DREW (focus-h7h) -----------------------------------------
+#
+# The block above proves every wire in App/ fired. That was measured to be worth nothing on its
+# own. An eight-part mutation that kept every one of those receipts firing and replaced only the
+# VALUES — the cockpit's whole state a frozen placeholder, the session timer reading nothing, the
+# Privacy pane always saying nothing is watched, the three windows ignoring dark mode and every
+# accessibility setting, the theme never persisted, the Intervention pane's controls reaching
+# nothing, the Keyboard Shortcuts window empty — passed the whole nineteen-stage gate: EXIT=0,
+# 262 ok-assertions against 262, and an EMPTY diff between the clean run's assertion list and the
+# mutant's.
+#
+# A receipt that fires when a closure runs cannot distinguish a closure that produced the right
+# value from one that produced a constant. So each window now reports the values it put on the
+# screen, through the same SwiftUI preference mechanism `DecisionSurfaceReachability` proved on
+# the nudge panel, and the composition root holds them up beside what it handed over.
+
+rendering = report.get("shellRendering") or {}
+readings = rendering.get("readings") or {}
+
+for surface, sentence in [
+    ("cockpit", "the cockpit"),
+    ("settings", "the Settings window"),
+    ("help", "the Keyboard Shortcuts window"),
+]:
+    reading = readings.get(surface) or {}
+    check(
+        reading.get("drewWhatTheAppKnows") is True,
+        f"{sentence} drew every value the composition root handed it",
+        reading.get("summary"),
+    )
+
+# The set, beside the names, for the reason the wire block asserts both: a surface added later
+# without a reading cannot be added at all, because ShellThemedSurface is what App/ calls.
+check(
+    set(rendering.get("surfacesThatDrewWhatTheAppKnows") or [])
+    == set(rendering.get("surfacesDeclared") or [])
+    and len(rendering.get("surfacesDeclared") or []) >= 3,
+    "every window App/ themes reported what it drew, and drew what the app knows",
+    (
+        rendering.get("surfacesThatDrewWhatTheAppKnows"),
+        rendering.get("surfacesDeclared"),
+    ),
+)
+
+# NON-VACUITY. A field the root has no opinion about is skipped rather than failed, so a root that
+# recorded nothing at all would make every assertion above pass for a window drawing anything.
+# These floors are the same job `len(declared) >= 12` does for the wire enumeration.
+for surface, floor in [("cockpit", 9), ("settings", 7), ("help", 2)]:
+    reading = readings.get(surface) or {}
+    check(
+        isinstance(reading.get("expectedFieldCount"), int)
+        and reading["expectedFieldCount"] >= floor,
+        f"the composition root recorded at least {floor} values it handed the {surface} window",
+        reading.get("expectedFieldCount"),
+    )
+
+# The cockpit drew the LIVE handoff rather than a placeholder's empty one. The handoff probe puts
+# a sentence into CockpitState that no person would ever type, which is what makes this a value a
+# frozen placeholder cannot be carrying. `handoffWasShown` above reads the store's answer, and a
+# window drawing a placeholder passes it: the handoff really did arrive, and the window really did
+# draw something else.
+check(
+    shell.get("cockpitDrewTheHandoff") is True,
+    "the cockpit drew the handoff that arrived, not a placeholder's empty one",
+    (shell.get("cockpitDrewnHandoffTask"), (shell.get("cockpitRenderingWithHandoff") or {}).get("summary")),
+)
+
+# NON-VACUITY for the three appearance-traits fields. `AppearanceTraits.systemDefault` is a light
+# appearance with every accessibility setting off, which is exactly what an untouched Mac reports
+# — so on a light Mac a window that ignores the injection and one that honours it draw the SAME
+# traits and nothing whatsoever could tell them apart. The self-check drives the preference to
+# dark for two-thirds of a second, and this is the assertion that the drive actually moved it.
+check(
+    rendering.get("drivenTraitsDifferFromTheDefault") is True,
+    "the driven appearance really differs from the default, so the traits readings mean something",
+    (rendering.get("drivenTraits"), rendering.get("defaultTraits")),
+)
+check(
+    rendering.get("appearancePreferenceRestored") is True,
+    "the appearance the drive moved was put back exactly as it was found",
+    rendering.get("appearancePreferenceRestored"),
+)
+# The quick-capture panel followed the LIVE change. `capturePanelTraitsAdopted` above is a
+# sentinel — somebody told the panel something — and a scene that told it the default satisfies it
+# exactly as well as one that told it the truth.
+check(
+    rendering.get("capturePanelFollowedTheLiveTheme") is True,
+    "the quick-capture panel followed the live appearance change rather than a constant",
+    (rendering.get("capturePanelTraits"), rendering.get("drivenTraits")),
+)
+
+# --- the two wires no value can reach, driven (focus-h7h) --------------------------------------
+#
+# `setPreference` and `onInterventionAction` are only ever called by a CLICK, and no lane in this
+# programme holds the Accessibility grant it would take to press one — which is exactly why
+# `{ _ in }` in their place survived two rounds of gates. So the Settings window hands back the
+# closures its controls are actually holding, the self-check calls them, and the composition
+# root's own graph is watched for the change. Everything is put back.
+
+appearance_drive = rendering.get("driveSetPreference") or {}
+check(
+    appearance_drive.get("available") is True,
+    "the Settings window handed back the sinks its controls are wired to",
+    appearance_drive,
+)
+check(
+    appearance_drive.get("reachedTheObserver") is True,
+    "the Appearance picker's writer reaches the observer the shell re-renders from",
+    (appearance_drive.get("probe"), appearance_drive.get("observerAfter")),
+)
+check(
+    appearance_drive.get("reachedTheStore") is True,
+    "the Appearance picker's writer reaches the store, so the choice survives a quit (M4)",
+    (appearance_drive.get("probe"), appearance_drive.get("storedAfter")),
+)
+check(
+    appearance_drive.get("restored") is True,
+    "the appearance probe put the person's stored preference back",
+    (appearance_drive.get("storedBefore"), appearance_drive.get("restored")),
+)
+
+intervention_drive = rendering.get("driveInterventionSink") or {}
+check(
+    intervention_drive.get("available") is True,
+    "the Intervention pane handed back the sink its controls are wired to",
+    intervention_drive,
+)
+check(
+    intervention_drive.get("voiceReachedTheLoop") is True,
+    "the Intervention pane's Voice control reaches the running nudge loop (M3)",
+    (intervention_drive.get("voiceProbe"), intervention_drive.get("voiceAfter")),
+)
+check(
+    intervention_drive.get("reducedReachedTheLoop") is True,
+    "the Intervention pane's Reduced-Interruption control reaches the running nudge loop",
+    (intervention_drive.get("reducedProbe"), intervention_drive.get("reducedAfter")),
+)
+check(
+    intervention_drive.get("restored") is True,
+    "the intervention probe put both preferences back",
+    intervention_drive.get("restored"),
+)
+
+# --- the session timer, where the figure exists (focus-h7h) ------------------------------------
+#
+# The fourth launch, against a store this script seeded with a ninety-minute session and a
+# commitment. The non-vacuity assertions come first and they are the point: if the fixture failed
+# to arrive, the reading below would pass by comparing two absences, which is the exact failure
+# mode this whole launch exists to escape.
+
+check(
+    seeded_cockpit.get("livePriorityIntent") == seeded_cockpit.get("seededPriorityIntent"),
+    "the seeded commitment reached the composition root, so the cockpit had a session to draw",
+    (seeded_cockpit.get("livePriorityIntent"), seeded_cockpit.get("seededPriorityIntent")),
+)
+seeded_elapsed = seeded_cockpit.get("liveSessionElapsedSeconds")
+check(
+    isinstance(seeded_elapsed, (int, float)) and seeded_elapsed > 5_000,
+    "the seeded session really is running, so 'none' is a value the app never produces here",
+    seeded_elapsed,
+)
+check(
+    seeded_cockpit.get("drawnSessionElapsedSeconds") not in ("", "none", None),
+    "the cockpit's session timer drew a figure rather than nothing",
+    seeded_cockpit.get("drawnSessionElapsedSeconds"),
+)
+check(
+    seeded_cockpit.get("drewWhatTheAppKnows") is True,
+    "the cockpit drew every value the composition root handed it, against a seeded session",
+    (seeded_cockpit.get("reading") or {}).get("summary"),
 )
 
 # --- the Help menu holds nothing that opens an alert (focus-h7h) -------------------------------

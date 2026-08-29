@@ -94,6 +94,12 @@ public struct CockpitView: View {
     /// matters, the scene in `App/` (focus-2er).
     private let didRender: (@MainActor () -> Void)?
 
+    /// Which issue of the connection this window is drawing from, and where the values it drew
+    /// are delivered (focus-h7h). `nil`/`0` for every caller that builds the view out of loose
+    /// values — the snapshot lane, the previews, the unit tests.
+    private let generation: Int
+    private let didDraw: (@MainActor (ShellRenderedValues) -> Void)?
+
     public init(
         state: CockpitState,
         actions: (any PriorityActing)? = nil,
@@ -109,6 +115,8 @@ public struct CockpitView: View {
         self.lastActiveBundleID = lastActiveBundleID
         self.commandCenter = commandCenter
         self.didRender = nil
+        self.generation = 0
+        self.didDraw = nil
     }
 
     /// **The application scene's initialiser, and the only one it can reach** (focus-2er).
@@ -127,6 +135,8 @@ public struct CockpitView: View {
         self.lastActiveBundleID = connection.lastActiveBundleID
         self.commandCenter = commandCenter
         self.didRender = connection.didRender
+        self.generation = connection.generation
+        self.didDraw = connection.didDraw
     }
 
     /// Every verb this window can perform, built from the host and the current priority.
@@ -184,6 +194,15 @@ public struct CockpitView: View {
         .padding(sectionSpacing)
         .frame(minWidth: 420, minHeight: 260, alignment: .topLeading)
         .background(DesignTokens.Palette.windowBackground)
+        // **The traits this window resolved out of its own environment** (focus-h7h).
+        //
+        // Read here rather than taken from the connection, and that is the whole point: this is
+        // the far end of the scene's `.appearanceTraits(composition.appearanceTraits(for:))`
+        // injection, which is a separate wire from the connection and was separately guttable.
+        // A window that asked the composition root for the live traits and then injected
+        // `AppearanceTraits.systemDefault` fires the receipt and ignores dark mode and every
+        // accessibility setting; this is the value that says which of the two happened.
+        .shellRendered(.appearanceTraits, traits.renderedDescription)
         .defaultFocus($focus, .cockpitOpenSettings)
         // The window is named for the app; the group is too, so VoiceOver announces what it
         // has landed in before reading the priority out of it.
@@ -224,6 +243,24 @@ public struct CockpitView: View {
                 )
             }
         }
+        // **The three values the column carries but no single subview owns** (focus-h7h).
+        //
+        // The recents row and the handoff sheet are drawn from `state`, and the two mutation
+        // hosts decide whether every control in the window is live or disabled — a cockpit handed
+        // `actions: nil` looks finished and does nothing, which is a defect no receipt can see.
+        // The handoff is reported by the **task it names** rather than by a `Bool`, because the
+        // self-check drives a handoff carrying a sentence no person would type: a placeholder has
+        // no way to be carrying that.
+        .shellRendered(.recentCount, state.recent.count)
+        .shellRendered(.handoffTask, state.pendingHandoff?.task ?? "")
+        .shellRendered(
+            .mutationHostsAttached,
+            "\(actions != nil ? "priority" : "-")/\(sessionActions != nil ? "session" : "-")"
+        )
+        // …and the collection point. The generation is injected here so every reporting site
+        // below is stamped with the connection it was drawn from, and the values arrive at the
+        // composition root through the one closure only the root can supply.
+        .shellRenderReport(generation: generation, didDraw)
     }
 
     // MARK: - The File menu
@@ -315,6 +352,12 @@ public struct CockpitView: View {
                 StatusBadge(status: state.status)
             }
         }
+        // **The two values at the top of the window, reported from where they are drawn**
+        // (focus-h7h). A cockpit handed a frozen placeholder draws a hero with no sentence in it
+        // and a badge that says `uncertain` for ever, and both of those are values the
+        // composition root can hold its own answer up beside.
+        .shellRendered(.priorityIntent, state.priority?.intent ?? "")
+        .shellRendered(.status, state.status.rawValue)
     }
 
     /// The priority itself — read as a hero, or corrected in place at the same size.
@@ -439,6 +482,18 @@ public struct CockpitView: View {
             actions: sessionActions,
             focus: $focus
         )
+        // **The figure the timer is reading, and the phase beside it** (focus-h7h).
+        //
+        // `"none"` rather than `""` for an absent figure, because a session timer that reads
+        // nothing and one that reads zero are different defects and one spelling for both would
+        // make them the same reading. Whole seconds: the wall clock moves between the moment the
+        // connection was built and the moment the reading is taken, and a comparison to the
+        // millisecond would fail on the passage of time rather than on a defect.
+        .shellRendered(
+            .sessionElapsedSeconds,
+            sessionElapsedSeconds.map { String(Int($0)) } ?? "none"
+        )
+        .shellRendered(.sessionPhase, state.session?.phase.rawValue ?? "none")
     }
 
     // MARK: - Per-task rules (F-11)
@@ -636,6 +691,11 @@ public struct CockpitView: View {
                 capabilities: state.capabilities,
                 showsReducedCapabilities: true
             )
+            // The capability table the footer's reduced list is drawn from. Reported whole
+            // rather than as the list it happened to name, so a matrix nobody probed — twelve
+            // `notRequested` rows, and therefore an empty reduced list because nothing is
+            // *watching* — is a different value rather than the same absence (focus-h7h).
+            .shellRendered(.capabilityStates, state.capabilities.renderedDescription)
 
             // Shown only where a host can act on it, for the same measured reason the capture
             // field is: an AppKit-backed control does not rasterise under `ImageRenderer` — a

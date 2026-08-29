@@ -1,3 +1,4 @@
+import FocusCore
 import SwiftUI
 
 /// One line of the Keyboard Shortcuts reference.
@@ -42,22 +43,37 @@ public struct ShortcutsHelpView: View {
     @Environment(\.appearanceTraits) private var traits
     @ScaledMetric(relativeTo: .body) private var spacing: CGFloat = 12
 
-    /// What the view reports when its body is evaluated. `nil` for every caller that builds it
-    /// for a snapshot or a preview; the composition root's receipt for the scene in `App/`.
+    /// **What the view drew**, reported when its body is evaluated. `nil` for every caller that
+    /// builds it for a snapshot or a preview; the composition root's own closure for the scene in
+    /// `App/`.
     ///
     /// The Keyboard Shortcuts window's content is otherwise unobservable from the one lane that
     /// can see `App/`: replacing `ShortcutsHelpView()` with `EmptyView()` left a window with a
     /// correct title, a correct identifier, correct appearance traits and nothing inside it, and
     /// the whole gate stayed green (focus-2er).
-    private let didRender: (@MainActor () -> Void)?
+    ///
+    /// A receipt that merely says the body ran does not close that, and the measurement is
+    /// unambiguous (focus-h7h): a window handed an **empty registry** fires it exactly as loudly
+    /// as one drawing the committed table, and 262 ok-assertions stayed at 262. So the receipt
+    /// carries the row count the window actually laid out.
+    private let didRender: (@MainActor (ShellRenderedValues) -> Void)?
 
     public init(registry: CommandRegistry = .shell) {
         self.registry = registry
         self.didRender = nil
     }
 
-    /// The application scene's initialiser: the same window, with a receipt.
-    public init(registry: CommandRegistry = .shell, didRender: @escaping @MainActor () -> Void) {
+    /// The application scene's initialiser: the same window, with a receipt that carries a value.
+    ///
+    /// **The one issue.** Unlike the cockpit and the Settings window this reference has no
+    /// connection to be stamped, because it reads nothing from the graph — it draws
+    /// `CommandRegistry.shell`, a committed value that cannot change while the process lives. So
+    /// there is exactly one issue of it, and `ShellRenderedValues.singleIssue` is what both ends
+    /// use rather than a counter that would only ever reach one.
+    public init(
+        registry: CommandRegistry = .shell,
+        didRender: @escaping @MainActor (ShellRenderedValues) -> Void
+    ) {
         self.registry = registry
         self.didRender = didRender
     }
@@ -80,7 +96,6 @@ public struct ShortcutsHelpView: View {
     }
 
     public var body: some View {
-        let _ = didRender?()
         // The scroll view is the *window's* affordance: at the largest accessibility text
         // size the reference can outgrow a small window, and scrolling is how a Mac window
         // handles that. The content itself is a separate view so the snapshot lane can
@@ -91,6 +106,14 @@ public struct ShortcutsHelpView: View {
         }
         .frame(minWidth: 360, minHeight: 240)
         .background(DesignTokens.Palette.windowBackground)
+        // **How many rows it actually drew, and which traits reached it** (focus-h7h).
+        //
+        // The row count is the value that tells the shipping window from an empty one. It is
+        // counted off the same `groups(for:)` the content draws, so the number reported and the
+        // number on the screen are one derivation rather than two.
+        .shellRendered(.shortcutRowCount, Self.groups(for: registry).reduce(0) { $0 + $1.rows.count })
+        .shellRendered(.appearanceTraits, traits.renderedDescription)
+        .shellRenderReport(generation: ShellRenderedValues.singleIssue, didRender)
     }
 }
 
