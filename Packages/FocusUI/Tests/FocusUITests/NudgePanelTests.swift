@@ -399,6 +399,8 @@ struct NudgePanelTests {
         let scale: ShellTextScale
         let offered: [String]
         let content: AnyView
+        /// What the panel is carrying, so a case cannot be added without saying (focus-v0u).
+        let showing: NudgePanelKind
     }
 
     static func cases() -> [PanelCase] {
@@ -411,7 +413,8 @@ struct NudgePanelTests {
                     offered: queryPresentation.offeredAnswerIdentifiers,
                     content: AnyView(
                         QueryPanelView(presentation: queryPresentation).shellTextScale(scale)
-                    )
+                    ),
+                    showing: .question
                 ),
                 PanelCase(
                     name: "accusation.\(size.rawValue)",
@@ -420,7 +423,8 @@ struct NudgePanelTests {
                     content: AnyView(
                         AccusationPanelView(presentation: accusationPresentation)
                             .shellTextScale(scale)
-                    )
+                    ),
+                    showing: .accusation
                 ),
                 PanelCase(
                     name: "recommitment.\(size.rawValue)",
@@ -429,7 +433,8 @@ struct NudgePanelTests {
                     content: AnyView(
                         AccusationPanelView(presentation: recommitmentPresentation)
                             .shellTextScale(scale)
-                    )
+                    ),
+                    showing: .accusation
                 )
             ]
         }
@@ -454,7 +459,7 @@ struct NudgePanelTests {
     func everyOfferedActionIsReachable() throws {
         for panelCase in Self.cases() {
             let controller = Self.controller()
-            controller.update(content: panelCase.content)
+            controller.update(showing: panelCase.showing, content: panelCase.content)
             controller.show(presentationIsClear: true)
             defer { controller.hide() }
             Self.settle()
@@ -510,7 +515,7 @@ struct NudgePanelTests {
         var heights: [String: Double] = [:]
         for panelCase in Self.cases() {
             let controller = Self.controller()
-            controller.update(content: panelCase.content)
+            controller.update(showing: panelCase.showing, content: panelCase.content)
             controller.show(presentationIsClear: true)
             defer { controller.hide() }
             Self.settle()
@@ -536,7 +541,7 @@ struct NudgePanelTests {
     @Test("the size a show sets is the size that survives the run loop")
     func theSizeSurvivesTheTurn() {
         let controller = Self.controller()
-        controller.update(content: QueryPanelView(presentation: Self.queryPresentation))
+        controller.update(showing: .question, content: QueryPanelView(presentation: Self.queryPresentation))
         controller.show(presentationIsClear: true)
         defer { controller.hide() }
 
@@ -562,7 +567,7 @@ struct NudgePanelTests {
     @Test("a panel moved off every display is not a decision surface")
     func aPanelOffScreenIsNotADecisionSurface() {
         let controller = Self.controller()
-        controller.update(content: QueryPanelView(presentation: Self.queryPresentation))
+        controller.update(showing: .question, content: QueryPanelView(presentation: Self.queryPresentation))
         controller.show(presentationIsClear: true)
         defer { controller.hide() }
         Self.settle()
@@ -584,7 +589,7 @@ struct NudgePanelTests {
     @Test("a hidden panel is not a decision surface")
     func aHiddenPanelIsNotADecisionSurface() {
         let controller = Self.controller()
-        controller.update(content: QueryPanelView(presentation: Self.queryPresentation))
+        controller.update(showing: .question, content: QueryPanelView(presentation: Self.queryPresentation))
         controller.show(presentationIsClear: true)
         Self.settle()
         controller.hide()
@@ -608,7 +613,7 @@ struct NudgePanelTests {
             dwelled: .seconds(180)
         )
         let controller = Self.controller()
-        controller.update(content: AccusationPanelView(presentation: noAnchor))
+        controller.update(showing: .accusation, content: AccusationPanelView(presentation: noAnchor))
         controller.show(presentationIsClear: true)
         defer { controller.hide() }
         Self.settle()
@@ -662,6 +667,7 @@ struct NudgePanelTests {
         )
         let controller = Self.controller()
         controller.update(
+            showing: .accusation,
             content: AccusationPanelView(presentation: enormous)
                 .shellTextScale(.accessibilityLarge)
         )
@@ -753,7 +759,7 @@ struct NudgePanelTests {
         )
         let offered = presentation.offeredActionIdentifiers
         let controller = Self.controller()
-        controller.update(content: AccusationPanelView(presentation: presentation))
+        controller.update(showing: .accusation, content: AccusationPanelView(presentation: presentation))
         controller.show(presentationIsClear: true)
         defer { controller.hide() }
         Self.settle()
@@ -764,7 +770,7 @@ struct NudgePanelTests {
         #expect(onTheNudge.everyActionIsReachable)
 
         // Now something with no action targets in it at all.
-        controller.update(content: Text(verbatim: "an interstitial with nothing to click"))
+        controller.update(showing: .accusation, content: Text(verbatim: "an interstitial with nothing to click"))
 
         let afterwards = controller.decisionSurfaceReading(offering: offered)
         #expect(
@@ -789,7 +795,7 @@ struct NudgePanelTests {
     @Test("frames stamped with another layout are refused rather than believed")
     func framesStampedWithAnotherLayoutAreRefused() {
         let controller = Self.controller()
-        controller.update(content: StaleFrameReporter())
+        controller.update(showing: .accusation, content: StaleFrameReporter())
         controller.show(presentationIsClear: true)
         defer { controller.hide() }
         Self.settle()

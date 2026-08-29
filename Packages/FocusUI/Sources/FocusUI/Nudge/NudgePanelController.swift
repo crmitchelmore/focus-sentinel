@@ -216,6 +216,19 @@ public final class NudgePanelController {
     private var content: AnyView = AnyView(EmptyView())
     private var traits: AppearanceTraits = .systemDefault
 
+    /// **What is on the panel right now, as something anybody can read** (focus-v0u).
+    ///
+    /// `AnyView` is opaque: nothing outside this object could tell a panel carrying a question
+    /// from one carrying an accusation from one carrying nothing at all. That opacity is what let
+    /// the most user-visible defect of this epic hide — a question left fully live and fully
+    /// clickable on a panel the nudge loop had already forgotten about, so the person's answer was
+    /// dropped in a `guard` and the question was asked again. Nothing anywhere could observe the
+    /// contradiction, because nothing anywhere could see what the panel was showing.
+    ///
+    /// `nil` while the panel is off screen: `hide()` and `withdrawForPresentation()` both clear
+    /// it, because a panel that has been ordered out is showing nobody anything.
+    public private(set) var showing: NudgePanelKind?
+
     /// Where every offered action landed, in the panel's content space, as the layout last
     /// reported it — **and which layout said so**. A reading from a layout the panel has since
     /// replaced is not a reading of what is on screen, so it is refused rather than trusted.
@@ -373,8 +386,13 @@ public final class NudgePanelController {
     /// The hosting view is built once, in `init`, and its root view is replaced — so showing a
     /// nudge is a state change on objects that already exist, exactly as the capture panel's
     /// 34 ms depends on (P-57) and for the same reason.
-    public func update(content: some View, traits: AppearanceTraits = .systemDefault) {
+    public func update(
+        showing: NudgePanelKind,
+        content: some View,
+        traits: AppearanceTraits = .systemDefault
+    ) {
         self.content = AnyView(content)
+        self.showing = showing
         self.traits = traits
         layOutContent()
     }
@@ -524,6 +542,7 @@ public final class NudgePanelController {
 
     /// Take the panel off screen. Writes nothing and decides nothing.
     public func hide() {
+        showing = nil
         panel.orderOut(nil)
     }
 
@@ -543,6 +562,7 @@ public final class NudgePanelController {
     /// The flag is dropped **before** the window is ordered out, so there is no instant in which
     /// a still-visible panel is eligible to join the space it is being removed from.
     public func withdrawForPresentation() {
+        showing = nil
         lastPresentationWasClear = false
         panel.collectionBehavior = NudgePanel.collectionBehavior(presentationIsClear: false)
         panel.orderOut(nil)

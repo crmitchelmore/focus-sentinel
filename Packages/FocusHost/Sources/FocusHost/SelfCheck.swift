@@ -490,6 +490,16 @@ enum SelfCheck {
         report["permitsNotificationDelivery"] = host.notificationAuthorisation.permitsDelivery
         report["requestAuthorizationCallCount"] = host.requestAuthorizationCallCount
 
+        // **A question on the screen that the loop has forgotten** — always empty (focus-v0u).
+        //
+        // The invariant `NudgeHost.endOpenQuestion(_:replacedOn:)` exists to keep, read off the
+        // shipping graph in the shipping process. A non-empty list is the defect itself: a live
+        // panel or an open popover offering three answers that `answer(_:)` will drop in a
+        // `guard`, and a question that will therefore be asked again. The unit lane drives every
+        // exit; this says the running app is not in that state.
+        report["orphanedQuestionSurfaces"] = host.orphanedQuestionSurfaces.map(\.rawValue).sorted()
+        report["questionExitsDeclared"] = QuestionExit.allCases.map(\.rawValue).sorted()
+
         // Every rung, with nothing presenting and no call in progress — which is the state the
         // settings pane's matrix describes.
         //
@@ -651,7 +661,7 @@ enum SelfCheck {
             reason: .noNegativeBasis,
             dwelled: .seconds(62)
         )
-        panel.update(content: QueryPanelView(presentation: presentation))
+        panel.update(showing: .question, content: QueryPanelView(presentation: presentation))
 
         let before = panel.readings()
         panel.show(presentationIsClear: true)

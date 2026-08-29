@@ -1527,6 +1527,33 @@ check(
     report.get("notificationAuthorisation"),
 )
 
+# 2a — **no question the person can still answer that the loop has forgotten** (focus-v0u).
+#
+# THE MOST USER-VISIBLE DEFECT THIS EPIC PRODUCED. `accuse(…)` cleared `openWarrant` on one line
+# and then touched the panel on the `.panel` branch ALONE — so a question displaced onto the
+# menu-bar glyph, the popover badge or a notification was left on screen, fully drawn and fully
+# clickable, while the host had forgotten it. `answer(_:)` hit `guard let warrant = openWarrant
+# else { return }` and dropped the click; `defer { closeSurfaces() }` tidied the evidence away.
+# Measured: before visible=true reachable=true, ordinary glyph preemption, after visible=true
+# reachable=true and "every offered action is reachable" — the person clicks "Yes, add it", ZERO
+# rules are written, the receipt says "expired", and the question is asked AGAIN. The ladder's
+# entry rung is the glyph, which makes that the commonest preemption there is.
+#
+# Every earlier finding in this epic was the app silencing itself. That one was the app ignoring
+# the person and asking again, which is U-1's repeat-asking clause broken from the other side.
+check(
+    nudge.get("orphanedQuestionSurfaces") == [],
+    "no surface is offering a question the nudge loop has forgotten",
+    nudge.get("orphanedQuestionSurfaces"),
+)
+# The exits are enumerated, and the unit lane walks every one of them. Asserted here so a sixth
+# exit added to the enum is visible in the gate log rather than only in a test file.
+check(
+    len(nudge.get("questionExitsDeclared") or []) >= 5,
+    "every way an open question can end is enumerated",
+    nudge.get("questionExitsDeclared"),
+)
+
 # D-06: three rungs, no more and no fewer — asserted in the running application as well as in
 # the policy manifest and the evaluation report.
 check(

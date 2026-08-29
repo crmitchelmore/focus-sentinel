@@ -501,6 +501,18 @@ public final class AppComposition {
             self?.perform(outcome, priorityID: priorityID)
         }
 
+        // **A question that has left the loop leaves the menu bar with it** (focus-v0u).
+        //
+        // The popover on screen is an `NSHostingController` built from the presentation the menu
+        // bar was last handed, and it does not rebuild itself: without this, a badge question the
+        // loop had ended went on offering three answers that `answer(_:)` would drop in a
+        // `guard`. This object is the only one that knows the menu bar and the nudge loop both
+        // exist, which is why the redraw is wired from here rather than reached for from there.
+        nudgeHost.onQuestionSurfacesChanged = { [weak self] in
+            guard let self else { return }
+            self.refreshMenuBar(session: self.sessionHost.snapshot)
+        }
+
         relevanceHost.onJudgement = { [weak self] judgement in
             self?.nudgeHost.consider(judgement)
         }

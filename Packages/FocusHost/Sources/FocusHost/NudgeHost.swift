@@ -427,7 +427,15 @@ final class NudgeHost {
         // The commitment as it stands **now**, at the accusation. Everything this rung ever
         // writes is keyed to it (focus-lmo).
         openRungPriorityID = priorityID
-        openWarrant = nil
+        // **The question comes off the screen, not only off the books** (focus-v0u).
+        //
+        // This was `openWarrant = nil` and nothing else, and the panel was touched on the
+        // `.panel` branch alone — so a question displaced onto the glyph, the badge or a
+        // notification was left drawn and clickable while this object had forgotten it. The
+        // ladder's ENTRY rung is the menu-bar glyph, which makes that the commonest displacement
+        // there is. The route is known here, so the one exit knows whether anything is taking the
+        // question's surface over.
+        endOpenQuestion(.preempted, replacedOn: route.surface)
         // **The mandate reaches the ladder that persists** (focus-56y, R-80).
         //
         // `NudgeDecider.accuse(…)` folds the mandate into a **copy** of this machine to work out
@@ -468,7 +476,7 @@ final class NudgeHost {
             settleOrExpire(displaced, rung: rung, deliveredOn: surface)
 
         case .panel:
-            panel.update(content: AccusationPanelView(presentation: presentation) { [weak self] action, span in
+            panel.update(showing: .accusation, content: AccusationPanelView(presentation: presentation) { [weak self] action, span in
                 self?.resolve(action, snoozeDuration: span)
             })
             panel.show(
@@ -590,7 +598,7 @@ final class NudgeHost {
 
         switch surface {
         case .panel:
-            panel.update(content: QueryPanelView(presentation: presentation) { [weak self] answer in
+            panel.update(showing: .question, content: QueryPanelView(presentation: presentation) { [weak self] answer in
                 self?.answer(answer)
             })
             panel.show(
@@ -626,9 +634,7 @@ final class NudgeHost {
                     \(reading.summary, privacy: .public)
                     """
                 )
-                panel.hide()
-                slot = slot.released()
-                forgetOpenQuestion()
+                endOpenQuestion(.neverDelivered, replacedOn: nil)
                 record(
                     deferral: .noSurfaceAvailable,
                     kind: .query,
@@ -654,8 +660,7 @@ final class NudgeHost {
         case .menuBar, .notification:
             // A question is never a notification (R-82), and the glyph has no answer affordance.
             // Reaching either would be a routing bug; it is a deferral, never a receipt.
-            slot = slot.released()
-            forgetOpenQuestion()
+            endOpenQuestion(.neverDelivered, replacedOn: nil)
             record(
                 deferral: .noSurfaceAvailable,
                 kind: .query,
@@ -782,7 +787,10 @@ final class NudgeHost {
             ladder.reduce(.rungIgnored, now: now)
         }
 
-        closeSurfaces()
+        // A rung is being answered, not a question — but if one is somehow still open it ends
+        // here rather than surviving into the next turn, and it ends as what it is: something the
+        // world moved past.
+        closeSurfaces(endingAnyQuestionAs: .worldMovedOn)
     }
 
     /// One click on the question.
@@ -791,7 +799,7 @@ final class NudgeHost {
     /// receipt commit together or neither does, so the app is never in the state where it has
     /// learned the answer but forgotten the asking.
     func answer(_ answer: QueryAnswer) {
-        defer { closeSurfaces() }
+        defer { closeSurfaces(endingAnyQuestionAs: .answered) }
 
         guard let warrant = openWarrant else { return }
         let scope = CorrectionScope.from(warrant)
@@ -988,8 +996,8 @@ final class NudgeHost {
         // surface as it was while the question was still on it.
         expireOpenQuestion()
         panel.withdrawForPresentation()
+        endOpenQuestion(.worldMovedOn, replacedOn: nil)
         slot = slot.released()
-        forgetOpenQuestion()
         forgetOpenRung()
     }
 
@@ -1036,9 +1044,7 @@ final class NudgeHost {
             )
             // The question's own key, not the live pointer (focus-lmo).
             let priorityID = openQuestionPriorityID
-            panel.hide()
-            slot = slot.released()
-            forgetOpenQuestion()
+            endOpenQuestion(.surfaceWentOutOfReach, replacedOn: nil)
             // The delivery is taken off the budget as well as off the screen (focus-mfc).
             undeliverOpenRecord(
                 kind: .query,
@@ -1075,11 +1081,68 @@ final class NudgeHost {
         forgetOpenRung()
     }
 
-    private func closeSurfaces() {
+    /// Everything comes down, and any open question ends by the named exit.
+    private func closeSurfaces(endingAnyQuestionAs exit: QuestionExit) {
+        endOpenQuestion(exit, replacedOn: nil)
         panel.hide()
         slot = slot.released()
-        forgetOpenQuestion()
         forgetOpenRung()
+    }
+
+    /// **The one door out of an open question** (focus-v0u).
+    ///
+    /// Three things have to happen when a question ends — the record, the slot, and the
+    /// **surface** — and five consecutive rounds of this epic each found a different exit that did
+    /// two of the three. The record is `settleOrExpire(…)` and `recordQuestion(…)`; this is the
+    /// other two, and it is the only place in this object that forgets a question.
+    ///
+    /// The surface clause is the one that was missing. `accuse(…)` used to clear `openWarrant` on
+    /// its own line and then touch the panel **on the `.panel` branch alone** — so a question
+    /// displaced onto the menu-bar glyph, the popover badge or a notification was left on the
+    /// screen, fully drawn and fully clickable, while the host had forgotten it. `answer(_:)`
+    /// then hit `guard let warrant = openWarrant else { return }` and dropped the click, and
+    /// `defer { closeSurfaces() }` tidied the evidence away. Measured: before `visible=true
+    /// reachable=true`, ordinary glyph preemption, after `visible=true reachable=true` and *"every
+    /// offered action is reachable"* — the person clicks *"Yes, add it"*, **zero** rules are
+    /// written, the receipt says `expired`, and the question is asked again. Every earlier finding
+    /// in this epic was the app silencing itself; this one is the app ignoring the person and
+    /// asking again, which is U-1's repeat-asking clause broken from the other side.
+    ///
+    /// - Parameter replacement: the surface something else is about to occupy in this same turn,
+    ///   for the one exit allowed to hand its surface over. A question on the panel is left where
+    ///   it is only when the accusation replacing it is going onto that same panel; anything else
+    ///   takes it down.
+    private func endOpenQuestion(_ exit: QuestionExit, replacedOn replacement: NudgeSurface?) {
+        guard openWarrant != nil || openQuestionSurface != nil else { return }
+        let surface = openQuestionSurface
+
+        openWarrant = nil
+        openWarrantAskedAt = nil
+        openQuestionPriorityID = nil
+        openQuestionSurface = nil
+        openQuestionReadingAtAsk = .unknowable
+        openQuestionActions = []
+
+        let handsOver = exit.mayHandOverItsSurface && replacement == surface
+        switch surface {
+        case .panel:
+            // The panel is taken down unless the accusation is going onto it, in which case
+            // `accuse(…)` replaces the content in this same turn and hiding it would be a flicker
+            // between two things the person is meant to read one after the other.
+            if !handsOver { panel.hide() }
+        case .popoverBadge:
+            // `pendingPopoverQuery` reads `openWarrant`, which is now `nil` — but the popover on
+            // screen is an `NSHostingController` built from the presentation the menu bar was
+            // last handed, and it does not rebuild itself. The composition root is the only
+            // object that knows the menu bar and the nudge loop both exist, so it redraws.
+            if !handsOver { onQuestionSurfacesChanged?() }
+        case .menuBar, .notification, nil:
+            // Neither can carry a question; reaching one is a routing bug that `ask(…)` already
+            // records as a deferral. There is nothing on screen to take down.
+            break
+        }
+
+        if exit.releasesTheSlot { slot = slot.released() }
     }
 
     /// Forget the rung on the surface, and the corrections it was offering.
@@ -1092,19 +1155,27 @@ final class NudgeHost {
         openRungPriorityID = nil
     }
 
-    /// Forget the open question **without writing anything**.
+    /// **A question the person can still see and answer that this host has forgotten** — and it
+    /// is always empty (focus-v0u).
     ///
-    /// One place, so that every path which ends a question either writes through
-    /// `recordQuestion(…)` first or writes nothing at all — and none of them can leave a reading
-    /// behind for the next question to inherit.
-    private func forgetOpenQuestion() {
-        openWarrant = nil
-        openWarrantAskedAt = nil
-        openQuestionPriorityID = nil
-        openQuestionSurface = nil
-        openQuestionReadingAtAsk = .unknowable
-        openQuestionActions = []
+    /// The invariant `endOpenQuestion(_:replacedOn:)` exists to keep, stated as a reading rather
+    /// than as a comment so the unit lane can drive every exit and the self-check can report it.
+    /// A non-empty answer is the defect itself: a live panel or an open popover offering three
+    /// answers that `answer(_:)` will drop in a `guard`, and a question that will therefore be
+    /// asked again.
+    var orphanedQuestionSurfaces: [NudgeSurface] {
+        guard openWarrant == nil else { return [] }
+        var orphans: [NudgeSurface] = []
+        if panel.isVisible, panel.showing == .question { orphans.append(.panel) }
+        if menuBar.isShowingQuery { orphans.append(.popoverBadge) }
+        return orphans
     }
+
+    /// Wired by the composition root, which is the only object that knows the menu bar and the
+    /// nudge loop both exist. Called when a question leaves a menu-bar surface, because the
+    /// popover on screen is a hosting controller built from the presentation the menu bar was
+    /// last handed and does not rebuild itself.
+    var onQuestionSurfacesChanged: (@MainActor () -> Void)?
 
     /// **A question that an accusation is about to displace, read before the surface changes**
     /// (focus-7w3).
@@ -1237,7 +1308,7 @@ final class NudgeHost {
     func phaseLeftFocus() {
         expireOpenQuestion()
         ladder.reduce(.deEscalated(.phaseLeftFocus), now: monotonicClock.elapsed)
-        closeSurfaces()
+        closeSurfaces(endingAnyQuestionAs: .worldMovedOn)
     }
 
     /// A different commitment. Every earlier observation is evidence about a different question,
@@ -1377,7 +1448,7 @@ final class NudgeHost {
     private func clearSessionState() {
         snoozes = .none
         correctedSubjects = []
-        closeSurfaces()
+        closeSurfaces(endingAnyQuestionAs: .worldMovedOn)
     }
 
     // MARK: - What the surfaces and the self-check read
@@ -1459,7 +1530,7 @@ final class NudgeHost {
         // the reading it read was the `isVisible` fallback's cheerful `true`. Nothing is written
         // here, which is the whole of F-81: the person asked for their screen back, not to tell
         // the app anything, so the question is still unanswered and will be offered again.
-        forgetOpenQuestion()
+        endOpenQuestion(.worldMovedOn, replacedOn: nil)
         forgetOpenRung()
         openRecordID = nil
     }
