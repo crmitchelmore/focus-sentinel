@@ -89,6 +89,14 @@ public struct SessionControls: View {
                 cancel: { isInterrupting = false }
             )
         }
+        // **The application the interruption sheet will name** (focus-7ow, F-101).
+        //
+        // Reported here rather than from the sheet, and that is the honest place: the sheet is
+        // built only while a person is interrupting, so a receipt inside it would be a receipt
+        // nothing in the programme ever collects. This is the identifier the sheet is about to be
+        // handed, on the view that is holding it — so a cockpit that passes down an application
+        // which is not installed, or the wrong one, or none, changes what is reported.
+        .shellRendered(.lastActiveApp, lastActiveBundleID ?? "none")
     }
 
     // MARK: - No session

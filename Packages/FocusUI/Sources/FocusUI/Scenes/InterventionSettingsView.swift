@@ -134,21 +134,44 @@ public struct InterventionSettingsView: View {
     /// window sizes itself to the tab's content instead.
     public var body: some View {
         VStack(alignment: .leading, spacing: DesignTokens.spacing(spacing, scale: textScale)) {
+            // **All seven fields of `InterventionSettings`, each reported beside the section that
+            // draws it** (focus-7ow).
+            //
+            // Two of the seven were reported before, from the Settings *window*, and the other
+            // five — quiet hours, the authorisation, today's spend, the exclusion list, and
+            // whether Reduce Motion forced the switch — could be replaced with anything at all
+            // while the whole nineteen-stage gate stayed green. They are what the person is
+            // shown when they ask "what will this app do, and when will it leave me alone".
             voiceSection
+                .shellRendered(.interventionVoice, settings.voice.rawValue)
             Divider()
             reducedInterruptionSection
+                .shellRendered(
+                    .reducedInterruption, settings.reducedInterruption ? "on" : "off"
+                )
+                .shellRendered(
+                    .reducedInterruptionForced,
+                    settings.reducedInterruptionIsForced ? "forced" : "chosen"
+                )
             Divider()
             quietHoursSection
+                .shellRendered(.quietHours, ShellValueDigest.describe(settings.quietHours))
             Divider()
             notificationSection
+                .shellRendered(.notificationAuthorisation, settings.authorisation.rawValue)
             Divider()
             routingMatrix
             Divider()
             capsSection
+                .shellRendered(.interruptionUsage, ShellValueDigest.describe(settings.usage))
             Divider()
             thresholdsSection
             Divider()
             exclusionsSection
+                .shellRendered(
+                    .presentationExclusions,
+                    ShellValueDigest.describe(settings.presentationExclusions)
+                )
         }
         .padding(DesignTokens.spacing(spacing, scale: textScale))
         .frame(maxWidth: .infinity, alignment: .leading)

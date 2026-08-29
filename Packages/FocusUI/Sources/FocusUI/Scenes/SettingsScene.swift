@@ -62,6 +62,21 @@ public struct ShellSettingsConnection {
     /// What the Intervention pane's controls reach. Under U-1 this is what decides whether the
     /// app may speak, and it was `{ _ in }`-able in a file no lane could read.
     public let onInterventionAction: @MainActor (InterventionSettingsAction) -> Void
+    /// **Which pane is on screen, decided by the composition root** (focus-7ow).
+    ///
+    /// A macOS `TabView` builds only the selected pane. Measured on the first run of the render
+    /// receipts: the Privacy pane's own stamps never arrived at all, because nobody had clicked
+    /// Privacy — so every value reported about the Settings window had to be reported from the
+    /// *window*, in the same expression that constructs each pane, and a defect **inside** an
+    /// unselected pane was invisible to every lane in the programme.
+    ///
+    /// Driving the selection from the root closes that: the self-check selects each pane in turn,
+    /// each pane reports what it drew, and the reports accumulate against one issue of this
+    /// connection.
+    public let selectedTab: SettingsTab
+    /// What a click on a tab performs. The root holds the selection, for the reason it holds the
+    /// appearance preference: a `@State` in a window body is a value no lane can read.
+    public let selectTab: @MainActor (SettingsTab) -> Void
     /// Called from the window's body: the far end of the scene's one wire.
     public let didRender: @MainActor () -> Void
 
@@ -90,6 +105,8 @@ public struct ShellSettingsConnection {
         verdict: VerdictSnapshot?,
         intervention: InterventionSettings,
         onInterventionAction: @escaping @MainActor (InterventionSettingsAction) -> Void,
+        selectedTab: SettingsTab = .general,
+        selectTab: @escaping @MainActor (SettingsTab) -> Void = { _ in },
         generation: Int = 0,
         didRender: @escaping @MainActor () -> Void = {},
         didDraw: @escaping @MainActor (ShellSettingsRendering) -> Void = { _ in }
@@ -102,9 +119,46 @@ public struct ShellSettingsConnection {
         self.verdict = verdict
         self.intervention = intervention
         self.onInterventionAction = onInterventionAction
+        self.selectedTab = selectedTab
+        self.selectTab = selectTab
         self.generation = generation
         self.didRender = didRender
         self.didDraw = didDraw
+    }
+}
+
+/// **Every field of the Settings connection, bound to the receipt that echoes it** (focus-7ow).
+///
+/// `intervention` descends, because the pane draws its seven fields as seven controls and five of
+/// them — quiet hours, authorisation, usage, the exclusion list, and whether Reduce Motion forced
+/// the switch — were carried into a window that reported two of them.
+extension ShellSettingsConnection: ShellDrawnConnection {
+    public nonisolated static var connectionName: String { "ShellSettingsConnection" }
+
+    public nonisolated static var fieldEchoes: [String: ShellFieldEcho] {
+        [
+            "preference": .drawn([.appearancePreference]),
+            "setPreference": .undrawn(.sink),
+            "storeURL": .drawn([.privacyStorePath]),
+            "summary": .drawn([.privacySummary, .sensingDetail]),
+            "capabilities": .drawn([.privacyCapabilities]),
+            "verdict": .drawn([.verdictBand, .verdictDetail]),
+            "intervention": .composite,
+            "onInterventionAction": .undrawn(.sink),
+            "selectedTab": .drawn([.settingsTab]),
+            "selectTab": .undrawn(.sink),
+            "generation": .undrawn(.generation),
+            "didRender": .undrawn(.receipt),
+            "didDraw": .undrawn(.receipt),
+
+            "intervention.voice": .drawn([.interventionVoice]),
+            "intervention.reducedInterruption": .drawn([.reducedInterruption]),
+            "intervention.reducedInterruptionIsForced": .drawn([.reducedInterruptionForced]),
+            "intervention.quietHours": .drawn([.quietHours]),
+            "intervention.authorisation": .drawn([.notificationAuthorisation]),
+            "intervention.usage": .drawn([.interruptionUsage]),
+            "intervention.presentationExclusions": .drawn([.presentationExclusions])
+        ]
     }
 }
 
@@ -159,6 +213,9 @@ public struct ShellSettingsView: View {
     private let verdict: VerdictSnapshot?
     private let intervention: InterventionSettings
     private let onInterventionAction: (InterventionSettingsAction) -> Void
+    /// Which pane is on screen. A `Binding` over the composition root's own value, never a
+    /// `@State`: the root drives it so each pane can be made to draw and report (focus-7ow).
+    @Binding private var selectedTab: SettingsTab
     /// What the window reports when its body is evaluated. `nil` for every caller that builds
     /// it out of loose values — the snapshot lane, the preview, the unit tests.
     private let didRender: (@MainActor () -> Void)?
@@ -175,7 +232,8 @@ public struct ShellSettingsView: View {
         capabilities: CapabilityMatrix = CapabilityMatrix(),
         verdict: VerdictSnapshot? = nil,
         intervention: InterventionSettings = InterventionSettings(),
-        onInterventionAction: @escaping (InterventionSettingsAction) -> Void = { _ in }
+        onInterventionAction: @escaping (InterventionSettingsAction) -> Void = { _ in },
+        selectedTab: Binding<SettingsTab> = .constant(.general)
     ) {
         self._preference = preference
         self.storeURL = storeURL
@@ -184,6 +242,7 @@ public struct ShellSettingsView: View {
         self.verdict = verdict
         self.intervention = intervention
         self.onInterventionAction = onInterventionAction
+        self._selectedTab = selectedTab
         self.didRender = nil
         self.generation = 0
         self.didDraw = nil
@@ -206,6 +265,10 @@ public struct ShellSettingsView: View {
         self.verdict = connection.verdict
         self.intervention = connection.intervention
         self.onInterventionAction = connection.onInterventionAction
+        self._selectedTab = Binding(
+            get: { connection.selectedTab },
+            set: { connection.selectTab($0) }
+        )
         self.didRender = connection.didRender
         self.generation = connection.generation
         self.didDraw = connection.didDraw
@@ -216,7 +279,7 @@ public struct ShellSettingsView: View {
         // where it is: a scene that asked the composition root and then drew something else must
         // fail the same assertion as one that never asked.
         let _ = didRender?()
-        TabView {
+        TabView(selection: $selectedTab) {
             GeneralSettingsView(preference: $preference)
                 .tabItem { tabLabel(.general) }
                 .tag(SettingsTab.general)
@@ -238,32 +301,20 @@ public struct ShellSettingsView: View {
             .tag(SettingsTab.privacy)
         }
         .frame(minWidth: 460, minHeight: 520)
-        // **The six values this window built its three panes out of** (focus-h7h).
+        // **The values are reported by the panes now, not by this window** (focus-7ow).
         //
-        // Reported here, from the window, rather than from inside each pane — and that is a
-        // measurement, not a preference. A macOS `TabView` builds only the pane a person has
-        // selected: on the first run of this mechanism the Privacy pane's own stamps never
-        // arrived at all, because nobody had clicked Privacy, and the General pane's were
-        // swallowed by the tab hosting the selected pane sits in. A report that depended on which
-        // tab happened to be in front would be a report that silently stopped asserting.
+        // They used to be reported here, and the reason was measured: a macOS `TabView` builds
+        // only the selected pane, so on the first run of this mechanism the Privacy pane's own
+        // stamps never arrived at all because nobody had clicked Privacy. Reporting from the
+        // window bought coverage of the *arguments* at the price of the panes themselves — a
+        // defect inside an unselected pane was invisible to every lane in the programme, and a
+        // mutation that handed the Privacy pane `URL(fileURLWithPath: "/")` was reported as the
+        // truth by a window stamping its own `storeURL`.
         //
-        // What is claimed is therefore exactly what can be claimed: these are the values the
-        // window constructed each pane from, in the same expression that constructs it. A
-        // connection carrying a placeholder changes them, which is the whole of what the three
-        // Settings mutations do.
-        .shellRendered(.appearancePreference, preference.rawValue)
-        .shellRendered(.interventionVoice, intervention.voice.rawValue)
-        .shellRendered(.reducedInterruption, intervention.reducedInterruption ? "on" : "off")
-        .shellRendered(.privacyCapabilities, capabilities.renderedDescription)
-        .shellRendered(.verdictBand, verdict?.band?.rawValue ?? "none")
-        .shellRendered(
-            .privacySummary,
-            SensingStatusView.renderedDescription(
-                summary: summary,
-                capabilities: capabilities,
-                showsReducedCapabilities: false
-            )
-        )
+        // So the selection is the composition root's, the self-check walks all three panes, and
+        // each pane reports the values **it** drew. What is left here is the one fact only the
+        // window knows — which pane is in front — and the traits it resolved.
+        .shellRendered(.settingsTab, selectedTab.rawValue)
         // Escape backs out of Settings, which is what `CancelBehaviour.dismissWindow`
         // declares for both panes and what a Mac user expects of a preferences window.
         .onExitCommand {

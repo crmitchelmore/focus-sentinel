@@ -79,7 +79,13 @@ public struct PrivacySettingsView: View {
 
                 // The path itself is data, not prose: it is the user's own file system
                 // location and must never be routed through a catalog.
-                Text(verbatim: storeURL.path(percentEncoded: false))
+                //
+                // One derivation, two consumers (focus-7ow): this is the string the person
+                // reads, and it is the string the receipt reports. A mutation that printed `/`
+                // here — with Reveal in Finder wired to open it — was invisible to the whole
+                // nineteen-stage gate, because the only thing reporting a Settings value was the
+                // window, and the window reported its own `storeURL` rather than the pane's.
+                Text(verbatim: storePath)
                     .font(DesignTokens.font(.footnote, scale: textScale))
                     .monospaced()
                     .textSelection(.enabled)
@@ -150,5 +156,31 @@ public struct PrivacySettingsView: View {
         }
         .padding(spacing * 2)
         .frame(maxWidth: .infinity, alignment: .leading)
+        // **What this pane drew, reported by this pane** (focus-7ow).
+        //
+        // Every one of these used to be reported by the Settings *window*, from the argument it
+        // was about to pass in — so a defect between the argument and the screen was invisible,
+        // and the whole pane was invisible whenever somebody had a different tab selected. The
+        // window drives the selection from the composition root now, and these are stamps on the
+        // values this view is actually holding.
+        .shellRendered(.privacyStorePath, storePath)
+        .shellRendered(.privacyCapabilities, capabilities.renderedDescription)
+        .shellRendered(
+            .privacySummary,
+            SensingStatusView.renderedDescription(
+                summary: summary,
+                capabilities: capabilities,
+                showsReducedCapabilities: false
+            )
+        )
+        // The whole summary and the whole verdict, derived rather than enumerated: the sentence
+        // above is a projection of six facts, and the band is one field of a verdict that also
+        // carries its subject, its confidence and its explanation (focus-7ow).
+        .shellRendered(.sensingDetail, ShellValueDigest.describe(summary))
+        .shellRendered(.verdictBand, verdict?.band?.rawValue ?? "none")
+        .shellRendered(.verdictDetail, ShellValueDigest.describe(verdict))
     }
+
+    /// The store's location, as one string: what the person reads, and what the receipt reports.
+    private var storePath: String { storeURL.path(percentEncoded: false) }
 }

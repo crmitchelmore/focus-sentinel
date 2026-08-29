@@ -64,5 +64,8 @@ public struct GeneralSettingsView: View {
         .padding(spacing)
         .frame(maxWidth: .infinity, alignment: .leading)
         .defaultFocus($focus, .generalAppearancePicker)
+        // What this pane drew, reported by this pane rather than by the window that built it
+        // (focus-7ow). The picker's selection *is* the binding, so this is the value on screen.
+        .shellRendered(.appearancePreference, preference.rawValue)
     }
 }

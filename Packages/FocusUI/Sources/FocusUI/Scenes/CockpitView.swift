@@ -155,7 +155,13 @@ public struct CockpitView: View {
         // disturb.
         let _ = didRender?()
         VStack(alignment: .leading, spacing: sectionSpacing) {
-            if state.showsRitualPrompt, let dismissRitual = wiring.dismissRitual {
+            // **One derivation, two consumers** (focus-7ow). The banner is on the screen exactly
+            // when this is not `nil`, and that is exactly what the receipt reports — so a
+            // mutation that shows the start-of-day ritual when it should not, or never shows it
+            // when it should, changes the reported value with it. It was drawn from
+            // `state.showsRitualPrompt` and reported nowhere.
+            let ritualDismissal = state.showsRitualPrompt ? wiring.dismissRitual : nil
+            if let dismissRitual = ritualDismissal {
                 RitualBanner(
                     answer: {
                         dismissRitual()
@@ -166,8 +172,19 @@ public struct CockpitView: View {
                     focus: $focus
                 )
             }
-
             header
+                .shellRendered(.ritualBanner, ritualDismissal == nil ? "hidden" : "shown")
+                // **The sections that only exist while there is a commitment still report**
+                // (focus-7ow). A field nobody reported is indistinguishable from a section
+                // somebody deleted, so a cockpit with nothing committed to says so in the same
+                // vocabulary the composition root expects it in.
+                //
+                // A **background** rather than a sibling in the column, and that is measured: a
+                // zero-height `Color.clear` is still a `VStack` child and still takes the stack's
+                // spacing, which moved every committed cockpit baseline by 20 points. A
+                // background proposes no size and is exactly how `shellRendered(_:_:)` itself
+                // reaches the preference channel.
+                .background(absentCommitmentReceipts)
 
             if let priority = state.priority {
                 doneWhenSection(priority)
@@ -186,6 +203,11 @@ public struct CockpitView: View {
             }
 
             RecentPrioritiesView(rows: state.recent, activate: wiring.activate)
+                // **What is in the rows, not only how many** (focus-7ow). `recentCount` alone was
+                // satisfied by a list of the right length holding somebody else's history, and it
+                // was reported from the column rather than from the list that draws it.
+                .shellRendered(.recentCount, state.recent.count)
+                .shellRendered(.recentDigest, ShellValueDigest.describe(state.recent))
 
             footer
 
@@ -251,8 +273,8 @@ public struct CockpitView: View {
         // The handoff is reported by the **task it names** rather than by a `Bool`, because the
         // self-check drives a handoff carrying a sentence no person would type: a placeholder has
         // no way to be carrying that.
-        .shellRendered(.recentCount, state.recent.count)
         .shellRendered(.handoffTask, state.pendingHandoff?.task ?? "")
+        .shellRendered(.handoffDetail, ShellValueDigest.describe(state.pendingHandoff))
         .shellRendered(
             .mutationHostsAttached,
             "\(actions != nil ? "priority" : "-")/\(sessionActions != nil ? "session" : "-")"
@@ -358,6 +380,29 @@ public struct CockpitView: View {
         // composition root can hold its own answer up beside.
         .shellRendered(.priorityIntent, state.priority?.intent ?? "")
         .shellRendered(.status, state.status.rawValue)
+        // **The whole commitment beside the sentence** (focus-7ow). `priorityIntent` is one field
+        // of twelve, and a window handed somebody else's timebox, context items and rules draws
+        // the same hero. Derived by `Mirror`, so a thirteenth field is in this string the day it
+        // is added and nobody has to remember to widen an enumeration.
+        .shellRendered(.priorityDetail, ShellValueDigest.describe(state.priority))
+    }
+
+    /// **What the commitment sections report when there is no commitment** (focus-7ow).
+    ///
+    /// A zero-height reporter rather than nothing at all. `ShellRenderFidelity` reads a field the
+    /// window never mentioned as `unreportedFields` — the same reading a deleted section
+    /// produces — so a cockpit with nothing committed to has to say so in the vocabulary the
+    /// composition root expects it in, or "correct" and "gutted" would be one answer.
+    @ViewBuilder
+    private var absentCommitmentReceipts: some View {
+        if state.priority == nil {
+            Color.clear
+                .shellRendered(.priorityDoneWhen, ShellRenderedValues.noCommitment)
+                .shellRendered(.sessionPhase, ShellRenderedValues.noCommitment)
+                .shellRendered(.sessionDetail, ShellRenderedValues.noCommitment)
+                .shellRendered(.sessionElapsedSeconds, ShellRenderedValues.noCommitment)
+                .shellRendered(.lastActiveApp, ShellRenderedValues.noCommitment)
+        }
     }
 
     /// The priority itself — read as a hero, or corrected in place at the same size.
@@ -439,6 +484,12 @@ public struct CockpitView: View {
                 .accessibilityLabel(Text(ShellStrings.resource(.priorityDoneWhenLabel)))
             }
         }
+        // **The definition of done, reported from the section that draws it** (focus-7ow, F-08).
+        //
+        // The value the section was handed, not `doneWhenDraft`: the draft is `@State` seeded
+        // from it and edited by a person, and reporting the draft would make the reading a race
+        // against `onAppear` rather than a statement about what the window was given.
+        .shellRendered(.priorityDoneWhen, priority.doneWhen ?? "")
     }
 
     private func commitDoneWhen(_ priority: PrioritySnapshot) {
@@ -494,6 +545,10 @@ public struct CockpitView: View {
             sessionElapsedSeconds.map { String(Int($0)) } ?? "none"
         )
         .shellRendered(.sessionPhase, state.session?.phase.rawValue ?? "none")
+        // The whole session beside the phase: a badge drawing `focus` for somebody else's
+        // session, started at another time and with another timebox, is the same phase
+        // (focus-7ow).
+        .shellRendered(.sessionDetail, ShellValueDigest.describe(state.session))
     }
 
     // MARK: - Per-task rules (F-11)
@@ -679,18 +734,26 @@ public struct CockpitView: View {
     /// person reading a status line is owed the parts of it that are missing.
     private var footer: some View {
         VStack(alignment: .leading, spacing: rowSpacing / 2) {
-            detail(
-                systemImage: state.storeIsReady
-                    ? "internaldrive.fill"
-                    : "exclamationmark.triangle.fill",
-                key: state.storeIsReady ? .cockpitStoreReady : .cockpitStoreUnavailable
-            )
+            // **One derivation, three consumers** (focus-7ow): the glyph, the sentence, and the
+            // receipt. This line told the person their store was unavailable when it was fine —
+            // a boolean flip, drawn from `state.storeIsReady`, reported nowhere, and invisible to
+            // the whole nineteen-stage gate. Reporting the **string key the label was actually
+            // given** rather than the flag it came from is what binds the receipt to the screen:
+            // a mutation to either ternary changes `storeLine`, and `storeLine` is what is said.
+            let storeLine = state.storeIsReady
+                ? (image: "internaldrive.fill", key: ShellStringKey.cockpitStoreReady)
+                : (image: "exclamationmark.triangle.fill", key: ShellStringKey.cockpitStoreUnavailable)
+            detail(systemImage: storeLine.image, key: storeLine.key)
+                .shellRendered(.storeStatus, storeLine.key.rawValue)
 
             SensingStatusView(
                 summary: state.sensing,
                 capabilities: state.capabilities,
                 showsReducedCapabilities: true
             )
+            // The whole summary behind the sentence. `sensingSummary` is a projection of six
+            // facts and five of them could move without it changing (focus-7ow).
+            .shellRendered(.sensingDetail, ShellValueDigest.describe(state.sensing))
             // The capability table the footer's reduced list is drawn from. Reported whole
             // rather than as the list it happened to name, so a matrix nobody probed — twelve
             // `notRequested` rows, and therefore an empty reduced list because nothing is
