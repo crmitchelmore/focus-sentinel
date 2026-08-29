@@ -188,4 +188,215 @@ struct NudgeHostSlotOwnershipTests {
             "a question was raised over an accusation panel"
         )
     }
+
+    // MARK: - The same rule, on the question's side of the slot
+
+    /// **A badge question waiting behind a click does not hold the slot** (U-2's own defect).
+    ///
+    /// The repair above was applied to the rung and not to the question: `slot` asked
+    /// `openQuestion != nil`, which is the identity `focus-k42` condemned, spelled on the other
+    /// branch. It was latent for as long as an accusation could displace a question — preemption
+    /// was the release valve. Deleting preemption (U-2) turned it into the loudest failure in the
+    /// epic, because `offering(_ rung:)` now withholds against an open query.
+    ///
+    /// The route is the shipping one, not a contrivance: reduced interruption is a checkbox in the
+    /// Intervention pane, and `silentVisual` and an active microphone reach the same branch. The
+    /// popover opens **only** when a person clicks the status item, and until then the loop's own
+    /// doctrine is that *"the badge is an invitation, not a delivery — nothing is counted and
+    /// nothing is written"*. Nothing is counted, and it used to hold the one interruption slot.
+    @Test("a badge question nobody has opened does not hold the interruption slot")
+    func aBadgeQuestionDoesNotHoldTheSlot() throws {
+        let fixture = try NudgeHostFixture()
+        defer { fixture.tearDown() }
+        fixture.host.choose(reducedInterruption: true)
+
+        fixture.host.consider(NudgeHostFixture.uncertainJudgement(subject: Self.other))
+        NudgeHostFixture.settle()
+
+        try #require(fixture.host.pendingPopoverQuery != nil, "the question did not reach the badge")
+        #expect(!fixture.menuBar.isPopoverShown, "the popover opened without anybody clicking")
+        #expect(
+            fixture.host.deliveredCount == 0,
+            "a question sitting behind a click was counted as delivered"
+        )
+        #expect(
+            fixture.host.slot.isOpen,
+            """
+            a question nobody has been shown is holding the one interruption slot: \
+            \(fixture.host.slot.holder)
+            """
+        )
+    }
+
+    /// **…and the consequence a person meets: the app still speaks about the drift.**
+    ///
+    /// The mechanism above, measured as behaviour. On the unfixed tree this is sustained drift
+    /// into a decoy application, for as long as you like, answered every single time with
+    /// `silent(interruptionInFlight)` — because a question nobody was ever shown is waiting.
+    /// U-2 says an accusation waits for a question; it does not say an accusation waits for a
+    /// question that reached nobody.
+    @Test("a badge question nobody has opened does not silence the accusation behind it")
+    func aBadgeQuestionDoesNotSilenceTheAccusation() throws {
+        let fixture = try NudgeHostFixture()
+        defer { fixture.tearDown() }
+        fixture.host.choose(reducedInterruption: true)
+
+        fixture.host.consider(NudgeHostFixture.uncertainJudgement(subject: Self.other))
+        NudgeHostFixture.settle()
+        try #require(fixture.host.pendingPopoverQuery != nil)
+
+        // Sustained, unambiguous drift into a different application, over the day.
+        fixture.host.consider(NudgeHostFixture.unrelatedJudgement(subject: Self.decoy))
+        NudgeHostFixture.settle()
+
+        #expect(
+            fixture.host.currentRung == .ambient,
+            """
+            eight minutes of sustained drift and the ladder never left the ground, because a \
+            question nobody saw was holding the slot: \
+            \(String(describing: fixture.host.lastDecision))
+            """
+        )
+        #expect(
+            fixture.host.deliveredCount == 1,
+            "the ambient glyph never lit while an unopened badge question held the slot"
+        )
+        // And the question is still there to be answered — waiting, not spent.
+        #expect(fixture.host.pendingPopoverQuery != nil, "the accusation ate the pending question")
+    }
+
+    /// **A question on the panel does still hold it, and the accusation waits** (U-2).
+    ///
+    /// The half of the cut that must survive the repair of the other half — the single most
+    /// important line of the scope cut, asserted as behaviour. Without this, "release the slot"
+    /// could be satisfied by releasing it always, and preemption would be back by omission.
+    @Test("a question on the panel holds the slot, and the accusation waits behind it")
+    func aPanelQuestionStillHoldsTheSlot() throws {
+        let fixture = try NudgeHostFixture()
+        defer { fixture.tearDown() }
+
+        fixture.host.consider(NudgeHostFixture.uncertainJudgement(subject: Self.other))
+        NudgeHostFixture.settle()
+
+        try #require(fixture.panel.isVisible && fixture.panel.showing == .question)
+        #expect(
+            fixture.host.slot.openQuery != nil,
+            "a question on the panel released the one interruption slot"
+        )
+
+        fixture.host.consider(NudgeHostFixture.unrelatedJudgement(subject: Self.decoy))
+        NudgeHostFixture.settle()
+
+        #expect(
+            fixture.panel.showing == .question,
+            "an accusation displaced the question U-1 licensed the interruption for"
+        )
+        // **Withheld is not spent** (U-2). The ladder never left the ground: no delivery was
+        // recorded, so the escalation clock never started and the same rung is still there.
+        #expect(
+            fixture.host.currentRung == nil,
+            "the withheld rung was consumed rather than kept for the next judgement"
+        )
+
+        // The person answers — Escape on the question panel is "Not now", which is an answer —
+        // and the accusation that waited is now free to arrive.
+        fixture.panel.onDismiss?()
+        NudgeHostFixture.settle()
+        try #require(fixture.host.slot.isOpen, "the answered question did not give the slot back")
+
+        fixture.host.consider(NudgeHostFixture.unrelatedJudgement(subject: Self.decoy))
+        NudgeHostFixture.settle()
+
+        #expect(
+            fixture.host.currentRung == .ambient,
+            """
+            the accusation was lost rather than delayed: \
+            \(String(describing: fixture.host.lastDecision))
+            """
+        )
+    }
+
+    /// **Escape on an accusation panel dismisses the accusation, not the invisible question.**
+    ///
+    /// A state that could not exist before the repair above and can now: an accusation on the
+    /// panel while a badge question waits behind a click. `panel.onDismiss` asked
+    /// `openQuestion != nil`, which was a safe spelling only while the two were the same state —
+    /// so Escape would have answered *"Not now"* to a question that is not on the screen, written
+    /// its receipt, settled the subject under gate 11 so it could never be asked again, and left
+    /// the accusation the person meant to dismiss still up.
+    ///
+    /// **Reaching it needs the settings pane**, and that is the point: every route that sends a
+    /// question to the badge also demotes the panel rung (reduced interruption and an active
+    /// microphone send it to the badge; `silentVisual` renders it as the glyph), so the two can
+    /// only meet if the preference changes between the ask and the accusation. Unchecking the
+    /// Intervention pane's box while a badge question waits is an ordinary thing to do.
+    @Test("escape on an accusation panel does not answer a question waiting in the badge")
+    func escapeDismissesThePanelNotThePendingBadgeQuestion() throws {
+        let fixture = try NudgeHostFixture()
+        defer { fixture.tearDown() }
+        // Reduced interruption routes the question to the badge…
+        fixture.host.choose(reducedInterruption: true)
+
+        fixture.host.consider(NudgeHostFixture.uncertainJudgement(subject: Self.other))
+        NudgeHostFixture.settle()
+        try #require(fixture.host.pendingPopoverQuery != nil)
+
+        // …and then the person turns it off again, with the question still waiting behind a click.
+        fixture.host.choose(reducedInterruption: false)
+
+        for _ in 0..<2 {
+            fixture.host.consider(NudgeHostFixture.unrelatedJudgement(subject: Self.decoy))
+            NudgeHostFixture.settle()
+            fixture.clock.advance(by: RelevancePolicy.mandateCooldown + .seconds(1))
+        }
+        try #require(
+            fixture.panel.isVisible && fixture.panel.showing == .accusation,
+            "the accusation never reached the panel: \(String(describing: fixture.host.lastDecision))"
+        )
+
+        fixture.panel.onDismiss?()
+        NudgeHostFixture.settle()
+
+        #expect(
+            fixture.host.pendingPopoverQuery != nil,
+            "Escape on an accusation panel answered a question that was not on the screen"
+        )
+        #expect(
+            try fixture.receipts().isEmpty,
+            "a receipt was written for a question nobody was ever shown"
+        )
+        #expect(
+            !(try fixture.ledger.isSettled(
+                priorityID: fixture.priorityID,
+                subjectKind: .app,
+                subject: Self.other
+            )),
+            "gate 11 would now suppress a question that was never asked"
+        )
+    }
+
+    /// **One question at a time is a fact about the loop, not about the slot.**
+    ///
+    /// The guard that had to be added when ownership stopped answering identity: with the badge
+    /// question no longer holding the slot, `slot.offering(warrant)` says *admitted* while one
+    /// waits. Raising the second would strand the badge the menu bar is already drawing and leave
+    /// `popoverPresentedTheQuestion()` to deliver a question about a different subject.
+    @Test("a second question is not raised over one still waiting in the badge")
+    func aPendingBadgeQuestionIsNotSilentlyReplaced() throws {
+        let fixture = try NudgeHostFixture()
+        defer { fixture.tearDown() }
+        fixture.host.choose(reducedInterruption: true)
+
+        fixture.host.consider(NudgeHostFixture.uncertainJudgement(subject: Self.other))
+        NudgeHostFixture.settle()
+        try #require(fixture.host.pendingPopoverQuery?.subject == Self.other)
+
+        fixture.host.consider(NudgeHostFixture.uncertainJudgement(subject: Self.decoy))
+        NudgeHostFixture.settle()
+
+        #expect(
+            fixture.host.pendingPopoverQuery?.subject == Self.other,
+            "the question waiting behind the click was replaced by a second one"
+        )
+    }
 }

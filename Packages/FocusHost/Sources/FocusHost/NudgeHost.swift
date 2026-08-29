@@ -207,6 +207,38 @@ final class NudgeHost {
         /// The answers the question is offering, by `rawValue`, so a reading taken as it ends asks
         /// about the same set the panel was drawn with.
         var actions: [String] = []
+
+        /// **Whether this question is occupying the thing the slot is about: an answerable
+        /// screen** — `OpenRung.holdsTheInterruptionSlot`'s twin, for the twin reason.
+        ///
+        /// focus-k42's repair separated *which interruption this is* from *whether the screen is
+        /// occupied*, and it was applied to the rung and not to the question. The asymmetry was
+        /// the whole of the cut's own defect: `slot` asked `openQuestion != nil`, so **every**
+        /// state in which this object holds a question — including the two in which the question
+        /// has reached nobody at all — withheld every accusation that followed, for the life of
+        /// the session. U-2 says an accusation *waits* for a question; it does not say an
+        /// accusation waits for a question nobody was ever shown.
+        ///
+        /// The two states that reach nobody, and now do not hold the slot:
+        ///
+        /// * `surface == nil` — the route offered no surface. `ask(…)` records a deferral, which
+        ///   is R-81's *"reached nobody"*, and this question is over.
+        /// * `surface == .popoverBadge` while the popover is shut — *"the badge is an invitation,
+        ///   not a delivery"*. Nothing is counted and nothing is written, and the popover opens
+        ///   only when a person clicks the status item. It is exactly the glyph's case:
+        ///   `offersACorrection` is `false`, and a badge that held the slot would hold it until
+        ///   the session ended, because nothing on screen can be pressed to take it down.
+        ///
+        /// The predicate is `NudgeSurface.offersACorrection` for the same reason the rung's is,
+        /// and it is deliberately **not** `readingAtAsk`: a panel question that could not be read
+        /// is ended by `ask(…)` rather than left open, so readability is not a state this can be
+        /// asked in, and adding it would be the second derivation of one fact that focus-k42
+        /// condemned.
+        ///
+        /// This is ownership. *Identity* — "is a question already open?" — is a different
+        /// question with a different answer, and `ask(…)` asks it separately so that a badge
+        /// question waiting behind a click is never silently replaced by a second one.
+        var holdsTheInterruptionSlot: Bool { surface?.offersACorrection ?? false }
     }
 
     /// **The appearance the person is actually running in** (focus-pq8).
@@ -286,11 +318,22 @@ final class NudgeHost {
     ///
     /// It asks `holdsTheInterruptionSlot` now, which is a fact about **where the rung landed**
     /// rather than about whether this object is holding one.
+    ///
+    /// **And it asks the same of the question** (U-2's own defect). The line below used to read
+    /// `if let openQuestion`, so the separation focus-k42 established survived on one side of the
+    /// slot and not the other — and once `offering(_ rung:)` began withholding against an open
+    /// query, that asymmetry stopped being latent and became the loudest failure in the epic: a
+    /// question routed to the badge and never opened, or routed to no surface at all, silenced
+    /// **every** accusation for the rest of the session, with no symptom but silence. Both
+    /// branches now ask where the interruption landed, and neither asks whether this object is
+    /// holding one.
     var slot: InterruptionSlot {
         if let openRung, openRung.holdsTheInterruptionSlot {
             return InterruptionSlot(holder: .accusation(openRung.rung))
         }
-        if let openQuestion { return InterruptionSlot(holder: .query(openQuestion.warrant)) }
+        if let openQuestion, openQuestion.holdsTheInterruptionSlot {
+            return InterruptionSlot(holder: .query(openQuestion.warrant))
+        }
         return .open
     }
 
@@ -708,6 +751,15 @@ final class NudgeHost {
         // slot, including against another question. `slot` is derived from the two values below,
         // so taking it *is* assigning them (focus-zrs).
         guard case .admitted = slot.offering(warrant) else { return }
+        // **Ownership is not identity, so the slot cannot answer this one** (U-2's defect).
+        // A question waiting behind a click — routed to the badge, popover shut — deliberately
+        // does *not* hold the slot, because it has reached nobody and an accusation must not wait
+        // for it. That is the right answer for the accusation and the wrong one here: overwriting
+        // `openQuestion` below would strand the badge the menu bar is already drawing, drop the
+        // subject the person was about to be asked about, and leave `popoverPresentedTheQuestion()`
+        // to deliver a question about something else. One question at a time is a fact about this
+        // object, so it is asked of this object.
+        guard openQuestion == nil else { return }
         // One value, set once. The commitment as it stands **now**, at the ask, travels inside it:
         // everything this question ever writes is keyed to that and never to a later store read
         // (focus-lmo, focus-zrs).
@@ -729,6 +781,13 @@ final class NudgeHost {
         )
 
         guard let surface = route.surface else {
+            // **A question that reached no surface at all is over** (focus-k42's shape, on the
+            // question side). `record(deferral:)` writes `disposition = deferred`, which is
+            // R-81's *"reached nobody"* — and this object used to keep the question anyway, with
+            // a `nil` surface, unanswerable and unexpirable. `accuse(…)` calls `forgetOpenRung()`
+            // on precisely this path; this is the same statement, and it is made before the
+            // deferral is written so no reader can observe the two disagreeing.
+            endOpenQuestion(.neverDelivered)
             record(
                 deferral: route.deferralReason ?? .noSurfaceAvailable,
                 kind: .query,
@@ -936,10 +995,22 @@ final class NudgeHost {
             ladder.reduce(.rungIgnored, now: now)
         }
 
-        // A rung is being answered, not a question — but if one is somehow still open it ends
-        // here rather than surviving into the next turn, and it ends as what it is: something the
-        // world moved past.
-        closeSurfaces(endingAnyQuestionAs: .worldMovedOn)
+        // A rung is being answered, not a question. What comes down is **the rung's surface**,
+        // and a question ends here only if it was sharing it.
+        //
+        // This was `closeSurfaces(endingAnyQuestionAs: .worldMovedOn)` on the argument that a
+        // question still open at this point was an anomaly to be tidied away. It is no longer an
+        // anomaly: a badge question waiting behind a click does not hold the slot, so an
+        // accusation is admitted while one pends, and the unconditional form threw that question
+        // away — the badge went dark and the subject the person was about to be asked about was
+        // dropped — because they dismissed a nudge about something else. U-2 keeps the question
+        // affordance in full; a correction aimed at an accusation must not spend it.
+        if let openQuestion, openQuestion.surface == .panel {
+            closeSurfaces(endingAnyQuestionAs: .worldMovedOn)
+        } else {
+            panel.hide()
+            forgetOpenRung()
+        }
     }
 
     /// **A press on a notification's button, always refused** (focus-zrs, U-2).
@@ -1022,7 +1093,17 @@ final class NudgeHost {
     /// treating that as "nothing happened" is what makes an app ask again tomorrow — and
     /// `.dismissed` for an accusation, which writes nothing and is allowed to (D-07).
     private func dismissWhateverIsOpen() {
-        if openQuestion != nil {
+        // **This is the *panel's* Escape, so it asks what the panel is carrying** — not whether
+        // this object is holding a question anywhere.
+        //
+        // `openQuestion != nil` was a safe spelling only for as long as a question on any surface
+        // held the interruption slot, because that made "a question exists" and "the panel is
+        // showing it" the same state. They are no longer the same state: a badge question waiting
+        // behind a click does not hold the slot, so an accusation can be on the panel while one
+        // pends. Under the old spelling, Escape on that accusation panel would answer `.notNow`
+        // to a question that is not on the screen — writing a receipt, settling the subject under
+        // gate 11, and leaving the accusation the person actually meant to dismiss still up.
+        if let openQuestion, openQuestion.surface == .panel {
             answer(.notNow)
             return
         }

@@ -237,9 +237,18 @@ public struct NudgeWorld: Sendable, Equatable {
     public private(set) var correctedSubjects: Set<String> = []
     public private(set) var counters: InterventionCounters = .empty
 
-    /// The ledger key of the question currently on screen, so that a preemption writes its receipt
+    /// The ledger key of the question currently on screen, so that its ending writes its receipt
     /// under the same key the asking used (R-84a).
     private var openQueryKey: AskedQuestionKey?
+
+    /// **The question this world is holding — identity, not ownership** (focus-k42, U-2).
+    ///
+    /// `resolveQuery(…)` read `slot.openQuery`, which is the same conflation `resolveAccusation`
+    /// below was repaired for and the same one `NudgeHost.slot` was carrying: it made *which
+    /// question this is* and *whether the screen is occupied* one value. They are not one value
+    /// once a badge question stops occupying the screen, and a replay that kept them so would
+    /// model a question nobody could ever answer.
+    private var openQueryWarrant: QueryWarrant?
 
     /// Every question this world actually delivered, in order — the numerator of every query
     /// metric and the thing `repeatQueryCount` is counted over.
@@ -463,7 +472,15 @@ public struct NudgeWorld: Sendable, Equatable {
             queriesAllPrioritiesToday += 1
             interruptionsToday += 1
             fatigue = FatigueController.reduce(fatigue, event: .delivered(.query), now: now)
-            slot = InterruptionSlot(holder: .query(warrant))
+            // **The same rule the accusation branch above applies, applied to the question**
+            // (focus-k42, U-2). A question on the badge is an invitation behind a click: it is a
+            // delivery and not an occupation, and a badge that held the slot would withhold every
+            // accusation for the rest of the replayed day — which is precisely the shape the host
+            // was carrying. Identity is `openQueryWarrant`, kept unconditionally just below.
+            openQueryWarrant = warrant
+            if surface.offersACorrection {
+                slot = InterruptionSlot(holder: .query(warrant))
+            }
             counters.record(
                 InterventionEvent(
                     kind: .query,
@@ -495,9 +512,10 @@ public struct NudgeWorld: Sendable, Equatable {
     /// harder than an ignore, which is U-1's whole thesis: implicit derivation, improved by one
     /// click, is what buys silence (R-83).
     public mutating func resolveQuery(_ answer: QueryAnswer, now: Duration) {
-        guard let warrant = slot.openQuery else { return }
+        guard let warrant = openQueryWarrant else { return }
         slot = slot.released()
         openQueryKey = nil
+        openQueryWarrant = nil
         fatigue = FatigueController.reduce(
             fatigue, event: .queryResolved(answer.outcome), now: now
         )
@@ -562,6 +580,7 @@ public struct NudgeWorld: Sendable, Equatable {
         ladder.reduce(.deEscalated(cause), now: now)
         slot = slot.released()
         openQueryKey = nil
+        openQueryWarrant = nil
     }
 
     /// Which de-escalation an outcome is. Total over `InterventionOutcome`, so an outcome added
@@ -589,6 +608,7 @@ public struct NudgeWorld: Sendable, Equatable {
         ladder = LadderMachine()
         slot = .open
         openQueryKey = nil
+        openQueryWarrant = nil
         snoozes = .none
         correctedSubjects = []
     }
@@ -605,6 +625,7 @@ public struct NudgeWorld: Sendable, Equatable {
     public mutating func beginIndependentObservation() {
         slot = .open
         openQueryKey = nil
+        openQueryWarrant = nil
         ladder = LadderMachine()
         fatigue = .fresh
         snoozes = .none

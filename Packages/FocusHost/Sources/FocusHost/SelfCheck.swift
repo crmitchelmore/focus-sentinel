@@ -487,8 +487,11 @@ enum SelfCheck {
         report["interventionVersion"] = InterventionPolicy.version
         report["ladderRungsDeclared"] = LadderRung.Kind.allCases.count
         // Which surfaces offer the person something to press. Since U-2 this is what decides
-        // whether a rung standing there occupies the one interruption slot: a glyph and a badge
-        // do not, and a rung that held the slot from a glyph would hold it for the whole session.
+        // whether an interruption standing there occupies the one interruption slot — for a
+        // **question** exactly as for a rung. A glyph and a badge do not: nothing on either can be
+        // pressed to take it down, so either would hold the slot for the whole session. That is
+        // the whole of both halves of the defect — a rung on the glyph silencing every question
+        // that followed, and a question on the badge silencing every accusation.
         report["surfacesOfferingACorrection"] =
             NudgeSurface.allCases.filter(\.offersACorrection).map(\.rawValue).sorted()
         report["notificationAuthorisation"] = host.notificationAuthorisation.rawValue
@@ -497,7 +500,7 @@ enum SelfCheck {
 
         // **A question on the screen that the loop has forgotten** — always empty (focus-v0u).
         //
-        // The invariant `NudgeHost.endOpenQuestion(_:replacedOn:)` exists to keep, read off the
+        // The invariant `NudgeHost.endOpenQuestion(_:)` exists to keep, read off the
         // shipping graph in the shipping process. A non-empty list is the defect itself: a live
         // panel or an open popover offering three answers that `answer(_:)` will drop in a
         // `guard`, and a question that will therefore be asked again. The unit lane drives every
@@ -509,15 +512,19 @@ enum SelfCheck {
         //
         // `orphanedQuestionSurfaces` above reads empty throughout the defect this round is about,
         // which is exactly why these exist: an invariant can only see the contradictions it was
-        // built to look for. These four say whether the *active priority* is still one fact.
+        // built to look for. These three say whether the *active priority* is still one fact.
+        //
+        // There were four. `preemptionsNamingNoQuestion` — the interruption slot naming a question
+        // the loop was not holding — went with the mechanism it watched (U-2). A counter of
+        // preemptions that name nothing is not a weaker check once preemption is gone; it is a
+        // check of nothing at all, and leaving it reporting a permanent zero would be the kind of
+        // green that means nothing.
         //
         // * `commitmentDisagreements` is `PriorityHost` checking its own three statements of it.
         // * `mandatesWithoutACommitment` is the loop being told to speak with no key to write
         //   under — gate 1 and the key having parted company, which is defect A's signature.
-        // * `preemptionsNamingNoQuestion` is the interruption slot naming a question the loop is
-        //   not holding, which is defect B's.
         // * `staleNotificationActions` is a press on a banner belonging to a rung that is over,
-        //   which is defect C's — and unlike the other three this one is *expected* to be
+        //   which is defect C's — and unlike the other two this one is *expected* to be
         //   reachable in the wild, because a person really can press a day-old notification. It is
         //   zero in an automated run because nothing here presses one.
         report["commitmentDisagreements"] = composition.priorityHost.commitmentDisagreements
