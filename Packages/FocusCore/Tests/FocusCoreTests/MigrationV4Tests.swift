@@ -17,21 +17,23 @@ struct MigrationV4Tests {
     static let priorityID = UUID(uuidString: "12341234-1234-4123-8123-123412341234")!
     static let timestamp = Date(timeIntervalSince1970: 1_767_225_600)
 
-    @Test("the plan declares four schemas and exactly three stages")
+    @Test("the plan declares five schemas and exactly four stages")
     func planShape() {
         #expect(FocusSchemaV4.versionIdentifier == Schema.Version(4, 0, 0))
-        #expect(FocusMigrationPlan.schemas.count == 4)
+        #expect(FocusMigrationPlan.schemas.count == 5)
         #expect(FocusMigrationPlan.schemas[0] is FocusSchemaV1.Type)
         #expect(FocusMigrationPlan.schemas[1] is FocusSchemaV2.Type)
         #expect(FocusMigrationPlan.schemas[2] is FocusSchemaV3.Type)
         #expect(FocusMigrationPlan.schemas[3] is FocusSchemaV4.Type)
-        #expect(FocusMigrationPlan.stages.count == 3)
+        #expect(FocusMigrationPlan.schemas[4] is FocusSchemaV5.Type)
+        #expect(FocusMigrationPlan.stages.count == 4)
 
-        // v1, v2 and v3 are migration sources and must stay exactly as they shipped. A source
-        // you have edited is not a source.
+        // v1, v2, v3 and now v4 are migration sources and must stay exactly as they shipped. A
+        // source you have edited is not a source.
         #expect(FocusSchemaV1.models.count == 5)
         #expect(FocusSchemaV2.models.count == 7)
         #expect(FocusSchemaV3.models.count == 10)
+        #expect(FocusSchemaV4.models.count == 12)
     }
 
     /// **v4 adds two entities and re-declares none.** That is what makes the stage lightweight

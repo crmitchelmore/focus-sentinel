@@ -1,8 +1,8 @@
 import Foundation
 import SwiftData
 
-/// The store's migration plan: v1 → v2 through one **custom** stage, then v2 → v3 and v3 → v4
-/// through **lightweight** ones.
+/// The store's migration plan: v1 → v2 through one **custom** stage, then v2 → v3, v3 → v4 and
+/// v4 → v5 through **lightweight** ones.
 ///
 /// This is the whole of F-139's insurance policy, and it was declared in e01 with no stages
 /// precisely so that this change would be *adding a stage to an existing plan* rather than
@@ -45,15 +45,25 @@ import SwiftData
 /// so the ten keep their identity and the store gains two tables. That is the same condition
 /// P-51 measured for v2 → v3, met more strongly.
 ///
-/// The v1 fixture now migrates through **all three** stages. That chain is what makes "no data
+/// ## Why v4 → v5 is lightweight, and how that is kept true
+///
+/// v5 adds **one** entity — the row the Intervention pane's three settings had never had
+/// anywhere (focus-z7g, focus-40i) — and re-declares nothing. Its two quiet-hours columns are
+/// optional and its other two carry property defaults, which is the same condition P-51
+/// measured, met by a stage that has nothing to carry at all.
+///
+/// The v1 fixture now migrates through **all four** stages. That chain is what makes "no data
 /// loss on upgrade" a fact rather than an intention, and it is asserted directly.
 public enum FocusMigrationPlan: SchemaMigrationPlan {
     public static var schemas: [any VersionedSchema.Type] {
-        [FocusSchemaV1.self, FocusSchemaV2.self, FocusSchemaV3.self, FocusSchemaV4.self]
+        [
+            FocusSchemaV1.self, FocusSchemaV2.self, FocusSchemaV3.self, FocusSchemaV4.self,
+            FocusSchemaV5.self
+        ]
     }
 
     public static var stages: [MigrationStage] {
-        [v1ToV2, v2ToV3, v3ToV4]
+        [v1ToV2, v2ToV3, v3ToV4, v4ToV5]
     }
 
     /// v2 → v3: every addition is optional or defaulted, so nothing has to be carried by hand.
@@ -69,6 +79,14 @@ public enum FocusMigrationPlan: SchemaMigrationPlan {
         MigrationStage.lightweight(
             fromVersion: FocusSchemaV3.self,
             toVersion: FocusSchemaV4.self
+        )
+    }
+
+    /// v4 → v5: purely additive. One new entity, nothing touched, no closure to get wrong.
+    static var v4ToV5: MigrationStage {
+        MigrationStage.lightweight(
+            fromVersion: FocusSchemaV4.self,
+            toVersion: FocusSchemaV5.self
         )
     }
 

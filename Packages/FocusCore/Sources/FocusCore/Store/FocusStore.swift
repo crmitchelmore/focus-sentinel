@@ -44,16 +44,17 @@ public enum FocusStore {
 
     /// The schema this build understands.
     ///
-    /// v4 since e05. A store written by v1 is brought forward by `FocusMigrationPlan`'s three
-    /// stages — the custom v1 → v2 one and the lightweight v2 → v3 and v3 → v4 ones — on the
-    /// way in, and a v3 store by the last alone. This is the only place the current version is
-    /// named, so every caller gets the whole chain for free.
+    /// v5 since e05's Intervention-pane settings got a row of their own. A store written by v1
+    /// is brought forward by `FocusMigrationPlan`'s four stages — the custom v1 → v2 one and the
+    /// lightweight v2 → v3, v3 → v4 and v4 → v5 ones — on the way in, and a v4 store by the last
+    /// alone. This is the only place the current version is named, so every caller gets the
+    /// whole chain for free.
     ///
-    /// v4 re-declares none of v3's classes (`FocusSchemaV4.models` names them), so every
+    /// v5 re-declares none of v4's classes (`FocusSchemaV5.models` names them), so every
     /// existing call site keeps fetching the entities it already knew and the version bump
     /// costs the rest of the programme nothing.
     public static var schema: Schema {
-        Schema(versionedSchema: FocusSchemaV4.self)
+        Schema(versionedSchema: FocusSchemaV5.self)
     }
 
     /// Build a container for the given kind of storage.

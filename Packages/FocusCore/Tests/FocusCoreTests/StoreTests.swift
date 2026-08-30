@@ -22,16 +22,17 @@ struct StoreTests {
         )
     }
 
-    @Test("the current schema the store opens is v4")
-    func currentSchemaIsVersionFour() {
-        // The plan's own shape — four schemas, three stages — is asserted in
-        // MigrationV4Tests. This is the narrower claim that FocusStore names v4 as the
+    @Test("the current schema the store opens is v5")
+    func currentSchemaIsVersionFive() {
+        // The plan's own shape — five schemas, four stages — is asserted in
+        // MigrationV5Tests. This is the narrower claim that FocusStore names v5 as the
         // version this build understands, which is what every caller inherits.
         //
-        // Twelve entities: v3's ten, which v4 reuses rather than re-declares, plus the query
-        // ledger's receipts and the intervention log.
-        #expect(FocusStore.schema.entities.count == 12)
-        #expect(FocusMigrationPlan.schemas.last is FocusSchemaV4.Type)
+        // Thirteen entities: v3's ten, which v4 and v5 reuse rather than re-declare, plus the
+        // query ledger's receipts, the intervention log, and the Intervention pane's own
+        // settings row.
+        #expect(FocusStore.schema.entities.count == 13)
+        #expect(FocusMigrationPlan.schemas.last is FocusSchemaV5.Type)
     }
 
     @Test("in-memory: insert, save and fetch round-trip")
@@ -102,7 +103,7 @@ struct StoreTests {
         let second = try FocusStore.makeContainer(kind: .inMemory)
 
         #expect(first.schema.entities.count == second.schema.entities.count)
-        #expect(first.schema.entities.count == 12)
+        #expect(first.schema.entities.count == 13)
     }
 
     @Test("every enum-backed field persists as its string raw value")
