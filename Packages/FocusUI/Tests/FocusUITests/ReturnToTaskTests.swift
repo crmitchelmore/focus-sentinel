@@ -13,9 +13,13 @@ final class StubReturnWorkspace: ReturnWorkspace {
 
     private(set) var activations: [String] = []
     private(set) var launches: [URL] = []
+    /// Every identifier a name was asked for, in order — so "the name is learned once and kept"
+    /// is a count rather than a claim (`SubjectNamingTests`).
+    private(set) var lookups: [String] = []
 
     func localizedNameOfRunningApplication(_ bundleIdentifier: String) -> String? {
-        runningNames[bundleIdentifier]
+        lookups.append(bundleIdentifier)
+        return runningNames[bundleIdentifier]
     }
 
     func activateRunningApplication(_ bundleIdentifier: String) -> Bool {
