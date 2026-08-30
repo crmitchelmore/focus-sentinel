@@ -16,10 +16,14 @@
 # prints `LIVE-LANE SKIPPED: <grant>` and exits **0**, and `scripts/build-gate.sh` never invokes it.
 #
 # **One exception, and it is not a TCC dependency: a VISIBILITY FAILURE exits 1.** If this lane
-# holds the grants, takes both frames, and finds the app's own panel measuring something other
-# than its `contentSize` — or finds the window's backing store carrying the question while the
-# screen at that window's own coordinates is blank — then it has not failed to observe. It has
-# observed a defect. See THE VISIBILITY DOCTRINE below.
+# holds the grants, takes both frames, and finds the app's own panel measuring something outside
+# the geometry contract the app itself reports — or finds the window's backing store carrying the
+# question while the screen at that window's own coordinates is blank — then it has not failed to
+# observe. It has observed a defect. See THE VISIBILITY DOCTRINE below.
+#
+# A frame this lane could not MEASURE is a visibility failure too, and it is never written up as a
+# finding. "Not taken" and "we looked and it was wrong" are different sentences, and the timeline
+# must only ever contain the second one.
 #
 # The half of e05's contract that must hold regardless is gated at zero grants by two stages the
 # gate does run: `focus-steal` (all four of R-89's readings, reading 1 from an independent observer)
@@ -67,6 +71,13 @@
 #   3. it is the SAME window as frame 5, by measured window id, which both captions record — so a
 #      reader who notices the two images are alike is reading the evidence correctly rather than
 #      catching the lane repeating itself.
+#
+# **And when an id could not be measured, the caption says NOT MEASURED and claims nothing.** The
+# alternative was in this file until focus-v55: an `else` branch that wrote *"the panel window
+# CHANGED … a surface this product is not supposed to be able to raise"* into `nudge-timeline.txt`
+# and which — because the geometry grep it depended on had silently stopped matching — fired on
+# every single run. An accusation of a U-2 violation, filed as evidence, produced by a lane that
+# had measured nothing at all.
 #
 # Frame 17 now runs after frame 6 rather than between 5 and 6: it foregrounds a second decoy and
 # kills it, and a top-out reading taken across that excursion would be a reading of a disturbed
@@ -370,10 +381,15 @@ app_window_records() {
 #
 # So every frame is now taken **twice** and proved three ways:
 #
-# 1. **Geometry, and it is decisive.** The window's own measured bounds, from `windowid`. For a
-#    nudge panel they must equal the shipping `contentSize` — read out of the source constant, not
-#    restated here — and the window must lie inside the display. This is the assertion that would
-#    have caught the defect on its own, exactly, with no image analysis at all.
+# 1. **Geometry, and it is decisive.** The window's own measured bounds, from `windowid`, against
+#    the geometry contract the RUNNING APP reports — `panel.contentWidth` and
+#    `panel.maximumContentHeight` out of its own self-check, never a literal grepped out of a
+#    source file. The panel's height is computed per content, so there is no single intended size
+#    to compare against; what is fixed is the width, and that a panel may not be taller than the
+#    maximum the app computed for this Mac's screens. The window must also lie inside the display.
+#    This is the assertion that would have caught the defect on its own, exactly, with no image
+#    analysis at all — and for a while it was dead code that could not pass. See
+#    `panel_geometry_contract` for what that cost.
 # 2. **Both captures, always.** `-l <id>` for the backing store and `-R <x,y,w,h>` at that same
 #    window's own measured coordinates for the screen. The second frame is what a person sees.
 # 3. **The differential, and it fails loudly.** Both frames are measured by `scripts/frame-ink.py`.
@@ -410,15 +426,53 @@ frame_verdict() {
     print -r -- "${${line##*verdict=}%% *}"
 }
 
-# The panel's intended size, read from the shipping constant so the lane cannot drift from the
-# app. Prints `<width> <height>`, or nothing when the constant cannot be read — in which case the
-# geometry assertion says so rather than inventing a number.
-PANEL_SIZE_SOURCE="Packages/FocusUI/Sources/FocusUI/Nudge/NudgePanelController.swift"
-panel_intended_size() {
-    local numbers
-    numbers="$(grep -oE 'contentSize = CGSize\(width: [0-9]+, height: [0-9]+\)' "$PANEL_SIZE_SOURCE" 2>/dev/null \
-        | grep -oE '[0-9]+' | tr '\n' ' ')"
-    print -r -- "${numbers% }"
+# **The panel's geometry contract, read out of the RUNNING BINARY** (focus-v55).
+#
+# This used to grep the shipping source for the literal `contentSize = CGSize(width: N, height: N)`.
+# That literal has had zero hits since `contentSize` became a computed property — its own doc
+# comment reads *"the size the window is actually at, as opposed to any size anybody committed
+# to"* — so the function returned nothing, `require_panel_geometry` took its empty-expected branch
+# on every call, and the assertion the doctrine above calls "the one that would have caught
+# focus-x7d on its own" was dead code in every run. Its consequences were worse than its absence:
+# `panel_window_id()` shared the grep, so both ids came back empty, and frame 6 then wrote *"the
+# panel window CHANGED across the second escalationDwell … a surface this product is not supposed
+# to be able to raise"* into the timeline — an accusation of a U-2 violation, in the evidence,
+# manufactured by a broken grep.
+#
+# **A repaired grep could not work either.** The panel's height is computed per content: a
+# three-action query panel and a six-action accusation panel are different heights, and there is
+# no single intended size for "exactly one window of WxH" to equal. So the contract is asked of
+# the thing that has one at runtime — the app under test, through its own self-check report:
+#
+#   * `panel.contentWidth`         — `NudgePanelController.contentWidth`, the ONE fixed dimension,
+#                                    and the dimension that separates the nudge panel (380) from
+#                                    the quick-capture panel (560) and the cockpit (900).
+#   * `panel.maximumContentHeight` — computed for this Mac's screens; the panel may be any height
+#                                    up to it and none above it.
+#
+# Prints `<width> <maxHeight>`, or nothing when the app could not be asked — in which case the
+# geometry assertion says NOT MEASURED and fails, rather than inventing a number or passing.
+PANEL_CONTRACT_CACHE=''
+panel_geometry_contract() {
+    if [[ -z "$PANEL_CONTRACT_CACHE" ]]; then
+        local destination="$LOG_DIR/focus-live-nudge-panel-contract.json"
+        read_state "$destination" || return 1
+        PANEL_CONTRACT_CACHE="$(python3 - "$destination" <<'PYTHON'
+import json
+import sys
+
+with open(sys.argv[1]) as handle:
+    panel = (json.load(handle).get("panel") or {})
+width = panel.get("contentWidth")
+maximum = panel.get("maximumContentHeight")
+# Both, or neither. A contract half-read is a contract not read.
+if isinstance(width, (int, float)) and isinstance(maximum, (int, float)) and width > 0 and maximum > 0:
+    print(f"{int(width)} {int(maximum)}")
+PYTHON
+)"
+    fi
+    [[ -n "$PANEL_CONTRACT_CACHE" ]] || return 1
+    print -r -- "$PANEL_CONTRACT_CACHE"
 }
 
 # Both captures of one window, plus the differential. Never called with a window this lane has
@@ -487,14 +541,18 @@ capture_windows() {
 # it must lie inside the display. Failing here dumps every window this lane can see with its
 # bounds, because "the panel is the wrong size" is only useful next to what size it actually is.
 require_panel_geometry() {
-    local label="$1" expected width height record id x y w h
-    expected="$(panel_intended_size)"
-    if [[ -z "$expected" ]]; then
-        print -u2 "LIVE-LANE VISIBILITY FAILURE: cannot read contentSize from $PANEL_SIZE_SOURCE"
+    local label="$1" contract width maximum record id x y w h
+    contract="$(panel_geometry_contract)"
+    if [[ -z "$contract" ]]; then
+        print -u2 "LIVE-LANE VISIBILITY FAILURE: $label — the panel geometry was NOT MEASURED."
+        print -u2 "    The app under test could not be asked for panel.contentWidth and"
+        print -u2 "    panel.maximumContentHeight, so there is nothing to compare the windows on"
+        print -u2 "    screen against. A measurement that could not be taken is not a finding, and"
+        print -u2 "    it is not a pass either — see $LOG_DIR/focus-live-nudge-state.log."
         VISIBILITY_FAILURES+=("$label")
         return 1
     fi
-    read -r width height <<< "$expected"
+    read -r width maximum <<< "$contract"
 
     local screen_width screen_height matches=0 observed=""
     read -r screen_width screen_height <<< "$(screen_size)"
@@ -504,22 +562,26 @@ require_panel_geometry() {
         read -r id x y w h <<< "$record"
         [[ -n "$h" ]] || continue
         observed+="        window $id at $x,$y ${w}x${h}"$'\n'
-        if (( w == width && h == height )); then
-            if (( x >= 0 && y >= 0 && x + w <= screen_width && y + h <= screen_height )); then
-                (( matches += 1 ))
-            else
-                observed+="            ^ right size, but not inside the ${screen_width}x${screen_height} display"$'\n'
-            fi
+        (( w == width )) || continue
+        if (( h <= 0 || h > maximum )); then
+            observed+="            ^ the panel's width, but ${h}pt tall against a maximum of ${maximum}pt"$'\n'
+            continue
+        fi
+        if (( x >= 0 && y >= 0 && x + w <= screen_width && y + h <= screen_height )); then
+            (( matches += 1 ))
+        else
+            observed+="            ^ a legal panel size, but not inside the ${screen_width}x${screen_height} display"$'\n'
         fi
     done
 
     if (( matches == 1 )); then
-        print "ok   visibility: $label — one panel-sized window (${width}x${height}) inside the display"
+        print "ok   visibility: $label — one panel-width window (${width}pt wide, within ${maximum}pt) inside the display"
         return 0
     fi
 
     print -u2 "LIVE-LANE VISIBILITY FAILURE: $label"
-    print -u2 "    Expected exactly ONE window of ${width}x${height} (NudgePanelController.contentSize)"
+    print -u2 "    Expected exactly ONE window ${width}pt wide (panel.contentWidth, read from the"
+    print -u2 "    app under test) with a height in 1..${maximum}pt (panel.maximumContentHeight),"
     print -u2 "    fully inside the ${screen_width}x${screen_height} display; found $matches."
     print -u2 "    This is focus-x7d's own signature: the live panel measured 380x2212 while its"
     print -u2 "    backing store photographed perfectly. Observed windows:"
@@ -528,23 +590,27 @@ require_panel_geometry() {
     return 1
 }
 
-# The window id of the single panel-sized window, or nothing when there is not exactly one.
+# The window id of the single panel-shaped window, or nothing when there is not exactly one.
 #
-# **This is what makes the top-out frame readable.** Frames 5 and 6 are pictures of the same
-# window taken a full `escalationDwell` apart, and they are meant to look alike: that is the
-# finding. Recording the id in both captions is how a reader tells "the ladder did not advance"
-# from "the lane captured the same frame twice by accident", which is exactly the confusion the
-# deleted rung-3 frame lived inside.
+# **This is what makes the top-out frame readable, and what makes frames 5 and 6 pictures of a
+# known window rather than of whatever was in front.** Frames 5 and 6 are the same window taken a
+# full `escalationDwell` apart, and they are meant to look alike: that is the finding. Recording
+# the id in both captions is how a reader tells "the ladder did not advance" from "the lane
+# captured the same frame twice by accident".
+#
+# It measures on the same contract `require_panel_geometry` does — the app's own `contentWidth`
+# and `maximumContentHeight` — so the id and the assertion can never be about two different
+# windows.
 panel_window_id() {
-    local expected width height record id x y w h found='' matches=0
-    expected="$(panel_intended_size)"
-    [[ -n "$expected" ]] || return 1
-    read -r width height <<< "$expected"
+    local contract width maximum record id x y w h found='' matches=0
+    contract="$(panel_geometry_contract)" || return 1
+    [[ -n "$contract" ]] || return 1
+    read -r width maximum <<< "$contract"
     for record in ${(f)"$(app_window_records "$WINDOW_OWNER")"}; do
         [[ -n "$record" ]] || continue
         read -r id x y w h <<< "$record"
         [[ -n "$h" ]] || continue
-        if (( w == width && h == height )); then
+        if (( w == width && h > 0 && h <= maximum )); then
             found="$id"
             (( matches += 1 ))
         fi
@@ -700,9 +766,12 @@ scenario_ladder() {
 
     note "waiting out escalationDwell (${ESCALATION_DWELL}s) for rung 2"
     sleep $(( ESCALATION_DWELL + 8 ))
-    require_panel_geometry "05 · rung 2 panel"
-    local panel_before
-    panel_before="$(panel_window_id)"
+    # **The assertion's answer is now read.** It returned a status that no call site checked, so
+    # a geometry failure printed and the lane carried on photographing regardless (focus-v55).
+    local panel_before=''
+    if require_panel_geometry "05 · rung 2 panel"; then
+        panel_before="$(panel_window_id)"
+    fi
     capture_windows "05-rung2-panel.png"
     # The caption used to say "five actions". `AccusationPanelView.actionOrder` is SIX —
     # returnToTask, thisIsRelevant, notThisTime, snooze, pause, changePriority — and two of them
@@ -745,16 +814,32 @@ frame_06_ladder_tops_out() {
 
     note "waiting out escalationDwell again (${ESCALATION_DWELL}s) — nothing may escalate above the panel"
     sleep $(( ESCALATION_DWELL + 8 ))
-    require_panel_geometry "06 · the ladder topped out — still one panel, a full dwell later"
-    panel_after="$(panel_window_id)"
+    panel_after=''
+    if require_panel_geometry "06 · the ladder topped out — still one panel, a full dwell later"; then
+        panel_after="$(panel_window_id)"
+    fi
     capture_windows "06-ladder-tops-out.png"
 
-    if [[ -n "$panel_before" && "$panel_after" == "$panel_before" ]]; then
+    # **Three branches, because there are three outcomes** (focus-v55).
+    #
+    # There were two, and the second one wrote an ACCUSATION: *"the panel window CHANGED … a
+    # surface this product is not supposed to be able to raise"*. Both ids came back empty on
+    # every run — `panel_window_id` shared the grep that had stopped matching — so that sentence
+    # was written into `nudge-timeline.txt` every single time, as a finding about a U-2
+    # violation, produced by a lane that had measured nothing at all.
+    #
+    # A measurement that could not be taken must read as NOT TAKEN, never as a finding. So the
+    # unmeasured case is now its own branch and says exactly that, and the accusation is reserved
+    # for the one case that earns it: two ids, both measured, and different.
+    if [[ -z "$panel_before" || -z "$panel_after" ]]; then
+        timeline "06 · NOT MEASURED — frame 05's panel window id is ${panel_before:-<not measured>} and frame 06's is ${panel_after:-<not measured>}. No claim is made here about whether the ladder advanced, in EITHER direction: this lane did not measure it. See the VISIBILITY FAILURE above for why, and read frames 05 and 06 by eye."
+        print -u2 "LIVE-FRAME 06: the panel window id was NOT MEASURED (05=${panel_before:-<not measured>} 06=${panel_after:-<not measured>}) — no claim written"
+    elif [[ "$panel_after" == "$panel_before" ]]; then
         timeline "06 · a second escalationDwell (${ESCALATION_DWELL}s) elapsed and the ladder did NOT advance — the SAME panel window ($panel_after) is still the top of it. The recommitment rung is deferred to focus-5ab and is not in this build: LadderRung.Kind declares ambient and panel, and the route table's top rung is the panel."
         timeline "    READ: frames 05 and 06 are pictures of ONE window a dwell apart, and that they look alike IS the finding (U-2). A different window id here would be a rung this product does not have."
     else
-        timeline "06 · the panel window CHANGED across the second escalationDwell — frame 05 was window ${panel_before:-<not measured>} and frame 06 is window ${panel_after:-<no single panel>}. The ladder tops out at the panel (U-2), so a new panel window a dwell later is a surface this product is not supposed to be able to raise. Read both frames before believing either."
-        print -u2 "LIVE-FRAME 06: the panel window changed across the dwell (${panel_before:-<none>} -> ${panel_after:-<none>})"
+        timeline "06 · the panel window CHANGED across the second escalationDwell — frame 05 was window $panel_before and frame 06 is window $panel_after. BOTH were measured. The ladder tops out at the panel (U-2), so a new panel window a dwell later is a surface this product is not supposed to be able to raise. Read both frames before believing either."
+        print -u2 "LIVE-FRAME 06: the panel window changed across the dwell ($panel_before -> $panel_after)"
     fi
 }
 
@@ -921,9 +1006,13 @@ scenario_query() {
     open -a "$DECOY2_APP" --args --echo "$ECHO_FILE"
     sleep $(( QUERY_DWELL + 10 ))
 
-    require_panel_geometry "12 · the question panel"
+    # Same shape as frames 5 and 6: the assertion's answer is read rather than discarded.
+    local query_panel=''
+    if require_panel_geometry "12 · the question panel"; then
+        query_panel="$(panel_window_id)"
+    fi
     capture_windows "12-the-query.png"
-    timeline "12 · the question — 'Is {subject} part of {task}?', three actions, and the scope stated in the copy"
+    timeline "12 · the question — 'Is {subject} part of {task}?', three actions, and the scope stated in the copy (window ${query_panel:-<not measured>})"
 
     if prompt_operator "on the question panel press “Yes, add it”, then look at the cockpit's context row and Settings ▸ Rules."; then
         sleep 3
