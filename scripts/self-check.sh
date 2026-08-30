@@ -1548,22 +1548,39 @@ check(
     relevance.get("judgementCount"),
 )
 
-# **Nothing may be mandated here.** There is no nudge in this build to consume a mandate, and
-# a self-check that reported one would be reporting an intervention nobody can see. The
-# stronger half is structural and lives in the 4 320-combination invariant test; this is the
-# observation that the shipping path agrees with it.
+# **The verdict answers the question, whichever way it answers it** (focus-lmy).
+#
+# This block used to read `verdict.isMandated in (False, None)` under the heading "Nothing may
+# be mandated here. There is no nudge in this build to consume a mandate" — six lines above the
+# check that the ladder declares exactly two rungs. One script asserted that the ladder exists
+# AND that nothing may feed it, and the contradiction went unread for an epic because the false
+# half is satisfied by a self-check run that has no active priority: `.noActivePriority` is the
+# first guard `decide(…)` reaches, so the check passed for a reason unrelated to its heading.
+#
+# What is asserted instead is the shape `InterventionEligibility` actually has — two cases, and
+# the pane draws one sentence per case. Exactly one of them is reported, never both and never
+# neither, which is a claim the shipping path can break in either direction and which no longer
+# needs the app to be quiet in order to pass.
 verdict = relevance.get("verdict") or {}
-check(
-    verdict.get("isMandated") in (False, None),
-    "the running application mandates no intervention (the nudge is e05's)",
-    verdict.get("isMandated"),
-)
+if verdict:
+    check(
+        bool(verdict.get("isMandated")) != bool(verdict.get("suppressionReason")),
+        "the running verdict either carries a mandate or names why it stayed silent",
+        (verdict.get("isMandated"), verdict.get("suppressionReason")),
+    )
+else:
+    # No application came forward, so nothing has been judged and the inspector draws
+    # "nothing judged yet". A missing verdict is a real answer; an empty one that claimed a
+    # suppression reason would not be.
+    print("note the self-check judged nothing to report an eligibility for")
 
-# R-72.2: nothing in e04 writes a session rule, so the box is empty on a launch that has
-# judged things. e05 adds the affordance; this is the record that it has not arrived early.
+# R-72.2. The affordance that writes a session rule has arrived — `NudgeHost` inserts one when
+# somebody presses the panel's *"not now"* correction — so this is no longer a record that a
+# mechanism is absent. It is the record that nothing wrote to the box **unbidden**: a self-check
+# presses nothing, so a non-zero count here is the loop correcting a person who never spoke.
 check(
     relevance.get("sessionRuleCount") == 0,
-    "the session rule box is empty — nothing in this epic writes to it",
+    "the session rule box is empty — nothing wrote to it without a person pressing something",
     relevance.get("sessionRuleCount"),
 )
 
