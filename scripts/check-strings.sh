@@ -1134,7 +1134,7 @@ failures = []
 
 
 def victim():
-    """A named `FocusUI` key to orphan, chosen from the tree rather than written down here.
+    """A named `FocusUI` key to orphan, and the file that declares it, read out of the tree.
 
     Naming a key in this file would be a fifth place the vocabulary lives, and it would rot the
     day somebody renamed it. The first declaration in sorted order is as good as any: what is
@@ -1151,11 +1151,17 @@ def victim():
                 for line in handle:
                     found = DECLARATION.match(line)
                     if found and found.group(2) in keys:
-                        return found.group(1), found.group(2)
-    return None, None
+                        return (
+                            found.group(1),
+                            found.group(2),
+                            os.path.relpath(path, root),
+                        )
+    return None, None, None
 
 
-CASE_NAME, CASE_KEY = victim()
+# The file the victim is declared in is the file the bypass mutations append to, so there is no
+# path written down in this harness to go stale.
+CASE_NAME, CASE_KEY, CASE_FILE = victim()
 if CASE_NAME is None:
     print("FAIL [F-149] self-test found no named key to orphan — the proof is blind",
           file=sys.stderr)
@@ -1302,7 +1308,7 @@ expect(
         orphan_the_named_key(directory),
         append(
             directory,
-            os.path.join(UI_SOURCES, "FocusUI", "Design", "ShellText.swift"),
+            CASE_FILE,
             f"\n\nenum StringGuardSelfTest {{ case {CASE_NAME} }}\n",
         ),
     ),
@@ -1316,7 +1322,7 @@ expect(
         orphan_the_named_key(directory),
         append(
             directory,
-            os.path.join(UI_SOURCES, "FocusUI", "Design", "ShellText.swift"),
+            CASE_FILE,
             f"\n// {CASE_NAME}\nlet selfTestNote = 0 // {CASE_NAME}\n"
             f"/*\n {CASE_NAME}\n*/\n",
         ),
@@ -1331,7 +1337,7 @@ expect(
         orphan_the_named_key(directory),
         append(
             directory,
-            os.path.join(UI_SOURCES, "FocusUI", "Design", "ShellText.swift"),
+            CASE_FILE,
             f'\nlet selfTestLiteral = "{CASE_NAME}"\n',
         ),
     ),
