@@ -34,7 +34,7 @@
 # **named scenarios**, each beginning with an explicit reset and declaring its full precondition.
 #
 #   S1  at rest                     frames 1, 2
-#   S2  the ladder                  frames 3, 4, 5, 17, 6
+#   S2  the ladder                  frames 3, 4, 5, 6, 17
 #   S3  the correction economy      frames 8, 9, 10      (each with its own reset)
 #   S4  the durable correction      frame 7
 #   S5  the phases that silence     frames 11, 16
@@ -44,6 +44,33 @@
 # **Frame numbers are stable identifiers, not an execution order.** The goal document references
 # frames 5, 14, 14b, 15 and 17 by number, so they keep their numbers while the driver captures them
 # in scenario order.
+#
+# ## Frame 6 photographs a TOP-OUT, and it used to photograph a rung that does not exist
+#
+# Until this repair frame 6 waited a second `escalationDwell`, called the geometry assertion
+# "rung 3 recommitment panel", captured `06-rung3-recommitment.png` and captioned it "the
+# recommitment panel". **U-2 deleted that rung**: `LadderRung.Kind` declares two cases and the
+# ladder tops out at `.panel`. Nothing in this repository dismisses the rung-2 panel — there is no
+# auto-dismiss anywhere in the app — so the panel from frame 5 was still on screen, the geometry
+# assertion found its one panel-sized window and printed `ok`, and the lane photographed frame 5 a
+# second time under a caption asserting a mechanism that had been removed from the product. A green
+# assertion and a filed picture, both about nothing: manufactured evidence, and the charter makes
+# these frames THE gate for this lane.
+#
+# The frame is kept, because "another full dwell passed and nothing more happened" is worth
+# photographing, and it now claims only that. Its three assertions are the claim:
+#
+#   1. the shipping binary declares exactly the two rungs, top rung `panel` (`ladderRungsDeclared`
+#      and the `routes` table, read out of the app under test — not restated here);
+#   2. after another full `escalationDwell` there is still EXACTLY ONE panel-sized window inside
+#      the display — a rung above the panel arriving as its own surface would make that two;
+#   3. it is the SAME window as frame 5, by measured window id, which both captions record — so a
+#      reader who notices the two images are alike is reading the evidence correctly rather than
+#      catching the lane repeating itself.
+#
+# Frame 17 now runs after frame 6 rather than between 5 and 6: it foregrounds a second decoy and
+# kills it, and a top-out reading taken across that excursion would be a reading of a disturbed
+# world.
 #
 # ## R-97.3 — a precondition that cannot be reached is a FAILURE, not a skip
 #
@@ -273,7 +300,7 @@ ARTEFACTS=(
     nudge-timeline.txt
     01-cockpit-at-rest.png 02-menu-bar-at-rest.png
     03-decoy-foregrounded.png 04-menu-bar-ambient.png 05-rung2-panel.png
-    17-keystroke-sink.png 06-rung3-recommitment.png
+    06-ladder-tops-out.png 17-keystroke-sink.png
     07-this-is-relevant.png 08-snooze-countdown.png 09-change-priority.png 10-return-to-task.png
     11-paused.png 16-break.png
     12-the-query.png 13-query-answered-yes.png 14-subject-returns.png 14b-rule-deleted.png
@@ -501,6 +528,31 @@ require_panel_geometry() {
     return 1
 }
 
+# The window id of the single panel-sized window, or nothing when there is not exactly one.
+#
+# **This is what makes the top-out frame readable.** Frames 5 and 6 are pictures of the same
+# window taken a full `escalationDwell` apart, and they are meant to look alike: that is the
+# finding. Recording the id in both captions is how a reader tells "the ladder did not advance"
+# from "the lane captured the same frame twice by accident", which is exactly the confusion the
+# deleted rung-3 frame lived inside.
+panel_window_id() {
+    local expected width height record id x y w h found='' matches=0
+    expected="$(panel_intended_size)"
+    [[ -n "$expected" ]] || return 1
+    read -r width height <<< "$expected"
+    for record in ${(f)"$(app_window_records "$WINDOW_OWNER")"}; do
+        [[ -n "$record" ]] || continue
+        read -r id x y w h <<< "$record"
+        [[ -n "$h" ]] || continue
+        if (( w == width && h == height )); then
+            found="$id"
+            (( matches += 1 ))
+        fi
+    done
+    (( matches == 1 )) || return 1
+    print -r -- "$found"
+}
+
 # The menu bar. P-132 measured status-item window numbers at or above 2**32 — synthetic, and
 # `screencapture -l` cannot address them — so the instrument here is `-R <rect>` over the
 # right-hand strip, which is where the extras live.
@@ -608,8 +660,14 @@ scenario_at_rest() {
 
 # --- S2 · the ladder -------------------------------------------------------------------------------
 #
-# reset: priority P1; `FocusDecoy` seeded `unrelated`; no task rules; phase `.focus`; notifications
-# unauthorised; ladder `.idle`; budget empty.
+# reset: priority P1; `FocusDecoy` seeded `unrelated`; no task rules; phase `.focus`; ladder
+# `.idle`; budget empty.
+#
+# **This Mac's notification authorisation is not a precondition and cannot be one.** It used to be
+# declared here, which implied these frames would look different on a Mac in another authorisation
+# state. `SurfaceRouter.route(…)` no longer takes an authorisation at all (focus-wy0), so the two
+# `require_state` calls below read what is now a property of the call graph rather than of this
+# machine: nothing asked, and every rung lands in-app.
 
 scenario_ladder() {
     reset "S2 · the ladder" || return 0
@@ -623,7 +681,7 @@ scenario_ladder() {
         manual_required "03-decoy-foregrounded.png" \
             "no operator was at the keyboard, so no priority and no seeded rule exist and the decoy cannot produce the unrelated verdict this scenario is about." \
             "Run attended. Set the priority, attach the context chip, then add an app rule for $DECOY_ID with verdict 'unrelated'."
-        for frame in 04-menu-bar-ambient.png 05-rung2-panel.png 06-rung3-recommitment.png; do
+        for frame in 04-menu-bar-ambient.png 05-rung2-panel.png 06-ladder-tops-out.png; do
             manual_required "$frame" "as frame 3" "as frame 3"
         done
         return 0
@@ -643,17 +701,61 @@ scenario_ladder() {
     note "waiting out escalationDwell (${ESCALATION_DWELL}s) for rung 2"
     sleep $(( ESCALATION_DWELL + 8 ))
     require_panel_geometry "05 · rung 2 panel"
+    local panel_before
+    panel_before="$(panel_window_id)"
     capture_windows "05-rung2-panel.png"
-    timeline "05 · rung 2 — the compact panel over the decoy, 'Still working on {task}?', five actions"
+    # The caption used to say "five actions". `AccusationPanelView.actionOrder` is SIX —
+    # returnToTask, thisIsRelevant, notThisTime, snooze, pause, changePriority — and two of them
+    # are conditional, so no single number is true of every run. A caption that names a count the
+    # panel does not have tells the eyes-on reader to accept the wrong panel, which is the same
+    # defect as frame 6's, one line up. So it names the set and its conditions instead.
+    timeline "05 · rung 2 — the compact panel over the decoy, 'Still working on {task}?' (window ${panel_before:-<not measured>})"
+    timeline "    READ: the actions, in AccusationPanelView.actionOrder — Back to work, This is relevant, Not this time, Snooze, Pause, Change priority. 'Back to work' is offered ONLY when a return target is stored and the scope-bearing three ONLY when the judgement named a subject (R-88), so read the set against those two conditions rather than against a count. 'Dismiss' is deliberately not a button: Escape and the close affordance are the dismissal."
     timeline "    READ: all four R-89 readings are gated at zero grants by scripts/check-focus-steal.sh"
 
+    frame_06_ladder_tops_out "$panel_before"
     frame_17_keystroke_sink
+}
 
-    note "waiting out escalationDwell again for rung 3"
+# --- frame 6 · the ladder tops out at the panel (U-2) -------------------------------------------
+#
+# **The rung this frame used to photograph does not exist.** See the header: it waited a second
+# `escalationDwell`, asserted "06 · rung 3 recommitment panel", and — because nothing dismisses the
+# rung-2 panel and the geometry assertion only asks for one panel-sized window — passed by
+# photographing frame 5 again under a caption about a mechanism U-2 removed from the product.
+#
+# What is left after the deletion is still worth a frame, and it is the opposite claim: a full
+# further dwell passes and the app does NOT escalate, because there is nothing above the panel to
+# escalate to. Three assertions carry it, and none of them is satisfied by the panel merely being
+# there:
+#
+#   1. the binary under test declares two rungs and its top route is the panel;
+#   2. one panel-sized window inside the display — a new rung arriving as its own surface is two;
+#   3. the same window id as frame 5, recorded in both captions.
+frame_06_ladder_tops_out() {
+    local panel_before="$1" panel_after
+
+    # `--focus-self-check-nudge` writes the nudge report FLAT at the top level — `routes`, not
+    # `nudge.routes`, which is where it sits only in the full report. Measured against the built
+    # binary rather than assumed: an expression indexing a key that is not there would raise, and
+    # `require_state` would abort this scenario on every single run while looking like a check.
+    require_state "the shipping ladder declares two rungs and tops out at the panel" \
+        "report.get('ladderRungsDeclared') == 2 and [r['rung'] for r in report.get('routes', [])] == ['ambient', 'panel']" \
+        || return 0
+
+    note "waiting out escalationDwell again (${ESCALATION_DWELL}s) — nothing may escalate above the panel"
     sleep $(( ESCALATION_DWELL + 8 ))
-    require_panel_geometry "06 · rung 3 recommitment panel"
-    capture_windows "06-rung3-recommitment.png"
-    timeline "06 · rung 3 with notifications unauthorised — the recommitment panel, still dismissible (D-07)"
+    require_panel_geometry "06 · the ladder topped out — still one panel, a full dwell later"
+    panel_after="$(panel_window_id)"
+    capture_windows "06-ladder-tops-out.png"
+
+    if [[ -n "$panel_before" && "$panel_after" == "$panel_before" ]]; then
+        timeline "06 · a second escalationDwell (${ESCALATION_DWELL}s) elapsed and the ladder did NOT advance — the SAME panel window ($panel_after) is still the top of it. The recommitment rung is deferred to focus-5ab and is not in this build: LadderRung.Kind declares ambient and panel, and the route table's top rung is the panel."
+        timeline "    READ: frames 05 and 06 are pictures of ONE window a dwell apart, and that they look alike IS the finding (U-2). A different window id here would be a rung this product does not have."
+    else
+        timeline "06 · the panel window CHANGED across the second escalationDwell — frame 05 was window ${panel_before:-<not measured>} and frame 06 is window ${panel_after:-<no single panel>}. The ladder tops out at the panel (U-2), so a new panel window a dwell later is a surface this product is not supposed to be able to raise. Read both frames before believing either."
+        print -u2 "LIVE-FRAME 06: the panel window changed across the dwell (${panel_before:-<none>} -> ${panel_after:-<none>})"
+    fi
 }
 
 # --- frame 17 · the keystroke sink (finding 1) -------------------------------------------------------
