@@ -134,9 +134,10 @@ struct SurfaceRouterTests {
     /// **Every accusation this router can deliver lands somewhere the person can answer it**
     /// (focus-uru).
     ///
-    /// The defect this closes was a whole class of user, not a corner: `AppearanceObserver`
-    /// forces `reducedInterruption` on under macOS **Reduce Motion**, under the `silentVisual`
-    /// deck and while a microphone is running, and this router sends the top rung to
+    /// The defect this closes was a whole class of user, not a corner: the composition root
+    /// forces `reducedInterruption` on under macOS **Reduce Motion**, from `AppearanceObserver`'s
+    /// traits through `appearanceChanged(_:)` (focus-w7v); so does the `silentVisual` deck, and so
+    /// does a running microphone. This router sends the top rung to
     /// `.popoverBadge` in all three. The popover drew a read-only *"Nudge: Panel"* row — no
     /// dismiss, no "this is relevant", no "not this time", no snooze — so
     /// `CorrectionAction`'s own "every surface, including the top rung, is dismissible" was false

@@ -73,7 +73,8 @@ public struct SurfaceRouter: Sendable {
     ///     6 has already suppressed the interruption; this is the backstop that makes a panel
     ///     over a call unreachable even from a caller who skipped the stack, because a panel over
     ///     a call is a panel everybody on the call can see.
-    ///   - reducedInterruption: F-148's flag, forced on by Reduce Motion.
+    ///   - reducedInterruption: F-148's flag. The person's own checkbox **or** macOS Reduce
+    ///     Motion, which `AppComposition.appearanceChanged(_:)` forces it on for (focus-w7v).
     ///   - menuBarVisible: whether the system menu bar is actually on screen (P-131).
     ///   - voice: the deck. `silentVisual` is a **routing** deck, not a copy deck.
     ///

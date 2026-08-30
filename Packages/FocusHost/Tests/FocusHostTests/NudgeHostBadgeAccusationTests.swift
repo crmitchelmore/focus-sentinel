@@ -11,8 +11,9 @@ import Testing
 /// ## The defect
 ///
 /// `SurfaceRouter.route(rung: .panel, …)` answers `.popoverBadge` whenever `reducedInterruption`
-/// is set, and `AppearanceObserver` forces that flag on whenever macOS **Reduce Motion** is on
-/// — also under the `silentVisual` deck, and while a microphone is running. The popover drew the
+/// is set, and the composition root forces that flag on from `AppearanceObserver`'s traits
+/// whenever macOS **Reduce Motion** is on — also under the `silentVisual` deck, and while a
+/// microphone is running. The popover drew the
 /// belief row and nothing else: *"Nudge: Panel"*. No dismiss, no "this is relevant", no "not this
 /// time", no snooze. The rung was a read-only label.
 ///

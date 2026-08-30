@@ -652,7 +652,7 @@ enum SelfCheck {
         // **Every accusation this app can raise lands somewhere it can be answered** (focus-uru).
         //
         // The table above is computed at `reducedInterruption: false` alone, which is precisely
-        // where the defect hid: under macOS Reduce Motion — which `AppearanceObserver` forces
+        // where the defect hid: under macOS Reduce Motion — which the composition root forces
         // this flag on for — the panel rung went to the popover badge, and the popover drew a
         // read-only label. Every reading the gate had said "in-app" and none said "answerable",
         // so a rung nobody could answer was indistinguishable from one they could.

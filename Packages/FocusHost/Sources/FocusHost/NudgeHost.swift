@@ -91,16 +91,51 @@ final class NudgeHost {
     var preferences: NudgePreferences {
         NudgePreferences(
             voice: chosenVoice,
-            reducedInterruption: chosenReducedInterruption
+            // **Either the person asked for it or the Mac did** (focus-w7v). `||`, not an
+            // assignment, and the direction matters both ways: the system cannot un-choose what
+            // the person chose, and the person cannot switch off what Reduce Motion turned on —
+            // which is what makes `reducedInterruptionIsForced` an honest thing for the pane to
+            // draw a disabled switch from rather than a claim about a setting they could beat.
+            reducedInterruption: chosenReducedInterruption || systemForcesReducedInterruption
         )
     }
 
     private var chosenVoice: NudgeVoice = .standard
     private var chosenReducedInterruption = false
 
+    /// **Whether macOS Reduce Motion is what turned reduced interruption on** (focus-w7v).
+    ///
+    /// Read by the Intervention pane through `AppComposition.interventionSettings`, which is
+    /// what puts the switch in its disabled state and draws *"Reduce Motion is on, so this stays
+    /// on."* — a string that shipped in the catalog and could not be reached, because nothing
+    /// ever set this.
+    private(set) var systemForcesReducedInterruption = false
+
     /// The two things the Intervention pane can set — which are now the whole of `preferences`.
     func choose(voice: NudgeVoice) { chosenVoice = voice }
     func choose(reducedInterruption: Bool) { chosenReducedInterruption = reducedInterruption }
+
+    /// **The Mac's Reduce Motion setting, observed** (focus-w7v).
+    ///
+    /// Six places in this repository asserted that `AppearanceObserver` forced
+    /// `reducedInterruption` on under Reduce Motion, and nothing did: the only shipping caller of
+    /// `choose(reducedInterruption:)` was the pane's own checkbox, and `appearanceChanged(_:)`
+    /// re-themed three surfaces and never reached this host. So a person who had told macOS they
+    /// wanted less motion got a full animated `NSPanel`, and the app shipped a sentence saying
+    /// otherwise.
+    ///
+    /// Wired rather than deleted, and the deciding fact is that wiring costs **nothing**:
+    /// `NSWorkspace.accessibilityDisplayShouldReduceMotion` is readable with no TCC grant of any
+    /// kind (the zero-grant doctrine is untouched), the copy becomes true instead of being
+    /// removed, and the people it changes the product for are precisely the people who asked the
+    /// system for calm. Deleting the claims would have cost the same edit and left them with the
+    /// panel.
+    ///
+    /// Separate from `choose(reducedInterruption:)` on purpose. One field for both would let the
+    /// next appearance notification silently discard a preference the person set in the pane —
+    /// the same "two writers, one field" shape `focus-zrs` removed from the notification
+    /// authorisation.
+    func observe(reduceMotion: Bool) { systemForcesReducedInterruption = reduceMotion }
 
     /// A correction that has to be performed somewhere else — a persisted rule (which goes
     /// through `PriorityHost`, so it lands in the Rules pane with an undo registered), a pause

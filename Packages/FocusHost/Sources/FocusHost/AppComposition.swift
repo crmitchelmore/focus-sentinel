@@ -505,6 +505,12 @@ public final class AppComposition {
         nudgeHost.appearanceTraits = { [weak self] in
             self?.appearance.traits ?? .systemDefault
         }
+        // **Reduce Motion, read at launch** (focus-w7v). The scene's
+        // `.onChange(of:initial:)` keeps it current from the first frame onward, and this is
+        // what the loop reads before there is a frame: a nudge raised between `start()` and the
+        // cockpit's first paint would otherwise be decided against a stale `false`, for the one
+        // person the setting exists for.
+        nudgeHost.observe(reduceMotion: appearance.traits.reduceMotion)
         nudgeHost.currentSessionID = { [weak self] in self?.sessionHost.snapshot?.sessionID }
         nudgeHost.onCorrection = { [weak self] outcome, priorityID in
             self?.perform(outcome, priorityID: priorityID)
@@ -1441,6 +1447,16 @@ public final class AppComposition {
     public func appearanceChanged(_ traits: AppearanceTraits) {
         shellWires.insert(.appearanceChanged)
         updateCapturePanelTraits(traits)
+        // **Reduce Motion reaches the nudge loop, and until focus-w7v it reached nothing.** Six
+        // places in this repository said it did. This wire re-themed the capture panel, the nudge
+        // panel and the menu bar, and never touched `nudgeHost` — so `reducedInterruption` was
+        // only ever the pane's own checkbox, a Reduce Motion user got a full animated `NSPanel`,
+        // and `settings.intervention.reduced.forced` — *"Reduce Motion is on, so this stays
+        // on."* — was a shipped string with no code path that could draw it.
+        //
+        // It costs no authorisation: `NSWorkspace` answers the accessibility flags at zero
+        // grants, which is why this is a wire rather than a deletion of the claims.
+        nudgeHost.observe(reduceMotion: traits.reduceMotion)
         // **The nudge surfaces are shell surfaces too** (focus-pq8). This wire reached the quick
         // capture panel and nothing else, so the two surfaces a person meets *because the app
         // interrupted them* — the nudge panel and the menu-bar popover — kept
@@ -1523,6 +1539,12 @@ public final class AppComposition {
         InterventionSettings(
             voice: nudgeHost.preferences.voice,
             reducedInterruption: nudgeHost.preferences.reducedInterruption,
+            // **Built without this, so the flag took its `false` default** (focus-w7v). The pane
+            // draws a disabled switch and *"Reduce Motion is on, so this stays on."* from it, and
+            // neither could ever appear: the value the router routes on and the value the pane
+            // explains itself with came from two different places, and one of them was a
+            // literal. Both are the loop's now.
+            reducedInterruptionIsForced: nudgeHost.systemForcesReducedInterruption,
             quietHours: InterventionPolicy.quietHoursDefault,
             usage: nudgeHost.todaysUsage(),
             presentationExclusions: sensingHost.presentationExclusions.sorted()

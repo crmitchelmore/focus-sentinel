@@ -136,9 +136,10 @@ public struct MenuBarPopoverView: View {
     /// **The top rung, with the answers it is required to carry.**
     ///
     /// The defect this closes was that there were none. `SurfaceRouter` sends the panel rung to
-    /// this surface whenever `reducedInterruption` is set — which `AppearanceObserver` forces on
-    /// under macOS Reduce Motion, under the `silentVisual` deck and while a microphone is running
-    /// — and all the popover drew was the `belief` row above: *"Nudge: Panel"*, a read-only
+    /// this surface whenever `reducedInterruption` is set — which the composition root forces on
+    /// from `AppearanceObserver`'s traits under macOS Reduce Motion, and under the `silentVisual`
+    /// deck, and while a microphone is running — and all the popover drew was the `belief` row
+    /// above: *"Nudge: Panel"*, a read-only
     /// label. The repo's own rule is that a nudge you cannot answer back to is an anti-pattern
     /// and that every surface, including the top rung, is dismissible; for a Reduce Motion user
     /// that sentence was false, and U-1's licence to interrupt — earned by the answer being one
