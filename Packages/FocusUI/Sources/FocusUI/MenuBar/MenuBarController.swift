@@ -548,8 +548,15 @@ public final class MenuBarController {
         }
         redraw(force: false)
         guard popover.isShown else { return }
+        let sizeBefore = popoverLayout.size
         popover.contentViewController = popoverController()
-        reanchorPopover()
+        // **Only when the size really changed** (focus-5yu). `update(_:)` is called on every
+        // accepted activation and every five-second corroboration tick, and while the popover is
+        // open each of those rebuilds its content view controller. Re-placing it every time would
+        // ask AppKit to show an already-shown popover once a tick — a repeated show under a
+        // person's cursor — for a size that has not moved. It moves when a nudge arrives or
+        // leaves, which is exactly when the content changed anyway.
+        if popoverLayout.size != sizeBefore { reanchorPopover() }
         // A nudge that arrived while the popover was already open is a nudge the person is
         // looking at, and the loop is told for the same reason it is told about an opening.
         //
