@@ -41,10 +41,15 @@ public enum NudgePanelKind: String, Sendable, CaseIterable, Codable, Hashable {
 /// all mean the same three things: write the record, release the slot, take the surface down.
 ///
 /// `QuestionEnding` already answers the first: what the ledger writes and whether it settles. This
-/// answers the other two, and its real work is being `CaseIterable`: `NudgeHost` has exactly one
-/// door out of an open question, every case of this enum is a way through that door, and a test
-/// walks `allCases` and drives each one. A fifth exit added without a driver is a non-exhaustive
-/// switch, which is a compile error rather than a sixth round.
+/// answers the other two — **and now the first as well** (focus-h0s). `recordsAnExpiry` below is
+/// what makes the door total: the record was the one of the three that was still a separate call,
+/// four exits made it and the fifth forgot, and forgetting it meant a keyboard shortcut aimed at
+/// the menu-bar glyph silently destroyed a question the person was looking at.
+///
+/// Its real work is being `CaseIterable`: `NudgeHost` has exactly one door out of an open
+/// question, every case of this enum is a way through that door, and a test walks `allCases` and
+/// drives each one. A further exit added without a driver is a non-exhaustive switch, which is a
+/// compile error rather than a sixth round.
 public enum QuestionExit: String, Sendable, CaseIterable, Codable, Hashable {
     /// The person clicked one of the three answers, or pressed Escape — which is *"Not now"*, and
     /// is an answer.
@@ -56,4 +61,40 @@ public enum QuestionExit: String, Sendable, CaseIterable, Codable, Hashable {
     /// The ask gave itself up before it reached anybody: an unreadable panel, or a route to a
     /// surface that cannot carry a question at all.
     case neverDelivered
+    /// **F-81: the person asked for their screen back.** Not the world moving on and not an
+    /// answer — `hideOverlays()` writes no receipt and no rule, because "hide" is a request about
+    /// the screen rather than a thing to tell the app, and the question is still unanswered and
+    /// will be offered again.
+    ///
+    /// It used to travel as `worldMovedOn`, which was a false label the moment the exit acquired
+    /// a consequence: `worldMovedOn` now means *write the expiry*, and `hideOverlays()` must not.
+    /// It was harmless only for as long as nothing read the label — the panel happened to be
+    /// ordered out first, so `readingNow` came back `unknowable` and `QuestionLedgerPolicy`
+    /// refused the write for a reason nobody had chosen. A rule that holds by accident of
+    /// statement order is the shape this type exists to retire.
+    case screenReclaimed
+
+    /// **Whether ending this way writes the question down as expired** — the third of the three
+    /// things an exit has to do, and the one that was still done by hand (focus-h0s).
+    ///
+    /// `QuestionExit`'s own header names the class: *"an exit is a place where three things have
+    /// to happen together — the record, the slot, and the surface — and each repair fixed the two
+    /// the author was thinking about"*. `NudgeHost.endOpenQuestion(_:)` did the slot and the
+    /// surface; the record was a separate `expireOpenQuestion()` that four call sites remembered
+    /// and a fifth did not. `resolve(_:snoozeDuration:)` — Ctrl-Cmd-R aimed at the glyph, or any
+    /// correction pressed on an accusation while a question stood on the panel — destroyed a
+    /// question the person could see, wrote nothing, and left the interruption charged.
+    ///
+    /// So the answer moves onto the exit itself, where it is a property of the *kind* of ending
+    /// rather than a line a caller can omit. `answered` writes through `QueryLedger.answer(…)` in
+    /// one transaction with the rule; `surfaceWentOutOfReach` and `neverDelivered` are un-askings
+    /// and R-81 forbids a receipt for a question that reached nobody; `screenReclaimed` is F-81.
+    /// One case is left, and it is the one that means *the question was on screen and the world
+    /// ended it*.
+    public var recordsAnExpiry: Bool {
+        switch self {
+        case .worldMovedOn: true
+        case .answered, .surfaceWentOutOfReach, .neverDelivered, .screenReclaimed: false
+        }
+    }
 }

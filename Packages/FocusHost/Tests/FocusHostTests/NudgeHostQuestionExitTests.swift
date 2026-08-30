@@ -117,6 +117,11 @@ struct NudgeHostQuestionExitTests {
             fixture.panel.displays = { NudgeHostDisplayChangeTests.displayTooSmall(for: 4_000) }
             NudgeHostDisplayChangeTests.theDisplayConfigurationChanges()
 
+        case .screenReclaimed:
+            // F-81's one command. It writes nothing — the person asked for their screen back, not
+            // to tell the app anything — and the question must still come off every surface.
+            fixture.host.hideOverlays()
+
         case .neverDelivered:
             // An intent nobody would type makes a panel whose answers really are past the edge of
             // the display, which is the situation `ask(…)` refuses to deliver into.

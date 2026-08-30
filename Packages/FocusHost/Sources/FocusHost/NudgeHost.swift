@@ -1209,6 +1209,15 @@ final class NudgeHost {
         // A rung is being answered, not a question. What comes down is **the rung's surface**,
         // and a question ends here only if it was sharing it.
         //
+        // **And when it was sharing it, the question is written down** (focus-h0s). This branch
+        // was the fifth producer of `.worldMovedOn` and the only one that did not call
+        // `expireOpenQuestion()` first, so Ctrl-Cmd-R aimed at the menu-bar glyph — or any
+        // correction pressed on an accusation while a question stood on the panel — destroyed a
+        // question the person could see, wrote nothing about it, and asked it again later. It is
+        // not repaired by a sixth caller remembering: the record moved inside
+        // `endOpenQuestion(_:)`, which is the one door, and the exit carries whether one is
+        // owed.
+        //
         // This was `closeSurfaces(endingAnyQuestionAs: .worldMovedOn)` on the argument that a
         // question still open at this point was an anomaly to be tidied away. It is no longer an
         // anomaly: a badge question waiting behind a click does not hold the slot, so an
@@ -1478,13 +1487,17 @@ final class NudgeHost {
     /// is released for the same reason in the other direction: a surface nobody can see must not
     /// hold the one open interruption for the rest of the session.
     private func withdrawForPresentation() {
-        // Before the window goes, never after: the reading the ledger needs is a reading of the
-        // surface as it was while the question was still on it.
-        expireOpenQuestion()
-        panel.withdrawForPresentation()
-        // The slot is released by these two and by nothing else: it is derived from the question
-        // and the rung, so forgetting them **is** giving it back (focus-zrs).
+        // **The question ends before the window goes, never after** (focus-h0s). The ledger's
+        // rule is that a receipt needs the surface provably readable at both ends, so the record
+        // has to be taken while the panel is still up — which is why this line moved above the
+        // withdrawal rather than the expiry staying beside it as a second statement. The panel is
+        // ordered out by `endOpenQuestion(_:)` on its way through; the withdrawal below is still
+        // what drops `.fullScreenAuxiliary`, which `hide()` does not.
+        //
+        // The slot is released by this and `forgetOpenRung()` and by nothing else: it is derived
+        // from the question and the rung, so forgetting them **is** giving it back (focus-zrs).
         endOpenQuestion(.worldMovedOn)
+        panel.withdrawForPresentation()
         forgetOpenRung()
     }
 
@@ -1603,6 +1616,18 @@ final class NudgeHost {
     /// with the mechanism.
     private func endOpenQuestion(_ exit: QuestionExit) {
         guard let question = openQuestion else { return }
+
+        // **The record, and it is the first of the three because it is a reading** (focus-h0s).
+        //
+        // `QuestionLedgerPolicy` refuses a receipt unless the surface is provably readable *now*
+        // as well as at the ask, so the write has to happen while the question is still on the
+        // screen it was asked on — before the two statements below take that screen away. This
+        // was four callers each remembering to call `expireOpenQuestion()` first, and
+        // `resolve(_:snoozeDuration:)` was the fifth and did not: an accusation dismissed on the
+        // glyph took a question off the panel with no row, no receipt and the interruption still
+        // charged. The exit says whether a record is owed; nobody has to remember one.
+        if exit.recordsAnExpiry { expireOpenQuestion() }
+
         let surface = question.surface
 
         // One assignment, because the question is one value. It used to be six lines, and the
@@ -1721,7 +1746,6 @@ final class NudgeHost {
     /// The session ended. Both fatigue runs die with it, the ladder resets, and every snooze and
     /// correction goes with them — because all three are statements about a session that is over.
     func sessionEnded() {
-        expireOpenQuestion()
         let now = monotonicClock.elapsed
         fatigue.reduce(.sessionEnded, now: now)
         ladder.reduce(.deEscalated(.sessionEnded), now: now)
@@ -1730,7 +1754,6 @@ final class NudgeHost {
 
     /// The session left `.focus` — a break, a detour, an interruption, completion.
     func phaseLeftFocus() {
-        expireOpenQuestion()
         ladder.reduce(.deEscalated(.phaseLeftFocus), now: monotonicClock.elapsed)
         closeSurfaces(endingAnyQuestionAs: .worldMovedOn)
     }
@@ -1738,7 +1761,6 @@ final class NudgeHost {
     /// A different commitment. Every earlier observation is evidence about a different question,
     /// and — because the ledger is keyed on the priority — every question legitimately re-opens.
     func priorityChanged() {
-        expireOpenQuestion()
         ladder.reduce(.deEscalated(.priorityChanged), now: monotonicClock.elapsed)
         clearSessionState()
     }
@@ -1858,6 +1880,13 @@ final class NudgeHost {
     /// **Unless the asking did not happen.** `QuestionLedgerPolicy` still refuses to write
     /// anything at all about a question that never reached a readable surface (focus-kby); that
     /// row would be a fact about an asking nobody experienced.
+    ///
+    /// **One caller, and it is the door** (focus-h0s). It had five, of which four were the
+    /// lifecycle callbacks and the fifth — `resolve(_:snoozeDuration:)` — was missing. Four call
+    /// sites remembering and one forgetting is the by-hand parity that produced the badge beads,
+    /// and it produced this one too: a keyboard shortcut aimed at the glyph destroyed a question
+    /// on the panel with nothing written down. `endOpenQuestion(_:)` asks
+    /// `QuestionExit.recordsAnExpiry` and calls this; nothing else may.
     private func expireOpenQuestion() {
         // The ask-time key, for the reason `OpenQuestion` carries one: this is the path a priority
         // change itself travels down, so reading the live pointer here would write the receipt
@@ -1998,7 +2027,13 @@ final class NudgeHost {
         // the reading it read was the `isVisible` fallback's cheerful `true`. Nothing is written
         // here, which is the whole of F-81: the person asked for their screen back, not to tell
         // the app anything, so the question is still unanswered and will be offered again.
-        endOpenQuestion(.worldMovedOn)
+        //
+        // **And the exit says so** (focus-h0s). It travelled as `.worldMovedOn`, which is now the
+        // exit that *writes*, and it wrote nothing here only because the panel above had already
+        // been ordered out and `QuestionLedgerPolicy` refused a receipt it could not prove
+        // readable. A rule that holds by accident of statement order is not a rule;
+        // `screenReclaimed` is F-81 stated as a case.
+        endOpenQuestion(.screenReclaimed)
         forgetOpenRung()
         // The rows go with the values that carried them: there is no shared `openRecordID` left to
         // clear, and forgetting the question and the rung above **is** forgetting their rows

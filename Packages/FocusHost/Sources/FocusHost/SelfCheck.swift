@@ -591,6 +591,17 @@ enum SelfCheck {
         // path lacked.
         report["orphanedNudgeSurfaces"] = host.orphanedNudgeSurfaces.map(\.rawValue).sorted()
         report["questionExitsDeclared"] = QuestionExit.allCases.map(\.rawValue).sorted()
+        // **Which exits owe the record**, read off the type rather than off the call sites
+        // (focus-h0s). The record was the one of an exit's three obligations that lived outside
+        // the door: four producers of `worldMovedOn` called `expireOpenQuestion()` first and
+        // `resolve(_:snoozeDuration:)` did not, so a correction aimed at the menu-bar glyph
+        // destroyed a question on the panel and wrote nothing about it. It is inside the door now
+        // and this is the reading that says which endings it fires for — an exit that quietly
+        // joined or left the writing set is a diff in this line.
+        report["questionExitsWritingAnExpiry"] = QuestionExit.allCases
+            .filter(\.recordsAnExpiry)
+            .map(\.rawValue)
+            .sorted()
 
         // **Two readings of one fact, disagreeing** — always zero and always empty (focus-zrs).
         //
