@@ -263,11 +263,11 @@ final class SessionHost: SessionActing {
 
     /// The only owner of `RuleAuthority.session`.
     ///
-    /// In memory, never persisted, and cleared here. **Nothing in e04 writes to it**: e05 owns
-    /// the one-click *"not now"* affordance that creates a session rule, and this epic supplies
-    /// the shape it will write into plus the lifetime that makes it safe. A session rule that
-    /// survived a relaunch would be a session rule that outlived its session, and giving the
-    /// value no persistence to reach is what makes that unrepresentable rather than unlikely.
+    /// In memory, never persisted, and cleared here. **The one writer is `NudgeHost`**, which
+    /// inserts a rule when somebody presses the panel's *"not now"* correction; e04 supplied the
+    /// shape and the lifetime that makes it safe. A session rule that survived a relaunch would
+    /// be a session rule that outlived its session, and giving the value no persistence to reach
+    /// is what makes that unrepresentable rather than unlikely.
     let sessionRuleBox = SessionRuleBox()
 
     /// Every session rule that applies to the open session and the given priority.

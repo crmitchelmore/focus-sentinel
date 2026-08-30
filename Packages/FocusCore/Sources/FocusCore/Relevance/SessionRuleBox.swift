@@ -39,12 +39,12 @@ import Foundation
 /// place the change can be observed — `setActivePriority` is called from there, so the lifetime
 /// is a property of the read path rather than of a hook somebody has to remember.
 ///
-/// ## Nothing in e04 writes to it
+/// ## Who writes to it
 ///
-/// e05 owns the one-click *"not now"* affordance that creates a session rule; e04 supplies the
-/// shape it will write into, exercises it from the corpus, and clears it from the host. That is
-/// deliberate — the correction economy needs a surface to be corrected *from*, and this epic
-/// has no nudge to correct.
+/// One caller: `NudgeHost` inserts a rule when somebody presses the panel's *"not now"*
+/// correction. e04 declared the shape and the lifetime, exercised it from the corpus and cleared
+/// it from the host; e05 supplied the surface to be corrected *from*. So a non-empty box means a
+/// person pressed something, which is what the self-check's zero is now a statement about.
 @MainActor
 public final class SessionRuleBox {
     /// What a session rule is scoped to: this session **and** this priority.

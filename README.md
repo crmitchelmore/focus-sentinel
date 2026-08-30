@@ -197,10 +197,13 @@ gate on the mere mention of it. The heuristic layer is the *whole* engine, which
 the charter's "fallback always present and independently tested" clause temporally true rather
 than a promise about a later release.
 
-**The nudge does not exist yet.** The engine emits `InterventionMandate` values and nothing
-consumes them; what ships is the verdict stream and the restrained explanation beside it, in
-Settings ▸ Privacy. A frame in which the engine has authorised an interruption and the screen is
-unchanged is the correct result, not a missing feature.
+**The mandate this engine emits is what the nudge ladder climbs.** `RelevanceHost` assigns the
+eligibility once and hands the same value to two readers: to Settings ▸ Privacy, where the
+verdict inspector explains it, and to `NudgeHost`, which folds it into the ladder. So the pane a
+person reads and the rung they are shown are two views of one judgement — which is why
+`settings.verdict.mandated` reading *"Nothing in this version can, so it does not"* was a
+product defect and not a stale sentence (focus-lmy). This paragraph said the same thing for the
+whole of e05.
 
 ### Three properties worth knowing before reading the code
 

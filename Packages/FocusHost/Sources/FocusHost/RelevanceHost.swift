@@ -43,12 +43,13 @@ struct JudgeableSubject: Sendable, Equatable {
 
 /// The relevance runtime: the engine, its snapshot, and the verdict the cockpit draws.
 ///
-/// ## What it consumes: nothing
+/// ## What it publishes, and who reads it
 ///
-/// **The nudge does not exist yet.** Every `InterventionMandate` this host's engine issues is
-/// consumed by nobody — e05 owns the ladder — so e04's demonstrable is the *verdict stream* and
-/// the restrained explanation beside it, surfaced in the Privacy pane's verdict inspector
-/// (R-71). This host publishes; nothing acts.
+/// **One eligibility, two readers** (focus-lmy). `assign(_:)` below stores the verdict for the
+/// Privacy pane's inspector (R-71) *and* fires `onJudgement`, which `NudgeHost` folds into the
+/// ladder. The pane and the nudge are therefore two views of the same decision rather than two
+/// decisions, and a sentence drawn in one that denies the other is a defect in the sentence —
+/// which is exactly how `settings.verdict.mandated` shipped saying nothing could nudge.
 ///
 /// ## Why the store is read here and never during a classification (R-65)
 ///

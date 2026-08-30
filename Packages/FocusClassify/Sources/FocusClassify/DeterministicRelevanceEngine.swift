@@ -4,9 +4,9 @@ import Foundation
 /// One classification, whole: what the engine concluded, why, whether it may say anything, and
 /// where the drift clock stands.
 ///
-/// Everything a surface needs and nothing it does not. In this build **every mandate this value
-/// carries is consumed by nobody** — the nudge is e05's — so the demonstrable is the verdict
-/// stream and the restrained explanation beside it.
+/// Everything a surface needs and nothing it does not. The mandate this value carries is what
+/// e05's ladder climbs, and the same value is what the Privacy pane's verdict inspector draws:
+/// one judgement, read by the surface that acts on it and by the surface that explains it.
 public struct Judgement: Sendable, Equatable {
     public let outcome: ClassificationOutcome
     public let explanation: Explanation

@@ -275,8 +275,8 @@ public struct CockpitState: Sendable, Equatable, Hashable {
     /// judgement, in exactly the way `CockpitState.ready` refuses to (its status is `paused`
     /// for the same reason).
     ///
-    /// Nothing consumes a mandate in this build. **The nudge is e05's**; e04's demonstrable is
-    /// the verdict stream and the restrained explanation beside it.
+    /// **This is the judgement the app acts on, not a copy of it.** e05's ladder is raised off
+    /// the same eligibility the inspector draws here (focus-lmy).
     public var verdict: VerdictSnapshot?
 
     /// What the app currently believes about all twelve capabilities.

@@ -56,11 +56,13 @@ public final class FixedPresentationSignals: PresentationSignalReading {
 /// This type's job is only to *gather* the inputs; the rule that weighs them is a pure function
 /// in `FocusCore`, which is what makes the whole table a unit test.
 ///
-/// ## What e03 does with the answer
+/// ## What is done with the answer
 ///
-/// Records it. **Nothing is suppressed**, because there is nothing to suppress until e05's
-/// overlays exist. `PresentationState.suppressesOverlays` is declared now and consumed then, so
-/// e05 adds a behaviour and not a state machine.
+/// e03 recorded it and suppressed nothing, because there was nothing yet to suppress. Since e05
+/// the state reaches `SurfaceRouter` through the nudge surroundings, so the panel rung raised
+/// while somebody is presenting is refused rather than drawn over their audience. This type's
+/// job did not change: it gathers, and the rule that weighs the answer stays a pure function
+/// elsewhere.
 @MainActor
 public final class PresentationReader {
     private let signals: any PresentationSignalReading

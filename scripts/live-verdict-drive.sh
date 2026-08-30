@@ -18,16 +18,19 @@
 # `scripts/build-gate.sh` never invokes it.
 #
 # The half of e04's contract that must hold regardless — the engine stamp, the policy digest,
-# the snapshot having been built, the engine having actually judged, and **nothing being
-# mandated on any surface** — is asserted at zero grants by `scripts/self-check.sh`, which is
-# stages 9a and 9b of the gate.
+# the snapshot having been built, the engine having actually judged, and the eligibility being
+# exactly one of mandated or suppressed-with-a-reason — is asserted at zero grants by
+# `scripts/self-check.sh`, which is stages 9a and 9b of the gate.
 #
-# ## Nothing happens on screen past the threshold, and that is the result
+# ## Past the threshold, the ladder is raised — and this lane has not been re-captured since
 #
-# **The nudge does not exist yet.** e05 owns the ladder; e04 emits mandates that are consumed by
-# nobody. So step 5 below captures a frame in which the engine has authorised an interruption
-# and the screen is unchanged, and the inspector says so in words. A reader expecting a panel to
-# appear is reading the wrong epic.
+# **This narration is e04's and its frames are e04's** (focus-lmy). It was written when the
+# mandate was consumed by nobody, so step 5 below says the screen is unchanged past the
+# threshold. That stopped being true at e05: `RelevanceHost` hands the same eligibility to
+# `NudgeHost`, which enters the ladder at the ambient glyph and escalates to the panel. What
+# appears in that frame now depends on the interruption budget and the slot, so this lane
+# describes what it captured rather than asserting an outcome, and the committed PNGs under
+# `.agents/evidence/e04/live` are from the older build. Re-capturing them is filed as focus-t3e.
 #
 # ## No `osascript`, anywhere, including here
 #
@@ -451,10 +454,11 @@ for artefact in $GRACE_STEPS; do
     timeline "$artefact · ~$(( SUSTAINED_DRIFT * step_index / 4 ))s of drift — inside the grace period, nothing may be said"
 done
 
-# Past the line. **Nothing happens on screen**, because the nudge is e05's.
+# Past the line. The engine may now speak and e05's ladder is what it speaks with, so this frame
+# is whatever the ladder raised — the ambient glyph, or the panel if it had already escalated.
 sleep $(( SUSTAINED_DRIFT / 4 + 6 ))
 capture_windows "05-decoy-past-threshold.png"
-timeline "05 · past ${SUSTAINED_DRIFT}s of drift — the engine may now speak, and NOTHING appears: the nudge is e05's"
+timeline "05 · past ${SUSTAINED_DRIFT}s of drift — the engine may now speak, and the ladder is what it speaks with"
 
 # --- 5 · the return ---------------------------------------------------------------------------
 #

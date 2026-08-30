@@ -53,8 +53,11 @@ public struct VerdictSnapshot: Sendable, Equatable, Hashable {
     /// The rung that decided, with its copy — what the inspector's "decided by" row draws.
     public var rung: CascadeRung? { CascadePrecedence.rung(for: stage) }
 
-    /// Whether the app is currently authorised to interrupt. Reported by the inspector, acted
-    /// on by nobody: **the nudge is e05's**, and in this build every mandate this engine
-    /// issues is consumed by nothing at all.
+    /// Whether the app is currently authorised to interrupt.
+    ///
+    /// Reported by the inspector **and acted on by e05's ladder**, off the same value. The
+    /// inspector's sentence for this branch denied that for a whole epic (focus-lmy), so the
+    /// two surfaces are worth naming together wherever this property is: it is not a debug
+    /// readout of something inert.
     public var isMandated: Bool { eligibility.isMandated }
 }

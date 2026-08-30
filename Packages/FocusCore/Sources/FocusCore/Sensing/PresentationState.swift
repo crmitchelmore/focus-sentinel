@@ -73,8 +73,10 @@ public struct PresentationState: Sendable, Equatable, Hashable {
         isPresenting: false
     )
 
-    /// **The contract e05 consumes.** Declared now and used nowhere in e03, because there is
-    /// nothing to suppress until e05's overlays exist — so e05 adds a behaviour and not a
-    /// state machine.
+    /// **The contract e05 consumes, and now does.** `AppComposition` hands this state to the
+    /// nudge surroundings and `SurfaceRouter.route(rung:presentation:…)` reads it, so the panel
+    /// rung raised while somebody is presenting comes back `.unavailable(.presentationActive)`
+    /// rather than being drawn over their audience. It was declared in e03 and unread until
+    /// then, which is why this remained a plain predicate and never grew a state machine.
     public var suppressesOverlays: Bool { isPresenting }
 }

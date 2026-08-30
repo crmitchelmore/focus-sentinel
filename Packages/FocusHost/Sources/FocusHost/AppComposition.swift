@@ -109,8 +109,9 @@ public final class AppComposition {
     /// The relevance runtime: the engine, the snapshot it judges against, and the verdict the
     /// cockpit and the Privacy pane draw.
     ///
-    /// **Nothing consumes a mandate in this build.** The nudge is e05's; e04's demonstrable is
-    /// the verdict stream and the restrained explanation beside it.
+    /// **The mandate this host issues is what the ladder climbs.** The same eligibility reaches
+    /// the Privacy pane's inspector and `NudgeHost`, so the verdict a person reads is the one
+    /// the app acted on (focus-lmy).
     let relevanceHost: RelevanceHost
 
     /// The relevance classifier. e01 and e02 shipped `UndecidedClassifier` here — it answers
