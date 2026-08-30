@@ -125,6 +125,28 @@ final class NudgeHost {
     /// ever set this.
     private(set) var systemForcesReducedInterruption = false
 
+    /// **Exactly what the person set**, and nothing the Mac decided for them (focus-40i).
+    ///
+    /// This is what the store holds. `preferences` is what the *loop* runs on, and its
+    /// `reducedInterruption` is the person's choice **or** what Reduce Motion forces — writing
+    /// that down would mean somebody who turns Reduce Motion off later is left holding a setting
+    /// they never chose, which is the "two writers, one field" defect focus-zrs removed from the
+    /// notification authorisation and focus-w7v kept out of this flag.
+    var chosen: InterventionPreferences {
+        InterventionPreferences(
+            voice: chosenVoice,
+            reducedInterruption: chosenReducedInterruption,
+            quietHours: chosenQuietHours
+        )
+    }
+
+    /// Everything the person set, restored in one call at launch.
+    func adopt(_ preferences: InterventionPreferences) {
+        chosenVoice = preferences.voice
+        chosenReducedInterruption = preferences.reducedInterruption
+        chosenQuietHours = preferences.quietHours
+    }
+
     /// The three things the Intervention pane can set. Two of them are `preferences`; the third
     /// is the window gate 8 evaluates.
     func choose(voice: NudgeVoice) { chosenVoice = voice }

@@ -1826,9 +1826,16 @@ enum SelfCheck {
     /// first and not the second is a gate that can never fire; one that reaches the first two
     /// and not the third is a setting the person loses when they quit.
     ///
-    /// The voice and the reduced-interruption probes are in-memory writes and their read-back;
-    /// the quiet-hours probe writes the person's row and puts it back, which is the same shape
-    /// `pressTheAppearancePicker()` uses and for the same reason — the claim is about a store.
+    /// **All three write the person's row and are put back** (focus-40i), which is the same
+    /// shape `pressTheAppearancePicker()` uses and for the same reason: the claim is about a
+    /// store, and no in-process read-back can make it. The voice and the flag were read only
+    /// out of the running loop here — a reading a plain in-memory property satisfies perfectly,
+    /// which is exactly how "never persisted" survived every gate this probe has ever run in.
+    ///
+    /// The stored flag is compared against **what the person chose**, never against
+    /// `preferences.reducedInterruption`: that value is the choice *or* what Reduce Motion
+    /// forces, so on a Mac with Reduce Motion on the two are legitimately different and a probe
+    /// that conflated them would report a defect on somebody's accessibility setting.
     @MainActor
     static func driveInterventionSink() -> [String: Any] {
         let composition = AppComposition.shared
@@ -1840,6 +1847,11 @@ enum SelfCheck {
         }
         report["available"] = true
 
+        // **What the person chose**, which is what has to be put back at the end. Read off the
+        // host's own statement of it rather than off `preferences`, whose reduced-interruption
+        // field is the choice OR what Reduce Motion forces: restoring that would write the Mac's
+        // accessibility setting into the person's row as though they had picked it.
+        let chosenBefore = composition.nudgeHost.chosen
         let voiceBefore = composition.nudgeHost.preferences.voice
         let reducedBefore = composition.nudgeHost.preferences.reducedInterruption
         let voiceProbe: NudgeVoice = voiceBefore == .standard ? .silentVisual : .standard
@@ -1849,12 +1861,22 @@ enum SelfCheck {
         report["voiceProbe"] = voiceProbe.rawValue
         report["voiceAfter"] = composition.nudgeHost.preferences.voice.rawValue
         report["voiceReachedTheLoop"] = composition.nudgeHost.preferences.voice == voiceProbe
+        report["voiceStored"] = FocusStore
+            .interventionPreferences(in: composition.modelContainer.mainContext).voice.rawValue
+        report["voiceReachedTheStore"] = FocusStore
+            .interventionPreferences(in: composition.modelContainer.mainContext).voice == voiceProbe
 
         sinks.onInterventionAction(.setReducedInterruption(reducedProbe))
         report["reducedProbe"] = reducedProbe
         report["reducedAfter"] = composition.nudgeHost.preferences.reducedInterruption
         report["reducedReachedTheLoop"] =
             composition.nudgeHost.preferences.reducedInterruption == reducedProbe
+        report["reducedStored"] = FocusStore
+            .interventionPreferences(in: composition.modelContainer.mainContext)
+            .reducedInterruption
+        report["reducedReachedTheStore"] = FocusStore
+            .interventionPreferences(in: composition.modelContainer.mainContext)
+            .reducedInterruption == reducedProbe
 
         // **Gate 8's own input, driven** (focus-z7g). The probe is the window the pane's own
         // button emits, so this is the shipping path rather than a value invented here.
@@ -1884,15 +1906,14 @@ enum SelfCheck {
             .interventionPreferences(in: composition.modelContainer.mainContext)
             .quietHours == quietProbe
 
-        composition.perform(.setVoice(voiceBefore))
-        composition.perform(.setReducedInterruption(reducedBefore))
-        composition.perform(.setQuietHours(quietBefore))
-        report["restored"] = composition.nudgeHost.preferences.voice == voiceBefore
-            && composition.nudgeHost.preferences.reducedInterruption == reducedBefore
-            && composition.nudgeHost.quietHours.window == quietBefore
-            && FocusStore
-                .interventionPreferences(in: composition.modelContainer.mainContext)
-                .quietHours == quietBefore
+        composition.perform(.setVoice(chosenBefore.voice))
+        composition.perform(.setReducedInterruption(chosenBefore.reducedInterruption))
+        composition.perform(.setQuietHours(chosenBefore.quietHours))
+        let stored = FocusStore.interventionPreferences(
+            in: composition.modelContainer.mainContext
+        )
+        report["restored"] = composition.nudgeHost.chosen == chosenBefore
+            && stored == chosenBefore
         return report
     }
 

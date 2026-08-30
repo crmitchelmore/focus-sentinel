@@ -119,6 +119,88 @@ struct AppCompositionSettingsTests {
         #expect(root.interventionSettings == before)
     }
 
+    // MARK: - The voice and "Interrupt me less" (focus-40i)
+
+    /// **A second composition root over the same store file**, which is the only reading that
+    /// can prove a setting was written. The suite's other reading of these two — set them, then
+    /// assert they reached the loop — is satisfied exactly as well by an in-memory property,
+    /// which is how "never persisted" survived every gate: the proof and the defect were
+    /// indistinguishable in one process.
+    @Test("the voice and Interrupt me less survive a relaunch")
+    func theVoiceAndTheFlagSurviveARelaunch() {
+        let url = Self.temporaryStoreURL()
+        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+
+        do {
+            let first = Self.root(storeKind: .temporary(url))
+            defer { first.stop() }
+            first.perform(InterventionSettingsAction.setVoice(NudgeVoice.warm))
+            first.perform(InterventionSettingsAction.setReducedInterruption(true))
+        }
+
+        let second = Self.root(storeKind: .temporary(url))
+        defer {
+            second.stop()
+            second.menuBar.remove()
+        }
+        // Before the launch reads them back, the loop holds the constructed defaults. Asserted so
+        // that the reading below is about the read-back rather than about a coincidence.
+        #expect(second.nudgeHost.chosen == .defaults)
+
+        second.startNudgeLoop()
+
+        #expect(second.nudgeHost.preferences.voice == NudgeVoice.warm)
+        #expect(second.nudgeHost.preferences.reducedInterruption == true)
+        #expect(second.interventionSettings.voice == NudgeVoice.warm)
+        #expect(second.interventionSettings.reducedInterruption == true)
+    }
+
+    /// A person who turns the flag **off** must get it off back, which a store that only ever
+    /// wrote the interesting value would fail.
+    @Test("turning Interrupt me less off survives a relaunch too")
+    func turningTheFlagOffSurvivesARelaunch() {
+        let url = Self.temporaryStoreURL()
+        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+
+        do {
+            let first = Self.root(storeKind: .temporary(url))
+            defer { first.stop() }
+            first.perform(InterventionSettingsAction.setReducedInterruption(true))
+            first.perform(InterventionSettingsAction.setReducedInterruption(false))
+        }
+
+        let second = Self.root(storeKind: .temporary(url))
+        defer {
+            second.stop()
+            second.menuBar.remove()
+        }
+        second.startNudgeLoop()
+
+        #expect(second.nudgeHost.chosen.reducedInterruption == false)
+    }
+
+    /// What is written is **what the person chose**, never what Reduce Motion forces. A row that
+    /// recorded the forced flag would leave somebody who turns Reduce Motion off later holding a
+    /// setting they never picked.
+    @Test("Reduce Motion forces the loop's flag and is never written to the person's row")
+    func theForcedFlagIsNotStored() {
+        let root = Self.root()
+        defer { root.stop() }
+
+        root.nudgeHost.observe(reduceMotion: true)
+
+        #expect(root.nudgeHost.preferences.reducedInterruption == true)
+        #expect(root.nudgeHost.chosen.reducedInterruption == false)
+
+        // A write of any of the three must not launder the forced flag into the row.
+        root.perform(InterventionSettingsAction.setVoice(NudgeVoice.direct))
+
+        #expect(
+            FocusStore.interventionPreferences(in: root.modelContainer.mainContext)
+                .reducedInterruption == false
+        )
+    }
+
     // MARK: - Quiet hours (focus-z7g)
 
     /// **The three places a window has to arrive**, and each of them was separately capable of

@@ -1547,27 +1547,34 @@ public final class AppComposition {
         }
     }
 
-    /// Persist the quiet-hours window the person just set, or cleared.
+    /// Persist all three of the Intervention pane's settings, as the loop now holds them.
     ///
     /// The loop has already been moved by the caller, so the shell and the next judgement act on
-    /// the new window immediately even if this write fails: a store that cannot be written is a
+    /// the new setting immediately even if this write fails: a store that cannot be written is a
     /// reason to tell the user, never a reason to ignore what they just chose. That is the same
     /// order — and the same reason — `setAppearancePreference(_:)` records.
-    private func persistQuietHours(_ window: QuietHoursWindow?) {
+    ///
+    /// **One writer, and it writes the whole value** (`nudgeHost.chosen`), rather than three
+    /// writers each carrying one field. A partial write from a caller that had read only its own
+    /// field is the shape that resets the other two to whatever that caller last saw, which is
+    /// exactly why `setSensingPaused(_:in:now:)` exists as a named verb rather than as a
+    /// read-modify-write at each call site.
+    private func persistInterventionPreferences() {
         do {
-            try FocusStore.setQuietHours(
-                window,
+            try FocusStore.setInterventionPreferences(
+                nudgeHost.chosen,
                 in: modelContainer.mainContext,
                 now: dateProvider.now
             )
         } catch {
             logger.error(
-                "the store refused a quiet-hours window: \(error.localizedDescription, privacy: .public)"
+                "the store refused an intervention preference: \(error.localizedDescription, privacy: .public)"
             )
         }
     }
 
-    /// **What the person set last time, read back into the loop at launch** (focus-z7g).
+    /// **What the person set last time, read back into the loop at launch** (focus-z7g,
+    /// focus-40i).
     ///
     /// Without this the store write above would be a write nobody reads, which is a defect of
     /// exactly the shape this repair exists to end. Called from `startNudgeLoop()`, beside the
@@ -1575,8 +1582,7 @@ public final class AppComposition {
     /// cockpit's first paint must be decided against the person's real settings rather than
     /// against the defaults this object was constructed with.
     func applyStoredInterventionPreferences() {
-        let stored = FocusStore.interventionPreferences(in: modelContainer.mainContext)
-        nudgeHost.choose(quietHours: stored.quietHours)
+        nudgeHost.adopt(FocusStore.interventionPreferences(in: modelContainer.mainContext))
     }
 
     /// Re-theme the pre-built quick-capture panel when the appearance preference changes.
@@ -1618,9 +1624,18 @@ public final class AppComposition {
     public func perform(_ action: InterventionSettingsAction) {
         switch action {
         case .setVoice(let voice):
+            // **The loop and the row, for the reason the window below gets both** (focus-40i).
+            // These were `nudgeHost.choose(…)` alone: a plain in-memory property, no column and
+            // no `UserDefaults` key anywhere in the repository, so a person who picked *Warm* or
+            // asked to be interrupted less got `neutral` and full panels back on the next
+            // launch. Reduced interruption decides **where** a nudge lands, so the setting that
+            // read as cosmetic was the one that silently restored the panel for somebody who had
+            // asked for quiet.
             nudgeHost.choose(voice: voice)
+            persistInterventionPreferences()
         case .setReducedInterruption(let reduced):
             nudgeHost.choose(reducedInterruption: reduced)
+            persistInterventionPreferences()
         case .setQuietHours(let window):
             // **Both halves, in this order** (focus-z7g). The loop first, so the very next
             // judgement is decided against the window the person just set even if the write
@@ -1628,7 +1643,7 @@ public final class AppComposition {
             // moved one and not the other is the defect this replaces wearing different
             // clothes.
             nudgeHost.choose(quietHours: window)
-            persistQuietHours(window)
+            persistInterventionPreferences()
             refreshCockpit()
         case .removePresentationExclusion:
             // A stored setting e05 does not persist a row for; the pane reports the request and

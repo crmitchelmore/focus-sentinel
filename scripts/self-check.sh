@@ -1138,6 +1138,20 @@ check(
     "the Intervention pane's Reduced-Interruption control reaches the running nudge loop",
     (intervention_drive.get("reducedProbe"), intervention_drive.get("reducedAfter")),
 )
+# **And the store** (focus-40i). Both controls reached the loop and neither reached a column: a
+# person who picked Warm, or asked to be interrupted less, got neutral and full panels back on
+# the next launch, and the probe above could not see it because it read the value back in the
+# same process it had just set it in.
+check(
+    intervention_drive.get("voiceReachedTheStore") is True,
+    "the Intervention pane's Voice control reaches the store, so the deck survives a quit",
+    (intervention_drive.get("voiceProbe"), intervention_drive.get("voiceStored")),
+)
+check(
+    intervention_drive.get("reducedReachedTheStore") is True,
+    "Interrupt me less reaches the store, so a person who asked for quiet keeps it",
+    (intervention_drive.get("reducedProbe"), intervention_drive.get("reducedStored")),
+)
 # **Quiet hours, at all three depths** (focus-z7g). The pane's "Set a window" button emitted an
 # action the composition root discarded with `break`, so the control redrew "Off" for ever and
 # gate 8 of the twelve-gate suppression stack was dead code in the shipping app. Three readings
