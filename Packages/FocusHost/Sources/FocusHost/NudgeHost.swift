@@ -1273,8 +1273,12 @@ final class NudgeHost {
 
     /// Complete one named row, whichever row happens to be open.
     ///
-    /// A preemption needs this: its write happens after the accusation has been delivered, and
-    /// delivery assigns `openRecordID` to the accusation's row (focus-7w3).
+    /// Named rather than implicit because the row to complete and the row that is currently
+    /// open are two different facts, and a caller that conflated them wrote an outcome onto the
+    /// wrong intervention (focus-7w3). The caller that needed it then was a preemption — an
+    /// accusation completing the question it had displaced *after* delivery had already moved
+    /// `openRecordID` to its own row. U-2 deleted preemption, and this stays because the
+    /// distinction is what makes the conflation impossible rather than unlikely.
     private func complete(_ outcome: InterventionOutcome, recordID: UUID?) {
         guard let id = recordID else { return }
         do {

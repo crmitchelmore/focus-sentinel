@@ -296,7 +296,8 @@ public struct FatigueController: Sendable, Equatable {
     ///
     /// An **answer** ends the run outright and lifts any suspension: the person is talking to
     /// the app again, and continuing to hold their questions would be punishing them for having
-    /// engaged. Anything else — "Not now", Escape, a preemption, an expiry — extends it, and at
+    /// engaged. Anything else — "Not now", Escape, an expiry, a surface that went out of reach —
+    /// extends it, and at
     /// `ignoredQueryBackoff` the app stops asking for `backoffSpan`.
     private static func resolvingQuery(
         _ state: FatigueState,

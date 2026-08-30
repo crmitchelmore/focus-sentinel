@@ -394,19 +394,48 @@ struct SequenceReplayTests {
         #expect(transcript.queryCount == 2)
     }
 
-    /// **R-84a.** A mandate closes an open question as declined and takes the slot; the question
-    /// is remembered, so it is never asked again. Losing the asking because something more urgent
-    /// happened would be invisible — the symptom is a question that comes back weeks later.
-    @Test("an accusation preempts an open question and the question is still remembered")
-    func anAccusationPreemptsAQuestion() throws {
+    /// **U-2, and the rule that replaced R-84a's asymmetry.**
+    ///
+    /// An accusation arriving while a question is on screen is **withheld and waits**. It does
+    /// not close the question, does not decline it and does not take the slot: the person
+    /// finishes answering the cheap teaching question, and only then does the accusation arrive.
+    /// The rung is not lost by waiting — no delivery is recorded and the escalation clock does
+    /// not start — and the question stays remembered, so it is never asked twice.
+    ///
+    /// **This test was called `anAccusationPreemptsAQuestion` and its failure message read "the
+    /// preempted question came back".** Its own fixture had said the opposite since U-2 deleted
+    /// preemption, and the body passed throughout because the behaviour was right and only the
+    /// caption was false. A green assertion under a false caption teaches the next reader the
+    /// mechanism the product does not have, which is how preemption kept coming back. The
+    /// assertions below now name the waiting rather than counting around it.
+    @Test("an accusation waits behind an open question, and the question is still remembered")
+    func anAccusationWaitsBehindAnOpenQuestion() throws {
         let fixture = try #require(try Self.fixtures().first { $0.id == "seq-0032" })
         let transcript = Self.harness.replay(fixture)
 
         #expect(transcript.queryCount == 1)
         #expect(transcript.accusationCount == 1)
+
+        // **The withholding itself**, which counting alone cannot see: a preempting accusation
+        // and a waiting one both end with one query and one accusation in the transcript.
+        let withheld = transcript.records.filter { $0.nudge == .silent(.interruptionInFlight) }
+        #expect(!withheld.isEmpty, "the accusation never waited — nothing was withheld in flight")
+
+        // And it waited **before** it spoke: every withholding precedes the delivery.
+        let accusedAt = transcript.records.firstIndex { if case .accuse = $0.nudge { true } else { false } }
+        let deliveredAt = try #require(accusedAt, "the accusation never arrived at all")
+        #expect(
+            withheld.allSatisfy { record in
+                transcript.records.firstIndex(of: record).map { $0 < deliveredAt } ?? false
+            },
+            "an accusation was withheld after it had already been delivered"
+        )
+
+        // The question was never closed as declined by the arrival of the accusation: the only
+        // thing that ends it is the person answering it.
         #expect(
             transcript.records.last?.nudge == .silent(.alreadyAsked),
-            "the preempted question came back"
+            "the question the person answered was not remembered"
         )
     }
 }

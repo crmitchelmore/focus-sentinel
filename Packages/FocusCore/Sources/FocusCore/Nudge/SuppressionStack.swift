@@ -12,7 +12,7 @@ public enum InterruptionKind: String, Sendable, CaseIterable, Codable, Hashable 
     /// app. Cheap, but still an interruption: a person asked ten questions has been interrupted
     /// ten times.
     case query
-    /// "Still working on *{task}*?" — the three-stage ladder, reserved for `unrelated`.
+    /// "Still working on *{task}*?" — the two-rung ladder, reserved for `unrelated`.
     case accusation
 }
 
@@ -58,8 +58,15 @@ public enum NudgeSuppressionReason: String, Sendable, CaseIterable, Codable, Has
     /// Gate 8 (e05, R-85). The person's own quiet hours. Not the system Focus, which this app
     /// makes no claim to read (P-137).
     case quietHours
-    /// Gate 9 (e05, R-84a). One open interruption at a time. A mandate offered against an open
-    /// query closes the query as `declined` and takes the slot; the reverse never happens.
+    /// Gate 9 (e05, U-2). One open interruption at a time, **symmetrically**: whatever is
+    /// already on screen keeps the slot, and whatever arrives second waits. The gate below is
+    /// `guard !interruptionInFlight` for both kinds, with no arm that reads `kind`.
+    ///
+    /// It used to say that a mandate offered against an open query closed the query as
+    /// `declined` and took the slot, and that the reverse never happened. That asymmetry was
+    /// preemption, U-2 deleted it, and roughly eleven defects across seven repair rounds had
+    /// lived in it. An accusation withheld here is **not lost**: no delivery is recorded and the
+    /// escalation clock does not start, so the same rung is offered again on the next judgement.
     case interruptionInFlight
     /// Gate 10 (e05, R-83). A cap, a cooldown or a backoff. Queries and accusations keep
     /// separate caps *and* draw on one shared daily budget whose last unit is reserved for an
@@ -247,7 +254,8 @@ public enum SuppressionStack {
             return .suppressed(.quietHours)
         }
 
-        // 9 — one open interruption at a time (e05, R-84a).
+        // 9 — one open interruption at a time, symmetrically (e05, U-2). No arm reads `kind`:
+        // whatever is on screen keeps the slot and whatever arrives second waits.
         guard !interruptionInFlight else { return .suppressed(.interruptionInFlight) }
 
         // 10 — the caps, the cooldown and the backoff (e05, R-83).

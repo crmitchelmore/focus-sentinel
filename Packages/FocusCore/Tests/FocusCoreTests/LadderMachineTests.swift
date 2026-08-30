@@ -139,7 +139,7 @@ struct LadderMachineTests {
             machine.reduce(.delivery(.deferred(.presentationActive)), now: at)
         }
 
-        // Still at rung 1, still owing rung 2 — not at rung 3.
+        // Still at rung 1, still owing rung 2 — and there is no rung above that to arrive at.
         #expect(machine.state.rung?.kind == .ambient)
         #expect(machine.candidate(at: due + .seconds(300), budgetPermits: true)?.kind == .panel)
     }
@@ -169,7 +169,12 @@ struct LadderMachineTests {
         #expect(machine.state.rung?.kind == .ambient)
     }
 
-    @Test("the ladder climbs three rungs and stops, because there is no fourth")
+    /// **The name said three and the body has asserted two since U-2** (focus-yln). It is the
+    /// same defect `anAccusationWaitsBehindAnOpenQuestion` carried in the sequence suite: a green
+    /// assertion under a caption describing a mechanism the product does not have. The count is
+    /// read from `LadderRung.Kind.allCases` and `InterventionPolicy.ladderRungCount` below, so
+    /// the name is the only place a number could have been wrong — and was.
+    @Test("the ladder climbs both its rungs and stops, because there is no third")
     func theLadderTopsOut() {
         var machine = LadderMachine()
         var at = Duration.seconds(0)

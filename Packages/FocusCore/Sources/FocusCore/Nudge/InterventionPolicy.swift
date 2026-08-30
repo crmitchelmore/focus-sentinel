@@ -278,7 +278,9 @@ public enum InterventionPolicy {
             kind: .behavioural,
             encoded: "\(ignoredAccusationBackoff)",
             justification: "R-83, F-63",
-            // Three delivered rungs ignored, then the ladder holds at `.ambient`.
+            // Two delivered rungs ignored, then the ladder holds at `.ambient`. It said three
+            // against a constant of 2; the note at the declaration above is explicit that
+            // seq-0023 "reaches the ladder's own hold in two".
             witnesses: ["seq-0023"],
             mutations: ["2", "4"]
         ),

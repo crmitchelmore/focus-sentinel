@@ -36,7 +36,8 @@ public enum NudgeCopySlot: String, Sendable, CaseIterable, Codable, Hashable {
 /// `nudge.*` catalog key names a real pair — which is a stronger property than "this literal
 /// appears in some source file".
 public enum NudgeCopyKey: String, Sendable, CaseIterable, Codable, Hashable {
-    // The accusation, rung 2 and rung 3.
+    // The accusation, at rung 2 — the panel, which is the top of the ladder (U-2). There is no
+    // rung 3 for these lines to also serve.
     case accusationPanelTitle = "accusation.panel.title"
     case accusationPanelBody = "accusation.panel.body"
     case accusationActionReturn = "accusation.action.return"

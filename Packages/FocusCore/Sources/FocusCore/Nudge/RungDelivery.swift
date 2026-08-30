@@ -20,6 +20,14 @@ public enum DeferralReason: String, Sendable, CaseIterable, Codable, Hashable {
     /// `UNUserNotificationCenter.add(_:)` came back with an error *after* a positive settings
     /// read — P-134 measured `UNErrorDomain` code 1, "Notifications are not allowed for this
     /// application". Delivery failure is a **route change**, not a log line (R-82.4).
+    ///
+    /// **Unreachable at HEAD, and gated as such** (U-2). No rung routes to a notification since
+    /// the recommitment rung was deferred to focus-5ab, so nothing can produce this reason; the
+    /// self-check asserts `"notification" not in surfacesARungCanReach` in every run. It is
+    /// declared, rather than deleted with its string, for the reason `NudgeSurface.notification`
+    /// is: `SurfaceRoute` is switched over totally in the settings pane and in the router, and a
+    /// missing case buys a `default:` arm — which is how an unreachable path becomes an
+    /// unnoticed one. The claim to check is the gate's, not this comment's.
     case notificationDeliveryFailed
     /// No surface exists that can carry this rung in the state the app is actually in.
     case noSurfaceAvailable

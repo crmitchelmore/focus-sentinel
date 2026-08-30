@@ -106,12 +106,16 @@ public struct LadderMachine: Sendable, Equatable {
             guard now - deliveredAt >= RelevancePolicy.escalationDwell else { return nil }
             // Fact 4.
             guard budgetPermits else { return nil }
-            // `nil` at the top: the ladder tops out at explicit recommitment and there is no
-            // fourth stage above it (D-07, R-99).
+            // `nil` at the top: the ladder tops out at the PANEL and there is no third rung
+            // above it (U-2). `rung.escalated()` returns `nil` there, which is what makes this
+            // the whole of the top-out rather than a case somebody has to remember to add.
             return rung.escalated()
 
         case .heldAtAmbient:
-            // Three rungs went unanswered, so the ladder holds. It is not silent — the glyph
+            // `InterventionPolicy.ignoredAccusationBackoff` rungs went unanswered — two — so the
+            // ladder holds. The number is named rather than restated, because this comment said
+            // "three" against a constant of 2 for as long as the constant has been 2. It is not
+            // silent — the glyph
             // delivered at the ambient rung is still on screen and still telling the truth
             // (F-146) — but there is nothing new to show, and re-delivering the same glyph
             // every observation would spend the day's budget on a picture that never changed.

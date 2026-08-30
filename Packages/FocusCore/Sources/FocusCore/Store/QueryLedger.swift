@@ -209,8 +209,9 @@ public final class QueryLedger {
 
     // MARK: - Writing
 
-    /// Record a question that produced **no answer** — "Not now", Escape, a preemption, or an
-    /// expiry.
+    /// Record a question that produced **no answer** — "Not now", Escape, an expiry, or a
+    /// surface that went out of reach. Those are `QuestionExit`'s whole list; the preemption
+    /// this line used to name is not on it, because U-2 deleted the mechanism.
     ///
     /// One row, because there is no answer to record. The asking still happened and is still
     /// remembered, which is what stops the question coming back after a relaunch.
@@ -254,7 +255,7 @@ public final class QueryLedger {
     /// `record(…)` above writes whatever it is handed. This asks `QuestionLedgerPolicy` first,
     /// and writes only when the policy says the question reached somebody — so the guard is
     /// inside the object that owns the immutable row rather than being an `if` in a caller no
-    /// test can import. A host that wants to record an expiry or a preemption has to say which
+    /// test can import. A host that wants to record an expiry or an out-of-reach surface has to say which
     /// surface carried the question and what that surface could be proven to show, and if it
     /// cannot prove it, nothing is written and the question stays askable.
     ///
