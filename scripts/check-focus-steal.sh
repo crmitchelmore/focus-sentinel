@@ -403,6 +403,60 @@ check(
     surface_reading,
 )
 
+# --- the OTHER surface that draws these actions (focus-5yu) -------------------------------------
+#
+# Every assertion above is about the panel. The popover draws the SAME AccusationPanelView and
+# the SAME QueryPanelView, it is where `SurfaceRouter` sends every rung under Reduce Motion,
+# "Interrupt me less", the Silent-and-visual deck or a live microphone — and this report carried
+# nothing at all about it. Measured before the repair, on a 1920 x 1080 display: the real popover
+# was 346 x 855 with a 21-character priority and 346 x 3127 with a long one, both placed as
+# though they were about 340 points tall, so most of each stood above the top of the screen.
+#
+# What is read here is the shipping layout function, on the shipping view, for the plainest and
+# the fullest content this surface can hold at a priority far longer than any interface expects.
+# It is not an open popover: the popover opens when a person clicks the status item, and a survey
+# that clicked it would be reporting a click nobody made.
+popover = report.get("popover") or {}
+popover_width = popover.get("committedWidth")
+check(
+    isinstance(popover_width, (int, float)) and popover_width > 0,
+    f"the popover commits to a width at all ({popover_width})",
+    popover,
+)
+popover_ceiling = popover.get("maximumContentHeight")
+for state in ("empty", "fullest"):
+    measured_popover = popover.get(state) or {}
+    check(
+        measured_popover.get("isTheCommittedWidth") is True,
+        f"the {state} popover is the committed {popover_width} points wide "
+        f"(measured {measured_popover.get('width')})",
+        measured_popover,
+    )
+    popover_height = measured_popover.get("height")
+    check(
+        isinstance(popover_height, (int, float)) and popover_height > 0,
+        f"the {state} popover has a measured height at all ({popover_height})",
+        measured_popover,
+    )
+    check(
+        isinstance(popover_height, (int, float))
+        and isinstance(popover_ceiling, (int, float))
+        and popover_height <= popover_ceiling + tolerance,
+        f"the {state} popover is within the {popover_ceiling}-point ceiling "
+        f"(measured {popover_height})",
+        {"popover": measured_popover, "maximumContentHeight": popover_ceiling},
+    )
+
+# The two contents are not the same picture: a height that ignored its content would satisfy
+# every bound above and would be the constant 380 x 190 the panel was clipped into.
+check(
+    isinstance((popover.get("empty") or {}).get("height"), (int, float))
+    and isinstance((popover.get("fullest") or {}).get("height"), (int, float))
+    and popover["fullest"]["height"] > popover["empty"]["height"],
+    "the fullest popover is taller than the plainest one, so the height is a measurement",
+    {"empty": popover.get("empty"), "fullest": popover.get("fullest")},
+)
+
 # --- SC-5, restated here because this stage launches the app -----------------------------------
 check(
     report.get("requestAuthorizationCallCount") == 0,

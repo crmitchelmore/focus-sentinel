@@ -1794,6 +1794,27 @@ check(
 # The counts beside it are the reading that finding needed and did not have. They are printed
 # rather than gated: an automated run raises no rung, so a threshold on them would be a threshold
 # on zero. What is gated is the join, which is a fact about the vocabulary and holds in every run.
+# **The badge's own surface has a size, and it is the one the product committed to** (focus-5yu).
+#
+# This report carried `panel.contentSize` and nothing at all for the popover — the surface the
+# quiet route sends every rung to, and the one that had committed to no size. Measured before the
+# repair, on a 1920 x 1080 display: 346 x 855 with a 21-character priority and 346 x 3127 with a
+# long one, both placed as though they were about 340 tall. `check-focus-steal.sh` makes the full
+# set of assertions about it; this is the one that belongs in every self-check, including the
+# Release one, because it is the number a person's popover is drawn at.
+popover = nudge.get("popover") or {}
+check(
+    isinstance(popover.get("committedWidth"), (int, float))
+    and popover["committedWidth"] > 0,
+    "the popover reports the width it commits to",
+    popover.get("committedWidth"),
+)
+check(
+    (popover.get("fullest") or {}).get("isTheCommittedWidth") is True,
+    "the fullest popover is laid out at the committed width, at any priority length",
+    popover.get("fullest"),
+)
+
 check(
     nudge.get("surfacesWithNoWindowAndNoMark") == [],
     "every nudge surface that raises no window marks the status item",

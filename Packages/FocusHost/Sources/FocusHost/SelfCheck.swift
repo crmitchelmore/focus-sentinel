@@ -905,10 +905,100 @@ enum SelfCheck {
             .sorted()
 
         report["panel"] = panelReport()
+        report["popover"] = popoverReport()
         report["menuBarInstalled"] = composition.menuBar.isInstalled
         report["decisionCount"] = host.decisionCount
         return report
     }
+
+    /// **The badge's own surface, measured** (focus-5yu).
+    ///
+    /// The Release report carried `panel.contentSize` and **nothing at all** for the popover,
+    /// which is the surface the quiet route sends every rung to — Reduce Motion, "Interrupt me
+    /// less", the Silent-and-visual deck, a live microphone — and the one that had committed to
+    /// no size. Measured before the repair, on a 1920 × 1080 display: 346 × 855 with a
+    /// 21-character priority and 346 × 3127 with a long one, both placed as though they were
+    /// about 340 tall, so most of each stood above the top of the screen.
+    ///
+    /// It is a **measurement of the shipping layout function**, not of an open popover: the
+    /// popover opens only when a person clicks the status item, and a survey that clicked it
+    /// would be reporting a click nobody made. `MenuBarController.popoverLayout(measuring:screens:)`
+    /// is what `popoverController()` itself calls, on the same view, so the numbers here are the
+    /// numbers the next click will produce.
+    ///
+    /// The content is the **fullest** the surface can hold — an accusation and a question at once
+    /// beside a snooze — at a priority far longer than any interface expects, because
+    /// `IntentValidator` bounds that sentence from below only.
+    @MainActor
+    static func popoverReport() -> [String: Any] {
+        var report: [String: Any] = [:]
+        let screens = NudgePanelController.currentScreens()
+        report["committedWidth"] = MenuBarController.popoverContentWidth
+        report["maximumContentHeight"] =
+            MenuBarController.popoverMaximumContentHeight(screens: screens) ?? -1
+        report["isShown"] = AppComposition.shared.menuBar.isPopoverShown
+
+        for (name, presentation) in popoverSurveyContents {
+            let layout = MenuBarController.popoverLayout(
+                measuring: MenuBarPopoverView(presentation: presentation),
+                screens: screens
+            )
+            report[name] = [
+                "width": Double(layout.size.width),
+                "height": Double(layout.size.height),
+                "scrolls": layout.scrolls,
+                "isTheCommittedWidth":
+                    Double(layout.size.width) == MenuBarController.popoverContentWidth
+            ]
+        }
+        return report
+    }
+
+    /// The two contents the popover survey measures: the plainest thing this surface draws, and
+    /// the fullest — with the longest priority, because that sentence is what used to set the
+    /// width.
+    static let popoverSurveyContents: [(String, MenuBarPresentation)] = {
+        let priority = (["Write the Q3 proposal"] + Array(
+            repeating: "and send the finance summary to the board before the review", count: 4
+        )).joined(separator: " ")
+        let subject = NudgeSubject.named(FocusStore.bundleIdentifier, runningName: nil)
+        return [
+            (
+                "empty",
+                MenuBarPresentation(status: .uncertain, priorityIntent: priority)
+            ),
+            (
+                "fullest",
+                MenuBarPresentation(
+                    status: .unrelated,
+                    priorityIntent: priority,
+                    elapsed: .seconds(1_505),
+                    snoozes: subject.map {
+                        [MenuBarSnooze(subject: $0, remaining: .seconds(305))]
+                    } ?? [],
+                    pendingQuery: subject.map {
+                        QueryPresentation(
+                            task: priority,
+                            subject: $0,
+                            reason: .noNegativeBasis,
+                            dwelled: .seconds(120)
+                        )
+                    },
+                    pendingAccusation: AccusationPresentation(
+                        rung: .panel,
+                        task: priority,
+                        subject: subject,
+                        dwelled: .seconds(600),
+                        returnTarget: "Pages",
+                        hasOpenSession: true
+                    ),
+                    rung: .panel,
+                    rungSurface: .popoverBadge,
+                    band: .medium
+                )
+            )
+        ]
+    }()
 
     /// Show the nudge panel, take the four readings, and put it away again.
     ///
