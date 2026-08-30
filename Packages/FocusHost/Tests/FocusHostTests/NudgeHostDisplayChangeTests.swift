@@ -254,6 +254,19 @@ struct NudgeHostDisplayChangeTests {
             spendAfter.interruptionsToday == spendBefore.interruptionsToday - 1,
             "a rung nobody saw is still charged to the shared interruption cap"
         )
+        // **And it gains no outcome** (focus-gmr). An outcome is what the person did about an
+        // interruption that reached them, and this one has just been declared to have reached
+        // nobody. `forgetOpenRung()` runs on the very next line of `displaysChanged()` and now
+        // completes a let-go-of rung as `.ignored`, so without
+        // `InterventionLog.complete(_:outcome:)`'s "only a delivery gains an outcome" guard this
+        // withdrawn row would say somebody ignored something the app says they never saw.
+        #expect(
+            try fixture.interventions().allSatisfy {
+                $0.dispositionRaw != InterventionDisposition.deferred.rawValue
+                    || $0.outcome == nil
+            },
+            "a withdrawn delivery was recorded as having been ignored by somebody who never saw it"
+        )
 
         // The ladder is standing where it was before the delivery — so the escalation clock is
         // not running, and the next judgement offers **this same rung** rather than the one above.
