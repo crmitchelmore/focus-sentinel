@@ -103,6 +103,20 @@ final class NudgeHost {
     private var chosenVoice: NudgeVoice = .standard
     private var chosenReducedInterruption = false
 
+    /// **The window the person set**, and the whole of what gate 8 evaluates (focus-z7g).
+    ///
+    /// It is not part of `preferences` because it is not a preference the *decider* consults: it
+    /// is a fact about the surroundings, evaluated against the wall clock and an injected
+    /// calendar by `SuppressionStack`'s eighth gate, exactly as a running microphone or a
+    /// full-screen presentation is. The composition root reads it here and puts it in the
+    /// `NudgeSurroundings` it builds, so there is one statement of the window and the pane and
+    /// the gate cannot hold two.
+    private var chosenQuietHours: QuietHoursWindow? = InterventionPolicy.quietHoursDefault
+
+    /// What gate 8 is given. `QuietHours.off` until the person sets a window, which is R-85's
+    /// shipped default and a real answer rather than an absent one.
+    var quietHours: QuietHours { QuietHours(window: chosenQuietHours) }
+
     /// **Whether macOS Reduce Motion is what turned reduced interruption on** (focus-w7v).
     ///
     /// Read by the Intervention pane through `AppComposition.interventionSettings`, which is
@@ -111,9 +125,11 @@ final class NudgeHost {
     /// ever set this.
     private(set) var systemForcesReducedInterruption = false
 
-    /// The two things the Intervention pane can set — which are now the whole of `preferences`.
+    /// The three things the Intervention pane can set. Two of them are `preferences`; the third
+    /// is the window gate 8 evaluates.
     func choose(voice: NudgeVoice) { chosenVoice = voice }
     func choose(reducedInterruption: Bool) { chosenReducedInterruption = reducedInterruption }
+    func choose(quietHours: QuietHoursWindow?) { chosenQuietHours = quietHours }
 
     /// **The Mac's Reduce Motion setting, observed** (focus-w7v).
     ///

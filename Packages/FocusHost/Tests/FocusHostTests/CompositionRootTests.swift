@@ -46,14 +46,14 @@ final class InertHotKeyRegistrar: HotKeyRegistering {
 @Suite("The composition root, run", .serialized)
 @MainActor
 struct CompositionRootTests {
-    static func root() -> AppComposition {
+    static func root(storeKind: FocusStore.Kind = .inMemory) -> AppComposition {
         AppComposition(
             dateProvider: FixedDateProvider(now: NudgeHostFixture.reference),
             monotonicClock: FixedMonotonicClock(),
             calendar: NudgeHostFixture.londonCalendar,
             locale: Locale(identifier: "en_GB"),
             hotKeyRegistrar: InertHotKeyRegistrar(),
-            storeKind: .inMemory,
+            storeKind: storeKind,
             notificationCentre: SilentNotificationCentre()
         )
     }

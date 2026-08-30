@@ -30,6 +30,25 @@ struct AppCompositionSettingsTests {
         CompositionRootTests.root()
     }
 
+    /// A root over a store this test owns, so a second one can open the same file and read back
+    /// what the first wrote. `.inMemory` builds a **fresh** container every time, which is
+    /// exactly the reading that cannot see a missing write.
+    static func root(storeKind: FocusStore.Kind) -> AppComposition {
+        CompositionRootTests.root(storeKind: storeKind)
+    }
+
+    /// A writable directory holding a store this test owns.
+    static func temporaryStoreURL() -> URL {
+        let directory = URL(filePath: NSTemporaryDirectory(), directoryHint: .isDirectory)
+            .appending(path: "focus-settings-\(UUID().uuidString)", directoryHint: .isDirectory)
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        return directory.appending(path: FocusStore.storeFileName, directoryHint: .notDirectory)
+    }
+
+    /// The window every quiet-hours assertion below is about: 22:00 to 07:00, which wraps
+    /// midnight and is the common case for the setting.
+    static let window = QuietHoursWindow(startMinuteOfDay: 22 * 60, endMinuteOfDay: 7 * 60)
+
     // MARK: - The appearance preference
 
     @Test("the stored appearance preference round-trips through the composition root")
@@ -85,19 +104,116 @@ struct AppCompositionSettingsTests {
         #expect(root.interventionSettings.reducedInterruption == true)
     }
 
-    /// The two the pane reports and this build does not yet store. They are a deliberate no-op
+    /// The one the pane reports and this build still does not store. It is a deliberate no-op
     /// rather than a fake write, and the assertion is that nothing else moved.
-    @Test("the settings this build does not persist change nothing else")
-    func theUnstoredSettingsChangeNothing() {
+    @Test("the setting this build does not persist changes nothing else")
+    func theUnstoredSettingChangesNothing() {
         let root = Self.root()
         defer { root.stop() }
         root.perform(InterventionSettingsAction.setVoice(NudgeVoice.warm))
         root.perform(InterventionSettingsAction.setReducedInterruption(true))
         let before = root.interventionSettings
 
-        root.perform(InterventionSettingsAction.setQuietHours(InterventionPolicy.quietHoursDefault))
         root.perform(InterventionSettingsAction.removePresentationExclusion("com.example.Slides"))
 
         #expect(root.interventionSettings == before)
+    }
+
+    // MARK: - Quiet hours (focus-z7g)
+
+    /// **The three places a window has to arrive**, and each of them was separately capable of
+    /// being green over a dead control: the pane's read-back, the surroundings the twelve-gate
+    /// suppression stack evaluates, and the row on disk.
+    @Test("setting a quiet-hours window reaches the pane, the gate and the store")
+    func theQuietHoursWindowReachesEverything() {
+        let root = Self.root()
+        defer { root.stop() }
+
+        // R-85's shipped default, and the state the dead button could never leave.
+        #expect(root.interventionSettings.quietHours == nil)
+        #expect(root.nudgeSurroundings().quietHours.isEnabled == false)
+
+        root.perform(InterventionSettingsAction.setQuietHours(Self.window))
+
+        #expect(root.interventionSettings.quietHours == Self.window)
+        #expect(root.nudgeSurroundings().quietHours.window == Self.window)
+        #expect(
+            FocusStore.interventionPreferences(in: root.modelContainer.mainContext).quietHours
+                == Self.window
+        )
+    }
+
+    /// The four boundary buttons were unreachable in the product because the pane could never
+    /// draw them: they exist only inside `if let window = settings.quietHours`. This drives the
+    /// sequence a person actually performs — switch on, then move a boundary — through the
+    /// composition root's own verb.
+    @Test("a boundary move lands on the window the pane is already showing")
+    func aBoundaryMoveLands() {
+        let root = Self.root()
+        defer { root.stop() }
+
+        root.perform(InterventionSettingsAction.setQuietHours(
+            InterventionSettingsView.startingWindow
+        ))
+        let shown = try? #require(root.interventionSettings.quietHours)
+        #expect(shown == InterventionSettingsView.startingWindow)
+
+        root.perform(InterventionSettingsAction.setQuietHours(
+            InterventionSettingsView.moved(
+                InterventionSettingsView.startingWindow,
+                startBy: -InterventionSettingsView.quietHoursStep
+            )
+        ))
+
+        #expect(
+            root.interventionSettings.quietHours?.startMinuteOfDay
+                == InterventionSettingsView.startingWindow.startMinuteOfDay
+                    - InterventionSettingsView.quietHoursStep
+        )
+    }
+
+    /// Turning it off again is a state the pane can reach, and it must clear the row rather than
+    /// leave the last window behind for the next launch to restore.
+    @Test("turning the window off clears it everywhere")
+    func turningTheWindowOffClearsIt() {
+        let root = Self.root()
+        defer { root.stop() }
+
+        root.perform(InterventionSettingsAction.setQuietHours(Self.window))
+        root.perform(InterventionSettingsAction.setQuietHours(nil))
+
+        #expect(root.interventionSettings.quietHours == nil)
+        #expect(root.nudgeSurroundings().quietHours.isEnabled == false)
+        #expect(
+            FocusStore.interventionPreferences(in: root.modelContainer.mainContext).quietHours
+                == nil
+        )
+    }
+
+    /// **A second composition root on the same store file**, which is the only reading that can
+    /// tell a stored window from a remembered one. The first root sets it and stops; the second
+    /// opens the same file and starts its nudge loop, exactly as a relaunch does.
+    @Test("a window set in one launch is in the gate's hands in the next")
+    func theWindowSurvivesARelaunch() throws {
+        let url = Self.temporaryStoreURL()
+        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+
+        do {
+            let first = Self.root(storeKind: .temporary(url))
+            defer { first.stop() }
+            first.perform(InterventionSettingsAction.setQuietHours(Self.window))
+            #expect(first.interventionSettings.quietHours == Self.window)
+        }
+
+        let second = Self.root(storeKind: .temporary(url))
+        defer {
+            second.stop()
+            second.menuBar.remove()
+        }
+        // The nudge half of `start()`, which is where a launch reads the person's settings back.
+        second.startNudgeLoop()
+
+        #expect(second.interventionSettings.quietHours == Self.window)
+        #expect(second.nudgeSurroundings().quietHours.window == Self.window)
     }
 }

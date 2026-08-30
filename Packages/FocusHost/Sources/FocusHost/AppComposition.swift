@@ -514,6 +514,8 @@ public final class AppComposition {
         // cockpit's first paint would otherwise be decided against a stale `false`, for the one
         // person the setting exists for.
         nudgeHost.observe(reduceMotion: appearance.traits.reduceMotion)
+        // **And what the person set, read at launch too** (focus-z7g). Same moment, same reason.
+        applyStoredInterventionPreferences()
         nudgeHost.currentSessionID = { [weak self] in self?.sessionHost.snapshot?.sessionID }
         nudgeHost.onCorrection = { [weak self] outcome, priorityID in
             self?.perform(outcome, priorityID: priorityID)
@@ -596,7 +598,11 @@ public final class AppComposition {
     /// e02's calendar, e01's clocks — and **nothing is fetched here**: every field is a reading
     /// somebody else already took, which is what keeps the nudge module free of every sensing
     /// API (R-96k).
-    private func nudgeSurroundings() -> NudgeSurroundings {
+    /// Internal rather than private, for the reason `startNudgeLoop()` is: the self-check reads
+    /// **the value the gates are actually handed**, so a setting that reaches the loop's own
+    /// field but never reaches the suppression stack is visible as a failing reading rather than
+    /// as a green one (focus-z7g).
+    func nudgeSurroundings() -> NudgeSurroundings {
         NudgeSurroundings(
             // **Gate 1 and the key are the same value** (focus-zrs). This was
             // `hasActivePriority: priorityHost.state.priority != nil` — a `Bool`, while the loop
@@ -613,7 +619,12 @@ public final class AppComposition {
             mediaSuppressionEnabled: true,
             presentation: sensingHost.presentationState,
             menuBarVisible: !sensingHost.presentationState.suppressesOverlays,
-            quietHours: QuietHours.off,
+            // **The person's own window, not the constant** (focus-z7g). This was
+            // `QuietHours.off` unconditionally, which made gate 8 of the twelve-gate suppression
+            // stack dead code in the shipping app: `evaluation.json` reported
+            // `bySuppressionReason.quietHours == 0` in every run because no run could ever
+            // produce one. The gate was implemented, tested and unreachable.
+            quietHours: nudgeHost.quietHours,
             now: dateProvider.now,
             calendar: calendar,
             monotonic: monotonicClock.elapsed
@@ -1536,6 +1547,38 @@ public final class AppComposition {
         }
     }
 
+    /// Persist the quiet-hours window the person just set, or cleared.
+    ///
+    /// The loop has already been moved by the caller, so the shell and the next judgement act on
+    /// the new window immediately even if this write fails: a store that cannot be written is a
+    /// reason to tell the user, never a reason to ignore what they just chose. That is the same
+    /// order — and the same reason — `setAppearancePreference(_:)` records.
+    private func persistQuietHours(_ window: QuietHoursWindow?) {
+        do {
+            try FocusStore.setQuietHours(
+                window,
+                in: modelContainer.mainContext,
+                now: dateProvider.now
+            )
+        } catch {
+            logger.error(
+                "the store refused a quiet-hours window: \(error.localizedDescription, privacy: .public)"
+            )
+        }
+    }
+
+    /// **What the person set last time, read back into the loop at launch** (focus-z7g).
+    ///
+    /// Without this the store write above would be a write nobody reads, which is a defect of
+    /// exactly the shape this repair exists to end. Called from `startNudgeLoop()`, beside the
+    /// Reduce Motion reading, and for the same reason it is there: a nudge raised before the
+    /// cockpit's first paint must be decided against the person's real settings rather than
+    /// against the defaults this object was constructed with.
+    func applyStoredInterventionPreferences() {
+        let stored = FocusStore.interventionPreferences(in: modelContainer.mainContext)
+        nudgeHost.choose(quietHours: stored.quietHours)
+    }
+
     /// Re-theme the pre-built quick-capture panel when the appearance preference changes.
     public func updateCapturePanelTraits(_ traits: AppearanceTraits) {
         quickCapturePanel.update(traits: traits)
@@ -1553,7 +1596,13 @@ public final class AppComposition {
             // explains itself with came from two different places, and one of them was a
             // literal. Both are the loop's now.
             reducedInterruptionIsForced: nudgeHost.systemForcesReducedInterruption,
-            quietHours: InterventionPolicy.quietHoursDefault,
+            // **The live window, not the constant the pane's own proof compared against**
+            // (focus-z7g). This was `InterventionPolicy.quietHoursDefault` — `nil`, for ever —
+            // so the pane redrew *"Set a window / Off"* whatever the person pressed, the four
+            // boundary buttons were unreachable in the product, and the settings connection's
+            // `expect(.quietHours, …)` audit compared the drawn row against the very same
+            // hardcoded constant that filled it. The proof agreed with itself.
+            quietHours: nudgeHost.quietHours.window,
             usage: nudgeHost.todaysUsage(),
             presentationExclusions: sensingHost.presentationExclusions.sorted()
         )
@@ -1572,9 +1621,18 @@ public final class AppComposition {
             nudgeHost.choose(voice: voice)
         case .setReducedInterruption(let reduced):
             nudgeHost.choose(reducedInterruption: reduced)
-        case .setQuietHours, .removePresentationExclusion:
-            // Both are stored settings e05 does not yet persist a row for; the pane reports the
-            // request and the store lands in a later task rather than being faked here.
+        case .setQuietHours(let window):
+            // **Both halves, in this order** (focus-z7g). The loop first, so the very next
+            // judgement is decided against the window the person just set even if the write
+            // below fails; then the row, so it is still set after they quit. A control that
+            // moved one and not the other is the defect this replaces wearing different
+            // clothes.
+            nudgeHost.choose(quietHours: window)
+            persistQuietHours(window)
+            refreshCockpit()
+        case .removePresentationExclusion:
+            // A stored setting e05 does not persist a row for; the pane reports the request and
+            // the store lands in a later task rather than being faked here.
             break
         }
     }

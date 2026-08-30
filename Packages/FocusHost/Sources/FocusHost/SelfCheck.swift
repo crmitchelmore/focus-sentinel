@@ -1815,9 +1815,20 @@ enum SelfCheck {
     /// did. Both of the pane's controls are driven, because they write different fields and a
     /// sink that carried one and dropped the other would be a real defect.
     ///
-    /// Nothing here touches the store: `NudgePreferences` lives in the running loop, so the whole
-    /// probe is a pair of in-memory writes and their read-back, put back through the composition
-    /// root's own verb rather than through the sink under test.
+    /// **And the one it did not press** (focus-z7g). This probed `.setVoice` and
+    /// `.setReducedInterruption` and skipped `.setQuietHours` — precisely the action that did
+    /// nothing — so the pane's dead button was the one control in the pane no lane touched.
+    /// Every case of `InterventionSettingsAction` a person can reach is driven here now.
+    ///
+    /// Quiet hours is read at **three** depths, because two of them were separately capable of
+    /// being green over a dead control: the loop's own field, the `NudgeSurroundings` the
+    /// suppression stack is actually handed, and the row on disk. A setting that reaches the
+    /// first and not the second is a gate that can never fire; one that reaches the first two
+    /// and not the third is a setting the person loses when they quit.
+    ///
+    /// The voice and the reduced-interruption probes are in-memory writes and their read-back;
+    /// the quiet-hours probe writes the person's row and puts it back, which is the same shape
+    /// `pressTheAppearancePicker()` uses and for the same reason — the claim is about a store.
     @MainActor
     static func driveInterventionSink() -> [String: Any] {
         let composition = AppComposition.shared
@@ -1845,10 +1856,43 @@ enum SelfCheck {
         report["reducedReachedTheLoop"] =
             composition.nudgeHost.preferences.reducedInterruption == reducedProbe
 
+        // **Gate 8's own input, driven** (focus-z7g). The probe is the window the pane's own
+        // button emits, so this is the shipping path rather than a value invented here.
+        let quietBefore = composition.nudgeHost.quietHours.window
+        let quietProbe: QuietHoursWindow? =
+            quietBefore == nil ? InterventionSettingsView.startingWindow : nil
+
+        report["quietHoursStoredBefore"] = FocusStore
+            .interventionPreferences(in: composition.modelContainer.mainContext)
+            .quietHours?.encoded ?? "none"
+
+        sinks.onInterventionAction(.setQuietHours(quietProbe))
+        report["quietHoursProbe"] = quietProbe?.encoded ?? "none"
+        report["quietHoursAfter"] = composition.nudgeHost.quietHours.window?.encoded ?? "none"
+        report["quietHoursReachedTheLoop"] = composition.nudgeHost.quietHours.window == quietProbe
+        // The value the twelve-gate stack is handed, not the field the loop stores it in.
+        report["quietHoursInSurroundings"] =
+            composition.nudgeSurroundings().quietHours.window?.encoded ?? "none"
+        report["quietHoursReachedTheGate"] =
+            composition.nudgeSurroundings().quietHours.window == quietProbe
+        // The row on disk, which is the only reading that can tell a stored setting from a
+        // remembered one.
+        report["quietHoursStored"] = FocusStore
+            .interventionPreferences(in: composition.modelContainer.mainContext)
+            .quietHours?.encoded ?? "none"
+        report["quietHoursReachedTheStore"] = FocusStore
+            .interventionPreferences(in: composition.modelContainer.mainContext)
+            .quietHours == quietProbe
+
         composition.perform(.setVoice(voiceBefore))
         composition.perform(.setReducedInterruption(reducedBefore))
+        composition.perform(.setQuietHours(quietBefore))
         report["restored"] = composition.nudgeHost.preferences.voice == voiceBefore
             && composition.nudgeHost.preferences.reducedInterruption == reducedBefore
+            && composition.nudgeHost.quietHours.window == quietBefore
+            && FocusStore
+                .interventionPreferences(in: composition.modelContainer.mainContext)
+                .quietHours == quietBefore
         return report
     }
 

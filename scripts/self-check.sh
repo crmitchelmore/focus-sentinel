@@ -1138,9 +1138,42 @@ check(
     "the Intervention pane's Reduced-Interruption control reaches the running nudge loop",
     (intervention_drive.get("reducedProbe"), intervention_drive.get("reducedAfter")),
 )
+# **Quiet hours, at all three depths** (focus-z7g). The pane's "Set a window" button emitted an
+# action the composition root discarded with `break`, so the control redrew "Off" for ever and
+# gate 8 of the twelve-gate suppression stack was dead code in the shipping app. Three readings
+# because two of them were separately capable of being green over a dead control: the loop's own
+# field, the NudgeSurroundings the stack is handed, and the row on disk.
+check(
+    intervention_drive.get("quietHoursReachedTheLoop") is True,
+    "the Intervention pane's Quiet-hours control reaches the running nudge loop",
+    (intervention_drive.get("quietHoursProbe"), intervention_drive.get("quietHoursAfter")),
+)
+check(
+    intervention_drive.get("quietHoursReachedTheGate") is True,
+    "the quiet-hours window reaches the surroundings the suppression stack evaluates (gate 8)",
+    (
+        intervention_drive.get("quietHoursProbe"),
+        intervention_drive.get("quietHoursInSurroundings"),
+    ),
+)
+check(
+    intervention_drive.get("quietHoursReachedTheStore") is True,
+    "the quiet-hours window reaches the store, so a window survives a quit",
+    (intervention_drive.get("quietHoursProbe"), intervention_drive.get("quietHoursStored")),
+)
+# Non-vacuity: the probe is the other state from whatever this Mac's store holds, so a sink that
+# ignored the action entirely could not satisfy the three readings above by coincidence.
+check(
+    intervention_drive.get("quietHoursProbe") != intervention_drive.get("quietHoursStoredBefore"),
+    "the quiet-hours probe drove the window to the state it was not already in",
+    (
+        intervention_drive.get("quietHoursProbe"),
+        intervention_drive.get("quietHoursStoredBefore"),
+    ),
+)
 check(
     intervention_drive.get("restored") is True,
-    "the intervention probe put both preferences back",
+    "the intervention probe put all three preferences back, including the person's stored window",
     intervention_drive.get("restored"),
 )
 
