@@ -92,6 +92,35 @@ public enum NudgeSurface: String, Sendable, CaseIterable, Codable, Hashable {
         }
     }
 
+    /// **Whether a nudge placed here has reached the person the moment it lands** (focus-xix,
+    /// focus-kby).
+    ///
+    /// | surface | reaches somebody on landing | what happens when it lands |
+    /// |---|---|---|
+    /// | `panel` | **yes** | the window is ordered front |
+    /// | `menuBar` | **yes** | the glyph is redrawn on the next refresh |
+    /// | `notification` | **yes** | the banner is posted |
+    /// | `popoverBadge` | no | it is behind a click nobody has made yet |
+    ///
+    /// The badge is the only `false`, and it is `false` for **both** kinds of nudge. That is the
+    /// whole of this predicate's job: the question path had the rule and the accusation path did
+    /// not, so a rung routed here spent one of the day's six accusations, one of its eight
+    /// interruptions and a 600-second cooldown on somebody who had been shown nothing but the
+    /// glyph they already had. `NudgeHost` now asks *this* rather than remembering it twice, and
+    /// `NudgeHost.popoverPresented()` is the one moment either kind may be counted.
+    ///
+    /// **Deliberately not `holdsTheInterruptionSlot` re-spelled**, though the two agree in three
+    /// of four cells. The glyph is on screen the moment it lands *and* occupies no screen a
+    /// second nudge could want, so the cells differ exactly where the two questions do. One
+    /// predicate for both would make *"the person saw it"* and *"the screen is busy"* one
+    /// statement, which is the identity focus-k42 spent a round undoing.
+    public var reachesThePersonOnLanding: Bool {
+        switch self {
+        case .panel, .menuBar, .notification: true
+        case .popoverBadge: false
+        }
+    }
+
     /// Whether this surface belongs to the application itself rather than to the system.
     ///
     /// The three in-app surfaces are what make the `notification-denied` gate stage possible:

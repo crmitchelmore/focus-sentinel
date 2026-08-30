@@ -140,10 +140,10 @@ struct NudgeHostQuestionTests {
         try MenuBarStage.open(
             fixture.menuBar,
             showing: MenuBarPresentation(status: .uncertain, pendingQuery: fixture.host.pendingPopoverQuery),
-            onDidShow: { fixture.host.popoverPresentedTheQuestion() }
+            onDidShow: { fixture.host.popoverPresented() }
         )
 
-        #expect(fixture.menuBar.isShowingQuery)
+        #expect(fixture.menuBar.isShowing(.query))
         #expect(fixture.host.deliveredCount == 1, "the popover opened on the question and nothing counted it")
         let rows = try fixture.interventions()
         #expect(rows.count == 1)
@@ -183,7 +183,7 @@ struct NudgeHostQuestionTests {
     /// **…and it is delivered exactly once, however many times the popover is opened on it**
     /// (focus-22m, S5).
     ///
-    /// `popoverPresentedTheQuestion()` is wired to `MenuBarController.onPopoverDidShow`, which
+    /// `popoverPresented()` is wired to `MenuBarController.onPopoverDidShow`, which
     /// fires on **every** open. The guard that makes a second open cost nothing is
     /// `openQuestionReadingAtAsk != .readable`, and with it removed a person who closed the
     /// popover and opened it again would have their one question delivered twice: two rows, two
@@ -205,7 +205,7 @@ struct NudgeHostQuestionTests {
             showing: MenuBarPresentation(
                 status: .uncertain, pendingQuery: fixture.host.pendingPopoverQuery
             ),
-            onDidShow: { fixture.host.popoverPresentedTheQuestion() }
+            onDidShow: { fixture.host.popoverPresented() }
         )
         try #require(fixture.host.deliveredCount == 1)
 

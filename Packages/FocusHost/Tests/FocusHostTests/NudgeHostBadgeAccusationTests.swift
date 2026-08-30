@@ -174,6 +174,272 @@ struct NudgeHostBadgeAccusationTests {
         #expect(fixture.host.pendingPopoverAccusation == nil)
     }
 
+    // MARK: - The badge is an invitation, not a delivery (focus-xix)
+
+    /// **A rung sitting behind a click has cost the person nothing** (focus-xix, R-81).
+    ///
+    /// The defect, as the person met it. `accuse(…)`'s `.menuBar, .popoverBadge` branch called
+    /// `delivered(…)` unconditionally, and `delivered(…)` did three things in one breath: advanced
+    /// the ladder, spent `fatigue.reduce(.delivered(.accusation))`, and wrote a
+    /// `disposition = .delivered` row. Nothing on screen changed — `MenuBarController.redraw`
+    /// draws from the status and the timer alone, `pendingAccusation` reaches the button by no
+    /// path, and `announceStatusChange` does not fire because the ambient rung already set
+    /// `.unrelated`. So the climb from rung 1 to rung 2 was silent, invisible **and**
+    /// unannounced, while it spent one of `dailyAccusationCap`'s six and one of
+    /// `dailyInterruptionCap`'s eight and armed a 600-second cooldown.
+    ///
+    /// Measured on the shipping loop before the repair: `accusationsToday=2`,
+    /// `interruptionsToday=2`, two rows both `disposition=delivered`, popover never opened. Three
+    /// drift episodes exhausted the day, and `InterventionSettingsView` printed *"Nudges today
+    /// 3 / 6"* back to somebody who had been shown a glyph.
+    ///
+    /// **What must still be true**, and is asserted here so the repair cannot be "stop counting
+    /// it" — the mutation that produced four failures, all `currentRung == .ambient`: the rung has
+    /// still *landed*. The ladder is on it, the badge is carrying its answers, and the popover has
+    /// something to draw. Landing and being seen are two facts, and only the second is a spend.
+    @Test(
+        "a rung waiting in an unopened badge spends nothing",
+        arguments: QuietRoute.allCases
+    )
+    func aBadgeRungBehindAClickIsNotCounted(via route: QuietRoute) throws {
+        let fixture = try NudgeHostFixture()
+        defer { fixture.tearDown() }
+        fixture.wireMenuBarToTheLoop()
+
+        Self.climbToTheBadge(fixture, via: route)
+
+        try #require(!fixture.menuBar.isPopoverShown, "the popover opened without anybody clicking")
+        // It landed: the ladder is on the top rung and the badge is carrying its answers.
+        #expect(fixture.host.currentRung == .panel, "the rung did not land")
+        #expect(
+            fixture.host.pendingPopoverAccusation != nil,
+            "the badge has nothing to draw, so the rung reached no surface at all"
+        )
+
+        // And it has cost the person nothing. One delivery — the ambient glyph, which really is
+        // on screen — and not the badge behind the click.
+        #expect(
+            fixture.host.deliveredCount == 1,
+            "\(route.rawValue): a rung nobody has been shown was counted as delivered"
+        )
+        let budget = fixture.host.todaysUsage()
+        #expect(
+            budget.accusationsToday == 1,
+            "the day's accusation budget was charged for a badge nobody opened"
+        )
+        #expect(budget.interruptionsToday == 1)
+        let badgeRows = try fixture.interventions().filter { $0.surface == .popoverBadge }
+        #expect(
+            badgeRows.isEmpty,
+            "a row was written for a badge nobody opened: \(badgeRows.map(\.disposition.rawValue))"
+        )
+    }
+
+    /// **Opening the popover is what counts it** — the accusation's
+    /// `popoverPresentedTheQuestion()`, which did not exist.
+    ///
+    /// Driven through the wire the composition root actually installs: the status item is clicked,
+    /// `MenuBarController.onPopoverDidShow` fires, and `NudgeHost.popoverPresented()` is the only
+    /// thing that turns the invitation into a delivery. Nothing here calls `delivered(…)` by
+    /// another name.
+    @Test("the rung is counted at the moment the popover shows it, and only then")
+    func openingThePopoverCountsTheBadgeRung() throws {
+        let fixture = try NudgeHostFixture()
+        defer { fixture.tearDown() }
+        fixture.wireMenuBarToTheLoop()
+
+        Self.climbToTheBadge(fixture, via: .reducedInterruption)
+        try #require(fixture.host.todaysUsage().accusationsToday == 1)
+
+        // The click. `onDidShow` is `nil` so the stage leaves the shipping wire alone.
+        try MenuBarStage.open(
+            fixture.menuBar,
+            showing: NudgeHostFixture.menuBarPresentation(of: fixture.host)
+        )
+        NudgeHostFixture.settle()
+
+        #expect(fixture.menuBar.isShowing(.accusation), "the popover is not showing the rung")
+        #expect(fixture.host.deliveredCount == 2, "the rung the person is looking at was not counted")
+        #expect(fixture.host.todaysUsage().accusationsToday == 2)
+
+        let badge = try #require(
+            try fixture.interventions().first { $0.surface == .popoverBadge },
+            "no row was written for the rung the person opened the popover onto"
+        )
+        #expect(badge.kind == .accusation)
+        #expect(badge.disposition == .delivered)
+        #expect(badge.rung == .panel)
+        #expect(badge.subject == Self.subject)
+    }
+
+    /// **Looked at twice is still one delivery.**
+    ///
+    /// The guard that makes the repair safe to call from three places — the landing, the redraw
+    /// and the click — rather than from exactly one that somebody has to remember. Without it the
+    /// fix would trade a spend nobody earned for a spend charged once per glance.
+    @Test("a rung is counted once however many times the popover is opened on it")
+    func theBadgeRungIsCountedOnce() throws {
+        let fixture = try NudgeHostFixture()
+        defer { fixture.tearDown() }
+        fixture.wireMenuBarToTheLoop()
+
+        Self.climbToTheBadge(fixture, via: .reducedInterruption)
+        try MenuBarStage.open(
+            fixture.menuBar,
+            showing: NudgeHostFixture.menuBarPresentation(of: fixture.host)
+        )
+        NudgeHostFixture.settle()
+        try #require(fixture.host.todaysUsage().accusationsToday == 2)
+
+        fixture.menuBar.closePopover()
+        NudgeHostFixture.settle()
+        try MenuBarStage.open(
+            fixture.menuBar,
+            showing: NudgeHostFixture.menuBarPresentation(of: fixture.host),
+            install: false
+        )
+        NudgeHostFixture.settle()
+        // And the loop is asked directly, twice more, which is what a redraw does.
+        fixture.host.popoverPresented()
+        fixture.host.popoverPresented()
+
+        #expect(
+            fixture.host.todaysUsage().accusationsToday == 2,
+            "the same rung was charged again for a second look"
+        )
+        let badgeRows = try fixture.interventions().filter { $0.surface == .popoverBadge }
+        #expect(badgeRows.count == 1, "one rung, \(badgeRows.count) rows")
+    }
+
+    /// **R-81's own worry cannot happen here, and this is why the ladder may advance on a landing.**
+    ///
+    /// R-81 forbids escalating *through* a rung nobody saw, because the person would meet the
+    /// loudest thing the app can do having never been shown the quietest. The badge cannot produce
+    /// that: `SurfaceRouter` reaches `.popoverBadge` for an accusation from the `.panel` rung
+    /// alone, and `.panel` is the top — U-2 deleted the rung above it. So the advance this repair
+    /// keeps carries the ladder past nothing, and the part of R-81 that is still at stake — the
+    /// budget, the fatigue run and the ledger — is exactly the part the repair holds back.
+    ///
+    /// Stated as an assertion rather than as a comment, because it is the load-bearing half of
+    /// the argument and it would stop being true the moment focus-5ab puts a rung above `.panel`.
+    @Test("no rung sits above the one the badge carries, so an unopened badge escalates past nothing")
+    func theBadgeCarriesTheTopRung() throws {
+        #expect(
+            LadderRung.Kind.panel.next == nil,
+            "a rung above the panel exists, so an unseen badge could now escalate through R-81"
+        )
+        for reduced in [true, false] {
+            let route = SurfaceRouter.route(
+                rung: .ambient,
+                presentation: .notPresenting,
+                media: .idle,
+                reducedInterruption: reduced,
+                menuBarVisible: true,
+                voice: .silentVisual
+            )
+            #expect(
+                route.surface != .popoverBadge,
+                "the ambient rung now reaches the badge, so a lower rung can go unseen"
+            )
+        }
+    }
+
+    // MARK: - The badge draws the rung's own commitment (focus-xix, focus-lmo)
+
+    /// **The badge keeps its sentence when the commitment can no longer be read.**
+    ///
+    /// `pendingPopoverAccusation` carried a guard its twin does not: `guard let commitment =
+    /// activeCommitment() else { return nil }`, taken against a **live** reading of the
+    /// surroundings rather than against the value the rung was raised with. Every redraw of an
+    /// open popover re-runs it, so the one taken after the commitment went away answered `nil` —
+    /// the badge's five answers vanished mid-nudge, on a surface the person was looking at, with
+    /// the rung still open and `resolve(…)` still willing to write a correction nothing was
+    /// offering.
+    ///
+    /// The panel never had this failure because its presentation is built once, from the
+    /// commitment `accuse(…)` was handed. The rung carries that commitment now, so both surfaces
+    /// are drawn from one value and the second reading is gone rather than guarded.
+    @Test("the badge still draws its rung when the commitment can no longer be read")
+    func theBadgeDrawsTheRungsOwnCommitment() throws {
+        let fixture = try NudgeHostFixture()
+        defer { fixture.tearDown() }
+
+        Self.climbToTheBadge(fixture, via: .reducedInterruption)
+        let raised = try #require(fixture.host.pendingPopoverAccusation)
+        #expect(raised.task == fixture.commitment.intent)
+
+        // The surroundings stop naming a commitment — a completion, a pause between two
+        // judgements, anything that empties `PriorityHost.activeCommitment` between the landing
+        // and the next redraw.
+        fixture.host.surroundings = { [clock = fixture.clock] in
+            NudgeHostFixture.surroundings(monotonic: clock.elapsed, commitment: nil)
+        }
+
+        let redrawn = try #require(
+            fixture.host.pendingPopoverAccusation,
+            "the badge went blank on a second reading of the commitment, mid-nudge"
+        )
+        #expect(
+            redrawn.task == fixture.commitment.intent,
+            "the badge redrew under a different task from the one the correction will be keyed to"
+        )
+        #expect(redrawn.subject?.identifier == Self.subject)
+    }
+
+    // MARK: - Nothing is left drawn that the loop is not holding (focus-v0u's other half)
+
+    /// **A rung that leaves the badge takes the popover's answers with it.**
+    ///
+    /// `forgetOpenRung()` carried the redraw and the two assignments in `accuse(…)` did not, so a
+    /// rung that was on the badge and was *replaced* — by a fresh entry rung for a different
+    /// subject, which is what `LadderMachine.arrive(_:)` produces — left the popover drawing the
+    /// old accusation about the old application. A click on it would not have been dropped: it
+    /// would have reached `resolve(…)` and been applied to the rung this host is holding **now**,
+    /// writing a rule about the wrong application.
+    ///
+    /// Every write of `openRung` goes through `setOpenRung(_:)`, which redraws whenever the
+    /// badge's contents change in either direction.
+    @Test("a rung replaced on the badge stops being offered there")
+    func aReplacedBadgeRungStopsBeingOffered() throws {
+        let fixture = try NudgeHostFixture()
+        defer { fixture.tearDown() }
+        fixture.wireMenuBarToTheLoop()
+
+        Self.climbToTheBadge(fixture, via: .reducedInterruption)
+        try Self.openThePopoverOnTheBadge(fixture)
+        try #require(fixture.menuBar.isShowing(.accusation))
+
+        // A different application, once the mandate cooldown has passed — otherwise the decider
+        // is silent and nothing is replaced, which would make this test pass by measuring
+        // nothing. The ladder resets to `.idle` for a new subject and re-enters at the ambient
+        // glyph, so the badge's rung is replaced by one on the menu bar.
+        fixture.clock.advance(by: RelevancePolicy.mandateCooldown + .seconds(1))
+        fixture.host.consider(
+            NudgeHostFixture.unrelatedJudgement(subject: "com.chrismitchelmore.FocusOtherApp")
+        )
+        NudgeHostFixture.settle()
+
+        try #require(
+            fixture.host.pendingPopoverAccusation == nil,
+            "the rung is still on the badge, so this proves nothing about the redraw"
+        )
+        #expect(
+            !fixture.menuBar.isShowing(.accusation),
+            """
+            the popover is still offering answers for a rung the loop has replaced; a click on \
+            them would be written against the new one
+            """
+        )
+    }
+
+    static func openThePopoverOnTheBadge(_ fixture: NudgeHostFixture) throws {
+        try MenuBarStage.open(
+            fixture.menuBar,
+            showing: NudgeHostFixture.menuBarPresentation(of: fixture.host)
+        )
+        NudgeHostFixture.settle()
+    }
+
     /// **A rung on the panel is not published to the badge**, so the popover cannot draw an
     /// accusation the router sent somewhere else.
     ///

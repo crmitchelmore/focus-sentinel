@@ -150,7 +150,7 @@ struct CompositionRootWireTests {
             install: false
         )
 
-        #expect(root.menuBar.isShowingQuery)
+        #expect(root.menuBar.isShowing(.query))
         #expect(
             root.nudgeHost.deliveredCount == 1,
             "the popover opened on the question and nothing in the programme told the loop"

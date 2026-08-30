@@ -71,6 +71,21 @@ public struct MenuBarSnooze: Sendable, Equatable, Hashable, Identifiable {
     }
 }
 
+/// **The two kinds of nudge the popover can be carrying** (focus-xix).
+///
+/// A named, `CaseIterable` pair rather than two `Bool`s read at each call site, because the
+/// question half of every reading in this file existed and the accusation half did not: the loop
+/// could ask *"is the popover showing the question?"* and had no way at all to ask the same about
+/// a rung — so a rung routed to the badge was counted as delivered to somebody who had not
+/// clicked. `allCases` is what makes the next reading impossible to write for one and forget for
+/// the other.
+public enum MenuBarNudge: String, Sendable, CaseIterable, Codable, Hashable {
+    /// U-1's question — *"is this part of it?"* — with its answers.
+    case query
+    /// A ladder rung, with the panel's whole correction economy.
+    case accusation
+}
+
 /// **What the menu bar draws**, as one value (R-91, F-82, F-83, F-84).
 ///
 /// The controller holds no model and reads no store: the composition root projects this and
@@ -145,6 +160,22 @@ public struct MenuBarPresentation: Sendable, Equatable {
         self.band = band
         self.sensingPaused = sensingPaused
         self.differentiateWithoutColor = differentiateWithoutColor
+    }
+
+    /// **Whether this presentation is carrying one kind of nudge** (focus-xix).
+    ///
+    /// One function over `MenuBarNudge` rather than two properties, so `carriedNudges` below and
+    /// every reading built on it are exhaustive by construction.
+    public func isCarrying(_ nudge: MenuBarNudge) -> Bool {
+        switch nudge {
+        case .query: pendingQuery != nil
+        case .accusation: pendingAccusation != nil
+        }
+    }
+
+    /// Every kind of nudge this presentation is carrying.
+    public var carriedNudges: Set<MenuBarNudge> {
+        Set(MenuBarNudge.allCases.filter(isCarrying))
     }
 
     /// The span the menu-bar timer counts.
@@ -251,9 +282,14 @@ public final class MenuBarController {
 
     /// **The popover has opened, or has just been handed something new to show.**
     ///
-    /// Wired by the composition root, because a question routed to the badge has reached nobody
+    /// Wired by the composition root, because a nudge routed to the badge has reached nobody
     /// until this fires: the popover opens **only** when a person clicks the status item, and
     /// nothing else in the programme can tell the nudge loop that the click happened (focus-kby).
+    ///
+    /// **It fires for a rung as well as for a question** (focus-xix). It used to fire on
+    /// `pendingQuery` alone, which is half of what the badge carries — so the accusation half of
+    /// the loop had no moment at which it could learn it had been looked at, and counted itself
+    /// delivered on landing instead.
     public var onPopoverDidShow: (() -> Void)?
 
     private var statusItem: NSStatusItem?
@@ -328,7 +364,7 @@ public final class MenuBarController {
 
     /// Hand the item a new state. Redraws only what changed.
     public func update(_ presentation: MenuBarPresentation, traits: AppearanceTraits? = nil) {
-        let hadQuery = self.presentation.pendingQuery != nil
+        let carriedBefore = self.presentation.carriedNudges
         self.presentation = presentation
         if let traits {
             self.traits = traits
@@ -343,9 +379,12 @@ public final class MenuBarController {
         redraw(force: false)
         guard popover.isShown else { return }
         popover.contentViewController = popoverController()
-        // A question that arrived while the popover was already open is a question the person is
+        // A nudge that arrived while the popover was already open is a nudge the person is
         // looking at, and the loop is told for the same reason it is told about an opening.
-        if !hadQuery, presentation.pendingQuery != nil { onPopoverDidShow?() }
+        //
+        // **Either kind** (focus-xix). Set subtraction rather than a pair of `Bool`s, so a rung
+        // arriving beside a question that was already there still counts as something new.
+        if !presentation.carriedNudges.subtracting(carriedBefore).isEmpty { onPopoverDidShow?() }
     }
 
     private func redraw(force: Bool) {
@@ -438,13 +477,21 @@ public final class MenuBarController {
 
     public var isPopoverShown: Bool { popover.isShown }
 
-    /// **Whether a question is on screen in the popover right now** (focus-kby, U-1).
+    /// **Whether one kind of nudge is on screen in the popover right now** (focus-kby, focus-xix,
+    /// U-1).
     ///
     /// Both halves are load-bearing and both were knowable and unread: a popover that is open
-    /// but showing snoozes is not showing a question, and a question in a popover nobody has
-    /// opened is a question nobody has seen. This is the whole of the badge route's readability
-    /// reading, and the nudge loop writes no receipt about a badge question without it.
-    public var isShowingQuery: Bool { popover.isShown && presentation.pendingQuery != nil }
+    /// but showing snoozes is not showing a nudge, and a nudge in a popover nobody has opened is
+    /// a nudge nobody has seen. This is the whole of the badge route's readability reading, and
+    /// the nudge loop counts no badge delivery without it.
+    ///
+    /// **It takes the kind as an argument**, because it used to exist for the question alone
+    /// (`isShowingQuery`, ten call sites) and not at all for a rung (zero) — which is precisely
+    /// the shape of focus-xix: the loop could not ask whether the accusation had been looked at,
+    /// so it assumed.
+    public func isShowing(_ nudge: MenuBarNudge) -> Bool {
+        popover.isShown && presentation.isCarrying(nudge)
+    }
 
     public func closePopover() {
         popover.performClose(nil)

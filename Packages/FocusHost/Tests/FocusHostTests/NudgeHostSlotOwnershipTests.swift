@@ -380,7 +380,7 @@ struct NudgeHostSlotOwnershipTests {
     /// The guard that had to be added when ownership stopped answering identity: with the badge
     /// question no longer holding the slot, `slot.offering(warrant)` says *admitted* while one
     /// waits. Raising the second would strand the badge the menu bar is already drawing and leave
-    /// `popoverPresentedTheQuestion()` to deliver a question about a different subject.
+    /// `popoverPresented()` to deliver a question about a different subject.
     @Test("a second question is not raised over one still waiting in the badge")
     func aPendingBadgeQuestionIsNotSilentlyReplaced() throws {
         let fixture = try NudgeHostFixture()

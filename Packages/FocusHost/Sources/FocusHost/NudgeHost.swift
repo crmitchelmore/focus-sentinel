@@ -186,7 +186,7 @@ final class NudgeHost {
     /// `InterventionLog.budget(on:priorityID:)`, summed from persisted rows on `spendsBudget`, and
     /// it is the only figure any cap is decided by (R-83).
     ///
-    /// They part company at exactly one place, deliberately: `undeliverOpenRecord(…)` takes a
+    /// They part company at exactly one place, deliberately: `undeliverRecord(…)` takes a
     /// delivery off the budget when a rung is stranded or a question's answers go out of reach,
     /// and does **not** decrement `deliveredCount` — because the app really did put something on
     /// the screen, and a counter of attempts that forgot it would be describing a different day
@@ -194,8 +194,6 @@ final class NudgeHost {
     private(set) var deliveredCount = 0
     private(set) var deferredCount = 0
 
-    /// The log row for whatever is on screen, so the person's answer can complete it.
-    private var openRecordID: UUID?
 
     /// **The question on screen, as one value** (focus-zrs).
     ///
@@ -218,7 +216,16 @@ final class NudgeHost {
         /// because the panel is sticky (`hidesOnDeactivate` is `false`, R-89) and a person can
         /// commit to something new while a question waits. It is the key the receipt, the learned
         /// rule and every deferral row that stands in for a receipt are written against.
-        let priorityID: UUID
+        ///
+        /// **Both halves of it, because the badge draws the other half** (focus-xix). It was the
+        /// `UUID` alone, so `pendingPopoverQuery` had to fetch the sentence again from a live
+        /// reading — `activeCommitment()?.intent ?? ""` — and a popover redrawn after the
+        /// commitment had gone drew the question under an empty task. The key and the sentence
+        /// are one fact about one commitment, and a value that carries one of them is the shape
+        /// focus-lmo condemned.
+        let commitment: ActiveCommitment
+        /// The key everything this question writes is scoped to.
+        var priorityID: UUID { commitment.id }
         let askedAt: Date
         /// **Which surface the question went to**, and, below, what that surface could be *proven*
         /// to show (focus-kby, U-1). Both, rather than one `Bool`, because the `Bool` was the
@@ -241,6 +248,11 @@ final class NudgeHost {
         /// The answers the question is offering, by `rawValue`, so a reading taken as it ends asks
         /// about the same set the panel was drawn with.
         var actions: [String] = []
+        /// **The log row this question's delivery wrote** (focus-xix), so the person's answer
+        /// completes *this* intervention rather than whichever row was written most recently.
+        /// `nil` until the question has actually reached somebody, which for the badge is the
+        /// moment the popover shows it.
+        var recordID: UUID?
 
         /// **Whether this question is occupying the thing the slot is about: an answerable
         /// screen** — `OpenRung.holdsTheInterruptionSlot`'s twin, for the twin reason.
@@ -305,7 +317,18 @@ final class NudgeHost {
         /// session-lived "not this time" rule and the deferral row a display change writes when it
         /// strands the rung are all keyed to this rather than to whatever the store happens to
         /// call active at the moment of the click (focus-lmo).
-        let priorityID: UUID
+        ///
+        /// **Both halves, and the second half is a defect this fixes** (focus-xix). The panel's
+        /// `AccusationPresentation` is built from the commitment `accuse(…)` was handed; the
+        /// badge's was built by `pendingPopoverAccusation` from a **second, live** reading, which
+        /// meant the same rung could name one task on one surface and another task on the other,
+        /// and — because that property guards `activeCommitment()` with a `return nil` its twin
+        /// does not have — the badge simply went blank on any redraw taken after the commitment
+        /// had gone. A rung that reached a surface knows what it is about, because it cannot be
+        /// constructed without one.
+        let commitment: ActiveCommitment
+        /// The key everything this rung writes is scoped to.
+        var priorityID: UUID { commitment.id }
         /// **The surface this rung actually reached** (focus-k42).
         ///
         /// Not optional, and that is the whole repair. An `OpenRung` is constructed only at a
@@ -317,6 +340,25 @@ final class NudgeHost {
         /// Empty when the live rung is not on the panel, which is every surface that has no
         /// actions to be out of reach.
         var panelActions: [String] = []
+        /// **What the surface it landed on could be *proven* to show** — `OpenQuestion`'s
+        /// `readingAtAsk`, on the rung (focus-xix).
+        ///
+        /// | surface | readable means |
+        /// |---|---|
+        /// | `panel` | on screen, on a display, and every correction in reach |
+        /// | `menuBar` | the glyph is drawn on the next refresh; the router already refused a
+        ///   hidden menu bar |
+        /// | `popoverBadge` | the popover is **open and showing this rung** |
+        ///
+        /// It is the flag that says whether this rung has been counted yet, and it is the same
+        /// flag the question uses for the same reason: `deliverPendingBadgeRung()` refuses to
+        /// count a second time, so an accusation that lands while the popover is already open and
+        /// one the person opens the popover onto are one delivery, not two.
+        var readingAtLanding: SurfaceReadability = .unknowable
+        /// **The log row this rung's delivery wrote** (focus-xix) — `OpenQuestion.recordID`'s
+        /// twin, and for the twin reason: the correction the person presses must complete the
+        /// row for the rung they pressed it on.
+        var recordID: UUID?
         /// **Whether this rung is occupying the thing the slot is about: an answerable screen.**
         ///
         /// R-84a's argument for a single slot is that *"two panels on screen at once is the
@@ -697,14 +739,42 @@ final class NudgeHost {
             // interruption slot. Nothing can ever take an ambient glyph down, and a badge is
             // behind a click nobody has made yet, so a rung that held the slot from either would
             // silence the question affordance for the rest of the session (focus-k42).
-            openRung = OpenRung(rung: rung, priorityID: priorityID, landedOn: surface)
-            delivered(surface: surface, rung: rung, priorityID: priorityID)
-            // **The badge has to be redrawn to carry its answers** (focus-uru). The popover on
-            // screen is a hosting controller built from the presentation the menu bar was last
-            // handed and does not rebuild itself, and `pendingPopoverAccusation` has only just
-            // become non-`nil`. The glyph needs no such thing: the status item's own title and
-            // symbol already follow `currentRung` on the next refresh.
-            if surface == .popoverBadge { onQuestionSurfacesChanged?() }
+            //
+            // **Landing and being seen are two different facts, and this branch used to make
+            // them one** (focus-xix). `delivered(…)` advanced the ladder, spent
+            // `fatigue.reduce(.delivered(.accusation))` and wrote a `disposition = .delivered`
+            // row, unconditionally, for both surfaces. For the badge that is a rung nobody has
+            // been shown: the popover opens only on a click, `MenuBarController.redraw` draws
+            // from the status and the timer alone, and `announceStatusChange` does not fire
+            // because the ambient rung already set `.unrelated`. So the climb from rung 1 to rung
+            // 2 was silent, invisible AND unannounced, while it spent one of the day's six
+            // accusations, one of its eight interruptions and armed a 600-second cooldown — and
+            // the Intervention pane then printed *"Nudges today 3 / 6"* to somebody who had been
+            // shown a glyph.
+            //
+            // The split is `NudgeSurface.reachesThePersonOnLanding`'s, which is the question
+            // path's own rule stated once for both: the ladder is told the rung landed either
+            // way, and the spend and the row wait for `popoverPresented()`.
+            landed(on: surface)
+            setOpenRung(
+                OpenRung(
+                    rung: rung,
+                    commitment: commitment,
+                    landedOn: surface,
+                    readingAtLanding: surface.reachesThePersonOnLanding ? .readable : .unknowable
+                )
+            )
+            if surface.reachesThePersonOnLanding {
+                deliveredRung(surface: surface, rung: rung, priorityID: priorityID)
+            } else {
+                // **The badge may already be open** (focus-uru's redraw, focus-xix's reading).
+                // `setOpenRung(…)` has just redrawn the popover — which is what makes
+                // `pendingPopoverAccusation` reach the surface at all — so this is the first
+                // moment the reading is worth taking. It is idempotent: if the redraw itself
+                // reached `onPopoverDidShow`, this call finds the rung already counted and
+                // refuses.
+                deliverPendingBadgeRung()
+            }
 
         case .panel:
             panel.update(
@@ -750,13 +820,17 @@ final class NudgeHost {
             }
             // Landed, answerable, and therefore genuinely occupying the one interruption slot —
             // the case R-84a is actually about.
-            openRung = OpenRung(
-                rung: rung,
-                priorityID: priorityID,
-                landedOn: .panel,
-                panelActions: presentation.offeredActionIdentifiers
+            landed(on: .panel)
+            setOpenRung(
+                OpenRung(
+                    rung: rung,
+                    commitment: commitment,
+                    landedOn: .panel,
+                    panelActions: presentation.offeredActionIdentifiers,
+                    readingAtLanding: .readable
+                )
             )
-            delivered(surface: .panel, rung: rung, priorityID: priorityID)
+            deliveredRung(surface: .panel, rung: rung, priorityID: priorityID)
 
         case .notification:
             // **No rung routes here any more** (U-2). The notification was the recommitment rung's
@@ -796,7 +870,7 @@ final class NudgeHost {
         // does *not* hold the slot, because it has reached nobody and an accusation must not wait
         // for it. That is the right answer for the accusation and the wrong one here: overwriting
         // `openQuestion` below would strand the badge the menu bar is already drawing, drop the
-        // subject the person was about to be asked about, and leave `popoverPresentedTheQuestion()`
+        // subject the person was about to be asked about, and leave `popoverPresented()`
         // to deliver a question about something else. One question at a time is a fact about this
         // object, so it is asked of this object.
         guard openQuestion == nil else { return }
@@ -805,7 +879,7 @@ final class NudgeHost {
         // (focus-lmo, focus-zrs).
         openQuestion = OpenQuestion(
             warrant: warrant,
-            priorityID: priorityID,
+            commitment: commitment,
             askedAt: dateProvider.now
         )
         forgetOpenRung()
@@ -894,19 +968,35 @@ final class NudgeHost {
                 )
                 return
             }
+            // On screen, and every answer in reach: the panel is the surface that reaches
+            // somebody the moment it lands, so this is both the landing and the delivery.
+            deliverQuestion(
+                surface: .panel,
+                warrant: warrant,
+                priorityID: priorityID,
+                now: surroundings.monotonic
+            )
+            return
 
         case .popoverBadge:
             // **The badge is an invitation, not a delivery** (focus-kby).
             //
             // The popover is drawn by the composition root's menu-bar refresh, which reads
             // `pendingPopoverQuery` below, and it opens **only when a person clicks the status
-            // item**. So a question routed here has reached nobody yet: the reading is taken
-            // now, and taken again when the popover actually opens
-            // (`popoverPresentedTheQuestion()`). Until then nothing is counted and nothing is
-            // written, which is what stops a question burning its one asking behind a click that
-            // opens it.
-            openQuestion?.readingAtAsk = popoverReadability()
-            guard openQuestion?.readingAtAsk == .readable else { return }
+            // item**. So a question routed here has reached nobody yet: nothing is counted and
+            // nothing is written until `popoverPresented()` says the popover is showing it, which
+            // is what stops a question burning its one asking behind a click that opens it.
+            //
+            // **The redraw is the rung's** (focus-xix, focus-uru). `accuse(…)` has always asked
+            // the composition root to redraw when a rung reached the badge, because the popover
+            // on screen is a hosting controller built from the presentation the menu bar was last
+            // handed. The question needed it for the same reason and never had it: a question
+            // raised while the popover was already open was invisible in it until the next
+            // five-second refresh, and could not be counted until then either. One shape now, for
+            // both.
+            onQuestionSurfacesChanged?()
+            deliverPendingBadgeQuestion()
+            return
 
         case .menuBar, .notification:
             // A question is never a notification (R-82), and the glyph has no answer affordance.
@@ -920,13 +1010,6 @@ final class NudgeHost {
             )
             return
         }
-
-        deliverQuestion(
-            surface: surface,
-            warrant: warrant,
-            priorityID: priorityID,
-            now: surroundings.monotonic
-        )
     }
 
     /// The bookkeeping of a question that has actually reached somebody.
@@ -941,7 +1024,7 @@ final class NudgeHost {
     ) {
         deliveredCount += 1
         fatigue.reduce(.delivered(.query), now: now)
-        openRecordID = write(
+        openQuestion?.recordID = write(
             InterventionEvent(
                 kind: .query,
                 subject: warrant.subject.identifier,
@@ -953,16 +1036,39 @@ final class NudgeHost {
         )
     }
 
-    /// **The popover has opened, and the question is on it** (focus-kby).
+    /// **The popover has opened, and whatever it is carrying is now in front of somebody**
+    /// (focus-kby, focus-xix).
     ///
     /// Wired from the composition root, which is the only object that knows the menu bar and the
-    /// nudge loop both exist. This is the moment a badge question stops being an invitation and
-    /// becomes an asking — and it is the only moment at which one may be counted as delivered.
-    func popoverPresentedTheQuestion() {
+    /// nudge loop both exist. This is the moment a badge nudge stops being an invitation and
+    /// becomes a delivery — and it is the only moment at which one may be counted.
+    ///
+    /// **It was `popoverPresented()`, and the name was the defect** (focus-xix). The
+    /// question got this treatment; the rung got none, so `accuse(…)` counted a badge accusation
+    /// at landing. The fix is not a second function beside this one — parity maintained by hand
+    /// is what produced the bead — it is **one wire and one loop over `MenuBarNudge.allCases`**,
+    /// so a third thing the badge learns to carry cannot be added to one half and forgotten by
+    /// the other. The switch is exhaustive; adding a case stops the build here.
+    func popoverPresented() {
+        for nudge in MenuBarNudge.allCases {
+            switch nudge {
+            case .query: deliverPendingBadgeQuestion()
+            case .accusation: deliverPendingBadgeRung()
+            }
+        }
+    }
+
+    /// Count the badge question, if the popover really is showing it and it has not been counted.
+    ///
+    /// Idempotent, and both of its guards are load-bearing: `readingAtAsk != .readable` is what
+    /// stops a question being delivered twice when the ask itself opened onto a popover that was
+    /// already up, and `badgeReadability(of:)` is what stops one being delivered at all when the
+    /// popover is showing snoozes instead.
+    private func deliverPendingBadgeQuestion() {
         guard let question = openQuestion,
               question.surface == .popoverBadge,
               question.readingAtAsk != .readable,
-              popoverReadability() == .readable
+              badgeReadability(of: .query) == .readable
         else { return }
 
         openQuestion?.readingAtAsk = .readable
@@ -974,12 +1080,51 @@ final class NudgeHost {
         )
     }
 
-    private func delivered(surface: NudgeSurface, rung: LadderRung, priorityID: UUID?) {
-        let now = monotonicClock.elapsed
+    /// Count the badge rung, if the popover really is showing it and it has not been counted.
+    ///
+    /// The twin of the function above, line for line, and its absence was focus-xix.
+    private func deliverPendingBadgeRung() {
+        guard let open = openRung,
+              open.landedOn == .popoverBadge,
+              open.readingAtLanding != .readable,
+              badgeReadability(of: .accusation) == .readable
+        else { return }
+
+        openRung?.readingAtLanding = .readable
+        deliveredRung(
+            surface: .popoverBadge,
+            rung: open.rung,
+            priorityID: open.priorityID
+        )
+    }
+
+    /// **The rung is on the surface it was routed to** — and that is all this says (focus-xix).
+    ///
+    /// The ladder's business, and only the ladder's: `LadderMachine` resolves the attempt it
+    /// recorded in `offer(at:budgetPermits:)` and writes `deliveredAt`, so `currentRung` names the
+    /// rung the popover is actually drawing rather than the one below it.
+    ///
+    /// **Why this is honest for a badge nobody has opened**, when R-81 says a rung nobody could
+    /// see must not advance the ladder: R-81's failure is *"arriving at the loudest rung having
+    /// shown the person nothing"*, and it cannot happen here. `SurfaceRouter` reaches
+    /// `.popoverBadge` from the `.panel` rung alone, `LadderRung.Kind.panel.escalated()` is `nil`,
+    /// and U-2 deleted the rung above it — so this advance can never carry the ladder past
+    /// anything. What R-81 protects that *is* still at stake — the day's budget, the fatigue run
+    /// and the ledger — is exactly what `deliveredRung(…)` holds back until somebody looks.
+    private func landed(on surface: NudgeSurface) {
+        ladder.reduce(.delivery(.delivered(surface)), now: monotonicClock.elapsed)
+    }
+
+    /// The bookkeeping of a rung that has actually reached somebody — `deliverQuestion(…)`'s twin,
+    /// and now a twin in the one respect that matters: it is called from the moment of *reaching*,
+    /// never from the moment of landing.
+    ///
+    /// One function and one call per rung, so "delivered" cannot be recorded twice for a badge
+    /// rung that lands once and is looked at once.
+    private func deliveredRung(surface: NudgeSurface, rung: LadderRung, priorityID: UUID?) {
         deliveredCount += 1
-        ladder.reduce(.delivery(.delivered(surface)), now: now)
-        fatigue.reduce(.delivered(.accusation), now: now)
-        openRecordID = write(
+        fatigue.reduce(.delivered(.accusation), now: monotonicClock.elapsed)
+        openRung?.recordID = write(
             InterventionEvent(
                 kind: .accusation,
                 rung: rung.kind,
@@ -1014,9 +1159,13 @@ final class NudgeHost {
         let now = monotonicClock.elapsed
         let scope = openRung.map(\.rung.mandate).flatMap(CorrectionScope.from)
 
-        // **The rung's own key, not the live pointer** (focus-lmo). Read before `apply(…)`,
-        // which is the function that hands the outcome to whoever writes it.
+        // **The rung's own key and the rung's own row, not the live pointer** (focus-lmo,
+        // focus-xix). Read before `apply(…)`, which is the function that hands the outcome to
+        // whoever writes it. The row is the rung's because the click was on the rung: a badge
+        // question can be delivered and open at the same moment, and the outcome of a correction
+        // belongs to the accusation it corrected.
         let priorityID = openRung?.priorityID
+        let recordID = openRung?.recordID
 
         let outcome = action.outcome(
             scope: scope,
@@ -1026,7 +1175,7 @@ final class NudgeHost {
         apply(outcome, action: action, now: now, priorityID: priorityID)
 
         if let interventionOutcome = Self.outcome(of: action) {
-            complete(interventionOutcome)
+            complete(interventionOutcome, recordID: recordID)
             fatigue.reduce(.accusationResolved(interventionOutcome), now: now)
         }
 
@@ -1126,7 +1275,9 @@ final class NudgeHost {
             )
         }
 
-        complete(.answered)
+        // The question's own row (focus-xix), read off the value that has carried every other
+        // fact about this asking since `ask(…)` built it.
+        complete(.answered, recordID: question.recordID)
         fatigue.reduce(.queryResolved(answer.outcome), now: now)
     }
 
@@ -1224,12 +1375,16 @@ final class NudgeHost {
     /// would count one attempt twice in every counter e09 renders. A fresh row is written only
     /// when there is no open row to turn — a delivery whose write failed, which is the one case
     /// where the alternative is no record at all.
-    private func undeliverOpenRecord(
+    ///
+    /// - Parameter recordID: the row belonging to **this** interruption. Named rather than read
+    ///   off a shared field, for the reason `complete(_:recordID:)` takes one.
+    private func undeliverRecord(
+        _ recordID: UUID?,
         kind: InterruptionKind,
         subject: String?,
         priorityID: UUID?
     ) {
-        guard withdrawOpenRecord() else {
+        guard withdraw(recordID) else {
             record(
                 deferral: .noSurfaceAvailable,
                 kind: kind,
@@ -1245,19 +1400,18 @@ final class NudgeHost {
         )
     }
 
-    /// Take the open row off the day's spend, and forget it.
+    /// Take one named row off the day's spend.
     ///
-    /// The counterpart of `complete(_:)` for an interruption that ended without ever reaching
-    /// anybody. One place, so a path that un-delivers a nudge cannot take it off the ladder and
-    /// leave it on the budget.
+    /// The counterpart of `complete(_:recordID:)` for an interruption that ended without ever
+    /// reaching anybody. One place, so a path that un-delivers a nudge cannot take it off the
+    /// ladder and leave it on the budget.
     ///
     /// - Returns: whether a delivery was actually taken back.
     @discardableResult
-    private func withdrawOpenRecord() -> Bool {
-        guard let id = openRecordID else { return false }
-        openRecordID = nil
+    private func withdraw(_ recordID: UUID?) -> Bool {
+        guard let recordID else { return false }
         do {
-            return try log.withdraw(id)
+            return try log.withdraw(recordID)
         } catch {
             logger.error(
                 "the intervention log refused a withdrawal: \(error.localizedDescription, privacy: .public)"
@@ -1266,19 +1420,22 @@ final class NudgeHost {
         }
     }
 
-    private func complete(_ outcome: InterventionOutcome) {
-        complete(outcome, recordID: openRecordID)
-        openRecordID = nil
-    }
-
-    /// Complete one named row, whichever row happens to be open.
+    /// Complete one named row.
     ///
-    /// Named rather than implicit because the row to complete and the row that is currently
-    /// open are two different facts, and a caller that conflated them wrote an outcome onto the
-    /// wrong intervention (focus-7w3). The caller that needed it then was a preemption — an
-    /// accusation completing the question it had displaced *after* delivery had already moved
-    /// `openRecordID` to its own row. U-2 deleted preemption, and this stays because the
-    /// distinction is what makes the conflation impossible rather than unlikely.
+    /// **There is no unnamed form of this any more** (focus-7w3, focus-xix). It used to have one:
+    /// `complete(_:)` read a single `openRecordID` field, on the assumption that this loop can
+    /// only ever be holding one row. The badge broke that assumption for both kinds of nudge —
+    /// a delivered badge accusation and a delivered badge question can be open at the same time,
+    /// in the same popover, because neither holds the interruption slot — so the field named
+    /// whichever was written **last**. Answering the question then completed the accusation's row
+    /// with `.answered` and left the question's open for ever, and answering the accusation
+    /// completed the question's row with `.corrected`: an outcome written onto an intervention
+    /// nobody performed it on, which is exactly the falsified row focus-7w3 was about, reached by
+    /// a different door.
+    ///
+    /// The row now lives **on** the interruption it belongs to — `OpenQuestion.recordID` and
+    /// `OpenRung.recordID` — so there is no shared field left for two open nudges to fight over,
+    /// and a caller cannot ask for "the open row" because no such thing is offered.
     private func complete(_ outcome: InterventionOutcome, recordID: UUID?) {
         guard let id = recordID else { return }
         do {
@@ -1353,10 +1510,14 @@ final class NudgeHost {
                 it is un-asked rather than counted: \(summary, privacy: .public)
                 """
             )
+            // The row is read off the question before `endOpenQuestion(_:)` forgets it: the id
+            // lives on the question now, so the order of these two lines is load-bearing.
+            let recordID = question.recordID
             endOpenQuestion(.surfaceWentOutOfReach)
             // The delivery is taken off the budget as well as off the screen (focus-mfc), against
             // the question's own key rather than the live pointer (focus-lmo).
-            undeliverOpenRecord(
+            undeliverRecord(
+                recordID,
                 kind: .query,
                 subject: question.warrant.subject.identifier,
                 priorityID: question.priorityID
@@ -1382,7 +1543,8 @@ final class NudgeHost {
         ladder.undeliver(at: monotonicClock.elapsed)
         // The rung's own key, not the live pointer (focus-lmo): this row is a statement about
         // the accusation that was stranded, and that accusation was about one commitment.
-        undeliverOpenRecord(
+        undeliverRecord(
+            open.recordID,
             kind: .accusation,
             subject: open.rung.subject,
             priorityID: open.priorityID
@@ -1453,19 +1615,30 @@ final class NudgeHost {
         )
     }
 
-    /// Forget the rung on the surface, the corrections it was offering, and the notification
-    /// delivery it went out on.
+    /// **The one place `openRung` is written** — `endOpenQuestion(_:)`'s twin, for the twin
+    /// reason (focus-uru, focus-v0u, focus-xix).
     ///
-    /// One assignment, for the reason `endOpenQuestion(_:)` is one: a reading taken
-    /// against a stale action list is a reading of a nudge nobody is looking at, and a delivery
-    /// token that outlived its rung is a banner whose buttons still work.
-    private func forgetOpenRung() {
+    /// The badge's answers go with the rung they belonged to. An open popover still offering
+    /// *"this is relevant"* for a rung this host has forgotten is the accusation half of
+    /// focus-v0u's orphan, and `resolve(…)` would drop the click in a `guard`.
+    ///
+    /// **And replacing a rung is as much a change as forgetting one.** `forgetOpenRung()` had the
+    /// redraw and the two assignments in `accuse(…)` did not — so a rung that was on the badge and
+    /// was replaced by one on the glyph or the panel left the popover drawing the *old*
+    /// accusation, and a click on it would have been applied to the new rung: a correction about
+    /// the wrong application, written under `resolve(…)`'s reading of whatever this host is
+    /// holding now. The redraw fires whenever the badge's contents change in either direction, and
+    /// there is no assignment left that can skip it.
+    private func setOpenRung(_ rung: OpenRung?) {
         let wasOnTheBadge = openRung?.landedOn == .popoverBadge
-        openRung = nil
-        // The badge's answers go with the rung they belonged to (focus-uru). An open popover
-        // still offering "this is relevant" for a rung this host has forgotten is the accusation
-        // half of focus-v0u's orphan, and `resolve(…)` would drop the click in a `guard`.
-        if wasOnTheBadge { onQuestionSurfacesChanged?() }
+        openRung = rung
+        let isOnTheBadge = rung?.landedOn == .popoverBadge
+        if wasOnTheBadge || isOnTheBadge { onQuestionSurfacesChanged?() }
+    }
+
+    /// Forget the rung on the surface and the corrections it was offering.
+    private func forgetOpenRung() {
+        setOpenRung(nil)
     }
 
     /// **A question the person can still see and answer that this host has forgotten** — and it
@@ -1480,7 +1653,7 @@ final class NudgeHost {
         guard openQuestion == nil else { return [] }
         var orphans: [NudgeSurface] = []
         if panel.isVisible, panel.showing == .question { orphans.append(.panel) }
-        if menuBar.isShowingQuery { orphans.append(.popoverBadge) }
+        if menuBar.isShowing(.query) { orphans.append(.popoverBadge) }
         return orphans
     }
 
@@ -1540,20 +1713,24 @@ final class NudgeHost {
             return panel.decisionSurfaceReading(offering: openQuestion?.actions ?? [])
                 .everyActionIsReachable ? .readable : .notReadable
         case .popoverBadge:
-            return popoverReadability()
+            return badgeReadability(of: .query)
         case .menuBar, .notification, nil:
             return .unknowable
         }
     }
 
-    /// **Whether the popover is open and showing this question** (focus-kby).
+    /// **Whether the popover is open and showing one kind of nudge** (focus-kby, focus-xix).
     ///
-    /// `MenuBarController.isPopoverShown` and `isShowingQuery` are both knowable and were both
+    /// `MenuBarController.isPopoverShown` and `isShowing(_:)` are both knowable and were both
     /// unread. A closed popover is `unknowable` rather than `notReadable`: nothing can be
     /// established about a surface that is not on screen, and both answers refuse the write.
-    private func popoverReadability() -> SurfaceReadability {
+    ///
+    /// **One function taking the kind**, rather than one that hard-codes the question. That
+    /// hard-coding was focus-xix's root at this level: the reading existed, the rung had no way
+    /// to ask for it, and the branch that should have taken it assumed instead.
+    private func badgeReadability(of nudge: MenuBarNudge) -> SurfaceReadability {
         guard menuBar.isPopoverShown else { return .unknowable }
-        return menuBar.isShowingQuery ? .readable : .notReadable
+        return menuBar.isShowing(nudge) ? .readable : .notReadable
     }
 
     /// A question that has ended, offered to the ledger.
@@ -1667,10 +1844,11 @@ final class NudgeHost {
         guard let question = openQuestion, question.surface == .popoverBadge else { return nil }
         return QueryPresentation(
             voice: preferences.voice,
-            // The commitment the app is acting under, from the one place that states it. It was
-            // `activeIntent()` — a third read of the priority store, which could name a different
-            // commitment from the one the receipt will be keyed to (focus-zrs).
-            task: activeCommitment()?.intent ?? "",
+            // **The commitment this question was asked under, carried on it** (focus-lmo,
+            // focus-xix). It was `activeCommitment()?.intent ?? ""` — a live reading taken at
+            // redraw time, so the popover could draw the question under a task the receipt will
+            // not be keyed to, or under no task at all.
+            task: question.commitment.intent,
             subject: naming.subject(of: question.warrant.subject),
             reason: question.warrant.reason,
             dwelled: question.warrant.dwelled
@@ -1692,8 +1870,15 @@ final class NudgeHost {
     /// it offers, or which commitment the click will be written against.
     var pendingPopoverAccusation: AccusationPresentation? {
         guard let open = openRung, open.landedOn == .popoverBadge else { return nil }
-        guard let commitment = activeCommitment() else { return nil }
-        return accusationPresentation(for: open.rung, commitment: commitment)
+        // **The rung's own commitment, so a second reading cannot empty the badge** (focus-xix).
+        //
+        // This was `guard let commitment = activeCommitment() else { return nil }` — a guard the
+        // twin above does not carry, taken against a live reading of the surroundings rather than
+        // against the value the rung was raised with. Every redraw of an open popover re-runs it,
+        // so the one taken after the commitment went away answered `nil`: the badge's five
+        // answers vanished mid-nudge, on a surface the person was looking at, with the rung still
+        // open and `resolve(…)` still willing to write a correction nothing was offering.
+        return accusationPresentation(for: open.rung, commitment: open.commitment)
     }
 
     /// What is snoozed right now, for the popover's list and its countdowns.
@@ -1766,7 +1951,10 @@ final class NudgeHost {
         // the app anything, so the question is still unanswered and will be offered again.
         endOpenQuestion(.worldMovedOn)
         forgetOpenRung()
-        openRecordID = nil
+        // The rows go with the values that carried them: there is no shared `openRecordID` left to
+        // clear, and forgetting the question and the rung above **is** forgetting their rows
+        // (focus-xix). It used to be a third line here, and a third line is a third thing a path
+        // can fail to do.
     }
 
     /// The rung the ladder has reached, for the popover.

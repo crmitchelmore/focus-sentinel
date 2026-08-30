@@ -351,13 +351,13 @@ struct MenuBarTests {
         controller.update(MenuBarFixture.presentation(pendingQuery: MenuBarFixture.query))
         #expect(!controller.isPopoverShown)
         #expect(
-            !controller.isShowingQuery,
+            !controller.isShowing(.query),
             "a question in a popover nobody has opened counted as a question somebody read"
         )
 
         // …and neither can an open one with no question in it.
         controller.update(MenuBarFixture.presentation(pendingQuery: nil))
-        #expect(!controller.isShowingQuery)
+        #expect(!controller.isShowing(.query))
     }
 
     /// **The half that must not fire.** A new question arriving while the popover is *closed* is

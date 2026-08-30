@@ -187,6 +187,39 @@ struct NudgeHostFixture {
         }
     }
 
+    /// **The menu bar, joined to the loop the way the composition root joins it** (focus-xix).
+    ///
+    /// `AppComposition.startNudgeLoop()` makes exactly three connections, and a badge test needs
+    /// all three or it is not driving the badge at all:
+    ///
+    /// * `menuBar.onPopoverDidShow` → `NudgeHost.popoverPresented()`, which is the only moment a
+    ///   badge nudge of either kind may be counted;
+    /// * `NudgeHost.onQuestionSurfacesChanged` → a redraw, because the popover on screen is a
+    ///   hosting controller built from the presentation the menu bar was last handed;
+    /// * that redraw taken from the **loop's own projection**, which is what
+    ///   `AppComposition.menuBarPresentation()` builds.
+    ///
+    /// Wired here rather than in each test, because a test that hand-rolled one of the three
+    /// would be proving that its own closure ran — the defect `thePopoverWireReachesTheLoop`
+    /// used to have.
+    func wireMenuBarToTheLoop() {
+        menuBar.onPopoverDidShow = { [host] in host.popoverPresented() }
+        host.onQuestionSurfacesChanged = { [host, menuBar] in
+            menuBar.update(Self.menuBarPresentation(of: host))
+        }
+    }
+
+    /// What `AppComposition.menuBarPresentation()` builds, of the parts a nudge test is about.
+    static func menuBarPresentation(of host: NudgeHost) -> MenuBarPresentation {
+        MenuBarPresentation(
+            status: .unrelated,
+            snoozes: host.activeSnoozes(),
+            pendingQuery: host.pendingPopoverQuery,
+            pendingAccusation: host.pendingPopoverAccusation,
+            rung: host.currentRung
+        )
+    }
+
     /// Take every surface down and the status item out of the menu bar. A test that left one
     /// behind would leave a floating panel on the machine running the gate.
     func tearDown() {
@@ -212,7 +245,7 @@ struct NudgeHostFixture {
 
     static func surroundings(
         monotonic: Duration,
-        commitment: ActiveCommitment,
+        commitment: ActiveCommitment?,
         presentation: PresentationState = .notPresenting,
         media: MediaActivity = .idle,
         menuBarVisible: Bool = true

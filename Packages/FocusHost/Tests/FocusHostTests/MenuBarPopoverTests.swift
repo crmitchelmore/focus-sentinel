@@ -15,7 +15,7 @@ import Testing
 /// reading in `FocusUITests` would be vacuous if it did — so the two assertions it makes about
 /// this route are both taken with the popover **closed**:
 ///
-/// * `isShowingQuery` is `popover.isShown && presentation.pendingQuery != nil`, and both of its
+/// * `isShowing(.query)` is `popover.isShown && presentation.pendingQuery != nil`, and both of its
 ///   cases there have `isShown == false`. Deleting the `pendingQuery` half left the suite green.
 /// * `onPopoverDidShow` was asserted only in the case where it must *not* fire. Deleting the
 ///   call in `togglePopover()` left the suite green, and so did replacing the "a question
@@ -59,7 +59,7 @@ struct MenuBarPopoverTests {
         // status — not a question. A reading that answered `true` here would mark a badge
         // question readable for the whole time it sat behind a click nobody had made.
         #expect(
-            !controller.isShowingQuery,
+            !controller.isShowing(.query),
             "an open popover with no question in it counted as showing one"
         )
         // …and the loop was told the popover opened, which is the only way it can ever learn it.
@@ -77,7 +77,7 @@ struct MenuBarPopoverTests {
             announcements > beforeTheQuestion,
             "a question appeared in an open popover and the loop was never told"
         )
-        #expect(controller.isShowingQuery)
+        #expect(controller.isShowing(.query))
     }
 
     /// The same three wires as one consequence, through the loop that depends on them: a badge
@@ -92,7 +92,7 @@ struct MenuBarPopoverTests {
         try MenuBarStage.open(
             fixture.menuBar,
             showing: MenuBarPresentation(status: .uncertain),
-            onDidShow: { fixture.host.popoverPresentedTheQuestion() }
+            onDidShow: { fixture.host.popoverPresented() }
         )
         #expect(fixture.host.deliveredCount == 0)
 

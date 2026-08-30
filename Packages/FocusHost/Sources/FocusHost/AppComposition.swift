@@ -482,12 +482,15 @@ public final class AppComposition {
     func startNudgeLoop() {
         menuBar.install()
         menuBar.onAction = { [weak self] action in self?.perform(action) }
-        // **A badge question is asked at the moment the popover opens, not before** (focus-kby).
+        // **A badge nudge is delivered at the moment the popover opens, not before** (focus-kby,
+        // focus-xix).
         //
         // The popover opens only on a human click, and the menu bar is the only object that
         // knows the click happened. This is the one wire that lets the nudge loop tell the
-        // difference between a question somebody read and a question sitting behind a click.
-        menuBar.onPopoverDidShow = { [weak self] in self?.nudgeHost.popoverPresentedTheQuestion() }
+        // difference between a nudge somebody read and a nudge sitting behind a click — and it is
+        // **one** wire for both kinds: it was `popoverPresentedTheQuestion()`, so the accusation
+        // half of the badge had no moment at which it could learn it had been looked at.
+        menuBar.onPopoverDidShow = { [weak self] in self?.nudgeHost.popoverPresented() }
         // Read once at launch, and again whenever the settings pane's one sanctioned request
         // returns. `getNotificationSettings` never prompts (P-134), so this costs no permission.
         //
