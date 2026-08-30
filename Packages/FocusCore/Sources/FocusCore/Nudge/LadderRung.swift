@@ -71,7 +71,13 @@ public struct LadderRung: Sendable, Equatable, Hashable {
         /// `.panel` read *"A small panel you can answer"* — so under the Silent-and-visual deck
         /// the row said **"A small panel you can answer │ Menu bar"**, and under reduced
         /// interruption every deck said it beside "The menu-bar popover". The same resource is
-        /// the popover's *"Next nudge: …"* row, which has no second column to correct it.
+        /// the popover's *"Current nudge: …"* row, which has no second column to correct it.
+        ///
+        /// **That row's own label was wrong in the other direction** (focus-7to). It read
+        /// *"Next nudge"* over `LadderState.rung`, which is the rung currently occupied — so the
+        /// popover named a scheduled step beside a rung already on screen, and the ladder
+        /// schedules nothing: `escalated()` below says only what the next rung *would be*, and
+        /// four further facts decide whether it is ever reached.
         ///
         /// A rung is one step of the ladder; where it appears is the router's answer and changes
         /// with the deck, the flag, a running microphone and a hidden menu bar.

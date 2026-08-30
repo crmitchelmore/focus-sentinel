@@ -3146,13 +3146,13 @@
       }
     },
     "shell.menuBar.nudgeRung" : {
-      "comment" : "Label for the accusation ladder's current rung in the menu-bar popover: what the app would do next.",
+      "comment" : "Label for the rung the accusation ladder is on right now, in the menu-bar popover. The step you are on, never a step that is scheduled.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Next nudge"
+            "value" : "Current nudge"
           }
         }
       }

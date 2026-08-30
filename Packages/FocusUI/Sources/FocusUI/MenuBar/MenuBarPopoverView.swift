@@ -105,6 +105,16 @@ public struct MenuBarPopoverView: View {
     ///
     /// Nothing at all is a real answer: before the first judgement the app has concluded
     /// nothing, and drawing a band it does not have would be inventing one.
+    ///
+    /// **Every value in this row is the present tense** (focus-7to). `presentation.rung` is
+    /// `LadderState.rung` — *"the rung currently occupied"* — and its label read *"Next nudge"*,
+    /// so the popover said **"Next nudge   Something you can answer"** directly above the
+    /// answerable accusation that was on screen at that moment. The ladder has no scheduled next
+    /// step to name: `LadderRung.escalated()` is computed on demand and `LadderMachine` gates it
+    /// on four further facts — a still-live mandate, a delivered previous rung, `escalationDwell`
+    /// elapsed since that delivery, and budget. Copy whose tense the mechanism cannot honour is
+    /// the same defect as the notification copy that was removed and the Reduce Motion string
+    /// that described a setting nothing read.
     @ViewBuilder
     private var belief: some View {
         if presentation.rung != nil || presentation.band != nil {

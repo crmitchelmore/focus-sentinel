@@ -200,7 +200,7 @@ struct InterventionSettingsTests {
     /// The rung column names the **step**; the surface column names the **place**. Neither may
     /// do the other's job, and that is checkable without knowing which deck anybody is holding:
     /// no rung's label may use any word the surface labels use. A rung named for a surface is
-    /// wrong wherever it is drawn — including the popover's *"Next nudge: …"* belief row, which
+    /// wrong wherever it is drawn — including the popover's *"Current nudge: …"* belief row, which
     /// draws the same `copyResource` with no second column to correct it, which is why the fold
     /// below covers every rung and not only the rows this pane happens to lay out.
     @Test(

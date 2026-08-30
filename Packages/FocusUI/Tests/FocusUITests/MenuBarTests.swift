@@ -272,6 +272,58 @@ struct MenuBarTests {
         #expect(Self.actionFrames(in: MenuBarFixture.presentation()).isEmpty)
     }
 
+    // MARK: - The belief row is in the present tense (focus-7to)
+
+    /// **The label named a step the ladder does not schedule.**
+    ///
+    /// The row draws `presentation.rung`, which is `LadderState.rung` — *"the rung currently
+    /// occupied"* — under a label reading *"Next nudge"*. The committed baseline
+    /// `menuBarPopover.accusation.light.standard.png` therefore read **"Next nudge   Something
+    /// you can answer"** directly above the accusation you can answer, which was on screen at
+    /// that moment. The assertion below is that pairing, stated: the label describes the thing
+    /// beneath it, so it may not be written as though it described a later one.
+    ///
+    /// There is nothing to schedule. `LadderRung.escalated()` says only what the next rung
+    /// *would be*, and `LadderMachine` gates reaching it on four further facts — a live mandate,
+    /// a **delivered** previous rung, `escalationDwell` since that delivery, and budget. Nothing
+    /// on `MenuBarPresentation` carries any of them, so this surface could not honestly compute a
+    /// next step even if it wanted to; naming the one it is on is the only true option left.
+    @Test("the rung the popover labels is the rung it is showing, not a later one")
+    func theBeliefRowNamesTheRungOnScreen() {
+        // The fixture the accusation baseline is recorded from: the belief row's rung and the
+        // accusation drawn under it are the same rung. That is the contradiction the old label
+        // put on screen, and it is a fact about this surface rather than about the fixture —
+        // `NudgeHost` builds both from one `LadderState`.
+        #expect(MenuBarFixture.withAccusation.rung == MenuBarFixture.accusation.rung)
+        #expect(MenuBarFixture.withAccusation.rung == .panel)
+    }
+
+    /// The tense, as copy.
+    ///
+    /// This is an explicit word list, which is weaker than the way `noRungIsNamedForASurface`
+    /// derives its forbidden vocabulary from the surface labels themselves — and it is explicit
+    /// because there is nothing to derive it from: the ladder has no scheduled-step vocabulary,
+    /// on account of having no scheduled step. So the list is the shape of the defect rather than
+    /// a corpus, and the non-vacuity assertion beside it is what stops it passing on a label that
+    /// resolved to nothing at all.
+    @Test(
+        "the belief row's label does not promise a step",
+        .enabled(if: LocalizationLane.catalogsAreCompiled)
+    )
+    func theBeliefRowPromisesNothing() {
+        let label = ShellStrings.string(.menuBarNudgeRung)
+        #expect(!label.isEmpty)
+        #expect(label != ShellStringKey.menuBarNudgeRung.rawValue, "the label resolved to its key")
+
+        let futureTense = ["next", "will", "then", "soon", "upcoming", "coming", "about to"]
+        for word in futureTense {
+            #expect(
+                !label.lowercased().contains(word),
+                "'\(label)' promises a step the ladder does not schedule"
+            )
+        }
+    }
+
     /// The correction travels on its own typed request, with the snooze span attached — the same
     /// pair `AccusationPanelView` reports on the panel, because it is the same view.
     @Test("a correction pressed on the badge reports itself, span and all")
