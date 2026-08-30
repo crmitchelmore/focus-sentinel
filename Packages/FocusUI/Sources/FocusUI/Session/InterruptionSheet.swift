@@ -156,7 +156,11 @@ public struct InterruptionSheet: View {
             if let bundleID = lastActiveBundleID {
                 let info = InstalledApplication.info(bundleID: bundleID)
                 Label {
-                    Text(verbatim: info?.name ?? bundleID)
+                    // The same resolver the rules list and the exclusions list use, so the one
+                    // application has one name across the whole shell (focus-7zr). It already
+                    // preferred the installed name; going through `SubjectDisplay` is what makes
+                    // that a shared rule rather than a third place that happens to agree.
+                    Text(verbatim: SubjectDisplay.name(of: bundleID, resolvingApplication: true))
                         .font(DesignTokens.font(.callout, scale: textScale))
                         .lineLimit(1)
                         .truncationMode(.middle)

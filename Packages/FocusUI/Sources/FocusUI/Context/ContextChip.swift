@@ -131,9 +131,13 @@ public struct ContextChip: View {
     /// that is the name the user knows it by; a bundle identifier they have never seen is a
     /// worse label than the one in their Dock.
     private var displayName: String {
-        if item.kind == .app, let info = InstalledApplication.info(bundleID: item.value) {
-            return info.name
+        if item.kind == .app, let name = InstalledApplication.name(bundleID: item.value) {
+            return name
         }
+        // The stored half, which for a file is its file name and for an origin is its host —
+        // neither of which a bundle lookup could have improved. Asking `info` for the name and
+        // taking `?? item.displayName` would have thrown the stored name away for an application
+        // whose bundle answers with whitespace; this keeps it.
         return item.displayName
     }
 

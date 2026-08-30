@@ -76,8 +76,13 @@ public struct TaskRulesView: View {
                 .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
                 .accessibilityLabel(Text(ShellStrings.resource(Self.scopeKey(rule.scope))))
 
-            // The subject is the user's own material — a bundle identifier, an origin, a word.
-            Text(verbatim: rule.subject)
+            // The subject is the user's own material — a bundle identifier, an origin, a word —
+            // and only the last of those three is already something to read. `rule.subject` is
+            // the key the cascade matches on and stays untouched; this row draws the other half
+            // (focus-7zr). It was the key, so the list said `com.apple.Safari` and
+            // `https://news.example.com` beside a chip row saying `Safari` and
+            // `docs.example.com` — one window, one kind of thing, two names for it.
+            Text(verbatim: SubjectDisplay.name(of: rule))
                 .font(DesignTokens.font(.callout, scale: textScale))
                 .lineLimit(1)
 

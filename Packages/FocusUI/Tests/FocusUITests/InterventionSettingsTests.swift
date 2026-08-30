@@ -19,7 +19,15 @@ enum InterventionSettingsFixture {
             accusationsToday: 2,
             interruptionsToday: 5
         ),
-        presentationExclusions: ["com.apple.Keynote"]
+        // **Both branches of the name, so the baseline can tell them apart** (focus-7zr).
+        //
+        // The list drew `com.apple.Keynote`, and one identifier could not prove a repair either
+        // way: nothing on this Mac answers to `com.apple.Keynote` — Keynote's real identifier is
+        // `com.apple.iWork.Keynote` — so a row that still read as a key would have looked
+        // identical whether the resolver had been wired up or not. Two rows instead:
+        // `com.apple.Preview` ships with every Mac and renders *"Preview"*, and `com.example.Deck`
+        // answers to nothing and renders as itself, which is the honest last resort.
+        presentationExclusions: ["com.apple.Preview", "com.example.Deck"]
     )
 
     static let quiet = InterventionSettings(

@@ -502,7 +502,12 @@ public struct InterventionSettingsView: View {
             } else {
                 ForEach(settings.presentationExclusions, id: \.self) { subject in
                     HStack(spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
-                        Text(verbatim: subject)
+                        // An exclusion is filed under a bundle identifier — `SensingHost` tests
+                        // it against `cleared.bundleIdentifier` — and the row below removes it by
+                        // that same key. The row *reads* the name (focus-7zr): "Not presentations"
+                        // over a list of `com.apple.Keynote` is a list of things the person has to
+                        // decode before they can decide whether to remove one.
+                        Text(verbatim: SubjectDisplay.name(of: subject, resolvingApplication: true))
                             .font(DesignTokens.font(.callout, scale: textScale))
                             .lineLimit(1)
                             .truncationMode(.middle)
