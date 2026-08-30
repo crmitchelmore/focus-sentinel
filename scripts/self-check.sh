@@ -1219,6 +1219,17 @@ check(
     "no decoded window key names a window rather than its owning application",
     windows_read.get("decodedKeys"),
 )
+# **Two checks, because there are two ways to fail and they are not the same failure**
+# (focus-2vi). The count used to arrive as `-1` when it could not be taken at all, and the
+# single assertion below then reported `got: -1` — a number, for a reading nobody made. The
+# report now says `countWasTaken` as its own fact and names which of the two obstacles it hit,
+# so a run in which this graph never learned who was frontmost reads as NOT TAKEN rather than
+# as a window list that came back empty.
+check(
+    windows_read.get("countWasTaken") is True,
+    "the grant-free window list was READ AT ALL (a reading that could not be taken is NOT TAKEN)",
+    windows_read.get("countNotTakenBecause") or windows_read.get("count"),
+)
 check(
     isinstance(windows_read.get("count"), int) and windows_read["count"] > 0,
     "the grant-free window list returned rows",
@@ -1801,6 +1812,16 @@ check(
     panel.get("appearanceRestored") is True,
     "the probe put the appearance preference back where it found it",
     panel.get("appearanceRestored"),
+)
+# **Was it taken, and only then: did it move** (focus-2vi). One assertion used to carry both
+# questions, and when `NSWorkspace.shared.frontmostApplication` came back nil at both ends it
+# printed `got: ('', '')` — a message about the frontmost application not being byte-identical,
+# for a pair of readings in which there was no frontmost application to be identical to. The
+# nil now serialises as `null` and is asked about first, by name.
+check(
+    panel.get("frontmostWasReadBothTimes") is True,
+    "reading 1 was TAKEN at both ends — nil frontmost is NOT TAKEN, never an application",
+    (before.get("frontmostBundleIdentifier"), after.get("frontmostBundleIdentifier")),
 )
 check(
     bool(before.get("frontmostBundleIdentifier"))

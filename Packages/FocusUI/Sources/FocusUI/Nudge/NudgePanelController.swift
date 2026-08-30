@@ -65,11 +65,31 @@ public final class NudgePanelController {
             self.panelIsVisible = panelIsVisible
         }
 
+        /// **Whether reading 1 was taken at all.**
+        ///
+        /// `NSWorkspace.shared.frontmostApplication` is `nil` while the front is moving between
+        /// two applications, and a process that has just been asked to activate is exactly when
+        /// that happens. Measured in a failing gate run: reading 1 was `nil` before the show and
+        /// `com.chrismitchelmore.FocusSentinel` after it, while `NSApp.isActive` was `false`
+        /// throughout — the activation was in flight across the pair.
+        ///
+        /// It is published because the two conjunctions below depend on it and a reader of the
+        /// report is entitled to see why. **There is no claim to be made about focus from a
+        /// reading of who is frontmost that was never taken.**
+        public var frontmostWasRead: Bool { frontmostBundleIdentifier != nil }
+
         /// **All four readings, together.** Three of them are absolute; the fourth is a
         /// comparison against the reading taken before the show, because "unchanged" is the
         /// claim and an absolute value could not express it.
+        ///
+        /// The comparison is guarded by `frontmostWasRead` on both sides, and that guard is the
+        /// difference between a proof and a coincidence: `nil == nil` is `true`, so a pair in
+        /// which reading 1 could not be taken at either end used to satisfy "the frontmost
+        /// application is unchanged" — a green conjunction resting on a measurement nobody made.
         public func tookNothing(comparedTo before: FocusReadings) -> Bool {
-            frontmostBundleIdentifier == before.frontmostBundleIdentifier
+            frontmostWasRead
+                && before.frontmostWasRead
+                && frontmostBundleIdentifier == before.frontmostBundleIdentifier
                 && !applicationIsActive
                 && !panelIsKey
                 && applicationKeyWindowIsNil
@@ -89,17 +109,27 @@ public final class NudgePanelController {
         /// panel is shown — so the claim worth making is that showing the panel **moved
         /// nothing**, which is exactly as strong a statement about the panel and does not
         /// pretend the process was in a posture it was not.
+        /// Guarded by `frontmostWasRead` for the reason `tookNothing(comparedTo:)` is: two
+        /// readings neither of which was taken are not evidence that nothing moved between them.
         public func changedNothing(comparedTo before: FocusReadings) -> Bool {
-            frontmostBundleIdentifier == before.frontmostBundleIdentifier
+            frontmostWasRead
+                && before.frontmostWasRead
+                && frontmostBundleIdentifier == before.frontmostBundleIdentifier
                 && applicationIsActive == before.applicationIsActive
                 && panelIsKey == before.panelIsKey
                 && applicationKeyWindowIsNil == before.applicationKeyWindowIsNil
         }
 
         /// The report the self-check serialises and `focus-steal` reads.
+        ///
+        /// Reading 1 is `null` when it was not taken, never `""`. The empty string was the same
+        /// defect as the window count's `-1`: a missing reading serialised as a value, which
+        /// then printed as `got: ('', '')` — a failure message about two applications, neither
+        /// of which existed.
         public var dictionary: [String: Any] {
             [
-                "frontmostBundleIdentifier": frontmostBundleIdentifier ?? "",
+                "frontmostBundleIdentifier": frontmostBundleIdentifier.map { $0 as Any } ?? NSNull(),
+                "frontmostWasRead": frontmostWasRead,
                 "applicationIsActive": applicationIsActive,
                 "panelIsKey": panelIsKey,
                 "applicationKeyWindowIsNil": applicationKeyWindowIsNil,

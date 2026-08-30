@@ -248,6 +248,13 @@ check(
     "reading 1 (observer): the app under test never came forward",
     front_after,
 )
+# Asked before the comparison, because `nil == nil` is true and two readings neither of which
+# was taken are not evidence that the front did not move (focus-2vi).
+check(
+    before.get("frontmostWasRead") is True and after.get("frontmostWasRead") is True,
+    "reading 1 (in-process) was TAKEN at both ends — nil frontmost is NOT TAKEN",
+    (before.get("frontmostBundleIdentifier"), after.get("frontmostBundleIdentifier")),
+)
 check(
     before.get("frontmostBundleIdentifier") == after.get("frontmostBundleIdentifier"),
     "reading 1 (in-process): the frontmost reading is byte-identical across the show",

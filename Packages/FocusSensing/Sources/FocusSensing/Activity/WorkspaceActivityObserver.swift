@@ -316,6 +316,36 @@ public final class WorkspaceActivityObserver: ActivityObserving {
         dwellOrigin = monotonicClock.elapsed
     }
 
+    /// Adopt the frontmost application **only if this observer has never had one**, and say
+    /// whether it has one now.
+    ///
+    /// ## Why the one-shot seed was not enough
+    ///
+    /// `reseed(with:)` above is called once at `attach()` and once at `resume()`, from
+    /// `frontmostPayload()`. That payload is `nil` whenever
+    /// `NSWorkspace.shared.frontmostApplication` is `nil` at that instant — which it is while
+    /// the front is moving between two applications, including the moment a freshly launched
+    /// process is taking it. After a `nil` seed this observer held **nothing**, and the only
+    /// thing that could ever fill it was a `didActivateApplication` notification that in a
+    /// headless run may never arrive. Every deeper reading downstream then had no subject:
+    /// measured as one gate run in three, with the self-check reporting a window count of `-1`
+    /// and a presentation reading of "suppressed" on a Mac with twenty-six windows open.
+    ///
+    /// ## It is a retry of the seed, and it is **not** a poll
+    ///
+    /// The distinction is the whole of R-34 and it is kept here by construction rather than by
+    /// convention: the payload is an `@autoclosure`, so on the path where this observer already
+    /// knows who is frontmost **`NSWorkspace` is not read at all**. It can only ever fill a
+    /// hole, never contradict a pushed activation, and — like `reseed(with:)`, which it
+    /// delegates to — it emits no event and starts no dwell.
+    @discardableResult
+    public func seedIfUnseeded(from payload: @autoclosure () -> ObservedNotification?) -> Bool {
+        if current != nil { return true }
+        guard let seed = payload() else { return false }
+        reseed(with: seed)
+        return true
+    }
+
     /// The frontmost application right now, as a payload this observer can be seeded with.
     ///
     /// `NSWorkspace.frontmostApplication` and nothing else — no window read, no Accessibility

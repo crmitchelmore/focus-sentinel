@@ -225,6 +225,71 @@ struct NudgePanelTests {
         #expect(!installedKeyWindow.tookNothing(comparedTo: before))
     }
 
+    /// **A reading that could not be taken is not a reading that did not move** (focus-2vi).
+    ///
+    /// `NSWorkspace.shared.frontmostApplication` returns `nil` while the front is moving between
+    /// two applications. `nil == nil` is `true`, so both conjunctions used to be satisfied by a
+    /// pair in which reading 1 was never taken at either end — the strongest claim this epic
+    /// makes, resting on a measurement nobody made. Every cell of {taken, not taken} × {taken,
+    /// not taken} is below, so the guard cannot be half-applied.
+    @Test("neither conjunction can be satisfied by a reading 1 that was never taken")
+    func aMissingFrontmostReadingIsNotAnUnchangedOne() {
+        func readings(_ frontmost: String?, visible: Bool) -> NudgePanelController.FocusReadings {
+            NudgePanelController.FocusReadings(
+                frontmostBundleIdentifier: frontmost,
+                applicationIsActive: false,
+                panelIsKey: false,
+                applicationKeyWindowIsNil: true,
+                panelIsVisible: visible
+            )
+        }
+
+        let takenBefore = readings("com.example.Decoy", visible: false)
+        let takenAfter = readings("com.example.Decoy", visible: true)
+        let missingBefore = readings(nil, visible: false)
+        let missingAfter = readings(nil, visible: true)
+
+        #expect(takenBefore.frontmostWasRead)
+        #expect(!missingBefore.frontmostWasRead)
+
+        // taken / taken — the only cell that may make a claim.
+        #expect(takenAfter.tookNothing(comparedTo: takenBefore))
+        #expect(takenAfter.changedNothing(comparedTo: takenBefore))
+
+        // The three cells in which reading 1 is missing at one end or both.
+        #expect(!missingAfter.tookNothing(comparedTo: missingBefore))
+        #expect(!missingAfter.changedNothing(comparedTo: missingBefore))
+        #expect(!missingAfter.tookNothing(comparedTo: takenBefore))
+        #expect(!missingAfter.changedNothing(comparedTo: takenBefore))
+        #expect(!takenAfter.tookNothing(comparedTo: missingBefore))
+        #expect(!takenAfter.changedNothing(comparedTo: missingBefore))
+    }
+
+    /// The serialised form the gate reads. A missing reading 1 is `null` — never `""`, which is
+    /// a value and printed as `got: ('', '')` in the failure that named this defect.
+    @Test("a missing reading 1 serialises as null rather than as an empty application")
+    func aMissingFrontmostReadingSerialisesAsNotTaken() {
+        let missing = NudgePanelController.FocusReadings(
+            frontmostBundleIdentifier: nil,
+            applicationIsActive: false,
+            panelIsKey: false,
+            applicationKeyWindowIsNil: true,
+            panelIsVisible: true
+        )
+        let taken = NudgePanelController.FocusReadings(
+            frontmostBundleIdentifier: "com.example.Decoy",
+            applicationIsActive: false,
+            panelIsKey: false,
+            applicationKeyWindowIsNil: true,
+            panelIsVisible: true
+        )
+
+        #expect(missing.dictionary["frontmostBundleIdentifier"] is NSNull)
+        #expect(missing.dictionary["frontmostWasRead"] as? Bool == false)
+        #expect(taken.dictionary["frontmostBundleIdentifier"] as? String == "com.example.Decoy")
+        #expect(taken.dictionary["frontmostWasRead"] as? Bool == true)
+    }
+
     @Test("the panel really appears, so a green reading is not a reading about nothing")
     func showingActuallyShows() {
         let controller = Self.controller()

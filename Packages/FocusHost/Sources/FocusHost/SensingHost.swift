@@ -207,9 +207,7 @@ final class SensingHost {
         media.start()
         camera.refresh()
 
-        if let seed = WorkspaceActivityObserver.frontmostPayload() {
-            activity.reseed(with: seed)
-        }
+        activity.seedIfUnseeded(from: WorkspaceActivityObserver.frontmostPayload())
 
         startTick()
         isRunning = true
@@ -335,8 +333,36 @@ final class SensingHost {
 
     var windowDecodedKeysAreTitleFree: Bool { WindowMetadataReader.decodedKeysAreTitleFree }
 
+    /// **Why a deeper reading could not be taken.** `nil` when it could.
+    ///
+    /// A reading that could not be taken must read as NOT TAKEN, never as a value — and "not
+    /// taken" is two different facts that a single `nil` cannot tell apart. One is a deliberate
+    /// stand-down the person is entitled to; the other is this graph knowing nothing about the
+    /// screen at all, which is a defect wearing the same clothes. `-1` in a report is how the
+    /// second one spent a round looking like a number.
+    enum FrontmostReadingObstacle: String, Sendable, CaseIterable {
+        /// Nothing is frontmost as far as this graph knows: no seed landed and no activation
+        /// has arrived. Nothing about the person's screen follows from this.
+        case nothingIsFrontmost
+        /// The frontmost application is one the sensitivity gate stood down from. This is the
+        /// gate working, and it is the honest answer rather than a zero.
+        case theSensitivityGateStoodDown
+    }
+
+    /// Why the deeper readings below are unavailable right now, or `nil` when they are not.
+    ///
+    /// Read through exactly the same two steps `clearedFrontmost()` takes, so the reason a
+    /// reading is missing and the fact that it is missing can never be two different answers.
+    var frontmostReadingObstacle: FrontmostReadingObstacle? {
+        guard let current = seededCurrent() else { return .nothingIsFrontmost }
+        return gate.evaluate(current).clearedActivation == nil
+            ? .theSensitivityGateStoodDown
+            : nil
+    }
+
     /// The current on-screen window count, read through the gate like everything else. `nil`
-    /// when the frontmost application is one the app has stood down from.
+    /// when the reading could not be taken — `frontmostReadingObstacle` says which of the two
+    /// reasons it was, and no caller may substitute a number for this.
     func currentWindowCount() -> Int? {
         guard let cleared = clearedFrontmost() else { return nil }
         return windows.windows(for: cleared).count
@@ -380,12 +406,12 @@ final class SensingHost {
     /// With nothing frontmost the honest answer is `.suppressed(reason: .unbundled)` — there is
     /// no application to clear, and an absent subject must never read as a cleared one.
     var sensitivityDecision: SensitiveScreenDecision {
-        guard let current = activity.current else { return .suppressed(reason: .unbundled) }
+        guard let current = seededCurrent() else { return .suppressed(reason: .unbundled) }
         return gate.evaluate(current)
     }
 
     var judgeableSubject: JudgeableSubject {
-        guard let current = activity.current else { return .none }
+        guard let current = seededCurrent() else { return .none }
         switch gate.evaluate(current) {
         case .suppressed(let reason):
             return JudgeableSubject(
@@ -403,8 +429,32 @@ final class SensingHost {
     /// The frontmost application, if the gate cleared it. `nil` is the honest answer for a
     /// sensitive application: there is nothing deeper to say about it, on purpose.
     private func clearedFrontmost() -> ClearedActivation? {
-        guard let current = activity.current else { return nil }
+        guard let current = seededCurrent() else { return nil }
         return gate.evaluate(current).clearedActivation
+    }
+
+    /// **The activation this graph believes is frontmost, seeding first if it has none.**
+    ///
+    /// The seed used to be one-shot, taken at `attach()` from
+    /// `WorkspaceActivityObserver.frontmostPayload()`. That payload is `nil` whenever
+    /// `NSWorkspace.shared.frontmostApplication` is `nil` at that instant — which it is while
+    /// the front is moving, including the moment a freshly launched process takes it. After a
+    /// `nil` seed this graph had no subject and could only get one from a
+    /// `didActivateApplication` notification, which in a run where nothing else ever activates
+    /// never arrives. Every reading below then returned `nil`, and the self-check turned one of
+    /// those into `-1`: measured as one gate run in three failing on a green tree.
+    ///
+    /// So the seed is **retried** rather than attempted once. `seedIfUnseeded(from:)` takes the
+    /// payload as an autoclosure and only evaluates it when this graph holds nothing at all, so
+    /// the ordinary path does not read `NSWorkspace` and this is a repaired seed rather than the
+    /// poll R-34 forbids.
+    ///
+    /// **A paused graph is never seeded.** F-119's switch is a detachment, and filling in a
+    /// subject while detached would be observing after being told to stop.
+    private func seededCurrent() -> FrontmostActivation? {
+        guard isRunning else { return activity.current }
+        activity.seedIfUnseeded(from: WorkspaceActivityObserver.frontmostPayload())
+        return activity.current
     }
 
     // MARK: - Settings and the lists
@@ -577,7 +627,7 @@ final class SensingHost {
         sampleIdle()
         _ = media.refresh()
 
-        guard let current = activity.current, let cleared = gate.evaluate(current).clearedActivation
+        guard let current = seededCurrent(), let cleared = gate.evaluate(current).clearedActivation
         else { return }
 
         let onScreen = windows.windows(for: cleared)

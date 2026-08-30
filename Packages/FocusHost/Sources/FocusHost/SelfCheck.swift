@@ -928,8 +928,11 @@ enum SelfCheck {
 
         report["readingsBeforeShow"] = before.dictionary
         report["readingsAfterShow"] = after.dictionary
-        report["frontmostBeforeShow"] = before.frontmostBundleIdentifier ?? ""
-        report["frontmostAfterShow"] = after.frontmostBundleIdentifier ?? ""
+        // `null`, never `""`, for the reason `FocusReadings.dictionary` gives: an empty string
+        // is a value, and reading 1 not having been taken is not a value.
+        report["frontmostBeforeShow"] = before.frontmostBundleIdentifier.map { $0 as Any } ?? NSNull()
+        report["frontmostAfterShow"] = after.frontmostBundleIdentifier.map { $0 as Any } ?? NSNull()
+        report["frontmostWasReadBothTimes"] = before.frontmostWasRead && after.frontmostWasRead
         // Two conjunctions, and the difference between them is the posture this process is in.
         //
         // `tookNothing` is R-89's **absolute** form — frontmost unchanged, `NSApp.isActive`
@@ -995,11 +998,26 @@ enum SelfCheck {
         // `kCGWindowOwnerName` is the application's name, is public, and was present on 100 % of
         // rows at zero grants (probe P-74) — it is not a title, and it is excluded from the
         // fragment test by name rather than by weakening the test.
-        report["windowMetadata"] = [
+        //
+        // **The count is a reading, and a reading that could not be taken is NOT TAKEN**
+        // (focus-2vi). It used to be written as `?? -1`, and that single character is how a
+        // missing reading became a numeric answer: the gate compared `-1 > 0`, said "the
+        // grant-free window list returned rows: got -1", and named neither of the two entirely
+        // different things that produce it. So the value is `null` when it was not taken,
+        // `countWasTaken` says so as its own fact, and `countNotTakenBecause` names which of the
+        // two reasons it was — a deliberate stand-down, or this graph knowing nothing about the
+        // screen at all. No sentinel of any kind may go back into this dictionary.
+        let windowCount = host.currentWindowCount()
+        var windowMetadata: [String: Any] = [
             "decodedKeys": host.windowDecodedKeys,
             "decodedKeysAreTitleFree": host.windowDecodedKeysAreTitleFree,
-            "count": host.currentWindowCount() ?? -1
+            "countWasTaken": windowCount != nil,
+            "count": windowCount.map { $0 as Any } ?? NSNull()
         ]
+        if let obstacle = host.frontmostReadingObstacle {
+            windowMetadata["countNotTakenBecause"] = obstacle.rawValue
+        }
+        report["windowMetadata"] = windowMetadata
 
         // Both idle sources on every sample. `hardwareSeconds >= sessionSeconds` is a property
         // rather than a coincidence — `.combinedSessionState` counts a superset of the events
@@ -1032,7 +1050,14 @@ enum SelfCheck {
                 "isPresenting": state.isPresenting
             ]
         } else {
-            report["presentation"] = ["suppressed": true]
+            // `suppressed: true` alone said "the gate stood down" about a graph that in the
+            // measured failure had simply never been told who was frontmost — the same
+            // conflation `-1` made above, in words instead of a number. The reason travels with
+            // it now, and a reader can tell the gate working from the graph knowing nothing.
+            report["presentation"] = [
+                "suppressed": true,
+                "notTakenBecause": host.frontmostReadingObstacle?.rawValue ?? ""
+            ]
         }
 
         // --- the pause probe, last, because it moves what everything above describes

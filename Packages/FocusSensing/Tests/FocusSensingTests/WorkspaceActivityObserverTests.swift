@@ -338,6 +338,133 @@ struct WorkspaceActivityObserverTests {
         #expect(seen.first?.dwellSeconds == 7)
     }
 
+    // MARK: - The seed is retried, not attempted once (focus-2vi)
+    //
+    // The whole input space of `seedIfUnseeded(from:)` is four cells — {holds an activation, holds
+    // none} × {the system offers a payload, it offers none} — and every one of them is below,
+    // because the defect lived in the cell nobody enumerated: unseeded, and the system offering
+    // nothing at that instant. There is no `guard` in these tests that could skip a cell.
+
+    @Test("a seed the system cannot answer leaves the observer unseeded, and says so")
+    func seedIfUnseededReportsAFailedSeed() {
+        let centre = RecordingNotificationCentre()
+        let observer = Self.makeObserver(centre: centre)
+        var seen: [FrontmostActivation] = []
+        observer.onActivation = { seen.append($0) }
+        observer.start()
+
+        #expect(observer.seedIfUnseeded(from: nil) == false)
+        #expect(observer.current == nil)
+        #expect(seen.isEmpty)
+    }
+
+    /// **The defect, and the fix, in one test.**
+    ///
+    /// `NSWorkspace.shared.frontmostApplication` is `nil` while the front is moving. The old
+    /// seeding read it once at `attach()` and, on a `nil`, waited for a `didActivateApplication`
+    /// notification that a headless run need never deliver — so every deeper reading had no
+    /// subject for the whole life of the process. A retried seed lands the moment the system can
+    /// answer, with no activation in between.
+    @Test("a seed that failed once lands on the next attempt, with no activation in between")
+    func seedIfUnseededRetriesUntilItLands() {
+        let centre = RecordingNotificationCentre()
+        let observer = Self.makeObserver(centre: centre)
+        var seen: [FrontmostActivation] = []
+        observer.onActivation = { seen.append($0) }
+        observer.start()
+
+        #expect(observer.seedIfUnseeded(from: nil) == false)
+        #expect(observer.current == nil)
+
+        let landed = observer.seedIfUnseeded(
+            from: ObservedNotification(
+                name: NSWorkspace.didActivateApplicationNotification,
+                bundleIdentifier: "com.apple.finder",
+                pid: 418
+            )
+        )
+
+        #expect(landed)
+        #expect(observer.current?.bundleIdentifier == "com.apple.finder")
+        // Still a seed: no event, no dwell, nothing in the timeline that the person did not do.
+        #expect(seen.isEmpty)
+        #expect(observer.current?.dwellSeconds == nil)
+    }
+
+    /// **It is a repaired seed, not a poll**, and this is what keeps the difference honest: on
+    /// the path where the observer already knows who is frontmost, the payload expression is
+    /// never evaluated at all. A version that read `NSWorkspace` first and compared afterwards
+    /// would pass every other test in this file and would be the second, disagreeing source of
+    /// the frontmost application that R-34 exists to forbid.
+    @Test("an observer that already has an activation does not consult the system at all")
+    func seedIfUnseededDoesNotPollWhenSeeded() {
+        let centre = RecordingNotificationCentre()
+        let observer = Self.makeObserver(centre: centre)
+        observer.start()
+        centre.post(NSWorkspace.didActivateApplicationNotification, bundleIdentifier: "com.apple.Safari")
+
+        var consulted = 0
+        func payload() -> ObservedNotification? {
+            consulted += 1
+            return ObservedNotification(
+                name: NSWorkspace.didActivateApplicationNotification,
+                bundleIdentifier: "com.apple.finder",
+                pid: 418
+            )
+        }
+
+        // Called outside `#expect`, deliberately: the macro captures its sub-expressions for the
+        // failure message, which evaluates the autoclosure and would consult the system itself —
+        // the test would then be measuring the macro rather than the observer.
+        let seeded = observer.seedIfUnseeded(from: payload())
+
+        #expect(seeded)
+        #expect(consulted == 0)
+        #expect(observer.current?.bundleIdentifier == "com.apple.Safari")
+    }
+
+    @Test("a seed can never overrule an activation the system pushed")
+    func seedIfUnseededNeverOverrulesAPush() {
+        let centre = RecordingNotificationCentre()
+        let observer = Self.makeObserver(centre: centre)
+        observer.start()
+        centre.post(NSWorkspace.didActivateApplicationNotification, bundleIdentifier: "com.apple.Safari")
+
+        observer.seedIfUnseeded(
+            from: ObservedNotification(
+                name: NSWorkspace.didActivateApplicationNotification,
+                bundleIdentifier: "com.apple.finder",
+                pid: 418
+            )
+        )
+
+        #expect(observer.current?.bundleIdentifier == "com.apple.Safari")
+    }
+
+    /// A pause detaches, and a resume that could not read the frontmost application is the same
+    /// hole in a different place: the retry has to work after `resume(seedingWith: nil)` too.
+    @Test("a resume that could not read the frontmost application is still repairable")
+    func seedIfUnseededRepairsAFailedResume() {
+        let centre = RecordingNotificationCentre()
+        let observer = Self.makeObserver(centre: centre)
+        observer.start()
+        observer.pause()
+        observer.resume(seedingWith: nil)
+
+        #expect(observer.current == nil)
+        #expect(observer.seedIfUnseeded(from: nil) == false)
+        #expect(
+            observer.seedIfUnseeded(
+                from: ObservedNotification(
+                    name: NSWorkspace.didActivateApplicationNotification,
+                    bundleIdentifier: "com.apple.finder",
+                    pid: 418
+                )
+            )
+        )
+        #expect(observer.current?.bundleIdentifier == "com.apple.finder")
+    }
+
     // MARK: - The nil bundle identifier (probe P-83)
 
     @Test("An activation with no bundle identifier is recorded, not dropped")
