@@ -346,8 +346,8 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case verdictDriftLabel = "settings.verdict.driftLabel"
     case verdictReasonsLabel = "settings.verdict.reasonsLabel"
     case verdictSilenceLabel = "settings.verdict.silenceLabel"
-    /// What this build says when the engine has authorised an interruption and there is
-    /// nothing to consume it. The nudge is e05's; this is the honest report of its absence.
+    /// What the pane says when the engine has authorised an interruption. e05's ladder is what
+    /// consumes it, so this sentence names the rung that is being raised (focus-lmy).
     case verdictMandated = "settings.verdict.mandated"
     case verdictEngineLabel = "settings.verdict.engineLabel"
 

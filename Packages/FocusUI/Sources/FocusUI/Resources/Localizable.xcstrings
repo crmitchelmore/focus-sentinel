@@ -2888,7 +2888,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Focus works this out on your Mac, from the app in front and the rules you wrote. This version shows you what it concluded and says nothing else."
+            "value" : "Focus works this out on your Mac, from the app in front and the rules you wrote. What you read here is the same judgement it acts on."
           }
         }
       }
@@ -2906,13 +2906,13 @@
       }
     },
     "settings.verdict.mandated" : {
-      "comment" : "Shown when the engine would interrupt and there is nothing yet to do it with.",
+      "comment" : "Shown when the engine is free to interrupt: the ladder has somewhere to go.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Focus would speak up now. Nothing in this version can, so it does not."
+            "value" : "Nothing is holding Focus back. It starts with the quiet menu-bar signal and only opens a panel if the drift keeps up."
           }
         }
       }

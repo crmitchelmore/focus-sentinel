@@ -11,13 +11,19 @@ import SwiftUI
 /// the other ones are. A debug window nobody but the author can open is a claim about the app's
 /// honesty that the app never actually makes.
 ///
-/// ## In this build it is the whole demonstrable
+/// ## It reports the judgement the app acts on, not a copy of it
 ///
-/// **The nudge does not exist yet.** Every `InterventionMandate` the engine issues is consumed
-/// by nobody — e05 owns the ladder — so e04's demonstrable is the verdict stream and the
-/// restrained explanation beside it. When the eligibility reads *mandated*, this pane says so
-/// and **nothing else happens on screen**. That is the honest report of a build that has decided
-/// it would speak and has nothing to speak with.
+/// **This pane and the ladder read the same verdict** (focus-lmy). `RelevanceHost` assigns the
+/// eligibility once and hands it to both: to Settings, and to `NudgeHost`, which folds the
+/// mandate into the ladder. So when the eligibility reads *mandated* there is a rung being
+/// raised — the ambient glyph first, the panel if the drift keeps up — and the sentence here
+/// says that rather than announcing an absence.
+///
+/// It said the opposite for the whole of e05. `settings.verdict.mandated` shipped reading
+/// *"Focus would speak up now. Nothing in this version can, so it does not."*, which was true
+/// of e04 and became a **denial of the panel that was on screen while a person read it**. The
+/// lesson is not about the sentence: three separate proofs agreed with it, because each was
+/// written to the world the sentence described rather than to the branch it draws.
 ///
 /// ## What it may show, and what it structurally cannot
 ///
@@ -162,9 +168,10 @@ public struct VerdictInspectorView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         } else {
-            // The engine has authorised an interruption and **nothing consumes it**. Saying so
-            // plainly is the honest report of this build; e05 is what gives the mandate
-            // somewhere to go.
+            // No suppression reason is exactly `.mandated`: the engine has authorised an
+            // interruption, and e05's ladder is what consumes it. There is no third state to
+            // fall through to, which is why this branch needs no condition of its own — and
+            // why a fixture that could not be `.mandated` left it with no picture at all.
             ShellText(.verdictMandated, role: .callout)
                 .lineLimit(nil)
                 .fixedSize(horizontal: false, vertical: true)
