@@ -2,16 +2,36 @@ import Foundation
 
 /// What became of one thing the app said.
 ///
-/// Three, and the middle one is R-81's: a rung nobody could see is **deferred**, not delivered
-/// and not suppressed. It does not advance the ladder, does not spend either cap and does not
-/// start the escalation clock — and it is counted in its own column so the number is *visible*
-/// rather than inferred. `deferredRungShare` is reported and ungated: a rising one means the
-/// presentation gate is over-firing, which is a signal for e08.
+/// Four, and the two in the middle are the two different ways of not reaching somebody. R-81's is
+/// **deferred**: a rung nobody could see, which does not advance the ladder, does not spend either
+/// cap and does not start the escalation clock — counted in its own column so the number is
+/// *visible* rather than inferred. `deferredRungShare` is reported and ungated: a rising one means
+/// the presentation gate is over-firing, which is a signal for e08.
+///
+/// **`unopened` is the other one, and it was missing** (focus-sq7). A nudge routed to the popover
+/// badge reaches a surface and then waits behind a click. If nobody makes that click it was
+/// correctly not delivered — nobody saw it — and it was also not deferred, because it was not
+/// refused a surface: it reached one and waited. With no case for it, such a nudge wrote **no row
+/// at all**, and a day on which the app raised its top rung and nobody ever looked was
+/// indistinguishable in the record from a day on which the ladder never left the glyph. That
+/// absence is exactly what would have revealed focus-2xw in the wild — nothing in the menu bar was
+/// inviting the click — and it is the signal a maintainer needs to see it come back.
 public enum InterventionDisposition: String, Sendable, CaseIterable, Codable, Hashable {
     /// It reached a surface a person could see.
     case delivered
     /// The surface exists but could not be seen now.
     case deferred
+    /// **It reached a surface and waited behind a click nobody made** (focus-sq7).
+    ///
+    /// The badge, for both kinds of nudge. Not `deferred`: `DeferralReason.noSurfaceAvailable`
+    /// would be a false statement about a surface the nudge did reach, and
+    /// `NudgeHostSlotOwnershipTests` reads `deferredCount` as a proxy for *"the route offered
+    /// nothing"* — writing this as a deferral would corrupt that reading as well as the record.
+    ///
+    /// It spends nothing. `spendsBudget` is `disposition == .delivered` and stays that way: an
+    /// invitation nobody opened is an attempt, not an interruption, and charging for one is the
+    /// whole of focus-xix.
+    case unopened
     /// The app chose not to speak (R-84).
     case suppressed
 }

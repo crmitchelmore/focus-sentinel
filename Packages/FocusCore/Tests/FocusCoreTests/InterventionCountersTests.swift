@@ -11,12 +11,30 @@ struct InterventionCountersTests {
 
     // MARK: - The vocabularies
 
-    @Test("there are three dispositions, and the middle one is the deferral")
-    func threeDispositions() {
-        #expect(InterventionDisposition.allCases.count == 3)
+    /// **Four, and the two in the middle are two different ways of not reaching somebody**
+    /// (R-81, focus-sq7).
+    ///
+    /// `deferred` is *no surface could carry it*; `unopened` is *a surface carried it and nobody
+    /// looked*. The badge is the whole of the second: it reaches a surface and then waits behind a
+    /// click, and with no case for that a nudge nobody opened wrote no row at all — so a day on
+    /// which the app raised its top rung and nobody ever looked read exactly like a day on which
+    /// the ladder never left the glyph.
+    @Test("there are four dispositions, and only one of them spends a cap")
+    func fourDispositions() {
+        #expect(InterventionDisposition.allCases.count == 4)
         #expect(
-            Set(InterventionDisposition.allCases) == [.delivered, .deferred, .suppressed]
+            Set(InterventionDisposition.allCases)
+                == [.delivered, .deferred, .unopened, .suppressed]
         )
+
+        // The cap is the reason the distinction is worth drawing at all: an invitation nobody
+        // opened is an attempt, not an interruption, and charging for one is focus-xix.
+        let spending = InterventionDisposition.allCases.filter { disposition in
+            InterventionEvent(
+                kind: .accusation, subject: Self.decoy, disposition: disposition
+            ).spendsBudget
+        }
+        #expect(spending == [.delivered])
     }
 
     /// R-79's eight outcomes, by name, in one place — so the persisted column, the counters and

@@ -135,8 +135,8 @@ public enum FocusSchemaV4: VersionedSchema {
         /// every deferral and every suppression. Read through `surface`, which decodes the
         /// empty string as `nil` rather than inventing a surface nobody saw.
         public var surfaceRaw: String
-        /// `InterventionDisposition` raw value: delivered, deferred or suppressed. **Only a
-        /// delivery spends a cap** (R-81).
+        /// `InterventionDisposition` raw value: delivered, deferred, unopened or suppressed.
+        /// **Only a delivery spends a cap** (R-81).
         public var dispositionRaw: String
         /// `InterventionOutcome` raw value, or `nil` while it is still on screen.
         public var outcomeRaw: String?
@@ -294,6 +294,7 @@ extension InterventionDisposition {
         switch raw {
         case "delivered": .delivered
         case "deferred": .deferred
+        case "unopened": .unopened
         case "suppressed": .suppressed
         default: .delivered
         }

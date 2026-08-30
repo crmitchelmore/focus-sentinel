@@ -598,6 +598,20 @@ enum SelfCheck {
         // destroyed a question on the panel and wrote nothing about it. It is inside the door now
         // and this is the reading that says which endings it fires for — an exit that quietly
         // joined or left the writing set is a diff in this line.
+        // **The four things that can become of one thing the app said, and the one that costs**
+        // (focus-sq7, R-81). `unopened` is the fourth: a nudge that reached the badge and waited
+        // behind a click nobody made. It used to write no row at all, so a day on which the app
+        // raised its top rung and nobody looked was indistinguishable from a day the ladder never
+        // left the glyph — which is the signal that would have shown focus-2xw in the wild.
+        report["dispositionsDeclared"] =
+            InterventionDisposition.allCases.map(\.rawValue).sorted()
+        report["dispositionsSpendingACap"] = InterventionDisposition.allCases
+            .filter {
+                InterventionEvent(kind: .accusation, subject: "", disposition: $0).spendsBudget
+            }
+            .map(\.rawValue)
+            .sorted()
+
         report["questionExitsWritingAnExpiry"] = QuestionExit.allCases
             .filter(\.recordsAnExpiry)
             .map(\.rawValue)

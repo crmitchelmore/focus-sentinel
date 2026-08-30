@@ -1117,6 +1117,66 @@ final class NudgeHost {
         )
     }
 
+    /// **An invitation that reached a surface and was never opened** (focus-sq7).
+    ///
+    /// The badge is the only surface where landing is not reaching: the popover opens on a click,
+    /// so a nudge routed there waits. `popoverPresented()` is the moment it becomes a delivery. If
+    /// that moment never comes — the person never clicks, or the rung is replaced before they do —
+    /// the record used to say **nothing at all**, for either kind. A day on which the app raised
+    /// its top rung and nobody ever looked read exactly like a day on which the ladder never left
+    /// the glyph, which is precisely the signal that would have shown focus-2xw in the wild.
+    ///
+    /// It is `.unopened` and not `.deferred`. A deferral is a statement that no surface could
+    /// carry it; this one reached a surface and waited, `DeferralReason.noSurfaceAvailable` would
+    /// be false about it, and `NudgeHostSlotOwnershipTests` reads `deferredCount` as a proxy for
+    /// *"the route offered nothing"*. It spends nothing either way — `spendsBudget` is
+    /// `disposition == .delivered` — so this adds a row to the record and not a unit to any cap.
+    ///
+    /// **One function over `MenuBarNudge`, not one per kind.** The question path has had the
+    /// badge's rule since focus-kby and the accusation path acquired it in focus-xix, both by
+    /// hand; the shape of every bead in this sequence is a treatment one half received and the
+    /// other did not. The switch is exhaustive, so a third thing the badge learns to carry stops
+    /// the build here rather than being written down for one kind and forgotten for the other.
+    ///
+    /// - Parameter nudge: which half of the badge is ending. Read off the live value, because both
+    ///   callers are the single door for their own half and call this **before** forgetting it.
+    private func recordUnopenedInvitation(_ nudge: MenuBarNudge) {
+        switch nudge {
+        case .query:
+            guard let question = openQuestion,
+                  let surface = question.surface,
+                  !surface.reachesThePersonOnLanding,
+                  question.readingAtAsk != .readable
+            else { return }
+            write(
+                InterventionEvent(
+                    kind: .query,
+                    subject: question.warrant.subject.identifier,
+                    surface: surface,
+                    disposition: .unopened,
+                    queryReason: question.warrant.reason
+                ),
+                priorityID: question.priorityID
+            )
+
+        case .accusation:
+            guard let open = openRung,
+                  !open.landedOn.reachesThePersonOnLanding,
+                  open.readingAtLanding != .readable
+            else { return }
+            write(
+                InterventionEvent(
+                    kind: .accusation,
+                    rung: open.rung.kind,
+                    subject: open.rung.subject ?? "",
+                    surface: open.landedOn,
+                    disposition: .unopened
+                ),
+                priorityID: open.priorityID
+            )
+        }
+    }
+
     /// **The rung is on the surface it was routed to** — and that is all this says (focus-xix).
     ///
     /// The ladder's business, and only the ladder's: `LadderMachine` resolves the attempt it
@@ -1627,6 +1687,11 @@ final class NudgeHost {
         // glyph took a question off the panel with no row, no receipt and the interruption still
         // charged. The exit says whether a record is owed; nobody has to remember one.
         if exit.recordsAnExpiry { expireOpenQuestion() }
+        // **And the other record: an invitation that was never opened** (focus-sq7). Written
+        // whatever the exit, because "nobody ever clicked" is a fact about the attempt and not
+        // about how it ended, and only for a surface where landing is not reaching — so a question
+        // on the panel produces nothing here.
+        recordUnopenedInvitation(.query)
 
         let surface = question.surface
 
@@ -1674,6 +1739,11 @@ final class NudgeHost {
     /// holding now. The redraw fires whenever the badge's contents change in either direction, and
     /// there is no assignment left that can skip it.
     private func setOpenRung(_ rung: OpenRung?) {
+        // **Before the rung this host is holding is let go of** (focus-sq7). Replacement counts as
+        // much as forgetting: `LadderMachine.arrive(_:)` resets for a different subject, so a
+        // fresh ambient rung replaces a badge rung and the first invitation used to vanish with no
+        // row at all.
+        recordUnopenedInvitation(.accusation)
         let before = openRung?.landedOn
         openRung = rung
         let after = rung?.landedOn
