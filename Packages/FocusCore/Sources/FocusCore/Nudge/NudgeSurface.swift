@@ -29,22 +29,63 @@ public enum NudgeSurface: String, Sendable, CaseIterable, Codable, Hashable {
     /// still answerable.
     case popoverBadge
 
-    /// **Whether a nudge placed here offers the person something to press.**
+    /// **Whether a person looking at this surface has a way to answer the nudge on it**
+    /// (focus-uru).
     ///
-    /// | surface | offers a correction | what is actually drawn |
+    /// | surface | can be answered back to | what is actually drawn |
     /// |---|---|---|
-    /// | `panel` | **yes** | `AccusationPanelView`, with the rung's full action set |
+    /// | `panel` | **yes** | `AccusationPanelView` / `QueryPanelView`, with the full action set |
+    /// | `popoverBadge` | **yes** | the *same two views*, inside `MenuBarPopoverView` |
     /// | `notification` | **yes** | the presentation's actions, as notification buttons |
-    /// | `menuBar` | no | a glyph. There is nothing on it to press |
-    /// | `popoverBadge` | no | a badge row. It carries a *question*, not the correction ladder |
+    /// | `menuBar` | no | a glyph, and it is not a thing to be answered — see below |
+    ///
+    /// **The badge answered `false` here, and that was the defect.** Under macOS Reduce Motion —
+    /// and under `silentVisual`, and whenever a microphone is running —
+    /// `SurfaceRouter.route(rung: .panel, …)` sends the top rung to the badge, and the popover
+    /// drew a read-only *"Nudge: Panel"* label: no dismiss, no "this is relevant", no "not this
+    /// time", no snooze. `CorrectionAction`'s own rule — *"a nudge you cannot answer back to is
+    /// an anti-pattern… Every surface, including the top rung, is dismissible"* — was false for
+    /// exactly the people who had asked the system for a calmer one, and U-1's bargain fails at
+    /// its root there: the app is licensed to interrupt **because** the answer is one cheap click
+    /// that teaches it.
+    ///
+    /// **The glyph's exemption is a ruling, not an oversight.** The ambient rung says nothing and
+    /// accuses nobody; R-87 requires it to keep telling the truth even through a snooze, so there
+    /// is no sentence on it to answer and nothing about it that may be taken down.
+    /// `LadderRung.Kind.makesAnAccusation` is the other half of that, and
+    /// `SurfaceRouterTests.everyRouteCanBeAnsweredBack` joins the two over the routing table.
+    public var offersAnAnswer: Bool {
+        switch self {
+        case .panel, .popoverBadge, .notification: true
+        case .menuBar: false
+        }
+    }
+
+    /// **Whether a nudge placed here occupies the one interruption slot the moment it lands.**
+    ///
+    /// Not the same question as `offersAnAnswer` above, and the pair differ in exactly one cell
+    /// for exactly one reason: **the badge is an invitation, not a delivery** (focus-kby). The
+    /// popover opens only when a person clicks the status item, so a nudge routed there has
+    /// reached nobody yet — it is answerable *once looked at*, and until then it is no more on
+    /// screen than the glyph is.
+    ///
+    /// | surface | holds the slot | why |
+    /// |---|---|---|
+    /// | `panel` | **yes** | it is on screen, and every action is in reach |
+    /// | `notification` | **yes** | its buttons are live wherever the banner is |
+    /// | `menuBar` | no | nothing can take an ambient glyph down |
+    /// | `popoverBadge` | no | it is behind a click nobody has made yet |
     ///
     /// It arrived as `PreemptionCredit`'s test for whether a displaced question had been handed
     /// something richer in its place, and it outlived preemption because it answers a question the
-    /// interruption slot needs answered too: **a rung standing on a surface with nothing to press
-    /// is not occupying the screen** (focus-k42). Nothing can ever take an ambient glyph down —
-    /// it carries no actions, so `resolve(…)` is unreachable from it — so a glyph that held the
-    /// slot would hold it for the life of the session.
-    public var offersACorrection: Bool {
+    /// interruption slot needs answered too: **a rung standing on a surface nobody is looking at
+    /// is not occupying the screen** (focus-k42). A glyph or a badge that held the slot would
+    /// hold it for the life of the session.
+    ///
+    /// It was called `offersACorrection`, which stopped being true of the badge the moment the
+    /// popover grew the correction economy (focus-uru). The values are unchanged; the name now
+    /// says which of the two questions it answers.
+    public var holdsTheInterruptionSlot: Bool {
         switch self {
         case .panel, .notification: true
         case .menuBar, .popoverBadge: false

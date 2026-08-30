@@ -123,7 +123,7 @@ struct NudgeHostSlotOwnershipTests {
     /// The slot exists because *"two panels on screen at once is the behaviour that makes people
     /// uninstall"*. A status-item glyph and a question panel are not two panels: the glyph carries
     /// no sentence and offers nothing to press, which is already the rule the surface type states
-    /// as `offersACorrection`.
+    /// as `holdsTheInterruptionSlot`.
     ///
     /// Measured against the unfixed tree: `slot = accusation(ambient)` after a single `unrelated`
     /// judgement, and every `uncertain` judgement afterwards is

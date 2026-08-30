@@ -31,6 +31,37 @@ struct NudgeSurfaceTests {
         }
     }
 
+    /// **Two questions that were one predicate, and the cell where they part company**
+    /// (focus-uru, focus-k42).
+    ///
+    /// `offersAnAnswer` asks *"can a person looking at this surface answer the nudge on it?"*;
+    /// `holdsTheInterruptionSlot` asks *"is this surface occupied the moment a nudge lands on
+    /// it?"*. They agree on three surfaces and differ on the badge, for one reason: the popover
+    /// opens only when somebody clicks the status item, so a nudge routed there is answerable
+    /// once looked at and has reached nobody until then.
+    ///
+    /// Asserted as an enumeration with the difference named, so that collapsing them back into
+    /// one predicate — in either direction — is a red run. Collapsing towards the slot brings
+    /// back focus-uru's unanswerable badge; collapsing towards the answer brings back focus-k42's
+    /// badge that withholds every accusation for the rest of the session.
+    @Test("answerability and slot ownership are different questions, and differ only on the badge")
+    func answerabilityIsNotSlotOwnership() {
+        #expect(Set(NudgeSurface.allCases.filter(\.offersAnAnswer))
+            == [.panel, .popoverBadge, .notification])
+        #expect(Set(NudgeSurface.allCases.filter(\.holdsTheInterruptionSlot))
+            == [.panel, .notification])
+
+        let disagree = NudgeSurface.allCases.filter {
+            $0.offersAnAnswer != $0.holdsTheInterruptionSlot
+        }
+        #expect(disagree == [.popoverBadge], "the two predicates parted company somewhere new")
+
+        // The glyph is the one surface that is neither, and that is R-87: it is a state rather
+        // than a sentence, it stays on through a snooze, and there is nothing on it to press.
+        #expect(!NudgeSurface.menuBar.offersAnAnswer)
+        #expect(!NudgeSurface.menuBar.holdsTheInterruptionSlot)
+    }
+
     // MARK: - The authorisation states
 
     @Test("there are exactly four authorisation states")

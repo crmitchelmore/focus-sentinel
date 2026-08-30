@@ -87,6 +87,18 @@ public struct MenuBarPresentation: Sendable, Equatable {
     /// The question waiting in the popover, when reduced interruption or the `silentVisual`
     /// deck routed it here instead of to a panel (R-92). `nil` the rest of the time.
     public let pendingQuery: QueryPresentation?
+    /// **The accusation waiting in the popover**, when reduced interruption, the `silentVisual`
+    /// deck or a running microphone routed the top rung here instead of to a panel (R-92).
+    /// `nil` the rest of the time.
+    ///
+    /// **It is a presentation and not a rung label, and that is the fix** (focus-uru). The
+    /// popover was handed `rung` alone and drew *"Nudge: Panel"* — a read-only sentence about an
+    /// accusation with no dismiss, no "this is relevant", no "not this time" and no snooze. For
+    /// a Reduce Motion user the top rung was a label, not a decision surface, and
+    /// `CorrectionAction`'s "every surface, including the top rung, is dismissible" was false.
+    /// Carrying the whole presentation is what lets this surface draw the *same*
+    /// `AccusationPanelView` the panel draws, with the same actions in the same order.
+    public let pendingAccusation: AccusationPresentation?
     /// The rung the ladder has reached, when it has reached one.
     public let rung: LadderRung.Kind?
     /// The band behind the current verdict, when there is one.
@@ -107,6 +119,7 @@ public struct MenuBarPresentation: Sendable, Equatable {
         timerFormat: MenuBarTimerFormat = .minuteSecond,
         snoozes: [MenuBarSnooze] = [],
         pendingQuery: QueryPresentation? = nil,
+        pendingAccusation: AccusationPresentation? = nil,
         rung: LadderRung.Kind? = nil,
         band: EvidenceBand? = nil,
         sensingPaused: Bool = false,
@@ -119,6 +132,7 @@ public struct MenuBarPresentation: Sendable, Equatable {
         self.timerFormat = timerFormat
         self.snoozes = snoozes
         self.pendingQuery = pendingQuery
+        self.pendingAccusation = pendingAccusation
         self.rung = rung
         self.band = band
         self.sensingPaused = sensingPaused
@@ -189,6 +203,11 @@ public enum MenuBarAction: Sendable, Equatable, Hashable {
     case cancelSnooze(subject: String)
     /// Answer the question the popover is carrying, when reduced interruption routed one here.
     case answerQuery(QueryAnswer)
+    /// **Answer the accusation the popover is carrying** (focus-uru), when reduced interruption,
+    /// the `silentVisual` deck or a running microphone routed the top rung here instead of to a
+    /// panel. The `Duration` is the chosen snooze span and is `nil` for every other action — the
+    /// same shape `AccusationPanelView` reports on the panel, because it *is* the same view.
+    case correct(CorrectionAction, snoozeDuration: Duration?)
 }
 
 /// **The menu-bar command centre: `NSStatusItem` + `NSPopover`** (R-91).

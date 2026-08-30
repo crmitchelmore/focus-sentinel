@@ -416,7 +416,7 @@ public struct NudgeWorld: Sendable, Equatable {
             // same rule `NudgeHost` applies. A glyph or a badge is a delivery and not an
             // occupation: nothing can take an ambient rung down, so a glyph that held the slot
             // would withhold every question for the rest of the replayed day.
-            if surface.offersACorrection {
+            if surface.holdsTheInterruptionSlot {
                 slot = InterruptionSlot(holder: .accusation(rung))
             }
             deliveredAccusations += 1
@@ -478,7 +478,7 @@ public struct NudgeWorld: Sendable, Equatable {
             // accusation for the rest of the replayed day — which is precisely the shape the host
             // was carrying. Identity is `openQueryWarrant`, kept unconditionally just below.
             openQueryWarrant = warrant
-            if surface.offersACorrection {
+            if surface.holdsTheInterruptionSlot {
                 slot = InterruptionSlot(holder: .query(warrant))
             }
             counters.record(

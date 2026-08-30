@@ -38,6 +38,18 @@ public struct LadderRung: Sendable, Equatable, Hashable {
         /// thing that asks for attention, and now the last. The ladder tops out here.
         case panel
 
+        /// **Whether this rung says something to the person that they could answer** (focus-uru).
+        ///
+        /// The glyph does not. It changes colour and shape and it accuses nobody: R-87 keeps it
+        /// on through a snooze precisely because it is a *state*, not a sentence, and there is
+        /// nothing on it a person could be asked to press. Every rung above it makes an
+        /// accusation, and an accusation must land somewhere the person can answer back.
+        ///
+        /// Derived from the rank rather than written out, so a third rung added above the panel
+        /// inherits the obligation instead of quietly escaping it — which is what the
+        /// recommitment rung deferred to focus-5ab will do when it returns.
+        public var makesAnAccusation: Bool { rank > 0 }
+
         /// Where this rung sits. 0, 1 — derived, never written down.
         public var rank: Int {
             Self.allCases.firstIndex(of: self) ?? Self.allCases.count

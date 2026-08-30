@@ -7,28 +7,6 @@ import Testing
 @testable import FocusUI
 
 enum MenuBarFixture {
-    static func presentation(
-        status: FocusStatus = .relevant,
-        snoozes: [MenuBarSnooze] = [],
-        pendingQuery: QueryPresentation? = nil,
-        differentiateWithoutColor: Bool = false,
-        sensingPaused: Bool = false
-    ) -> MenuBarPresentation {
-        MenuBarPresentation(
-            status: status,
-            priorityIntent: "Write the Q3 proposal",
-            elapsed: .seconds(1_505),
-            remaining: nil,
-            timerFormat: .minuteSecond,
-            snoozes: snoozes,
-            pendingQuery: pendingQuery,
-            rung: .panel,
-            band: .medium,
-            sensingPaused: sensingPaused,
-            differentiateWithoutColor: differentiateWithoutColor
-        )
-    }
-
     static let snoozed = presentation(
         snoozes: [MenuBarSnooze(subject: "com.apple.Safari", remaining: .seconds(305))]
     )
@@ -41,6 +19,41 @@ enum MenuBarFixture {
     )
 
     static let withQuestion = presentation(status: .uncertain, pendingQuery: query)
+
+    /// The top rung, as the router hands it to this surface under Reduce Motion.
+    static let accusation = AccusationPresentation(
+        rung: .panel,
+        task: "Write the Q3 proposal",
+        subject: "com.apple.Safari",
+        dwelled: .seconds(600),
+        returnTarget: "Pages"
+    )
+
+    static let withAccusation = presentation(status: .unrelated, pendingAccusation: accusation)
+
+    static func presentation(
+        status: FocusStatus = .relevant,
+        snoozes: [MenuBarSnooze] = [],
+        pendingQuery: QueryPresentation? = nil,
+        pendingAccusation: AccusationPresentation? = nil,
+        differentiateWithoutColor: Bool = false,
+        sensingPaused: Bool = false
+    ) -> MenuBarPresentation {
+        MenuBarPresentation(
+            status: status,
+            priorityIntent: "Write the Q3 proposal",
+            elapsed: .seconds(1_505),
+            remaining: nil,
+            timerFormat: .minuteSecond,
+            snoozes: snoozes,
+            pendingQuery: pendingQuery,
+            pendingAccusation: pendingAccusation,
+            rung: .panel,
+            band: .medium,
+            sensingPaused: sensingPaused,
+            differentiateWithoutColor: differentiateWithoutColor
+        )
+    }
 }
 
 /// **The menu bar, and the two measurements that shape it** (R-91, P-132, P-133).
@@ -226,6 +239,85 @@ struct MenuBarTests {
         #expect(seen.contains(.answerQuery(.yesAddIt)))
     }
 
+    // MARK: - The top rung on the badge has answers (focus-uru)
+
+    /// **Every action the accusation offers reports a real frame in this popover's layout.**
+    ///
+    /// The instrument is the panel's own — `nudgeActionTarget(_:)`, the preference every
+    /// `AccusationPanelView` row already publishes, collected through `NudgePanelContent`, which
+    /// is what `NudgePanelController.decisionSurfaceReading(offering:)` reads on the panel. It is
+    /// used here rather than a picture comparison because the claim is not "something changed":
+    /// it is that **each named action laid out somewhere with a size**, which is the difference
+    /// between a decision surface and a paragraph.
+    ///
+    /// The defect it would have caught: before focus-uru this popover drew `presentation.rung` as
+    /// a label and nothing else, so this reading would have been empty for all six.
+    @Test("the popover lays out every action the accusation offers")
+    func thePopoverLaysOutEveryAccusationAction() {
+        let offered = MenuBarFixture.accusation.offeredActionIdentifiers
+        #expect(offered.count == 6, "the fixture stopped offering the full economy")
+
+        let frames = Self.actionFrames(in: MenuBarFixture.withAccusation)
+
+        for identifier in offered {
+            guard let frame = frames[identifier] else {
+                Issue.record("the popover drew no target for \(identifier)")
+                continue
+            }
+            #expect(frame.width > 0 && frame.height > 0, "\(identifier) laid out at zero size")
+        }
+
+        // …and a popover with no accusation in it reports none of them, so the reading above is
+        // about the accusation rather than about anything else on this surface.
+        #expect(Self.actionFrames(in: MenuBarFixture.presentation()).isEmpty)
+    }
+
+    /// The correction travels on its own typed request, with the snooze span attached — the same
+    /// pair `AccusationPanelView` reports on the panel, because it is the same view.
+    @Test("a correction pressed on the badge reports itself, span and all")
+    func theBadgeReportsItsCorrections() {
+        var seen: [MenuBarAction] = []
+        let view = MenuBarPopoverView(presentation: MenuBarFixture.withAccusation) {
+            seen.append($0)
+        }
+
+        for action in MenuBarFixture.accusation.offeredActions {
+            view.onAction(.correct(action, snoozeDuration: nil))
+        }
+        view.onAction(.correct(.dismiss, snoozeDuration: nil))
+        view.onAction(.correct(.snooze, snoozeDuration: .seconds(300)))
+
+        #expect(seen.count == MenuBarFixture.accusation.offeredActions.count + 2)
+        #expect(seen.contains(.correct(.thisIsRelevant, snoozeDuration: nil)))
+        #expect(seen.contains(.correct(.dismiss, snoozeDuration: nil)))
+        #expect(seen.contains(.correct(.snooze, snoozeDuration: .seconds(300))))
+        // A span is part of the request, so two snoozes of different lengths are two requests.
+        #expect(
+            MenuBarAction.correct(.snooze, snoozeDuration: .seconds(300))
+                != .correct(.snooze, snoozeDuration: .seconds(600))
+        )
+    }
+
+    /// Lay the popover out and collect the action frames its rows publish.
+    ///
+    /// `NudgePanelContent` is what declares the coordinate space those frames are measured
+    /// against; outside one, `nudgeActionTarget(_:)`'s `GeometryReader` answers `.zero` — which
+    /// is why the harness wraps rather than rendering the view bare.
+    @MainActor
+    private static func actionFrames(in presentation: MenuBarPresentation) -> [String: CGRect] {
+        var collected: [String: CGRect] = [:]
+        let content = NudgePanelContent(
+            inset: 0,
+            scrolls: false,
+            content: AnyView(MenuBarPopoverView(presentation: presentation)),
+            onFrames: { collected.merge($0.frames) { _, latest in latest } }
+        )
+        let renderer = ImageRenderer(content: content.frame(width: 320))
+        renderer.scale = 2
+        _ = renderer.cgImage
+        return collected
+    }
+
     /// The switch carries the value the person asked **for**, not a toggle — so a popover drawn
     /// from a stale presentation cannot invert F-119's global switch.
     @Test("the sensing switch is absolute, never a toggle")
@@ -321,6 +413,9 @@ struct MenuBarSnapshotTests {
         let cases: [(String, MenuBarPresentation)] = [
             ("snoozed", MenuBarFixture.snoozed),
             ("question", MenuBarFixture.withQuestion),
+            // The top rung as a Reduce Motion user meets it (focus-uru). Before the repair this
+            // picture was the popover with a "Nudge: Panel" label and nothing to press.
+            ("accusation", MenuBarFixture.withAccusation),
             ("paused", MenuBarFixture.presentation(status: .paused, sensingPaused: true))
         ]
         for (name, presentation) in cases {
@@ -348,6 +443,25 @@ struct MenuBarSnapshotTests {
             traits: SnapshotHarness.variantTraits(named: "light"),
             width: Self.popoverWidth,
             name: "menuBarPopover.distinctness.question"
+        )
+        #expect(PNGCompare.areDistinct(without.pixels, with.pixels))
+    }
+
+    /// The same claim for the rung (focus-uru): a top rung routed here draws the panel's own
+    /// decision surface, so the popover carrying one must differ from the popover without.
+    @Test("a waiting accusation changes the picture")
+    func anAccusationChangesThePicture() throws {
+        let without = try SnapshotHarness.render(
+            MenuBarPopoverView(presentation: MenuBarFixture.presentation(status: .unrelated)),
+            traits: SnapshotHarness.variantTraits(named: "light"),
+            width: Self.popoverWidth,
+            name: "menuBarPopover.distinctness.noAccusation"
+        )
+        let with = try SnapshotHarness.render(
+            MenuBarPopoverView(presentation: MenuBarFixture.withAccusation),
+            traits: SnapshotHarness.variantTraits(named: "light"),
+            width: Self.popoverWidth,
+            name: "menuBarPopover.distinctness.accusation"
         )
         #expect(PNGCompare.areDistinct(without.pixels, with.pixels))
     }

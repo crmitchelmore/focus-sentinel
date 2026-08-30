@@ -1655,6 +1655,18 @@ check(
     "every rung is delivered in-app, whatever this Mac says about notifications",
     nudge.get("routes"),
 )
+# 3a — **and every accusation lands somewhere the person can answer it** (focus-uru).
+#
+# "In-app" is the weaker claim and it was the only one anybody made. Under macOS Reduce Motion —
+# which AppearanceObserver forces `reducedInterruption` on for — the top rung routed to the
+# popover badge, and the popover was a read-only label: no dismiss, no "this is relevant", no
+# snooze. That passed `everyRungIsInApp` every time. This reading is folded over both settings of
+# the flag and every deck, and it names the offending cells rather than answering a bare False.
+check(
+    nudge.get("everyAccusationRouteCanBeAnswered") is True,
+    "every accusation route offers the person a way to answer back",
+    nudge.get("accusationRoutesWithNoWayToAnswer"),
+)
 # A question is never a notification (R-82): its route takes no authorisation at all.
 check(
     nudge.get("querySurface") in ("panel", "popoverBadge"),

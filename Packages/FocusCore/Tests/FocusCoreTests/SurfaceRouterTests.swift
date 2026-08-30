@@ -131,6 +131,68 @@ struct SurfaceRouterTests {
         #expect(cells == 160)
     }
 
+    /// **Every accusation this router can deliver lands somewhere the person can answer it**
+    /// (focus-uru).
+    ///
+    /// The defect this closes was a whole class of user, not a corner: `AppearanceObserver`
+    /// forces `reducedInterruption` on under macOS **Reduce Motion**, under the `silentVisual`
+    /// deck and while a microphone is running, and this router sends the top rung to
+    /// `.popoverBadge` in all three. The popover drew a read-only *"Nudge: Panel"* row — no
+    /// dismiss, no "this is relevant", no "not this time", no snooze — so
+    /// `CorrectionAction`'s own "every surface, including the top rung, is dismissible" was false
+    /// for exactly the people who had asked the system for a calmer product, and U-1's licence to
+    /// interrupt had nothing to spend.
+    ///
+    /// **Enumerated over the routing table, not asserted about one surface.** Every rung, every
+    /// deck, both settings of the flag, both media states, both menu-bar states, presenting and
+    /// not — 160 cells, the same fold `noCellReachesANotification` uses. A cell either carries no
+    /// surface (a deferral, which reaches nobody and is R-81's business) or carries one a person
+    /// can answer back on.
+    ///
+    /// The ambient rung is exempt through `LadderRung.Kind.makesAnAccusation` rather than by
+    /// being left out of the loop, and the exemption is a ruling: the glyph says nothing, accuses
+    /// nobody, and R-87 keeps it on through a snooze precisely because it is a state rather than
+    /// a sentence. `#expect(accusations > 0)` below is what stops the whole property passing
+    /// because the exemption swallowed it.
+    ///
+    /// The rung the exemption is asked about is the **rendered** one, `voice.renderedRung(for:)`,
+    /// not the one the ladder asked for. `silentVisual` maps the panel rung onto the ambient one
+    /// — a routing deck, R-92 — so under it the person is shown a glyph and no accusation is put
+    /// in front of them to answer. Asking the requested rung instead would fail this property on
+    /// four cells in which nothing unanswerable is ever drawn, which would be the assertion
+    /// mis-aimed rather than the product wrong.
+    @Test("every surface an accusation can reach offers a way to answer back")
+    func everyRouteCanBeAnsweredBack() {
+        var accusations = 0
+        var deferrals = 0
+
+        Self.everyCell { rung, presentation, media, reduced, menuBar, voice, route in
+            guard voice.renderedRung(for: rung).makesAnAccusation else { return }
+            guard let surface = route.surface else {
+                deferrals += 1
+                return
+            }
+            accusations += 1
+            #expect(
+                surface.offersAnAnswer,
+                """
+                \(rung)/\(voice)/reduced=\(reduced)/menuBar=\(menuBar) reached \(surface), \
+                which offers the person no way to answer it. presentation \
+                suppresses=\(presentation.suppressesOverlays), media \
+                suppresses=\(media.suppressesIntervention)
+                """
+            )
+        }
+
+        #expect(accusations > 0, "the exemption swallowed the property")
+        #expect(deferrals > 0, "no cell deferred, so the deferral branch is untested")
+
+        // And the reduced-interruption cell by name, because it is the one that was wrong: the
+        // badge is where a Reduce Motion user's top rung goes, and it must be answerable.
+        #expect(Self.route(rung: .panel, reducedInterruption: true) == .surface(.popoverBadge))
+        #expect(NudgeSurface.popoverBadge.offersAnAnswer)
+    }
+
     @Test("a question is never a notification, in any cell")
     func aQuestionIsNeverANotification() {
         for presentation in [PresentationState.notPresenting, Self.presenting] {

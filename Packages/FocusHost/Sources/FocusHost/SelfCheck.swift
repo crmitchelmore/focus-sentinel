@@ -494,8 +494,15 @@ enum SelfCheck {
         // pressed to take it down, so either would hold the slot for the whole session. That is
         // the whole of both halves of the defect — a rung on the glyph silencing every question
         // that followed, and a question on the badge silencing every accusation.
-        report["surfacesOfferingACorrection"] =
-            NudgeSurface.allCases.filter(\.offersACorrection).map(\.rawValue).sorted()
+        report["surfacesHoldingTheInterruptionSlot"] =
+            NudgeSurface.allCases.filter(\.holdsTheInterruptionSlot).map(\.rawValue).sorted()
+        // **And the different question: which surfaces a person can answer back on** (focus-uru).
+        // It was the same reading under one name, and the two parted company when the popover
+        // grew the correction economy: the badge is answerable once looked at and still does not
+        // occupy the screen behind an unclicked status item. Reported separately so that a future
+        // conflation is visible in the evidence rather than only in a comment.
+        report["surfacesOfferingAnAnswer"] =
+            NudgeSurface.allCases.filter(\.offersAnAnswer).map(\.rawValue).sorted()
         // **What this Mac's grant state actually is, reported and acted on by nothing**
         // (focus-wy0). It is the reading that makes the `notification-denied` stage a
         // measurement: "this machine was at *x*, and every rung still landed in-app".
@@ -581,6 +588,42 @@ enum SelfCheck {
         report["surfacesARungCanReach"] = Set(
             routes.compactMap { $0["surface"] as? String }.filter { !$0.isEmpty }
         ).sorted()
+        // **Every accusation this app can raise lands somewhere it can be answered** (focus-uru).
+        //
+        // The table above is computed at `reducedInterruption: false` alone, which is precisely
+        // where the defect hid: under macOS Reduce Motion — which `AppearanceObserver` forces
+        // this flag on for — the panel rung went to the popover badge, and the popover drew a
+        // read-only label. Every reading the gate had said "in-app" and none said "answerable",
+        // so a rung nobody could answer was indistinguishable from one they could.
+        //
+        // Folded over both settings of the flag and every deck, and reported as a list of the
+        // cells rather than a bare `true`, so a red run says which rung under which conditions.
+        // The rung asked about is the **rendered** one: `silentVisual` maps the panel rung onto
+        // the ambient one (R-92), so under that deck the person is shown a glyph and no
+        // accusation is put in front of them to answer.
+        var unanswerable: [String] = []
+        for rung in LadderRung.Kind.allCases {
+            for reduced in [false, true] {
+                for voice in NudgeVoice.allCases
+                where voice.renderedRung(for: rung).makesAnAccusation {
+                    let route = SurfaceRouter.route(
+                        rung: rung,
+                        presentation: .notPresenting,
+                        media: .idle,
+                        reducedInterruption: reduced,
+                        menuBarVisible: true,
+                        voice: voice
+                    )
+                    guard let surface = route.surface, !surface.offersAnAnswer else { continue }
+                    unanswerable.append(
+                        "\(rung.rawValue)/reduced=\(reduced)/\(voice.rawValue)"
+                            + " -> \(surface.rawValue)"
+                    )
+                }
+            }
+        }
+        report["accusationRoutesWithNoWayToAnswer"] = unanswerable.sorted()
+        report["everyAccusationRouteCanBeAnswered"] = unanswerable.isEmpty
         // **The shape of a row the settings pane draws** (focus-wy0), read off the compiled type
         // with `Mirror` rather than written down here.
         //

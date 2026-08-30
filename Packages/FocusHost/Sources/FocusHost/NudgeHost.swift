@@ -218,10 +218,10 @@ final class NudgeHost {
         /// * `surface == .popoverBadge` while the popover is shut — *"the badge is an invitation,
         ///   not a delivery"*. Nothing is counted and nothing is written, and the popover opens
         ///   only when a person clicks the status item. It is exactly the glyph's case:
-        ///   `offersACorrection` is `false`, and a badge that held the slot would hold it until
+        ///   `holdsTheInterruptionSlot` is `false`, and a badge that held the slot would hold it until
         ///   the session ended, because nothing on screen can be pressed to take it down.
         ///
-        /// The predicate is `NudgeSurface.offersACorrection` for the same reason the rung's is,
+        /// The predicate is `NudgeSurface.holdsTheInterruptionSlot` for the same reason the rung's is,
         /// and it is deliberately **not** `readingAtAsk`: a panel question that could not be read
         /// is ended by `ask(…)` rather than left open, so readability is not a state this can be
         /// asked in, and adding it would be the second derivation of one fact that focus-k42
@@ -230,7 +230,7 @@ final class NudgeHost {
         /// This is ownership. *Identity* — "is a question already open?" — is a different
         /// question with a different answer, and `ask(…)` asks it separately so that a badge
         /// question waiting behind a click is never silently replaced by a second one.
-        var holdsTheInterruptionSlot: Bool { surface?.offersACorrection ?? false }
+        var holdsTheInterruptionSlot: Bool { surface?.holdsTheInterruptionSlot ?? false }
     }
 
     /// **The appearance the person is actually running in** (focus-pq8).
@@ -280,9 +280,9 @@ final class NudgeHost {
         /// R-84a's argument for a single slot is that *"two panels on screen at once is the
         /// behaviour that makes people uninstall"*. A glyph and a badge are not panels: they carry
         /// no sentence and offer nothing to press, which is exactly what
-        /// `NudgeSurface.offersACorrection` already says. A glyph that held the slot would hold it
+        /// `NudgeSurface.holdsTheInterruptionSlot` already says. A glyph that held the slot would hold it
         /// for ever, because nothing can take an ambient rung down.
-        var holdsTheInterruptionSlot: Bool { landedOn.offersACorrection }
+        var holdsTheInterruptionSlot: Bool { landedOn.holdsTheInterruptionSlot }
     }
 
     private var openRung: OpenRung?
@@ -650,12 +650,18 @@ final class NudgeHost {
             // nothing here has to raise a window for them.
             //
             // It landed, so the rung is recorded against the surface it landed on — but
-            // `offersACorrection` is `false` for both of these, so it does not hold the
-            // interruption slot. Nothing can ever take an ambient glyph down, and a rung that held
-            // the slot from a glyph would silence the question affordance for the rest of the
-            // session (focus-k42).
+            // `holdsTheInterruptionSlot` is `false` for both of these, so it does not hold the
+            // interruption slot. Nothing can ever take an ambient glyph down, and a badge is
+            // behind a click nobody has made yet, so a rung that held the slot from either would
+            // silence the question affordance for the rest of the session (focus-k42).
             openRung = OpenRung(rung: rung, priorityID: priorityID, landedOn: surface)
             delivered(surface: surface, rung: rung, priorityID: priorityID)
+            // **The badge has to be redrawn to carry its answers** (focus-uru). The popover on
+            // screen is a hosting controller built from the presentation the menu bar was last
+            // handed and does not rebuild itself, and `pendingPopoverAccusation` has only just
+            // become non-`nil`. The glyph needs no such thing: the status item's own title and
+            // symbol already follow `currentRung` on the next refresh.
+            if surface == .popoverBadge { onQuestionSurfacesChanged?() }
 
         case .panel:
             panel.update(
@@ -1404,7 +1410,12 @@ final class NudgeHost {
     /// against a stale action list is a reading of a nudge nobody is looking at, and a delivery
     /// token that outlived its rung is a banner whose buttons still work.
     private func forgetOpenRung() {
+        let wasOnTheBadge = openRung?.landedOn == .popoverBadge
         openRung = nil
+        // The badge's answers go with the rung they belonged to (focus-uru). An open popover
+        // still offering "this is relevant" for a rung this host has forgotten is the accusation
+        // half of focus-v0u's orphan, and `resolve(…)` would drop the click in a `guard`.
+        if wasOnTheBadge { onQuestionSurfacesChanged?() }
     }
 
     /// **A question the person can still see and answer that this host has forgotten** — and it
@@ -1424,9 +1435,13 @@ final class NudgeHost {
     }
 
     /// Wired by the composition root, which is the only object that knows the menu bar and the
-    /// nudge loop both exist. Called when a question leaves a menu-bar surface, because the
-    /// popover on screen is a hosting controller built from the presentation the menu bar was
-    /// last handed and does not rebuild itself.
+    /// nudge loop both exist. Called when a question **or an accusation** arrives at or leaves a
+    /// menu-bar surface, because the popover on screen is a hosting controller built from the
+    /// presentation the menu bar was last handed and does not rebuild itself.
+    ///
+    /// The accusation half is focus-uru's: the badge only became something a person can answer
+    /// once the popover started drawing `pendingPopoverAccusation`, and a surface that gains
+    /// answers on the next unrelated refresh is a surface whose answers arrive late.
     var onQuestionSurfacesChanged: (@MainActor () -> Void)?
 
     // MARK: - Transitions that end everything
@@ -1610,6 +1625,25 @@ final class NudgeHost {
             reason: question.warrant.reason,
             dwelled: question.warrant.dwelled
         )
+    }
+
+    /// **The accusation waiting in the menu-bar popover** (focus-uru), when reduced interruption,
+    /// the `silentVisual` deck or a running microphone routed the top rung there (R-92). `nil`
+    /// the rest of the time.
+    ///
+    /// `pendingPopoverQuery`'s twin, and it is a twin down to the guard: the test is **the
+    /// surface the router chose**, not "the panel is not up", so a rung the panel deferred cannot
+    /// appear in the popover as though it had been routed there.
+    ///
+    /// It did not exist, and that was the defect: the composition root handed the popover
+    /// `currentRung` alone, so the surface drew *"Nudge: Panel"* and offered nothing to press.
+    /// The presentation is built by the same `accusationPresentation(for:commitment:)` the panel
+    /// is drawn from, so the two surfaces cannot disagree about what the rung says, which actions
+    /// it offers, or which commitment the click will be written against.
+    var pendingPopoverAccusation: AccusationPresentation? {
+        guard let open = openRung, open.landedOn == .popoverBadge else { return nil }
+        guard let commitment = activeCommitment() else { return nil }
+        return accusationPresentation(for: open.rung, commitment: commitment)
     }
 
     /// What is snoozed right now, for the popover's list and its countdowns.

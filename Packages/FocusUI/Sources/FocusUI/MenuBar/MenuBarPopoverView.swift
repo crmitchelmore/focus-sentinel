@@ -6,8 +6,12 @@ import SwiftUI
 /// The Court's list, in the Court's order: the priority most prominent — because the product
 /// boundary is that the priority outranks the app's opinions, and a command centre that led with
 /// its own verdict would have inverted that — then the timer, then what the app currently
-/// believes, then the question when reduced interruption routed one here (R-92), then what is
-/// snoozed, then the session controls and F-119's global switch.
+/// believes, then **the accusation and the question when reduced interruption routed one here**
+/// (R-92), then what is snoozed, then the session controls and F-119's global switch.
+///
+/// The accusation sits above the question because it is the louder of the two and because U-2
+/// says an accusation *waits* for a question rather than displacing it: when both are here, the
+/// person meets them in the order the app raised them.
 ///
 /// It draws **no score and no streak** (D-01): there is no "you were distracted for 42 minutes
 /// today" here and no field one could be put in. What it shows are facts about right now.
@@ -34,6 +38,10 @@ public struct MenuBarPopoverView: View {
             priority
             statusRow
             belief
+            if let accusation = presentation.pendingAccusation {
+                Divider()
+                pendingAccusation(accusation)
+            }
             if let query = presentation.pendingQuery {
                 Divider()
                 pendingQuestion(query)
@@ -120,6 +128,34 @@ public struct MenuBarPopoverView: View {
                 .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
             ShellText(resource: value, role: .footnote)
                 .foregroundStyle(DesignTokens.Palette.primaryText)
+        }
+    }
+
+    // MARK: - The accusation, when reduced interruption sent it here (R-92, focus-uru)
+
+    /// **The top rung, with the answers it is required to carry.**
+    ///
+    /// The defect this closes was that there were none. `SurfaceRouter` sends the panel rung to
+    /// this surface whenever `reducedInterruption` is set — which `AppearanceObserver` forces on
+    /// under macOS Reduce Motion, under the `silentVisual` deck and while a microphone is running
+    /// — and all the popover drew was the `belief` row above: *"Nudge: Panel"*, a read-only
+    /// label. The repo's own rule is that a nudge you cannot answer back to is an anti-pattern
+    /// and that every surface, including the top rung, is dismissible; for a Reduce Motion user
+    /// that sentence was false, and U-1's licence to interrupt — earned by the answer being one
+    /// cheap click — had nothing to spend.
+    ///
+    /// **The same view the panel draws**, exactly as `pendingQuestion(_:)` reuses
+    /// `QueryPanelView`, so a rung routed here is the same rung with the same actions in the same
+    /// order and the same announcement. A second rendering would be a second place its tone, its
+    /// action set and its scope rules could drift — and it is the reuse that makes
+    /// `AccusationPresentation.offeredActionIdentifiers` a true statement about this surface too.
+    ///
+    /// Routing these users to a panel instead was the alternative and is the wrong fix twice
+    /// over: it overrides a setting the person chose, and the microphone case forbids it outright
+    /// — a panel over a call is a panel everybody on the call can see.
+    private func pendingAccusation(_ accusation: AccusationPresentation) -> some View {
+        AccusationPanelView(presentation: accusation) { action, span in
+            onAction(.correct(action, snoozeDuration: span))
         }
     }
 

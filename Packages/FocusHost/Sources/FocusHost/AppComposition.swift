@@ -697,6 +697,12 @@ public final class AppComposition {
         case .setSensingPaused(let paused): sessionHost.setSensingPaused(paused)
         case .cancelSnooze(let subject): nudgeHost.cancelSnooze(subject: subject)
         case .answerQuery(let answer): nudgeHost.answer(answer)
+        // **The same entry point the panel's buttons use** (focus-uru). The popover performs
+        // nothing and decides nothing: a correction pressed on the badge is the identical call
+        // `AccusationPanelView` makes on the panel, so one click has one meaning and
+        // `CorrectionAction.outcome(scope:at:)` stays the single place a click becomes a write.
+        case .correct(let action, let span):
+            nudgeHost.resolve(action, snoozeDuration: span)
         }
         refreshCockpit()
     }
@@ -745,6 +751,10 @@ public final class AppComposition {
             timerFormat: menuBarTimerFormat,
             snoozes: nudgeHost.activeSnoozes(),
             pendingQuery: nudgeHost.pendingPopoverQuery,
+            // **The rung's answers, not just its name** (focus-uru). `rung` below is a label in
+            // the belief row; this is the decision surface, and without it a top rung routed to
+            // the badge under Reduce Motion was a sentence with nothing to press.
+            pendingAccusation: nudgeHost.pendingPopoverAccusation,
             rung: nudgeHost.currentRung,
             band: relevanceHost.verdict?.band,
             sensingPaused: !sensingHost.isRunning,
