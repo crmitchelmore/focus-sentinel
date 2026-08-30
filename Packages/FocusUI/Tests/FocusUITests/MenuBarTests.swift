@@ -32,6 +32,41 @@ enum MenuBarFixture {
 
     static let withAccusation = presentation(status: .unrelated, pendingAccusation: accusation)
 
+    /// **Both at once**, which is a state the loop really produces: a badge question waiting
+    /// behind a click does not hold the interruption slot, so an accusation can be live while
+    /// one pends — and this surface draws both when it happens. It is also the tallest content
+    /// the popover can hold.
+    static let withBothNudges = presentation(
+        status: .unrelated,
+        pendingQuery: query,
+        pendingAccusation: accusation
+    )
+
+    /// One popover state with a name to record it under.
+    struct PopoverState: Sendable, CustomTestStringConvertible {
+        let name: String
+        let presentation: MenuBarPresentation
+
+        var testDescription: String { name }
+    }
+
+    /// **Every state that adds a section to this surface**, which is every state that can make
+    /// it grow. The lane that iterates the text sizes used to be pointed at the popover with no
+    /// nudge in it at all.
+    static let statefulPopovers: [PopoverState] = [
+        PopoverState(name: "snoozed", presentation: snoozed),
+        PopoverState(name: "question", presentation: withQuestion),
+        // The top rung as a Reduce Motion user meets it (focus-uru). Before the repair this
+        // picture was the popover with a "Nudge: Panel" label and nothing to press.
+        PopoverState(name: "accusation", presentation: withAccusation),
+        // Both at once, which is the tallest this surface can be.
+        PopoverState(name: "both", presentation: withBothNudges),
+        PopoverState(
+            name: "paused",
+            presentation: presentation(status: .paused, sensingPaused: true)
+        )
+    ]
+
     static func presentation(
         status: FocusStatus = .relevant,
         snoozes: [MenuBarSnooze] = [],
@@ -437,7 +472,15 @@ struct MenuBarTests {
 @Suite("Menu-bar popover snapshots", .enabled(if: LocalizationLane.catalogsAreCompiled))
 @MainActor
 struct MenuBarSnapshotTests {
-    static let popoverWidth: CGFloat = 300
+    /// **The width the shipping popover commits to**, read off the controller rather than
+    /// chosen here (focus-5yu).
+    ///
+    /// It was `300`, a literal in the test file, and that is what made every picture below
+    /// unable to fail on the one thing that was wrong with this surface: the width in the
+    /// baseline was the width the *test* supplied, while `popoverController()` supplied nothing
+    /// at all and AppKit drew the popover 1119 points wide on a long priority. Sourced from the
+    /// product, a baseline is a picture of the layout the product actually draws.
+    static let popoverWidth = CGFloat(MenuBarController.popoverContentWidth)
 
     /// **All five states.** The popover is where the label always accompanies the glyph, so this
     /// is the surface on which "distinguishable without colour" is a picture rather than a claim.
@@ -463,25 +506,46 @@ struct MenuBarSnapshotTests {
         )
     }
 
-    @Test("the two states that add a section", arguments: ["light"])
-    func statefulVariants(variant: String) throws {
-        let cases: [(String, MenuBarPresentation)] = [
-            ("snoozed", MenuBarFixture.snoozed),
-            ("question", MenuBarFixture.withQuestion),
-            // The top rung as a Reduce Motion user meets it (focus-uru). Before the repair this
-            // picture was the popover with a "Nudge: Panel" label and nothing to press.
-            ("accusation", MenuBarFixture.withAccusation),
-            ("paused", MenuBarFixture.presentation(status: .paused, sensingPaused: true))
-        ]
-        for (name, presentation) in cases {
-            try SnapshotHarness.assertSnapshot(
-                MenuBarPopoverView(presentation: presentation),
-                component: "menuBarPopover.\(name)",
-                variant: variant,
-                width: Self.popoverWidth
-            )
-        }
+    /// **The states that add a section, at both text sizes** (focus-5yu).
+    ///
+    /// It ran at the default size only, while `appearanceVariants` above — the one lane whose
+    /// stated job is to prove the layout grows instead of truncating — was pointed at
+    /// `MenuBarFixture.presentation()`, the popover with **no nudge in it**: the single state
+    /// that has nothing to grow. So the surface whose height at `accessibilityLarge` is 1184
+    /// points had no picture of itself at that size in any state that carries a nudge.
+    /// The variant is `"light"` and the states are the arguments, rather than the other way
+    /// round with a `for` loop inside: a loop stops at the first state that fails, so a lane
+    /// that gained four states and a second text size would report one of them and hide the
+    /// rest.
+    @Test(
+        "the two states that add a section",
+        arguments: MenuBarFixture.statefulPopovers, SnapshotTypeSize.allCases
+    )
+    func statefulVariants(state: MenuBarFixture.PopoverState, size: SnapshotTypeSize) throws {
+        try SnapshotHarness.assertSnapshot(
+            MenuBarPopoverView(presentation: state.presentation),
+            component: "menuBarPopover.\(state.name)",
+            variant: "light",
+            textScale: size.textScale,
+            width: Self.popoverWidth
+        )
     }
+
+    /// **The fullest popover, in the other appearance** — an accusation and a question at once,
+    /// which is a supported state (`NudgeHost` says a badge question waiting behind a click does
+    /// not hold the slot) and which nothing in this repository drew a picture of.
+    @Test("the popover carrying both nudges survives the dark appearance at both sizes",
+          arguments: ["dark"], SnapshotTypeSize.allCases)
+    func bothNudgesInTheDark(variant: String, size: SnapshotTypeSize) throws {
+        try SnapshotHarness.assertSnapshot(
+            MenuBarPopoverView(presentation: MenuBarFixture.withBothNudges),
+            component: "menuBarPopover.both",
+            variant: variant,
+            textScale: size.textScale,
+            width: Self.popoverWidth
+        )
+    }
+
 
     /// The question routed to the popover is the **same** question the panel draws (R-92), so
     /// the popover with one in it must differ from the popover without.
