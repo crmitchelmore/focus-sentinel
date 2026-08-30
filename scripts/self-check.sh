@@ -860,6 +860,15 @@ print(
 panel = report.get("capturePanel") or {}
 check(panel.get("prebuilt") is True, "the quick-capture panel was built at launch", panel.get("prebuilt"))
 check(panel.get("visibleAfterShow") is True, "showing the panel makes it visible", panel.get("visibleAfterShow"))
+# The probe's own cleanup receipt, reported since it was written and asked by nobody
+# (focus-jax's sweep). A self-check that shows the capture panel and leaves it on the screen has
+# changed the machine it was measuring, and every window reading after this line is about a
+# screen the probe put a panel on.
+check(
+    panel.get("hiddenAfterHide") is True,
+    "the capture-panel probe put the panel away again",
+    panel.get("hiddenAfterHide"),
+)
 # 250 ms is a regression guard with two orders of magnitude of slack, not a restatement of the
 # claim: P-57 measured 34 ms from the hot key to a visible, focused panel. What it catches is
 # somebody moving the panel's construction into `show()`.
@@ -905,6 +914,18 @@ check(
     sensing.get("liveObserverCountAfterResume") == sensing.get("liveObserverCount"),
     "resume() restores exactly the observers pause() removed",
     (sensing.get("liveObserverCount"), sensing.get("liveObserverCountAfterResume")),
+)
+# **The reading before it, or the one after it proves nothing** (focus-jax's sweep).
+#
+# `audioListenerCountBeforePause` sat in the same dictionary as the assertion below, reported and
+# asked by nobody — and `after == 0` is satisfied perfectly by a graph that had no CoreAudio
+# listener to remove. The observer assertion three lines above has always had its before-reading;
+# this one did not, so half of the pause claim was `0 -> 0` wearing the same green as `n -> 0`.
+check(
+    isinstance(sensing.get("audioListenerCountBeforePause"), int)
+    and sensing["audioListenerCountBeforePause"] > 0,
+    "the graph holds CoreAudio property listeners before the pause probe",
+    sensing.get("audioListenerCountBeforePause"),
 )
 check(
     sensing.get("audioListenerCountAfterPause") == 0,
@@ -1395,9 +1416,24 @@ print(
 )
 
 # F-35: the quorum's three inputs, recorded whatever the verdict.
+# **And the note under it said which, without reading which** (focus-jax's sweep).
+#
+# `SensingHost.FrontmostReadingObstacle` exists precisely because "no presentation reading" is two
+# different facts: a stand-down the person is entitled to, and this graph never having been told
+# who was frontmost — "a defect wearing the same clothes", as its own doc says. The report carries
+# `notTakenBecause` to tell them apart; this note asserted the first one in prose whichever it
+# was. A gate that names a cause it did not read is the failure this whole round is about, one
+# note smaller.
 presentation = sensing.get("presentation") or {}
 if presentation.get("suppressed"):
-    print("note the frontmost application was suppressed by the sensitivity gate")
+    if presentation.get("notTakenBecause") == "theSensitivityGateStoodDown":
+        print("note the frontmost application was suppressed by the sensitivity gate")
+    else:
+        not_taken(
+            "the presentation quorum's three inputs",
+            presentation.get("notTakenBecause") or "the report named no obstacle at all",
+            "the graph was never told who was frontmost, which is not the gate standing down",
+        )
 else:
     for signal in ("frontmostWindowFillsAScreen", "presentationOptionsSayFullScreen", "menuBarHidden"):
         check(
