@@ -10,9 +10,16 @@ import Foundation
 /// were not working in is worse than no button.
 public struct ReturnTarget: Sendable, Equatable, Hashable {
     public let bundleIdentifier: String
-    /// The application's localised name, for `{returnTarget}`. Falls back to the bundle
-    /// identifier when the workspace has no name for it — which is honest, and still a thing the
-    /// person can recognise.
+    /// **What the button says**, for `{returnTarget}`: the application's name, resolved whether
+    /// it is running or merely installed, and falling back to the bundle identifier only when
+    /// nothing on this Mac has a name to give.
+    ///
+    /// The two halves are `NudgeSubject`'s two halves and are decided by `NudgeSubject`'s rule —
+    /// see `ReturnToTask.display(_:_:)`. Before focus-7gc this slot had a rule of its own, and it
+    /// was wrong twice: the installed-but-not-running branch never asked for a name at all, so
+    /// the most prominent control on the panel read *"Back to com.apple.Safari"*; and the running
+    /// branch guarded `isEmpty` but not whitespace, so an application called `"   "` read
+    /// *"Back to    "*. One slot, one rule.
     public let displayName: String
     /// Whether it is running right now. Decides `activate()` versus `openApplication` (R-88),
     /// and nothing else.
@@ -53,7 +60,8 @@ public enum ReturnFailure: String, Sendable, CaseIterable, Hashable {
     case launchFailed
 }
 
-/// The two workspace calls R-88 sanctions, behind a seam.
+/// The two workspace calls R-88 sanctions, plus the two reads that decide what to call the
+/// thing they act on — behind a seam.
 ///
 /// A protocol so the unit lane can drive all three branches with no application to activate and
 /// no application to launch. The real implementation is `SystemReturnWorkspace`, below, and it
@@ -68,6 +76,15 @@ public protocol ReturnWorkspace: AnyObject {
     func activateRunningApplication(_ bundleIdentifier: String) -> Bool
     /// Where an installed-but-not-running application lives, or `nil` when none is installed.
     func applicationURL(for bundleIdentifier: String) -> URL?
+    /// **What the bundle at this URL is called**, or `nil` when it has no name to give
+    /// (focus-7gc).
+    ///
+    /// The other half of the pair above: `applicationURL(for:)` decides *whether* there is
+    /// anywhere to go, and this decides what to call it once there is. They are two calls rather
+    /// than one because the first one's answer is already needed for the launch itself — R-88's
+    /// second sanctioned call takes the URL — so resolving the name from it is a read of
+    /// something the code is holding, not a second lookup that could disagree with the first.
+    func applicationName(at url: URL) -> String?
     /// Launch it and bring it forward.
     func openApplication(at url: URL, completion: @escaping @MainActor (Bool) -> Void)
 }
@@ -111,23 +128,46 @@ public enum ReturnToTask {
         let trimmed = anchor.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
 
-        if let name = workspace.localizedNameOfRunningApplication(trimmed) {
-            return ReturnTarget(
-                bundleIdentifier: trimmed,
-                displayName: name.isEmpty ? trimmed : name,
-                isRunning: true
-            )
+        // **Running is a fact about activation; what it is called is a separate question.** They
+        // were one branch, and that is how *"Back to    "* reached the screen: an application
+        // running under a blank name took the running branch, failed an `isEmpty` guard, and
+        // never asked the bundle sitting on the disk what it was called (focus-7gc).
+        let running = workspace.localizedNameOfRunningApplication(trimmed)
+        if let named = NudgeSubject.nameable(running) {
+            return ReturnTarget(bundleIdentifier: trimmed, displayName: named, isRunning: true)
         }
 
-        // Not running. It is still a target **if it is installed** — a cold launch is a
-        // legitimate return, and P-135 measured one working at zero grants. If nothing on this
-        // Mac has that identifier there is nowhere to go, and the honest answer is `nil`.
-        guard workspace.applicationURL(for: trimmed) != nil else { return nil }
+        // Either it is not running, or it is running under something that is not a name. Both
+        // want the bundle: the first to know there is anywhere to go at all — a cold launch is a
+        // legitimate return, and P-135 measured one working at zero grants — and the second to
+        // find the name the running application declined to give. The URL is fetched once and
+        // read twice, so what the button says and what the click opens cannot be two bundles.
+        guard let url = workspace.applicationURL(for: trimmed) else {
+            // Nothing on this Mac answers to that identifier. If it is not running either, there
+            // is nowhere to go and the honest answer is `nil` (R-88.3). If it *is* running, it is
+            // still a target, and the key is all anybody can call it.
+            guard running != nil else { return nil }
+            return ReturnTarget(bundleIdentifier: trimmed, displayName: trimmed, isRunning: true)
+        }
         return ReturnTarget(
             bundleIdentifier: trimmed,
-            displayName: trimmed,
-            isRunning: false
+            displayName: display(trimmed, workspace.applicationName(at: url)),
+            isRunning: running != nil
         )
+    }
+
+    /// **The naming rule, once, for every branch.**
+    ///
+    /// It is `NudgeSubject`'s rule and not a copy of it: the panel's sentence and the panel's
+    /// button are the same kind of thing named in the same slot, and the entire point of
+    /// focus-ebv was that they had stopped agreeing. Delegating here means the whitespace case
+    /// — a bundle whose name is `"   "` — is handled by the one function that already handled
+    /// it, rather than by a second `isEmpty` guard that misses it.
+    ///
+    /// `identifier` is trimmed and non-empty at the call site, so `named(_:runningName:)`
+    /// cannot answer `nil`. The coalesce says so totally rather than with a `!`.
+    private static func display(_ identifier: String, _ resolved: String?) -> String {
+        NudgeSubject.named(identifier, runningName: resolved)?.displayName ?? identifier
     }
 
     /// Whether the panel should draw the action at all.
@@ -200,6 +240,12 @@ public final class SystemReturnWorkspace: ReturnWorkspace {
 
     public func applicationURL(for bundleIdentifier: String) -> URL? {
         NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleIdentifier)
+    }
+
+    /// The same read the context chips, the rules list and the exclusions list make, so every
+    /// surface in the app calls one application by one name (focus-7zr).
+    public func applicationName(at url: URL) -> String? {
+        InstalledApplication.name(at: url)
     }
 
     public func openApplication(

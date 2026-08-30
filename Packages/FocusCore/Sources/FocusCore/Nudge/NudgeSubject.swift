@@ -30,8 +30,13 @@ import Foundation
 /// A nudge that renders an empty string is worse than one that renders an identifier: the
 /// identifier is ugly and the empty string is a bug the person is asked to answer. Every route
 /// through `named(_:runningName:)` therefore ends at a non-empty string, and the last resort is
-/// `identifier` itself — which is exactly what `ReturnTarget.displayName` already does for
-/// *"Back to …"*, and for the same reason.
+/// `identifier` itself.
+///
+/// *"Back to …"* is drawn from the same function rather than from a copy of the rule
+/// (focus-7gc). It was cited here as the exemplar while it was in fact the unrepaired surface:
+/// `ReturnTarget.displayName` fell straight to the identifier for anything not running, so the
+/// button read *"Back to com.apple.Safari"* under a sentence that said *"Safari"*. A rule
+/// justified by pointing at a second copy of itself is a rule with one place left to drift.
 ///
 /// ## There is no public initialiser
 ///
@@ -113,9 +118,19 @@ public struct NudgeSubject: Sendable, Equatable, Hashable {
         return nameable(candidate) ?? identifier
     }
 
-    /// A candidate that is actually nameable, or `nil`. `QuerySubject.nameable(_:)`'s twin, and
-    /// deliberately the same rule: empty and whitespace-only are how an absent value arrives.
-    private static func nameable(_ candidate: String?) -> String? {
+    /// **A candidate that is actually nameable, or `nil`** — the whole of the rule, in one place.
+    ///
+    /// Empty and whitespace-only are how an absent value arrives: e04's `InterventionMandate`
+    /// carries `""` for mixed drift, and `FileManager.displayName` really does answer `"   "` for
+    /// a bundle called `   .app` (measured). Neither is something a sentence can say.
+    ///
+    /// It is `public` because it had **three private copies** — here, on `QuerySubject` and on
+    /// `CorrectionAction` — and a fourth was about to be written in `FocusUI` when focus-7gc
+    /// asked why `ReturnTarget` guarded `isEmpty` while the subject beside it guarded whitespace.
+    /// A rule with copies is a rule with places to drift, and this one had already drifted: the
+    /// panel drew *"Back to    "* for an application the sentence three lines above was willing
+    /// to call by its identifier instead. The other two now call this.
+    public static func nameable(_ candidate: String?) -> String? {
         guard let candidate else { return nil }
         let trimmed = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed

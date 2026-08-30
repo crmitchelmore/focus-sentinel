@@ -2,28 +2,6 @@ import AppKit
 import FocusCore
 import SwiftUI
 
-/// An installed application, as the context pack needs to draw it.
-///
-/// Resolved through `NSWorkspace` with **no grant of any kind** (probe P-67): a bundle
-/// identifier becomes a real name and a real icon, and an identifier that is not installed
-/// resolves to `nil` — which is a first-class state the chip draws, not a blank space.
-enum InstalledApplication {
-    struct Info {
-        let name: String
-        let icon: NSImage?
-    }
-
-    static func info(bundleID: String) -> Info? {
-        guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) else {
-            return nil
-        }
-        return Info(
-            name: FileManager.default.displayName(atPath: url.path(percentEncoded: false)),
-            icon: NSWorkspace.shared.icon(forFile: url.path(percentEncoded: false))
-        )
-    }
-}
-
 /// One item of the task's context pack, drawn.
 ///
 /// Four kinds and no fifth (F-09): an application, a normalised web origin, a keyword and a

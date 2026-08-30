@@ -67,13 +67,18 @@ public struct CorrectionScope: Sendable, Equatable, Hashable {
         )
     }
 
+    /// `NudgeSubject.nameable(_:)`'s rule, called rather than restated (focus-7gc). It was the
+    /// third byte-identical copy of it in this directory.
     private static func nameable(_ candidate: String) -> String? {
-        let trimmed = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? nil : trimmed
+        NudgeSubject.nameable(candidate)
     }
 
+    /// The same discriminator `QuerySubject.kind(of:)` decides `.domain` by, and for the same
+    /// reason: `OriginNormalizer` emits `scheme://host[:port]` and nothing else does. Asking
+    /// `NudgeSubject` rather than re-writing `contains("://")` is what stops a rule and the
+    /// sentence about it disagreeing on what an origin is.
     private static func kind(of subject: String) -> RuleSubjectKind {
-        subject.contains("://") ? .domain : .app
+        NudgeSubject.isOrigin(subject) ? .domain : .app
     }
 }
 

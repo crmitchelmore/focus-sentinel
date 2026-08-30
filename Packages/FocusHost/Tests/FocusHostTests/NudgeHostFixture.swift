@@ -73,7 +73,15 @@ final class InertReturnWorkspace: ReturnWorkspace {
         return true
     }
 
-    func applicationURL(for bundleIdentifier: String) -> URL? { nil }
+    /// **What is on the disk** (focus-7gc). Empty by default, so these suites go on exercising
+    /// the running branch; a suite that wants the not-running one seeds a URL here and a name in
+    /// `installedNames`, and gets the same two-map shape `StubReturnWorkspace` has.
+    var installedURLs: [String: URL] = [:]
+    var installedNames: [URL: String] = [:]
+
+    func applicationURL(for bundleIdentifier: String) -> URL? { installedURLs[bundleIdentifier] }
+
+    func applicationName(at url: URL) -> String? { installedNames[url] }
 
     func openApplication(at url: URL, completion: @escaping @MainActor (Bool) -> Void) {
         completion(false)

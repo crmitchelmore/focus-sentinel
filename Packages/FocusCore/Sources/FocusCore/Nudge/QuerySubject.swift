@@ -108,13 +108,10 @@ public struct QuerySubject: Sendable, Equatable, Hashable {
 
     /// A candidate that is actually nameable to a person, or `nil`.
     ///
-    /// Empty and whitespace-only are the two shapes an absent identifier arrives in — e04's
-    /// `InterventionMandate` carries `""` for a mixed subject — and neither is something a
-    /// question could be about.
+    /// `NudgeSubject.nameable(_:)`'s rule, called rather than restated (focus-7gc): this was a
+    /// byte-identical copy, and the two are answering the same question about the same string.
     private static func nameable(_ candidate: String?) -> String? {
-        guard let candidate else { return nil }
-        let trimmed = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? nil : trimmed
+        NudgeSubject.nameable(candidate)
     }
 
     /// `.domain` for a normalised origin, `.app` for everything else.

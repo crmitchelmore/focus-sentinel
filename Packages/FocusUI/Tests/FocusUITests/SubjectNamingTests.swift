@@ -50,10 +50,51 @@ struct SubjectNamingTests {
         #expect(naming.subject(of: try Self.query(Self.safari)).identifier == Self.safari)
     }
 
+    // MARK: - Not running is not the same as not installed (focus-7gc)
+
+    /// The sentence and the button under it ask the disk the same question.
+    ///
+    /// Before this, `SubjectNaming` asked only whether the subject was **running**, so a panel
+    /// about an application that had quit said *"You've been in com.figma.Desktop"* — focus-ebv's
+    /// own defect, one branch further down.
+    @Test("an application that is installed but not running is named from its bundle")
+    func installedApplicationsAreNamed() throws {
+        let workspace = Self.workspace()
+        let url = URL(fileURLWithPath: "/Applications/Figma.app")
+        workspace.installedURLs[Self.figma] = url
+        workspace.installedNames[url] = "Figma"
+
+        let subject = try #require(SubjectNaming(workspace: workspace).subject(Self.figma))
+        #expect(subject.displayName == "Figma")
+        #expect(subject.identifier == Self.figma)
+        // The disk is asked only after the running lookup came back with nothing.
+        #expect(workspace.lookups == [Self.figma])
+        #expect(workspace.bundleLookups == [url])
+    }
+
+    /// The answer read from the disk is **not** memoised, because it cannot change under a
+    /// reader — and leaving it out is what keeps the promise that an application asked about
+    /// before it finished launching answers with its running name next time.
+    @Test("an installed name gives way to the running one, and a running one is kept")
+    func theInstalledNameIsNotLearned() throws {
+        let workspace = Self.workspace()
+        let url = URL(fileURLWithPath: "/Applications/Figma.app")
+        workspace.installedURLs[Self.figma] = url
+        workspace.installedNames[url] = "Figma"
+        let naming = SubjectNaming(workspace: workspace)
+
+        #expect(try #require(naming.subject(Self.figma)).displayName == "Figma")
+        workspace.runningNames[Self.figma] = "Figma Beta"
+        #expect(try #require(naming.subject(Self.figma)).displayName == "Figma Beta")
+        // And now it is, because a running name is one a live surface could see change.
+        workspace.runningNames.removeValue(forKey: Self.figma)
+        #expect(try #require(naming.subject(Self.figma)).displayName == "Figma Beta")
+    }
+
     // MARK: - What it does when there is no name
 
     /// The bead's own question, answered: the sentence is the identifier, never nothing.
-    @Test("an application that is not running renders its identifier rather than an empty string")
+    @Test("an application that is neither running nor installed renders its identifier")
     func unnamedApplicationsFallBackToTheIdentifier() throws {
         let naming = SubjectNaming(workspace: Self.workspace())
         let subject = try #require(naming.subject(Self.figma))
@@ -61,12 +102,25 @@ struct SubjectNamingTests {
         #expect(!subject.displayName.isEmpty)
     }
 
-    @Test("an application running under a blank name is treated as having none")
-    func blankNamesAreNoName() throws {
-        let workspace = Self.workspace()
-        workspace.runningNames[Self.figma] = "   "
-        let naming = SubjectNaming(workspace: workspace)
-        #expect(try #require(naming.subject(Self.figma)).displayName == Self.figma)
+    /// Every way a lookup can answer with something that is not a name, on both branches.
+    /// `FileManager.displayName` really does return `"   "` for a bundle called `   .app` —
+    /// measured — so the whitespace row is a state of the world rather than a defensive case.
+    @Test(
+        "a name that is only whitespace is no name, whichever lookup produced it",
+        arguments: ["", "   ", "\n\t"]
+    )
+    func blankNamesAreNoName(blank: String) throws {
+        let running = Self.workspace()
+        running.runningNames[Self.figma] = blank
+        #expect(try #require(SubjectNaming(workspace: running).subject(Self.figma))
+            .displayName == Self.figma)
+
+        let installed = Self.workspace()
+        let url = URL(fileURLWithPath: "/Applications/Figma.app")
+        installed.installedURLs[Self.figma] = url
+        installed.installedNames[url] = blank
+        #expect(try #require(SubjectNaming(workspace: installed).subject(Self.figma))
+            .displayName == Self.figma)
     }
 
     /// Drift across several applications names nobody, and naming is not where that changes.
@@ -127,5 +181,8 @@ struct SubjectNamingTests {
         #expect(subject.displayName == "docs.google.com")
         #expect(subject.identifier == "https://docs.google.com")
         #expect(workspace.lookups.isEmpty)
+        // **Both** lookups, now that there are two. A guard that only covered the first would
+        // leave the disk being asked what application owns a website.
+        #expect(workspace.bundleLookups.isEmpty)
     }
 }

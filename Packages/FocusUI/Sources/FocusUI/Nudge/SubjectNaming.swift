@@ -32,10 +32,11 @@ import Foundation
 ///
 /// ## What it does when there is no name to be had
 ///
-/// Nothing not running, nothing unnamed and nothing unbundled is invented: `NudgeSubject` falls
-/// back to the identifier, and this type does not cache that fallback. An application that was
-/// asked about before it finished launching is asked about again next time, and answers with its
-/// real name.
+/// Two questions, in order, and then the key. **Is it running?** — the localised name, memoised.
+/// **Is it installed?** — the name the bundle on the disk declares (focus-7gc). Only when both
+/// answer nothing does `NudgeSubject` fall back to the identifier, and this type does not cache
+/// that fallback. An application that was asked about before it finished launching is asked about
+/// again next time, and answers with its real name.
 @MainActor
 public final class SubjectNaming {
     private let workspace: any ReturnWorkspace
@@ -66,16 +67,33 @@ public final class SubjectNaming {
     /// An origin is never asked about: no application owns `https://docs.google.com`, so a
     /// lookup could only ever return a browser's name for a site, and `NudgeSubject` derives the
     /// host instead.
+    ///
+    /// **A subject that is not running is still asked about** (focus-7gc). The memo above covers
+    /// the ordinary case — a name learned while the panel was raised outlives the application it
+    /// describes — but it only ever holds a name somebody once looked up *while it was running*,
+    /// and the first look does not always happen then: the snooze row's own comment says a snooze
+    /// outlives its application far more often than a panel does. So the disk is asked second,
+    /// through the same seam `ReturnToTask` asks. Without it the panel could say
+    /// *"You've been in com.figma.Desktop"* directly above a button reading *"Back to Pages"* —
+    /// which is focus-ebv's defect again, with the halves swapped.
     private func name(for identifier: String) -> String? {
         let trimmed = identifier.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, !NudgeSubject.isOrigin(trimmed) else { return nil }
         if let learnt = learned[trimmed] { return learnt }
 
-        guard let live = workspace.localizedNameOfRunningApplication(trimmed),
-              !live.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        else { return nil }
+        if let usable = NudgeSubject.nameable(
+            workspace.localizedNameOfRunningApplication(trimmed)
+        ) {
+            learned[trimmed] = usable
+            return usable
+        }
 
-        learned[trimmed] = live
-        return live
+        // Installed but not running. **Deliberately not memoised**: the memo exists to stop a
+        // live surface changing its own sentence, and this answer cannot change one — it is read
+        // from a bundle that is sitting still. Leaving it out keeps the promise the memo's own
+        // doc makes, that an application asked about before it finished launching is asked again
+        // and answers with its running name.
+        guard let url = workspace.applicationURL(for: trimmed) else { return nil }
+        return NudgeSubject.nameable(workspace.applicationName(at: url))
     }
 }
