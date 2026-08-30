@@ -232,6 +232,22 @@ final class NudgeHost {
     private(set) var deliveredCount = 0
     private(set) var deferredCount = 0
 
+    /// **Every charge this loop has made, and the proof it was made on** (focus-1b5, focus-nrl).
+    ///
+    /// One `PerceptibleChange` per unit of the person's day that has been spent, in the order
+    /// they were spent. It exists to be **joined against the store**: the day's caps are summed
+    /// from `InterventionRecord` rows marked `delivered`, and this is the list of receipts the
+    /// perception path issued, so `rows == receipts` is a statement that no delivered row in the
+    /// store came from anywhere but a proof.
+    ///
+    /// That join is the reading three rounds of this defect did not have. `deliveredCount` above
+    /// is a count of *attempts the loop believes reached somebody* and cannot fail; the self-check
+    /// published `menuBarGlyphWrites` and `menuBarAnnouncements` as raw counters and paired them
+    /// with nothing. A counter that is always zero would be the same green that means nothing —
+    /// this is not one: it is a list that grows, whose length has to match a number computed a
+    /// completely different way, from persisted rows.
+    private(set) var chargesPaidFor: [PerceptibleChange] = []
+
 
     /// **The question on screen, as one value** (focus-zrs).
     ///
@@ -1143,6 +1159,7 @@ final class NudgeHost {
         now: Duration
     ) {
         deliveredCount += 1
+        chargesPaidFor.append(change)
         fatigue.reduce(.delivered(.query), now: now)
         openQuestion?.recordID = write(
             InterventionEvent(
@@ -1392,6 +1409,7 @@ final class NudgeHost {
         priorityID: UUID?
     ) {
         deliveredCount += 1
+        chargesPaidFor.append(change)
         fatigue.reduce(.delivered(.accusation), now: monotonicClock.elapsed)
         openRung?.recordID = write(
             InterventionEvent(
@@ -2404,6 +2422,19 @@ final class NudgeHost {
     /// a cap that silently stops applying.
     func todaysUsage() -> InterruptionBudget {
         (try? log.budget(on: log.today, priorityID: activeCommitment()?.id)) ?? .empty
+    }
+
+    /// **Delivered rows in the store today** — the other half of the charging invariant's join
+    /// (focus-1b5, focus-nrl).
+    ///
+    /// Summed from persisted rows, the way the day's caps are, so that comparing it with
+    /// `chargesPaidFor.count` compares two numbers computed by completely different routes: one
+    /// from the receipts the perception path issued, one from what is actually written down. A
+    /// delivered row with no receipt behind it is a charge that did not go through the door.
+    func deliveredRowsToday() throws -> Int {
+        try InterruptionKind.allCases.reduce(0) { total, kind in
+            total + (try log.deliveredCount(kind: kind, on: log.today))
+        }
     }
 
     /// The four grant-free focus readings from the last time the panel was shown (R-89, §4.5).

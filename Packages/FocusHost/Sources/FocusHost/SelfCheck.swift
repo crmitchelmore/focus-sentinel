@@ -861,6 +861,32 @@ enum SelfCheck {
         report["menuBarGlyphWrites"] = composition.menuBar.glyphWriteCount
         report["menuBarTitleWrites"] = composition.menuBar.titleWriteCount
         report["menuBarAnnouncements"] = composition.menuBar.announcementCount
+        // **The mark the item is really drawing, which is not the mark the presentation asked
+        // for** (focus-nrl). `menuBarAttention` below is the composed request — the *maximum* of
+        // the rung's mark and the badge's — and this is the button's own answer. The two
+        // disagreeing is the whole of focus-nrl: a glyph rung asking for `noticing` under a
+        // pending badge nudge while the item goes on drawing `waiting`.
+        report["markOnTheMenuBarItem"] = composition.menuBar.markOnTheItem.rawValue
+        // **The charging invariant, as a join rather than as a counter** (focus-1b5, focus-nrl).
+        //
+        // `chargesPaidFor` is the list of `PerceptibleChange` receipts the perception path has
+        // issued; `deliveredRowsToday` is summed from persisted `InterventionRecord` rows the
+        // completely separate way the day's caps are. A delivered row with no receipt behind it
+        // is a charge that did not go through the door, which is what three rounds of this defect
+        // were. The two published side by side rather than as a single `Bool`, because a `Bool`
+        // computed here would be this file marking its own homework.
+        //
+        // The channels are published with them so the evidence says *what* was perceived: a
+        // charge on `menuBarItem` is an assignment to an `NSStatusBarButton`, and one on
+        // `popoverContents` is a popover that was open and drawing the nudge.
+        report["chargesPaidFor"] = host.chargesPaidFor.count
+        report["chargeChannels"] = host.chargesPaidFor.map(\.channel.rawValue).sorted()
+        report["deliveredRowsToday"] = (try? host.deliveredRowsToday()) ?? -1
+        // The table itself, so a surface that acquired a channel nothing can observe is a diff in
+        // the evidence rather than only in a doc comment.
+        report["surfacePerceptionChannels"] = NudgeSurface.allCases.map { surface in
+            ["surface": surface.rawValue, "channel": surface.perceptionChannel.rawValue]
+        }
         report["menuBarAttention"] = composition.menuBarPresentation().attention.rawValue
         report["surfaceAttention"] = NudgeSurface.allCases.map { surface in
             [
