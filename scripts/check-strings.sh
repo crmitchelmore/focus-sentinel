@@ -647,6 +647,31 @@ print "== reachable, not merely mentioned"
 #   lint can invent one — so the link is declared in `Config/string-draw-sites.txt`, one row per
 #   vocabulary, and checked: the drawing file must exist and must still contain the expression.
 #
+# ## The four bypasses this rule shipped with, and where each one is closed (focus-cv3)
+#
+# The rule above was raised to stop dead copy shipping, and its whole evidence was that it caught
+# the copy it was written against. Read adversarially, four ways to satisfy it without writing a
+# drawing turned up, all of them a one-line edit:
+#
+#   1. **A second `case` of the same name.** Rule 1 excluded the key's OWN declaration line and
+#      nothing else, so `enum Whatever { case interventionQuietHoursStartEarlier }` — anywhere in
+#      the module, raw value or not — blessed an orphaned key. Closed: no `case` line counts as a
+#      use, because a `case` is a spelling wherever it appears.
+#   2. **A comment.** Both rules read raw text and skipped only comments that OWNED their line, so
+#      a trailing `// .interventionQuietHoursStartEarlier`, a `/* … */` block, or the draw-site
+#      expression pasted into a comment in the drawing file all passed. Closed: both rules read
+#      comment-stripped source, and Rule 1 reads string-stripped source as well.
+#   3. **A path that merely starts with a drawing root.** `path.startswith("App")` accepts
+#      `AppTests/…`, which is exactly the "a test cannot bless a string" rule the line enforces.
+#      Closed: the match is on a path boundary.
+#   4. **An expression that is not a drawing.** A row could name `import SwiftUI` and stay true
+#      for as long as the file existed. Closed: the expression must contain a call to one of the
+#      app's drawing entry points.
+#
+# Each was closed by asking a sharper question, never by naming the string that exploited it: no
+# name a `case` declares counts as a use, both rules read comment-stripped source, the path match
+# is on a boundary, and the expression has to be a drawing.
+#
 # ## What it still cannot do, said plainly rather than left to be discovered
 #
 # **Rule 2 proves a vocabulary is drawn, never that a particular case is reachable.** A key named
@@ -658,8 +683,16 @@ print "== reachable, not merely mentioned"
 # the producer's own output, the way `InterventionSettingsTests.everyDrawnRowHasASentence` now
 # does against `SurfaceRouter.table(…)`.
 #
+# **Rule 1 does not ask whether the naming site is itself reachable.** A key spelled inside a
+# private helper that nothing calls is blessed — `boundaryButtons(_:)` is the shape, though on
+# this tree that function is called from `quietHoursSection` and its four keys really are drawn.
+# Closing it means transitive name-reachability from a root set (a `body`, a public member, an
+# `init`), which is a real lint and a much larger one; it is filed as focus-ado rather than
+# half-built here.
+#
 # So this section makes the *mechanical* claim it can make, and states the residual. What changes
-# is that a key can no longer be blessed by the line that spells it.
+# is that a key can no longer be blessed by the line that spells it, by a second line that spells
+# it, by a comment, by a test, or by a row that points at a file rather than at a drawing.
 
 python3 - "$REPO_ROOT" <<'PYTHON'
 import json
@@ -671,8 +704,95 @@ root = sys.argv[1]
 registry_path = os.path.join(root, "Config", "string-draw-sites.txt")
 
 COMMENT = re.compile(r'^\s*(//|///|\*|/\*)')
-# `case <name> = "<key>"`, alone on its line: the declaration of a NAMED key.
+# `case <name> = "<key>"`, alone on its line: the declaration of a NAMED key. Matched against a
+# COMMENT-STRIPPED line, so a declaration carrying a trailing `// note` is still seen as one.
 DECLARATION = re.compile(r'^\s*case\s+([A-Za-z_]\w*)\s*=\s*"([^"]+)"\s*$')
+# The name a `case` DECLARES, anywhere on a line — `case foo`, `case foo = "…"`,
+# `case foo(Bar)`, and `enum Whatever { case foo }` all the same. Such a name is a spelling, never
+# a drawing, and the anchored `^\s*case` this replaced was itself a bypass: putting the enum on
+# one line moved the `case` off the start of it, which the self-test at the foot of this script
+# caught the first time it ran. A switch ARM is untouched — `case .foo:` and `case let x` do not
+# match, because what follows the keyword there is not a bare identifier — so a drawing that
+# shares a line with a switch arm still counts.
+CASE_DECLARED_NAME = re.compile(r'\bcase\s+[A-Za-z_]\w*')
+# A Swift identifier, whole. `\b` at both ends of the old per-key pattern made it a whole-token
+# match already; this is the same claim asked once for the whole module instead of once per key.
+IDENTIFIER = re.compile(r'[A-Za-z_]\w*')
+
+
+def without_comments(lines):
+    """`lines` with every comment blanked out, line count and columns preserved.
+
+    `COMMENT` only ever matched a comment that OWNED its line, which left three ways to bless a
+    string with prose (focus-cv3):
+
+        adjust(key)                      // .interventionQuietHoursStartEarlier
+        /*
+           interventionQuietHoursStartEarlier
+        */
+        print("interventionQuietHoursStartEarlier")
+
+    The first two are comments the old needle could not see; the third is dealt with by
+    `without_comments_or_strings` below. A lint that a sentence in a comment can satisfy is a
+    lint that anybody can satisfy without writing any code, which is the shape of bypass this
+    guard exists to refuse.
+    """
+    return _strip(lines, strings=False)
+
+
+def without_comments_or_strings(lines):
+    """`lines` with comments AND string literals blanked out.
+
+    A case name inside a string literal is a mention, never a drawing — and the raw value of a
+    *different* key is a string literal that can spell any case name at all.
+    """
+    return _strip(lines, strings=True)
+
+
+def _strip(lines, strings):
+    out = []
+    in_block = False
+    for line in lines:
+        kept = []
+        index = 0
+        in_string = False
+        while index < len(line):
+            pair = line[index:index + 2]
+            if in_block:
+                if pair == "*/":
+                    in_block = False
+                    index += 2
+                    continue
+                index += 1
+                continue
+            if in_string:
+                if line[index] == "\\":
+                    if not strings:
+                        kept.append(line[index:index + 2])
+                    index += 2
+                    continue
+                if line[index] == '"':
+                    in_string = False
+                if not strings:
+                    kept.append(line[index])
+                index += 1
+                continue
+            if pair == "/*":
+                in_block = True
+                index += 2
+                continue
+            if pair == "//":
+                break
+            if line[index] == '"':
+                in_string = True
+                if not strings:
+                    kept.append('"')
+                index += 1
+                continue
+            kept.append(line[index])
+            index += 1
+        out.append("".join(kept))
+    return out
 
 MODULES = {
     "FocusCore": (
@@ -725,37 +845,64 @@ for module, (catalog_path, source_dir) in sorted(MODULES.items()):
         keys = set(json.load(handle).get("strings", {}))
 
     paths = sources(source_dir)
-    text = {path: open(path).read().split("\n") for path in paths}
+    raw = {path: open(path).read().split("\n") for path in paths}
+    # Two views of every file. Declarations are read with the strings still in — a declaration IS
+    # its string — and uses are counted with both comments and strings gone, because neither can
+    # draw anything.
+    prose_free = {path: without_comments(raw[path]) for path in paths}
+    code = {path: without_comments_or_strings(raw[path]) for path in paths}
 
     for path in paths:
-        for number, line in enumerate(text[path], start=1):
-            if COMMENT.match(line):
-                continue
+        for number, line in enumerate(prose_free[path], start=1):
             found = DECLARATION.match(line)
             if found and found.group(2) in keys:
                 named[found.group(2)] = (
                     module, os.path.relpath(path, root), number, found.group(1)
                 )
 
+    # **Every identifier this module writes in code that is not a `case` line.**
+    #
+    # One pass rather than one regular expression per key: the question "is this case name named
+    # anywhere else" is answered by a set, and building the set once turns a check that took five
+    # seconds into one that takes a fraction of it — which is what makes the self-test at the foot
+    # of this script affordable enough to run every time.
+    #
+    # **No name a `case` declares contributes** (focus-cv3). Excluding only the key's OWN
+    # declaration left the rule open to a one-line bypass: declare the same case name a second
+    # time — in any enum, with or without a raw value, in any file of the module — and the
+    # orphaned key is blessed by a line that draws nothing.
+    #
+    #     enum Whatever { case interventionQuietHoursStartEarlier }
+    #
+    # A `case` declares a spelling wherever it appears, so the name it declares is struck from the
+    # line before the line is read. Measured on this tree the day the rule changed: zero keys were
+    # relying on one.
+    spoken = set()
+    for path in paths:
+        for line in code[path]:
+            spoken.update(IDENTIFIER.findall(CASE_DECLARED_NAME.sub(" ", line)))
+
     orphans = []
     for key, (owner, relative, number, case) in sorted(named.items()):
         if owner != module:
             continue
-        # The declaration itself is excluded — that is the whole of the fix.
-        pattern = re.compile(r'(?<![A-Za-z0-9_])' + re.escape(case) + r'\b')
-        uses = 0
-        for path in paths:
-            for other, line in enumerate(text[path], start=1):
-                if os.path.relpath(path, root) == relative and other == number:
-                    continue
-                if COMMENT.match(line):
-                    continue
-                if pattern.search(line):
-                    uses += 1
-        if uses:
+        if case in spoken:
             blessed_by_name.add(key)
         else:
             orphans.append(f"{key}: nothing names `{case}` outside {relative}:{number}")
+
+    mine = sum(1 for key in named if named[key][0] == module)
+    # Non-vacuity, per module. If `DECLARATION` ever stops matching — a reformat, a rename, a new
+    # way of spelling a key — every key silently falls through to Rule 2, and Rule 2's registry
+    # says nothing about `FocusUI`. The whole of Rule 1 would then be an empty loop printing `ok`.
+    if not mine:
+        fail(
+            f"{module}: Rule 1 found no `case … = \"…\"` declaration at all",
+            [
+                "Every key would fall to the draw-site registry, which does not cover this",
+                "module — so the case-name check would be an empty loop reporting success.",
+            ],
+        )
 
     if orphans:
         fail(
@@ -766,8 +913,7 @@ for module, (catalog_path, source_dir) in sorted(MODULES.items()):
                 "sentence the app cannot say."
             ],
         )
-    else:
-        mine = sum(1 for key in named if named[key][0] == module)
+    elif mine:
         print(f"ok   {module}: all {mine} named key(s) are named by code, not by their own declaration")
 
 # --- Rule 2: an unnamed key is blessed by a declared draw site -------------------------------
@@ -805,22 +951,59 @@ for number, prefix, _path, _expression in registry:
 
 # The drawing site must still be there. A registry describing a drawing the app no longer makes
 # is the same failure as a catalog key nobody draws, one level up.
+#
+# ## Three things a row now has to be, because it used to have to be none of them (focus-cv3)
+#
+# The row was a path and a substring, and the substring was looked for in the whole file. So a
+# row could be kept true forever by:
+#
+#   * pasting the expression into a COMMENT in the drawing file — the check read the raw text,
+#     comments and all, and a sentence in a comment draws nothing;
+#   * pointing the path at anything whose name STARTS WITH a drawing root. `AppTests/…`,
+#     `Apple.swift` and `Packages/FocusUI/SourcesOld/…` all satisfied `startswith`, which is
+#     precisely the "a test cannot bless a string" rule the line was written to enforce;
+#   * naming an expression that is not a drawing at all. `import SwiftUI` is in every one of
+#     these files, and a row carrying it would have passed for as long as the file existed.
+#
+# All three are closed below. The third is the coarsest of the checks — a call to one of the
+# app's drawing entry points is necessary, never sufficient — but it is the difference between a
+# row that has to point at a drawing and a row that has to point at a file.
+DRAW_CALLS = (
+    "ShellText(", "NudgeText(", "Text(", "Label(",
+    "String(localized:", "setActionName(",
+)
+
 for number, prefix, path, expression in registry:
-    if not any(path.startswith(drawing_root) for drawing_root in DRAWING_ROOTS):
+    if not any(
+        path == drawing_root or path.startswith(drawing_root + "/")
+        for drawing_root in DRAWING_ROOTS
+    ):
         fail(
             f"{registry_path}:{number} draws `{prefix}` from {path}",
-            [f"which is not one of {', '.join(DRAWING_ROOTS)} — a test cannot bless a string."],
+            [f"which is not under one of {', '.join(DRAWING_ROOTS)} — "
+             "a test cannot bless a string."],
+        )
+        continue
+    if not any(call in expression for call in DRAW_CALLS):
+        fail(
+            f"{registry_path}:{number} the expression for `{prefix}` is not a drawing",
+            [
+                f"expected one of {', '.join(DRAW_CALLS)} in: {expression}",
+                "A row has to point at the line that draws the copy, not merely at a line that",
+                "exists in the file that draws it.",
+            ],
         )
         continue
     full = os.path.join(root, path)
     if not os.path.exists(full):
         fail(f"{registry_path}:{number} names a drawing file that does not exist: {path}")
         continue
-    if expression not in open(full).read():
+    drawing = "\n".join(without_comments(open(full).read().split("\n")))
+    if expression not in drawing:
         fail(
             f"{registry_path}:{number} the drawing of `{prefix}` is gone from {path}",
             [
-                f"expected to find: {expression}",
+                f"expected to find, in code rather than in a comment: {expression}",
                 "Point the row at the site that draws it now, or delete the copy: a vocabulary",
                 "whose last reader went is a vocabulary nobody can read.",
             ],
