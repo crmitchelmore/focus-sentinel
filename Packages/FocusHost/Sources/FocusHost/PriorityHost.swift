@@ -470,7 +470,7 @@ final class PriorityHost: PriorityActing {
     /// **Every way this host states the active commitment, and whether they agree** — and it is
     /// always empty (focus-zrs).
     ///
-    /// A reading rather than a comment, for the reason `NudgeHost.orphanedQuestionSurfaces` is
+    /// A reading rather than a comment, for the reason `NudgeHost.orphanedNudgeSurfaces` is
     /// one: an invariant nobody can take a reading of is a belief. `refresh()` derives all three
     /// from one fetch and assigns them before it announces anything, so a non-empty answer means a
     /// second door to the active priority has been opened somewhere — which is the class this

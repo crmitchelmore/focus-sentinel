@@ -575,19 +575,26 @@ enum SelfCheck {
         report["notificationAuthorisation"] = host.notificationAuthorisation.rawValue
         report["requestAuthorizationCallCount"] = host.requestAuthorizationCallCount
 
-        // **A question on the screen that the loop has forgotten** — always empty (focus-v0u).
+        // **A nudge on the screen that the loop has forgotten** — always empty (focus-v0u,
+        // focus-xix).
         //
-        // The invariant `NudgeHost.endOpenQuestion(_:)` exists to keep, read off the
-        // shipping graph in the shipping process. A non-empty list is the defect itself: a live
-        // panel or an open popover offering three answers that `answer(_:)` will drop in a
-        // `guard`, and a question that will therefore be asked again. The unit lane drives every
-        // exit; this says the running app is not in that state.
-        report["orphanedQuestionSurfaces"] = host.orphanedQuestionSurfaces.map(\.rawValue).sorted()
+        // The invariant `NudgeHost.endOpenQuestion(_:)` and `NudgeHost.setOpenRung(_:)` exist to
+        // keep, read off the shipping graph in the shipping process. A non-empty list is the
+        // defect itself: a live panel or an open popover offering answers that `answer(_:)` will
+        // drop in a `guard` — or, worse, that `resolve(_:snoozeDuration:)` will apply to a
+        // different rung. The unit lane drives every exit; this says the running app is not in
+        // that state.
+        //
+        // **The key was `orphanedQuestionSurfaces` and it read half the screen.** The accusation
+        // can be orphaned on both of the same surfaces and had no reading at all, which is the
+        // shape of this whole round: every treatment the question path received, the accusation
+        // path lacked.
+        report["orphanedNudgeSurfaces"] = host.orphanedNudgeSurfaces.map(\.rawValue).sorted()
         report["questionExitsDeclared"] = QuestionExit.allCases.map(\.rawValue).sorted()
 
         // **Two readings of one fact, disagreeing** — always zero and always empty (focus-zrs).
         //
-        // `orphanedQuestionSurfaces` above reads empty throughout the defect this round is about,
+        // `orphanedNudgeSurfaces` above reads empty throughout the defect this round is about,
         // which is exactly why these exist: an invariant can only see the contradictions it was
         // built to look for. These three say whether the *active priority* is still one fact.
         //

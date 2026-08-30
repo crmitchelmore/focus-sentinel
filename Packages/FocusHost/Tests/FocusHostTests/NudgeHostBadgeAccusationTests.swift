@@ -432,6 +432,46 @@ struct NudgeHostBadgeAccusationTests {
         )
     }
 
+    /// **The invariant that watches for it reads both kinds.**
+    ///
+    /// `orphanedQuestionSurfaces` was built for focus-v0u and read half the screen: an accusation
+    /// can be left drawn on the same two surfaces, with a worse consequence, and had no reading at
+    /// all. This drives the reading into the state it exists to catch — the popover carrying an
+    /// accusation the loop is not holding — and then out of it again, because a reading that
+    /// cannot go non-empty is not an invariant, it is a constant.
+    @Test("the orphan reading sees an accusation the loop is not holding")
+    func theOrphanReadingSeesAnAccusation() throws {
+        let fixture = try NudgeHostFixture()
+        defer { fixture.tearDown() }
+
+        Self.climbToTheBadge(fixture, via: .reducedInterruption)
+        let stranded = try #require(fixture.host.pendingPopoverAccusation)
+        try MenuBarStage.open(
+            fixture.menuBar,
+            showing: MenuBarPresentation(status: .unrelated, pendingAccusation: stranded)
+        )
+        NudgeHostFixture.settle()
+        try #require(fixture.menuBar.isShowing(.accusation))
+
+        // The loop lets the rung go — a phase change, a session end — while the popover keeps the
+        // presentation it was last handed, which is exactly what a hosting controller does.
+        fixture.host.phaseLeftFocus()
+        NudgeHostFixture.settle()
+
+        #expect(
+            fixture.host.orphanedNudgeSurfaces == [.popoverBadge],
+            """
+            the popover is offering an accusation the loop has forgotten and the invariant \
+            cannot see it: \(fixture.host.orphanedNudgeSurfaces.map(\.rawValue))
+            """
+        )
+
+        // And the redraw the shipping wire performs clears it.
+        fixture.menuBar.update(NudgeHostFixture.menuBarPresentation(of: fixture.host))
+        NudgeHostFixture.settle()
+        #expect(fixture.host.orphanedNudgeSurfaces.isEmpty)
+    }
+
     static func openThePopoverOnTheBadge(_ fixture: NudgeHostFixture) throws {
         try MenuBarStage.open(
             fixture.menuBar,

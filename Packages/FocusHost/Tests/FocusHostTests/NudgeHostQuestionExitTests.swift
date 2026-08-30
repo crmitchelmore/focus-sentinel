@@ -61,7 +61,7 @@ struct NudgeHostQuestionExitTests {
         // The question is still on the screen, still owned, still answerable.
         #expect(fixture.panel.isVisible && fixture.panel.showing == .question)
         #expect(fixture.host.slot.openQuery != nil, "the question lost the slot it was holding")
-        #expect(fixture.host.orphanedQuestionSurfaces.isEmpty)
+        #expect(fixture.host.orphanedNudgeSurfaces.isEmpty)
 
         // Nothing was written about it, and it certainly was not settled.
         let settling = try fixture.ledger.settledReceipt(
@@ -72,7 +72,7 @@ struct NudgeHostQuestionExitTests {
         // And the person's answer still reaches the loop.
         fixture.host.answer(.yesAddIt)
         NudgeHostFixture.settle()
-        #expect(fixture.host.orphanedQuestionSurfaces.isEmpty)
+        #expect(fixture.host.orphanedNudgeSurfaces.isEmpty)
         #expect(
             try fixture.ledger.settledReceipt(
                 priorityID: fixture.priorityID, subjectKind: .app, subject: Self.subject
@@ -125,10 +125,10 @@ struct NudgeHostQuestionExitTests {
             long.host.consider(NudgeHostFixture.uncertainJudgement(subject: Self.subject))
             NudgeHostFixture.settle()
             #expect(
-                long.host.orphanedQuestionSurfaces.isEmpty,
+                long.host.orphanedNudgeSurfaces.isEmpty,
                 """
                 \(exit.rawValue) left a question on \
-                \(long.host.orphanedQuestionSurfaces.map(\.rawValue))
+                \(long.host.orphanedNudgeSurfaces.map(\.rawValue))
                 """
             )
             return
@@ -136,10 +136,10 @@ struct NudgeHostQuestionExitTests {
 
         NudgeHostFixture.settle()
         #expect(
-            fixture.host.orphanedQuestionSurfaces.isEmpty,
+            fixture.host.orphanedNudgeSurfaces.isEmpty,
             """
             \(exit.rawValue) left a question on screen that the host has forgotten: \
-            \(fixture.host.orphanedQuestionSurfaces.map(\.rawValue))
+            \(fixture.host.orphanedNudgeSurfaces.map(\.rawValue))
             """
         )
     }

@@ -1660,20 +1660,33 @@ final class NudgeHost {
         setOpenRung(nil)
     }
 
-    /// **A question the person can still see and answer that this host has forgotten** — and it
-    /// is always empty (focus-v0u).
+    /// **A nudge the person can still see and answer that this host has forgotten** — and it is
+    /// always empty (focus-v0u, focus-xix).
     ///
-    /// The invariant `endOpenQuestion(_:)` exists to keep, stated as a reading rather
-    /// than as a comment so the unit lane can drive every exit and the self-check can report it.
-    /// A non-empty answer is the defect itself: a live panel or an open popover offering three
-    /// answers that `answer(_:)` will drop in a `guard`, and a question that will therefore be
-    /// asked again.
-    var orphanedQuestionSurfaces: [NudgeSurface] {
-        guard openQuestion == nil else { return [] }
-        var orphans: [NudgeSurface] = []
-        if panel.isVisible, panel.showing == .question { orphans.append(.panel) }
-        if menuBar.isShowing(.query) { orphans.append(.popoverBadge) }
-        return orphans
+    /// The invariant `endOpenQuestion(_:)` and `setOpenRung(_:)` exist to keep, stated as a
+    /// reading rather than as a comment so the unit lane can drive every exit and the self-check
+    /// can report it. A non-empty answer is the defect itself: a live panel or an open popover
+    /// offering answers that `answer(_:)` or `resolve(_:snoozeDuration:)` will drop in a `guard`,
+    /// and a nudge that will therefore be raised again.
+    ///
+    /// **It was `orphanedQuestionSurfaces` and it read half the screen.** The reading was built
+    /// for focus-v0u, which was a question left drawn on a surface the loop had forgotten — and
+    /// the accusation can be left in exactly the same state on exactly the same two surfaces,
+    /// with a worse consequence, because `resolve(…)` does *not* drop the click: it applies the
+    /// correction to whatever rung this host is holding now. So the invariant that watched one
+    /// half now watches both, and `MenuBarNudge.allCases` in `isShowing(_:)` is what stops a
+    /// third from being watched for one and not the other.
+    var orphanedNudgeSurfaces: [NudgeSurface] {
+        var orphans: Set<NudgeSurface> = []
+        if openQuestion == nil {
+            if panel.isVisible, panel.showing == .question { orphans.insert(.panel) }
+            if menuBar.isShowing(.query) { orphans.insert(.popoverBadge) }
+        }
+        if openRung == nil {
+            if panel.isVisible, panel.showing == .accusation { orphans.insert(.panel) }
+            if menuBar.isShowing(.accusation) { orphans.insert(.popoverBadge) }
+        }
+        return orphans.sorted { $0.rawValue < $1.rawValue }
     }
 
     /// Wired by the composition root, which is the only object that knows the menu bar and the

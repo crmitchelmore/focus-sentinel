@@ -1579,9 +1579,9 @@ check(
 # Every earlier finding in this epic was the app silencing itself. That one was the app ignoring
 # the person and asking again, which is U-1's repeat-asking clause broken from the other side.
 check(
-    nudge.get("orphanedQuestionSurfaces") == [],
-    "no surface is offering a question the nudge loop has forgotten",
-    nudge.get("orphanedQuestionSurfaces"),
+    nudge.get("orphanedNudgeSurfaces") == [],
+    "no surface is offering a nudge the loop has forgotten, of either kind",
+    nudge.get("orphanedNudgeSurfaces"),
 )
 # The exits are enumerated, and the unit lane walks every one of them. Asserted here so an exit
 # added to the enum is visible in the gate log rather than only in a test file.

@@ -428,7 +428,7 @@ public final class NudgePanelController {
     ///
     /// `showing` and `content` are two statements about one thing, and `update(showing:content:)`
     /// lets a caller make them disagree — a panel drawing an accusation while reporting a
-    /// question, which is precisely the contradiction `NudgeHost.orphanedQuestionSurfaces` exists
+    /// question, which is precisely the contradiction `NudgeHost.orphanedNudgeSurfaces` exists
     /// to catch and would then be catching a lie about. The shipping loop uses these two, where
     /// the kind is derived from the type of the view rather than restated beside it, and there is
     /// no argument to get wrong.

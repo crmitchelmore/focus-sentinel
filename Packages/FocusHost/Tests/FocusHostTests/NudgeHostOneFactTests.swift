@@ -25,7 +25,7 @@ import Testing
 /// read it and answer it, and then dropped the click in `guard let priorityID =
 /// openQuestionPriorityID else { return }` — with `defer { closeSurfaces(…) }` tidying the panel
 /// away, zero rules written, no receipt, and the same question asked again on the next tick.
-/// `orphanedQuestionSurfaces` reads empty throughout, so round 6's own invariant cannot see it.
+/// `orphanedNudgeSurfaces` reads empty throughout, so round 6's own invariant cannot see it.
 ///
 /// These three drive the divergence at the loop's own entry point. The repair is not a check that
 /// the two readings agree: it is that **there is one reading**. The commitment travels in
@@ -105,7 +105,7 @@ struct NudgeHostOneFactTests {
             fixture.panel.showing == .question,
             "the question was taken off the screen by an accusation that should have waited"
         )
-        #expect(fixture.host.orphanedQuestionSurfaces.isEmpty)
+        #expect(fixture.host.orphanedNudgeSurfaces.isEmpty)
         #expect(fixture.host.slot.openQuery != nil)
     }
 
