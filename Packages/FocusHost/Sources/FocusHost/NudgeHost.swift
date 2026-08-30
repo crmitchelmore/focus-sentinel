@@ -882,7 +882,26 @@ final class NudgeHost {
             commitment: commitment,
             askedAt: dateProvider.now
         )
-        forgetOpenRung()
+        // **Nothing is taken down here** (focus-2rg, U-2).
+        //
+        // This line was `forgetOpenRung()`, unconditional, and it is preemption's other direction
+        // outliving the mechanism. Ask what it could still reach: `slot.offering(warrant)` above
+        // withholds against any rung that `holdsTheInterruptionSlot`, so a rung on the **panel**
+        // never gets here. What did was exactly the two rungs that hold no slot — the ambient
+        // glyph and the badge — and the badge is the one it cost something.
+        //
+        // Driven on the shipping loop with reduced interruption on: ladder at `.panel`, the rung
+        // on the badge with five answers on it, then one ordinary uncertain judgement about
+        // another application, and `pendingPopoverAccusation` went to `nil`. Nothing was recorded
+        // — no deferral, no `ladder.undeliver`, no withdrawal — while the delivered row went on
+        // charging the day's budget and `openRecordID` was overwritten by the question's own write
+        // so that row could never be completed either. The accusation had five answers a moment
+        // earlier and now had no surface, because the person was asked about something else.
+        //
+        // The two do not collide. `MenuBarPopoverView` draws `pendingAccusation` and
+        // `pendingQuery` as two rows of one popover, and the reverse order was already proved to
+        // keep both (`NudgeHostSlotOwnershipTests.aBadgeQuestionDoesNotSilenceTheAccusation`) —
+        // so this direction was the asymmetry, not the rule.
 
         let presentation = QueryPresentation(
             voice: preferences.voice,

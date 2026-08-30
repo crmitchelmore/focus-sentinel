@@ -375,6 +375,101 @@ struct NudgeHostSlotOwnershipTests {
         )
     }
 
+    /// **A question does not take the badge's accusation down with it** (focus-2rg, U-2).
+    ///
+    /// The mirror of `aBadgeQuestionDoesNotSilenceTheAccusation` above, and it was the direction
+    /// nothing guarded. `ask(…)` called `forgetOpenRung()` **unconditionally**: the rung holds no
+    /// slot when it is on the badge, so `slot.offering(warrant)` admitted, and the open accusation
+    /// was dropped with nothing recorded — no deferral, no `ladder.undeliver`, no withdrawal.
+    ///
+    /// Ask what that line could still reach and the answer is only ever the two rungs that hold no
+    /// slot: a rung on the **panel** withholds the question at the line above. So it existed to
+    /// take down exactly the surfaces it must not.
+    ///
+    /// Driven on the shipping loop before the repair: ladder at `.panel`, badge carrying five
+    /// answers about the decoy, then one ordinary uncertain judgement about another application —
+    /// and `pendingPopoverAccusation` went to `nil` while the delivered row went on charging the
+    /// budget. The person was asked about one thing and silently lost the nudge about another.
+    ///
+    /// The two do not collide: `MenuBarPopoverView` draws both as two rows of one popover, which
+    /// is the state the reverse order has produced since focus-k42.
+    @Test("a question does not wipe the accusation waiting in the badge")
+    func aQuestionDoesNotWipeTheBadgeAccusation() throws {
+        let fixture = try NudgeHostFixture()
+        defer { fixture.tearDown() }
+        fixture.host.choose(reducedInterruption: true)
+
+        for _ in 0..<2 {
+            fixture.host.consider(NudgeHostFixture.unrelatedJudgement(subject: Self.decoy))
+            NudgeHostFixture.settle()
+            fixture.clock.advance(by: RelevancePolicy.mandateCooldown + .seconds(1))
+        }
+        try #require(
+            fixture.host.pendingPopoverAccusation?.subject?.identifier == Self.decoy,
+            "the rung never reached the badge: \(String(describing: fixture.host.lastDecision))"
+        )
+        let rungsBefore = try fixture.interventions().filter { $0.kind == .accusation }.count
+
+        // One ordinary uncertain judgement about a different application.
+        fixture.host.consider(NudgeHostFixture.uncertainJudgement(subject: Self.other))
+        NudgeHostFixture.settle()
+
+        try #require(
+            fixture.host.pendingPopoverQuery?.subject.identifier == Self.other,
+            "the question was not raised at all, so this proves nothing about the accusation"
+        )
+        #expect(
+            fixture.host.pendingPopoverAccusation?.subject?.identifier == Self.decoy,
+            "the question wiped the accusation waiting in the badge, and recorded nothing"
+        )
+        #expect(fixture.host.currentRung == .panel, "the ladder lost the rung it was holding")
+        // Nothing was written about the accusation on the way past: no deferral, and no second
+        // row. Losing it silently was the defect; recording a loss that did not happen would be
+        // the over-correction.
+        #expect(fixture.host.deferredCount == 0)
+        #expect(
+            try fixture.interventions().filter { $0.kind == .accusation }.count == rungsBefore,
+            "a row was written about an accusation that is still on the badge"
+        )
+    }
+
+    /// **And it is still answerable afterwards** — the consequence a person meets.
+    ///
+    /// The reading above is the mechanism. This is the badge being pressed after the question
+    /// arrived beside it, which is the whole point of not dropping it: a correction that reaches
+    /// `resolve(…)` and writes the rule the person meant.
+    @Test("the accusation the question did not wipe can still be answered")
+    func theSurvivingBadgeAccusationStillAnswers() throws {
+        let fixture = try NudgeHostFixture()
+        defer { fixture.tearDown() }
+        fixture.host.choose(reducedInterruption: true)
+        var written: [CorrectionOutcome] = []
+        fixture.host.onCorrection = { outcome, _ in written.append(outcome) }
+
+        for _ in 0..<2 {
+            fixture.host.consider(NudgeHostFixture.unrelatedJudgement(subject: Self.decoy))
+            NudgeHostFixture.settle()
+            fixture.clock.advance(by: RelevancePolicy.mandateCooldown + .seconds(1))
+        }
+        fixture.host.consider(NudgeHostFixture.uncertainJudgement(subject: Self.other))
+        NudgeHostFixture.settle()
+        try #require(fixture.host.pendingPopoverQuery != nil)
+
+        fixture.host.resolve(.thisIsRelevant, snoozeDuration: nil)
+        NudgeHostFixture.settle()
+
+        let rule = try #require(
+            written.compactMap(\.ruleAwaitingPersistence).first,
+            "the correction on the surviving badge accusation wrote nothing"
+        )
+        #expect(rule.subject == Self.decoy, "the correction landed on the wrong application")
+        // And the question is untouched by a correction aimed at the accusation.
+        #expect(
+            fixture.host.pendingPopoverQuery?.subject.identifier == Self.other,
+            "answering the accusation spent the question beside it"
+        )
+    }
+
     /// **One question at a time is a fact about the loop, not about the slot.**
     ///
     /// The guard that had to be added when ownership stopped answering identity: with the badge
