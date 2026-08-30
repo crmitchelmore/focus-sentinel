@@ -660,6 +660,27 @@ check_outside "R-70n" "no rule is constructed with the session scope" \
 #        and does not name `QueryWarrant`. The rung is the unit of escalation, so its
 #        provenance IS the no-escalation invariant.
 #
+# R-96o  **The sentence names the app; the key stays a key** (focus-ebv). Two halves:
+#
+#          * every line in a nudge SURFACE that draws text and names a subject must draw
+#            `displayName`. Not the value, not the description — the display half, by name;
+#          * no such line may name `identifier`;
+#          * and the three files that do nothing BUT draw a nudge — the two panels and the
+#            popover — may not name `identifier` anywhere at all. A line-based rule alone can
+#            be walked around by aliasing the key into a local first; this half is what makes
+#            that walk fail, because the local's own definition names it.
+#
+#        This is the condition the bead asked for: `grep -n "subject" scripts/check-strings.sh`
+#        returned nothing, so the one slot whose content is the whole product had no lint over
+#        it at all — while THREE test files pinned the raw bundle identifier as the expected
+#        user-facing sentence. A defect with proofs guarding it needs a lint that is about the
+#        shape rather than about the case.
+#
+#        Line-based, and honestly so: an `arguments:` list split across lines so that the slot
+#        expression sits on a line of its own would pass. That is a visible act in a diff, which
+#        is the most a grep can offer here; the totality claim is `SubjectSentenceTests`, which
+#        renders every deck crossed with every subject shape and asserts both directions.
+#
 # R-96d  No shared protocol over the two authorisations. `: NudgeAuthorisation`-shaped
 #        conformances are banned outright — a shared abstraction is the elegant refactor
 #        that would quietly destroy the guarantee while looking like an improvement.
@@ -759,6 +780,24 @@ NUDGE_SOURCES=(
 
 # The reducers alone — no surface, no AppKit. R-96i and R-96j are about these.
 NUDGE_REDUCERS=(Packages/FocusCore/Sources/FocusCore/Nudge)
+
+# The files that DRAW a nudge. R-96o is about these: `FocusCore/Nudge` is deliberately absent,
+# because it draws nothing and holds the two halves' definitions.
+NUDGE_SURFACES=(
+    Packages/FocusUI/Sources/FocusUI/Nudge
+    Packages/FocusUI/Sources/FocusUI/MenuBar
+)
+
+# The three files that do nothing but draw a nudge, and may therefore name no key at all
+# (R-96o). The rest of `NUDGE_SURFACES` is excluded for named reasons: `SubjectNaming` is the
+# seam that RESOLVES a name and has to take a key to do it, `NotificationDelivery`'s
+# identifiers are `UNNotificationRequest`'s and have nothing to do with a subject, and
+# `MenuBarController` declares the value type whose halves these are.
+NUDGE_DRAWING_FILES=(
+    Packages/FocusUI/Sources/FocusUI/Nudge/QueryPanelView.swift
+    Packages/FocusUI/Sources/FocusUI/Nudge/AccusationPanelView.swift
+    Packages/FocusUI/Sources/FocusUI/MenuBar/MenuBarPopoverView.swift
+)
 
 # The one file permitted to show the panel (R-96m). It arrives in T133.
 PANEL_SHOW_FILE="Packages/FocusUI/Sources/FocusUI/Nudge/NudgePanelController.swift"
@@ -936,6 +975,84 @@ print(f"ok   [R-96f] {checked} nudge query line(s) checked, none accusatory")
 PYTHON
 tone_rc=$?
 (( tone_rc != 0 )) && rc=1
+
+# R-96o — the subject slot's content, which nothing guarded (focus-ebv).
+#
+# A "drawing line" is one carrying `arguments:` — the slot list every deck line is substituted
+# through — or `Text(verbatim:`, which is how the popover's Snoozed row draws its subject. A
+# drawing line that names a subject must name the display half and must not name the key.
+check_subject_slot() {
+    local paths
+    paths=(${(f)"$(existing_paths "${NUDGE_SURFACES[@]}")"})
+    if (( ${#paths} == 0 )) || [[ -z "${paths[1]}" ]]; then
+        print -u2 "FAIL [R-96o] no nudge surface files to search — the check would pass vacuously"
+        rc=1
+        return
+    fi
+    print "     [R-96o] searching: ${paths[*]}"
+
+    local drawn
+    drawn=$(grep -rnE --include='*.swift' --exclude-dir='.build' \
+        'arguments:|Text\(verbatim:' "${paths[@]}" 2>/dev/null \
+        | strip_comments | grep -i 'subject')
+
+    if [[ -z "$drawn" ]]; then
+        # Non-vacuity. Four user-visible surfaces draw a subject; a search that finds none has
+        # lost its target and must not report success.
+        print -u2 "FAIL [R-96o] no drawn subject found in any nudge surface — the check is blind"
+        rc=1
+        return
+    fi
+
+    local without_name with_key
+    without_name=$(print -r -- "$drawn" | grep -v 'displayName')
+    with_key=$(print -r -- "$drawn" | grep 'identifier')
+
+    if [[ -n "$without_name" ]]; then
+        print -u2 "FAIL [R-96o] a nudge draws a subject without its display half"
+        print -u2 "$without_name" | sed 's/^/    /'
+        print -u2 "    A rule keyed on a display name is not a rule — and a SENTENCE naming a"
+        print -u2 "    storage key is not a sentence. Draw subject.displayName (focus-ebv)."
+        rc=1
+    else
+        print "ok   [R-96o] every drawn subject draws its display half"
+    fi
+
+    if [[ -n "$with_key" ]]; then
+        print -u2 "FAIL [R-96o] a nudge draws a subject's bundle identifier"
+        print -u2 "$with_key" | sed 's/^/    /'
+        rc=1
+    else
+        print "ok   [R-96o] no drawn subject names the key it is filed under"
+    fi
+
+    # The third half. A view that never names a key cannot draw one, however the expression is
+    # spelled or aliased. Each file is required to exist: a renamed view that quietly dropped
+    # out of this list would take its ban with it.
+    local file keys
+    for file in $NUDGE_DRAWING_FILES; do
+        if [[ ! -f "$file" ]]; then
+            print -u2 "FAIL [R-96o] the nudge drawing file $file is missing"
+            rc=1
+            continue
+        fi
+        # `-H`, not `-n` alone: `strip_comments` matches on grep's `path:line:` form, and a
+        # single-file grep omits the path — so without this every doc comment quoting the rule
+        # would be read as a violation of it.
+        keys=$(grep -HnE '\.identifier\b|identifier:' "$file" | strip_comments | grep '[^[:space:]]')
+        if [[ -n "$keys" ]]; then
+            print -u2 "FAIL [R-96o] $file names a storage key"
+            print -u2 "$keys" | sed 's/^/    /'
+            print -u2 "    A view draws names and reports values; which half keys a rule is the"
+            print -u2 "    host's business (focus-ebv)."
+            rc=1
+        else
+            print "ok   [R-96o] $file names no storage key"
+        fi
+    done
+}
+
+check_subject_slot
 
 # R-96g — **nowhere, now** (focus-wy0). It was `count_at_most … 1`: the call was permitted in the
 # Intervention pane's user-initiated button and nowhere else. The button asked for a permission
