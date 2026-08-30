@@ -66,7 +66,7 @@
 #
 #   1. the shipping binary declares exactly the two rungs, top rung `panel` (`ladderRungsDeclared`
 #      and the `routes` table, read out of the app under test — not restated here);
-#   2. after another full `escalationDwell` there is still EXACTLY ONE panel-sized window inside
+#   2. after another full `escalationDwell` there is still EXACTLY ONE panel-shaped window inside
 #      the display — a rung above the panel arriving as its own surface would make that two;
 #   3. it is the SAME window as frame 5, by measured window id, which both captions record — so a
 #      reader who notices the two images are alike is reading the evidence correctly rather than
@@ -307,25 +307,21 @@ print "decoy 2: $DECOY2_APP"
 
 # Nothing from a previous run may survive into this one. A frame this drive fails to take must be
 # **absent**, not last week's picture of a different state.
-ARTEFACTS=(
-    nudge-timeline.txt
-    01-cockpit-at-rest.png 02-menu-bar-at-rest.png
-    03-decoy-foregrounded.png 04-menu-bar-ambient.png 05-rung2-panel.png
-    06-ladder-tops-out.png 17-keystroke-sink.png
-    07-this-is-relevant.png 08-snooze-countdown.png 09-change-priority.png 10-return-to-task.png
-    11-paused.png 16-break.png
-    12-the-query.png 13-query-answered-yes.png 14-subject-returns.png 14b-rule-deleted.png
-    15-decoy-full-screen.png
-)
-for artefact in $ARTEFACTS; do
-    rm -f -- "$EVIDENCE_DIR/$artefact" "$EVIDENCE_DIR/${artefact}.MANUAL_REQUIRED.txt"
-    # The screen twin of every window frame, and the numbered extras of both (see the
-    # visibility doctrine). A stale -onscreen.png beside a fresh frame would be a picture of a
-    # different run's screen filed as proof about this one.
-    rm -f -- "$EVIDENCE_DIR/${artefact%.png}-onscreen.png"
-    rm -f -- "$EVIDENCE_DIR/${artefact%.png}"-[0-9]*.png
-    rm -f -- "$EVIDENCE_DIR/${artefact%.png}"-[0-9]*-onscreen.png
+#
+# **The sweep is over the DIRECTORY, not over a list somebody maintains** (focus-ghy). The list
+# used to be written out by hand, and the moment frame 6 was renamed away from
+# `06-rung3-recommitment.png` the reset stopped deleting it — so a
+# `06-rung3-recommitment.png.MANUAL_REQUIRED.txt` receipt for a rung U-2 had deleted survived
+# every subsequent run, in the evidence directory, dated and looking exactly like a finding. A
+# reset that can only remove the artefacts somebody remembered to enumerate is not the promise the
+# header above makes. Every `.png`, every `-onscreen.png`, every `.MANUAL_REQUIRED.txt` and the
+# timeline go, whatever they are called and whichever run made them.
+reset_count=0
+for stale in "$EVIDENCE_DIR"/*.png(N) "$EVIDENCE_DIR"/*.MANUAL_REQUIRED.txt(N) \
+             "$EVIDENCE_DIR"/nudge-timeline.txt(N); do
+    rm -f -- "$stale" && (( reset_count += 1 ))
 done
+print "reset: removed $reset_count artefact(s) from $EVIDENCE_DIR — the sweep is the directory, not a list"
 rm -f -- "$ECHO_FILE"
 
 {
@@ -392,9 +388,12 @@ app_window_records() {
 #    `panel_geometry_contract` for what that cost.
 # 2. **Both captures, always.** `-l <id>` for the backing store and `-R <x,y,w,h>` at that same
 #    window's own measured coordinates for the screen. The second frame is what a person sees.
-# 3. **The differential, and it fails loudly.** Both frames are measured by `scripts/frame-ink.py`.
-#    A run in which the backing store has ink and the screen at the window's own coordinates does
-#    not is the exact signature of this defect, and it stops the lane.
+# 3. **The differential, and it fails loudly.** Both frames are measured by `scripts/frame-ink.py`,
+#    which returns `ink`, `blank`, `unreadable` or `missing`. The whole verdict space is judged,
+#    not one cell of it: a backing store with ink over a blank screen is focus-x7d's exact
+#    signature, two blanks are a window that showed nothing, and either frame coming back
+#    `unreadable` or `missing` means this lane did not measure the frame at all. All of them stop
+#    the lane; none of them is allowed to pass silently and be recorded as produced.
 #
 # The `-R` frame is filed beside its `-l` twin as `<name>-onscreen.png`, so a reader of the
 # evidence directory sees the pair rather than having to know one was taken.
@@ -501,12 +500,38 @@ capture_window_pair() {
     onscreen_verdict="$(frame_verdict "$onscreen")"
     print "     visibility: ${backing:t} backing=$backing_verdict screen=$onscreen_verdict (window $id at $x,$y,$w,$h)"
 
-    if [[ "$backing_verdict" == "ink" && "$onscreen_verdict" == "blank" ]]; then
+    # **The differential used to fire on one cell of nine** (focus-ghy). `frame_verdict` returns
+    # `ink`, `blank`, `unreadable` or `missing`, and only `backing=ink screen=blank` stopped the
+    # lane — so `missing` at either end, `unreadable` at either end, and a blank/blank pair all
+    # passed silently and were recorded as produced. Observed live: `backing=unreadable
+    # screen=unreadable`, rc=0, both files written and filed as evidence. A frame nobody could
+    # measure is not a frame that passed; a pair of blanks is not a window somebody could see.
+    #
+    # `frame-ink.py` had been saying so all along — it exits non-zero on `missing`, on
+    # `unreadable` and on `blank` — and this lane read the verdict word and threw the exit status
+    # away. So the whole verdict space is enumerated here rather than one cell of it, and the only
+    # accepted outcome is one this lane can actually read.
+    local failure=''
+    if [[ "$backing_verdict" != "ink" && "$backing_verdict" != "blank" ]]; then
+        failure="the BACKING STORE frame is $backing_verdict — it could not be measured at all"
+    elif [[ "$onscreen_verdict" != "ink" && "$onscreen_verdict" != "blank" ]]; then
+        failure="the SCREEN frame is $onscreen_verdict — it could not be measured at all"
+    elif [[ "$backing_verdict" == "ink" && "$onscreen_verdict" == "blank" ]]; then
+        failure="the BACKING STORE has content and the SCREEN at that same window's own coordinates is blank — focus-x7d's exact signature: the surface rendered, and nobody could see it"
+    elif [[ "$backing_verdict" == "blank" && "$onscreen_verdict" == "blank" ]]; then
+        failure="BOTH frames are blank — this window drew nothing and showed nothing, and a picture of it proves nothing"
+    fi
+    # The one remaining cell, `backing=blank screen=ink`, is enumerated and deliberately allowed:
+    # the app owns windows that legitimately render nothing (a zero-height helper, a window behind
+    # another), `capture_windows` photographs every one of them, and ink on the screen at those
+    # coordinates is somebody else's window rather than a claim about this one. It is named here
+    # so the next reader knows it was decided rather than missed.
+
+    if [[ -n "$failure" ]]; then
         print -u2 "LIVE-LANE VISIBILITY FAILURE: ${backing:t}"
-        print -u2 "    The window's BACKING STORE has content and the SCREEN at that same window's"
-        print -u2 "    own coordinates ($x,$y,$w,$h) is blank. This is the exact signature of"
-        print -u2 "    focus-x7d: the surface rendered, and nobody could see it. Read"
-        print -u2 "    ${onscreen:t} beside ${backing:t} before believing any claim about this frame."
+        print -u2 "    $failure"
+        print -u2 "    Window $id at $x,$y,$w,$h. Read ${onscreen:t} beside ${backing:t} before"
+        print -u2 "    believing any claim about this frame."
         VISIBILITY_FAILURES+=("${backing:t}")
         return 1
     fi
@@ -517,21 +542,53 @@ capture_window_pair() {
 # entry" fallback anywhere in this file.** e02's lane learned that the hard way: a 900×704 picture
 # of the cockpit filed as the quick-capture panel. A frame that shows the wrong window is worse
 # than a missing frame.
+#
+# **The fallback was gone and the NAME was still landing on the front-most window** (focus-ghy).
+# Capture-them-all replaced the fallback, but the canonical filename went to `index == 1` — the
+# first row `windowid` lists, which is the front-most one — with no check that it was the window
+# the frame is about. Two floating panels ship, both owned by `Focus Sentinel` and both enumerated
+# by `--include-panels`: demonstrated with the real function and the quick-capture panel in front,
+# `05-rung2-panel.png` was the 560×121 quick-capture panel and the nudge panel landed in
+# `05-rung2-panel-2.png`. Reachable by the operator pressing the global capture hot key during an
+# attended drive — and the reader of the evidence has no way to tell.
+#
+# So a caller that knows which window the frame is about passes its id as `$3`, and that window
+# gets the canonical name whatever position it lists in. Every other window is still captured,
+# numbered, so nothing is hidden; and a preferred id that is not on screen is a loud failure
+# rather than a quiet demotion to whatever is in front.
 capture_windows() {
-    local artefact="$1" owner="${2:-$WINDOW_OWNER}" index=0 target rc=1
+    local artefact="$1" owner="${2:-$WINDOW_OWNER}" preferred="${3:-}"
+    local index=0 extra=1 target rc=1 matched=0
     local record id x y w h
     for record in ${(f)"$(app_window_records "$owner")"}; do
         [[ -n "$record" ]] || continue
         read -r id x y w h <<< "$record"
         [[ -n "$h" ]] || continue
         (( index += 1 ))
-        if (( index == 1 )); then
+        if [[ -n "$preferred" ]]; then
+            if [[ "$id" == "$preferred" ]]; then
+                target="$artefact"
+                matched=1
+            else
+                (( extra += 1 ))
+                target="${artefact%.png}-$extra.png"
+            fi
+        elif (( index == 1 )); then
             target="$artefact"
         else
             target="${artefact%.png}-$index.png"
         fi
         capture_window_pair "$target" "$id" "$x" "$y" "$w" "$h" && rc=0
     done
+
+    if [[ -n "$preferred" ]] && (( ! matched )); then
+        print -u2 "LIVE-LANE VISIBILITY FAILURE: $artefact"
+        print -u2 "    The window this frame is about (id $preferred) is not among the $index window(s)"
+        print -u2 "    $owner has on screen, so nothing was filed under the canonical name. The"
+        print -u2 "    front-most window is NOT a substitute for the right one."
+        VISIBILITY_FAILURES+=("$artefact")
+        return 1
+    fi
     return $rc
 }
 
@@ -772,7 +829,8 @@ scenario_ladder() {
     if require_panel_geometry "05 · rung 2 panel"; then
         panel_before="$(panel_window_id)"
     fi
-    capture_windows "05-rung2-panel.png"
+    # The panel's own id, so the canonical name cannot land on the quick-capture panel (focus-ghy).
+    capture_windows "05-rung2-panel.png" "$WINDOW_OWNER" "$panel_before"
     # The caption used to say "five actions". `AccusationPanelView.actionOrder` is SIX —
     # returnToTask, thisIsRelevant, notThisTime, snooze, pause, changePriority — and two of them
     # are conditional, so no single number is true of every run. A caption that names a count the
@@ -818,7 +876,7 @@ frame_06_ladder_tops_out() {
     if require_panel_geometry "06 · the ladder topped out — still one panel, a full dwell later"; then
         panel_after="$(panel_window_id)"
     fi
-    capture_windows "06-ladder-tops-out.png"
+    capture_windows "06-ladder-tops-out.png" "$WINDOW_OWNER" "$panel_after"
 
     # **Three branches, because there are three outcomes** (focus-v55).
     #
@@ -1006,12 +1064,13 @@ scenario_query() {
     open -a "$DECOY2_APP" --args --echo "$ECHO_FILE"
     sleep $(( QUERY_DWELL + 10 ))
 
-    # Same shape as frames 5 and 6: the assertion's answer is read rather than discarded.
+    # Same shape as frames 5 and 6: the assertion's answer is read, and the frame is filed under
+    # the question panel's own id rather than under whatever window happens to be in front.
     local query_panel=''
     if require_panel_geometry "12 · the question panel"; then
         query_panel="$(panel_window_id)"
     fi
-    capture_windows "12-the-query.png"
+    capture_windows "12-the-query.png" "$WINDOW_OWNER" "$query_panel"
     timeline "12 · the question — 'Is {subject} part of {task}?', three actions, and the scope stated in the copy (window ${query_panel:-<not measured>})"
 
     if prompt_operator "on the question panel press “Yes, add it”, then look at the cockpit's context row and Settings ▸ Rules."; then
