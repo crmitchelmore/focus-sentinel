@@ -59,20 +59,40 @@ enum SubjectDisplay {
         return NudgeSubject.named(subject, runningName: resolved)?.displayName ?? subject
     }
 
+    /// **Whether a rule of this scope has a subject a bundle could name.**
+    ///
+    /// A function rather than a `switch` inside the call below, and the reason is R-70n. The
+    /// `.session` scope is the shipped-but-ambiguous shape — a persisted row with
+    /// `scopeRaw == "session"` says nothing about whether its subject is a bundle identifier, an
+    /// origin or a title token, which is why e04 skips such rows and `check-forbidden.sh` bans
+    /// reviving them. The cockpit's own `PriorityRuleValue` can still carry one and the rules
+    /// list still draws it, so this has to answer for it — but nothing should have to *plant*
+    /// one to prove the answer is total. Split out, the policy is checkable over
+    /// `PriorityRuleScope.allCases` with no rule constructed at all.
+    ///
+    /// Exhaustive on purpose: a fifth scope has to say which of the two it is.
+    static func resolvesApplication(_ scope: PriorityRuleScope) -> Bool {
+        switch scope {
+        // A bundle identifier by definition.
+        case .app: true
+        // Any of the three. `name(of:resolvingApplication:)` refuses origins by shape, which is
+        // the most a scope naming no kind can honestly ask for.
+        case .session: true
+        // An origin loses its scheme; a title token is already the word the person typed.
+        // Neither is a question for LaunchServices.
+        case .domain, .titleToken: false
+        }
+    }
+
     /// The name for one rule's subject, decided by the rule's own scope.
     static func name(
         of rule: PriorityRuleValue,
         installedName: InstalledNameLookup = InstalledApplication.name(bundleID:)
     ) -> String {
-        switch rule.scope {
-        case .app, .session:
-            // `.app` is a bundle identifier by definition. `.session` says only how long the rule
-            // lives, so its subject can be any of the three — and the shape check inside decides.
-            name(of: rule.subject, resolvingApplication: true, installedName: installedName)
-        case .domain, .titleToken:
-            // An origin loses its scheme; a title token is already the word a person typed.
-            // Neither is a question for LaunchServices.
-            name(of: rule.subject, resolvingApplication: false, installedName: installedName)
-        }
+        name(
+            of: rule.subject,
+            resolvingApplication: resolvesApplication(rule.scope),
+            installedName: installedName
+        )
     }
 }

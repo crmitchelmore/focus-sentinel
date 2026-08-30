@@ -68,14 +68,14 @@ struct SubjectDisplayTests {
             scope: .domain, subject: "news.example.com", expected: "news.example.com", asks: false
         ),
         // A word the person typed. There is nothing to look up and no lookup is made.
-        RuleCase(scope: .titleToken, subject: "proposal", expected: "proposal", asks: false),
-        // A session rule says how long it lasts, not what it is about — so its subject is
-        // decided by its shape. Both shapes, because one would prove only half the arm.
-        RuleCase(scope: .session, subject: "com.figma.Desktop", expected: "Figma", asks: true),
-        RuleCase(
-            scope: .session, subject: "https://docs.example.com", expected: "docs.example.com",
-            asks: false
-        )
+        RuleCase(scope: .titleToken, subject: "proposal", expected: "proposal", asks: false)
+        // **`.session` is deliberately absent, and that is R-70n rather than an omission.**
+        // A persisted row scoped `.session` is the ambiguous legacy shape — it names no subject
+        // kind — and `check-forbidden.sh` bans constructing one outside four named files, so a
+        // row here would have had to widen that allow-list to make a test pass. The arm is
+        // covered instead by `everyScopeDeclaresWhatItIs` below, which asks the policy directly
+        // and is total over the enum, and by the shape cases in `originsAreRefusedByShape` and
+        // `applicationListsDrawNames`, which are what that arm delegates to.
     ]
 
     @Test("a rule row draws the name for its scope, and asks the disk only when there is a bundle",
@@ -100,11 +100,32 @@ struct SubjectDisplayTests {
         #expect(rule.subject == row.subject)
     }
 
-    /// Totality over the scope enum rather than over the rows above: a fifth scope would be
-    /// unreachable here and would have to be given an arm before this passes again.
-    @Test("every scope the store can hold has a row in the table above")
-    func everyScopeIsCovered() {
-        #expect(Set(Self.ruleCases.map(\.scope)) == Set(PriorityRuleScope.allCases))
+    /// **Totality over the scope enum, and the one arm the table above cannot reach.**
+    ///
+    /// `SubjectDisplay.resolvesApplication(_:)` is the whole scope policy, and asking it directly
+    /// covers `.session` — which no test may construct a rule for (R-70n) — without planting the
+    /// ambiguous row. A fifth scope has to be given an answer here before this compiles, and a
+    /// scope that changed sides shows up as a changed expectation rather than as a picture.
+    @Test("every scope the cockpit can hold declares whether it names an application")
+    func everyScopeDeclaresWhatItIs() {
+        let expected: [PriorityRuleScope: Bool] = [
+            .app: true,
+            // Says how long the rule lives, not what it is about. Asking is the honest default:
+            // the shape check inside `name(of:resolvingApplication:)` still refuses an origin,
+            // so the worst case is one LaunchServices lookup that answers nothing.
+            .session: true,
+            .domain: false,
+            .titleToken: false
+        ]
+        #expect(Set(expected.keys) == Set(PriorityRuleScope.allCases))
+        for scope in PriorityRuleScope.allCases {
+            #expect(SubjectDisplay.resolvesApplication(scope) == expected[scope])
+        }
+
+        // The rows above cover every scope this suite is permitted to build a rule for, so a
+        // new constructible scope cannot slip past the table either.
+        let constructible = Set(PriorityRuleScope.allCases).subtracting([.session])
+        #expect(Set(Self.ruleCases.map(\.scope)) == constructible)
     }
 
     // MARK: - The exclusions list and the interruption sheet, which are always applications
