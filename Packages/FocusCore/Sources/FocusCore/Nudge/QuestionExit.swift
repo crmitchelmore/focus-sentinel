@@ -97,4 +97,32 @@ public enum QuestionExit: String, Sendable, CaseIterable, Codable, Hashable {
         case .answered, .surfaceWentOutOfReach, .neverDelivered, .screenReclaimed: false
         }
     }
+
+    /// **Whether ending this way leaves the delivered row saying nobody did anything about it**
+    /// (focus-gmr, R-79).
+    ///
+    /// The `InterventionRecord` a delivery writes gains exactly one field afterwards: what the
+    /// person did. Nothing filled it in for a question that ended any way other than an answer,
+    /// so a question the person really opened and really read stayed `delivered` with
+    /// `outcome = nil` **for ever** — a row that says the app interrupted somebody and never says
+    /// how it turned out. `InterventionOutcome.ignored` is the value that already means *"nothing
+    /// happened at all"*, and it is what `InterventionPolicy.ignoredQueryBackoff` is named for.
+    ///
+    /// | exit | fills the outcome in | why |
+    /// |---|---|---|
+    /// | `worldMovedOn` | **yes** | it was on screen, the world ended it, and nobody pressed anything |
+    /// | `screenReclaimed` | **yes** | F-81 — the person asked for their screen back, which is not an answer and is not nothing having happened to the interruption |
+    /// | `answered` | no | `QueryLedger.answer(…)` has already completed the row with `.answered` |
+    /// | `surfaceWentOutOfReach` | no | the delivery is *withdrawn*; an outcome on a row that is being taken off the budget would be the app saying somebody ignored something it has just said reached nobody |
+    /// | `neverDelivered` | no | there is no row to complete |
+    ///
+    /// Stated here rather than at the call site for `recordsAnExpiry`'s reason: it is a property
+    /// of the kind of ending, and a line a caller can omit is a line four callers remember and a
+    /// fifth does not.
+    public var leavesTheInterruptionUnanswered: Bool {
+        switch self {
+        case .worldMovedOn, .screenReclaimed: true
+        case .answered, .surfaceWentOutOfReach, .neverDelivered: false
+        }
+    }
 }

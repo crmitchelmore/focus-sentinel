@@ -188,13 +188,28 @@ struct QuestionLedgerPolicyTests {
 
     /// **The burn defence, stated as a property rather than as a list of cells.**
     ///
-    /// No unanswered question is ever written down unless *both* readings prove readability.
-    /// This is the assertion the `return .writeReceipt` mutation dies on.
-    @Test("no unanswered question is written down without two readable readings")
+    /// No unanswered question is ever written down unless readability was **proven** at the ask
+    /// and proven at the end — where *proven at the end*, for a surface that cannot be re-read,
+    /// is the reading it already gave. This is the assertion the `return .writeReceipt` mutation
+    /// dies on.
+    ///
+    /// **The second clause is focus-gmr and it is not a loosening of the first.** The reading at
+    /// the ask is `.readable` only when the host watched the popover open and watched it draw
+    /// this question; the surface column says whether a *second* look at that surface is a thing
+    /// that exists. A transient `NSPopover` has no second state — it is drawing the question or
+    /// it is gone — so demanding one demanded evidence the surface cannot produce, and the whole
+    /// quiet route recorded no unanswered asking ever.
+    @Test("no unanswered question is written down without a proven reading at each end")
     func noBurnWithoutAReading() {
+        var written = 0
+        var refused = 0
         for (surface, atAsk, now, ending) in Self.everyCell where ending != .answered {
             let action = Self.decide(surface, atAsk, now, ending)
-            guard atAsk == .readable, now == .readable, surface?.canCarryAQuestion == true else {
+            let carriesIt = surface?.canCarryAQuestion == true
+            // A second reading is required exactly where a second reading is possible.
+            let provenAtTheEnd = now == .readable
+                || (carriesIt && surface?.canBeReReadAtTheEnd == false)
+            guard atAsk == .readable, carriesIt, provenAtTheEnd else {
                 #expect(
                     !action.writesAReceipt,
                     """
@@ -202,10 +217,51 @@ struct QuestionLedgerPolicyTests {
                     read \(atAsk) at the ask and \(now) at the \(ending)
                     """
                 )
+                refused += 1
                 continue
             }
             #expect(action.writesAReceipt)
+            written += 1
         }
+        // Non-vacuity in both directions: a policy that wrote everything and one that wrote
+        // nothing would each satisfy an implication written only one way round.
+        #expect(written > 0, "no cell in the whole grid wrote a receipt, so this proves nothing")
+        #expect(refused > 0, "every cell wrote a receipt, so this proves nothing")
+    }
+
+    /// **focus-gmr: the badge records an unanswered asking, and the panel still needs its second
+    /// look.**
+    ///
+    /// The two halves of the rule at their two extremes, so the surface column cannot be deleted
+    /// without a named failure. Driven at `readingNow == .unknowable`, which is what a shut
+    /// popover and a hidden panel both give.
+    @Test("a transient surface's proven reading is the only reading it will ever give")
+    func theBadgeRecordsWhatItReallyShowed() {
+        // The badge: proven on screen at the ask, popover shut by the time the break arrives.
+        #expect(
+            Self.decide(.popoverBadge, .readable, .unknowable, .expired) == .recordUnanswered,
+            "a question the person opened the popover onto and read left no receipt at all"
+        )
+        // And it still stays askable — an expiry is not an answer (focus-qds).
+        #expect(!Self.decide(.popoverBadge, .readable, .unknowable, .expired).settlesTheQuestion)
+        // A badge question that was never shown is still written down as nothing.
+        #expect(
+            Self.decide(.popoverBadge, .unknowable, .unknowable, .expired)
+                == .stayAskable(.neverReachedAReadableSurface)
+        )
+        // The panel is sticky, so it can be re-read and must be: a panel whose answers went off
+        // an edge is a question that was not readable at the end, and nothing is written.
+        #expect(
+            Self.decide(.panel, .readable, .notReadable, .expired)
+                == .stayAskable(.readabilityCouldNotBeProven)
+        )
+        #expect(
+            Self.decide(.panel, .readable, .unknowable, .expired)
+                == .stayAskable(.readabilityCouldNotBeProven)
+        )
+        // The column itself, read off the surfaces rather than off a list written here.
+        #expect(NudgeSurface.panel.canBeReReadAtTheEnd)
+        #expect(!NudgeSurface.popoverBadge.canBeReReadAtTheEnd)
     }
 
     /// Every unwritten question is unwritten **for a stated reason**, and every reason is

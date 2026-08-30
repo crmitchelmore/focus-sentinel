@@ -110,6 +110,37 @@ extension NudgeSurface {
         case .menuBar, .notification: false
         }
     }
+
+    /// **Whether a question on this surface can still be read when it ends, or whether the
+    /// reading taken at the ask is the only reading there will ever be** (focus-gmr, U-1).
+    ///
+    /// | surface | can be re-read at the end | why |
+    /// |---|---|---|
+    /// | `panel` | **yes** | it is sticky — `hidesOnDeactivate` is `false` (R-89) — so it is still on screen at the expiry, and it can *become* unreadable while it is up: a display change moves it, and its answers can go off an edge |
+    /// | `popoverBadge` | no | `NSPopover` with `.transient` behaviour is shut by the next click anywhere; it is showing the question or it is gone, and it cannot be shown and unreadable |
+    /// | `menuBar`, `notification` | no | neither carries a question at all |
+    ///
+    /// **This is not the fallback that answered `true` for a surface nobody ever saw.** That was
+    /// `guard panel.isVisible else { return true }`, and it made a question routed to a popover
+    /// that was never opened "readable" for its whole life. Here nothing is invented: a `false`
+    /// in this column means the policy leans on `readingAtAsk`, which is `.readable` only when
+    /// `NudgeHost` **proved** the popover was open and drawing the question. A proof is held; it
+    /// is not manufactured.
+    ///
+    /// Measured before this column existed, with reduced interruption on — the state macOS Reduce
+    /// Motion forces (focus-w7v): a question the person opened the popover onto and really read
+    /// was charged a query and an interruption, the popover shut on their next click, they took a
+    /// break, and `QueryLedger` receipts for the priority came back **zero**. The row stayed
+    /// `delivered` with no outcome for ever, and the next uncertain judgement about the same
+    /// subject asked the same question again — because gate 11 reads the ledger and the ledger
+    /// had nothing. U-1's *never asked twice* held for the panel and was broken for the entire
+    /// quiet route: every Reduce Motion user, every `silentVisual` user, everybody on a call.
+    public var canBeReReadAtTheEnd: Bool {
+        switch self {
+        case .panel: true
+        case .popoverBadge, .menuBar, .notification: false
+        }
+    }
 }
 
 /// **Whether a question that has ended is written down** — the whole of never-ask-twice, and the
@@ -163,7 +194,21 @@ public enum QuestionLedgerPolicy {
         guard readingAtAsk == .readable else {
             return .stayAskable(.neverReachedAReadableSurface)
         }
-        guard readingNow == .readable else {
+        // **A surface that cannot be re-read has already given its only reading** (focus-gmr).
+        //
+        // The rule below is *"proven readable when it went up and proven readable when it came
+        // down"*, and the second half is an instrument, not a principle: it exists because a
+        // panel is sticky and can go out of reach while it is still on screen, so a second look
+        // is worth taking. A transient popover has no second state to look at — it is drawing the
+        // question or it is gone — so demanding a second reading of it is demanding evidence the
+        // surface is structurally incapable of producing, and `readingNow` came back `unknowable`
+        // for essentially every badge question that was not answered in the popover itself.
+        //
+        // Refusing on that is default-deny applied to the wrong question. Default-deny says do
+        // not invent a proof; it does not say discard one you were handed. `readingAtAsk` above
+        // is a proof — `NudgeHost` watched the popover open and watched it draw this question —
+        // and for this surface it is the whole of the evidence there is.
+        guard readingNow == .readable || !surface.canBeReReadAtTheEnd else {
             return .stayAskable(.readabilityCouldNotBeProven)
         }
         // Readable at both ends, so the asking is a fact and is written down. Whether it also

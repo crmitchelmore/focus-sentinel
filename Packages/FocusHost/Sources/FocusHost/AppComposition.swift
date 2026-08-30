@@ -38,6 +38,10 @@ public final class AppComposition {
     /// into the person's own store — a fact about their day that never happened (focus-h7h).
     public static let shared = AppComposition(storeKind: SelfCheck.requestedStoreKind)
 
+    /// **Whether `start()` has run**, readable without forcing `shared` into existence
+    /// (focus-gmr). See the note at the assignment in `start()`.
+    public private(set) static var isRunning = false
+
     private let logger = Logger(
         subsystem: FocusStore.bundleIdentifier,
         category: "AppComposition"
@@ -406,6 +410,13 @@ public final class AppComposition {
     public func start() {
         guard !hasStarted else { return }
         hasStarted = true
+        // **Readable without creating one** (focus-gmr). `FocusAppDelegate` asks this before it
+        // touches `shared` at quit: `shared` is a `static let`, so reading it in
+        // `applicationWillTerminate` would *build* a whole composition root — a store, a graph,
+        // an observer set — in the reduced self-check modes that never started one, at the exact
+        // moment the process is trying to leave. A separate flag costs nothing and is the only
+        // reading that can be taken safely there.
+        Self.isRunning = true
 
         quickCapturePanel.onCommit = { [weak self] result in
             guard let self else { return }

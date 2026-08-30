@@ -96,6 +96,15 @@ public final class InterventionLog {
         )
         guard let row = try context.fetch(descriptor).first else { return }
         guard row.outcomeRaw == nil else { return }
+        // **An outcome belongs to a delivery** (focus-gmr, R-81). What the person did about an
+        // interruption is only a fact about an interruption that reached them: a deferred row
+        // reached nobody and a withdrawn one has just been taken off the day's spend for exactly
+        // that reason, so stamping *"they ignored it"* on either would be the falsified row
+        // focus-7w3 was about, reached from the other side. It is a guard rather than a caller's
+        // responsibility because the two orderings really do both occur — `endOpenQuestion(_:)`
+        // completes before the withdrawal and `displaysChanged()` withdraws before it forgets —
+        // and a rule that holds by accident of statement order is the shape this epic retires.
+        guard row.spendsBudget else { return }
         row.outcome = outcome
         try context.save()
     }

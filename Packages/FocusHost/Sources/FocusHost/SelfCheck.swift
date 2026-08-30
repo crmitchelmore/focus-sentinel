@@ -2769,4 +2769,20 @@ public final class FocusAppDelegate: NSObject, NSApplicationDelegate {
     public func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         false
     }
+
+    /// **Quit is an exit of the nudge loop, and it was the only one with no door** (focus-gmr).
+    ///
+    /// Nothing in the programme reached `NudgeHost` from a termination, so an unopened badge
+    /// invitation at quit wrote no `unopened` row and a nudge on screen at quit left its record at
+    /// `delivered` with no outcome for ever. A day on which the app raised its top rung and the
+    /// person quit without looking read exactly like a day the ladder never left the glyph.
+    ///
+    /// The guard is `AppComposition.isRunning` and not `AppComposition.shared`: `shared` is a
+    /// `static let`, so reading it here would build a whole composition root — a store, a graph,
+    /// an observer set — in the reduced self-check modes that never started one, at the moment
+    /// the process is trying to leave.
+    public func applicationWillTerminate(_ notification: Notification) {
+        guard AppComposition.isRunning else { return }
+        AppComposition.shared.nudgeHost.applicationWillTerminate()
+    }
 }

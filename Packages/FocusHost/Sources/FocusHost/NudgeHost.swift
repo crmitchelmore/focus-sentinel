@@ -1907,6 +1907,17 @@ final class NudgeHost {
         // about how it ended, and only for a surface where landing is not reaching — so a question
         // on the panel produces nothing here.
         recordUnopenedInvitation(.query)
+        // **And the row this question's delivery wrote gets its one remaining field** (focus-gmr,
+        // R-79). An `InterventionRecord` gains exactly one thing after it is written: what the
+        // person did. Nothing filled it in for a question that ended any way but an answer, so a
+        // question somebody really opened and really read stayed `delivered` with `outcome = nil`
+        // for ever — the app saying it interrupted somebody and never saying how it turned out.
+        // Which endings owe it is `QuestionExit`'s answer, beside `recordsAnExpiry`, for the
+        // reason that one is there: a line a caller can omit is a line four callers remember and
+        // a fifth does not.
+        if exit.leavesTheInterruptionUnanswered {
+            complete(.ignored, recordID: question.recordID)
+        }
 
         let surface = question.surface
 
@@ -1959,6 +1970,15 @@ final class NudgeHost {
         // fresh ambient rung replaces a badge rung and the first invitation used to vanish with no
         // row at all.
         recordUnopenedInvitation(.accusation)
+        // **The question's treatment, given to the accusation** (focus-gmr's shape). A rung that
+        // was delivered and is now being replaced or forgotten with nothing pressed on it was
+        // ignored, which is what `InterventionPolicy.ignoredAccusationBackoff` is named for — and
+        // its row said `delivered` with no outcome for ever, exactly as the question's did. The
+        // bead named only the question; every bead in this sequence is a treatment one half
+        // received and the other did not, so both halves get it. `complete(_:recordID:)` refuses
+        // a second call and refuses a row that is no longer a delivery, so a correction that has
+        // already filled this in and a rung whose delivery has just been withdrawn are both safe.
+        complete(.ignored, recordID: openRung?.recordID)
         let before = openRung?.landedOn
         openRung = rung
         let after = rung?.landedOn
@@ -2040,6 +2060,27 @@ final class NudgeHost {
     /// The session left `.focus` — a break, a detour, an interruption, completion.
     func phaseLeftFocus() {
         ladder.reduce(.deEscalated(.phaseLeftFocus), now: monotonicClock.elapsed)
+        closeSurfaces(endingAnyQuestionAs: .worldMovedOn)
+    }
+
+    /// **The application is quitting** (focus-gmr).
+    ///
+    /// Quit is an exit, and it was the one exit the nudge loop had never heard of: nothing in the
+    /// programme reached this object from `applicationWillTerminate`, so an unopened badge
+    /// invitation at quit wrote no `unopened` row and a delivered nudge on screen at quit left its
+    /// `InterventionRecord` at `delivered` with no outcome for ever. That is the record focus-sq7
+    /// exists to produce, missing at one of the commonest exits of the day — a day on which the
+    /// app raised its top rung and the person quit without looking read exactly like a day the
+    /// ladder never left the glyph.
+    ///
+    /// It is `worldMovedOn` and not `screenReclaimed`: quitting is not the person asking for the
+    /// screen back mid-nudge, it is the world ending under a question that was on screen — so the
+    /// asking is written down as an expiry, and, because an expiry is not an answer (focus-qds),
+    /// the question is still askable tomorrow.
+    ///
+    /// It writes and it decides nothing else. No ladder reset, no snooze cleared, no session
+    /// touched: quitting is not a correction and must not read as one.
+    func applicationWillTerminate() {
         closeSurfaces(endingAnyQuestionAs: .worldMovedOn)
     }
 

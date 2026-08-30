@@ -141,8 +141,15 @@ struct NudgeHostOpenRecordTests {
         let query = try Self.row(fixture, kind: .query)
         let accusation = try Self.row(fixture, kind: .accusation)
         #expect(query.outcome == .answered, "the question's own row was never completed")
+        // **Not `.answered`, and no longer `nil` either** (focus-gmr). The click belonged to the
+        // question and must never be written onto the rung — that is what this test is for. What
+        // the rung's row now says is `.ignored`: the answer wrote a rule, the rule de-escalated
+        // the ladder, and the accusation went off the badge with nobody having pressed anything
+        // on it. *"Nothing happened at all"* is the outcome that already means that, and a
+        // delivered row that never gains one is the app saying it interrupted somebody and never
+        // saying how it turned out.
         #expect(
-            accusation.outcome == nil,
+            accusation.outcome == .ignored,
             """
             the accusation was recorded as \(String(describing: accusation.outcome)) by a click \
             on the question beside it
