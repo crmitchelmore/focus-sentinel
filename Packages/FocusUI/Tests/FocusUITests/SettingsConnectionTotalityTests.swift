@@ -13,6 +13,12 @@ import Testing
 /// the Settings window and were reported by nothing, and the Privacy pane's store path was
 /// reported by the **window** rather than by the pane, so a mutation that handed the pane
 /// `URL(fileURLWithPath: "/")` was invisible.
+///
+/// Two of those seven are gone rather than repaired: the notification authorisation with the
+/// section that asked for a permission this app cannot use (focus-wy0), and the
+/// presentation-exclusion list with the section that told the person to add an app the
+/// application offered no way to add (focus-1qm). Five remain, and the walk still descends
+/// through every one of them.
 @Suite("Totality: the Settings connection")
 @MainActor
 struct SettingsConnectionTotalityTests {
@@ -44,12 +50,12 @@ struct SettingsConnectionTotalityTests {
         #expect(reading.isTotal, "\(reading.summary)")
         // Non-vacuity, one level down and further: the walk descends into the intervention
         // settings rather than stopping at them — five of those seven fields were unreported —
-        // and now into the values *they* hold. Six fields now: the notification authorisation
-        // went with the section that drew it (focus-wy0).
+        // and now into the values *they* hold. Five fields now: the notification authorisation
+        // went with the section that drew it (focus-wy0) and the exclusion list with its own
+        // (focus-1qm).
         for member in [
             "intervention.quietHours",
             "intervention.usage",
-            "intervention.presentationExclusions",
             "intervention.reducedInterruptionIsForced",
             "intervention.usage.accusationsToday",
             "intervention.quietHours.startMinuteOfDay",

@@ -156,7 +156,6 @@ extension ShellSettingsConnection: ShellDrawnConnection {
             "intervention.reducedInterruptionIsForced": .drawn([.reducedInterruptionForced]),
             "intervention.quietHours": .drawn([.quietHours]),
             "intervention.usage": .drawn([.interruptionUsage]),
-            "intervention.presentationExclusions": .drawn([.presentationExclusions]),
 
             // --- one level down, and then to the leaves (focus-cxs) ------------------------
             //

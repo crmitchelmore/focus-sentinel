@@ -18,16 +18,7 @@ enum InterventionSettingsFixture {
             queriesAllPrioritiesToday: 3,
             accusationsToday: 2,
             interruptionsToday: 5
-        ),
-        // **Both branches of the name, so the baseline can tell them apart** (focus-7zr).
-        //
-        // The list drew `com.apple.Keynote`, and one identifier could not prove a repair either
-        // way: nothing on this Mac answers to `com.apple.Keynote` — Keynote's real identifier is
-        // `com.apple.iWork.Keynote` — so a row that still read as a key would have looked
-        // identical whether the resolver had been wired up or not. Two rows instead:
-        // `com.apple.Preview` ships with every Mac and renders *"Preview"*, and `com.example.Deck`
-        // answers to nothing and renders as itself, which is the honest last resort.
-        presentationExclusions: ["com.apple.Preview", "com.example.Deck"]
+        )
     )
 
     static let quiet = InterventionSettings(
@@ -142,11 +133,12 @@ struct InterventionSettingsTests {
             .children.compactMap(\.label).sorted()
 
         #expect(!fields.contains("authorisation"), "the pane got its authorisation back: \(fields)")
+        // **And no presentation-exclusion list**, which went with the section that instructed
+        // the person to add an app the application offered no way to add (focus-1qm).
         #expect(fields == [
-            "presentationExclusions", "quietHours", "reducedInterruption",
-            "reducedInterruptionIsForced", "usage", "voice"
+            "quietHours", "reducedInterruption", "reducedInterruptionIsForced", "usage", "voice"
         ])
-        // …and the only requests it can make are the four that change a setting.
+        // …and the only requests it can make are the three that change a setting.
         #expect(!InterventionSettingsView(settings: .init()).drawnRows.isEmpty)
     }
 
@@ -395,14 +387,13 @@ struct InterventionSettingsTests {
         // than a control this test silently stops covering.
         func changesASetting(_ action: InterventionSettingsAction) -> Bool {
             switch action {
-            case .setVoice, .setReducedInterruption, .setQuietHours, .removePresentationExclusion:
+            case .setVoice, .setReducedInterruption, .setQuietHours:
                 true
             }
         }
         #expect(changesASetting(.setVoice(.warm)))
         #expect(changesASetting(.setReducedInterruption(true)))
         #expect(changesASetting(.setQuietHours(nil)))
-        #expect(changesASetting(.removePresentationExclusion("com.apple.Keynote")))
 
         var seen: [InterventionSettingsAction] = []
         let view = InterventionSettingsView(settings: InterventionSettingsFixture.midDay) {
@@ -412,13 +403,11 @@ struct InterventionSettingsTests {
         view.onAction(.setVoice(.warm))
         view.onAction(.setReducedInterruption(true))
         view.onAction(.setQuietHours(nil))
-        view.onAction(.removePresentationExclusion("com.apple.Keynote"))
 
         #expect(seen == [
             .setVoice(.warm),
             .setReducedInterruption(true),
-            .setQuietHours(nil),
-            .removePresentationExclusion("com.apple.Keynote")
+            .setQuietHours(nil)
         ])
     }
 
@@ -437,22 +426,33 @@ struct InterventionSettingsTests {
 struct InterventionSettingsSnapshotTests {
     static let paneWidth: CGFloat = 460
 
-    @Test("the pane in its four states", arguments: ["light"])
-    func states(variant: String) throws {
-        let cases: [(String, InterventionSettings)] = [
-            ("fresh", InterventionSettingsFixture.fresh),
-            ("midDay", InterventionSettingsFixture.midDay),
-            ("quiet", InterventionSettingsFixture.quiet),
-            ("reduced", InterventionSettingsFixture.reduced)
-        ]
-        for (name, settings) in cases {
-            try SnapshotHarness.assertSnapshot(
-                InterventionSettingsView(settings: settings),
-                component: "interventionSettings.\(name)",
-                variant: variant,
-                width: Self.paneWidth
-            )
+    /// The four states, as four **independent** cases rather than one loop.
+    ///
+    /// A loop stops at its first `throw`, so a run that had lost more than one baseline — or a
+    /// change that moved more than one state — reported the first and hid the rest, and a
+    /// reviewer re-ran the gate once per picture to see them all. One case per state says
+    /// everything that moved in one run.
+    @Test(
+        "the pane in its four states",
+        arguments: ["fresh", "midDay", "quiet", "reduced"]
+    )
+    func states(_ state: String) throws {
+        let settings: InterventionSettings
+        switch state {
+        case "fresh": settings = InterventionSettingsFixture.fresh
+        case "midDay": settings = InterventionSettingsFixture.midDay
+        case "quiet": settings = InterventionSettingsFixture.quiet
+        case "reduced": settings = InterventionSettingsFixture.reduced
+        default:
+            Issue.record("no fixture named \(state)")
+            return
         }
+        try SnapshotHarness.assertSnapshot(
+            InterventionSettingsView(settings: settings),
+            component: "interventionSettings.\(state)",
+            variant: "light",
+            width: Self.paneWidth
+        )
     }
 
     @Test(

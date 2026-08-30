@@ -51,7 +51,6 @@ Packages/FocusUI/Sources/FocusUI/Context/ContextChip.swift | displayName) | NAME
 Packages/FocusUI/Sources/FocusUI/Context/ContextChip.swift | accessibilityDescription)) | NAME the same, spoken: the kind, then the subject
 Packages/FocusUI/Sources/FocusUI/MenuBar/MenuBarPopoverView.swift | snooze.subject.displayName) | NAME what is snoozed. Never `.identifier` — R-96o lints this line
 Packages/FocusUI/Sources/FocusUI/Scenes/TaskRulesView.swift | SubjectDisplay.name(of: rule)) | NAME a rule's subject, by its scope (focus-7zr)
-Packages/FocusUI/Sources/FocusUI/Scenes/InterventionSettingsView.swift | SubjectDisplay.name(of: subject, resolvingApplication: true)) | NAME an excluded application (focus-7zr)
 Packages/FocusUI/Sources/FocusUI/Session/InterruptionSheet.swift | SubjectDisplay.name(of: bundleID, resolvingApplication: true)) | NAME the last application in front, when the session was interrupted
 
 # --- RESOLVED: a whole sentence, already composed --------------------------------------------

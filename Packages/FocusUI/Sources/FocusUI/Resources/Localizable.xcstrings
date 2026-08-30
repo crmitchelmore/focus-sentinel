@@ -2437,42 +2437,6 @@
         }
       }
     },
-    "settings.intervention.exclusions.empty" : {
-      "comment" : "Shown when the exclusion list is empty.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nothing yet. Add an app here when Focus mistakes its full-screen window for a presentation."
-          }
-        }
-      }
-    },
-    "settings.intervention.exclusions.heading" : {
-      "comment" : "Heading above e03's presentation exclusion list.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Not presentations"
-          }
-        }
-      }
-    },
-    "settings.intervention.exclusions.remove" : {
-      "comment" : "Action: take one app off the presentation exclusion list.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Remove"
-          }
-        }
-      }
-    },
     "settings.intervention.quietHours.endEarlier" : {
       "comment" : "Action: move the end of the quiet window back.",
       "extractionState" : "manual",

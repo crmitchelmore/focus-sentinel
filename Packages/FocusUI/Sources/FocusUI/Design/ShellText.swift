@@ -426,9 +426,6 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case interventionThresholdAccusationCooldown = "settings.intervention.thresholds.accusationCooldown"
     case interventionThresholdEscalation = "settings.intervention.thresholds.escalation"
     case interventionThresholdSnooze = "settings.intervention.thresholds.snooze"
-    case interventionExclusionsHeading = "settings.intervention.exclusions.heading"
-    case interventionExclusionsEmpty = "settings.intervention.exclusions.empty"
-    case interventionExclusionsRemove = "settings.intervention.exclusions.remove"
 }
 
 /// A transform applied to a resolved string immediately before it is drawn.

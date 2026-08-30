@@ -19,24 +19,19 @@ public struct InterventionSettings: Sendable, Equatable {
     /// Today's spend, from `InterventionLog.budget(on:priorityID:)`. Shown as usage over the
     /// cap — **information, never a score** (D-01).
     public var usage: InterruptionBudget
-    /// e03's presentation exclusion list: applications the person has said are not
-    /// presentations, so a full-screen editor does not silence the app all afternoon.
-    public var presentationExclusions: [String]
 
     public init(
         voice: NudgeVoice = .standard,
         reducedInterruption: Bool = false,
         reducedInterruptionIsForced: Bool = false,
         quietHours: QuietHoursWindow? = InterventionPolicy.quietHoursDefault,
-        usage: InterruptionBudget = .empty,
-        presentationExclusions: [String] = []
+        usage: InterruptionBudget = .empty
     ) {
         self.voice = voice
         self.reducedInterruption = reducedInterruption
         self.reducedInterruptionIsForced = reducedInterruptionIsForced
         self.quietHours = quietHours
         self.usage = usage
-        self.presentationExclusions = presentationExclusions
     }
 }
 
@@ -50,12 +45,11 @@ public enum InterventionSettingsAction: Sendable, Equatable {
     case setVoice(NudgeVoice)
     case setReducedInterruption(Bool)
     case setQuietHours(QuietHoursWindow?)
-    case removePresentationExclusion(String)
 }
 
 /// **The Intervention settings pane** (R-98, R-92, F-132, F-148).
 ///
-/// Five sections, and one of them is the honest answer to a question a person is entitled to ask:
+/// Four sections, and one of them is the honest answer to a question a person is entitled to ask:
 ///
 /// * the **voice**, five static decks and no sixth;
 /// * **reduced interruption**, which is a routing flag inside the existing router rather than a
@@ -76,6 +70,18 @@ public enum InterventionSettingsAction: Sendable, Equatable {
 /// this product's privacy tenets that is worse than a dead control, so the section, its copy, its
 /// action and the one `requestAuthorization` call site in the repository were deleted rather than
 /// disabled.
+///
+/// **There was a seventh, and it instructed the person to do something the app offered no way
+/// to do** (focus-1qm). *"Not presentations"* drew a heading and, under it, *"Nothing yet. Add an
+/// app here when Focus mistakes its full-screen window for a presentation."* There was no add
+/// affordance in that section and none anywhere else in the application: `SensitiveAppSeed.add`
+/// had no shipping call site at all, and the presentation-exclusion list is not seeded, so the
+/// list was empty for every person for ever and the section could never draw a row — which made
+/// its Remove button unreachable too. A section whose only user-reachable half is an instruction
+/// nobody can follow is worse than a dead control, so the section, its copy, its action and the
+/// `presentationExclusions` field that fed it were deleted rather than reworded. The capability
+/// itself — the store list, its tombstones and `SensingHost`'s `isUserExcluded` — is untouched
+/// and unreachable, which is a fact recorded in focus-62o rather than left in a comment.
 ///
 /// The usage rows are **information, never a score** (D-01): "2 / 4 questions today" is a fact
 /// about what the app did, and there is no streak, no total and no trend anywhere on this pane
@@ -114,17 +120,18 @@ public struct InterventionSettingsView: View {
     /// window sizes itself to the tab's content instead.
     public var body: some View {
         VStack(alignment: .leading, spacing: DesignTokens.spacing(spacing, scale: textScale)) {
-            // **All six fields of `InterventionSettings`, each reported beside the section that
+            // **All five fields of `InterventionSettings`, each reported beside the section that
             // draws it** (focus-7ow).
             //
-            // Two of them were reported before, from the Settings *window*, and the other four —
-            // quiet hours, today's spend, the exclusion list, and whether Reduce Motion forced
-            // the switch — could be replaced with anything at all while the whole nineteen-stage
-            // gate stayed green. They are what the person is shown when they ask "what will this
-            // app do, and when will it leave me alone".
+            // Two of them were reported before, from the Settings *window*, and the other three —
+            // quiet hours, today's spend, and whether Reduce Motion forced the switch — could be
+            // replaced with anything at all while the whole nineteen-stage gate stayed green.
+            // They are what the person is shown when they ask "what will this app do, and when
+            // will it leave me alone".
             //
-            // There were seven. The notification authorisation went with the section that drew
-            // it (focus-wy0).
+            // There were seven. The notification authorisation went with the section that drew it
+            // (focus-wy0), and the presentation-exclusion list with the section that instructed
+            // the person to add an app the application offered no way to add (focus-1qm).
             voiceSection
                 .shellRendered(.interventionVoice, settings.voice.rawValue)
             Divider()
@@ -146,12 +153,6 @@ public struct InterventionSettingsView: View {
                 .shellRendered(.interruptionUsage, ShellValueDigest.describe(settings.usage))
             Divider()
             thresholdsSection
-            Divider()
-            exclusionsSection
-                .shellRendered(
-                    .presentationExclusions,
-                    ShellValueDigest.describe(settings.presentationExclusions)
-                )
         }
         .padding(DesignTokens.spacing(spacing, scale: textScale))
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -515,42 +516,6 @@ public struct InterventionSettingsView: View {
             Text(verbatim: NudgeCopy.duration(span))
                 .font(DesignTokens.font(.callout, scale: textScale))
                 .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
-        }
-    }
-
-    // MARK: - e03's presentation exclusions
-
-    private var exclusionsSection: some View {
-        VStack(alignment: .leading, spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
-            ShellText(.interventionExclusionsHeading, role: .headline)
-            if settings.presentationExclusions.isEmpty {
-                ShellText(.interventionExclusionsEmpty, role: .callout)
-                    .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
-                    .lineLimit(nil)
-                    .fixedSize(horizontal: false, vertical: true)
-            } else {
-                ForEach(settings.presentationExclusions, id: \.self) { subject in
-                    HStack(spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
-                        // An exclusion is filed under a bundle identifier — `SensingHost` tests
-                        // it against `cleared.bundleIdentifier` — and the row below removes it by
-                        // that same key. The row *reads* the name (focus-7zr): "Not presentations"
-                        // over a list of `com.apple.Keynote` is a list of things the person has to
-                        // decode before they can decide whether to remove one.
-                        Text(verbatim: SubjectDisplay.name(of: subject, resolvingApplication: true))
-                            .font(DesignTokens.font(.callout, scale: textScale))
-                            .lineLimit(1)
-                            .truncationMode(.middle)
-                        Spacer(minLength: 0)
-                        Button {
-                            onAction(.removePresentationExclusion(subject))
-                        } label: {
-                            ShellText(.interventionExclusionsRemove, role: .footnote)
-                                .foregroundStyle(DesignTokens.Palette.accent(for: traits))
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-            }
         }
     }
 }

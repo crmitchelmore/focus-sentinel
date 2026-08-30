@@ -1309,11 +1309,6 @@ public final class AppComposition {
         )
         expect(.quietHours, ShellValueDigest.describe(intervention.quietHours), for: .settings)
         expect(.interruptionUsage, ShellValueDigest.describe(intervention.usage), for: .settings)
-        expect(
-            .presentationExclusions,
-            ShellValueDigest.describe(intervention.presentationExclusions),
-            for: .settings
-        )
         // Which pane is in front. The window reports it, and it is what makes the other readings
         // legible: a value missing because its pane was never selected is a different thing from
         // a value missing because the pane drew nothing.
@@ -1609,8 +1604,7 @@ public final class AppComposition {
             // `expect(.quietHours, …)` audit compared the drawn row against the very same
             // hardcoded constant that filled it. The proof agreed with itself.
             quietHours: nudgeHost.quietHours.window,
-            usage: nudgeHost.todaysUsage(),
-            presentationExclusions: sensingHost.presentationExclusions.sorted()
+            usage: nudgeHost.todaysUsage()
         )
     }
 
@@ -1645,10 +1639,6 @@ public final class AppComposition {
             nudgeHost.choose(quietHours: window)
             persistInterventionPreferences()
             refreshCockpit()
-        case .removePresentationExclusion:
-            // A stored setting e05 does not persist a row for; the pane reports the request and
-            // the store lands in a later task rather than being faked here.
-            break
         }
     }
 

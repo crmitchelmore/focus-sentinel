@@ -96,8 +96,6 @@ public enum ShellRenderedField: String, Sendable, CaseIterable, Codable, Hashabl
     case quietHours
     /// Today's spend over the cap, as the pane drew it (D-01: information, never a score).
     case interruptionUsage
-    /// e03's presentation-exclusion list, as the pane drew it.
-    case presentationExclusions
     /// The appearance the General pane's picker drew as selected.
     case appearancePreference
     /// **Which pane is on screen** (focus-7ow).

@@ -940,7 +940,11 @@ check(
 # NON-VACUITY. A field the root has no opinion about is skipped rather than failed, so a root that
 # recorded nothing at all would make every assertion above pass for a window drawing anything.
 # These floors are the same job `len(declared) >= 12` does for the wire enumeration.
-for surface, floor in [("cockpit", 18), ("settings", 15), ("help", 2)]:
+# The settings floor was 15 and is 14: the presentation-exclusion field went with the section that
+# instructed a person to add an app the application offered no way to add (focus-1qm). A floor
+# lowered because a value was deleted is a different act from one lowered because a value stopped
+# arriving, and this is the first kind.
+for surface, floor in [("cockpit", 18), ("settings", 14), ("help", 2)]:
     reading = readings.get(surface) or {}
     check(
         isinstance(reading.get("expectedFieldCount"), int)
@@ -1048,7 +1052,6 @@ for field in [
     "privacyStorePath",
     "quietHours",
     "interruptionUsage",
-    "presentationExclusions",
     "reducedInterruptionForced",
 ]:
     check(

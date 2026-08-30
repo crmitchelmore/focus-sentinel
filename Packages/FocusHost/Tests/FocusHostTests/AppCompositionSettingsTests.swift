@@ -104,19 +104,22 @@ struct AppCompositionSettingsTests {
         #expect(root.interventionSettings.reducedInterruption == true)
     }
 
-    /// The one the pane reports and this build still does not store. It is a deliberate no-op
-    /// rather than a fake write, and the assertion is that nothing else moved.
-    @Test("the setting this build does not persist changes nothing else")
-    func theUnstoredSettingChangesNothing() {
-        let root = Self.root()
-        defer { root.stop() }
-        root.perform(InterventionSettingsAction.setVoice(NudgeVoice.warm))
-        root.perform(InterventionSettingsAction.setReducedInterruption(true))
-        let before = root.interventionSettings
-
-        root.perform(InterventionSettingsAction.removePresentationExclusion("com.example.Slides"))
-
-        #expect(root.interventionSettings == before)
+    /// **Every action the pane can raise now writes something**, which is the state this round
+    /// leaves the pane in. There was a test here for the ones that did not — a deliberate no-op
+    /// rather than a fake write — and the set it covered is empty: quiet hours is wired
+    /// (focus-z7g), and the presentation-exclusion action went with the section that could never
+    /// draw a row for it to act on (focus-1qm). A total switch, so a case added to the vocabulary
+    /// is a compile error here rather than a control this suite silently stops covering.
+    @Test("every request the pane can make is one this root performs")
+    func everyPaneActionIsPerformed() {
+        func isPerformed(_ action: InterventionSettingsAction) -> Bool {
+            switch action {
+            case .setVoice, .setReducedInterruption, .setQuietHours: true
+            }
+        }
+        #expect(isPerformed(.setVoice(.warm)))
+        #expect(isPerformed(.setReducedInterruption(true)))
+        #expect(isPerformed(.setQuietHours(nil)))
     }
 
     // MARK: - The voice and "Interrupt me less" (focus-40i)

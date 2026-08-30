@@ -91,23 +91,21 @@ struct StringCatalogTests {
         }
         let duplicated = byValue.filter { $0.value.count > 1 }.map { $0.value.sorted() }.sorted { $0[0] < $1[0] }
 
-        // e05 adds two, and both are the same word for the same act in two places a person
-        // reaches it from — which is the case this assertion is meant to permit, not the
-        // copy-paste it is meant to catch:
+        // e05 adds one, and it is the same word for the same act in two places a person reaches
+        // it from — which is the case this assertion is meant to permit, not the copy-paste it is
+        // meant to catch: "Cancel" backs out of the completion sheet and ends a snooze early. Two
+        // retractions, one word.
         //
-        //   * "Remove" takes a context item off the pack and an app off the presentation
-        //     exclusion list. Two lists, one verb.
-        //   * "Cancel" backs out of the completion sheet and ends a snooze early. Two
-        //     retractions, one word.
-        //
-        // It added a third, and the pair is gone with one of its halves: "Notifications" headed
-        // both the capability matrix's row and the Intervention pane's own section. The section
-        // asked for a permission the app cannot use and was deleted (focus-wy0); the capability
-        // row stays, because the capability matrix reports what this Mac permits rather than what
-        // the app intends to do with it.
+        // It added two more, and **both pairs are gone with one of their halves**, each with the
+        // section that drew it. "Notifications" headed the capability matrix's row and the
+        // Intervention pane's own section; that section asked for a permission the app cannot use
+        // and went (focus-wy0), and the capability row stays because the matrix reports what this
+        // Mac permits rather than what the app intends to do with it. "Remove" took a context
+        // item off the pack and an app off the presentation-exclusion list; that list could never
+        // hold a row, because nothing in the application could add one, so its section went too
+        // (focus-1qm) and only the context pack's verb is left.
         #expect(
             duplicated == [
-                ["context.action.remove", "settings.intervention.exclusions.remove"],
                 ["priority.complete.action.cancel", "shell.menuBar.cancelSnooze"],
                 ["shell.cockpit.heading", "shell.window.cockpit.title"],
                 ["shell.help.heading", "shell.window.help.title"]
