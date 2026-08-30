@@ -442,7 +442,15 @@ public struct InterventionSettingsView: View {
             Spacer(minLength: 0)
             // Digits, monospaced, and no bar: a progress bar is a thing to fill, and a thing to
             // fill is a score to defend (D-01).
-            Text(verbatim: "\(used) / \(cap)")
+            //
+            // **`.formatted()`, not interpolation** (focus-7zr's sweep). String interpolation of
+            // an `Int` is `String(describing:)` and draws Western Arabic digits in every locale;
+            // every other number this app shows a person goes through `.formatted()` —
+            // `CascadePrecedenceView`'s rank, `RecentPrioritiesView`'s attachment count,
+            // `SensingStatusView`'s readings. This row was the one that did not, and
+            // `Text(verbatim:)` is why nothing noticed: it is the construct the string lint
+            // exempts by design.
+            Text(verbatim: "\(used.formatted()) / \(cap.formatted())")
                 .font(DesignTokens.font(.callout, scale: textScale).monospacedDigit())
                 .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
         }
