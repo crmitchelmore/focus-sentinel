@@ -80,3 +80,11 @@ status.unrelated.   | Packages/FocusUI/Sources/FocusUI/Design/StatusBadge.swift 
 # system Edit menu puts after "Undo" is drawn by `undo?.setActionName(UndoActionName.addRule
 # .localizedName)`, which names the case. A row for a key the case-name check already blesses is
 # refused as redundant: two mechanisms covering one key is a row nobody has to keep true.
+
+# --- e05: the menu bar says a nudge is there (focus-mkk, focus-2xw) ---------------------------
+#
+# `MenuBarAttention` is FocusCore's, beside the surface whose mark it is, and it is drawn by the
+# status item rather than by a SwiftUI view — so there is no `ShellText(...)` line to follow and
+# the row names the sentence-builder instead. The mark itself is a shape in the glyph; this is the
+# half a person listening rather than looking receives, which is the half focus-2xw is about.
+nudge.attention.   | Packages/FocusUI/Sources/FocusUI/MenuBar/MenuBarController.swift | guard let resource = attention.copyResource else { return head }

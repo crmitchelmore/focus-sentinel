@@ -64,6 +64,94 @@ struct NudgeSurfaceTests {
 
     // MARK: - The authorisation states
 
+    /// **A nudge that takes no screen must be visible in the menu bar, or it is visible
+    /// nowhere** (focus-mkk, focus-2xw).
+    ///
+    /// The join, and it is deliberately *derived* from two predicates that were written for other
+    /// reasons rather than restated as a third table. `holdsTheInterruptionSlot` is `false` for
+    /// exactly the two surfaces that raise no window — the glyph and the badge — and those are
+    /// exactly the two whose entire physical presence is the status item. So a surface that does
+    /// not hold the slot and does not mark the item is a nudge with nowhere to be, which is what
+    /// both beads measured: an ambient rung charged as a delivery against a menu bar that never
+    /// changed, and a badge nudge waiting behind a click nothing had asked for.
+    ///
+    /// Written as an equality over `allCases` rather than four assertions, so a fifth surface
+    /// cannot be added on one side of it.
+    @Test("exactly the surfaces that raise no window mark the status item")
+    func everySurfaceWithoutAWindowMarksTheItem() {
+        for surface in NudgeSurface.allCases {
+            #expect(
+                surface.menuBarAttention.marksTheItem == !surface.holdsTheInterruptionSlot,
+                """
+                \(surface.rawValue) holds the slot: \(surface.holdsTheInterruptionSlot), \
+                marks the item: \(surface.menuBarAttention.marksTheItem) — a nudge that takes \
+                no screen and marks no item has reached nobody
+                """
+            )
+        }
+    }
+
+    /// **The mark asks for a click exactly when there is an answer waiting that landing did not
+    /// deliver** (focus-mkk, focus-2xw, R-87).
+    ///
+    /// Derived from `offersAnAnswer` and `reachesThePersonOnLanding` — neither of which was
+    /// written for the menu bar — so the two marks cannot be collapsed into one without failing.
+    ///
+    /// Collapsing towards `.waiting` would invite a click onto the ambient rung, which R-87 says
+    /// has nothing on it to answer and nothing about it that may be taken down: the person clicks
+    /// and finds a glyph. Collapsing towards `.noticing` is focus-2xw itself, restated one level
+    /// up — a nudge that *is* an accusation or a question, saying "nothing to answer".
+    @Test("the mark invites a click only where an unopened answer is waiting")
+    func onlyAnUnopenedAnswerInvitesAClick() {
+        for surface in NudgeSurface.allCases {
+            let waiting = surface.offersAnAnswer && !surface.reachesThePersonOnLanding
+            #expect(
+                surface.menuBarAttention.invitesAClick == waiting,
+                """
+                \(surface.rawValue) offers an answer: \(surface.offersAnAnswer), reaches on \
+                landing: \(surface.reachesThePersonOnLanding), invites a click: \
+                \(surface.menuBarAttention.invitesAClick)
+                """
+            )
+        }
+        // And the badge is the one that does, so the fold above is not vacuously satisfied by an
+        // empty set — the shape `everyAccusationRouteCanBeAnswered` had when it was a tautology.
+        #expect(
+            NudgeSurface.allCases.filter(\.menuBarAttention.invitesAClick) == [.popoverBadge]
+        )
+    }
+
+    /// Every mark has a sentence, and the unmarked item has none.
+    ///
+    /// The half a visual mark cannot cover: `MenuBarController.announceStatusChange` was keyed to
+    /// `FocusStatus` and a rung landing changes no status, so somebody using VoiceOver was told
+    /// nothing at all. A mark with no words would repair focus-2xw for sighted people alone.
+    ///
+    /// And `.unmarked` must stay wordless: an empty phrase appended to the status label reads as
+    /// a pause to somebody listening, and would bless a catalog key nothing says.
+    @Test("every mark carries a sentence, and the unmarked item carries none")
+    func everyMarkHasASentence() {
+        for attention in MenuBarAttention.allCases {
+            #expect(
+                (attention.copyKey != nil) == attention.marksTheItem,
+                "\(attention.rawValue) marks the item: \(attention.marksTheItem), key: \(attention.copyKey ?? "none")"
+            )
+            #expect((attention.copyResource != nil) == attention.marksTheItem)
+        }
+        #expect(MenuBarAttention.allCases.compactMap(\.copyKey).count == 2)
+    }
+
+    /// The rank is the order of `allCases`, and `MenuBarPresentation.attention` takes the
+    /// stronger of its two readings on the strength of it: a question waiting behind the click
+    /// must not be reported as "nothing to answer" because an ambient rung is also up.
+    @Test("waiting outranks noticing, which outranks an unmarked item")
+    func theMarksAreOrdered() {
+        #expect(MenuBarAttention.allCases == [.unmarked, .noticing, .waiting])
+        #expect(MenuBarAttention.unmarked < .noticing)
+        #expect(MenuBarAttention.noticing < .waiting)
+        #expect(Swift.max(MenuBarAttention.noticing, .waiting) == .waiting)
+    }
+
     @Test("there are exactly four authorisation states")
     func fourAuthorisationStates() {
         #expect(NotificationAuthorisation.allCases.count == 4)

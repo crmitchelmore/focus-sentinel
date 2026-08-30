@@ -765,6 +765,11 @@ public final class AppComposition {
             // the badge under Reduce Motion was a sentence with nothing to press.
             pendingAccusation: nudgeHost.pendingPopoverAccusation,
             rung: nudgeHost.currentRung,
+            // **Where that rung actually is** (focus-mkk). Without it the item was a function of
+            // the status and the timer alone, so the ambient rung — which *is* the item — changed
+            // nothing at all while being charged as a delivery: measured at six accusation rows
+            // and one write to the menu bar, made before the first rung existed.
+            rungSurface: nudgeHost.landedRungSurface,
             band: relevanceHost.verdict?.band,
             sensingPaused: !sensingHost.isRunning,
             // **F-146's channel, actually connected** (focus-pq8). This argument was never passed,

@@ -1649,10 +1649,27 @@ final class NudgeHost {
     /// holding now. The redraw fires whenever the badge's contents change in either direction, and
     /// there is no assignment left that can skip it.
     private func setOpenRung(_ rung: OpenRung?) {
-        let wasOnTheBadge = openRung?.landedOn == .popoverBadge
+        let before = openRung?.landedOn
         openRung = rung
-        let isOnTheBadge = rung?.landedOn == .popoverBadge
-        if wasOnTheBadge || isOnTheBadge { onQuestionSurfacesChanged?() }
+        let after = rung?.landedOn
+        // The popover's *contents* changed: a badge rung arriving, leaving, or being replaced by
+        // another badge rung. The last of those is why this is not folded into the mark below —
+        // the mark is `.waiting` on both sides of a replacement, and the popover would go on
+        // drawing the accusation this host has already forgotten.
+        let touchesTheBadge = before == .popoverBadge || after == .popoverBadge
+        // **The status ITEM changed** (focus-mkk). This clause is the whole bead. `accuse(…)`
+        // records the glyph landing as a delivery on the ground that "the glyph is redrawn on the
+        // next refresh", and until this line nothing asked for one: the redraw was requested only
+        // when the badge was involved, so an ambient rung landed, was charged, and reached a menu
+        // bar that would not be told about it until the next five-second corroboration tick —
+        // which drew from the status and the timer anyway, and both were unchanged.
+        //
+        // Asked as `menuBarAttention`, which is the surface's own answer, rather than as
+        // `== .menuBar`: a fifth surface that the item speaks for inherits the redraw instead of
+        // needing a second clause here.
+        let markChanged = (before?.menuBarAttention ?? .unmarked)
+            != (after?.menuBarAttention ?? .unmarked)
+        if touchesTheBadge || markChanged { onQuestionSurfacesChanged?() }
     }
 
     /// Forget the rung on the surface and the corrections it was offering.
@@ -1991,6 +2008,20 @@ final class NudgeHost {
 
     /// The rung the ladder has reached, for the popover.
     var currentRung: LadderRung.Kind? { ladder.state.rung?.kind }
+
+    /// **The surface that rung is actually standing on**, or `nil` when this loop is holding no
+    /// rung at all (focus-mkk).
+    ///
+    /// `currentRung` above is the ladder's name for what it reached; this is where it went, and
+    /// the menu bar needs it because the item's mark is a function of the surface rather than of
+    /// the rung. Without it `MenuBarPresentation` could not tell an ambient rung on the glyph
+    /// from a panel rung in front of the person — and it drew neither, which is how a landing on
+    /// the glyph spent an accusation while the glyph did not change.
+    ///
+    /// The **open** rung, not the ladder's state: the ladder remembers the rung it climbed to
+    /// through a deferral and a withdrawal, and the item must go back to being unmarked the
+    /// moment the nudge is over.
+    var landedRungSurface: NudgeSurface? { openRung?.landedOn }
 
     /// Today's spend, for the settings pane's usage rows.
     ///

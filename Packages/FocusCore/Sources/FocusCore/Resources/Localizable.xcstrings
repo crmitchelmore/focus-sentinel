@@ -337,6 +337,30 @@
         }
       }
     },
+    "nudge.attention.noticing" : {
+      "comment" : "Read by VoiceOver off the menu-bar item when the ambient rung has landed on the glyph: the app has spoken, and there is nothing on it to press.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus Sentinel has noticed. Nothing to answer."
+          }
+        }
+      }
+    },
+    "nudge.attention.waiting" : {
+      "comment" : "Read by VoiceOver off the menu-bar item when a question or an accusation is waiting in the popover. It is the invitation to open it.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waiting for your answer. Open this to see it."
+          }
+        }
+      }
+    },
     "nudge.direct.accusation.action.notNow" : {
       "comment" : "[direct] Accusation action: a session-lived rule that dies with the session.",
       "extractionState" : "manual",

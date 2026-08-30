@@ -224,7 +224,12 @@ struct NudgeHostFixture {
             snoozes: host.activeSnoozes(),
             pendingQuery: host.pendingPopoverQuery,
             pendingAccusation: host.pendingPopoverAccusation,
-            rung: host.currentRung
+            rung: host.currentRung,
+            // **Where the rung is, not only what it is called** (focus-mkk). The composition root
+            // passes it, so a fixture that did not would be driving a menu bar the shipping app
+            // does not have — and the glyph mark, which is the whole of the ambient rung, would
+            // be missing from every drive in this package.
+            rungSurface: host.landedRungSurface
         )
     }
 

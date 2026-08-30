@@ -36,6 +36,7 @@ enum MenuBarFixture {
         snoozes: [MenuBarSnooze] = [],
         pendingQuery: QueryPresentation? = nil,
         pendingAccusation: AccusationPresentation? = nil,
+        rungSurface: NudgeSurface? = nil,
         differentiateWithoutColor: Bool = false,
         sensingPaused: Bool = false
     ) -> MenuBarPresentation {
@@ -49,6 +50,7 @@ enum MenuBarFixture {
             pendingQuery: pendingQuery,
             pendingAccusation: pendingAccusation,
             rung: .panel,
+            rungSurface: rungSurface,
             band: .medium,
             sensingPaused: sensingPaused,
             differentiateWithoutColor: differentiateWithoutColor

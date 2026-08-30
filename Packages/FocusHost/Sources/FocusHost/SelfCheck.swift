@@ -774,6 +774,38 @@ enum SelfCheck {
         report["querySurfaceWhenMenuBarHidden"] = hiddenMenuBar.surface?.rawValue ?? ""
         report["queryDeferralWhenMenuBarHidden"] = hiddenMenuBar.deferralReason?.rawValue ?? ""
 
+        // **What the status item says a nudge is doing, and how often it has actually said it**
+        // (focus-mkk, focus-2xw).
+        //
+        // Counts of assignments to a real `NSStatusBarButton`, not predicates about a surface.
+        // The bead was measured with exactly this reading and it came back `[1,1,1,1,1,1,1]` over
+        // seven drifts and six delivered rows — the one write having happened at `install()`,
+        // before the first rung existed. A predicate saying the glyph "reaches the person on
+        // landing" could not have shown that, and asserting it is what produced the defect.
+        //
+        // `surfaceAttention` is the whole table rather than the live cell, because the live cell
+        // in an automated run is `unmarked` and a reading that is constant is a reading a gate
+        // cannot use.
+        report["menuBarGlyphWrites"] = composition.menuBar.glyphWriteCount
+        report["menuBarTitleWrites"] = composition.menuBar.titleWriteCount
+        report["menuBarAnnouncements"] = composition.menuBar.announcementCount
+        report["menuBarAttention"] = composition.menuBarPresentation().attention.rawValue
+        report["surfaceAttention"] = NudgeSurface.allCases.map { surface in
+            [
+                "surface": surface.rawValue,
+                "attention": surface.menuBarAttention.rawValue,
+                "marksTheItem": surface.menuBarAttention.marksTheItem,
+                "invitesAClick": surface.menuBarAttention.invitesAClick,
+                "holdsTheInterruptionSlot": surface.holdsTheInterruptionSlot
+            ]
+        }
+        // The join focus-mkk and focus-2xw share: a nudge that raises no window must be visible in
+        // the menu bar, or it is visible nowhere at all.
+        report["surfacesWithNoWindowAndNoMark"] = NudgeSurface.allCases
+            .filter { !$0.holdsTheInterruptionSlot && !$0.menuBarAttention.marksTheItem }
+            .map(\.rawValue)
+            .sorted()
+
         report["panel"] = panelReport()
         report["menuBarInstalled"] = composition.menuBar.isInstalled
         report["decisionCount"] = host.decisionCount

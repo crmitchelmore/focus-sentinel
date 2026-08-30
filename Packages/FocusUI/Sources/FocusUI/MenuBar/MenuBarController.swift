@@ -124,6 +124,14 @@ public struct MenuBarPresentation: Sendable, Equatable {
     public let pendingAccusation: AccusationPresentation?
     /// The rung the ladder has reached, when it has reached one.
     public let rung: LadderRung.Kind?
+    /// **The surface that rung actually landed on**, or `nil` when this loop is holding none
+    /// (focus-mkk).
+    ///
+    /// `rung` above is the ladder's *name* for what it reached and has never said where it went;
+    /// this is the other half, and its absence is what let an ambient rung be charged as a
+    /// delivery while the item it was supposedly drawn on never changed. The item reads it
+    /// through `attention` below and nowhere else.
+    public let rungSurface: NudgeSurface?
     /// The band behind the current verdict, when there is one.
     public let band: EvidenceBand?
     /// F-119's one global switch, as the popover shows it.
@@ -144,6 +152,7 @@ public struct MenuBarPresentation: Sendable, Equatable {
         pendingQuery: QueryPresentation? = nil,
         pendingAccusation: AccusationPresentation? = nil,
         rung: LadderRung.Kind? = nil,
+        rungSurface: NudgeSurface? = nil,
         band: EvidenceBand? = nil,
         sensingPaused: Bool = false,
         differentiateWithoutColor: Bool = false
@@ -157,6 +166,7 @@ public struct MenuBarPresentation: Sendable, Equatable {
         self.pendingQuery = pendingQuery
         self.pendingAccusation = pendingAccusation
         self.rung = rung
+        self.rungSurface = rungSurface
         self.band = band
         self.sensingPaused = sensingPaused
         self.differentiateWithoutColor = differentiateWithoutColor
@@ -176,6 +186,29 @@ public struct MenuBarPresentation: Sendable, Equatable {
     /// Every kind of nudge this presentation is carrying.
     public var carriedNudges: Set<MenuBarNudge> {
         Set(MenuBarNudge.allCases.filter(isCarrying))
+    }
+
+    /// **What the status item says about a nudge, over and above the status** (focus-mkk,
+    /// focus-2xw).
+    ///
+    /// Derived, never passed in: the two facts it is made of — what the popover is carrying and
+    /// where the rung landed — are already here, and a fourth stored field would be a third
+    /// statement of the same thing for a path to get wrong.
+    ///
+    /// The **stronger** of the two, because the badge's invitation subsumes the glyph's mark: a
+    /// person with a question waiting behind the click needs to be told to click, and telling
+    /// them instead that there is nothing to answer would be the worse of the two truths. The
+    /// order is `MenuBarAttention`'s own rank, not a comparison written here.
+    ///
+    /// `carriedNudges` rather than `rungSurface == .popoverBadge`, so the **question** half is
+    /// covered by the same line: a badge question is exactly as invisible in the menu bar as a
+    /// badge accusation was, and `MenuBarNudge.allCases` is what stops a third kind being marked
+    /// for one and forgotten for the other.
+    public var attention: MenuBarAttention {
+        Swift.max(
+            rungSurface?.menuBarAttention ?? .unmarked,
+            carriedNudges.isEmpty ? .unmarked : NudgeSurface.popoverBadge.menuBarAttention
+        )
     }
 
     /// The span the menu-bar timer counts.
@@ -299,13 +332,39 @@ public final class MenuBarController {
     /// The last string actually written to the button. The coalescing cadence is this
     /// comparison and nothing else.
     private var drawnTitle: String?
-    /// The last status **announced**. VoiceOver hears a state change once, when it happens —
+    /// The last **glyph state** actually written: the status's silhouette and the mark on it.
+    /// The image used to be assigned on every redraw, unconditionally, which made "the item
+    /// changed" unobservable — every tick wrote the same picture.
+    private var drawnGlyph: DrawnGlyph?
+    /// The last accessibility label actually written.
+    private var drawnAccessibilityLabel: String?
+    /// The last thing **announced**. VoiceOver hears a state change once, when it happens —
     /// not once per corroboration tick, which would be the app reading the same word aloud
     /// every five seconds (F-144, F-146).
-    private var announcedStatus: FocusStatus?
+    ///
+    /// **Keyed on the glyph state, not on `FocusStatus`** (focus-mkk). It was the status alone,
+    /// and a rung landing changes no status — a mandate needs ninety seconds of sustained drift,
+    /// so by the time one exists the status has been `.unrelated` throughout. Somebody who cannot
+    /// see the glyph was told nothing at all, on the one rung whose entire content is the glyph.
+    /// It is deliberately **not** keyed on the accessibility label, which carries the timer: that
+    /// would read the item aloud once a second while a snooze runs.
+    private var announcedGlyph: DrawnGlyph?
     /// How many times the title has actually been rewritten. Reported by the self-check, so
     /// "it does not redraw every tick" is a number rather than a promise.
     public private(set) var titleWriteCount = 0
+    /// **How many times the glyph has actually been rewritten** — the number focus-mkk is about.
+    ///
+    /// The bead's whole finding is a measurement of this: seven drifts, seven hundred seconds
+    /// apart, six delivered rows and *one* write to the menu bar, made before the first rung
+    /// existed. A predicate saying the glyph "reaches the person on landing" cannot fail; this
+    /// can, and `MenuBarStage` and the self-check read it around a real landing rather than
+    /// asserting the predicate back.
+    public private(set) var glyphWriteCount = 0
+    /// How many announcements have actually been posted, for the same reason.
+    public private(set) var announcementCount = 0
+    /// The last sentence announced, so a test can say **what** VoiceOver heard rather than only
+    /// that something was said.
+    public private(set) var lastAnnouncement: String?
 
     public init(traits: AppearanceTraits = .systemDefault) {
         self.traits = traits
@@ -387,21 +446,48 @@ public final class MenuBarController {
         if !presentation.carriedNudges.subtracting(carriedBefore).isEmpty { onPopoverDidShow?() }
     }
 
+    /// **The item's three channels, each written only when its own value changed.**
+    ///
+    /// It used to be two statements: the image was assigned unconditionally on every redraw and
+    /// the title was coalesced behind a `guard … else { return }` — and that `return` took the
+    /// accessibility label with it, so the label was written only in the ticks where the *timer
+    /// string* happened to differ. Splitting the guard per channel is what makes
+    /// `glyphWriteCount` a reading of the glyph rather than a reading of the clock.
     private func redraw(force: Bool) {
         guard let button = statusItem?.button else { return }
         // A figure nobody can see is not a figure worth writing (F-163).
         guard isItemVisible || force else { return }
 
-        button.image = Self.glyph(for: presentation.status)
+        let glyph = DrawnGlyph(status: presentation.status, attention: presentation.attention)
+        if force || glyph != drawnGlyph {
+            button.image = Self.glyph(for: glyph.status, attention: glyph.attention)
+            drawnGlyph = glyph
+            glyphWriteCount += 1
+        }
         button.imagePosition = presentation.timerText.isEmpty ? .imageOnly : .imageLeading
-        announceStatusChange(button: button)
+        announceGlyphChange(button: button, glyph: glyph)
+
+        let label = Self.accessibilityLabel(presentation)
+        if force || label != drawnAccessibilityLabel {
+            button.setAccessibilityLabel(label)
+            drawnAccessibilityLabel = label
+        }
 
         let title = Self.buttonTitle(presentation)
         guard force || title != drawnTitle else { return }
         button.attributedTitle = MenuBarTitle.attributed(title)
         drawnTitle = title
         titleWriteCount += 1
-        button.setAccessibilityLabel(Self.accessibilityLabel(presentation))
+    }
+
+    /// **What the item is drawing, as one comparable value** (focus-mkk).
+    ///
+    /// The status *and* the mark, because the pair is what the silhouette is a function of. Two
+    /// separate fields would let a future channel be coalesced against one of them, which is the
+    /// shape the unconditional image assignment had.
+    private struct DrawnGlyph: Equatable {
+        let status: FocusStatus
+        let attention: MenuBarAttention
     }
 
     /// The glyph: the status's own SF Symbol, **template-rendered**.
@@ -410,13 +496,98 @@ public final class MenuBarController {
     /// it is also what makes the silhouette the whole signal — P-132 read all five in the real
     /// menu bar and confirmed they are distinguishable in monochrome, which is F-146 satisfied by
     /// the tokens e01 already shipped rather than by colour.
-    nonisolated public static func glyph(for status: FocusStatus) -> NSImage? {
+    /// **And the mark, when a nudge is standing somewhere the menu bar speaks for** (focus-mkk,
+    /// focus-2xw).
+    ///
+    /// The mark is drawn *into* the glyph, at the glyph's own size, and the status silhouette is
+    /// scaled down uniformly to make room for it. That is a deliberate choice of channel: P-133
+    /// measured the menu-bar title jittering 7.69 pt between `11:11` and `88:88` on the
+    /// proportional face, which is why the timer is monospaced-digit — an indicator that
+    /// lengthened the string would shove every item to its left, and focus-2xw names that shape
+    /// as the wrong one. The image's bounds do not change, so the item's width does not either.
+    ///
+    /// A **filled** dot invites the click and a **hollow** ring does not, which is
+    /// `MenuBarAttention`'s two marks and `LadderRung.Kind.makesAnAccusation` seen from the menu
+    /// bar. Both are shapes and neither is a colour, so the template rendering below carries them
+    /// through the menu bar's own light and dark treatments unchanged (F-146) — and the fine
+    /// visual difference between a ring and a dot is deliberately *not* the load-bearing one:
+    /// that is `accessibilityLabel(_:)`'s sentence and the announcement, which say in words which
+    /// of the two this is.
+    nonisolated public static func glyph(
+        for status: FocusStatus,
+        attention: MenuBarAttention = .unmarked
+    ) -> NSImage? {
         let image = NSImage(
             systemSymbolName: status.symbolName,
             accessibilityDescription: status.shortLabel
         )
         image?.isTemplate = true
-        return image
+        guard let image, attention.marksTheItem else { return image }
+        return marked(image, attention: attention, describing: status)
+    }
+
+    /// The diameter of the mark, as a fraction of the glyph's shorter side.
+    nonisolated private static let markShare = 0.44
+    /// How much clear space the mark keeps between itself and the silhouette, as a fraction of
+    /// its own diameter. This is what the status symbol is scaled down by.
+    nonisolated private static let markClearance = 0.3
+    /// The ring's stroke, as a fraction of the mark's diameter.
+    nonisolated private static let markStrokeShare = 0.28
+
+    /// The status silhouette with the attention mark drawn into its top-trailing corner.
+    ///
+    /// A drawing handler rather than a pre-rendered asset, because the mark has to sit on
+    /// whichever of the five symbols the status happens to be and the composite has to stay a
+    /// **template** — the menu bar tints it, and a bitmap with its own colours in it would be the
+    /// one thing F-146 forbids.
+    nonisolated private static func marked(
+        _ symbol: NSImage,
+        attention: MenuBarAttention,
+        describing status: FocusStatus
+    ) -> NSImage {
+        let size = symbol.size
+        let shorter = min(size.width, size.height)
+        let diameter = shorter * markShare
+        // Uniform, so a non-square symbol is not stretched on its way to making room.
+        let scale = (shorter - diameter * markClearance) / shorter
+        let stroke = diameter * markStrokeShare
+
+        let composite = NSImage(size: size, flipped: false) { _ in
+            symbol.draw(
+                in: NSRect(x: 0, y: 0, width: size.width * scale, height: size.height * scale),
+                from: .zero,
+                operation: .sourceOver,
+                fraction: 1
+            )
+            let mark = NSRect(
+                x: size.width - diameter,
+                y: size.height - diameter,
+                width: diameter,
+                height: diameter
+            )
+            // Template images carry alpha, not colour: what is drawn here is a coverage mask and
+            // the menu bar decides the ink.
+            NSColor.black.setFill()
+            NSColor.black.setStroke()
+            switch attention {
+            case .waiting:
+                NSBezierPath(ovalIn: mark).fill()
+            case .noticing:
+                let ring = NSBezierPath(ovalIn: mark.insetBy(dx: stroke / 2, dy: stroke / 2))
+                ring.lineWidth = stroke
+                ring.stroke()
+            case .unmarked:
+                break
+            }
+            return true
+        }
+        composite.isTemplate = true
+        composite.accessibilityDescription = accessibilityLabel(
+            status: status,
+            attention: attention,
+            timer: ""
+        )
+        return composite
     }
 
     /// The text drawn beside the glyph.
@@ -432,10 +603,42 @@ public final class MenuBarController {
     }
 
     /// What VoiceOver reads off the item.
+    ///
+    /// **The mark's sentence is part of it** (focus-2xw). The bead's finding is that nothing in
+    /// the menu bar said a nudge was waiting *at all* — and for somebody using VoiceOver the
+    /// glyph's new dot says nothing whatever, so a mark with no words would repair the defect for
+    /// sighted people and leave it standing for everybody else. The phrase comes from
+    /// `MenuBarAttention.copyResource`, in `FocusCore`, where the vocabulary lives.
     nonisolated public static func accessibilityLabel(_ presentation: MenuBarPresentation) -> String {
-        let timer = presentation.timerText
-        let label = presentation.status.shortLabel
-        return timer.isEmpty ? label : "\(label) \(timer)"
+        accessibilityLabel(
+            status: presentation.status,
+            attention: presentation.attention,
+            timer: presentation.timerText
+        )
+    }
+
+    /// The same sentence from its three parts, so the glyph's own description and the button's
+    /// label cannot drift.
+    nonisolated static func accessibilityLabel(
+        status: FocusStatus,
+        attention: MenuBarAttention,
+        timer: String
+    ) -> String {
+        let head = timer.isEmpty ? status.shortLabel : "\(status.shortLabel) \(timer)"
+        guard let resource = attention.copyResource else { return head }
+        return "\(head). \(String(localized: resource))"
+    }
+
+    /// **What VoiceOver is told when the item changes**, with no timer in it.
+    ///
+    /// Deliberately not `accessibilityLabel(_:)`: that carries the countdown, and announcing it
+    /// would read the item aloud once a second while a snooze runs. What changes here is a state,
+    /// so what is announced is the state.
+    nonisolated static func announcement(
+        status: FocusStatus,
+        attention: MenuBarAttention
+    ) -> String {
+        accessibilityLabel(status: status, attention: attention, timer: "")
     }
 
     /// Say the new state out loud, once (F-144).
@@ -445,17 +648,27 @@ public final class MenuBarController {
     /// announced, and it is announced on the change rather than on the reading, because a state
     /// that is repeated is not a state that changed.
     ///
+    /// **And "the state" is the glyph, not the status** (focus-mkk). Keyed on `FocusStatus` this
+    /// could not fire for a rung at all: `InterventionPolicy`'s mandate needs ninety seconds of
+    /// sustained drift, so the status has been `.unrelated` since long before the rung existed
+    /// and `announcedStatus != presentation.status` was false at the exact moment the app first
+    /// had something to say. The rung was silent, invisible **and** unannounced, and it was
+    /// charged.
+    ///
     /// `.medium` priority: it is a fact about the app, not an interruption. A high-priority
     /// announcement would cut across whatever the person is having read to them, which is a
     /// louder thing than the glyph it describes.
-    private func announceStatusChange(button: NSStatusBarButton) {
-        guard announcedStatus != presentation.status else { return }
-        announcedStatus = presentation.status
+    private func announceGlyphChange(button: NSStatusBarButton, glyph: DrawnGlyph) {
+        guard announcedGlyph != glyph else { return }
+        announcedGlyph = glyph
+        let sentence = Self.announcement(status: glyph.status, attention: glyph.attention)
+        lastAnnouncement = sentence
+        announcementCount += 1
         NSAccessibility.post(
             element: button,
             notification: .announcementRequested,
             userInfo: [
-                .announcement: Self.accessibilityLabel(presentation),
+                .announcement: sentence,
                 .priority: NSAccessibilityPriorityLevel.medium.rawValue
             ]
         )

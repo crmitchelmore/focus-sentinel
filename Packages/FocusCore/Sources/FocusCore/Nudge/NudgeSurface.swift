@@ -98,7 +98,7 @@ public enum NudgeSurface: String, Sendable, CaseIterable, Codable, Hashable {
     /// | surface | reaches somebody on landing | what happens when it lands |
     /// |---|---|---|
     /// | `panel` | **yes** | the window is ordered front |
-    /// | `menuBar` | **yes** | the glyph is redrawn on the next refresh |
+    /// | `menuBar` | **yes** | the item is marked `noticing`, in the landing itself |
     /// | `notification` | **yes** | the banner is posted |
     /// | `popoverBadge` | no | it is behind a click nobody has made yet |
     ///
@@ -108,6 +108,15 @@ public enum NudgeSurface: String, Sendable, CaseIterable, Codable, Hashable {
     /// interruptions and a 600-second cooldown on somebody who had been shown nothing but the
     /// glyph they already had. `NudgeHost` now asks *this* rather than remembering it twice, and
     /// `NudgeHost.popoverPresented()` is the one moment either kind may be counted.
+    ///
+    /// **`.menuBar`'s `true` was a promise nothing kept, and `menuBarAttention` below is the
+    /// keeping of it** (focus-mkk). The row above used to read *"the glyph is redrawn on the next
+    /// refresh"*. It was not: the item was drawn from the status and the timer alone, and the
+    /// status has been `.unrelated` for the ninety seconds the mandate took to form, so nothing
+    /// changed — not the glyph, not the title, not the VoiceOver announcement — while the landing
+    /// spent an accusation, an interruption and a ten-minute cooldown. This cell is now true
+    /// because the cell below makes it true, and the proof of it counts writes to the status item
+    /// rather than reading this predicate back.
     ///
     /// **Deliberately not `holdsTheInterruptionSlot` re-spelled**, though the two agree in three
     /// of four cells. The glyph is on screen the moment it lands *and* occupies no screen a
@@ -121,6 +130,44 @@ public enum NudgeSurface: String, Sendable, CaseIterable, Codable, Hashable {
         }
     }
 
+    /// **What the status item itself must say while a nudge is standing on this surface**
+    /// (focus-mkk, focus-2xw).
+    ///
+    /// | surface | the item says | why |
+    /// |---|---|---|
+    /// | `menuBar` | `noticing` | the ambient rung *is* the item; if it changes nothing, rung 1 of a two-rung ladder does not exist |
+    /// | `popoverBadge` | `waiting` | the popover opens only on a click, and nothing was asking for one |
+    /// | `panel` | `unmarked` | it is a window in front of the person; the menu bar has nothing to add |
+    /// | `notification` | `unmarked` | the banner is the surface, and no rung routes to one (U-2) |
+    ///
+    /// **This is the missing half of `reachesThePersonOnLanding`, and its absence was the
+    /// defect.** That predicate answers `true` for `.menuBar` on the stated ground that *"the
+    /// glyph is redrawn on the next refresh"* — and nothing redrew it. `MenuBarPresentation`
+    /// carried the status, the timer and the popover's contents, and the item was a function of
+    /// those alone: `currentStatus` never read the ladder, the announcement fired on a
+    /// `FocusStatus` change, and a mandate needs ninety seconds of sustained drift, so the status
+    /// had already been `.unrelated` throughout. Measured on the shipping loop with a real
+    /// installed `NSStatusItem` — seven drifts, seven hundred seconds apart: six delivered rows,
+    /// the whole day's accusation cap spent, the query budget squeezed from four to one, and
+    /// **one** write to the menu bar, made before the first rung existed.
+    ///
+    /// So the predicate above is now a claim this one has to make good on: a surface that reaches
+    /// somebody in the menu bar the moment it lands must mark the item, and the mark is a write
+    /// a test can count. `MenuBarControllerAttentionTests` counts them; `NudgeSurfaceTests` joins
+    /// the two columns so a future `true` in the left one with `unmarked` in the right one is a
+    /// build that does not pass.
+    ///
+    /// Stated **here**, on the surface, for the reason `reachesThePersonOnLanding` is: the
+    /// question path and the accusation path both reach the badge and only the rung reaches the
+    /// glyph, so a rule written at either call site is a rule the other half can be missing.
+    public var menuBarAttention: MenuBarAttention {
+        switch self {
+        case .menuBar: .noticing
+        case .popoverBadge: .waiting
+        case .panel, .notification: .unmarked
+        }
+    }
+
     /// Whether this surface belongs to the application itself rather than to the system.
     ///
     /// The three in-app surfaces are what make the `notification-denied` gate stage possible:
@@ -130,6 +177,79 @@ public enum NudgeSurface: String, Sendable, CaseIterable, Codable, Hashable {
 
     /// Whether reaching this surface needs a TCC-style authorisation the user may refuse.
     public var requiresNotificationAuthorisation: Bool { self == .notification }
+}
+
+/// **What the menu-bar item is saying about a nudge, over and above the status** (focus-mkk,
+/// focus-2xw).
+///
+/// Three states, and the middle one exists because U-2's ladder has two rungs and the lower one
+/// *is* the status item. A rung that changes nothing in the menu bar is not a quieter rung; it is
+/// no rung at all, charged at the price of one.
+///
+/// ## Why the two marks are different marks
+///
+/// `.waiting` asks for a click and `.noticing` does not, and that difference is the whole of
+/// `LadderRung.Kind.makesAnAccusation` seen from the menu bar. R-87 keeps the ambient rung on
+/// through a snooze precisely because it is a *state* rather than a sentence — there is nothing
+/// on it to answer — while a badge nudge is a question or an accusation sitting behind a click
+/// nobody has been invited to make. One mark for both would invite a click that finds nothing to
+/// press, which is the badge defect run backwards.
+///
+/// ## The channel, and why it is the glyph and not the title
+///
+/// P-133 measured the proportional system font jittering the menu-bar title by 7.69 pt between
+/// `11:11` and `88:88`, which is why the timer is drawn in `monospacedDigitSystemFont`. An
+/// indicator that lengthened that string would shove every item to its left once a second, so the
+/// mark is drawn **into the glyph, at the glyph's own size**: the item's width is untouched, and
+/// `MenuBarTitleWidthTests` still holds.
+///
+/// The mark is a shape, never a colour (F-146), and it carries a sentence for VoiceOver, because
+/// `MenuBarController.announceStatusChange` was keyed to `FocusStatus` and a rung landing changes
+/// no status.
+public enum MenuBarAttention: String, Sendable, CaseIterable, Codable, Hashable, Comparable {
+    /// Nothing is standing anywhere the menu bar speaks for. The item is the status and the
+    /// timer, exactly as it has always been.
+    case unmarked
+    /// **The ambient rung is on the glyph itself.** The app has escalated to saying *something*,
+    /// and this is the whole of what it says. Nothing to answer, and no click asked for.
+    case noticing
+    /// **A nudge is waiting behind the click.** Either kind: the badge carries the question and
+    /// the accusation through one surface, so it carries one mark.
+    case waiting
+
+    /// Rank, derived from `allCases` exactly as `LadderRung.Kind.rank` is (R-96j).
+    public var rank: Int { Self.allCases.firstIndex(of: self) ?? Self.allCases.count }
+
+    public static func < (lhs: Self, rhs: Self) -> Bool { lhs.rank < rhs.rank }
+
+    /// Whether the item carries a mark at all — the reading a write-counting test asserts on.
+    public var marksTheItem: Bool { self != .unmarked }
+
+    /// Whether this mark is inviting a click, which is the half `.noticing` must not claim.
+    public var invitesAClick: Bool { self == .waiting }
+
+    /// The String Catalog key for the sentence VoiceOver reads, or `nil` for the unmarked item —
+    /// which has nothing to add and must not add a word.
+    ///
+    /// `nil` rather than an empty key: an empty sentence appended to the status label would read
+    /// as a pause to somebody listening, and `check-strings.sh` would bless a key nothing says.
+    public var copyKey: String? {
+        switch self {
+        case .unmarked: nil
+        case .noticing: "nudge.attention.noticing"
+        case .waiting: "nudge.attention.waiting"
+        }
+    }
+
+    /// The sentence itself, resolved against `FocusCore`'s own bundle, in the shape
+    /// `FocusStatus.shortLabelResource` already ships.
+    public var copyResource: LocalizedStringResource? {
+        guard let copyKey else { return nil }
+        return LocalizedStringResource(
+            String.LocalizationValue(copyKey),
+            bundle: .atURL(Bundle.module.bundleURL)
+        )
+    }
 }
 
 /// Whether the system will deliver a notification for us.
