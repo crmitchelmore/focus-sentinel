@@ -651,7 +651,16 @@ struct NudgeDeciderTests {
 
     // MARK: - Voices and surfaces
 
-    @Test("the silent deck renders the panel rung as a glyph without changing the ladder")
+    /// **The silent deck sends the top rung to the badge, not to the glyph** (focus-vxo).
+    ///
+    /// This test pinned the defect: it asserted `.surface(.menuBar)` and called it "rendered as
+    /// the glyph", one line after asserting that the ladder really had escalated and the rung
+    /// really was rung 2. Both halves are the same decision object, so the file said in two
+    /// adjacent expectations that the app had climbed to an accusation and then put it somewhere
+    /// with nothing on it to press. The escalation half was always right; a rung the ladder
+    /// climbed to and the loop records delivered against a named subject is an accusation, and a
+    /// deck chooses how quiet it lands, never whether it is one.
+    @Test("the silent deck routes the panel rung to the badge without changing the ladder")
     func theSilentDeckRoutesRatherThanSilences() {
         var ladder = LadderMachine()
         let at = Duration.seconds(10_000)
@@ -666,9 +675,11 @@ struct NudgeDeciderTests {
             preferences: NudgePreferences(voice: .silentVisual)
         )
 
-        // The ladder really escalated — the rung is rung 2 — and it is *rendered* as the glyph.
+        // The ladder really escalated — the rung is rung 2 — and it lands quietly, on a surface
+        // that carries the whole correction economy.
         #expect(decision.rung?.kind == .panel)
-        #expect(decision.route == .surface(.menuBar))
+        #expect(decision.route == .surface(.popoverBadge))
+        #expect(decision.route?.surface?.offersAnAnswer == true)
     }
 
     @Test("reduced interruption moves the question to a badge without withdrawing it")

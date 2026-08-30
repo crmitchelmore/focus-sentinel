@@ -1660,8 +1660,21 @@ check(
 # "In-app" is the weaker claim and it was the only one anybody made. Under macOS Reduce Motion —
 # which AppearanceObserver forces `reducedInterruption` on for — the top rung routed to the
 # popover badge, and the popover was a read-only label: no dismiss, no "this is relevant", no
-# snooze. That passed `everyRungIsInApp` every time. This reading is folded over both settings of
-# the flag and every deck, and it names the offending cells rather than answering a bare False.
+# snooze. That passed `everyRungIsInApp` every time. This reading names the offending cells
+# rather than answering a bare False.
+#
+# **The size of the fold is checked first, and that is focus-vxo's lesson** (R-96o's shape). The
+# reading came back True while the running loop was putting a delivered accusation on the
+# menu-bar glyph, because the fold asked the rung a *deck* claimed to draw and pinned an idle
+# microphone and no presentation — so True was true of a space chosen so it could not be false.
+# A verdict over a space the gate does not measure is not evidence, so the cell count is asserted
+# before the verdict it qualifies.
+ACCUSATION_ROUTE_CELLS = 1 * 2 * 2 * 2 * 2 * 5  # rung × presenting × mic × flag × menuBar × deck
+check(
+    nudge.get("accusationRouteCellsChecked") == ACCUSATION_ROUTE_CELLS,
+    f"the accusation-route fold covers all {ACCUSATION_ROUTE_CELLS} cells rather than a subset",
+    nudge.get("accusationRouteCellsChecked"),
+)
 check(
     nudge.get("everyAccusationRouteCanBeAnswered") is True,
     "every accusation route offers the person a way to answer back",

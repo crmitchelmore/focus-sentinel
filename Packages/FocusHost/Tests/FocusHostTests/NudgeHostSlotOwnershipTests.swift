@@ -326,9 +326,9 @@ struct NudgeHostSlotOwnershipTests {
     /// the accusation the person meant to dismiss still up.
     ///
     /// **Reaching it needs the settings pane**, and that is the point: every route that sends a
-    /// question to the badge also demotes the panel rung (reduced interruption and an active
-    /// microphone send it to the badge; `silentVisual` renders it as the glyph), so the two can
-    /// only meet if the preference changes between the ask and the accusation. Unchecking the
+    /// question to the badge also demotes the panel rung — reduced interruption, an active
+    /// microphone and the `silentVisual` deck all send both to the badge (focus-vxo) — so the two
+    /// can only meet if the preference changes between the ask and the accusation. Unchecking the
     /// Intervention pane's box while a badge question waits is an ordinary thing to do.
     @Test("escape on an accusation panel does not answer a question waiting in the badge")
     func escapeDismissesThePanelNotThePendingBadgeQuestion() throws {

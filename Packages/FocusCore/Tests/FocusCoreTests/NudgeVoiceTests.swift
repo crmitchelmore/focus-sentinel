@@ -152,35 +152,81 @@ struct NudgeVoiceTests {
 
     // MARK: - The routing deck
 
-    /// `silentVisual` is a **routing** deck, not a copy deck: it maps the panel rung onto the
-    /// ambient one and puts the question in the popover. It still carries every line, because
-    /// a badge with no words is not an accessible surface.
-    @Test("silentVisual reroutes rather than falling silent")
+    /// `silentVisual` is a **routing** deck, not a copy deck: it puts the top rung and the
+    /// question alike in the menu-bar popover. It still carries every line, because a badge with
+    /// no words is not an accessible surface.
+    ///
+    /// **A deck says how quiet, never which rung** (focus-vxo). `renderedRung(for:)` used to say
+    /// the second thing — under this deck the panel rung "was" the ambient rung — and it was
+    /// false in the loop, which climbed to the panel rung, recorded it delivered against a named
+    /// application, spent the accusation budget on it and drew the panel rung's own label in the
+    /// popover. The function is deleted, so no deck has a way to say it: the router is handed
+    /// the rung the ladder set, and `isRoutingDeck` is the deck's whole say in where it lands.
+    @Test("the routing deck reroutes the surface, and no deck reroutes the rung")
     func silentVisualReroutes() {
         #expect(NudgeVoice.silentVisual.isRoutingDeck)
-        #expect(NudgeVoice.silentVisual.renderedRung(for: .panel) == .ambient)
-        #expect(NudgeVoice.silentVisual.renderedRung(for: .ambient) == .ambient)
         #expect(NudgeVoice.silentVisual.querySurface == .popoverBadge)
 
         for voice in NudgeVoice.allCases where voice != .silentVisual {
             #expect(!voice.isRoutingDeck)
             #expect(voice.querySurface == .panel)
-            for rung in LadderRung.Kind.allCases {
-                #expect(
-                    voice.renderedRung(for: rung) == rung,
-                    "\(voice.rawValue) is a copy deck and must not reroute a rung"
-                )
-            }
+        }
+
+        // **What a deck may not do, over every deck.** The glyph is the ambient rung's only
+        // surface and the top rung never lands on it: the ambient rung is what a glyph means,
+        // and a deck that sent the panel rung there would be re-labelling a rung the ladder has
+        // already climbed, recorded and charged for. That is the defect focus-vxo closed, and
+        // this is it stated as a rule rather than as the one deck it was true of.
+        for voice in NudgeVoice.allCases {
+            let ambient = SurfaceRouter.route(
+                rung: .ambient,
+                presentation: .notPresenting,
+                media: .idle,
+                reducedInterruption: false,
+                menuBarVisible: true,
+                voice: voice
+            )
+            let panel = SurfaceRouter.route(
+                rung: .panel,
+                presentation: .notPresenting,
+                media: .idle,
+                reducedInterruption: false,
+                menuBarVisible: true,
+                voice: voice
+            )
+            #expect(ambient.surface == .menuBar, "\(voice.rawValue) moved the glyph")
+            #expect(panel.surface != .menuBar, "\(voice.rawValue) put the top rung on the glyph")
         }
     }
 
-    /// A rendering choice, never a ladder change: the rung a voice *renders* is never above the
-    /// rung the ladder asked for, so no deck can escalate on the ladder's behalf.
-    @Test("no voice renders a rung higher than the one it was given")
+    /// A deck chooses a quieter surface, never a louder one, and never a different rung: for
+    /// every deck and every rung the router is asked for the rung it was given, and the surface
+    /// it answers is never louder than the standard deck's.
+    @Test("no deck routes a rung anywhere louder than the standard deck does")
     func noVoiceEscalates() {
         for voice in NudgeVoice.allCases {
             for rung in LadderRung.Kind.allCases {
-                #expect(voice.renderedRung(for: rung).rank <= rung.rank)
+                let standard = SurfaceRouter.route(
+                    rung: rung,
+                    presentation: .notPresenting,
+                    media: .idle,
+                    reducedInterruption: false,
+                    menuBarVisible: true,
+                    voice: .standard
+                )
+                let deck = SurfaceRouter.route(
+                    rung: rung,
+                    presentation: .notPresenting,
+                    media: .idle,
+                    reducedInterruption: false,
+                    menuBarVisible: true,
+                    voice: voice
+                )
+                // "Louder" is `holdsTheInterruptionSlot`: a deck may take a rung off the screen
+                // and may never put one there the standard deck would not have.
+                let standardHolds = standard.surface?.holdsTheInterruptionSlot ?? false
+                let deckHolds = deck.surface?.holdsTheInterruptionSlot ?? false
+                #expect(!deckHolds || standardHolds, "\(voice.rawValue) escalated \(rung.rawValue)")
             }
         }
     }

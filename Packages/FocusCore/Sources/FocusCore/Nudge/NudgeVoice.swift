@@ -82,10 +82,9 @@ public enum NudgeCopyKey: String, Sendable, CaseIterable, Codable, Hashable {
 /// **Five static decks, and no way to generate a sixth** (R-90, F-65, D-11, SC-4).
 ///
 /// Four of them are registers of the same thirteen lines. The fifth is different in kind:
-/// `silentVisual` is a **routing** deck rather than a copy deck — it maps every panel rung onto
-/// the ambient rung and puts the question in the menu-bar popover — and it is the
-/// accessibility-critical one, so it carries the full line set as well and is snapshot-tested
-/// like the rest.
+/// `silentVisual` is a **routing** deck rather than a copy deck — it takes the panel rung and the
+/// question alike into the menu-bar popover — and it is the accessibility-critical one, so it
+/// carries the full line set as well and is snapshot-tested like the rest.
 ///
 /// The Court's adopted default is F-66's: **"Still working on {task}?"** for the accusation and
 /// its question-shaped sibling **"Is {subject} part of {task}?"** for the query.
@@ -105,27 +104,24 @@ public enum NudgeVoice: String, Sendable, CaseIterable, Codable, Hashable {
     public static let standard = NudgeVoice.neutral
 
     /// Whether this deck changes **where** a nudge appears rather than only what it says.
+    ///
+    /// It is read by `SurfaceRouter.route(rung:…)`, as one of the three terms of that function's
+    /// *quiet* condition, beside `reducedInterruption` and a running microphone. That is the
+    /// whole of the deck's routing effect and there is no second mechanism: R-92's ruling is one
+    /// flag inside the existing router, and a deck that reached the router by a private path
+    /// would be the parallel surface stack the ruling forbids.
+    ///
+    /// **It used to have a partner, `renderedRung(for:)`, and deleting that is focus-vxo's
+    /// ruling.** The function claimed the panel rung *was* the ambient rung under this deck, and
+    /// three things made that false at once. The running loop recorded the rung as an accusation
+    /// delivered against a named subject and spent the accusation budget on it, `MenuBarPopover`
+    /// drew the panel rung's own label — *"A small panel you can answer"* — and the router sent
+    /// it to `.menuBar`, which offers no answer at all. Worse, the claim was load-bearing in the
+    /// two properties that existed to catch exactly this: both asked the *rendered* rung whether
+    /// it made an accusation, so the four broken cells were skipped by their own guard. A rung
+    /// the ladder climbed to, recorded, and charged for is an accusation; a deck may choose a
+    /// quieter **surface** for it and may not un-say it.
     public var isRoutingDeck: Bool { self == .silentVisual }
-
-    /// The rung this voice actually renders for a requested rung (R-90, R-92).
-    ///
-    /// `silentVisual` maps the panel rung onto the ambient one — the escalation still happened
-    /// and is still recorded, but it is rendered as a glyph change rather than as a window. The
-    /// recommitment rung is left alone: it is already quiet by construction where notifications
-    /// are authorised, and where they are not the router demotes it to the popover badge rather
-    /// than to a panel.
-    ///
-    /// **This is a rendering choice, never a ladder change.** The ladder's own state, its
-    /// escalation clock and its budget are untouched: R-81's rule is about what a person could
-    /// *see*, and under this deck they can see the glyph.
-    public func renderedRung(for rung: LadderRung.Kind) -> LadderRung.Kind {
-        switch self {
-        case .neutral, .warm, .direct, .playful:
-            rung
-        case .silentVisual:
-            rung == .panel ? .ambient : rung
-        }
-    }
 
     /// The surface a **question** takes under this voice.
     ///

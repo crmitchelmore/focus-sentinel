@@ -40,13 +40,36 @@ import Testing
 struct NudgeHostBadgeAccusationTests {
     static let subject = NudgeHostFixture.decoy
 
-    /// Drive sustained drift under reduced interruption until the ladder reaches the panel rung.
+    /// **The two ways a person reaches the badge from the Intervention pane**, and both are two
+    /// clicks away (focus-vxo).
+    ///
+    /// The suite drove the checkbox alone, and the deck was the one that was broken: it sent the
+    /// top rung to the menu-bar glyph, where the loop recorded it *delivered* against a named
+    /// application while the popover had nothing on it to press. Both are now driven, because a
+    /// proof written to one of two settings of one pane is a proof written to the case somebody
+    /// happened to hold.
+    ///
+    /// The third route to the badge — a running microphone — cannot be driven here and is not
+    /// missing: gate 6 of the suppression stack refuses the whole intervention while a microphone
+    /// is running, so the router's backstop is reached only from a caller that skipped the stack.
+    /// `SurfaceRouterTests` and the self-check's own fold cover that cell over the whole matrix.
+    enum QuietRoute: String, CaseIterable, Sendable {
+        /// F-148's checkbox — the one macOS Reduce Motion forces on.
+        case reducedInterruption
+        /// Settings → Intervention → "Silent and visual".
+        case routingDeck
+    }
+
+    /// Drive sustained drift under one of the quiet routes until the ladder reaches the panel rung.
     ///
     /// Two ticks, exactly as `NudgeHostLadderTests.theLoopClimbsTheWholeLadder` drives it: the
     /// ladder enters at `.ambient` and escalates once the clock has passed both `escalationDwell`
     /// and the longer `mandateCooldown`.
-    static func climbToTheBadge(_ fixture: NudgeHostFixture) {
-        fixture.host.choose(reducedInterruption: true)
+    static func climbToTheBadge(_ fixture: NudgeHostFixture, via route: QuietRoute) {
+        switch route {
+        case .reducedInterruption: fixture.host.choose(reducedInterruption: true)
+        case .routingDeck: fixture.host.choose(voice: .silentVisual)
+        }
         for _ in 0..<2 {
             fixture.host.consider(NudgeHostFixture.unrelatedJudgement(subject: Self.subject))
             NudgeHostFixture.settle()
@@ -59,18 +82,20 @@ struct NudgeHostBadgeAccusationTests {
     /// The presentation is built by the same `accusationPresentation(for:commitment:)` the panel
     /// is drawn from, so this is not "the badge has some buttons" — it is the same six actions,
     /// in the same order, about the same subject, under the same commitment.
-    @Test("a top rung routed to the badge arrives with every answer the panel would offer")
-    func theBadgeRungCarriesItsAnswers() throws {
+    @Test(
+        "a top rung routed to the badge arrives with every answer the panel would offer",
+        arguments: QuietRoute.allCases
+    )
+    func theBadgeRungCarriesItsAnswers(via route: QuietRoute) throws {
         let fixture = try NudgeHostFixture()
         defer { fixture.tearDown() }
 
-        Self.climbToTheBadge(fixture)
+        Self.climbToTheBadge(fixture, via: route)
 
         #expect(fixture.host.currentRung == .panel, "the ladder did not reach the top rung")
         guard case .accuse(_, .surface(.popoverBadge)) = fixture.host.lastDecision else {
-            Issue.record(
-                "the rung was not routed to the badge: \(String(describing: fixture.host.lastDecision))"
-            )
+            let decision = String(describing: fixture.host.lastDecision)
+            Issue.record("\(route.rawValue): the rung was not routed to the badge: \(decision)")
             return
         }
         // Reduce Motion does not get a panel. That was the alternative fix and it is the wrong
@@ -111,16 +136,22 @@ struct NudgeHostBadgeAccusationTests {
     /// further along, so the proof ends at the store: "this is relevant" writes a task-authority
     /// rule about this subject, the ladder de-escalates, and the badge stops offering answers for
     /// a rung this host no longer holds.
-    @Test("a correction pressed on the badge is written, and takes the rung down with it")
-    func aCorrectionOnTheBadgeIsWritten() throws {
+    @Test(
+        "a correction pressed on the badge is written, and takes the rung down with it",
+        arguments: QuietRoute.allCases
+    )
+    func aCorrectionOnTheBadgeIsWritten(via route: QuietRoute) throws {
         let fixture = try NudgeHostFixture()
         defer { fixture.tearDown() }
 
         var written: [CorrectionOutcome] = []
         fixture.host.onCorrection = { outcome, _ in written.append(outcome) }
 
-        Self.climbToTheBadge(fixture)
-        #expect(fixture.host.pendingPopoverAccusation != nil)
+        Self.climbToTheBadge(fixture, via: route)
+        #expect(
+            fixture.host.pendingPopoverAccusation != nil,
+            "\(route.rawValue) published no presentation for the badge to draw"
+        )
 
         // The press. `AppComposition.perform(_:)` maps `.correct` straight onto this call, so a
         // click on the badge and a click on the panel are literally the same one.

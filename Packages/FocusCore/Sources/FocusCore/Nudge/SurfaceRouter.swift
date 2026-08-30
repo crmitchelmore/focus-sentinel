@@ -41,8 +41,19 @@ public struct SurfaceRoutingRow: Sendable, Equatable, Hashable {
 ///    now passes at zero.
 /// 3. **Reduced interruption is a flag in here, not a second surface stack** (R-92, F-148).
 ///    Panel rungs become menu-bar badges and the question becomes a popover row. `silentVisual` is
-///    the same mechanism spelled as a deck: `NudgeVoice.renderedRung(for:)` maps the panel rung
-///    onto the ambient one before this function reads it.
+///    the same mechanism spelled as a deck, and since focus-vxo that is true rather than merely
+///    written down here: `NudgeVoice.isRoutingDeck` is one of the three terms of the *quiet*
+///    condition below, beside the flag and a running microphone, and all three reach the badge.
+///
+///    It did not. The deck went through `NudgeVoice.renderedRung(for:)`, which remapped the panel
+///    rung to the ambient one *before* this function read it, so the top rung took the ambient
+///    branch and landed on `.menuBar` — a glyph, with nothing on it to press — while the loop
+///    recorded it delivered against a named subject and charged the accusation budget for it. The
+///    three conditions this paragraph named as one mechanism were two: the flag and the
+///    microphone reached an answerable surface and the deck reached an unanswerable one. Since
+///    the deck is reachable in two clicks from Settings → Intervention, and is the one the copy
+///    calls accessibility-critical, the people it was wrong for are the people who asked for
+///    calm.
 ///
 /// ## A badge is a menu-bar thing, and the menu bar can be hidden
 ///
@@ -65,6 +76,13 @@ public struct SurfaceRouter: Sendable {
     ///   - reducedInterruption: F-148's flag, forced on by Reduce Motion.
     ///   - menuBarVisible: whether the system menu bar is actually on screen (P-131).
     ///   - voice: the deck. `silentVisual` is a **routing** deck, not a copy deck.
+    ///
+    /// **It switches on the rung it was handed** (focus-vxo). It used to switch on
+    /// `voice.renderedRung(for: rung)`, and that indirection is what let an accusation reach the
+    /// glyph: the ladder asked for the panel rung, a deck answered "call it the ambient one", and
+    /// the ambient branch put a rung that accuses a named application onto a surface that offers
+    /// no way to answer it. A deck chooses **how quiet**, never **which rung** — so the rung is
+    /// read here exactly as the ladder set it, and the deck spends its say in `quiet` below.
     public static func route(
         rung: LadderRung.Kind,
         presentation: PresentationState,
@@ -73,11 +91,14 @@ public struct SurfaceRouter: Sendable {
         menuBarVisible: Bool,
         voice: NudgeVoice
     ) -> SurfaceRoute {
-        switch voice.renderedRung(for: rung) {
+        switch rung {
         case .ambient:
             // The glyph, and nothing else. Its only failure mode is a menu bar that is not
             // there — which is a deferral, never a suppression, because the rung was wanted and
             // merely undeliverable (R-81).
+            //
+            // Nothing quietens it further, the routing deck included: it is already the quietest
+            // thing this app can do, and it makes no accusation there is anything to answer.
             return resolve(.menuBar, presentation: presentation, menuBarVisible: menuBarVisible)
 
         case .panel:
@@ -88,7 +109,11 @@ public struct SurfaceRouter: Sendable {
             guard !presentation.suppressesOverlays else {
                 return .unavailable(.presentationActive)
             }
-            if reducedInterruption || media.suppressesIntervention {
+            // **The three quiet conditions, and they now agree.** F-148's flag (which Reduce
+            // Motion forces on), a running microphone, and the routing deck. Each one means "no
+            // window" and none of them means "no accusation": the rung keeps its whole
+            // correction economy on a surface that is a badge and a row rather than a panel.
+            if reducedInterruption || media.suppressesIntervention || voice.isRoutingDeck {
                 return resolve(
                     .popoverBadge, presentation: presentation, menuBarVisible: menuBarVisible
                 )

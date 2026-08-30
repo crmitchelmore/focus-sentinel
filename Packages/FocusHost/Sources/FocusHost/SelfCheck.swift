@@ -479,6 +479,67 @@ enum SelfCheck {
     ///    is published by the notification boundary; `requestAuthorization(` appears in no file
     ///    of this repository, so the number is a property of the call graph rather than of a
     ///    counter somebody remembered to leave alone.
+    /// **Every accusation route in the whole input space, and which of them cannot be answered**
+    /// (focus-uru, focus-vxo).
+    ///
+    /// A named function rather than a loop inside `nudgeReport()`, for the reason focus-vxo turns
+    /// on: the same fold with the same exemption existed twice, once here and once in
+    /// `SurfaceRouterTests`, and they agreed with each other for as long as they shared the
+    /// blind spot. One fold, run by the binary and by the unit lane, cannot do that.
+    ///
+    /// **The rung is the requested one and every input varies.** It asked the rung a *deck*
+    /// claimed to render and pinned an idle microphone and no presentation, so the reading it
+    /// produced was true of a space chosen so that it could not be false.
+    ///
+    /// Returns the offending cells named, so a red gate says which rung under which conditions,
+    /// and the number of cells visited, so a fold that quietly shrinks is visible as a number
+    /// rather than as an unchanged `true`.
+    nonisolated static func accusationRouteAudit() -> (cells: Int, unanswerable: [String]) {
+        let presenting = PresentationState(
+            signals: PresentationSignals(
+                frontmostWindowFillsAScreen: true,
+                presentationOptionsSayFullScreen: true,
+                menuBarHidden: true
+            ),
+            isUserExcluded: false,
+            isPresenting: true
+        )
+        var unanswerable: [String] = []
+        var cells = 0
+
+        for rung in LadderRung.Kind.allCases where rung.makesAnAccusation {
+            for presentation in [PresentationState.notPresenting, presenting] {
+                for media in [MediaActivity.idle, MediaActivity(microphoneRunning: true)] {
+                    for reduced in [false, true] {
+                        for menuBar in [true, false] {
+                            for voice in NudgeVoice.allCases {
+                                cells += 1
+                                let route = SurfaceRouter.route(
+                                    rung: rung,
+                                    presentation: presentation,
+                                    media: media,
+                                    reducedInterruption: reduced,
+                                    menuBarVisible: menuBar,
+                                    voice: voice
+                                )
+                                guard let surface = route.surface, !surface.offersAnAnswer else {
+                                    continue
+                                }
+                                var cell = "\(rung.rawValue)/\(voice.rawValue)"
+                                cell += "/reduced=\(reduced)/menuBar=\(menuBar)"
+                                cell += "/presenting=\(presentation.suppressesOverlays)"
+                                cell += "/mic=\(media.suppressesIntervention)"
+                                cell += " -> \(surface.rawValue)"
+                                unanswerable.append(cell)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return (cells, Set(unanswerable).sorted())
+    }
+
     @MainActor
     static func nudgeReport() -> [String: Any] {
         let composition = AppComposition.shared
@@ -596,34 +657,31 @@ enum SelfCheck {
         // read-only label. Every reading the gate had said "in-app" and none said "answerable",
         // so a rung nobody could answer was indistinguishable from one they could.
         //
-        // Folded over both settings of the flag and every deck, and reported as a list of the
-        // cells rather than a bare `true`, so a red run says which rung under which conditions.
-        // The rung asked about is the **rendered** one: `silentVisual` maps the panel rung onto
-        // the ambient one (R-92), so under that deck the person is shown a glyph and no
-        // accusation is put in front of them to answer.
-        var unanswerable: [String] = []
-        for rung in LadderRung.Kind.allCases {
-            for reduced in [false, true] {
-                for voice in NudgeVoice.allCases
-                where voice.renderedRung(for: rung).makesAnAccusation {
-                    let route = SurfaceRouter.route(
-                        rung: rung,
-                        presentation: .notPresenting,
-                        media: .idle,
-                        reducedInterruption: reduced,
-                        menuBarVisible: true,
-                        voice: voice
-                    )
-                    guard let surface = route.surface, !surface.offersAnAnswer else { continue }
-                    unanswerable.append(
-                        "\(rung.rawValue)/reduced=\(reduced)/\(voice.rawValue)"
-                            + " -> \(surface.rawValue)"
-                    )
-                }
-            }
-        }
-        report["accusationRoutesWithNoWayToAnswer"] = unanswerable.sorted()
-        report["everyAccusationRouteCanBeAnswered"] = unanswerable.isEmpty
+        // Folded over the **whole** input space and reported as a list of the offending cells
+        // rather than a bare `true`, so a red run says which rung under which conditions.
+        //
+        // **It had two exemptions, and between them the reading was a tautology** (focus-vxo).
+        // It asked `voice.renderedRung(for: rung)` — the rung a deck *claimed* to draw rather
+        // than the rung the ladder climbed to — so under `silentVisual` the top rung was
+        // reported as ambient and skipped by the very guard that exists to find it. And it
+        // pinned `media: .idle` and `presentation: .notPresenting`, the two conditions under
+        // which nothing is demoted at all. `everyAccusationRouteCanBeAnswered = true` was
+        // therefore true of a space chosen so that it could not be false, while the running loop
+        // put a delivered accusation on the menu-bar glyph.
+        //
+        // So: the requested rung, every deck, both settings of the flag, both media states, both
+        // menu-bar states, presenting and not. Same 160 cells `SurfaceRouterTests` folds over,
+        // and the count is reported beside the verdict — a fold that quietly shrinks is the
+        // shape both exemptions had, and a number is the only way a gate reading shows it.
+        //
+        // The fold itself is `accusationRouteAudit()` rather than a loop written out here, so the
+        // unit lane runs **this** fold rather than a second one shaped like it. That is the other
+        // half of the lesson: the binary's fold and the suite's fold agreed for as long as they
+        // shared the exemption and nothing could have told anyone, because they were two copies.
+        let audit = accusationRouteAudit()
+        report["accusationRoutesWithNoWayToAnswer"] = audit.unanswerable
+        report["everyAccusationRouteCanBeAnswered"] = audit.unanswerable.isEmpty
+        report["accusationRouteCellsChecked"] = audit.cells
         // **The shape of a row the settings pane draws** (focus-wy0), read off the compiled type
         // with `Mirror` rather than written down here.
         //

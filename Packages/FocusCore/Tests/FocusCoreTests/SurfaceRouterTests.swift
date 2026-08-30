@@ -152,44 +152,67 @@ struct SurfaceRouterTests {
     /// The ambient rung is exempt through `LadderRung.Kind.makesAnAccusation` rather than by
     /// being left out of the loop, and the exemption is a ruling: the glyph says nothing, accuses
     /// nobody, and R-87 keeps it on through a snooze precisely because it is a state rather than
-    /// a sentence. `#expect(accusations > 0)` below is what stops the whole property passing
-    /// because the exemption swallowed it.
+    /// a sentence.
     ///
-    /// The rung the exemption is asked about is the **rendered** one, `voice.renderedRung(for:)`,
-    /// not the one the ladder asked for. `silentVisual` maps the panel rung onto the ambient one
-    /// — a routing deck, R-92 — so under it the person is shown a glyph and no accusation is put
-    /// in front of them to answer. Asking the requested rung instead would fail this property on
-    /// four cells in which nothing unanswerable is ever drawn, which would be the assertion
-    /// mis-aimed rather than the product wrong.
+    /// ## The rung asked is the one the **ladder** asked for (focus-vxo)
+    ///
+    /// It was `voice.renderedRung(for: rung)`, and that is how this property came to certify the
+    /// defect it exists to find. `silentVisual` remapped the panel rung to the ambient one, so
+    /// the four cells in which an accusation reached `.menuBar` were **skipped by the guard whose
+    /// job was to catch them** — the exemption ran ahead of the assertion and took the evidence
+    /// with it. `#expect(accusations > 0)` did not save it either: the other four decks kept the
+    /// counter well above zero, so the property was green, loud, and blind in exactly one corner.
+    ///
+    /// The replacement is not a bigger number, it is a **conservation law**: every cell whose
+    /// requested rung makes an accusation is either answered or deferred, and the two counters
+    /// must sum to the whole of that half of the matrix — 80 cells, `.panel` × 2 presentations ×
+    /// 2 media × 2 flags × 2 menu-bar states × 5 decks. A guard that silently drops cells can
+    /// then only fail: it cannot make the sum come out.
     @Test("every surface an accusation can reach offers a way to answer back")
     func everyRouteCanBeAnsweredBack() {
         var accusations = 0
         var deferrals = 0
+        var unanswerable: [String] = []
 
         Self.everyCell { rung, presentation, media, reduced, menuBar, voice, route in
-            guard voice.renderedRung(for: rung).makesAnAccusation else { return }
+            guard rung.makesAnAccusation else { return }
             guard let surface = route.surface else {
                 deferrals += 1
                 return
             }
             accusations += 1
-            #expect(
-                surface.offersAnAnswer,
-                """
-                \(rung)/\(voice)/reduced=\(reduced)/menuBar=\(menuBar) reached \(surface), \
-                which offers the person no way to answer it. presentation \
-                suppresses=\(presentation.suppressesOverlays), media \
-                suppresses=\(media.suppressesIntervention)
-                """
+            guard !surface.offersAnAnswer else { return }
+            unanswerable.append(
+                "\(rung)/\(voice)/reduced=\(reduced)/menuBar=\(menuBar)/"
+                    + "presenting=\(presentation.suppressesOverlays)/"
+                    + "mic=\(media.suppressesIntervention) reached \(surface)"
             )
         }
 
+        #expect(
+            unanswerable.isEmpty,
+            """
+            an accusation reached a surface offering no way to answer it:
+            \(Set(unanswerable).sorted().joined(separator: "\n"))
+            """
+        )
+
+        // **Nothing was skipped**, which is the half of this property that failed before. Every
+        // accusing cell was counted exactly once, into one of the two buckets.
+        let accusingCells = 2 * 2 * 2 * 2 * NudgeVoice.allCases.count
+        #expect(
+            accusations + deferrals == accusingCells,
+            "the fold visited \(accusations + deferrals) accusing cells, not \(accusingCells)"
+        )
         #expect(accusations > 0, "the exemption swallowed the property")
         #expect(deferrals > 0, "no cell deferred, so the deferral branch is untested")
 
-        // And the reduced-interruption cell by name, because it is the one that was wrong: the
-        // badge is where a Reduce Motion user's top rung goes, and it must be answerable.
+        // And the three quiet routes by name, because they are the ones that were wrong — two of
+        // them in focus-uru and the third in focus-vxo. All three are where a person who asked
+        // for calm meets the top rung, and all three must be answerable.
         #expect(Self.route(rung: .panel, reducedInterruption: true) == .surface(.popoverBadge))
+        #expect(Self.route(rung: .panel, media: Self.onACall) == .surface(.popoverBadge))
+        #expect(Self.route(rung: .panel, voice: .silentVisual) == .surface(.popoverBadge))
         #expect(NudgeSurface.popoverBadge.offersAnAnswer)
     }
 
@@ -261,14 +284,44 @@ struct SurfaceRouterTests {
             == .unavailable(.presentationActive))
     }
 
-    @Test("reduced interruption turns the panel rung into a badge, and the silent deck into a glyph")
+    /// **The three quiet conditions reach one surface, and it is the answerable one** (focus-vxo).
+    ///
+    /// The deck used to reach `.menuBar` while the other two reached `.popoverBadge`, which is
+    /// how "reduced interruption is one flag inside the existing router, and `silentVisual` is the
+    /// same mechanism spelled as a deck" was written down in three files and true in none. A glyph
+    /// carrying the top rung is R-81's failure in a different costume: the loop recorded it
+    /// delivered against a named application and there was nothing on it to press.
+    ///
+    /// Asserted for **every** deck rather than for the one that was broken, so a sixth routing
+    /// deck cannot arrive with its own private answer.
+    @Test("every quiet condition turns the panel rung into a badge, and none into a glyph")
     func thePanelRungGoesQuiet() {
         #expect(Self.route(rung: .panel, reducedInterruption: true) == .surface(.popoverBadge))
-        #expect(Self.route(rung: .panel, voice: .silentVisual) == .surface(.menuBar))
+        #expect(Self.route(rung: .panel, media: Self.onACall) == .surface(.popoverBadge))
+
+        for voice in NudgeVoice.allCases {
+            let quiet: SurfaceRoute =
+                voice.isRoutingDeck ? .surface(.popoverBadge) : .surface(.panel)
+            #expect(
+                Self.route(rung: .panel, voice: voice) == quiet,
+                "\(voice) put the top rung somewhere the deck's own promise does not allow"
+            )
+            // Whatever the deck, the rung it carries is answerable in every quiet condition.
+            for reduced in [false, true] {
+                for media in [MediaActivity.idle, Self.onACall] {
+                    let route = Self.route(
+                        rung: .panel, media: media, reducedInterruption: reduced, voice: voice
+                    )
+                    #expect(route.surface?.offersAnAnswer == true, "\(voice)/\(reduced)/\(media)")
+                }
+            }
+        }
 
         // A badge is a menu-bar thing, so a hidden menu bar takes it away too. Routing a badge
         // into a menu bar nobody can see would be R-81's failure in a different costume.
         #expect(Self.route(rung: .panel, reducedInterruption: true, menuBarVisible: false)
+            == .unavailable(.menuBarHidden))
+        #expect(Self.route(rung: .panel, menuBarVisible: false, voice: .silentVisual)
             == .unavailable(.menuBarHidden))
     }
 
@@ -345,11 +398,22 @@ struct SurfaceRouterTests {
         #expect(table.map(\.route) == [.surface(.menuBar), .surface(.panel)])
     }
 
+    /// **Every quiet setting draws the same table**, which is what "one flag inside the existing
+    /// router" means when it is true (R-92, focus-vxo).
+    ///
+    /// The routing deck drew `[.menuBar, .menuBar]` — a glyph where the top rung goes — and this
+    /// is the row the Intervention pane renders, so the pane said the deck's top rung appeared in
+    /// the menu bar. It is the same table now because it is the same mechanism.
     @Test("the reduced-interruption table is the same shape with quieter surfaces")
     func theReducedTable() {
-        let table = SurfaceRouter.table(reducedInterruption: true)
+        let quiet: [SurfaceRoute] = [.surface(.menuBar), .surface(.popoverBadge)]
 
-        #expect(table.map(\.route) == [.surface(.menuBar), .surface(.popoverBadge)])
+        #expect(SurfaceRouter.table(reducedInterruption: true).map(\.route) == quiet)
+        #expect(SurfaceRouter.table(voice: .silentVisual).map(\.route) == quiet)
+        #expect(
+            SurfaceRouter.table(reducedInterruption: true, voice: .silentVisual).map(\.route)
+                == quiet
+        )
     }
 
     @Test("routes turn into deliveries without a second opinion about what happened")
