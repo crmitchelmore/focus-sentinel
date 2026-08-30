@@ -346,8 +346,82 @@ public final class MenuBarController {
     /// would then have to trust.
     public var onGlyphWritten: (() -> Void)?
 
+    /// **The size the popover is laid out at, and whether that content has to scroll**
+    /// (focus-5yu).
+    ///
+    /// A pair rather than a size alone, for `NudgePanelContent.scrolls`'s reason: a clipped
+    /// action is invisible *and* unreported, while a scrolled one is reachable the moment the
+    /// person scrolls — and neither is a nudge that may be charged until
+    /// `decisionSurfaceReading(of:)` says every action is in reach.
+    public struct PopoverLayout: Sendable, Equatable, Hashable {
+        public let size: CGSize
+        public let scrolls: Bool
+
+        public init(size: CGSize, scrolls: Bool) {
+            self.size = size
+            self.scrolls = scrolls
+        }
+
+        /// What a popover that has never been built is laid out at: nothing at all. Read as a
+        /// content bounds it contains no action, which is what default-deny requires of a
+        /// surface nobody has drawn.
+        public static let unbuilt = PopoverLayout(size: .zero, scrolls: false)
+    }
+
+    /// **The width the popover commits to** (focus-5yu).
+    ///
+    /// The number every committed `menuBarPopover.*.png` baseline was already rendered at, which
+    /// is exactly why it was not a fact about the product: the snapshot lane supplied it, and the
+    /// shipping controller supplied nothing. Committing it here is what turns those pictures
+    /// into pictures of the layout the app actually draws.
+    public static let popoverContentWidth: Double = 300
+
+    /// **The popover brings no inset of its own.**
+    ///
+    /// `MenuBarPopoverView.body` already pads itself by its own scaled spacing, and a second
+    /// inset here would be a margin nobody chose, growing with the text scale twice over. It is
+    /// stated as a constant rather than as a bare literal at the two call sites so that the
+    /// measurement and the live layout cannot be given different ones.
+    public static let popoverContentInset: Double = 0
+
+    /// The margin between the bottom of the popover and the bottom of the display's visible
+    /// frame. The panel's own `edgeMargin`, for the same reason: a surface flush against the
+    /// edge of the screen reads as clipped whether it is or not.
+    public static let popoverEdgeMargin: Double = 24
+
+    /// **What the popover's own chrome costs, on top of its content.**
+    ///
+    /// Measured, not assumed: the real popover's window read 855 points tall around a content
+    /// view of 829, and 3127 around 3101 — 26 points in both, which is the arrow and the border
+    /// AppKit draws around whatever it is given. The ceiling is a statement about the **window**
+    /// fitting under the menu bar, so the content's ceiling has to be that much lower.
+    public static let popoverChromeAllowance: Double = 26
+
+    /// How far over the ceiling a measurement may land before the content is given a scroll
+    /// view. One point, for `NudgePanelController.sizeTolerance`'s reason: a layout escape is
+    /// measured in hundreds or thousands of points and a rounding difference in fractions of one.
+    public static let popoverSizeTolerance: Double = 1
+
     private var statusItem: NSStatusItem?
     private let popover = NSPopover()
+    /// **Which displays the popover is being laid out against** (focus-5yu).
+    ///
+    /// A closure for `NudgePanelController.displays`'s reason: the shipping app reads
+    /// `NSScreen.screens` and a test hands over a display of its own, so the clamp and the scroll
+    /// past it are drivable without a second Mac.
+    public var displays: @MainActor () -> [DisplayGeometry] = {
+        NudgePanelController.currentScreens()
+    }
+    /// The size the **current** popover content view controller was built at. Read by
+    /// `decisionSurfaceReading(of:)` as the content a person can see, so a reading is taken
+    /// against the layout that is on screen rather than against a constant.
+    private var popoverLayout = PopoverLayout.unbuilt
+    /// Which layout pass the popover is on, stamped into the action frames it reports so that
+    /// two identical layouts are two distinguishable readings and a replaced layout's frames can
+    /// be refused rather than believed.
+    private var popoverLayoutGeneration = 0
+    /// Where the popover's actions actually landed, as the layout itself reported them.
+    private var reportedPopoverFrames = NudgeActionFrameSet.empty
     private var presentation = MenuBarPresentation(status: .uncertain)
     private var traits: AppearanceTraits = .systemDefault
     /// The last string actually written to the button. The coalescing cadence is this
@@ -769,12 +843,146 @@ public final class MenuBarController {
         popover.performClose(nil)
     }
 
+    /// **The popover, laid out into a width it commits to** (focus-5yu, focus-vpu).
+    ///
+    /// ## What this used to be, and what it measured
+    ///
+    /// It used to be one expression: `NSHostingController(rootView: MenuBarPopoverView(…))`,
+    /// handed to `NSPopover` with no width, no `preferredContentSize`, no min or max, and no
+    /// scroll view. `MenuBarPopoverView.body` is a `VStack` whose first row is the person's own
+    /// priority as `Text(verbatim:)` with `lineLimit(nil)`, and `IntentValidator` bounds that
+    /// sentence only from **below** — two tokens, three characters — so the container's ideal
+    /// width was whatever the person typed, set on one line.
+    ///
+    /// Measured on the real popover, opened on a 1920 × 1080 display whose visible frame is
+    /// 1920 × 961:
+    ///
+    /// | priority | window | content |
+    /// |---|---|---|
+    /// | `"Write the Q3 proposal"` | 346 × **855** at y = 708 | 320 × 829 |
+    /// | 185 characters | 346 × **3127** at y = 708 | 320 × 3101 |
+    ///
+    /// Both are placed as though they were about 340 points tall, so the short one stands 483
+    /// points above the top of the display and the long one 2755 — with the priority, the
+    /// accusation and the question all in the part that is off screen. `NSPopover.contentSize`
+    /// read (320 × 320) throughout, which is AppKit's default and nobody's decision, and the
+    /// hosting view's `fittingSize` read 469 × 186 and then 1255 × 186 — the unconstrained
+    /// number, agreeing with neither the window nor the content.
+    ///
+    /// ## The panel's four commitments, on the panel's twin
+    ///
+    /// `NudgePanelController.layOutContent()` fixed exactly this defect for the window that
+    /// draws the *same* `AccusationPanelView` and `QueryPanelView`, and its four parts are the
+    /// four this needs:
+    ///
+    /// * the **width** is committed — `popoverContentWidth` — so the person's sentence wraps
+    ///   into a column instead of setting the surface's width;
+    /// * the **height** is measured at that width through `sizeThatFits(in:)`, which is the
+    ///   *wrapped* height and is not `NSView.fittingSize`, the unconstrained number above;
+    /// * it is **clamped** to what the display below the menu bar can hold;
+    /// * and content taller than the clamp **scrolls**, so nothing is ever cut off.
+    ///
+    /// The fifth thing is this surface's own and is why the content is wrapped in
+    /// `NudgePanelContent`: the popover now **reports where its actions landed**, which is what
+    /// `decisionSurfaceReading(of:)` reads and what stops a badge nudge being charged to somebody
+    /// whose Pause button is off the bottom.
     private func popoverController() -> NSViewController {
-        NSHostingController(
-            rootView: MenuBarPopoverView(presentation: presentation) { [weak self] action in
-                self?.onAction?(action)
-            }
-            .appearanceTraits(traits)
+        popoverLayoutGeneration += 1
+        let content = MenuBarPopoverView(presentation: presentation) { [weak self] action in
+            self?.onAction?(action)
+        }
+        .appearanceTraits(traits)
+
+        let layout = Self.popoverLayout(measuring: content, screens: displays())
+        popoverLayout = layout
+
+        let hosting = NSHostingController(
+            rootView: AnyView(
+                NudgePanelContent(
+                    inset: Self.popoverContentInset,
+                    scrolls: layout.scrolls,
+                    content: AnyView(content),
+                    onFrames: { [weak self] reported in self?.reportedPopoverFrames = reported }
+                )
+                .environment(\.nudgeLayoutGeneration, popoverLayoutGeneration)
+                // The live layout fills the size that was committed to; the measurement above
+                // must not, or an unbounded height proposal would come back unbounded.
+                .frame(
+                    width: layout.size.width,
+                    height: layout.size.height,
+                    alignment: .topLeading
+                )
+            )
+        )
+        // Both halves, because they are two different objects' answers to the same question:
+        // `preferredContentSize` is what the popover asks its content view controller for, and
+        // `contentSize` is what the popover is. Left unset, AppKit answered (320 × 320) and then
+        // let the window grow to 3127.
+        hosting.preferredContentSize = layout.size
+        popover.contentSize = layout.size
+        // Synchronous, for `layOutContent()`'s reason: this is what makes the action frames
+        // readable in the same turn, because SwiftUI delivers the preference the action targets
+        // publish during that layout rather than one pass later.
+        hosting.view.layoutSubtreeIfNeeded()
+        return hosting
+    }
+
+    /// **How tall the popover may be on the display it hangs from.**
+    ///
+    /// What the display can hold below the menu bar, with the popover's own margin at the
+    /// bottom and its chrome allowed for. There is no absolute cap of the kind
+    /// `NudgePanelController.maximumContentHeight(screens:)` carries, and the difference is a
+    /// difference between the two surfaces rather than an oversight: a panel is an interruption,
+    /// and one that filled a laptop screen would have stopped being proportionate, while this
+    /// popover is a command centre a person **clicked**, and shortening it below what they asked
+    /// to see would be answering a question they did not ask.
+    ///
+    /// With no display to read — a headless test rig, a Mac between display configurations —
+    /// the answer is `nil`: nothing bounds a surface nobody can point at, and
+    /// `popoverLayout(measuring:screens:)` then commits the measured height and scrolls nothing.
+    public static func popoverMaximumContentHeight(screens: [DisplayGeometry]) -> Double? {
+        guard let display = DisplayMapper.primaryScreen(in: screens) else { return nil }
+        return display.visibleFrame.height - popoverChromeAllowance - popoverEdgeMargin
+    }
+
+    /// **The size the popover commits to for one content, and whether that content scrolls.**
+    ///
+    /// A `static` over the view rather than a method on the live controller, so the number the
+    /// shipping popover is built at is the number a test or the self-check can take — at a
+    /// priority of any length, at either text scale, in either appearance — without a window
+    /// server, a status item or a click. The lane that recorded every popover baseline at a
+    /// width it supplied itself is the reason this is reachable at all: a picture rendered at a
+    /// width the test chose can never show the width being wrong.
+    public static func popoverLayout(
+        measuring content: some View,
+        screens: [DisplayGeometry]
+    ) -> PopoverLayout {
+        let measurer = NSHostingController(
+            rootView: AnyView(
+                NudgePanelContent(
+                    inset: popoverContentInset,
+                    scrolls: false,
+                    content: AnyView(content),
+                    onFrames: { _ in }
+                )
+            )
+        )
+        let measured = measurer.sizeThatFits(
+            in: CGSize(width: popoverContentWidth, height: .greatestFiniteMagnitude)
+        )
+        guard let ceiling = popoverMaximumContentHeight(screens: screens) else {
+            return PopoverLayout(
+                size: CGSize(width: popoverContentWidth, height: measured.height),
+                scrolls: false
+            )
+        }
+        return PopoverLayout(
+            size: CGSize(width: popoverContentWidth, height: min(measured.height, ceiling)),
+            // A hair of slack, so a content that measures a fraction over the ceiling because of
+            // a rounding difference does not acquire a scroll view it has no use for.
+            scrolls: measured.height > ceiling + popoverSizeTolerance
         )
     }
 }
+
+
