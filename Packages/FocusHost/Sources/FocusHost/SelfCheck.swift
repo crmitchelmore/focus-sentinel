@@ -1135,6 +1135,37 @@ enum SelfCheck {
         report["frontmostBeforeShow"] = before.frontmostBundleIdentifier.map { $0 as Any } ?? NSNull()
         report["frontmostAfterShow"] = after.frontmostBundleIdentifier.map { $0 as Any } ?? NSNull()
         report["frontmostWasReadBothTimes"] = before.frontmostWasRead && after.frontmostWasRead
+
+        // **Whose front moved, and in which direction** (focus-jax, focus-doy set B).
+        //
+        // The delta assertions below spend `panelSettleSeconds` — two and a half seconds of run
+        // loop — between the two readings, and any application coming forward in that window
+        // changes `frontmostBundleIdentifier` and flips `applicationIsActive`. Every delta then
+        // fails, naming the panel for something a `.nonactivatingPanel` cannot do. focus-doy
+        // measured it: the frontmost application went from this app to a Chrome PWA the app under
+        // test cannot activate, and the gate reported two failures of R-89.
+        //
+        // A panel can only ever move the front TOWARD this process, so the direction decides:
+        //
+        //   the front did not move                  the readings are about the panel, and taken
+        //   the front moved and ended on US         the panel took it — a real R-89 failure
+        //   the front moved and ended elsewhere     the world moved, and the reading is NOT TAKEN
+        //
+        // Reading 3 — the panel is not the key window — needs none of this and stays absolute,
+        // and so does §4.5's `focus-steal` stage, which makes R-89's claim from outside the
+        // process against an app launched with `open -g -a` and never brought forward at all.
+        let ourIdentifier = Bundle.main.bundleIdentifier ?? ""
+        let frontMoved = before.frontmostWasRead
+            && after.frontmostWasRead
+            && before.frontmostBundleIdentifier != after.frontmostBundleIdentifier
+        let frontEndedOnUs = after.frontmostBundleIdentifier == ourIdentifier
+        report["frontMovedDuringTheShow"] = frontMoved
+        report["deltaReadingWasTaken"] = !frontMoved || frontEndedOnUs
+        report["deltaNotTakenBecause"] = (!frontMoved || frontEndedOnUs)
+            ? ""
+            : "another application came frontmost while the panel was up: "
+                + "\(before.frontmostBundleIdentifier ?? "none") -> "
+                + "\(after.frontmostBundleIdentifier ?? "none")"
         // Two conjunctions, and the difference between them is the posture this process is in.
         //
         // `tookNothing` is R-89's **absolute** form — frontmost unchanged, `NSApp.isActive`

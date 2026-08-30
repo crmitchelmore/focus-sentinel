@@ -2167,41 +2167,62 @@ check(
     "reading 1 was TAKEN at both ends — nil frontmost is NOT TAKEN, never an application",
     (before.get("frontmostBundleIdentifier"), after.get("frontmostBundleIdentifier")),
 )
-check(
-    bool(before.get("frontmostBundleIdentifier"))
-    and before.get("frontmostBundleIdentifier") == after.get("frontmostBundleIdentifier"),
-    "reading 1: the frontmost application is byte-identical before and after the panel is shown",
-    (before.get("frontmostBundleIdentifier"), after.get("frontmostBundleIdentifier")),
-)
 # Reading 3 is absolute here as well: the panel becomes key only when a person clicks it, and
-# that is true whether or not the application is active.
+# that is true whether or not the application is active. It is asserted OUTSIDE the branch
+# below, because nothing about it depends on who happened to be frontmost.
 check(
     after.get("panelIsKey") is False,
     "reading 3: the panel is not the key window",
     after.get("panelIsKey"),
 )
-# Readings 2 and 4 are asserted as a **delta**, not absolutely, and the reason is this launch.
-# The shell survey activates the application on purpose — AppKit validates a menu item by
-# walking the *key window's* responder chain, and a background application has no key window at
-# all — so `NSApp.isActive` is legitimately true here before the panel is shown. Requiring it to
-# be false would be asserting something about the self-check's own launch rather than about the
-# panel. The absolute form is §4.5's `focus-steal` stage, which launches the app with
-# `open -g -a`: never frontmost, which is the posture a nudge really fires in (P-128, P-139).
-check(
-    panel.get("changedNothing") is True,
-    "showing the nudge changed none of the four focus readings",
-    (before, after),
-)
-check(
-    after.get("applicationIsActive") == before.get("applicationIsActive"),
-    "reading 2: NSApp.isActive is exactly what it was before the panel was shown",
-    (before.get("applicationIsActive"), after.get("applicationIsActive")),
-)
-check(
-    after.get("applicationKeyWindowIsNil") == before.get("applicationKeyWindowIsNil"),
-    "reading 4: showing the panel installed no key window",
-    (before.get("applicationKeyWindowIsNil"), after.get("applicationKeyWindowIsNil")),
-)
+# **And in which direction it moved** (focus-jax, focus-doy set B).
+#
+# The four delta readings spend two and a half seconds of run loop between their two ends, and
+# any application coming forward in that window changes the frontmost identifier and flips
+# `NSApp.isActive`. focus-doy measured exactly that: the front went from this app to a Chrome PWA
+# the app under test cannot activate, and the gate reported two failures of R-89 — the panel
+# named for something a `.nonactivatingPanel` cannot do.
+#
+# A panel can only ever move the front TOWARD this process. So a front that moved and ended on
+# US is a real R-89 failure and is asserted below; a front that moved and ended on somebody else
+# is the world moving, and the reading is NOT TAKEN. The absolute form of the claim is §4.5's
+# `focus-steal` stage, which launches the app with `open -g -a` — never frontmost, which is the
+# posture a nudge really fires in (P-128, P-139) — and it is unaffected by any of this.
+if panel.get("deltaReadingWasTaken") is not True:
+    not_taken(
+        "R-89's four focus deltas around the nudge panel",
+        panel.get("deltaNotTakenBecause") or "no reason reported",
+        "reading 3 (the panel is not the key window) was taken absolutely and passed; "
+        "the absolute form of the rest is the focus-steal stage",
+    )
+else:
+    check(
+        bool(before.get("frontmostBundleIdentifier"))
+        and before.get("frontmostBundleIdentifier") == after.get("frontmostBundleIdentifier"),
+        "reading 1: the frontmost application is byte-identical before and after the panel is shown",
+        (before.get("frontmostBundleIdentifier"), after.get("frontmostBundleIdentifier")),
+    )
+    # Readings 2 and 4 are asserted as a **delta**, not absolutely, and the reason is this
+    # launch. The shell survey activates the application on purpose — AppKit validates a menu
+    # item by walking the *key window's* responder chain, and a background application has no key
+    # window at all — so `NSApp.isActive` is legitimately true here before the panel is shown.
+    # Requiring it to be false would be asserting something about the self-check's own launch
+    # rather than about the panel.
+    check(
+        panel.get("changedNothing") is True,
+        "showing the nudge changed none of the four focus readings",
+        (before, after),
+    )
+    check(
+        after.get("applicationIsActive") == before.get("applicationIsActive"),
+        "reading 2: NSApp.isActive is exactly what it was before the panel was shown",
+        (before.get("applicationIsActive"), after.get("applicationIsActive")),
+    )
+    check(
+        after.get("applicationKeyWindowIsNil") == before.get("applicationKeyWindowIsNil"),
+        "reading 4: showing the panel installed no key window",
+        (before.get("applicationKeyWindowIsNil"), after.get("applicationKeyWindowIsNil")),
+    )
 check(
     panel.get("hiddenAfter") is True,
     "the panel was put away again, so a self-check leaves no window on the screen",
