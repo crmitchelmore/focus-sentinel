@@ -123,8 +123,12 @@ public struct QuerySubject: Sendable, Equatable, Hashable {
     /// is a reliable discriminator. `NormalisedToken` cannot hold one — it rejects `:` and `/`
     /// — so a subject taken from an explanation clause is always `.app`-shaped, which is the
     /// honest baseline until e07 gives the engine an origin to reason with.
+    ///
+    /// The test itself lives on `NudgeSubject`, which has to make the same distinction to decide
+    /// whether a display name is *looked up* or *derived* (focus-ebv). Two copies of a
+    /// discriminator are two things to keep in step; this is one, called from both.
     private static func kind(of identifier: String) -> RuleSubjectKind {
-        identifier.contains("://") ? .domain : .app
+        NudgeSubject.isOrigin(identifier) ? .domain : .app
     }
 }
 
