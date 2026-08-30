@@ -1,0 +1,74 @@
+# Every `verbatim:` in the shipping graph, and what it draws.
+#
+# `scripts/check-strings.sh` reads this file. See the "== registered verbatim sites" section of
+# that script for what it asserts and — more importantly — for what it deliberately does not.
+#
+# The short version: `Text(verbatim:)` is the one construct the string lint exempts by design,
+# and it is how three separate defects reached a person's screen with the gate green (focus-7gc,
+# focus-7zr, focus-7to). The exemption is correct — a file path, a ⌘W glyph and somebody's own
+# sentence must never be sent through a catalog — so the answer is not to withdraw it but to make
+# every use of it a stated act. A row here is that statement. It does not make the drawing right;
+# it makes it visible, and it makes adding a new one something a diff shows.
+#
+# Format, one site per line:
+#
+#     <path> | <the expression, exactly as the line has it> | <what it draws>
+#
+# A line is keyed on the path and the expression, so editing what a site draws is a diff here as
+# well as in the source. Order and blank lines do not matter; `#` starts a comment.
+#
+# The four kinds, and every row below is one of them:
+#
+#   OWN      the person's own material — their sentence, their file path, their keyword. The
+#            reason the exemption exists.
+#   NAME     a display name resolved from a key. `NudgeSubject`/`SubjectDisplay` decide it, never
+#            the call site, and the key half is never what is drawn (R-96o).
+#   NUMBER   a number or a span, through a locale-aware formatter. Never string interpolation of
+#            an Int — that draws Western Arabic digits in every locale.
+#   RESOLVED a catalog string that has already been looked up, transformed and substituted, so
+#            the literal is gone by the time it gets here. `ShellText` and `NudgeText` only.
+
+# --- RESOLVED: the two ends of the catalog pipeline -----------------------------------------
+Packages/FocusUI/Sources/FocusUI/Design/ShellText.swift | drawn) | RESOLVED the shell's own catalog string, after the pseudo-locale transform
+Packages/FocusUI/Sources/FocusUI/Nudge/NudgeCopy.swift | resolved) | RESOLVED a deck line, after the transform and argument substitution
+
+# --- OWN: the person's own words -------------------------------------------------------------
+Packages/FocusUI/Sources/FocusUI/Handoff/HandoffConfirmationSheet.swift | intent) | OWN the commitment being replaced, in the person's words
+Packages/FocusUI/Sources/FocusUI/Handoff/HandoffConfirmationSheet.swift | doneWhen) | OWN their own definition of done
+Packages/FocusUI/Sources/FocusUI/MenuBar/MenuBarPopoverView.swift | intent) | OWN the priority sentence, at the top of the popover
+Packages/FocusUI/Sources/FocusUI/Scenes/CockpitView.swift | priority.doneWhen ?? "") | OWN their definition of done — and `""` when there is none, which draws a heading over nothing (focus-0ai)
+Packages/FocusUI/Sources/FocusUI/Scenes/CompletionSheet.swift | intent) | OWN the priority being completed
+Packages/FocusUI/Sources/FocusUI/Scenes/PriorityHeroView.swift | string) | OWN the committed priority, the largest text in the app
+Packages/FocusUI/Sources/FocusUI/Scenes/PrivacySettingsView.swift | storePath) | OWN the path their store is at, selectable, monospaced
+Packages/FocusUI/Sources/FocusUI/Scenes/RecentPrioritiesView.swift | row.intent) | OWN a past commitment
+Packages/FocusUI/Sources/FocusUI/Scenes/RecentPrioritiesView.swift | doneWhen) | OWN its definition of done
+Packages/FocusUI/Sources/FocusUI/Relevance/ExplanationClauseRow.swift | evidence) | OWN the clause's payload: their words, their rule subject, their context identity
+Packages/FocusUI/Sources/FocusUI/Scenes/ShortcutsHelpView.swift | row.glyphs ?? "—") | OWN the shortcut itself, in ⌘⌥⇧ glyphs — and an authored em dash where a row has none
+Packages/FocusUI/Sources/FocusUI/Relevance/VerdictInspectorView.swift | verdict.stampKey) | OWN the engine's version stamp, so a week-old verdict can be placed
+
+# --- NAME: a key resolved to something a person recognises -----------------------------------
+Packages/FocusUI/Sources/FocusUI/Context/ContextChip.swift | displayName) | NAME the chip's subject: an app's name, a host, a keyword, a file name
+Packages/FocusUI/Sources/FocusUI/Context/ContextChip.swift | accessibilityDescription)) | NAME the same, spoken: the kind, then the subject
+Packages/FocusUI/Sources/FocusUI/MenuBar/MenuBarPopoverView.swift | snooze.subject.displayName) | NAME what is snoozed. Never `.identifier` — R-96o lints this line
+Packages/FocusUI/Sources/FocusUI/Scenes/TaskRulesView.swift | SubjectDisplay.name(of: rule)) | NAME a rule's subject, by its scope (focus-7zr)
+Packages/FocusUI/Sources/FocusUI/Scenes/InterventionSettingsView.swift | SubjectDisplay.name(of: subject, resolvingApplication: true)) | NAME an excluded application (focus-7zr)
+Packages/FocusUI/Sources/FocusUI/Session/InterruptionSheet.swift | SubjectDisplay.name(of: bundleID, resolvingApplication: true)) | NAME the last application in front, when the session was interrupted
+
+# --- RESOLVED: a whole sentence, already composed --------------------------------------------
+Packages/FocusUI/Sources/FocusUI/Nudge/AccusationPanelView.swift | presentation.announcement())) | RESOLVED the panel's title and body, spoken when it appears
+Packages/FocusUI/Sources/FocusUI/Nudge/QueryPanelView.swift | presentation.announcement())) | RESOLVED the question's title and body, spoken when it appears
+
+# --- NUMBER: through a formatter, never through interpolation --------------------------------
+Packages/FocusUI/Sources/FocusUI/MenuBar/MenuBarPopoverView.swift | presentation.timerText) | NUMBER the session clock, monospaced-digit (P-133)
+Packages/FocusUI/Sources/FocusUI/MenuBar/MenuBarPopoverView.swift | NudgeCopy.countdown(snooze.remaining)) | NUMBER what is left of a snooze
+Packages/FocusUI/Sources/FocusUI/Nudge/AccusationPanelView.swift | NudgeCopy.countdown(remaining)) | NUMBER what is left of the snooze the panel is under
+Packages/FocusUI/Sources/FocusUI/Nudge/AccusationPanelView.swift | NudgeCopy.duration(span)) | NUMBER a snooze button's span
+Packages/FocusUI/Sources/FocusUI/Relevance/CascadePrecedenceView.swift | (rung.rank + 1).formatted(.number)) | NUMBER the rung's place in the cascade, from `rank` itself
+Packages/FocusUI/Sources/FocusUI/Relevance/VerdictInspectorView.swift | verdict.drift.accumulated.formatted( | NUMBER how long the drift clock has been running
+Packages/FocusUI/Sources/FocusUI/Scenes/InterventionSettingsView.swift | "\(used.formatted()) / \(cap.formatted())") | NUMBER today's spend over its cap. The " / " is authored punctuation
+Packages/FocusUI/Sources/FocusUI/Scenes/InterventionSettingsView.swift | NudgeCopy.duration(span)) | NUMBER one threshold from `InterventionPolicy`
+Packages/FocusUI/Sources/FocusUI/Scenes/InterventionSettingsView.swift | InterventionPolicy.snoozeDurations | NUMBER every snooze span on offer, joined
+Packages/FocusUI/Sources/FocusUI/Scenes/InterventionSettingsView.swift | Self.render(window)) | NUMBER the quiet-hours window — as a 24-hour clock with an authored dash, in every locale (focus-43k)
+Packages/FocusUI/Sources/FocusUI/Scenes/RecentPrioritiesView.swift | row.contextItemCount.formatted()) | NUMBER how many context items a past priority had
+Packages/FocusUI/Sources/FocusUI/Sensing/SensingStatusView.swift | value.formatted()) | NUMBER one sensing reading
+Packages/FocusUI/Sources/FocusUI/Scenes/TimeboxControl.swift | Self.formatPreset(.seconds(seconds))) | NUMBER a timebox preset's length

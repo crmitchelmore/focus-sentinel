@@ -87,6 +87,130 @@ else
 fi
 
 print
+print "== registered verbatim sites"
+
+# **The exemption above is a mechanism, and this is the lint over it** (focus-7zr's sweep).
+#
+# Check 1 lets `Text(verbatim:)` through by design, and the design is right: a file path, a ⌘W
+# glyph and somebody's own sentence must never be routed through a String Catalog. But an
+# exemption nobody reads is an exemption that spreads, and in this repository it did. Three
+# defects reached a person's screen with this gate green, all through this one door:
+#
+#   * the rules list drew `com.apple.Safari` and `https://news.example.com` while the chip row
+#     in the same window drew `Safari` and `docs.example.com` (focus-7zr);
+#   * the Intervention pane drew `com.apple.Keynote` under "Not presentations" (focus-7zr);
+#   * the budget row interpolated two `Int`s, so it drew Western Arabic digits in every locale
+#     while every other number in the app went through `.formatted()`.
+#
+# Each was justified by a source comment saying the subject was "the user's own material", and
+# each comment was true of the *slot* and false of the *value in it*.
+#
+# So this does not withdraw the exemption. It requires every use of it to be **registered** in
+# `Config/verbatim-sites.txt`, with a line saying what that site draws. Adding a verbatim site
+# then costs a row in a file whose whole content is a list of the things this app draws without
+# translating, which is a thing a reviewer can read end to end.
+#
+# ## What it cannot do, stated so nobody mistakes it for more
+#
+# It cannot tell a good drawing from a bad one. A row reading "draws the bundle identifier"
+# passes. What it changes is that the row has to be written, and a diff that adds one is a diff
+# that says out loud what is about to be drawn untranslated. The claim is visibility, not
+# correctness; correctness is R-96o for the nudge's subject slot and the snapshot baselines
+# everywhere else.
+#
+# ## Why the needle is `verbatim:` and not `Text(verbatim:`
+#
+# Measured on this tree: `grep 'Text(verbatim:'` finds 33 sites and `grep 'verbatim:'` finds 35.
+# The two it misses are the ones whose argument was long enough to wrap, so `Text(` sits on one
+# line and `verbatim:` on the next — `VerdictInspectorView`'s drift clock and the Intervention
+# pane's snooze spans. A lint whose needle can be escaped by adding a newline is a lint with a
+# documented hole in it, and both of those sites are real drawings.
+
+python3 - "$REPO_ROOT" "${SOURCE_ROOTS[@]}" <<'PYTHON'
+import os
+import re
+import sys
+
+root, source_roots = sys.argv[1], sys.argv[2:]
+registry_path = os.path.join(root, "Config", "verbatim-sites.txt")
+
+COMMENT = re.compile(r'^\s*(//|///|\*|/\*)')
+
+# A site is (path relative to the repository, the expression exactly as the line has it).
+found = {}
+for source_root in source_roots:
+    for directory, _, names in os.walk(os.path.join(root, source_root)):
+        for name in sorted(names):
+            if not name.endswith(".swift"):
+                continue
+            path = os.path.join(directory, name)
+            relative = os.path.relpath(path, root)
+            with open(path) as handle:
+                for number, line in enumerate(handle, start=1):
+                    if "verbatim:" not in line or COMMENT.match(line):
+                        continue
+                    expression = line.split("verbatim:", 1)[1].strip()
+                    found.setdefault((relative, expression), []).append(number)
+
+registered = {}
+if not os.path.exists(registry_path):
+    print(f"FAIL [F-149] no verbatim registry at {registry_path}", file=sys.stderr)
+    sys.exit(1)
+
+with open(registry_path) as handle:
+    for number, line in enumerate(handle, start=1):
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        parts = [part.strip() for part in line.split("|")]
+        if len(parts) < 3 or not parts[2]:
+            print(
+                f"FAIL [F-149] {registry_path}:{number} is not "
+                "`<path> | <expression> | <what it draws>`",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        registered[(parts[0], parts[1])] = parts[2]
+
+rc = 0
+
+# Non-vacuity. A registry and a search that both came back empty would agree perfectly and
+# prove nothing — the failure mode this whole section exists to close.
+if not found:
+    print("FAIL [F-149] no verbatim site found in the shipping graph — the check is blind",
+          file=sys.stderr)
+    rc = 1
+
+unregistered = sorted(set(found) - set(registered))
+if unregistered:
+    print("FAIL [F-149] a verbatim site is not registered:", file=sys.stderr)
+    for path, expression in unregistered:
+        lines = ", ".join(str(number) for number in found[(path, expression)])
+        print(f"    {path}:{lines}  verbatim: {expression}", file=sys.stderr)
+    print("    Add a row to Config/verbatim-sites.txt saying what it draws — or draw it",
+          file=sys.stderr)
+    print("    through ShellText/NudgeText, if it is prose the app authored.", file=sys.stderr)
+    rc = 1
+
+stale = sorted(set(registered) - set(found))
+if stale:
+    print("FAIL [F-149] a registered verbatim site no longer exists:", file=sys.stderr)
+    for path, expression in stale:
+        print(f"    {path}  verbatim: {expression}", file=sys.stderr)
+    print("    Remove the row from Config/verbatim-sites.txt. A registry that describes",
+          file=sys.stderr)
+    print("    drawings the app no longer makes is a registry nobody can trust.",
+          file=sys.stderr)
+    rc = 1
+
+if rc == 0:
+    print(f"ok   all {len(found)} verbatim sites are registered with what they draw")
+sys.exit(rc)
+PYTHON
+verbatim_rc=$?
+(( verbatim_rc != 0 )) && rc=1
+
+print
 print "== catalog completeness"
 
 python3 - "$REPO_ROOT" <<'PYTHON'
