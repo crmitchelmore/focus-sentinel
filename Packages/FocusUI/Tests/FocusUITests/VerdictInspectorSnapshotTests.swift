@@ -44,30 +44,107 @@ enum VerdictFixture {
         stampKey: EngineStamp.current.withEmbeddingRevision(1).cacheKey
     )
 
-    /// `unrelated`, sustained past the threshold, and **mandated**. Nothing consumes it: the
-    /// nudge is e05's, so the pane says so and the screen does nothing.
+    /// **A mandate, made by the only function that can make one** (focus-lmy).
+    ///
+    /// `InterventionEligibility.decide(…)` is the single producer of `InterventionMandate` —
+    /// its memberwise initialiser is `fileprivate` and R-70b asserts the call site is unique —
+    /// so a fixture cannot write `.mandated(…)` and there is no way to fake one. Going through
+    /// the real decision is therefore not a nicety here; it is the only route, and it means the
+    /// picture below is drawn from an authorisation the engine really issues.
+    ///
+    /// **The `guard` is the point of this function.** The fixture this replaced was *named*
+    /// `unrelatedMandated`, doc-commented "and **mandated** … the pane says so", and set
+    /// `.suppressed(.withinMandateCooldown)`. Nothing failed, because nothing checked the name
+    /// against the value: `settings.verdict.mandated` therefore had no baseline among 447 and
+    /// shipped for the whole of e05 saying the nudge could not exist. A fixture whose name
+    /// makes a claim has to assert the claim, or the name is decoration.
+    static func mandated(
+        band: EvidenceBand,
+        drift: DriftState,
+        explanation: Explanation
+    ) -> InterventionEligibility {
+        let eligibility = InterventionEligibility.decide(
+            outcome: ClassificationOutcome(
+                verdict: .unrelated,
+                source: .userRule,
+                confidence: 1,
+                band: band
+            ),
+            drift: drift,
+            phase: .focus,
+            status: .unrelated,
+            isUserIdle: false,
+            hasActivePriority: true,
+            explanation: explanation,
+            stamp: .current
+        )
+        guard eligibility.isMandated else {
+            preconditionFailure(
+                "the fixture named mandated is \(eligibility) — see focus-lmy"
+            )
+        }
+        return eligibility
+    }
+
+    /// The drift and the reasons `unrelatedMandated` and `unrelatedInCooldown` share.
+    ///
+    /// One subject, dwelt on for three and a half minutes against a global rule the person
+    /// wrote. The two fixtures differ in exactly one thing — whether the mandate has already
+    /// been spent — which is what makes the pair a picture of the *branch* rather than of two
+    /// unrelated screens.
+    static let sustainedDrift = DriftState.sustained(
+        subject: .single("com.apple.ScreenContinuity"),
+        accumulated: .seconds(214),
+        isMixed: false
+    )
+
+    static let sustainedExplanation = explanation(
+        stage: .globalRule,
+        band: .high,
+        clauses: [
+            .userRule(
+                authority: .global,
+                kind: .app,
+                subject: token("com.apple.screencontinuity")
+            ),
+            .sustainedDwell(seconds: 214)
+        ]
+    )
+
+    /// `unrelated`, sustained past the threshold, and **mandated** — the one frame in this set
+    /// in which the app is about to say something.
+    ///
+    /// e05 is what consumes this: `RelevanceHost` hands the same eligibility to Settings and to
+    /// `NudgeHost`, which folds the mandate into the ladder. So this is the picture a person
+    /// sees in Settings ▸ Privacy *while* the ambient signal is on and the panel is coming.
     static let unrelatedMandated = VerdictSnapshot(
         status: .unrelated,
         stage: .globalRule,
         band: .high,
-        drift: .sustained(
-            subject: .single("com.apple.ScreenContinuity"),
-            accumulated: .seconds(214),
-            isMixed: false
-        ),
-        eligibility: .suppressed(.withinMandateCooldown),
-        explanation: explanation(
-            stage: .globalRule,
+        drift: sustainedDrift,
+        eligibility: mandated(
             band: .high,
-            clauses: [
-                .userRule(
-                    authority: .global,
-                    kind: .app,
-                    subject: token("com.apple.screencontinuity")
-                ),
-                .sustainedDwell(seconds: 214)
-            ]
+            drift: sustainedDrift,
+            explanation: sustainedExplanation
         ),
+        explanation: sustainedExplanation,
+        stampKey: EngineStamp.current.withEmbeddingRevision(1).cacheKey
+    )
+
+    /// The same drift, one rung later: the mandate was issued, the ladder spent it, and the
+    /// engine is in cooldown.
+    ///
+    /// It exists so that converting `unrelatedMandated` into the mandate its name always
+    /// claimed does not cost the vocabulary a picture. `withinMandateCooldown` is the reason a
+    /// person is most likely to meet twice in one session, and it had the only baseline it will
+    /// ever have under the wrong name.
+    static let unrelatedInCooldown = VerdictSnapshot(
+        status: .unrelated,
+        stage: .globalRule,
+        band: .high,
+        drift: sustainedDrift,
+        eligibility: .suppressed(.withinMandateCooldown),
+        explanation: sustainedExplanation,
         stampKey: EngineStamp.current.withEmbeddingRevision(1).cacheKey
     )
 
@@ -147,15 +224,22 @@ enum VerdictFixture {
 
 /// The components the inspector is rendered as.
 ///
-/// Five statuses plus the two states that only a *verdict* can be in — nothing judged yet, and
-/// drift accumulating inside the grace period — because those are the two frames a person is
-/// most likely to be looking at and neither is a `FocusStatus` of its own.
+/// Five statuses plus the three states that only a *verdict* can be in — nothing judged yet,
+/// drift accumulating inside the grace period, and the same drift once the mandate has been
+/// spent — because none of them is a `FocusStatus` of its own and each draws a different
+/// sentence in the eligibility row.
+///
+/// **Both sides of `eligibility(_:)` are drawn here** (focus-lmy). The view's one branch is
+/// `suppressionReason == nil`, and until this component list contained a mandated verdict the
+/// `else` arm had no baseline among 447 — so the sentence it draws could say anything at all
+/// and the snapshot lane would stay green.
 enum VerdictComponent: String, CaseIterable, Sendable {
     case verdictNothingJudged
     case verdictRelevant
     case verdictUncertainNoNegativeBasis
     case verdictUnrelatedInGrace
     case verdictUnrelatedMandated
+    case verdictUnrelatedInCooldown
     case verdictOnBreak
     case verdictPaused
 
@@ -168,6 +252,7 @@ enum VerdictComponent: String, CaseIterable, Sendable {
         case .verdictUncertainNoNegativeBasis: VerdictFixture.uncertainNoNegativeBasis
         case .verdictUnrelatedInGrace: VerdictFixture.unrelatedInGrace
         case .verdictUnrelatedMandated: VerdictFixture.unrelatedMandated
+        case .verdictUnrelatedInCooldown: VerdictFixture.unrelatedInCooldown
         case .verdictOnBreak: VerdictFixture.onBreak
         case .verdictPaused: VerdictFixture.paused
         }
@@ -188,12 +273,13 @@ enum VerdictAppearance {
     static let baselineVariants = ["light", "dark"]
 }
 
-/// **e04's demonstrable, drawn.**
+/// **The verdict a person can read, drawn.**
 ///
-/// The nudge does not exist yet, so the verdict stream and the restrained explanation beside it
-/// *are* the epic's surface. These baselines are what "restrained" means as a picture: no
-/// title, no URL, no path, no number from the similarity signal, and no accusation — the
-/// clause list and nothing else.
+/// These baselines are what "restrained" means as a picture: no title, no URL, no path, no
+/// number from the similarity signal — the clause list and nothing else. Restraint is about
+/// what the pane may *show*, and it never meant that the app stays quiet: since e05 the same
+/// eligibility drawn here is the one the ladder raises a rung on, and
+/// `verdictUnrelatedMandated` is that frame.
 @Suite("Verdict inspector snapshots", .enabled(if: LocalizationLane.catalogsAreCompiled))
 @MainActor
 struct VerdictInspectorSnapshotTests {
@@ -338,22 +424,80 @@ struct VerdictInspectorSnapshotTests {
         #expect(VerdictFixture.relevant.band != nil)
     }
 
-    /// **Nothing in this build is mandated on a surface.**
+    /// **Every fixture answers the question the view actually asks, and both answers occur.**
     ///
-    /// Every fixture is `.suppressed`, including the one that has drifted for three and a half
-    /// minutes — because the mandate went into cooldown after the engine issued it and nothing
-    /// consumed it. The pane's job here is to say *why* it is quiet, which it can do for every
-    /// reason the vocabulary knows.
-    @Test("every drawn verdict is suppressed, with a named reason")
-    func everyFixtureIsSuppressedWithAReason() {
+    /// This test used to read `#expect(!verdict.isMandated)` for every component, with the
+    /// comment *"nothing in this build is mandated on a surface"*. It was true of e04 and it
+    /// became, at e05, a test that **forbade the failing branch from ever being pictured** —
+    /// the one branch of `eligibility(_:)` that had no baseline, drawing the one sentence that
+    /// was wrong. A proof that cannot fail is counted as coverage, which is worse than no proof.
+    ///
+    /// So the shape is inverted. `InterventionEligibility` has exactly two cases and the view
+    /// switches on exactly that, so what is asserted is the biconditional — a verdict names its
+    /// reason for silence or it carries a mandate, never both and never neither — plus the
+    /// partition being *inhabited on both sides*. The last two expectations are what make this
+    /// unsatisfiable by a fixture set that has quietly drifted back to all-suppressed.
+    @Test("every drawn verdict either names its silence or carries a mandate")
+    func everyFixtureAnswersTheEligibilityQuestion() {
+        var mandated: [String] = []
+        var suppressed: [String] = []
         for component in VerdictComponent.allCases {
             guard let verdict = component.verdict else { continue }
+            let reason = verdict.eligibility.suppressionReason
             #expect(
-                !verdict.isMandated,
-                "\(component.rawValue) draws a mandate, and nothing in e04 may consume one"
+                verdict.isMandated == (reason == nil),
+                "\(component.rawValue) is neither mandated nor suppressed with a reason"
             )
-            #expect(verdict.eligibility.suppressionReason != nil)
+            if verdict.isMandated {
+                mandated.append(component.rawValue)
+            } else {
+                suppressed.append(component.rawValue)
+            }
         }
+        #expect(!mandated.isEmpty, "no fixture is mandated: the else branch has no picture")
+        #expect(!suppressed.isEmpty, "no fixture is suppressed: the silence row has no picture")
+    }
+
+    /// The fixture named `unrelatedMandated` **is** mandated.
+    ///
+    /// Held as a statement of its own, and not folded into the partition test above, because
+    /// this is the exact defect: the name said mandated, the value said
+    /// `.suppressed(.withinMandateCooldown)`, and for three rounds every proof in this file
+    /// agreed with the value while every reader believed the name.
+    @Test("the fixture named mandated is mandated, and the one named cooldown is not")
+    func namedFixturesAreWhatTheirNamesSay() {
+        #expect(VerdictFixture.unrelatedMandated.isMandated)
+        #expect(VerdictFixture.unrelatedMandated.eligibility.mandate?.isMixed == false)
+        #expect(!VerdictFixture.unrelatedInCooldown.isMandated)
+        #expect(
+            VerdictFixture.unrelatedInCooldown.eligibility.suppressionReason
+                == .withinMandateCooldown
+        )
+    }
+
+    /// **The mandated branch draws a sentence, and it is not the suppressed one.**
+    ///
+    /// The pane has one `if`, and its `else` arm is reached on exactly `.mandated`. Nothing
+    /// asserted what that arm said, so `settings.verdict.mandated` shipped reading *"Focus
+    /// would speak up now. Nothing in this version can, so it does not."* while the ladder it
+    /// denies was raising a rung off the same eligibility.
+    ///
+    /// Asserted as a property rather than against the sentence's text: a copy edit is somebody's
+    /// job to make, and a test that pins the words would fail on one. What may not change is
+    /// that the sentence exists, resolves, and is nobody else's.
+    @Test(
+        "the mandated sentence is real copy, distinct from every reason for silence",
+        .enabled(if: LocalizationLane.catalogsAreCompiled)
+    )
+    func theMandatedBranchHasCopyOfItsOwn() {
+        let mandated = String(localized: ShellStrings.resource(.verdictMandated))
+        #expect(!mandated.isEmpty)
+        #expect(mandated != ShellStringKey.verdictMandated.rawValue, "the key resolved to itself")
+        let silences = SuppressionReason.allCases.map { String(localized: $0.copyResource) }
+        #expect(
+            !silences.contains(mandated),
+            "the mandated branch draws a reason for silence"
+        )
     }
 
     /// The rung a verdict names is one `CascadePrecedence` knows, and it is drawn from the

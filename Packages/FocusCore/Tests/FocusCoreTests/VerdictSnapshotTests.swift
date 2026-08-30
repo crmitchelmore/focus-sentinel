@@ -64,8 +64,9 @@ struct VerdictSnapshotTests {
         #expect(rung.settingsCopyKey == "cascade.rung.heuristic")
     }
 
-    /// e04 emits mandates and nobody consumes them. The property exists so the inspector can
-    /// show the eligibility; the nudge is e05's.
+    /// One half of the partition. The mandated half is asserted where it can be built — the
+    /// mandate's only producer is `InterventionEligibility.decide(…)` — in `EngineTests` and in
+    /// `VerdictInspectorSnapshotTests`, which pictures it (focus-lmy).
     @Test("a suppressed snapshot is not mandated, and says why")
     func suppressedSnapshotSaysWhy() {
         let snapshot = Self.snapshot()
