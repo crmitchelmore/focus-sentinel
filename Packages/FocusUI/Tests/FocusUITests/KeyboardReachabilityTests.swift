@@ -111,7 +111,8 @@ struct KeyboardReachabilityTests {
             task: "Write the Q3 proposal",
             subject: AccusationFixture.safari,
             dwelled: .seconds(600),
-            returnTarget: "Pages"
+            returnTarget: "Pages",
+            hasOpenSession: true
         ).announcement()
         #expect(!accusation.isEmpty)
         #expect(accusation.contains("Write the Q3 proposal"))

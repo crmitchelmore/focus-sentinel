@@ -292,7 +292,8 @@ struct ReturnToTaskTests {
             task: "Write the Q3 proposal",
             subject: NudgeSubject.named("com.figma.Desktop", runningName: "Figma"),
             dwelled: .seconds(12 * 60),
-            returnTarget: target?.displayName
+            returnTarget: target?.displayName,
+            hasOpenSession: true
         )
 
         // It is offered at all, and it is the emphasised control — which is what makes this the

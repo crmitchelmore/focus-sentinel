@@ -26,7 +26,8 @@ enum MenuBarFixture {
         task: "Write the Q3 proposal",
         subject: AccusationFixture.safari,
         dwelled: .seconds(600),
-        returnTarget: "Pages"
+        returnTarget: "Pages",
+        hasOpenSession: true
     )
 
     static let withAccusation = presentation(status: .unrelated, pendingAccusation: accusation)

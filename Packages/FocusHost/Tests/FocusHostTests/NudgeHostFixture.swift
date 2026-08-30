@@ -125,6 +125,26 @@ struct NudgeHostFixture {
     /// The session-lived rule box the host writes "Not this time" into. Exposed because the
     /// rule it writes is keyed on a **priority** as well as a session (focus-lmo).
     let sessionRules: SessionRuleBox
+    /// **The session the loop is running inside**, and it was never wired here (focus-rdw).
+    ///
+    /// `NudgeHost.currentSessionID` answered `nil` in every suite built on this fixture, which
+    /// meant every one of them was driving the *no-session* state while asserting on actions
+    /// that cannot write in it — `theBadgeRungCarriesItsAnswers` asserted that "Not this time"
+    /// and "Pause" were on offer over a loop that could write neither. The fixture states which
+    /// state it is in now, and `closeSession()` is how a test asks for the other one.
+    /// A box rather than a stored value, because this fixture is a struct and the host reads the
+    /// identifier through a closure that has to see a later change.
+    @MainActor
+    final class OpenSession {
+        var identifier: UUID? = UUID(uuidString: "5E551011-0000-4000-8000-000000000001")!
+    }
+
+    let session = OpenSession()
+
+    var openSessionID: UUID? { session.identifier }
+
+    /// Drive the supported default state: a priority set and no session open.
+    func closeSession() { session.identifier = nil }
 
     static let decoy = "com.chrismitchelmore.FocusDecoy"
     /// The name each identifier in these suites is known by, and the reason every one of them
@@ -185,6 +205,9 @@ struct NudgeHostFixture {
             dateProvider: dateProvider,
             calendar: Self.londonCalendar
         )
+        // The session identifier the composition root supplies from `SessionHost.snapshot`.
+        // Read through `self` so `closeSession()` moves it, exactly as ending a real session does.
+        host.currentSessionID = { [session] in session.identifier }
         // The commitment the loop is acting under, as one value — the same shape the composition
         // root builds from `PriorityHost.activeCommitment` (focus-zrs). Captured from the locals
         // rather than from `self`, which is not yet whole.

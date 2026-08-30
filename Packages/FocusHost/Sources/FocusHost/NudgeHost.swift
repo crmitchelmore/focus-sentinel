@@ -1273,6 +1273,28 @@ final class NudgeHost {
     /// row, whichever surface the click came from — and everything below is the bookkeeping that
     /// makes the ladder, the fatigue controller and the log agree about what just happened.
     func resolve(_ action: CorrectionAction, snoozeDuration: Duration?) {
+        // **An action that cannot write what it promises is refused whole** (focus-rdw).
+        //
+        // Every surface withdraws these two when there is no session — `offeredActions` asks the
+        // same question this does — so no click can arrive here. It is a guard rather than a
+        // comment because the alternative shape is what the defect *was*: `apply(_:…)` returned
+        // early on the missing session id and the rest of this function ran on, completing the
+        // row as `.corrected`, spending fatigue and de-escalating the ladder for a write that
+        // never happened. Refusing before any of that is what makes "offered or nothing" one
+        // rule rather than two places that have to agree.
+        //
+        // Nothing is taken off screen: a click the loop refused must not look to the person like
+        // a click it obeyed.
+        if action.requiresOpenSession, currentSessionID?() == nil {
+            logger.error(
+                """
+                a correction that needs an open session reached the loop with none \
+                (\(action.rawValue, privacy: .public)); it is refused
+                """
+            )
+            return
+        }
+
         let now = monotonicClock.elapsed
         let scope = openRung.map(\.rung.mandate).flatMap(CorrectionScope.from)
 
@@ -1444,6 +1466,9 @@ final class NudgeHost {
             onCorrection?(outcome, priorityID)
 
         case .sessionRule(let rule):
+            // `resolve(_:snoozeDuration:)` refuses the action outright when there is no session,
+            // so this is unreachable rather than load-bearing — and it stays, because the
+            // identifier has to be unwrapped to key the box either way.
             guard let sessionID = currentSessionID?() else { return }
             // The rung's commitment, not the live one (focus-lmo). `SessionRuleBox` is keyed on
             // the priority as well as the session, so a live read would file "not this time"
@@ -2056,14 +2081,26 @@ final class NudgeHost {
     /// it offers, or which commitment the click will be written against.
     var pendingPopoverAccusation: AccusationPresentation? {
         guard let open = openRung, open.landedOn == .popoverBadge else { return nil }
-        // **The rung's own commitment, so a second reading cannot empty the badge** (focus-xix).
-        //
-        // This was `guard let commitment = activeCommitment() else { return nil }` — a guard the
-        // twin above does not carry, taken against a live reading of the surroundings rather than
-        // against the value the rung was raised with. Every redraw of an open popover re-runs it,
-        // so the one taken after the commitment went away answered `nil`: the badge's five
-        // answers vanished mid-nudge, on a surface the person was looking at, with the rung still
-        // open and `resolve(…)` still willing to write a correction nothing was offering.
+        return openRungPresentation
+    }
+
+    /// **What the open rung is being drawn from**, whatever surface it landed on.
+    ///
+    /// One builder, so the panel, the badge and anything that asks *which corrections is this
+    /// nudge offering* read the same answer. It is the reading `resolve(_:snoozeDuration:)` has
+    /// to agree with: an action this does not offer is one the loop must refuse, and a test that
+    /// derived the expected list for itself would be a proof that agrees with itself rather than
+    /// with the app (focus-rdw).
+    ///
+    /// **The rung's own commitment, so a second reading cannot empty it** (focus-xix). This was
+    /// `guard let commitment = activeCommitment() else { return nil }` — a guard taken against a
+    /// live reading of the surroundings rather than against the value the rung was raised with.
+    /// Every redraw of an open popover re-ran it, so the one taken after the commitment went away
+    /// answered `nil`: the badge's answers vanished mid-nudge, on a surface the person was
+    /// looking at, with the rung still open and `resolve(…)` still willing to write a correction
+    /// nothing was offering.
+    var openRungPresentation: AccusationPresentation? {
+        guard let open = openRung else { return nil }
         return accusationPresentation(for: open.rung, commitment: open.commitment)
     }
 
@@ -2223,7 +2260,12 @@ final class NudgeHost {
             dwelled: rung.mandate.sustainedFor,
             returnTarget: target?.displayName,
             snoozeRemaining: subject.flatMap { snoozes.snooze(for: $0.identifier) }?
-                .remaining(at: monotonicClock.elapsed)
+                .remaining(at: monotonicClock.elapsed),
+            // **Whether the two session-scoped actions have anything to act on** (focus-rdw).
+            // The same wire `apply(_:…)` reads before writing a session rule, asked *before* the
+            // buttons are drawn rather than after one is pressed: an action that would be dropped
+            // in a `guard` is an action this panel must not offer.
+            hasOpenSession: currentSessionID?() != nil
         )
     }
 }

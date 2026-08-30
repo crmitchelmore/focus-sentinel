@@ -83,7 +83,8 @@ struct SubjectSentenceTests {
                 task: "Write the Q3 proposal",
                 subject: subject,
                 dwelled: .seconds(720),
-                returnTarget: "Pages"
+                returnTarget: "Pages",
+                hasOpenSession: true
             ).announcement()
 
             #expect(!sentence.isEmpty, "\(voice) drew nothing for \(subject.identifier)")
@@ -118,7 +119,8 @@ struct SubjectSentenceTests {
             task: "Write the Q3 proposal",
             subject: nil,
             dwelled: .seconds(900),
-            returnTarget: "Pages"
+            returnTarget: "Pages",
+            hasOpenSession: true
         ).announcement()
 
         #expect(!sentence.isEmpty)

@@ -201,6 +201,35 @@ public enum CorrectionAction: String, Sendable, CaseIterable, Codable, Hashable 
         }
     }
 
+    /// Whether this action needs an **open session** to write what it promises.
+    ///
+    /// Two do, and no open session is a supported default working state rather than an
+    /// exceptional one: the code says so twice (*"No open session is not a break: the person can
+    /// be working with no session started"*, `phase: session?.phase ?? .focus`), and there is no
+    /// auto-start — `startSession(` has exactly two shipping call sites and both are clicks. So
+    /// the ladder runs, and the panel appears, with only a priority set.
+    ///
+    /// * `notThisTime` writes a **session-lived** rule through `SessionRuleBox`, which is keyed
+    ///   on the session as well as the priority. With no session there is no key, and there is no
+    ///   honest wider rule to widen it to: this action's whole meaning is *"until this session
+    ///   ends"*.
+    /// * `pause` moves e03's `SessionMachine`, which throws `noOpenSession` when there is none.
+    ///
+    /// The consequence of offering them anyway was not a dropped click. It was a **falsified
+    /// one** (focus-rdw): the panel came down, the log recorded `.corrected`, fatigue was spent
+    /// and the ladder de-escalated — while nothing was written and nothing was learned, so the
+    /// next mandate accused the person about the very thing they had just excused.
+    ///
+    /// This is R-88's ruling, at a second site. *"A 'back to work' button with nowhere to go is
+    /// a button that lies"* is the same sentence as "an excuse with no session to die with", and
+    /// `returnTarget == nil` withdraws the action rather than explaining it away.
+    public var requiresOpenSession: Bool {
+        switch self {
+        case .notThisTime, .pause: true
+        case .thisIsRelevant, .snooze, .changePriority, .returnToTask, .dismiss: false
+        }
+    }
+
     /// The single write this action performs.
     ///
     /// - Parameters:

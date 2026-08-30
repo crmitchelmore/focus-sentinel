@@ -25,7 +25,8 @@ enum AccusationFixture {
             task: "Write the Q3 proposal",
             subject: Self.safari,
             dwelled: .seconds(720),
-            returnTarget: "Pages"
+            returnTarget: "Pages",
+            hasOpenSession: true
         )
     }
 
@@ -37,7 +38,8 @@ enum AccusationFixture {
         task: "Write the Q3 proposal",
         subject: nil,
         dwelled: .seconds(900),
-        returnTarget: "Pages"
+        returnTarget: "Pages",
+        hasOpenSession: true
     )
 
     /// No stored return anchor: "Back to …" is not offered at all (R-88).
@@ -47,7 +49,21 @@ enum AccusationFixture {
         task: "Write the Q3 proposal",
         subject: safari,
         dwelled: .seconds(600),
-        returnTarget: nil
+        returnTarget: nil,
+        hasOpenSession: true
+    )
+
+    /// **No open session**, which is a supported default working state rather than an edge: the
+    /// app never starts one by itself, so the ladder can climb and the panel can appear with only
+    /// a priority set (focus-rdw).
+    static let noSession = AccusationPresentation(
+        rung: .panel,
+        voice: .standard,
+        task: "Write the Q3 proposal",
+        subject: safari,
+        dwelled: .seconds(600),
+        returnTarget: "Pages",
+        hasOpenSession: false
     )
 
     /// A running snooze, drawn as a visible countdown (R-87).
@@ -58,7 +74,8 @@ enum AccusationFixture {
         subject: safari,
         dwelled: .seconds(600),
         returnTarget: "Pages",
-        snoozeRemaining: .seconds(305)
+        snoozeRemaining: .seconds(305),
+        hasOpenSession: true
     )
 }
 
@@ -115,6 +132,46 @@ struct AccusationPanelTests {
         #expect(offered.contains(.thisIsRelevant))
         #expect(offered.contains(.pause))
         #expect(AccusationFixture.noReturnTarget.primaryAction == .thisIsRelevant)
+    }
+
+    /// **The quadrant nothing covered** (focus-rdw). With no session, *"Not this time"* wrote no
+    /// rule — `apply(_:…)` returned early on the missing identifier — and *"Pause"* threw
+    /// `noOpenSession`, while `resolve(…)` went on to complete the row as `.corrected`, spend
+    /// fatigue, de-escalate the ladder and hide the panel. The person excused the app, the log
+    /// recorded a correction, and the next mandate accused them about the thing they had just
+    /// excused.
+    @Test("with no session open the two session-scoped actions are not offered at all")
+    func sessionScopedActionsWithdrawnWithNoSession() {
+        let offered = AccusationFixture.noSession.offeredActions
+
+        for action in CorrectionAction.allCases where action.requiresOpenSession {
+            #expect(!offered.contains(action), "\(action) was offered with no session to act on")
+        }
+        // …and withdrawing two must not withdraw the economy: a panel with nothing on it is the
+        // anti-pattern, not the fix. Everything whose write does not need a session is still here.
+        for action in AccusationPresentation.actionOrder where !action.requiresOpenSession {
+            #expect(offered.contains(action), "\(action) was withdrawn by the session state")
+        }
+        #expect(AccusationFixture.noSession.primaryAction == .returnToTask)
+    }
+
+    /// The two conditions are independent: a mixed-drift accusation with no session withdraws
+    /// both sets rather than one masking the other.
+    @Test("no subject and no session withdraw their own actions and no others")
+    func theTwoWithdrawalsCompose() {
+        let presentation = AccusationPresentation(
+            rung: .panel,
+            voice: .standard,
+            task: "Write the Q3 proposal",
+            subject: nil,
+            dwelled: .seconds(900),
+            returnTarget: "Pages",
+            hasOpenSession: false
+        )
+        let offered = presentation.offeredActions
+
+        #expect(offered == [.returnToTask, .changePriority])
+        #expect(!offered.isEmpty, "an accusation nobody can answer is the anti-pattern")
     }
 
     /// Mixed drift names nobody, so a rule about "several unrelated apps" would be a rule about

@@ -37,6 +37,17 @@ public struct AccusationPresentation: Sendable, Equatable {
     /// How long a running snooze for this subject has left, when one is running. Drawn as a
     /// countdown, because a suppression a person cannot see is a suppression they cannot trust.
     public let snoozeRemaining: Duration?
+    /// **Whether there is a session for the two session-scoped actions to act on** (focus-rdw).
+    ///
+    /// A world-fact rather than a style, and it is here for the reason `returnTarget` is: it
+    /// decides whether an action can honestly be offered. No open session is a supported default
+    /// state — there is no auto-start, so the panel really does appear with only a priority set
+    /// — and in it *"Not this time"* wrote no rule and *"Pause"* threw `noOpenSession`, while the
+    /// panel came down and the log recorded a correction anyway.
+    ///
+    /// It has **no default**. Every construction of this value states it, because a default is
+    /// what would let the next surface inherit the wrong half of the answer in silence.
+    public let hasOpenSession: Bool
     /// The snooze spans on offer. `InterventionPolicy.snoozeDurations` in the shipping app.
     public let snoozeDurations: [Duration]
 
@@ -48,6 +59,7 @@ public struct AccusationPresentation: Sendable, Equatable {
         dwelled: Duration,
         returnTarget: String? = nil,
         snoozeRemaining: Duration? = nil,
+        hasOpenSession: Bool,
         snoozeDurations: [Duration] = InterventionPolicy.snoozeDurations
     ) {
         self.rung = rung
@@ -57,6 +69,7 @@ public struct AccusationPresentation: Sendable, Equatable {
         self.dwelled = dwelled
         self.returnTarget = returnTarget
         self.snoozeRemaining = snoozeRemaining
+        self.hasOpenSession = hasOpenSession
         self.snoozeDurations = snoozeDurations
     }
 
@@ -77,11 +90,16 @@ public struct AccusationPresentation: Sendable, Equatable {
 
     /// The actions this panel actually shows, in `actionOrder`.
     ///
-    /// Two are conditional and both conditions are the same principle: an action the app cannot
-    /// honestly perform is not offered at all, rather than offered and then explained away.
+    /// **Four** are conditional now, and all four conditions are the same principle: an action
+    /// the app cannot honestly perform is not offered at all, rather than offered and then
+    /// explained away. `returnToTask` needs somewhere to go (R-88); the two rule-writing actions
+    /// need a subject to be about; and the two session-scoped ones need a session to act on
+    /// (focus-rdw) — with none, *"Not this time"* wrote no rule and *"Pause"* threw, while the
+    /// panel came down and the log recorded a correction regardless.
     public var offeredActions: [CorrectionAction] {
         Self.actionOrder.filter { action in
             if action == .returnToTask { return returnTarget != nil }
+            if action.requiresOpenSession, !hasOpenSession { return false }
             return !action.requiresScope || hasScope
         }
     }

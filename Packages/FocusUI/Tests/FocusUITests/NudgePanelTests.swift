@@ -453,7 +453,8 @@ struct NudgePanelTests {
         task: "Write the Q3 proposal for Acme",
         subject: decoy,
         dwelled: .seconds(180),
-        returnTarget: "TextEdit"
+        returnTarget: "TextEdit",
+        hasOpenSession: true
     )
 
     /// The shipped tolerance, read from the type under test rather than restated here — a test
@@ -667,7 +668,8 @@ struct NudgePanelTests {
             rung: .panel,
             task: "Write the Q3 proposal for Acme",
             subject: Self.decoy,
-            dwelled: .seconds(180)
+            dwelled: .seconds(180),
+            hasOpenSession: true
         )
         let controller = Self.controller()
         controller.update(showing: .accusation, content: AccusationPanelView(presentation: noAnchor))
@@ -720,6 +722,7 @@ struct NudgePanelTests {
             subject: Self.decoy,
             dwelled: .seconds(600),
             returnTarget: "TextEdit",
+            hasOpenSession: true,
             snoozeDurations: (1...20).map { Duration.seconds($0 * 60) }
         )
         let controller = Self.controller()
@@ -812,7 +815,8 @@ struct NudgePanelTests {
             task: "Write the Q3 proposal for Acme",
             subject: Self.decoy,
             dwelled: .seconds(600),
-            returnTarget: "TextEdit"
+            returnTarget: "TextEdit",
+            hasOpenSession: true
         )
         let offered = presentation.offeredActionIdentifiers
         let controller = Self.controller()
