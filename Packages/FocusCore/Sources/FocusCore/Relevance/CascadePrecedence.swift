@@ -78,8 +78,6 @@ public struct CascadeRung: Sendable, Equatable, Hashable, Identifiable, Codable 
     /// than skipped by a special case. e06 flips this one flag and supplies an
     /// implementation; it neither re-ranks the ladder nor renumbers anything.
     public let isExecutable: Bool
-    /// The String Catalog key for the phrase an explanation uses when this rung decided.
-    public let explanationKey: String
     /// The String Catalog key for the precedence pane's row label.
     public let settingsCopyKey: String
 
@@ -88,13 +86,11 @@ public struct CascadeRung: Sendable, Equatable, Hashable, Identifiable, Codable 
     public init(
         stage: CascadeStage,
         isExecutable: Bool,
-        explanationKey: String,
         settingsCopyKey: String
     ) {
         self.stage = stage
         self.rank = stage.rank
         self.isExecutable = isExecutable
-        self.explanationKey = explanationKey
         self.settingsCopyKey = settingsCopyKey
     }
 
@@ -110,13 +106,18 @@ public struct CascadeRung: Sendable, Equatable, Hashable, Identifiable, Codable 
         )
     }
 
-    /// The explanation phrase, localised against `FocusCore`'s own catalog.
-    public var explanationResource: LocalizedStringResource {
-        LocalizedStringResource(
-            String.LocalizationValue(explanationKey),
-            bundle: .atURL(Bundle.module.bundleURL)
-        )
-    }
+    // **`explanationResource` and the nine `explanation.stage.*` phrases are gone** (focus-pzl).
+    //
+    // They read *"a rule you set for this session"*, *"context you attached to this priority"* and
+    // seven more — a lower-case sentence-fragment rendering of the same nine rungs
+    // `settingsCopyKey` above draws as *"Rule for this session"* and *"Context you attached"*. No
+    // explanation the builder produces interpolates one: `ExplanationClause` carries its own
+    // `explanation.clause.*` vocabulary, which is what `ExplanationClauseRow` draws.
+    //
+    // The draw-site rule in `check-strings.sh` is what found them. Nothing outside this package
+    // ever read `explanationResource`, so no row for these keys could be written in
+    // `Config/string-draw-sites.txt` — while `cascade.rung.*`, defined in this same file, is drawn
+    // by `CascadePrecedenceView` and stays.
 }
 
 /// **The** ordered list of cascade rungs. There is no other one in this repository.
@@ -142,55 +143,46 @@ public enum CascadePrecedence {
         CascadeRung(
             stage: .sessionRule,
             isExecutable: true,
-            explanationKey: "explanation.stage.sessionRule",
             settingsCopyKey: "cascade.rung.sessionRule"
         ),
         CascadeRung(
             stage: .taskRule,
             isExecutable: true,
-            explanationKey: "explanation.stage.taskRule",
             settingsCopyKey: "cascade.rung.taskRule"
         ),
         CascadeRung(
             stage: .globalRule,
             isExecutable: true,
-            explanationKey: "explanation.stage.globalRule",
             settingsCopyKey: "cascade.rung.globalRule"
         ),
         CascadeRung(
             stage: .contextPack,
             isExecutable: true,
-            explanationKey: "explanation.stage.contextPack",
             settingsCopyKey: "cascade.rung.contextPack"
         ),
         CascadeRung(
             stage: .seedRule,
             isExecutable: true,
-            explanationKey: "explanation.stage.seedRule",
             settingsCopyKey: "cascade.rung.seedRule"
         ),
         CascadeRung(
             stage: .heuristic,
             isExecutable: true,
-            explanationKey: "explanation.stage.heuristic",
             settingsCopyKey: "cascade.rung.heuristic"
         ),
         CascadeRung(
             stage: .onDeviceModel,
             isExecutable: false,
-            explanationKey: "explanation.stage.onDeviceModel",
             settingsCopyKey: "cascade.rung.onDeviceModel"
         ),
         CascadeRung(
             stage: .seedFallback,
             isExecutable: true,
-            explanationKey: "explanation.stage.seedFallback",
             settingsCopyKey: "cascade.rung.seedFallback"
         ),
         CascadeRung(
             stage: .unresolved,
             isExecutable: true,
-            explanationKey: "explanation.stage.unresolved",
             settingsCopyKey: "cascade.rung.unresolved"
         )
     ]

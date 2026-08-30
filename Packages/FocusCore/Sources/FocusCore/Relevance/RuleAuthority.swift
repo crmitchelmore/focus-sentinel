@@ -43,21 +43,17 @@ public enum RuleAuthority: String, Sendable, CaseIterable, Codable, Hashable, Co
         }
     }
 
-    /// The String Catalog key for this authority's label.
-    public var labelKey: String {
-        switch self {
-        case .session: "rule.authority.session"
-        case .task: "rule.authority.task"
-        case .global: "rule.authority.global"
-        }
-    }
-
-    public var labelResource: LocalizedStringResource {
-        LocalizedStringResource(
-            String.LocalizationValue(labelKey),
-            bundle: .atURL(Bundle.module.bundleURL)
-        )
-    }
+    // **The three `rule.authority.*` labels are gone** (focus-pzl), and the draw-site rule in
+    // `check-strings.sh` is what found them: `labelResource` had no reader in `FocusUI`, `App` or
+    // `FocusHost`, so no row could honestly be written for this file in
+    // `Config/string-draw-sites.txt`.
+    //
+    // They read *"This session"*, *"This priority"* and *"Everything"* — a third naming of three
+    // ranks that `cascade.rung.sessionRule`, `.taskRule` and `.globalRule` already draw as *"Rule
+    // for this session"*, *"Rule for this priority"* and *"Rule for everything"* in the precedence
+    // pane. `stage` above is the correspondence, and `CascadePrecedenceTests` asserts it; a
+    // surface that ever needs to name an authority should draw the rung's own label through that
+    // rather than a fourth set of words.
 
     public static func < (lhs: RuleAuthority, rhs: RuleAuthority) -> Bool {
         lhs.rank < rhs.rank

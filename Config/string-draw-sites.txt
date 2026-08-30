@@ -1,0 +1,82 @@
+# The draw-site registry — what makes a `FocusCore` catalogue key REACHABLE (focus-pzl).
+#
+#   <key prefix> | <path of the file that draws it> | <expression that must appear in that file>
+#
+# ## Why this file exists
+#
+# `check-strings.sh` asserted, for years, that "every catalog key is referenced by the module's
+# sources". Measured on the tree the day this file was written, that check was **vacuous for
+# every key in the repository**: all 269 of `FocusUI`'s are raw values of `ShellStringKey` and
+# their only literal is the `case … = "…"` that spells them, and all of `FocusCore`'s are
+# spelled by a `copyKey`-shaped switch in the file that declares the vocabulary. A key was
+# blessed by its own definition.
+#
+# What that bought: forty shipped sentences no route could draw — `nudge.suppressed.*` (12),
+# `nudge.withheld.*` (12), `nudge.deferred.*` (4), `explanation.stage.*` (9), `rule.authority.*`
+# (3) — plus `settings.intervention.surface.notification`, which read "A notification" four
+# lines under the app's promise that it "never sends a notification, and never asks for
+# permission to".
+#
+# ## Why `FocusCore`'s keys need a declared row and `FocusUI`'s do not
+#
+# `FocusUI` draws its own keys by **name**: `ShellText(.interventionRoutingHeading, …)`. So a
+# lint can follow the Swift case name from the declaration to a use, per key, with no registry —
+# and `check-strings.sh` does exactly that.
+#
+# `FocusCore` cannot be followed that way. It never draws anything: it exposes a
+# `LocalizedStringResource` accessor, and a view in `FocusUI` reads it off a value whose type
+# the call site does not spell — `ShellText(resource: reason.copyResource, …)`. There is no
+# textual path from `"suppression.reason.userIdle"` to that line, and no textual lint can invent
+# one. So the link is **declared here**, one row per vocabulary, and the lint checks that the
+# drawing file still exists and still contains the expression.
+#
+# ## What this cannot do, stated so nobody mistakes it for more
+#
+# A row proves a *vocabulary* is drawn somewhere. It does not prove that *this* key is reachable
+# on *this* run — a switch arm for a case no state can produce still passes, which is how
+# `settings.intervention.surface.notification` survived. That last step is not decidable from
+# text: it is closed by narrowing the drawing function's domain and asserting over the producer's
+# own output, the way `InterventionSettingsTests.everyDrawnRowHasASentence` does against
+# `SurfaceRouter.table(…)`.
+#
+# ## Adding a vocabulary
+#
+# A prefix is `<namespace>.<vocabulary>.` — exactly two components, so a row cannot bless a whole
+# namespace at once. If no honest row can be written, the copy has no reader and the answer is to
+# delete it, not to point a row at a definition.
+
+# --- e04's relevance vocabularies ------------------------------------------------------------
+cascade.precedence. | Packages/FocusUI/Sources/FocusUI/Relevance/CascadePrecedenceView.swift | ShellText(resource: CascadePrecedence.headingResource, role: .headline)
+cascade.rung.       | Packages/FocusUI/Sources/FocusUI/Relevance/CascadePrecedenceView.swift | ShellText(resource: rung.settingsCopyResource, role: .callout)
+evidence.band.      | Packages/FocusUI/Sources/FocusUI/Relevance/VerdictInspectorView.swift | ShellText(resource: band.labelResource, role: .callout)
+explanation.clause. | Packages/FocusUI/Sources/FocusUI/Relevance/ExplanationClauseRow.swift | ShellText(resource: clause.kind.copyResource, role: .callout)
+rule.disposition.   | Packages/FocusUI/Sources/FocusUI/Scenes/TaskRulesView.swift | .help(Text(disposition.labelResource))
+suppression.reason. | Packages/FocusUI/Sources/FocusUI/Relevance/VerdictInspectorView.swift | ShellText(resource: reason.copyResource, role: .callout)
+
+# --- e05's nudge vocabularies ----------------------------------------------------------------
+#
+# The five deck rows point at the same two panels on purpose: a deck is a *parameter* of the
+# draw, not a surface of its own, so `NudgeText(_:voice:)` draws all sixty-five keys and the
+# `voice` decides which. `check-strings.sh` asserts the 5 x 13 bijection separately; these rows
+# are the other half of the claim — that something reads the composed key at all.
+nudge.direct.       | Packages/FocusUI/Sources/FocusUI/Nudge/QueryPanelView.swift | NudgeText(answer.copyKey, voice: presentation.voice, role: .callout)
+nudge.neutral.      | Packages/FocusUI/Sources/FocusUI/Nudge/QueryPanelView.swift | NudgeText(answer.copyKey, voice: presentation.voice, role: .callout)
+nudge.playful.      | Packages/FocusUI/Sources/FocusUI/Nudge/QueryPanelView.swift | NudgeText(answer.copyKey, voice: presentation.voice, role: .callout)
+nudge.silentVisual. | Packages/FocusUI/Sources/FocusUI/Nudge/QueryPanelView.swift | NudgeText(answer.copyKey, voice: presentation.voice, role: .callout)
+nudge.warm.         | Packages/FocusUI/Sources/FocusUI/Nudge/QueryPanelView.swift | NudgeText(answer.copyKey, voice: presentation.voice, role: .callout)
+nudge.query.        | Packages/FocusUI/Sources/FocusUI/Nudge/QueryPanelView.swift | ShellText(resource: presentation.reason.copyResource, role: .footnote)
+nudge.rung.         | Packages/FocusUI/Sources/FocusUI/Scenes/InterventionSettingsView.swift | ShellText(resource: row.rung.copyResource, role: .footnote)
+
+# --- e01/e03: the status word, and the Edit menu -----------------------------------------------
+status.break.       | Packages/FocusUI/Sources/FocusUI/Design/StatusBadge.swift | ShellText(resource: status.shortLabelResource)
+status.paused.      | Packages/FocusUI/Sources/FocusUI/Design/StatusBadge.swift | ShellText(resource: status.shortLabelResource)
+status.relevant.    | Packages/FocusUI/Sources/FocusUI/Design/StatusBadge.swift | ShellText(resource: status.shortLabelResource)
+status.uncertain.   | Packages/FocusUI/Sources/FocusUI/Design/StatusBadge.swift | ShellText(resource: status.shortLabelResource)
+status.unrelated.   | Packages/FocusUI/Sources/FocusUI/Design/StatusBadge.swift | ShellText(resource: status.shortLabelResource)
+
+# `undo.*` has no rows here, and the absence is the rule working rather than a gap.
+# `UndoActionName` is a raw-value enum in `FocusCore`, so its fourteen keys are **named** keys
+# like `FocusUI`'s and the case-name check reaches them without a declaration — the sentence the
+# system Edit menu puts after "Undo" is drawn by `undo?.setActionName(UndoActionName.addRule
+# .localizedName)`, which names the case. A row for a key the case-name check already blesses is
+# refused as redundant: two mechanisms covering one key is a row nobody has to keep true.

@@ -63,20 +63,23 @@ struct CascadePrecedenceTests {
         #expect(CascadeStage.heuristic < CascadeStage.seedFallback)
     }
 
-    @Test("every rung carries both copy keys, and they are distinct and well-formed")
+    /// **A rung carries one copy key, and it used to carry two** (focus-pzl).
+    ///
+    /// `explanationKey` gave every rung a second, lower-case rendering under
+    /// `explanation.stage.*` — *"a rule you set for this session"* beside *"Rule for this
+    /// session"* — and nothing outside `FocusCore` ever read `explanationResource`. This test
+    /// asserted both were well-formed and distinct, which is exactly the proof that keeps a dead
+    /// vocabulary alive: well-formed and distinct are true of nine sentences nobody can read.
+    @Test("every rung carries a settings copy key, and they are distinct and well-formed")
     func everyRungHasCopy() {
         var settingsKeys: Set<String> = []
-        var explanationKeys: Set<String> = []
 
         for rung in CascadePrecedence.rungs {
             #expect(rung.settingsCopyKey == "cascade.rung.\(rung.stage.rawValue)")
-            #expect(rung.explanationKey == "explanation.stage.\(rung.stage.rawValue)")
             settingsKeys.insert(rung.settingsCopyKey)
-            explanationKeys.insert(rung.explanationKey)
         }
 
         #expect(settingsKeys.count == CascadePrecedence.rungs.count)
-        #expect(explanationKeys.count == CascadePrecedence.rungs.count)
         #expect(!CascadePrecedence.unavailableCaptionKey.isEmpty)
         #expect(!CascadePrecedence.headingKey.isEmpty)
         #expect(!CascadePrecedence.footnoteKey.isEmpty)

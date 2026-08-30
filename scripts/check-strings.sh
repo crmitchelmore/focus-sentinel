@@ -3,7 +3,7 @@
 #
 #   scripts/check-strings.sh
 #
-# Two checks, both of which fail the gate:
+# Three checks, all of which fail the gate:
 #
 #   1. **No hardcoded user-visible string.** A bare string literal in a SwiftUI position that
 #      draws text — `Text("…")`, `Label("…"`, `Button("…"`, `.navigationTitle("…")`,
@@ -17,6 +17,14 @@
 #      must exist in that module's catalog. A key present but unused is dead text; a key
 #      used but absent resolves to itself at runtime, which is the exact failure mode the
 #      lane-gated localisation tests exist to catch.
+#
+#   3. **The catalogs and the code agree about DRAWING, not about spelling** (focus-pzl). Check
+#      2's forward direction was satisfied, for every key in this repository, by the `case … =
+#      "…"` or `case .x: "…"` line that spells the key — so the check was vacuous and forty
+#      undrawable sentences shipped under it. The third section excludes a key's own definition
+#      and asks what NAMES it (a Swift case name, per key) or what DRAWS it (a declared row in
+#      `Config/string-draw-sites.txt`, per vocabulary). Its limits are stated in full at the
+#      section itself; read them before trusting it further than it goes.
 #
 # ## The key convention this lint depends on
 #
@@ -601,6 +609,276 @@ print("catalog completeness OK")
 PYTHON
 catalog_rc=$?
 (( catalog_rc != 0 )) && rc=1
+
+print
+print "== reachable, not merely mentioned"
+
+# **The blessing rule** (focus-pzl). Read the header note above this line before changing it.
+#
+# ## What was wrong with the check above
+#
+# "Every catalog key is referenced by that module's sources" was, measured on this tree,
+# **vacuous for every key in the repository**. All of `FocusUI`'s are raw values of
+# `ShellStringKey`, whose only literal is the `case … = "…"` that spells them; all of
+# `FocusCore`'s are spelled by a `copyKey`-shaped switch in the file that declares the
+# vocabulary. Every key was referenced — by its own definition. Deleting the last real reader of
+# a string changed nothing the lint could see.
+#
+# What it bought: forty shipped sentences no route could draw — `nudge.suppressed.*` (12),
+# `nudge.withheld.*` (12), `nudge.deferred.*` (4), `explanation.stage.*` (9) and
+# `rule.authority.*` (3) — plus `settings.intervention.surface.notification` = "A notification",
+# which sat four lines under the app's own promise that it "never sends a notification, and never
+# asks for permission to". Every one of them passed because a switch arm somewhere MENTIONED its
+# key.
+#
+# ## The rule, in two halves, because the repository has two shapes
+#
+#   **Rule 1 — a named key is blessed by its Swift case name, not by its own spelling.**
+#   `FocusUI` draws by name: `ShellText(.interventionRoutingHeading, …)`. So for a key declared
+#   as `case <name> = "<key>"` the declaration line is excluded, and the key is blessed only if
+#   `<name>` is named somewhere else in the module. Per key, mechanical, no registry. This is
+#   what catches a freshly-orphaned string: delete the last `ShellText(.foo, …)` and the key
+#   named by `foo` fails here.
+#
+#   **Rule 2 — an unnamed key is blessed by a declared draw site.**
+#   `FocusCore` never draws. It exposes a `LocalizedStringResource` and a view in `FocusUI` reads
+#   it off a value whose type the call site does not spell: `ShellText(resource:
+#   reason.copyResource, …)`. There is no textual path from the key to that line and no textual
+#   lint can invent one — so the link is declared in `Config/string-draw-sites.txt`, one row per
+#   vocabulary, and checked: the drawing file must exist and must still contain the expression.
+#
+# ## What it still cannot do, said plainly rather than left to be discovered
+#
+# **Rule 2 proves a vocabulary is drawn, never that a particular case is reachable.** A key named
+# only in a switch arm over a wider type than the caller can produce still passes — which is
+# exactly how `settings.intervention.surface.notification` survived, and Rule 1 would not have
+# caught it either, because `.interventionSurfaceNotification` really was named in
+# `InterventionSettingsView`. That last step is a dataflow question and is not decidable from
+# text. It is closed at the type instead: narrow the drawing function's domain and assert over
+# the producer's own output, the way `InterventionSettingsTests.everyDrawnRowHasASentence` now
+# does against `SurfaceRouter.table(…)`.
+#
+# So this section makes the *mechanical* claim it can make, and states the residual. What changes
+# is that a key can no longer be blessed by the line that spells it.
+
+python3 - "$REPO_ROOT" <<'PYTHON'
+import json
+import os
+import re
+import sys
+
+root = sys.argv[1]
+registry_path = os.path.join(root, "Config", "string-draw-sites.txt")
+
+COMMENT = re.compile(r'^\s*(//|///|\*|/\*)')
+# `case <name> = "<key>"`, alone on its line: the declaration of a NAMED key.
+DECLARATION = re.compile(r'^\s*case\s+([A-Za-z_]\w*)\s*=\s*"([^"]+)"\s*$')
+
+MODULES = {
+    "FocusCore": (
+        "Packages/FocusCore/Sources/FocusCore/Resources/Localizable.xcstrings",
+        "Packages/FocusCore/Sources",
+    ),
+    "FocusUI": (
+        "Packages/FocusUI/Sources/FocusUI/Resources/Localizable.xcstrings",
+        "Packages/FocusUI/Sources",
+    ),
+}
+
+# Where a drawing may live. `FocusCore` is in the list for exactly one vocabulary — the Edit
+# menu's "Undo …" sentence, set from `PriorityStore` — and naming the modules rather than
+# allowing any path is what stops a row pointing at a test.
+DRAWING_ROOTS = (
+    "Packages/FocusUI/Sources",
+    "Packages/FocusHost/Sources",
+    "Packages/FocusCore/Sources",
+    "App",
+)
+
+failures = []
+
+
+def fail(message, detail=()):
+    line = f"FAIL [F-149] {message}"
+    if detail:
+        line += "\n" + "\n".join(f"    {d}" for d in detail)
+    failures.append(line)
+    print(line, file=sys.stderr)
+
+
+def sources(directory):
+    found = []
+    for base, _dirs, names in os.walk(os.path.join(root, directory)):
+        for name in sorted(names):
+            if name.endswith(".swift"):
+                found.append(os.path.join(base, name))
+    return found
+
+
+# --- Rule 1: a named key is blessed by its case name -----------------------------------------
+
+named = {}          # key -> (module, relative path, line number, case name)
+blessed_by_name = set()
+
+for module, (catalog_path, source_dir) in sorted(MODULES.items()):
+    with open(os.path.join(root, catalog_path)) as handle:
+        keys = set(json.load(handle).get("strings", {}))
+
+    paths = sources(source_dir)
+    text = {path: open(path).read().split("\n") for path in paths}
+
+    for path in paths:
+        for number, line in enumerate(text[path], start=1):
+            if COMMENT.match(line):
+                continue
+            found = DECLARATION.match(line)
+            if found and found.group(2) in keys:
+                named[found.group(2)] = (
+                    module, os.path.relpath(path, root), number, found.group(1)
+                )
+
+    orphans = []
+    for key, (owner, relative, number, case) in sorted(named.items()):
+        if owner != module:
+            continue
+        # The declaration itself is excluded — that is the whole of the fix.
+        pattern = re.compile(r'(?<![A-Za-z0-9_])' + re.escape(case) + r'\b')
+        uses = 0
+        for path in paths:
+            for other, line in enumerate(text[path], start=1):
+                if os.path.relpath(path, root) == relative and other == number:
+                    continue
+                if COMMENT.match(line):
+                    continue
+                if pattern.search(line):
+                    uses += 1
+        if uses:
+            blessed_by_name.add(key)
+        else:
+            orphans.append(f"{key}: nothing names `{case}` outside {relative}:{number}")
+
+    if orphans:
+        fail(
+            f"{module}: a catalog key is blessed only by the line that spells it",
+            orphans + [
+                "A `case … = \"…\"` declaration is the key's spelling, not a use of it. Draw the",
+                "key through ShellText/NudgeText, or delete it: a string no code names is a",
+                "sentence the app cannot say."
+            ],
+        )
+    else:
+        mine = sum(1 for key in named if named[key][0] == module)
+        print(f"ok   {module}: all {mine} named key(s) are named by code, not by their own declaration")
+
+# --- Rule 2: an unnamed key is blessed by a declared draw site -------------------------------
+
+if not os.path.exists(registry_path):
+    fail(f"no draw-site registry at {registry_path}")
+    print()
+    print("REACHABILITY LINT FAILED", file=sys.stderr)
+    sys.exit(1)
+
+registry = []       # (line number, prefix, drawing path, expression)
+with open(registry_path) as handle:
+    for number, line in enumerate(handle, start=1):
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        parts = [part.strip() for part in line.split("|")]
+        if len(parts) != 3 or not all(parts):
+            fail(
+                f"{registry_path}:{number} is not "
+                "`<key prefix> | <drawing file> | <expression>`"
+            )
+            continue
+        registry.append((number, parts[0], parts[1], parts[2]))
+
+# A prefix is `<namespace>.<vocabulary>.` — exactly two components. Without this a single row
+# reading `nudge.` would bless seventy keys, which is the coarseness that makes a registry a
+# rubber stamp.
+for number, prefix, _path, _expression in registry:
+    if not prefix.endswith(".") or prefix.count(".") != 2:
+        fail(
+            f"{registry_path}:{number} prefix `{prefix}` is not `<namespace>.<vocabulary>.`",
+            ["A row may bless one vocabulary, never a whole namespace."],
+        )
+
+# The drawing site must still be there. A registry describing a drawing the app no longer makes
+# is the same failure as a catalog key nobody draws, one level up.
+for number, prefix, path, expression in registry:
+    if not any(path.startswith(drawing_root) for drawing_root in DRAWING_ROOTS):
+        fail(
+            f"{registry_path}:{number} draws `{prefix}` from {path}",
+            [f"which is not one of {', '.join(DRAWING_ROOTS)} — a test cannot bless a string."],
+        )
+        continue
+    full = os.path.join(root, path)
+    if not os.path.exists(full):
+        fail(f"{registry_path}:{number} names a drawing file that does not exist: {path}")
+        continue
+    if expression not in open(full).read():
+        fail(
+            f"{registry_path}:{number} the drawing of `{prefix}` is gone from {path}",
+            [
+                f"expected to find: {expression}",
+                "Point the row at the site that draws it now, or delete the copy: a vocabulary",
+                "whose last reader went is a vocabulary nobody can read.",
+            ],
+        )
+
+# Every key must be blessed by one rule or the other, and no row may cover only keys Rule 1
+# already blesses — two mechanisms over one key is a row nobody has to keep true.
+covered_by_row = {number: 0 for number, _p, _f, _e in registry}
+for module, (catalog_path, _source_dir) in sorted(MODULES.items()):
+    with open(os.path.join(root, catalog_path)) as handle:
+        keys = sorted(json.load(handle).get("strings", {}))
+
+    unreachable = []
+    by_row = 0
+    for key in keys:
+        if key in blessed_by_name:
+            continue
+        rows = [number for number, prefix, _f, _e in registry if key.startswith(prefix)]
+        if not rows:
+            unreachable.append(key)
+            continue
+        by_row += 1
+        for number in rows:
+            covered_by_row[number] += 1
+
+    if unreachable:
+        fail(
+            f"{module}: a catalog key has no draw site and no code names it",
+            [f"unreachable: {key}" for key in unreachable] + [
+                f"Add a row to {registry_path} naming the file that draws it — or delete the",
+                "key. It is a sentence in the shipped binary that no route can produce.",
+            ],
+        )
+    else:
+        print(f"ok   {module}: every unnamed key ({by_row}) has a live draw site")
+
+redundant = [
+    f"{registry_path}:{number} `{prefix}` covers no key the case-name check leaves to it"
+    for number, prefix, _f, _e in registry
+    if covered_by_row[number] == 0
+]
+if redundant:
+    fail("a draw-site row is redundant or stale", redundant)
+
+# Non-vacuity: a registry and a catalog that were both empty would agree perfectly.
+if not registry:
+    fail("the draw-site registry is empty — the check is blind")
+elif not failures:
+    print(f"ok   all {len(registry)} draw-site row(s) still draw what they claim")
+
+print()
+if failures:
+    print(f"REACHABILITY LINT FAILED — {len(failures)} check(s)", file=sys.stderr)
+    sys.exit(1)
+print("reachability OK")
+PYTHON
+reachable_rc=$?
+(( reachable_rc != 0 )) && rc=1
 
 print
 if (( rc == 0 )); then
