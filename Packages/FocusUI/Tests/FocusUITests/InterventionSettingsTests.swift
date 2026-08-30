@@ -107,8 +107,10 @@ struct InterventionSettingsTests {
                     let key = InterventionSettingsView.surfaceKey(row.route)
                     #expect(
                         key != nil,
-                        "\(voice.rawValue)/reduced=\(reduced) drew \(row.rung.rawValue) with no "
-                            + "sentence for \(row.route)"
+                        """
+                        \(voice.rawValue)/reduced=\(reduced) drew \(row.rung.rawValue) with no \
+                        sentence for \(row.route)
+                        """
                     )
                     if let key { drawn.insert(key) }
                 }
