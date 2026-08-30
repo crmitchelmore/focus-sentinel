@@ -297,11 +297,37 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case capabilityStateRestricted = "capability.state.restricted"
     case capabilityStateUnavailable = "capability.state.unavailable"
     case capabilityStateNotRequested = "capability.state.notRequested"
+    /// **The fallback sentences are predicates, and their subject is the row's consumer list**
+    /// (focus-doc).
+    ///
+    /// They were whole sentences with no subject — *"Nothing depends on it."*, *"That part of
+    /// the app does not run."* — and the matrix draws every DISTINCT fallback a capability
+    /// produces across its ten consumers, so under *"Which app is in front"* it printed four of
+    /// them at once. Each was true of the consumer it came from; together they contradicted, and
+    /// *"Nothing depends on it"* was plainly false of an app whose own Watching section two
+    /// inches above says the app in front is watched.
+    ///
+    /// So every one of them now begins mid-sentence and is drawn through
+    /// `capability.fallback.attributed` under the names of the consumers it is true of. A line
+    /// that cannot be read as an app-level claim cannot contradict the line beside it.
+    case capabilityFallbackAttributed = "capability.fallback.attributed"
     case capabilityFallbackFullFunction = "capability.fallback.fullFunction"
     case capabilityFallbackDegraded = "capability.fallback.degraded"
     case capabilityFallbackFeatureAbsent = "capability.fallback.featureAbsent"
     case capabilityFallbackSuppressOnly = "capability.fallback.suppressOnly"
     case capabilityFallbackShowUnavailable = "capability.fallback.showUnavailable"
+
+    /// The ten things the app does with a signal, named so a fallback line has a subject.
+    case capabilityConsumerActivationTimeline = "capability.consumer.activationTimeline"
+    case capabilityConsumerDwellAttribution = "capability.consumer.dwellAttribution"
+    case capabilityConsumerDisplayFairness = "capability.consumer.displayFairness"
+    case capabilityConsumerPresentationSuppression = "capability.consumer.presentationSuppression"
+    case capabilityConsumerMediaSuppression = "capability.consumer.mediaSuppression"
+    case capabilityConsumerLifecyclePause = "capability.consumer.lifecyclePause"
+    case capabilityConsumerIdlePause = "capability.consumer.idlePause"
+    case capabilityConsumerClassification = "capability.consumer.classification"
+    case capabilityConsumerNudgeLadder = "capability.consumer.nudgeLadder"
+    case capabilityConsumerAnalytics = "capability.consumer.analytics"
 
     // The verdict inspector (F-46, F-52, R-71).
     //
@@ -484,8 +510,8 @@ extension View {
 public struct ShellText: View {
     private let resource: LocalizedStringResource
     private let role: DesignTokens.FontRole
-    /// The one substitution, for the format-string entries. `nil` for every plain entry.
-    private let argument: String?
+    /// The substitutions, for the format-string entries. Empty for every plain entry.
+    private let arguments: [String]
 
     @Environment(\.shellStringTransform) private var transform
     @Environment(\.shellTextScale) private var scale
@@ -494,7 +520,7 @@ public struct ShellText: View {
     public init(_ key: ShellStringKey, role: DesignTokens.FontRole = .body) {
         self.resource = ShellStrings.resource(key)
         self.role = role
-        self.argument = nil
+        self.arguments = []
     }
 
     /// A format entry from the catalog with the user's own phrase substituted into it.
@@ -505,7 +531,24 @@ public struct ShellText: View {
     public init(_ key: ShellStringKey, role: DesignTokens.FontRole = .body, argument: String) {
         self.resource = ShellStrings.resource(key)
         self.role = role
-        self.argument = argument
+        self.arguments = [argument]
+    }
+
+    /// A format entry with **several** positional slots, in the order the format declares them.
+    ///
+    /// `NudgeText` has taken `arguments:` since e05; the capability matrix is what needed it
+    /// here (focus-doc). Its fallback lines read *"<the consumers that answer this way>: <what
+    /// they do instead>"*, and **both halves are authored catalog entries** — which is why this
+    /// is one format entry with `%1$@` and `%2$@` rather than two views with a hardcoded colon
+    /// between them. A translation is then free to put the list after the verb.
+    public init(
+        _ key: ShellStringKey,
+        role: DesignTokens.FontRole = .body,
+        arguments: [String]
+    ) {
+        self.resource = ShellStrings.resource(key)
+        self.role = role
+        self.arguments = arguments
     }
 
     /// A string from some other package's catalog — the status labels, which `FocusCore`
@@ -519,12 +562,12 @@ public struct ShellText: View {
     public init(resource: LocalizedStringResource, role: DesignTokens.FontRole = .body) {
         self.resource = resource
         self.role = role
-        self.argument = nil
+        self.arguments = []
     }
 
     public var body: some View {
         let format = transform(String(localized: resource))
-        let drawn = argument.map { String(format: format, $0) } ?? format
+        let drawn = arguments.isEmpty ? format : String(format: format, arguments: arguments)
         return Text(verbatim: drawn)
             .font(DesignTokens.font(role, scale: scale))
     }

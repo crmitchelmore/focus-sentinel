@@ -23,18 +23,47 @@ import SwiftUI
 /// alarm, because "you said no" is an answer the app is required to respect rather than a
 /// problem it is inviting the person to solve.
 ///
-/// ## Where the fallback sentences come from
+/// ## Where the fallback sentences come from — and why each one names its consumers
 ///
 /// The contract is indexed by capability **and** consumer, so one capability can have several
 /// answers: an unavailable microphone signal means one thing to the suppression rule that
 /// wanted it and something else to the analytics that merely counted it. The view collects the
 /// **distinct** fallbacks across all ten consumers and draws each once, which is a true
-/// statement about the table rather than a summary invented here. A capability whose ten
-/// consumers all answer the same way therefore draws one line, which is the common case.
+/// statement about the table rather than a summary invented here.
+///
+/// **Each line names the consumers it is true of, and it did not** (focus-doc). Read by eye in
+/// the committed baseline `privacySettings.reduceMotion.standard.png`, the row for *"Which app
+/// is in front"* printed four unattributed sentences one under another:
+///
+/// > There is nothing to fall back to, so the app says so.
+/// > That part of the app does not run.
+/// > The app does less, never more.
+/// > Nothing depends on it.
+///
+/// Per consumer each is true. Rendered together they contradict one another, and the last is
+/// plainly false of an app whose own Watching section two inches above reads *"The app in front
+/// is in a window."* The comment on `capability.fallback.fullFunction` said as much: *"What
+/// happens instead when a capability is missing"* — an **app-level** claim, written as one and
+/// rendered as one.
+///
+/// The fix is both halves of what the bug asked for. `fallbacks(for:in:)` now returns each
+/// distinct answer **with the consumers that give it**, and every fallback string was reworded
+/// into a predicate — *"carries on unchanged."*, *"does not run."* — so that none of them can be
+/// read as a claim about the app even in isolation.
+///
+/// ## This is the only place the matrix composes several consumers into one line
+///
+/// Checked, per the bug's second half: the capability column is one name per capability
+/// (`labelKey(for: Capability)`), and the state column is one `CapabilityState` per capability
+/// read straight off `CapabilityMatrix.allStates` — neither folds a per-consumer value. The
+/// fallback list was the only fold, and it is now attributed.
 public struct CapabilityMatrixView: View {
     public let capabilities: CapabilityMatrix
 
     @Environment(\.appearanceTraits) private var traits
+    /// Read here, not only inside `ShellText`, because the fallback lines compose two authored
+    /// catalog strings into the arguments of a third — see `fallbackLine(_:consumers:)`.
+    @Environment(\.shellStringTransform) private var transform
     @ScaledMetric(relativeTo: .body) private var spacing: CGFloat = 12
 
     public init(capabilities: CapabilityMatrix) {
@@ -87,57 +116,109 @@ public struct CapabilityMatrixView: View {
                     .foregroundStyle(DesignTokens.tint(for: state))
             }
 
-            ForEach(Self.fallbacks(for: capability, in: capabilities), id: \.token) { fallback in
-                fallbackLine(fallback)
+            ForEach(Self.fallbacks(for: capability, in: capabilities), id: \.fallback.token) { row in
+                fallbackLine(row.fallback, consumers: row.consumers)
                     .padding(.leading, spacing)
             }
         }
         .accessibilityElement(children: .combine)
     }
 
-    /// One fallback sentence. `degraded` names where it falls back to, because "falls back to
-    /// something cheaper" is not an answer a person can check.
-    @ViewBuilder
-    private func fallbackLine(_ fallback: CapabilityFallback) -> some View {
+    /// One fallback line: **whose** fallback it is, then what they do instead.
+    ///
+    /// `degraded` names where it falls back to, because "falls back to something cheaper" is not
+    /// an answer a person can check.
+    /// Both halves go through the **string transform** before they are substituted, which is
+    /// what keeps the pseudo-localisation lane honest: `ShellText` expands the format it is
+    /// given and leaves its arguments alone by design — that is right for the user's own words
+    /// and wrong here, where every argument is authored catalog prose. Without this the matrix
+    /// would draw a 2× heading over unexpanded fallback lines and the lane would report a row
+    /// narrower than any translation will ever make it.
+    private func fallbackLine(
+        _ fallback: CapabilityFallback,
+        consumers: [SensingConsumer]
+    ) -> some View {
+        ShellText(
+            .capabilityFallbackAttributed,
+            role: .footnote,
+            arguments: [
+                Self.subject(consumers, transform: transform),
+                Self.predicate(fallback, transform: transform)
+            ]
+        )
+        .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+        .lineLimit(nil)
+        .fixedSize(horizontal: false, vertical: true)
+    }
+
+    /// The consumers this line is true of, as a list in the reader's own language.
+    ///
+    /// `.list(type: .and)` rather than a joined `", "`: the separator and the final conjunction
+    /// are the locale's, which is the same reason every number in this app goes through
+    /// `.formatted()`.
+    nonisolated public static func subject(
+        _ consumers: [SensingConsumer],
+        transform: ShellStringTransform = .identity
+    ) -> String {
+        consumers
+            .map { transform(ShellStrings.string(Self.labelKey(for: $0))) }
+            .formatted(.list(type: .and))
+    }
+
+    /// What they do instead — a predicate, never a whole sentence (focus-doc).
+    nonisolated public static func predicate(
+        _ fallback: CapabilityFallback,
+        transform: ShellStringTransform = .identity
+    ) -> String {
         switch fallback {
         case .degraded(let destination):
-            ShellText(
-                .capabilityFallbackDegraded,
-                role: .footnote,
-                argument: ShellStrings.string(Self.labelKey(for: destination))
+            String(
+                format: transform(ShellStrings.string(.capabilityFallbackDegraded)),
+                transform(ShellStrings.string(Self.labelKey(for: destination)))
             )
-            .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
-            .lineLimit(nil)
-            .fixedSize(horizontal: false, vertical: true)
-
         case .fullFunction, .featureAbsent, .suppressOnly, .showUnavailable:
-            ShellText(Self.labelKey(for: fallback), role: .footnote)
-                .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
-                .lineLimit(nil)
-                .fixedSize(horizontal: false, vertical: true)
+            transform(ShellStrings.string(Self.labelKey(for: fallback)))
         }
     }
 
     // MARK: - The table, read rather than restated
 
-    /// The distinct fallbacks a capability produces across every consumer, in a stable order.
+    /// The distinct fallbacks a capability produces, **each with the consumers that give it**,
+    /// in a stable order.
     ///
     /// Empty when the capability is available: a capability that works needs no explanation,
-    /// and printing "nothing depends on it" beside a working signal would be noise.
+    /// and printing "carries on unchanged" beside a working signal would be noise.
+    ///
+    /// It returned the bare fallbacks until focus-doc, which is what let four contradicting
+    /// sentences be drawn one under another with nothing saying who each was about.
+    ///
+    /// **What changed comes before what did not.** `fullFunction` is the complement of the
+    /// interesting answers and is usually the longest list — eight of the ten consumers, under a
+    /// capability whose one real degradation is on the line below. Drawn in consumer order it
+    /// arrived first and buried the answer a person came to this pane for. It is not dropped: a
+    /// row that says which parts are untouched is a row somebody can check, and this pane exists
+    /// to be checked.
     nonisolated public static func fallbacks(
         for capability: Capability,
         in capabilities: CapabilityMatrix
-    ) -> [CapabilityFallback] {
+    ) -> [(fallback: CapabilityFallback, consumers: [SensingConsumer])] {
         guard !capabilities.isAvailable(capability) else { return [] }
 
-        var seen: Set<String> = []
-        var ordered: [CapabilityFallback] = []
+        var order: [String] = []
+        var grouped: [String: (CapabilityFallback, [SensingConsumer])] = [:]
         for consumer in SensingConsumer.allCases {
             let fallback = CapabilityContract.fallback(for: capability, consumer: consumer)
-            guard seen.insert(fallback.token).inserted else { continue }
-            ordered.append(fallback)
+            if var entry = grouped[fallback.token] {
+                entry.1.append(consumer)
+                grouped[fallback.token] = entry
+            } else {
+                order.append(fallback.token)
+                grouped[fallback.token] = (fallback, [consumer])
+            }
         }
-        return ordered
+        let unchanged = CapabilityFallback.fullFunction.token
+        return (order.filter { $0 != unchanged } + order.filter { $0 == unchanged })
+            .map { (fallback: grouped[$0]!.0, consumers: grouped[$0]!.1) }
     }
 
     // MARK: - Labels
@@ -181,6 +262,22 @@ public struct CapabilityMatrixView: View {
         case .featureAbsent: .capabilityFallbackFeatureAbsent
         case .suppressOnly: .capabilityFallbackSuppressOnly
         case .showUnavailable: .capabilityFallbackShowUnavailable
+        }
+    }
+
+    /// The ten consumers, named. This is the subject the fallback sentences were missing.
+    nonisolated public static func labelKey(for consumer: SensingConsumer) -> ShellStringKey {
+        switch consumer {
+        case .activationTimeline: .capabilityConsumerActivationTimeline
+        case .dwellAttribution: .capabilityConsumerDwellAttribution
+        case .displayFairness: .capabilityConsumerDisplayFairness
+        case .presentationSuppression: .capabilityConsumerPresentationSuppression
+        case .mediaSuppression: .capabilityConsumerMediaSuppression
+        case .lifecyclePause: .capabilityConsumerLifecyclePause
+        case .idlePause: .capabilityConsumerIdlePause
+        case .classification: .capabilityConsumerClassification
+        case .nudgeLadder: .capabilityConsumerNudgeLadder
+        case .analytics: .capabilityConsumerAnalytics
         }
     }
 }

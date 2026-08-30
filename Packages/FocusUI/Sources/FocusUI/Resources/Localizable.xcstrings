@@ -2,61 +2,193 @@
   "sourceLanguage" : "en",
   "strings" : {
     "capability.fallback.degraded" : {
-      "comment" : "What happens instead. %@ is the name of the cheaper capability it falls back to.",
+      "comment" : "What the named consumers do instead. %@ is the name of the cheaper capability.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Falls back to “%@” and keeps working."
+            "value" : "falls back to \u201c%@\u201d and carries on."
           }
         }
       }
     },
     "capability.fallback.featureAbsent" : {
-      "comment" : "What happens instead.",
+      "comment" : "What the named consumers do instead.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "That part of the app does not run."
+            "value" : "does not run."
           }
         }
       }
     },
     "capability.fallback.fullFunction" : {
-      "comment" : "What happens instead when a capability is missing.",
+      "comment" : "What the named consumers do instead: this signal is not one they need.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nothing depends on it."
+            "value" : "carries on unchanged."
           }
         }
       }
     },
     "capability.fallback.showUnavailable" : {
-      "comment" : "What happens instead.",
+      "comment" : "What the named consumers do instead.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "There is nothing to fall back to, so the app says so."
+            "value" : "has nothing to fall back to, and says so."
           }
         }
       }
     },
     "capability.fallback.suppressOnly" : {
-      "comment" : "What happens instead. The safe direction for every suppression rule.",
+      "comment" : "What the named consumers do instead. The safe direction for every suppression rule.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The app does less, never more."
+            "value" : "does less, never more."
+          }
+        }
+      }
+    },
+    "capability.consumer.activationTimeline" : {
+      "comment" : "Names one thing the app does with a signal, so a fallback sentence says WHOSE fallback it is.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The record of what was in front"
+          }
+        }
+      }
+    },
+    "capability.consumer.dwellAttribution" : {
+      "comment" : "Names one thing the app does with a signal, so a fallback sentence says WHOSE fallback it is.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Time spent in each app"
+          }
+        }
+      }
+    },
+    "capability.consumer.displayFairness" : {
+      "comment" : "Names one thing the app does with a signal, so a fallback sentence says WHOSE fallback it is.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fairness across displays"
+          }
+        }
+      }
+    },
+    "capability.consumer.presentationSuppression" : {
+      "comment" : "Names one thing the app does with a signal, so a fallback sentence says WHOSE fallback it is.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Standing down while you present"
+          }
+        }
+      }
+    },
+    "capability.consumer.mediaSuppression" : {
+      "comment" : "Names one thing the app does with a signal, so a fallback sentence says WHOSE fallback it is.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Standing down while a mic is live"
+          }
+        }
+      }
+    },
+    "capability.consumer.lifecyclePause" : {
+      "comment" : "Names one thing the app does with a signal, so a fallback sentence says WHOSE fallback it is.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pausing on lock and sleep"
+          }
+        }
+      }
+    },
+    "capability.consumer.idlePause" : {
+      "comment" : "Names one thing the app does with a signal, so a fallback sentence says WHOSE fallback it is.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pausing when you step away"
+          }
+        }
+      }
+    },
+    "capability.consumer.classification" : {
+      "comment" : "Names one thing the app does with a signal, so a fallback sentence says WHOSE fallback it is.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Judging what belongs to your priority"
+          }
+        }
+      }
+    },
+    "capability.consumer.nudgeLadder" : {
+      "comment" : "Names one thing the app does with a signal, so a fallback sentence says WHOSE fallback it is.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nudges"
+          }
+        }
+      }
+    },
+    "capability.consumer.analytics" : {
+      "comment" : "Names one thing the app does with a signal, so a fallback sentence says WHOSE fallback it is.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your local summaries"
+          }
+        }
+      }
+    },
+    "capability.fallback.attributed" : {
+      "comment" : "One fallback line. %1$@ is the list of things this answer is true of, %2$@ is what they do.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: %2$@"
           }
         }
       }

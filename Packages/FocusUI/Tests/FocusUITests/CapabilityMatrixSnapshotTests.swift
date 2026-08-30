@@ -186,7 +186,7 @@ struct CapabilityMatrixSnapshotTests {
             #expect(!drawn.isEmpty, "\(capability.rawValue) is not available and drew nothing")
 
             // No repeats…
-            let tokens = drawn.map(\.token)
+            let tokens = drawn.map(\.fallback.token)
             #expect(Set(tokens).count == tokens.count)
 
             // …and every one of them is an answer the contract really gives for this capability.
@@ -196,6 +196,130 @@ struct CapabilityMatrixSnapshotTests {
                 }
             )
             #expect(Set(tokens) == declared, "\(capability.rawValue) drew \(tokens) against \(declared)")
+
+            // What changed is drawn before what did not: "carries on unchanged" is the
+            // complement and usually the longest list, and it used to arrive first.
+            if let unchanged = tokens.firstIndex(of: CapabilityFallback.fullFunction.token) {
+                #expect(
+                    unchanged == tokens.count - 1,
+                    "\(capability.rawValue) drew the unchanged line above a degradation"
+                )
+            }
+
+            // **Every consumer appears on exactly one line** (focus-doc). The lines partition the
+            // ten consumers, so no line can be true of somebody it does not name and none can be
+            // read as an app-level claim — which is what four unattributed sentences under
+            // "Which app is in front" were doing to each other.
+            let attributed = drawn.flatMap(\.consumers)
+            #expect(
+                Set(attributed) == Set(SensingConsumer.allCases),
+                "\(capability.rawValue) attributed \(attributed.count) of ten consumers"
+            )
+            #expect(attributed.count == SensingConsumer.allCases.count)
+            for (fallback, consumers) in drawn {
+                #expect(!consumers.isEmpty)
+                for consumer in consumers {
+                    #expect(
+                        CapabilityContract.fallback(for: capability, consumer: consumer).token
+                            == fallback.token,
+                        "\(capability.rawValue) put \(consumer.rawValue) under \(fallback.token)"
+                    )
+                }
+            }
+        }
+    }
+
+    /// **The defect this suite could not see, asserted as text** (focus-doc).
+    ///
+    /// The four sentences that shipped under *"Which app is in front"* — *"There is nothing to
+    /// fall back to, so the app says so."* / *"That part of the app does not run."* / *"The app
+    /// does less, never more."* / *"Nothing depends on it."* — were each a complete sentence with
+    /// no subject, so a reader supplied one, and the only subject available was the app. The last
+    /// was then false of an app whose Watching section two inches above says the app in front is
+    /// watched.
+    ///
+    /// Two claims, and neither is about a picture. A fallback predicate may not begin with a
+    /// capital or name the app; and the line as drawn must begin with the consumers it is about.
+    @Test(
+        "no fallback line can be read as a claim about the app",
+        .enabled(if: LocalizationLane.catalogsAreCompiled)
+    )
+    func everyFallbackLineNamesItsConsumers() {
+        let predicates: [CapabilityFallback] = [
+            .fullFunction, .featureAbsent, .suppressOnly, .showUnavailable,
+            .degraded(to: .frontmostApplication)
+        ]
+        for fallback in predicates {
+            let text = CapabilityMatrixView.predicate(fallback)
+            #expect(!text.isEmpty)
+            #expect(
+                text.first?.isUppercase != true,
+                "\"\(text)\" starts a sentence, so it reads as a claim of its own"
+            )
+            #expect(
+                !text.lowercased().contains("the app "),
+                "\"\(text)\" says what THE APP does; a fallback is what one consumer does"
+            )
+        }
+
+        // And the drawn line puts the subject in front of it.
+        let matrix = CapabilityFixture.everyState
+        for capability in Capability.allCases where !matrix.isAvailable(capability) {
+            for (fallback, consumers) in CapabilityMatrixView.fallbacks(for: capability, in: matrix) {
+                let subject = CapabilityMatrixView.subject(consumers)
+                #expect(!subject.isEmpty)
+                for consumer in consumers {
+                    let name = ShellStrings.string(CapabilityMatrixView.labelKey(for: consumer))
+                    #expect(subject.contains(name), "\(subject) does not name \(name)")
+                }
+                #expect(!CapabilityMatrixView.predicate(fallback).contains(subject))
+            }
+        }
+    }
+
+    /// **Both halves of a fallback line are authored prose, so both must pseudo-localise.**
+    ///
+    /// `ShellText` expands the format it is handed and leaves its arguments alone, which is
+    /// exactly right for the one place that mechanism was built for — the user's own words in
+    /// the refinement strip — and exactly wrong here, where the arguments are two catalog
+    /// entries. Without the transform reaching them the matrix would draw a 2× heading over
+    /// unexpanded fallback lines and `capabilityComponentsExpand` would report a row narrower
+    /// than any real translation will make it.
+    @Test(
+        "a fallback line's consumer list and its predicate both expand under the pseudo-locale",
+        .enabled(if: LocalizationLane.catalogsAreCompiled)
+    )
+    func bothHalvesOfAFallbackLinePseudoLocalise() {
+        let plainSubject = CapabilityMatrixView.subject([.nudgeLadder, .analytics])
+        let pseudoSubject = CapabilityMatrixView.subject(
+            [.nudgeLadder, .analytics], transform: PseudoLocale.transform
+        )
+        #expect(pseudoSubject.count > plainSubject.count)
+        #expect(pseudoSubject.contains(PseudoLocale.opening))
+
+        for fallback in [
+            CapabilityFallback.fullFunction, .featureAbsent, .suppressOnly, .showUnavailable,
+            .degraded(to: .frontmostApplication)
+        ] {
+            let plain = CapabilityMatrixView.predicate(fallback)
+            let pseudo = CapabilityMatrixView.predicate(fallback, transform: PseudoLocale.transform)
+            #expect(pseudo.count > plain.count, "\(fallback.token) did not expand: \(pseudo)")
+            #expect(pseudo.contains(PseudoLocale.opening))
+        }
+    }
+
+    /// Ten consumers, ten distinct names — a list that reads "Nudges and Nudges" names nothing.
+    @Test(
+        "every sensing consumer has its own name",
+        .enabled(if: LocalizationLane.catalogsAreCompiled)
+    )
+    func everyConsumerIsNamed() {
+        let names = SensingConsumer.allCases
+            .map { ShellStrings.string(CapabilityMatrixView.labelKey(for: $0)) }
+        #expect(names.count == 10)
+        #expect(Set(names).count == names.count, "two consumers read the same: \(names)")
+        for name in names {
+            #expect(!name.isEmpty)
         }
     }
 
@@ -211,6 +335,14 @@ struct CapabilityMatrixSnapshotTests {
         var strings = CapabilityMatrixView.contentKeys.map(ShellStrings.string)
         strings += Capability.allCases.map { ShellStrings.string(CapabilityMatrixView.labelKey(for: $0)) }
         strings += CapabilityState.allCases.map { ShellStrings.string(CapabilityMatrixView.labelKey(for: $0)) }
+        // The fallback lines too, both halves — they are the only prose on this pane that is
+        // composed at draw time, and focus-doc added ten more strings to it.
+        strings += SensingConsumer.allCases
+            .map { ShellStrings.string(CapabilityMatrixView.labelKey(for: $0)) }
+        strings += [
+            CapabilityFallback.fullFunction, .featureAbsent, .suppressOnly, .showUnavailable,
+            .degraded(to: .frontmostApplication)
+        ].map { CapabilityMatrixView.predicate($0) }
 
         // Words an ask is made of. A surface that says "allow", "grant", "enable" or "open
         // System Settings" is asking, whatever the button is called.
