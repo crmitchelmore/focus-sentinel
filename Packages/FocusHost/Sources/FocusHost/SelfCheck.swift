@@ -1544,8 +1544,17 @@ enum SelfCheck {
         // "nobody ever told the panel anything" are the same reading on a machine whose
         // appearance happens to be the default.
         report["undoManagerAdopted"] = composition.priorityHost.journalUndoManager != nil
-        report["undoManagerIsTheKeyWindows"] =
-            composition.priorityHost.journalUndoManager === NSApp.keyWindow?.undoManager
+        // **Read off the cockpit, never off `NSApp.keyWindow`** (focus-jax).
+        //
+        // This is the sixth of the six assertions the gate failed twice in five runs on a tree
+        // whose wiring was correct. `NSApp.keyWindow` is `nil` in an application that is not
+        // active, so a reading taken through it turns "another app came forward" into "the
+        // cockpit never handed the journal its manager" — a sentence about a wire, made out of a
+        // fact about the machine. The cockpit window exists either way, and it is the window
+        // whose manager the claim is about, so it is the one the reading is taken through.
+        report["undoManagerIsTheCockpitWindows"] =
+            liveCockpitWindow() != nil
+            && composition.priorityHost.journalUndoManager === liveCockpitWindow()?.undoManager
         report["capturePanelTraitsAdopted"] = composition.quickCapturePanel.adoptedTraits != nil
 
         // **The cockpit's content is somewhere a person can scroll** (focus-2er).
@@ -2087,6 +2096,11 @@ enum SelfCheck {
         // that works for a manager `PriorityStore` would never have written to. What F-93 claims
         // is that the *journal* reaches the standard Edit menu, so the journal's manager is the
         // one the reading is taken through, and its absence is a failure rather than a fallback.
+        // Before the guard, so a run in which the journal holds nothing still says whether the
+        // window it should have come from was there.
+        let cockpit = liveCockpitWindow()
+        report["cockpitWindowExists"] = cockpit != nil
+
         let manager = AppComposition.shared.priorityHost.journalUndoManager
         guard let manager else {
             report["available"] = false
@@ -2105,8 +2119,6 @@ enum SelfCheck {
         // `adoptUndoManager` breaks. Reading it off `liveCockpitWindow()` rather than off
         // `NSApp.keyWindow` is what makes it front-free: the cockpit exists whether or not this
         // process is active, and the key window does not.
-        let cockpit = liveCockpitWindow()
-        report["cockpitWindowExists"] = cockpit != nil
         report["cockpitUndoManagerIsJournal"] = cockpit != nil && cockpit?.undoManager === manager
 
         // --- the preconditions of the half that does, asked before it is taken ---------------

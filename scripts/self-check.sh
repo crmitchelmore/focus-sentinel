@@ -739,10 +739,16 @@ check(
     "the cockpit handed the journal the window's own undo manager (F-93)",
     shell.get("undoManagerAdopted"),
 )
+# **The sixth of focus-jax's six, and now front-free.** It read
+# `journalUndoManager === NSApp.keyWindow?.undoManager`, and a background application has no key
+# window at all — so on the two runs in five where the front was lost this failed as "the manager
+# the journal holds is not the window's", which is a claim about a wire built out of a fact about
+# the machine. The cockpit window is there whichever application is frontmost, and it is the
+# window the claim is about.
 check(
-    shell.get("undoManagerIsTheKeyWindows") is True,
-    "the manager the journal holds is the key window's own",
-    shell.get("undoManagerIsTheKeyWindows"),
+    shell.get("undoManagerIsTheCockpitWindows") is True,
+    "the manager the journal holds is the cockpit window's own",
+    shell.get("undoManagerIsTheCockpitWindows"),
 )
 # A sentinel, not a comparison: `QuickCaptureModel` is initialised with `.systemDefault`, so
 # "the shell themed the panel" and "nobody ever told the panel anything" are the same reading
