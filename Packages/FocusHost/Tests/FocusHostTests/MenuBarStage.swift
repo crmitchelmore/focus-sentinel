@@ -62,10 +62,41 @@ enum MenuBarStage {
         if let onDidShow { controller.onPopoverDidShow = onDidShow }
         controller.update(presentation)
 
-        for _ in 0..<6 where !controller.isPopoverShown {
+        for _ in 0..<6 where !isAnchored(controller) {
+            if controller.isPopoverShown { controller.closePopover() }
+            NudgeHostFixture.settle(0.2)
             controller.togglePopover()
             NudgeHostFixture.settle(0.2)
         }
         try #require(controller.isPopoverShown, "the popover never opened, so nothing below is a reading")
+        try #require(
+            isAnchored(controller),
+            "the popover opened at \(controller.popoverFrame), which is not on any display"
+        )
+    }
+
+    /// **Whether the popover AppKit placed is on a display at all** (focus-5yu).
+    ///
+    /// Measured on this rig: a popover shown on a status item the same process installed
+    /// milliseconds earlier is placed at (0, -4, 326, 816) in roughly three runs in four, while
+    /// the button reads (1493, 1050, 70, 30) — AppKit anchored it to nothing and dropped it in the
+    /// corner, four points below the bottom edge of the screen. In the shipping app `install()` and
+    /// the person's click are separated by the life of the application; here they are separated by
+    /// one settle, so the stage asks again rather than handing a suite a popover to measure that
+    /// the window server never placed.
+    ///
+    /// It is deliberately the **weakest** placement question — is this window on a display —
+    /// rather than the reading the suites take. A stage that asserted reachability would be a
+    /// stage that could not produce the unreadable popover `MenuBarPopoverReadingTests` drives.
+    static func isAnchored(_ controller: MenuBarController) -> Bool {
+        guard controller.isPopoverShown else { return false }
+        let frame = controller.popoverFrame
+        guard !frame.isEmpty else { return false }
+        return NudgePanelController.currentScreens().contains { screen in
+            frame.minX >= screen.frame.minX
+                && frame.maxX <= screen.frame.maxX
+                && frame.minY >= screen.frame.minY
+                && frame.maxY <= screen.frame.maxY
+        }
     }
 }
