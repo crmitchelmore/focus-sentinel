@@ -220,10 +220,17 @@ check(
 
 # --- the correction economy has a surface to be on ---------------------------------------------
 #
-# Rung 3 landing on "the panel" means nothing if the panel is not a real, correctly configured
-# window. R-89's six properties are asserted on the object the application actually showed.
+# The top rung landing on "the panel" means nothing if the panel is not a real, correctly
+# configured window. R-89's six properties are asserted on the object the application actually
+# showed.
+#
+# **This used to say "Rung 3", and the assertion below used to say the panel is what the top rung
+# "falls back to".** Both described the deleted mechanism: U-2 cut the ladder to two rungs, so the
+# top rung IS the panel and it falls back from nothing. The two assertions above this line already
+# read the top rung's rank out of the report; a comment claiming a third rung over them told a
+# reader the gate was checking something it was not.
 panel = report.get("panel") or {}
-check(panel.get("wasVisible") is True, "the panel the top rung falls back to really appears", panel.get("wasVisible"))
+check(panel.get("wasVisible") is True, "the panel the top rung lands on really appears", panel.get("wasVisible"))
 check(
     panel.get("propertiesAreCorrect") is True,
     "that panel is non-activating, key-capable, never main and never hides on deactivate",
