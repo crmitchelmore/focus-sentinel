@@ -549,6 +549,7 @@ public final class MenuBarController {
         redraw(force: false)
         guard popover.isShown else { return }
         popover.contentViewController = popoverController()
+        reanchorPopover()
         // A nudge that arrived while the popover was already open is a nudge the person is
         // looking at, and the loop is told for the same reason it is told about an opening.
         //
@@ -819,6 +820,28 @@ public final class MenuBarController {
         popover.contentViewController = popoverController()
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
         onPopoverDidShow?()
+    }
+
+    /// **Put an already-open popover back under the item it hangs from** (focus-5yu).
+    ///
+    /// A nudge arriving in a popover somebody is already looking at replaces its content view
+    /// controller, and the replacement is a different height. Measured on the real popover:
+    /// opened on a status row it stood at (1383, 830, 326, 466)… after the question arrived and
+    /// made it 466 points tall, it was still at y = 830, so it now spanned 830 → 1296 on a
+    /// 1080-point display. It had grown **upward**, 216 points of it above the top of the screen
+    /// and its arrow nowhere near the item, and the question was in the part that was gone.
+    ///
+    /// `NSPopover` re-lays-out for a new content size but does not re-place itself for one, so
+    /// the placement is asked for again here — the same call `togglePopover()` makes, with the
+    /// same anchor. Re-showing an already-shown popover moves it; it does not close it, and it
+    /// posts no second appearance, which is why `onPopoverDidShow` stays where it is and is
+    /// still fired once, for the nudge rather than for the placement.
+    ///
+    /// Placed after the assignment, never before: the popover has to be holding the content it
+    /// is being placed for, or it would be re-anchored at the size of the thing it is replacing.
+    private func reanchorPopover() {
+        guard popover.isShown, let button = statusItem?.button else { return }
+        popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
     }
 
     public var isPopoverShown: Bool { popover.isShown }
