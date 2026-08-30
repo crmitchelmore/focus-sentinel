@@ -64,6 +64,27 @@ cd "$REPO_ROOT" || exit 1
 
 rc=0
 
+# **Two flags, and both exist for the self-test at the foot of this file** (focus-cv3).
+#
+#   --reachability-only   run only the "reachable, not merely mentioned" section, and do not
+#                         recurse into the self-test. This is what each mutation run invokes on
+#                         its own copy of the tree, so a mutation costs one section rather than
+#                         four.
+#   --no-self-test        skip the self-test on a full run. For an inner loop; the gate never
+#                         passes it, because a guard that is only checked when somebody
+#                         remembers to check it is a guard with a schedule rather than a proof.
+ONLY_REACHABILITY=0
+SELF_TEST=1
+for argument in "$@"; do
+    case "$argument" in
+        --reachability-only) ONLY_REACHABILITY=1; SELF_TEST=0 ;;
+        --no-self-test) SELF_TEST=0 ;;
+        *) print -u2 "usage: ${0:t} [--reachability-only] [--no-self-test]"; exit 2 ;;
+    esac
+done
+
+if (( ! ONLY_REACHABILITY )); then
+
 print "== hardcoded user-visible strings"
 
 typeset -a SOURCE_ROOTS
@@ -610,6 +631,8 @@ PYTHON
 catalog_rc=$?
 (( catalog_rc != 0 )) && rc=1
 
+fi
+
 print
 print "== reachable, not merely mentioned"
 
@@ -668,9 +691,9 @@ print "== reachable, not merely mentioned"
 #      for as long as the file existed. Closed: the expression must contain a call to one of the
 #      app's drawing entry points.
 #
-# Each was closed by asking a sharper question, never by naming the string that exploited it: no
-# name a `case` declares counts as a use, both rules read comment-stripped source, the path match
-# is on a boundary, and the expression has to be a drawing.
+# `--self-test` at the foot of this script mutates the tree each of those ways and asserts the
+# lint goes RED. A guard whose only evidence is that it caught the strings it was written against
+# is the pattern this programme keeps paying for.
 #
 # ## What it still cannot do, said plainly rather than left to be discovered
 #
@@ -1062,6 +1085,312 @@ print("reachability OK")
 PYTHON
 reachable_rc=$?
 (( reachable_rc != 0 )) && rc=1
+
+# --- the guard's own proof ---------------------------------------------------------------------
+#
+# **Mutation, because a guard's only evidence was that it caught the strings it was written
+# against** (focus-cv3).
+#
+# Everything above is a lint. Nothing above says the lint can FAIL. That is the pattern this
+# programme keeps paying for — a proof written to the known failure, counted as coverage — and it
+# is why `6db2351`'s blessing rule shipped with four one-line bypasses in it.
+#
+# So the reachability rule is mutated, on a throwaway copy of the tree, eight ways: one control
+# that must stay GREEN, three that orphan a string and must go RED, and four that orphan a string
+# and then try each closed bypass in turn, which must ALSO go RED. Each mutation run is
+# `--reachability-only`, so the whole proof costs about a second.
+#
+# The control is not a formality. If the copy were incomplete, every mutation would go red for the
+# wrong reason and the whole proof would be a tautology about a broken directory.
+
+if (( SELF_TEST )); then
+    print
+    print "== the guard's own proof (mutation)"
+    python3 - "$REPO_ROOT" <<'PYTHON'
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+
+root = sys.argv[1]
+COPIED = (
+    "Config",
+    "App",
+    "Packages/FocusCore/Sources",
+    "Packages/FocusUI/Sources",
+    "Packages/FocusHost/Sources",
+)
+DECLARATION = re.compile(r'^\s*case\s+([A-Za-z_]\w*)\s*=\s*"([^"]+)"\s*$')
+
+UI_KEYS = "Packages/FocusUI/Sources/FocusUI/Resources/Localizable.xcstrings"
+UI_SOURCES = "Packages/FocusUI/Sources"
+CORE_KEYS = "Packages/FocusCore/Sources/FocusCore/Resources/Localizable.xcstrings"
+REGISTRY = "Config/string-draw-sites.txt"
+
+failures = []
+
+
+def victim():
+    """A named `FocusUI` key to orphan, chosen from the tree rather than written down here.
+
+    Naming a key in this file would be a fifth place the vocabulary lives, and it would rot the
+    day somebody renamed it. The first declaration in sorted order is as good as any: what is
+    being proved is that the rule has power, not that it has power over one particular sentence.
+    """
+    with open(os.path.join(root, UI_KEYS)) as handle:
+        keys = set(json.load(handle).get("strings", {}))
+    for base, _dirs, names in os.walk(os.path.join(root, UI_SOURCES)):
+        for name in sorted(names):
+            if not name.endswith(".swift"):
+                continue
+            path = os.path.join(base, name)
+            with open(path) as handle:
+                for line in handle:
+                    found = DECLARATION.match(line)
+                    if found and found.group(2) in keys:
+                        return found.group(1), found.group(2)
+    return None, None
+
+
+CASE_NAME, CASE_KEY = victim()
+if CASE_NAME is None:
+    print("FAIL [F-149] self-test found no named key to orphan — the proof is blind",
+          file=sys.stderr)
+    sys.exit(1)
+
+
+def fresh():
+    directory = tempfile.mkdtemp(prefix="focus-string-guard-")
+    os.makedirs(os.path.join(directory, "scripts"))
+    shutil.copy2(
+        os.path.join(root, "scripts", "check-strings.sh"),
+        os.path.join(directory, "scripts", "check-strings.sh"),
+    )
+    for relative in COPIED:
+        shutil.copytree(
+            os.path.join(root, relative),
+            os.path.join(directory, relative),
+            symlinks=True,
+        )
+    return directory
+
+
+def orphan_the_named_key(directory):
+    """Rename every USE of the victim case, leaving its declaration alone.
+
+    That is exactly the shape of the defect: the last reader of a string goes, the `case … = "…"`
+    stays, and the catalog keeps a sentence no route can produce.
+    """
+    pattern = re.compile(r'(?<![A-Za-z0-9_])' + re.escape(CASE_NAME) + r'\b')
+    for base, _dirs, names in os.walk(os.path.join(directory, UI_SOURCES)):
+        for name in sorted(names):
+            if not name.endswith(".swift"):
+                continue
+            path = os.path.join(base, name)
+            with open(path) as handle:
+                lines = handle.read().split("\n")
+            changed = False
+            for index, line in enumerate(lines):
+                if DECLARATION.match(line):
+                    continue
+                replaced = pattern.sub(CASE_NAME + "Renamed", line)
+                if replaced != line:
+                    lines[index] = replaced
+                    changed = True
+            if changed:
+                with open(path, "w") as handle:
+                    handle.write("\n".join(lines))
+
+
+def append(directory, relative, text):
+    with open(os.path.join(directory, relative), "a") as handle:
+        handle.write(text)
+
+
+def first_row(directory):
+    """The line number, prefix, path and expression of the registry's first real row."""
+    path = os.path.join(directory, REGISTRY)
+    with open(path) as handle:
+        lines = handle.read().split("\n")
+    for index, line in enumerate(lines):
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        parts = [part.strip() for part in stripped.split("|")]
+        if len(parts) == 3:
+            return path, lines, index, parts
+    return path, lines, None, None
+
+
+def rewrite_row(directory, replacement):
+    path, lines, index, parts = first_row(directory)
+    if index is None:
+        return None
+    lines[index] = replacement(parts)
+    with open(path, "w") as handle:
+        handle.write("\n".join(lines))
+    return parts
+
+
+def remove_the_drawing(directory):
+    """Delete the expression the registry's first row points at, from the file it points at."""
+    _path, _lines, index, parts = first_row(directory)
+    if index is None:
+        return None
+    drawing = os.path.join(directory, parts[1])
+    with open(drawing) as handle:
+        text = handle.read()
+    with open(drawing, "w") as handle:
+        handle.write(text.replace(parts[2], "// the drawing was removed"))
+    return parts
+
+
+def run(directory):
+    finished = subprocess.run(
+        [os.path.join(directory, "scripts", "check-strings.sh"), "--reachability-only"],
+        capture_output=True,
+        text=True,
+    )
+    return finished.returncode, finished.stdout + finished.stderr
+
+
+def expect(name, want_red, mutate, needle=None):
+    directory = fresh()
+    try:
+        mutate(directory)
+        code, output = run(directory)
+        red = code != 0
+        if red != want_red:
+            failures.append(
+                f"{name}: expected {'RED' if want_red else 'GREEN'}, got "
+                f"{'RED' if red else 'GREEN'}"
+            )
+            print(f"FAIL [F-149] mutation `{name}` did not move the lint", file=sys.stderr)
+            for line in output.strip().split("\n")[-12:]:
+                print(f"    {line}", file=sys.stderr)
+            return
+        if needle is not None and needle not in output:
+            failures.append(f"{name}: went RED without saying {needle!r}")
+            print(f"FAIL [F-149] mutation `{name}` failed for the wrong reason", file=sys.stderr)
+            for line in output.strip().split("\n")[-12:]:
+                print(f"    {line}", file=sys.stderr)
+            return
+        print(f"ok   {name}: {'RED' if red else 'GREEN'}, as the rule claims")
+    finally:
+        shutil.rmtree(directory, ignore_errors=True)
+
+
+# The control. A copy nobody touched must pass, or every RED below proves nothing.
+expect("an untouched copy of the tree", False, lambda directory: None)
+
+# --- Rule 1 has power, and none of its three closed bypasses restores it ----------------------
+
+expect(
+    f"the last reader of `{CASE_KEY}` deleted",
+    True,
+    orphan_the_named_key,
+    "blessed only by the line that spells it",
+)
+
+expect(
+    "…and a second `case` of the same name added (bypass 1)",
+    True,
+    lambda directory: (
+        orphan_the_named_key(directory),
+        append(
+            directory,
+            os.path.join(UI_SOURCES, "FocusUI", "Design", "ShellText.swift"),
+            f"\n\nenum StringGuardSelfTest {{ case {CASE_NAME} }}\n",
+        ),
+    ),
+    "blessed only by the line that spells it",
+)
+
+expect(
+    "…and the case name written in comments instead (bypass 2)",
+    True,
+    lambda directory: (
+        orphan_the_named_key(directory),
+        append(
+            directory,
+            os.path.join(UI_SOURCES, "FocusUI", "Design", "ShellText.swift"),
+            f"\n// {CASE_NAME}\nlet selfTestNote = 0 // {CASE_NAME}\n"
+            f"/*\n {CASE_NAME}\n*/\n",
+        ),
+    ),
+    "blessed only by the line that spells it",
+)
+
+expect(
+    "…and the case name written inside a string literal (bypass 2)",
+    True,
+    lambda directory: (
+        orphan_the_named_key(directory),
+        append(
+            directory,
+            os.path.join(UI_SOURCES, "FocusUI", "Design", "ShellText.swift"),
+            f'\nlet selfTestLiteral = "{CASE_NAME}"\n',
+        ),
+    ),
+    "blessed only by the line that spells it",
+)
+
+# --- Rule 2 has power, and none of its two closed bypasses restores it ------------------------
+
+expect(
+    "the drawing a registry row points at deleted",
+    True,
+    remove_the_drawing,
+    "is gone from",
+)
+
+expect(
+    "…and the expression pasted back into a comment (bypass 2)",
+    True,
+    lambda directory: (
+        remove_the_drawing(directory),
+        append(
+            directory,
+            first_row(directory)[3][1],
+            "\n// " + first_row(directory)[3][2] + "\n",
+        ),
+    ),
+    "is gone from",
+)
+
+expect(
+    "a registry row pointed at a test directory (bypass 3)",
+    True,
+    lambda directory: rewrite_row(
+        directory,
+        lambda parts: f"{parts[0]} | AppTests/Fake.swift | {parts[2]}",
+    ),
+    "a test cannot bless a string",
+)
+
+expect(
+    "a registry row whose expression draws nothing (bypass 4)",
+    True,
+    lambda directory: rewrite_row(
+        directory,
+        lambda parts: f"{parts[0]} | {parts[1]} | import SwiftUI",
+    ),
+    "is not a drawing",
+)
+
+print()
+if failures:
+    print(f"GUARD PROOF FAILED — {len(failures)} mutation(s) the lint did not notice",
+          file=sys.stderr)
+    sys.exit(1)
+print("the reachability guard fails when it should")
+PYTHON
+    selftest_rc=$?
+    (( selftest_rc != 0 )) && rc=1
+fi
 
 print
 if (( rc == 0 )); then
