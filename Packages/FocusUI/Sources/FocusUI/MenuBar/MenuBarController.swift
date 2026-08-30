@@ -325,6 +325,27 @@ public final class MenuBarController {
     /// delivered on landing instead.
     public var onPopoverDidShow: (() -> Void)?
 
+    /// **The item was actually written to** — the wire that makes a charge a *consequence* of a
+    /// write rather than a sibling of one (focus-1b5, focus-nrl).
+    ///
+    /// Fired at the end of `redraw(force:)`, and only when the picture or the announcement really
+    /// changed. The composition root joins it to `NudgeHost.menuBarItemRedrawn()`, which is the
+    /// only place in the programme a glyph rung is ever charged.
+    ///
+    /// ## Why this exists rather than the loop asking
+    ///
+    /// The loop *did* ask, and the asking is the shape three rounds of this defect kept: the
+    /// host requested a redraw and then charged, on the ground that the item would change. It
+    /// did not — the request is coalesced away when two consecutive rungs compose the same
+    /// picture (focus-1b5), and the picture is the badge's rather than the rung's whenever a
+    /// badge nudge is pending (focus-nrl). A request is not a write, and only the object that
+    /// makes the assignment knows the difference.
+    ///
+    /// It carries no payload: the listener reads `glyphWriteCount` and `markOnTheItem` back,
+    /// which are what the item *is*, rather than being handed a description of the pass that it
+    /// would then have to trust.
+    public var onGlyphWritten: (() -> Void)?
+
     private var statusItem: NSStatusItem?
     private let popover = NSPopover()
     private var presentation = MenuBarPresentation(status: .uncertain)
@@ -366,6 +387,16 @@ public final class MenuBarController {
     /// that something was said.
     public private(set) var lastAnnouncement: String?
 
+    /// **The mark the item is actually drawing right now** (focus-nrl).
+    ///
+    /// Read off `drawnGlyph` — what was last *assigned* — and never off `presentation`, which is
+    /// what was last *asked for*. The two differ exactly where focus-nrl lives:
+    /// `MenuBarPresentation.attention` is the maximum of the rung's mark and the badge's, so a
+    /// glyph rung standing under a pending badge nudge asks the item for `noticing` and the item
+    /// goes on drawing `waiting`. The presentation would report the rung was marked; the button
+    /// says it was not, and this is the button's answer.
+    public var markOnTheItem: MenuBarAttention { drawnGlyph?.attention ?? .unmarked }
+
     public init(traits: AppearanceTraits = .systemDefault) {
         self.traits = traits
         popover.behavior = .transient
@@ -394,6 +425,12 @@ public final class MenuBarController {
         NSStatusBar.system.removeStatusItem(statusItem)
         self.statusItem = nil
         drawnTitle = nil
+        // **The picture goes with the item it was drawn on** (focus-nrl). `markOnTheItem` is a
+        // reading of what a person can see, and there is no item to see: leaving the last mark
+        // behind would let a re-installed item be charged for a rung it had never drawn.
+        drawnGlyph = nil
+        drawnAccessibilityLabel = nil
+        announcedGlyph = nil
     }
 
     public var isInstalled: Bool { statusItem != nil }
@@ -458,14 +495,22 @@ public final class MenuBarController {
         // A figure nobody can see is not a figure worth writing (F-163).
         guard isItemVisible || force else { return }
 
+        // **What the item actually did in this pass**, so `onGlyphWritten` fires on a write and
+        // never on a request for one. That distinction is focus-1b5's whole mechanism seen from
+        // this end: `setOpenRung(_:)` asked for a redraw only when the composed mark changed, and
+        // this function then coalesced on the same value, so a "forced refresh" of two
+        // consecutive `noticing` rungs assigned nothing at all.
+        var theItemMoved = false
+
         let glyph = DrawnGlyph(status: presentation.status, attention: presentation.attention)
         if force || glyph != drawnGlyph {
             button.image = Self.glyph(for: glyph.status, attention: glyph.attention)
             drawnGlyph = glyph
             glyphWriteCount += 1
+            theItemMoved = true
         }
         button.imagePosition = presentation.timerText.isEmpty ? .imageOnly : .imageLeading
-        announceGlyphChange(button: button, glyph: glyph)
+        if announceGlyphChange(button: button, glyph: glyph) { theItemMoved = true }
 
         let label = Self.accessibilityLabel(presentation)
         if force || label != drawnAccessibilityLabel {
@@ -474,10 +519,18 @@ public final class MenuBarController {
         }
 
         let title = Self.buttonTitle(presentation)
-        guard force || title != drawnTitle else { return }
-        button.attributedTitle = MenuBarTitle.attributed(title)
-        drawnTitle = title
-        titleWriteCount += 1
+        if force || title != drawnTitle {
+            button.attributedTitle = MenuBarTitle.attributed(title)
+            drawnTitle = title
+            titleWriteCount += 1
+        }
+
+        // **Last, and only on a real assignment.** Everything above has settled, so a listener
+        // that reads `glyphWriteCount` and `markOnTheItem` back sees the pass it is being told
+        // about rather than a half-written one. The title is deliberately not a reason to fire:
+        // it is the clock, it moves once a second, and a charge that could be paid for by the
+        // timer ticking would be no charge at all.
+        if theItemMoved { onGlyphWritten?() }
     }
 
     /// **What the item is drawing, as one comparable value** (focus-mkk).
@@ -658,8 +711,13 @@ public final class MenuBarController {
     /// `.medium` priority: it is a fact about the app, not an interruption. A high-priority
     /// announcement would cut across whatever the person is having read to them, which is a
     /// louder thing than the glyph it describes.
-    private func announceGlyphChange(button: NSStatusBarButton, glyph: DrawnGlyph) {
-        guard announcedGlyph != glyph else { return }
+    ///
+    /// - Returns: whether anything was actually said. Read by `redraw(force:)`, which fires
+    ///   `onGlyphWritten` on a real assignment to either channel — the picture or the sentence —
+    ///   and on neither channel being touched, on nothing.
+    @discardableResult
+    private func announceGlyphChange(button: NSStatusBarButton, glyph: DrawnGlyph) -> Bool {
+        guard announcedGlyph != glyph else { return false }
         announcedGlyph = glyph
         let sentence = Self.announcement(status: glyph.status, attention: glyph.attention)
         lastAnnouncement = sentence
@@ -672,6 +730,7 @@ public final class MenuBarController {
                 .priority: NSAccessibilityPriorityLevel.medium.rawValue
             ]
         )
+        return true
     }
 
     // MARK: - The popover

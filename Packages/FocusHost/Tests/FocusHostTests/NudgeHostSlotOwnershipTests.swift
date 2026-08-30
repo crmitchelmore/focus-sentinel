@@ -133,6 +133,12 @@ struct NudgeHostSlotOwnershipTests {
     func theGlyphDoesNotHoldTheSlot() throws {
         let fixture = try NudgeHostFixture()
         defer { fixture.tearDown() }
+        // **The item is in the menu bar, exactly as the shipping app has it** (focus-1b5).
+        // The ambient rung *is* the status item: with no item installed there is nothing for it
+        // to change, `MenuBarController.redraw(force:)` refuses to write to an item nobody can
+        // see (F-163), and the loop correctly charges nothing. A fixture without one drives an
+        // app whose menu bar is not there, which is not the state this test is about.
+        try fixture.wireMenuBarToTheLoop()
 
         fixture.host.consider(NudgeHostFixture.unrelatedJudgement(subject: Self.decoy))
         NudgeHostFixture.settle()
@@ -239,6 +245,7 @@ struct NudgeHostSlotOwnershipTests {
     func aBadgeQuestionDoesNotSilenceTheAccusation() throws {
         let fixture = try NudgeHostFixture()
         defer { fixture.tearDown() }
+        try fixture.wireMenuBarToTheLoop()
         fixture.host.choose(reducedInterruption: true)
 
         fixture.host.consider(NudgeHostFixture.uncertainJudgement(subject: Self.other))
@@ -257,9 +264,20 @@ struct NudgeHostSlotOwnershipTests {
             \(String(describing: fixture.host.lastDecision))
             """
         )
+        // **It landed, and it was charged nothing** (focus-nrl). The rung reached the glyph —
+        // which is what this test is about, and what the slot must not have prevented — and the
+        // status item went on drawing the badge's `waiting` mark, because
+        // `MenuBarPresentation.attention` is the *maximum* of the rung's mark and the badge's.
+        // The stronger mark subsuming the weaker is right about what to draw and wrong about what
+        // to charge, and this is the line that says so: nothing is spent for a rung the item
+        // never mentioned, and the rung stays open to be charged the moment the mark falls to it.
         #expect(
-            fixture.host.deliveredCount == 1,
-            "the ambient glyph never lit while an unopened badge question held the slot"
+            fixture.host.landedRungSurface == .menuBar,
+            "the ambient rung never reached the glyph while an unopened question held the slot"
+        )
+        #expect(
+            fixture.host.deliveredCount == 0,
+            "a rung the menu bar never mentioned was charged (focus-nrl)"
         )
         // And the question is still there to be answered — waiting, not spent.
         #expect(fixture.host.pendingPopoverQuery != nil, "the accusation ate the pending question")

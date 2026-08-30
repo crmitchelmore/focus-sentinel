@@ -282,7 +282,16 @@ final class NudgeHost {
         /// falling through a branch. A *settling* receipt about a question nobody saw does not
         /// merely mis-record history — `isSettled(…)` is gate 11, so it permanently silences that
         /// question.
+        ///
+        /// **It is now a consequence of `perceived` below** rather than a second derivation
+        /// beside it: one reading of the real surfaces decides both whether the question is
+        /// charged and what the ledger is later told about it, so the two cannot disagree.
         var readingAtAsk: SurfaceReadability = .unknowable
+        /// What every surface was doing immediately before this question was allowed to change
+        /// one — `OpenRung.observedAtLanding`'s twin, for the twin reason.
+        var observedAtAsk: SurfaceObservation = .nothingSeen
+        /// **The receipt this question was charged on**, or `nil` while nobody has been shown it.
+        var perceived: PerceptibleChange?
         /// The answers the question is offering, by `rawValue`, so a reading taken as it ends asks
         /// about the same set the panel was drawn with.
         var actions: [String] = []
@@ -378,21 +387,29 @@ final class NudgeHost {
         /// Empty when the live rung is not on the panel, which is every surface that has no
         /// actions to be out of reach.
         var panelActions: [String] = []
-        /// **What the surface it landed on could be *proven* to show** — `OpenQuestion`'s
-        /// `readingAtAsk`, on the rung (focus-xix).
+        /// **What every surface was doing at the instant before this rung was allowed to change
+        /// any of them** (focus-1b5, focus-nrl).
         ///
-        /// | surface | readable means |
-        /// |---|---|
-        /// | `panel` | on screen, on a display, and every correction in reach |
-        /// | `menuBar` | the glyph is drawn on the next refresh; the router already refused a
-        ///   hidden menu bar |
-        /// | `popoverBadge` | the popover is **open and showing this rung** |
+        /// The baseline half of the charge's proof, and it is fixed at the landing and never
+        /// re-taken: a rung that reaches nobody now may reach somebody later — when the badge
+        /// question above it is answered and the item's mark falls from `waiting` to the rung's
+        /// own `noticing` — and the change that has to be proven then is the change since the
+        /// **landing**, not since the last redraw.
         ///
-        /// It is the flag that says whether this rung has been counted yet, and it is the same
-        /// flag the question uses for the same reason: `deliverPendingBadgeRung()` refuses to
-        /// count a second time, so an accusation that lands while the popover is already open and
-        /// one the person opens the popover onto are one delivery, not two.
-        var readingAtLanding: SurfaceReadability = .unknowable
+        /// It replaced a `SurfaceReadability` written by hand at each landing. The readability
+        /// was the right shape for the badge, where "the popover is showing it" really is the
+        /// whole question, and the wrong shape for the glyph, where the item is always on screen
+        /// and only a *difference* is perceptible. One field for both meant the glyph's cell was
+        /// filled in from `reachesThePersonOnLanding` — a predicate that answers `true` and
+        /// cannot fail — which is the defect three rounds have now fixed one instance at a time.
+        let observedAtLanding: SurfaceObservation
+        /// **The receipt this rung was charged on, or `nil` while it has been shown to nobody.**
+        ///
+        /// The flag that says whether this rung has been counted, and it is a *proof* rather than
+        /// a `Bool`, so the answer to "why was this charged?" is a value naming the surface and
+        /// the channel. `deliverPendingRung()` refuses to charge twice, so a rung that lands on
+        /// an already-open popover and a rung the person opens the popover onto are one delivery.
+        var perceived: PerceptibleChange?
         /// **The log row this rung's delivery wrote** (focus-xix) — `OpenQuestion.recordID`'s
         /// twin, and for the twin reason: the correction the person presses must complete the
         /// row for the rung they pressed it on.
@@ -767,6 +784,12 @@ final class NudgeHost {
             return
         }
 
+        // **What every surface was doing before this rung was allowed to touch one**
+        // (focus-1b5, focus-nrl). Taken once, above the switch, because every branch below needs
+        // the same baseline and a branch that took its own could take it after its own redraw —
+        // which is the difference between measuring a change and asserting one.
+        let observedBeforeLanding = observation(of: .accusation)
+
         switch surface {
         case .menuBar, .popoverBadge:
             // The glyph and the badge are drawn by the composition root's own menu-bar refresh;
@@ -793,26 +816,34 @@ final class NudgeHost {
             // The split is `NudgeSurface.reachesThePersonOnLanding`'s, which is the question
             // path's own rule stated once for both: the ladder is told the rung landed either
             // way, and the spend and the row wait for `popoverPresented()`.
+            // `setOpenRung(…)` below asks the composition root for a refresh, and that refresh
+            // is what may or may not write to the item. The baseline above is older than the
+            // write it will be compared against, which is what makes the comparison a
+            // measurement.
             landed(on: surface)
             setOpenRung(
                 OpenRung(
                     rung: rung,
                     commitment: commitment,
                     landedOn: surface,
-                    readingAtLanding: surface.reachesThePersonOnLanding ? .readable : .unknowable
+                    observedAtLanding: observedBeforeLanding
                 )
             )
-            if surface.reachesThePersonOnLanding {
-                deliveredRung(surface: surface, rung: rung, priorityID: priorityID)
-            } else {
-                // **The badge may already be open** (focus-uru's redraw, focus-xix's reading).
-                // `setOpenRung(…)` has just redrawn the popover — which is what makes
-                // `pendingPopoverAccusation` reach the surface at all — so this is the first
-                // moment the reading is worth taking. It is idempotent: if the redraw itself
-                // reached `onPopoverDidShow`, this call finds the rung already counted and
-                // refuses.
-                deliverPendingBadgeRung()
-            }
+            // **The rung is charged if — and only if — that redraw showed somebody something.**
+            //
+            // It used to be charged on `reachesThePersonOnLanding`, a predicate that answers
+            // `true` for `.menuBar` and cannot fail. Measured on the shipping loop, that
+            // predicate paid for six glyph landings with one write to the status item
+            // (focus-mkk), then for six more with none at all once a second subject was driven
+            // (focus-1b5), and for six more with none ever whenever a badge nudge was pending —
+            // which is the ordinary state of every Reduce Motion user (focus-nrl).
+            //
+            // This call is idempotent and it is not the only one: the same door is opened by
+            // `popoverPresented()` when somebody clicks the item, and by `menuBarItemRedrawn()`
+            // every time the item is really written to. A rung that reaches nobody now is not
+            // discarded — it stays open and unpaid, and is charged at the first moment the person
+            // can see it, which is what makes focus-nrl's rung recoverable instead of lost.
+            deliverPendingRung()
 
         case .panel:
             panel.update(
@@ -837,13 +868,21 @@ final class NudgeHost {
             // a list written onto the open rung first: the rung is not recorded at all until it is
             // known to have landed somewhere answerable, so there is no half-built rung for this
             // guard to have to unwind (focus-k42).
-            let reading = panel.decisionSurfaceReading(
-                offering: presentation.offeredActionIdentifiers
-            )
-            guard reading.everyActionIsReachable else {
-                logger.error(
-                    "a rung was put on an unreadable panel: \(reading.summary, privacy: .public)"
-                )
+            // **One derivation, and the charge is its consequence** (focus-1b5). The reading is
+            // taken through `PerceptibleChange`, which is the same door the glyph and the badge
+            // go through — so there is no second rule here for a future round to find out of step
+            // with the other two. For a window the proof is a state and honestly so: a window is
+            // absent or present, `isVisible` is a reading of the real `NSWindow`, and every
+            // action is hit-tested where it actually is.
+            guard let change = PerceptibleChange.proven(
+                on: .panel,
+                from: observedBeforeLanding,
+                to: observation(of: .accusation, panelActions: presentation.offeredActionIdentifiers)
+            ) else {
+                let summary = panel.decisionSurfaceReading(
+                    offering: presentation.offeredActionIdentifiers
+                ).summary
+                logger.error("a rung was put on an unreadable panel: \(summary, privacy: .public)")
                 panel.hide()
                 record(
                     deferral: .noSurfaceAvailable,
@@ -865,10 +904,11 @@ final class NudgeHost {
                     commitment: commitment,
                     landedOn: .panel,
                     panelActions: presentation.offeredActionIdentifiers,
-                    readingAtLanding: .readable
+                    observedAtLanding: observedBeforeLanding,
+                    perceived: change
                 )
             )
-            deliveredRung(surface: .panel, rung: rung, priorityID: priorityID)
+            deliveredRung(rung: rung, provenBy: change, priorityID: priorityID)
 
         case .notification:
             // **No rung routes here any more** (U-2). The notification was the recommitment rung's
@@ -972,6 +1012,14 @@ final class NudgeHost {
         }
         openQuestion?.surface = surface
         openQuestion?.actions = presentation.offeredAnswerIdentifiers
+        // **What every surface was doing before this question was allowed to touch one**
+        // (focus-1b5). The question path's twin of `accuse(…)`'s baseline, taken above the switch
+        // for the same reason: a branch that took its own could take it after its own redraw.
+        let observedBeforeAsking = observation(
+            of: .query,
+            panelActions: presentation.offeredAnswerIdentifiers
+        )
+        openQuestion?.observedAtAsk = observedBeforeAsking
 
         switch surface {
         case .panel:
@@ -1005,15 +1053,25 @@ final class NudgeHost {
             // `forgetOpenQuestion()`, which overwrote the constant with `.unknowable` on its way
             // out. One derivation, one gate: a question is delivered only if the value the ledger
             // will later be handed says it could be read.
-            let reading = panel.decisionSurfaceReading(
-                offering: openQuestion?.actions ?? []
+            // **One derivation, and both the charge and the ledger's input are its
+            // consequences** (focus-1b5). The reading goes through `PerceptibleChange`, which is
+            // the door the glyph, the badge and the panel's rung all go through; `readingAtAsk`
+            // — the value `QuestionLedgerPolicy` is handed later — is filled in from the same
+            // answer rather than derived a second time beside it.
+            let change = PerceptibleChange.proven(
+                on: .panel,
+                from: observedBeforeAsking,
+                to: observation(of: .query, panelActions: presentation.offeredAnswerIdentifiers)
             )
-            openQuestion?.readingAtAsk = reading.everyActionIsReachable ? .readable : .notReadable
-            guard openQuestion?.readingAtAsk == .readable else {
+            openQuestion?.readingAtAsk = change == nil ? .notReadable : .readable
+            guard let change else {
+                let summary = panel.decisionSurfaceReading(
+                    offering: presentation.offeredAnswerIdentifiers
+                ).summary
                 logger.error(
                     """
                     a question was put on a panel nobody could answer and was left unwritten: \
-                    \(reading.summary, privacy: .public)
+                    \(summary, privacy: .public)
                     """
                 )
                 endOpenQuestion(.neverDelivered)
@@ -1027,8 +1085,9 @@ final class NudgeHost {
             }
             // On screen, and every answer in reach: the panel is the surface that reaches
             // somebody the moment it lands, so this is both the landing and the delivery.
+            openQuestion?.perceived = change
             deliverQuestion(
-                surface: .panel,
+                provenBy: change,
                 warrant: warrant,
                 priorityID: priorityID,
                 now: surroundings.monotonic
@@ -1073,8 +1132,12 @@ final class NudgeHost {
     ///
     /// One function and one call per question, so "delivered" cannot be recorded twice for a
     /// badge question that is asked once and read once.
+    /// - Parameter change: the receipt, with no default, for the reason `deliveredRung(_:…)`
+    ///   has one. The question path already waited on a real reading of a real surface — it is
+    ///   where the badge's rule was invented — and it goes through the same door so that the
+    ///   invariant is one statement rather than two that agree today.
     private func deliverQuestion(
-        surface: NudgeSurface,
+        provenBy change: PerceptibleChange,
         warrant: QueryWarrant,
         priorityID: UUID?,
         now: Duration
@@ -1085,7 +1148,7 @@ final class NudgeHost {
             InterventionEvent(
                 kind: .query,
                 subject: warrant.subject.identifier,
-                surface: surface,
+                surface: change.surface,
                 disposition: .delivered,
                 queryReason: warrant.reason
             ),
@@ -1110,9 +1173,28 @@ final class NudgeHost {
         for nudge in MenuBarNudge.allCases {
             switch nudge {
             case .query: deliverPendingBadgeQuestion()
-            case .accusation: deliverPendingBadgeRung()
+            case .accusation: deliverPendingRung()
             }
         }
+    }
+
+    /// **The status item was actually written to** (focus-1b5, focus-nrl).
+    ///
+    /// Wired by the composition root from `MenuBarController.onGlyphWritten`, which fires at the
+    /// end of a redraw and only when the picture or the announcement really changed. This is the
+    /// second half of *"the charge is a consequence of the write"*: the loop no longer asks for a
+    /// redraw and then charges on the assumption that one happened, because three rounds measured
+    /// that assumption false — a redraw is coalesced away when two consecutive rungs compose the
+    /// same picture, and the picture is the badge's rather than the rung's whenever a badge nudge
+    /// is pending.
+    ///
+    /// It is also what makes an unpaid rung **recoverable**. focus-nrl's rung landed on the glyph
+    /// under a pending question, was charged, and appeared in no channel at all — not even in the
+    /// popover, which draws only what landed on the badge. Now it is charged nothing and stays
+    /// open; when the question is answered the badge's `waiting` goes, the item is written with
+    /// the rung's own `noticing`, and this door opens on the first moment anybody could see it.
+    func menuBarItemRedrawn() {
+        deliverPendingRung()
     }
 
     /// Count the badge question, if the popover really is showing it and it has not been counted.
@@ -1124,34 +1206,92 @@ final class NudgeHost {
     private func deliverPendingBadgeQuestion() {
         guard let question = openQuestion,
               question.surface == .popoverBadge,
-              question.readingAtAsk != .readable,
-              badgeReadability(of: .query) == .readable
+              question.perceived == nil,
+              let change = PerceptibleChange.proven(
+                  on: .popoverBadge,
+                  from: question.observedAtAsk,
+                  to: observation(of: .query)
+              )
         else { return }
 
+        openQuestion?.perceived = change
         openQuestion?.readingAtAsk = .readable
         deliverQuestion(
-            surface: .popoverBadge,
+            provenBy: change,
             warrant: question.warrant,
             priorityID: question.priorityID,
             now: monotonicClock.elapsed
         )
     }
 
-    /// Count the badge rung, if the popover really is showing it and it has not been counted.
+    /// **The one door to a rung's charge, for every surface** (focus-1b5, focus-nrl).
     ///
-    /// The twin of the function above, line for line, and its absence was focus-xix.
-    private func deliverPendingBadgeRung() {
-        guard let open = openRung,
-              open.landedOn == .popoverBadge,
-              open.readingAtLanding != .readable,
-              badgeReadability(of: .accusation) == .readable
-        else { return }
+    /// It was `deliverPendingBadgeRung()`, and the word *badge* in its name was the defect. The
+    /// badge had a door — it waited for `popoverPresented()` to prove the popover was showing the
+    /// rung — and the glyph had none: `accuse(…)` charged it at the landing on the strength of
+    /// `NudgeSurface.reachesThePersonOnLanding`, which answers `true` for `.menuBar` and cannot
+    /// fail. Every bead in this sequence has that shape: a treatment one surface received and
+    /// another did not.
+    ///
+    /// So there is one door and it is opened by a proof rather than by a predicate. Three callers
+    /// — the landing itself, a click that opens the popover, and a write to the status item — and
+    /// each of them merely *offers* the rung to this function, which charges only if
+    /// `PerceptibleChange.proven(on:from:to:)` can show the person was shown something on that
+    /// surface's own channel since the landing.
+    ///
+    /// Idempotent, on the receipt: a rung that has been charged holds one, and a second offer
+    /// finds it and refuses.
+    private func deliverPendingRung() {
+        guard let open = openRung, open.perceived == nil else { return }
+        guard let change = PerceptibleChange.proven(
+            on: open.landedOn,
+            from: open.observedAtLanding,
+            to: observation(of: .accusation, panelActions: open.panelActions)
+        ) else { return }
 
-        openRung?.readingAtLanding = .readable
-        deliveredRung(
-            surface: .popoverBadge,
-            rung: open.rung,
-            priorityID: open.priorityID
+        openRung?.perceived = change
+        deliveredRung(rung: open.rung, provenBy: change, priorityID: open.priorityID)
+    }
+
+    /// **What a person could actually be shown of one kind of nudge, right now** (focus-1b5).
+    ///
+    /// Every field is read off a live AppKit object: counts of assignments that really happened
+    /// to the `NSStatusBarButton`, the mark that button is really drawing, `NSWindow.isVisible`
+    /// conjoined with a hit test of the actions on offer, and `NSPopover.isShown` conjoined with
+    /// what the popover is carrying. Not one of them is a predicate about a surface, which is the
+    /// distinction the whole of this round turns on.
+    ///
+    /// - Parameters:
+    ///   - nudge: which half of the loop is asking, because the panel and the popover each carry
+    ///     one kind at a time and *"a panel is up"* is not *"my panel is up"*.
+    ///   - panelActions: the actions to hit-test, defaulted to whatever the live nudge of that
+    ///     kind is offering. Passed explicitly at a landing, where the rung being measured has
+    ///     not been written into `openRung` yet.
+    private func observation(
+        of nudge: MenuBarNudge,
+        panelActions: [String]? = nil
+    ) -> SurfaceObservation {
+        let panelKind: NudgePanelKind
+        let actions: [String]
+        switch nudge {
+        case .query:
+            panelKind = .question
+            actions = panelActions ?? openQuestion?.actions ?? []
+        case .accusation:
+            panelKind = .accusation
+            actions = panelActions ?? openRung?.panelActions ?? []
+        }
+        // Short-circuited deliberately: `decisionSurfaceReading(offering:)` lays the panel's
+        // action frames out, and this function is called on every write to the status item.
+        let panelIsShowingTheNudge = panel.isVisible
+            && panel.showing == panelKind
+            && panel.decisionSurfaceReading(offering: actions).everyActionIsReachable
+        return SurfaceObservation(
+            menuBarWrites: menuBar.glyphWriteCount,
+            menuBarAnnouncements: menuBar.announcementCount,
+            markOnTheItem: menuBar.markOnTheItem,
+            panelIsShowingTheNudge: panelIsShowingTheNudge,
+            popoverIsShowingTheNudge: menuBar.isPopoverShown && menuBar.isShowing(nudge)
         )
     }
 
@@ -1198,10 +1338,13 @@ final class NudgeHost {
             )
 
         case .accusation:
-            guard let open = openRung,
-                  !open.landedOn.reachesThePersonOnLanding,
-                  open.readingAtLanding != .readable
-            else { return }
+            // **Every rung nobody was shown, not only the ones behind a click** (focus-1b5,
+            // focus-nrl). The guard was `!landedOn.reachesThePersonOnLanding`, which is `false`
+            // for `.menuBar` — so the glyph rungs this round stops charging would have left no
+            // row at all, and focus-sq7's ruling is that a thing the app did gets a row. The
+            // receipt is the whole condition now: a rung that was never perceived is `unopened`,
+            // whichever surface it was standing on.
+            guard let open = openRung, open.perceived == nil else { return }
             write(
                 InterventionEvent(
                     kind: .accusation,
@@ -1238,7 +1381,16 @@ final class NudgeHost {
     ///
     /// One function and one call per rung, so "delivered" cannot be recorded twice for a badge
     /// rung that lands once and is looked at once.
-    private func deliveredRung(surface: NudgeSurface, rung: LadderRung, priorityID: UUID?) {
+    /// - Parameter change: **the receipt, and there is no default** (focus-1b5, focus-nrl). The
+    ///   surface is read off it rather than passed beside it, so a proof taken on one surface
+    ///   cannot be spent on another. `PerceptibleChange` has a `fileprivate` initialiser and one
+    ///   producer, pinned by R-96p — which is what makes *charging without a perceptible change*
+    ///   a thing that cannot be written down rather than a thing a test hopes to catch.
+    private func deliveredRung(
+        rung: LadderRung,
+        provenBy change: PerceptibleChange,
+        priorityID: UUID?
+    ) {
         deliveredCount += 1
         fatigue.reduce(.delivered(.accusation), now: monotonicClock.elapsed)
         openRung?.recordID = write(
@@ -1246,7 +1398,7 @@ final class NudgeHost {
                 kind: .accusation,
                 rung: rung.kind,
                 subject: rung.subject ?? "",
-                surface: surface,
+                surface: change.surface,
                 disposition: .delivered
             ),
             priorityID: priorityID

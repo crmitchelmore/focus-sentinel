@@ -84,7 +84,7 @@ struct NudgeHostUnopenedInvitationTests {
     func anUnopenedInvitationIsWrittenDown(nudge: MenuBarNudge) throws {
         let fixture = try NudgeHostFixture()
         defer { fixture.tearDown() }
-        fixture.wireMenuBarToTheLoop()
+        try fixture.wireMenuBarToTheLoop()
 
         try Self.waitingOnTheBadge(fixture, nudge)
         #expect(try Self.unopened(fixture).isEmpty, "the invitation was written off before it ended")
@@ -131,7 +131,7 @@ struct NudgeHostUnopenedInvitationTests {
     func aReplacedInvitationStillLeavesItsRow() throws {
         let fixture = try NudgeHostFixture()
         defer { fixture.tearDown() }
-        fixture.wireMenuBarToTheLoop()
+        try fixture.wireMenuBarToTheLoop()
 
         try Self.waitingOnTheBadge(fixture, .accusation)
         #expect(try Self.unopened(fixture).isEmpty)
@@ -160,7 +160,7 @@ struct NudgeHostUnopenedInvitationTests {
     func anOpenedInvitationIsADeliveryAlone() throws {
         let fixture = try NudgeHostFixture()
         defer { fixture.tearDown() }
-        fixture.wireMenuBarToTheLoop()
+        try fixture.wireMenuBarToTheLoop()
 
         try Self.waitingOnTheBadge(fixture, .accusation)
         try MenuBarStage.open(

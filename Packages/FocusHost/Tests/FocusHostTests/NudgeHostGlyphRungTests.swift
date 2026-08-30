@@ -47,9 +47,7 @@ struct NudgeHostGlyphRungTests {
     /// to an item nobody can see (F-163), so an inactive process would measure zero writes for the
     /// fixed code as well as for the broken code.
     static func installedMenuBar(_ fixture: NudgeHostFixture) throws {
-        fixture.wireMenuBarToTheLoop()
-        try MenuBarStage.install(fixture.menuBar)
-        fixture.menuBar.update(NudgeHostFixture.menuBarPresentation(of: fixture.host))
+        try fixture.wireMenuBarToTheLoop()
     }
 
     /// Rows the log marked `delivered` for one surface.

@@ -220,21 +220,36 @@ struct NudgeHostFixture {
 
     /// **The menu bar, joined to the loop the way the composition root joins it** (focus-xix).
     ///
-    /// `AppComposition.startNudgeLoop()` makes exactly three connections, and a badge test needs
-    /// all three or it is not driving the badge at all:
+    /// `AppComposition.startNudgeLoop()` makes exactly four connections, and a nudge test needs
+    /// all four or it is not driving the menu bar at all:
     ///
     /// * `menuBar.onPopoverDidShow` → `NudgeHost.popoverPresented()`, which is the only moment a
     ///   badge nudge of either kind may be counted;
+    /// * `menuBar.onGlyphWritten` → `NudgeHost.menuBarItemRedrawn()`, which is the only moment a
+    ///   **glyph** rung may be (focus-1b5, focus-nrl). The charge is a consequence of the write;
     /// * `NudgeHost.onQuestionSurfacesChanged` → a redraw, because the popover on screen is a
     ///   hosting controller built from the presentation the menu bar was last handed;
     /// * that redraw taken from the **loop's own projection**, which is what
     ///   `AppComposition.menuBarPresentation()` builds.
     ///
-    /// Wired here rather than in each test, because a test that hand-rolled one of the three
+    /// Wired here rather than in each test, because a test that hand-rolled one of the four
     /// would be proving that its own closure ran — the defect `thePopoverWireReachesTheLoop`
     /// used to have.
-    func wireMenuBarToTheLoop() {
+    func wireMenuBarToTheLoop() throws {
+        // **The item goes into the menu bar first, exactly as `startNudgeLoop()` does it**
+        // (focus-1b5). It was not, and the omission became load-bearing the moment the charge
+        // became a consequence of the write: `MenuBarController.redraw(force:)` refuses to write
+        // to an item nobody can see (F-163), so a fixture with no status item drives an app whose
+        // menu bar is not there — and the ambient rung, whose entire content is that item,
+        // correctly reaches nobody. Every suite that wires the loop is asking for the shipping
+        // arrangement, and the shipping arrangement has an item in it.
+        try MenuBarStage.install(menuBar)
+        menuBar.update(Self.menuBarPresentation(of: host))
         menuBar.onPopoverDidShow = { [host] in host.popoverPresented() }
+        // **The wire that makes a charge a consequence of a write** (focus-1b5, focus-nrl). A
+        // fixture missing it would drive a menu bar the shipping app does not have: the glyph
+        // rung would land, the item would be written, and nothing would ever charge for it.
+        menuBar.onGlyphWritten = { [host] in host.menuBarItemRedrawn() }
         host.onQuestionSurfacesChanged = { [host, menuBar] in
             menuBar.update(Self.menuBarPresentation(of: host))
         }

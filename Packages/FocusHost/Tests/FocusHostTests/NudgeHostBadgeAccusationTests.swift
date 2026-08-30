@@ -204,7 +204,7 @@ struct NudgeHostBadgeAccusationTests {
     func aBadgeRungBehindAClickIsNotCounted(via route: QuietRoute) throws {
         let fixture = try NudgeHostFixture()
         defer { fixture.tearDown() }
-        fixture.wireMenuBarToTheLoop()
+        try fixture.wireMenuBarToTheLoop()
 
         Self.climbToTheBadge(fixture, via: route)
 
@@ -246,7 +246,7 @@ struct NudgeHostBadgeAccusationTests {
     func openingThePopoverCountsTheBadgeRung() throws {
         let fixture = try NudgeHostFixture()
         defer { fixture.tearDown() }
-        fixture.wireMenuBarToTheLoop()
+        try fixture.wireMenuBarToTheLoop()
 
         Self.climbToTheBadge(fixture, via: .reducedInterruption)
         try #require(fixture.host.todaysUsage().accusationsToday == 1)
@@ -281,7 +281,7 @@ struct NudgeHostBadgeAccusationTests {
     func theBadgeRungIsCountedOnce() throws {
         let fixture = try NudgeHostFixture()
         defer { fixture.tearDown() }
-        fixture.wireMenuBarToTheLoop()
+        try fixture.wireMenuBarToTheLoop()
 
         Self.climbToTheBadge(fixture, via: .reducedInterruption)
         try MenuBarStage.open(
@@ -403,7 +403,7 @@ struct NudgeHostBadgeAccusationTests {
     func aReplacedBadgeRungStopsBeingOffered() throws {
         let fixture = try NudgeHostFixture()
         defer { fixture.tearDown() }
-        fixture.wireMenuBarToTheLoop()
+        try fixture.wireMenuBarToTheLoop()
 
         Self.climbToTheBadge(fixture, via: .reducedInterruption)
         try Self.openThePopoverOnTheBadge(fixture)

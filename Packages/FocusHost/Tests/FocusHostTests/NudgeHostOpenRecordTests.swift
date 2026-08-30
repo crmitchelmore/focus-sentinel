@@ -68,7 +68,7 @@ struct NudgeHostOpenRecordTests {
     /// real `NSStatusItem` — which is the only way either nudge becomes a delivery at all.
     static func twoDeliveredBadgeNudges(_ fixture: NudgeHostFixture, order: Order) throws {
         fixture.host.choose(reducedInterruption: true)
-        fixture.wireMenuBarToTheLoop()
+        try fixture.wireMenuBarToTheLoop()
 
         func climb() {
             for _ in 0..<2 {

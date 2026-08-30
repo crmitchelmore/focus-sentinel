@@ -41,6 +41,12 @@ struct NudgeHostLadderTests {
     func theLoopClimbsTheWholeLadder() throws {
         let fixture = try NudgeHostFixture()
         defer { fixture.tearDown() }
+        // **The item is in the menu bar, exactly as the shipping app has it** (focus-1b5).
+        // The ambient rung *is* the status item: with no item installed there is nothing for it
+        // to change, `MenuBarController.redraw(force:)` refuses to write to an item nobody can
+        // see (F-163), and the loop correctly charges nothing. A fixture without one drives an
+        // app whose menu bar is not there, which is not the state this test is about.
+        try fixture.wireMenuBarToTheLoop()
 
         var rungs: [LadderRung.Kind] = []
         var surfaces: [String] = []

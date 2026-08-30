@@ -492,6 +492,15 @@ public final class AppComposition {
         // **one** wire for both kinds: it was `popoverPresentedTheQuestion()`, so the accusation
         // half of the badge had no moment at which it could learn it had been looked at.
         menuBar.onPopoverDidShow = { [weak self] in self?.nudgeHost.popoverPresented() }
+        // **The charge is a consequence of the write** (focus-1b5, focus-nrl).
+        //
+        // The third wire, and the one whose absence is the shape three rounds of this defect
+        // kept: the loop asked for a redraw and then charged on the assumption that one happened.
+        // Measured on the shipping loop, the assumption is false twice over — the request is
+        // coalesced away when two consecutive rungs compose the same picture, and the picture is
+        // the badge's rather than the rung's whenever a badge nudge is pending. Only the object
+        // that makes the assignment knows the difference, so it is the object that says so.
+        menuBar.onGlyphWritten = { [weak self] in self?.nudgeHost.menuBarItemRedrawn() }
         // Read once at launch, and again whenever the settings pane's one sanctioned request
         // returns. `getNotificationSettings` never prompts (P-134), so this costs no permission.
         //
