@@ -8,12 +8,12 @@ import Testing
 
 enum MenuBarFixture {
     static let snoozed = presentation(
-        snoozes: [MenuBarSnooze(subject: "com.apple.Safari", remaining: .seconds(305))]
+        snoozes: [MenuBarSnooze(subject: AccusationFixture.safari, remaining: .seconds(305))]
     )
 
     static let query = QueryPresentation(
         task: "Write the Q3 proposal",
-        subject: "com.figma.Desktop",
+        subject: QueryFixture.figma,
         reason: .noNegativeBasis,
         dwelled: .seconds(90)
     )
@@ -24,7 +24,7 @@ enum MenuBarFixture {
     static let accusation = AccusationPresentation(
         rung: .panel,
         task: "Write the Q3 proposal",
-        subject: "com.apple.Safari",
+        subject: AccusationFixture.safari,
         dwelled: .seconds(600),
         returnTarget: "Pages"
     )
@@ -209,7 +209,7 @@ struct MenuBarTests {
             status: .relevant,
             elapsed: .seconds(600),
             remaining: .seconds(900),
-            snoozes: [MenuBarSnooze(subject: "com.apple.Safari", remaining: .seconds(120))]
+            snoozes: [MenuBarSnooze(subject: AccusationFixture.safari, remaining: .seconds(120))]
         )
         #expect(snoozed.timedSpan == .seconds(120))
 
@@ -230,11 +230,11 @@ struct MenuBarTests {
         view.onAction(.pauseSession)
         view.onAction(.completeSession)
         view.onAction(.setSensingPaused(true))
-        view.onAction(.cancelSnooze(subject: "com.apple.Safari"))
+        view.onAction(.cancelSnooze(subject: AccusationFixture.safari))
         view.onAction(.answerQuery(.yesAddIt))
 
         #expect(seen.count == 7)
-        #expect(seen.contains(.cancelSnooze(subject: "com.apple.Safari")))
+        #expect(seen.contains(.cancelSnooze(subject: AccusationFixture.safari)))
         #expect(seen.contains(.setSensingPaused(true)))
         #expect(seen.contains(.answerQuery(.yesAddIt)))
     }

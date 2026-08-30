@@ -52,12 +52,20 @@ public enum MenuBarTimerFormat: String, Sendable, CaseIterable, Codable, Hashabl
 
 /// One snooze, as the popover lists it.
 public struct MenuBarSnooze: Sendable, Equatable, Hashable, Identifiable {
-    public let subject: String
+    /// **Both halves** (focus-ebv). This was a `String` carrying the snooze's own key, so the
+    /// popover's Snoozed row read *"com.apple.Safari"* beside its countdown while the chip row
+    /// above it drew *"Safari"*. The row is still identified and cancelled by
+    /// `subject.identifier`; the word drawn is `subject.displayName`.
+    public let subject: NudgeSubject
     public let remaining: Duration
 
-    public var id: String { subject }
+    /// **The subject itself, not either half as a string.** Two applications may share a display
+    /// name, so a list keyed on the name would draw one row for two snoozes; and an `id` of type
+    /// `String` is a key a view could draw by mistake, which is the whole of focus-ebv. Keyed on
+    /// the value, a row cannot be identified by anything a sentence would want.
+    public var id: NudgeSubject { subject }
 
-    public init(subject: String, remaining: Duration) {
+    public init(subject: NudgeSubject, remaining: Duration) {
         self.subject = subject
         self.remaining = remaining
     }
@@ -200,7 +208,13 @@ public enum MenuBarAction: Sendable, Equatable, Hashable {
     /// cannot invert it.
     case setSensingPaused(Bool)
     /// Cancel one subject's snooze from the popover (R-87).
-    case cancelSnooze(subject: String)
+    ///
+    /// It carries the **subject**, not its identifier: a surface reports which row was pressed,
+    /// as the value it was handed, and which half of that value keys a suppression is the host's
+    /// business — the same division `correct(_:snoozeDuration:)` draws, where the view reports
+    /// and `CorrectionAction.outcome(…)` decides. It is also what lets `check-forbidden.sh`
+    /// (R-96o) ban the word `identifier` from the three views outright (focus-ebv).
+    case cancelSnooze(subject: NudgeSubject)
     /// Answer the question the popover is carrying, when reduced interruption routed one here.
     case answerQuery(QueryAnswer)
     /// **Answer the accusation the popover is carrying** (focus-uru), when reduced interruption,

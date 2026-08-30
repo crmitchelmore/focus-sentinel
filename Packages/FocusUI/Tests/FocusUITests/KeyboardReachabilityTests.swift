@@ -109,22 +109,27 @@ struct KeyboardReachabilityTests {
         let accusation = AccusationPresentation(
             rung: .panel,
             task: "Write the Q3 proposal",
-            subject: "com.apple.Safari",
+            subject: AccusationFixture.safari,
             dwelled: .seconds(600),
             returnTarget: "Pages"
         ).announcement()
         #expect(!accusation.isEmpty)
         #expect(accusation.contains("Write the Q3 proposal"))
-        #expect(accusation.contains("com.apple.Safari"))
+        // **What VoiceOver hears is what the panel draws** — a name (focus-ebv). These two lines
+        // pinned the bundle identifier, which is how the defect survived: the accusation spoke
+        // *"You've been in com.apple.Safari for 10 minutes"* and the suite agreed.
+        #expect(accusation.contains(AccusationFixture.safari.displayName))
+        #expect(!accusation.contains(AccusationFixture.safari.identifier))
 
         let question = QueryPresentation(
             task: "Write the Q3 proposal",
-            subject: "com.figma.Desktop",
+            subject: QueryFixture.figma,
             reason: .noNegativeBasis,
             dwelled: .seconds(90)
         ).announcement()
         #expect(!question.isEmpty)
-        #expect(question.contains("com.figma.Desktop"))
+        #expect(question.contains(QueryFixture.figma.displayName))
+        #expect(!question.contains(QueryFixture.figma.identifier))
         // The scope is spoken **before** the answer, exactly as it is drawn.
         #expect(question.contains(NudgeCopy.string(voice: .standard, .queryPanelScopeApp)))
     }

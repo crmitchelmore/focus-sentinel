@@ -30,7 +30,7 @@ struct MenuBarPopoverTests {
     static func query() -> QueryPresentation {
         QueryPresentation(
             task: "Write the Q3 proposal for Acme",
-            subject: "com.example.Reader",
+            subject: NudgeSubject.named("com.example.Reader", runningName: "Reader")!,
             reason: .noNegativeBasis,
             dwelled: .seconds(120)
         )

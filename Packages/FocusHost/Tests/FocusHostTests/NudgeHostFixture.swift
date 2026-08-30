@@ -55,8 +55,18 @@ final class SilentNotificationCentre: NotificationCentring {
 @MainActor
 final class InertReturnWorkspace: ReturnWorkspace {
     private(set) var activations: [String] = []
+    /// **What the applications in these suites call themselves** (focus-ebv).
+    ///
+    /// It answered `nil` for everything, which made the naming seam unfalsifiable from here: a
+    /// host that never consulted it would fall back to the identifier and every assertion about
+    /// a drawn sentence would still pass, because the fallback and the key are the same string.
+    /// Seeded with `NudgeHostFixture.displayNames`, they are different strings and a host that
+    /// skipped the seam fails.
+    var runningNames: [String: String] = NudgeHostFixture.displayNames
 
-    func localizedNameOfRunningApplication(_ bundleIdentifier: String) -> String? { nil }
+    func localizedNameOfRunningApplication(_ bundleIdentifier: String) -> String? {
+        runningNames[bundleIdentifier]
+    }
 
     func activateRunningApplication(_ bundleIdentifier: String) -> Bool {
         activations.append(bundleIdentifier)
@@ -109,6 +119,14 @@ struct NudgeHostFixture {
     let sessionRules: SessionRuleBox
 
     static let decoy = "com.chrismitchelmore.FocusDecoy"
+    /// The name each identifier in these suites is known by, and the reason every one of them
+    /// differs from its key: a sentence drawing the key is the defect focus-ebv repaired, and a
+    /// fixture whose name *equals* its key could not tell the two apart.
+    static let displayNames = [
+        decoy: "Focus Decoy",
+        "com.chrismitchelmore.FocusOtherApp": "Other App",
+        "com.example.Reader": "Reader"
+    ]
     /// A commitment for the handful of callers that need gate 1 open and never look at the key —
     /// the pure-decider drives, which have no store behind them at all.
     static let anyCommitment = ActiveCommitment(

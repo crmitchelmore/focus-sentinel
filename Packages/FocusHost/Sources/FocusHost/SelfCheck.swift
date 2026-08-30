@@ -737,12 +737,36 @@ enum SelfCheck {
         //
         // The question is used rather than the accusation because it is the surface U-1's whole
         // bargain rests on; the unit lane asserts both.
+        //
+        // **And the subject is NAMED, through the shipping seam** (focus-ebv).
+        //
+        // The panel a person meets said *"Is com.figma.Desktop part of …?"* for the whole of e05
+        // and this probe could not have noticed: it drew a panel and measured its window. The
+        // subject here is resolved by `SubjectNaming` against the real `SystemReturnWorkspace` —
+        // and the identifier it is asked about is **this process's own**, which is running by
+        // definition, so the lookup either produces a name or the fix is not in the binary.
+        // `self-check.sh` fails the gate when the drawn sentence carries the identifier.
+        let naming = SubjectNaming(workspace: SystemReturnWorkspace())
+        guard let subject = naming.subject(FocusStore.bundleIdentifier) else {
+            // Unreachable — the identifier is a non-empty constant — and **reported** rather
+            // than forced. A probe that trapped here would take the whole self-check with it,
+            // and the gate reads an absent key as a failure anyway (`.get(…) is True`).
+            report["subjectResolved"] = false
+            return report
+        }
+        report["subjectResolved"] = true
+        report["subjectIdentifier"] = subject.identifier
+        report["subjectDisplayName"] = subject.displayName
+
         let presentation = QueryPresentation(
             task: "Write the Q3 proposal for Acme",
-            subject: FocusStore.bundleIdentifier,
+            subject: subject,
             reason: .noNegativeBasis,
             dwelled: .seconds(62)
         )
+        // The sentence itself, exactly as the panel draws it and VoiceOver speaks it — so the
+        // assertion is about what a person meets rather than about a field beside it.
+        report["subjectSentence"] = presentation.announcement()
 
         // **The probe draws in the appearance it is probing** (focus-7wy).
         //

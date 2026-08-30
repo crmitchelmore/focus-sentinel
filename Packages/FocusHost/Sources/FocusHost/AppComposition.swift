@@ -695,7 +695,7 @@ public final class AppComposition {
         case .pauseSession: FocusCommandCenter.shared.send(.pauseSession)
         case .completeSession: FocusCommandCenter.shared.send(.completeSession)
         case .setSensingPaused(let paused): sessionHost.setSensingPaused(paused)
-        case .cancelSnooze(let subject): nudgeHost.cancelSnooze(subject: subject)
+        case .cancelSnooze(let subject): nudgeHost.cancelSnooze(subject: subject.identifier)
         case .answerQuery(let answer): nudgeHost.answer(answer)
         // **The same entry point the panel's buttons use** (focus-uru). The popover performs
         // nothing and decides nothing: a correction pressed on the badge is the identical call

@@ -364,9 +364,21 @@ struct NudgePanelTests {
     /// Deliberately *real* content rather than a placeholder: the defects this section exists to
     /// catch are layout ones, and a layout defect cannot be provoked by `EmptyView`. The strings
     /// are the ones the live drives photographed, so the fixture and the frame agree.
+    /// **Both halves, and the panel draws the name** (focus-ebv). `returnTarget` is a display
+    /// name too — it always was, which is how "Back to Pages" came to sit three lines under
+    /// "com.apple.Safari" — so the fixtures below name applications rather than filing them.
+    private static let sentinel = NudgeSubject.named(
+        "com.chrismitchelmore.FocusSentinel",
+        runningName: "Focus Sentinel"
+    )!
+    private static let decoy = NudgeSubject.named(
+        "com.chrismitchelmore.FocusDecoy",
+        runningName: "Focus Decoy"
+    )!
+
     private static let queryPresentation = QueryPresentation(
         task: "Write the Q3 proposal for Acme",
-        subject: "com.chrismitchelmore.FocusSentinel",
+        subject: sentinel,
         reason: .noNegativeBasis,
         dwelled: .seconds(62)
     )
@@ -374,9 +386,9 @@ struct NudgePanelTests {
     private static let accusationPresentation = AccusationPresentation(
         rung: .panel,
         task: "Write the Q3 proposal for Acme",
-        subject: "com.chrismitchelmore.FocusDecoy",
+        subject: decoy,
         dwelled: .seconds(180),
-        returnTarget: "com.apple.TextEdit"
+        returnTarget: "TextEdit"
     )
 
     /// The shipped tolerance, read from the type under test rather than restated here — a test
@@ -589,7 +601,7 @@ struct NudgePanelTests {
         let noAnchor = AccusationPresentation(
             rung: .panel,
             task: "Write the Q3 proposal for Acme",
-            subject: "com.chrismitchelmore.FocusDecoy",
+            subject: Self.decoy,
             dwelled: .seconds(180)
         )
         let controller = Self.controller()
@@ -640,9 +652,9 @@ struct NudgePanelTests {
         let enormous = AccusationPresentation(
             rung: .panel,
             task: "Write the Q3 proposal for Acme",
-            subject: "com.chrismitchelmore.FocusDecoy",
+            subject: Self.decoy,
             dwelled: .seconds(600),
-            returnTarget: "com.apple.TextEdit",
+            returnTarget: "TextEdit",
             snoozeDurations: (1...20).map { Duration.seconds($0 * 60) }
         )
         let controller = Self.controller()
@@ -733,9 +745,9 @@ struct NudgePanelTests {
         let presentation = AccusationPresentation(
             rung: .panel,
             task: "Write the Q3 proposal for Acme",
-            subject: "com.chrismitchelmore.FocusDecoy",
+            subject: Self.decoy,
             dwelled: .seconds(600),
-            returnTarget: "com.apple.TextEdit"
+            returnTarget: "TextEdit"
         )
         let offered = presentation.offeredActionIdentifiers
         let controller = Self.controller()

@@ -83,7 +83,11 @@ struct NudgeHostBadgeAccusationTests {
             "the badge rung published no presentation, so the popover has only a label to draw"
         )
         #expect(presentation.rung == .panel)
-        #expect(presentation.subject == Self.subject)
+        // **Both halves, and they differ** (focus-ebv). The identifier is what the correction
+        // will be keyed on; the display name is what the badge draws — and asserting the second
+        // is what proves the host consulted the naming seam rather than falling back to the key.
+        #expect(presentation.subject?.identifier == Self.subject)
+        #expect(presentation.subject?.displayName == NudgeHostFixture.displayNames[Self.subject])
         #expect(presentation.task == fixture.commitment.intent)
 
         // The invariant, read on the surface the rung actually reached.

@@ -10,6 +10,12 @@ import Testing
 /// Named rather than inline, so the snapshot names and the structural assertions are about the
 /// same values and a reader of a failing baseline can find what produced it.
 enum AccusationFixture {
+    /// **The subject, with both halves** (focus-ebv). `safari.identifier` is what a rule, a
+    /// snooze and a receipt are keyed on; `safari.displayName` is the only half a sentence may
+    /// draw. Every fixture in the nudge suites is built through this, so a test that asserted on
+    /// a raw identifier is asserting about the key rather than about what a person reads.
+    static let safari = NudgeSubject.named("com.apple.Safari", runningName: "Safari")!
+
     /// Rung 2, with everything on offer: a named subject and a stored return anchor, which is
     /// the state the whole correction economy is reachable from.
     static func rungTwo(voice: NudgeVoice = .standard) -> AccusationPresentation {
@@ -17,7 +23,7 @@ enum AccusationFixture {
             rung: .panel,
             voice: voice,
             task: "Write the Q3 proposal",
-            subject: "com.apple.Safari",
+            subject: Self.safari,
             dwelled: .seconds(720),
             returnTarget: "Pages"
         )
@@ -39,7 +45,7 @@ enum AccusationFixture {
         rung: .panel,
         voice: .standard,
         task: "Write the Q3 proposal",
-        subject: "com.apple.Safari",
+        subject: safari,
         dwelled: .seconds(600),
         returnTarget: nil
     )
@@ -49,7 +55,7 @@ enum AccusationFixture {
         rung: .panel,
         voice: .standard,
         task: "Write the Q3 proposal",
-        subject: "com.apple.Safari",
+        subject: safari,
         dwelled: .seconds(600),
         returnTarget: "Pages",
         snoozeRemaining: .seconds(305)
@@ -163,13 +169,20 @@ struct AccusationPanelTests {
     func announcementMatchesTheDrawnCopy() {
         let announced = AccusationFixture.rungTwo().announcement()
         #expect(announced.contains("Write the Q3 proposal"))
-        #expect(announced.contains("com.apple.Safari"))
+        // **The name, and the ABSENCE of the key** (focus-ebv). This asserted
+        // `announced.contains("com.apple.Safari")` — so what VoiceOver spoke was the storage
+        // key, and the suite that exists to check the spoken words was pinning it there. What a
+        // person hears is what the panel draws, and the panel draws a name.
+        #expect(announced.contains(AccusationFixture.safari.displayName))
+        #expect(!announced.contains(AccusationFixture.safari.identifier))
 
         // Mixed drift draws no body line, so it announces none: a spoken sentence naming a
-        // subject the panel does not show would be the app inventing evidence out loud.
+        // subject the panel does not show would be the app inventing evidence out loud. Both
+        // halves are checked, because "names nobody" must not mean "names nobody by name".
         let mixed = AccusationFixture.mixed.announcement()
         #expect(mixed.contains("Write the Q3 proposal"))
-        #expect(!mixed.contains("com.apple.Safari"))
+        #expect(!mixed.contains(AccusationFixture.safari.displayName))
+        #expect(!mixed.contains(AccusationFixture.safari.identifier))
     }
 
     /// The accusation never says "you are distracted" — and the check that it does not is

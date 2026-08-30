@@ -21,7 +21,13 @@ public struct AccusationPresentation: Sendable, Equatable {
     /// line — which exists only to say *what* you have been in — is **omitted** rather than
     /// filled with an invented subject. The two actions that would write a rule about a subject
     /// are withdrawn for the same reason (`CorrectionAction.requiresScope`).
-    public let subject: String?
+    ///
+    /// **Both halves, and the body line draws only one of them** (focus-ebv). This was a
+    /// `String?` carrying `LadderRung.subject` — the storage key — so the panel said
+    /// *"com.apple.Safari, 12 minutes."* three lines under a button reading *"Back to Pages"*.
+    /// A rule, a snooze and a receipt are still keyed on `subject.identifier`; the sentence
+    /// draws `subject.displayName` and nothing else.
+    public let subject: NudgeSubject?
     /// How long, monotonic. `{duration}`.
     public let dwelled: Duration
     /// The application "Back to …" would activate, or `nil` when there is no stored anchor —
@@ -38,7 +44,7 @@ public struct AccusationPresentation: Sendable, Equatable {
         rung: LadderRung.Kind,
         voice: NudgeVoice = .standard,
         task: String,
-        subject: String?,
+        subject: NudgeSubject?,
         dwelled: Duration,
         returnTarget: String? = nil,
         snoozeRemaining: Duration? = nil,
@@ -101,7 +107,7 @@ public struct AccusationPresentation: Sendable, Equatable {
                 NudgeCopy.string(
                     voice: voice,
                     .accusationPanelBody,
-                    arguments: [subject, NudgeCopy.duration(dwelled)]
+                    arguments: [subject.displayName, NudgeCopy.duration(dwelled)]
                 )
             )
         }
@@ -171,7 +177,7 @@ public struct AccusationPanelView: View {
                 NudgeText(
                     .accusationPanelBody,
                     voice: presentation.voice,
-                    arguments: [subject, NudgeCopy.duration(presentation.dwelled)],
+                    arguments: [subject.displayName, NudgeCopy.duration(presentation.dwelled)],
                     role: .callout
                 )
                 .foregroundStyle(DesignTokens.supportingTextColor(for: traits))

@@ -53,6 +53,13 @@ final class NudgeHost {
     private let menuBar: MenuBarController
     private let notifications: NotificationDelivery
     private let workspace: any ReturnWorkspace
+    /// **What the app calls the thing it is nudging about** (focus-ebv).
+    ///
+    /// Built from the same `ReturnWorkspace` the return action uses, because the panel saying
+    /// "Back to Pages" three lines under "com.apple.Safari" was one object asking two different
+    /// questions about the same kind of thing. It memoises, so a sticky panel and a running
+    /// snooze keep the name they were raised with even after the application quits.
+    private let naming: SubjectNaming
     private let monotonicClock: any MonotonicClock
     private let dateProvider: any DateProvider
     private let logger = Logger(
@@ -364,6 +371,7 @@ final class NudgeHost {
         self.menuBar = menuBar
         self.notifications = notifications
         self.workspace = workspace
+        self.naming = SubjectNaming(workspace: workspace)
         self.monotonicClock = monotonicClock
         self.dateProvider = dateProvider
 
@@ -772,7 +780,10 @@ final class NudgeHost {
             // The commitment's own sentence, carried in with it rather than fetched again — so the
             // question on the screen names the task the receipt will be written against.
             task: commitment.intent,
-            subject: warrant.subject.identifier,
+            // **The name, resolved once, at the moment the question goes up** (focus-ebv). The
+            // rule the answer writes is still keyed on `warrant.subject.identifier` — every
+            // `record(…)` and every ledger write below reads that same value, unchanged.
+            subject: naming.subject(of: warrant.subject),
             reason: warrant.reason,
             dwelled: warrant.dwelled
         )
@@ -1621,7 +1632,7 @@ final class NudgeHost {
             // `activeIntent()` — a third read of the priority store, which could name a different
             // commitment from the one the receipt will be keyed to (focus-zrs).
             task: activeCommitment()?.intent ?? "",
-            subject: question.warrant.subject.identifier,
+            subject: naming.subject(of: question.warrant.subject),
             reason: question.warrant.reason,
             dwelled: question.warrant.dwelled
         )
@@ -1649,8 +1660,17 @@ final class NudgeHost {
     /// What is snoozed right now, for the popover's list and its countdowns.
     func activeSnoozes() -> [MenuBarSnooze] {
         let now = monotonicClock.elapsed
-        return snoozes.active(at: now).map {
-            MenuBarSnooze(subject: $0.subject, remaining: $0.remaining(at: now))
+        // Named here rather than in the view, so the popover's Snoozed row says what the panel
+        // that raised it said (focus-ebv), and through the same memo — a snooze outlives the
+        // application it suppresses far more often than a panel does. `cancelSnooze(subject:)`
+        // still takes the identifier, which is what a suppression is filed under.
+        //
+        // `compactMap` rather than `map`: a snooze on nobody is not a row a person could cancel,
+        // and `SnoozeBook` is the only judge of whether one can exist.
+        return snoozes.active(at: now).compactMap { snooze in
+            naming.subject(snooze.subject).map {
+                MenuBarSnooze(subject: $0, remaining: snooze.remaining(at: now))
+            }
         }
     }
 
@@ -1755,7 +1775,11 @@ final class NudgeHost {
         commitment: ActiveCommitment
     ) -> AccusationPresentation {
         let target = ReturnToTask.target(anchor: returnAnchor, workspace: workspace)
-        let subject = rung.subject
+        // **The rung's key, and the name that key is known by** (focus-ebv). Both come off the
+        // one value: the snooze below is looked up by `subject.identifier`, exactly as it was,
+        // and only the panel's body line reads the other half. `rung.subject` is already `nil`
+        // for mixed drift, so an accusation that names nobody goes on naming nobody.
+        let subject = naming.subject(rung.subject)
         return AccusationPresentation(
             rung: rung.kind,
             voice: preferences.voice,
@@ -1765,7 +1789,7 @@ final class NudgeHost {
             subject: subject,
             dwelled: rung.mandate.sustainedFor,
             returnTarget: target?.displayName,
-            snoozeRemaining: subject.flatMap { snoozes.snooze(for: $0) }?
+            snoozeRemaining: subject.flatMap { snoozes.snooze(for: $0.identifier) }?
                 .remaining(at: monotonicClock.elapsed)
         )
     }

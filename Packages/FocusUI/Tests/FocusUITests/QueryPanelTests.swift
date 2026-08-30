@@ -6,13 +6,20 @@ import Testing
 @testable import FocusUI
 
 enum QueryFixture {
+    /// **The subjects, with both halves** (focus-ebv). The identifier is what the answer's rule
+    /// is keyed on; the display name is the only half the question may say out loud. Defined
+    /// here once, so every suite that draws a question draws the same two words.
+    static let figma = NudgeSubject.named("com.figma.Desktop", runningName: "Figma")!
+    static let safari = NudgeSubject.named("com.apple.Safari", runningName: "Safari")!
+    static let word = NudgeSubject.named("com.microsoft.Word", runningName: "Microsoft Word")!
+
     /// The central case. `noNegativeBasis` is 32 of the corpus's 72 uncertain verdicts (P-138):
     /// a real application in front of the person and the app genuinely does not know.
     static func noNegativeBasis(voice: NudgeVoice = .standard) -> QueryPresentation {
         QueryPresentation(
             voice: voice,
             task: "Write the Q3 proposal",
-            subject: "com.figma.Desktop",
+            subject: Self.figma,
             reason: .noNegativeBasis,
             dwelled: .seconds(90)
         )
@@ -21,7 +28,7 @@ enum QueryFixture {
     /// A browser or a chat client. The answer is coarse at baseline and the copy says so.
     static let mixedUse = QueryPresentation(
         task: "Write the Q3 proposal",
-        subject: "com.apple.Safari",
+        subject: safari,
         reason: .mixedUseApplication,
         dwelled: .seconds(120)
     )
@@ -29,7 +36,7 @@ enum QueryFixture {
     /// The engine cannot judge; the person can.
     static let languageNotSupported = QueryPresentation(
         task: "Rédiger la proposition",
-        subject: "com.microsoft.Word",
+        subject: word,
         reason: .languageNotSupported,
         dwelled: .seconds(60)
     )
@@ -104,7 +111,11 @@ struct QueryPanelTests {
     func noSeverityToEscalate() {
         let presentation = QueryFixture.noNegativeBasis()
         // Everything it does carry is either a name or a fact about time.
-        #expect(!presentation.subject.isEmpty)
+        // Both halves of the subject, because a question that could not name what it is about
+        // is not a question and one that named it by its filing key is the defect focus-ebv
+        // repaired.
+        #expect(!presentation.subject.identifier.isEmpty)
+        #expect(!presentation.subject.displayName.isEmpty)
         #expect(!presentation.task.isEmpty)
         #expect(presentation.dwelled > .zero)
         #expect(QueryableUncertainty.allCases.contains(presentation.reason))
@@ -118,7 +129,14 @@ struct QueryPanelTests {
     )
     func announcementNamesEverything() {
         let announced = QueryFixture.noNegativeBasis().announcement()
-        #expect(announced.contains("com.figma.Desktop"))
+        // **The name, and the ABSENCE of the key** (focus-ebv). This line pinned
+        // `"com.figma.Desktop"` — the storage key — so the defect had a proof guarding it: the
+        // question a person met read *"Is com.figma.Desktop part of Write the Q3 proposal?"* and
+        // this suite called that correct. The second assertion is the one that cannot be
+        // satisfied by the old behaviour, and it is why the identifier and the display name in
+        // `QueryFixture` are deliberately different strings.
+        #expect(announced.contains(QueryFixture.figma.displayName))
+        #expect(!announced.contains(QueryFixture.figma.identifier))
         #expect(announced.contains("Write the Q3 proposal"))
         // The scope sentence, spoken before the person can answer.
         #expect(

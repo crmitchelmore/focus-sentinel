@@ -18,7 +18,12 @@ public struct QueryPresentation: Sendable, Equatable {
     /// withholds with `.noSingleSubject` rather than producing one, so by the time anybody can
     /// see this panel there is exactly one nameable thing to ask about. *"Is something part of
     /// your task?"* is not a question, so it is never asked.
-    public let subject: String
+    ///
+    /// **Both halves, and the sentence draws only one of them** (focus-ebv). This was a `String`
+    /// carrying `QuerySubject.identifier`, so the question a person met read *"Is
+    /// com.figma.Desktop part of Write the Q3 proposal?"*. The rule an answer writes is still
+    /// keyed on `subject.identifier`; `subject.displayName` is the only half this view draws.
+    public let subject: NudgeSubject
     /// Which of the three answerable uncertainties produced it (R-77). Drawn, because a person
     /// asked a question deserves to know why they are being asked it.
     public let reason: QueryableUncertainty
@@ -29,7 +34,7 @@ public struct QueryPresentation: Sendable, Equatable {
     public init(
         voice: NudgeVoice = .standard,
         task: String,
-        subject: String,
+        subject: NudgeSubject,
         reason: QueryableUncertainty,
         dwelled: Duration
     ) {
@@ -57,7 +62,11 @@ public struct QueryPresentation: Sendable, Equatable {
     /// What VoiceOver hears: the question and its scope, in the order they are drawn (F-144).
     public func announcement() -> String {
         [
-            NudgeCopy.string(voice: voice, .queryPanelTitle, arguments: [subject, task]),
+            NudgeCopy.string(
+                voice: voice,
+                .queryPanelTitle,
+                arguments: [subject.displayName, task]
+            ),
             NudgeCopy.string(voice: voice, .queryPanelScopeApp)
         ].joined(separator: " ")
     }
@@ -121,7 +130,7 @@ public struct QueryPanelView: View {
             NudgeText(
                 .queryPanelTitle,
                 voice: presentation.voice,
-                arguments: [presentation.subject, presentation.task],
+                arguments: [presentation.subject.displayName, presentation.task],
                 role: .headline
             )
             .foregroundStyle(DesignTokens.Palette.primaryText)

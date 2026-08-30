@@ -182,7 +182,10 @@ public struct MenuBarPopoverView: View {
                 .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
             ForEach(presentation.snoozes) { snooze in
                 HStack(spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
-                    Text(verbatim: snooze.subject)
+                    // The name, and only ever the name (focus-ebv). This row drew the snooze's
+                    // own key, so the popover said "com.apple.Safari" beside its countdown while
+                    // the context chips above it said "Safari".
+                    Text(verbatim: snooze.subject.displayName)
                         .font(DesignTokens.font(.callout, scale: textScale))
                         .lineLimit(1)
                         .truncationMode(.middle)

@@ -1728,6 +1728,36 @@ check(
     panel.get("wasVisible"),
 )
 
+# --- the sentence names the APP, not its bundle identifier (focus-ebv) -------------------------
+#
+# Every nudge said "Is com.figma.Desktop part of Write the Q3 proposal?" for the whole of e05,
+# on four user-visible surfaces, one of them directly under a button reading "Back to Pages".
+# Nothing in this gate could see it: the probe drew a panel and measured its window, and three
+# unit tests PINNED the identifier as the expected output.
+#
+# So the running binary is asked what its panel actually says. The subject is this process's own
+# identifier, which is running by definition, so the workspace lookup either produces a name or
+# the fix is not in the build being checked. Three assertions, and the third is what stops the
+# first two being satisfied by a name that happens to equal the key.
+check(
+    panel.get("subjectResolved") is True,
+    "the nudge resolved a name for the application it is about",
+    (panel.get("subjectIdentifier"), panel.get("subjectDisplayName")),
+)
+sentence = panel.get("subjectSentence") or ""
+display_name = panel.get("subjectDisplayName") or ""
+identifier = panel.get("subjectIdentifier") or ""
+check(
+    bool(display_name) and display_name != identifier,
+    "the display half is a name rather than a second copy of the storage key",
+    (identifier, display_name),
+)
+check(
+    bool(sentence) and display_name in sentence and identifier not in sentence,
+    "the sentence a person reads names the application and never its bundle identifier",
+    sentence,
+)
+
 # --- the dark-mode probe, which used to be light-pinned itself (focus-7wy) ----------------------
 #
 # `panelReport()` built the panel with no `traits:` argument, so it took the default —

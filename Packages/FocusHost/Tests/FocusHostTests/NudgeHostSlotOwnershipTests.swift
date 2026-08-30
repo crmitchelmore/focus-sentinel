@@ -389,13 +389,13 @@ struct NudgeHostSlotOwnershipTests {
 
         fixture.host.consider(NudgeHostFixture.uncertainJudgement(subject: Self.other))
         NudgeHostFixture.settle()
-        try #require(fixture.host.pendingPopoverQuery?.subject == Self.other)
+        try #require(fixture.host.pendingPopoverQuery?.subject.identifier == Self.other)
 
         fixture.host.consider(NudgeHostFixture.uncertainJudgement(subject: Self.decoy))
         NudgeHostFixture.settle()
 
         #expect(
-            fixture.host.pendingPopoverQuery?.subject == Self.other,
+            fixture.host.pendingPopoverQuery?.subject.identifier == Self.other,
             "the question waiting behind the click was replaced by a second one"
         )
     }
