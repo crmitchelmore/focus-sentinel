@@ -1583,18 +1583,89 @@ check(
     "no surface is offering a nudge the loop has forgotten, of either kind",
     nudge.get("orphanedNudgeSurfaces"),
 )
+# **A nudge that raises no window is visible in the menu bar, or it is visible nowhere**
+# (focus-mkk, focus-2xw).
+#
+# `NudgeSurface.holdsTheInterruptionSlot` is false for exactly the two surfaces that raise no
+# window — the glyph and the badge — and those are exactly the two whose whole physical presence
+# is the status item. A surface on that list with no mark on the item is a nudge with nowhere to
+# be, and the app charged the day's budget for six of them: measured on the shipping loop, seven
+# drifts 700 s apart gave six delivered rows on `menuBar`, `accusationsToday` 6 of 6, the query
+# budget squeezed from 4 to 1, and ONE write to the menu bar — made by `install()` before the
+# first rung existed.
+#
+# The counts beside it are the reading that finding needed and did not have. They are printed
+# rather than gated: an automated run raises no rung, so a threshold on them would be a threshold
+# on zero. What is gated is the join, which is a fact about the vocabulary and holds in every run.
+check(
+    nudge.get("surfacesWithNoWindowAndNoMark") == [],
+    "every nudge surface that raises no window marks the status item",
+    nudge.get("surfacesWithNoWindowAndNoMark"),
+)
+print(
+    "     menu bar: {} glyph write(s), {} title write(s), {} announcement(s), attention {}".format(
+        nudge.get("menuBarGlyphWrites"),
+        nudge.get("menuBarTitleWrites"),
+        nudge.get("menuBarAnnouncements"),
+        nudge.get("menuBarAttention"),
+    )
+)
+
+# **Only a delivery spends a cap** (R-81, focus-sq7).
+#
+# `unopened` is the fourth disposition and the second way of not reaching somebody: a nudge that
+# reached the badge and waited behind a click nobody made. Before it there was no case for that at
+# all, so such a nudge wrote NO ROW — and a day on which the app raised its top rung and nobody
+# looked was indistinguishable in the record from a day on which the ladder never left the glyph.
+#
+# Asserted as a set rather than a count, because the danger of a new disposition is not that there
+# are four of them but that one of them starts charging: `spendsBudget` is what the daily caps sum
+# on, and an invitation nobody opened is an attempt rather than an interruption.
+check(
+    nudge.get("dispositionsSpendingACap") == ["delivered"],
+    "only a delivery spends a cap, whatever the record has learned to say",
+    nudge.get("dispositionsSpendingACap"),
+)
+check(
+    "unopened" in (nudge.get("dispositionsDeclared") or []),
+    "the record can say a badge invitation was never opened",
+    nudge.get("dispositionsDeclared"),
+)
+
 # The exits are enumerated, and the unit lane walks every one of them. Asserted here so an exit
 # added to the enum is visible in the gate log rather than only in a test file.
 #
-# **Four, not five** (U-2). The fifth was `preempted`, and it went with the mechanism: an accusation
-# can no longer take a question's ask or its surface, so the door it went through is gone rather
-# than guarded. Exact equality rather than the `>= 5` this used to be — a floor could not see an
-# exit being *removed*, which is precisely the edit that has just happened, and a count that only
-# fails upward is half a lint.
+# **Five** (focus-h0s). It was four, and before U-2 it was five with `preempted` in it — that one
+# went with the mechanism, because an accusation can no longer take a question's ask or its
+# surface. The fifth now is `screenReclaimed`: F-81's "give me my screen back", which used to
+# travel as `worldMovedOn` and wrote nothing only because the panel had already been ordered out
+# and `QuestionLedgerPolicy` refused a receipt it could not prove readable. Once the record moved
+# inside the door that accident would have become a write, so the exit says for itself that it
+# owes none.
+#
+# Exact equality rather than a floor: a floor cannot see an exit being *removed*, and both edits
+# this line has survived were removals. A count that only fails upward is half a lint.
 check(
-    len(nudge.get("questionExitsDeclared") or []) == 4,
+    len(nudge.get("questionExitsDeclared") or []) == 5,
     "every way an open question can end is enumerated",
     nudge.get("questionExitsDeclared"),
+)
+# **And exactly one of them owes the record** (focus-h0s).
+#
+# The count above says the vocabulary is whole; this says the *obligation* is placed, which is the
+# half that was wrong. `resolve(_:snoozeDuration:)` was the fifth producer of `worldMovedOn` and
+# the only one that did not call `expireOpenQuestion()` first, so Ctrl-Cmd-R aimed at the menu-bar
+# glyph destroyed a question on the panel with nothing written down. The obligation lives on the
+# exit now instead of on five callers remembering.
+#
+# Named rather than counted: an exit quietly joining or leaving the writing set is the edit that
+# matters, and `["worldMovedOn"]` says which one it is. `answered` writes through the ledger's own
+# transaction; `surfaceWentOutOfReach` and `neverDelivered` are un-askings R-81 forbids a receipt
+# for; `screenReclaimed` is F-81.
+check(
+    nudge.get("questionExitsWritingAnExpiry") == ["worldMovedOn"],
+    "exactly the exit that means the world ended it writes the question down",
+    nudge.get("questionExitsWritingAnExpiry"),
 )
 
 # **The active priority is still one fact** (focus-zrs).
