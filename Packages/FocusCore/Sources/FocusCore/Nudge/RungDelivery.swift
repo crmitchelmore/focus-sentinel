@@ -32,23 +32,17 @@ public enum DeferralReason: String, Sendable, CaseIterable, Codable, Hashable {
     /// No surface exists that can carry this rung in the state the app is actually in.
     case noSurfaceAvailable
 
-    /// The String Catalog key for the sentence a surface draws about a deferral.
-    /// `check-strings.sh` asserts the bijection with `nudge.deferred.*` (R-96l).
-    public var copyKey: String {
-        switch self {
-        case .menuBarHidden: "nudge.deferred.menuBarHidden"
-        case .presentationActive: "nudge.deferred.presentationActive"
-        case .notificationDeliveryFailed: "nudge.deferred.notificationDeliveryFailed"
-        case .noSurfaceAvailable: "nudge.deferred.noSurfaceAvailable"
-        }
-    }
-
-    public var copyResource: LocalizedStringResource {
-        LocalizedStringResource(
-            String.LocalizationValue(copyKey),
-            bundle: .atURL(Bundle.module.bundleURL)
-        )
-    }
+    // **It carried four sentences a person could never be in a position to read** (focus-pzl).
+    //
+    // A deferral is defined by nobody being able to see the surface: the menu bar is hidden, or a
+    // presentation is up. Every one of `nudge.deferred.*` described the *inside* of a moment
+    // whose whole content is that the app is not on screen, and by the time there is a screen to
+    // read it on the ladder has resumed at the rung it never left. The number that matters —
+    // `deferredRungShare` — is a diagnostic for e08's over-firing presentation gate, and a
+    // diagnostic is not a sentence.
+    //
+    // The type stays. It is the discriminator that keeps `RungDelivery` from collapsing into a
+    // `Bool`, and `SurfaceRoute.unavailable` carries it.
 }
 
 /// **What happened when the app tried to speak** — and the reason it is not a `Bool`.

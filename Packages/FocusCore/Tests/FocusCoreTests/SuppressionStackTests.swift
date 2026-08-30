@@ -470,24 +470,23 @@ struct SuppressionStackTests {
         )
     }
 
-    // MARK: - Copy
+    // MARK: - The reasons are keys, not sentences (focus-pzl)
 
-    @Test("every suppression reason has its own copy key")
-    func copyKeys() {
-        var keys: Set<String> = []
+    /// **This suite used to prove the twelve dead sentences resolved**, and that was the whole of
+    /// its interest in them: `copyKeys()` asserted the key was spelled `nudge.suppressed.<case>`
+    /// and `copyResolves()` asserted the catalogue answered something. Both were green for a
+    /// vocabulary no route could draw, which is the shape this repository keeps finding — a proof
+    /// written to the known failure.
+    ///
+    /// What replaces them is the claim that survives the deletion: every reason is a distinct
+    /// **key**, usable as a record field and a dictionary key, and nothing here is a sentence.
+    @Test("every suppression reason is a distinct, stable raw value")
+    func rawValuesAreDistinctAndStable() {
+        var seen: Set<String> = []
         for reason in NudgeSuppressionReason.allCases {
-            #expect(reason.copyKey == "nudge.suppressed.\(reason.rawValue)")
-            #expect(keys.insert(reason.copyKey).inserted, "duplicate copy key")
-        }
-    }
-
-    @Test(
-        "no suppression reason resolves to its own key",
-        .enabled(if: LocalizationLane.catalogsAreCompiled)
-    )
-    func copyResolves() {
-        for reason in NudgeSuppressionReason.allCases {
-            #expect(String(localized: reason.copyResource) != reason.copyKey)
+            #expect(seen.insert(reason.rawValue).inserted, "duplicate raw value")
+            #expect(!reason.rawValue.isEmpty)
+            #expect(NudgeSuppressionReason(rawValue: reason.rawValue) == reason)
         }
     }
 

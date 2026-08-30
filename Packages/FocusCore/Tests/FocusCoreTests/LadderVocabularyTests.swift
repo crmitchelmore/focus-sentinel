@@ -164,14 +164,18 @@ struct LadderVocabularyTests {
         #expect(RungDelivery.delivered(.panel) == RungDelivery.delivered(.panel))
     }
 
-    /// P-131's four ways a rung can fail to be seen, each named and each with copy.
-    @Test("every deferral reason is named and has its own copy key")
+    /// P-131's four ways a rung can fail to be seen, each named and each distinct.
+    ///
+    /// It asserted a `nudge.deferred.*` copy key per case until focus-pzl deleted the four
+    /// sentences: a deferral is a moment defined by nobody being able to see the surface, so
+    /// there was no screen on which any of them could be read.
+    @Test("every deferral reason is named and distinct")
     func deferralReasons() {
         #expect(DeferralReason.allCases.count == 4)
-        var keys: Set<String> = []
+        var seen: Set<String> = []
         for reason in DeferralReason.allCases {
-            #expect(reason.copyKey == "nudge.deferred.\(reason.rawValue)")
-            #expect(keys.insert(reason.copyKey).inserted, "duplicate copy key")
+            #expect(seen.insert(reason.rawValue).inserted, "duplicate raw value")
+            #expect(DeferralReason(rawValue: reason.rawValue) == reason)
         }
         #expect(DeferralReason.allCases.contains(.menuBarHidden))
         #expect(DeferralReason.allCases.contains(.presentationActive))
@@ -189,15 +193,12 @@ struct LadderVocabularyTests {
     }
 
     @Test(
-        "no rung or deferral copy resolves to its own key",
+        "no rung copy resolves to its own key",
         .enabled(if: LocalizationLane.catalogsAreCompiled)
     )
     func copyResolves() {
         for kind in LadderRung.Kind.allCases {
             #expect(String(localized: kind.copyResource) != kind.copyKey)
-        }
-        for reason in DeferralReason.allCases {
-            #expect(String(localized: reason.copyResource) != reason.copyKey)
         }
     }
 

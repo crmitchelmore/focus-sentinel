@@ -404,25 +404,20 @@ struct QueryInvariantTests {
         }
     }
 
-    @Test("every withholding reason has its own copy key")
-    func withholdingReasonsHaveCopy() {
-        var keys: Set<String> = []
+    /// **The twelve `nudge.withheld.*` sentences are gone** (focus-pzl), and these two tests are
+    /// what is left when the thing they proved was that dead copy resolved.
+    ///
+    /// A withholding reason is a value a call site must handle by name — that is the whole reason
+    /// it is not a `Bool` — and it is a stable raw value so a record written today is readable
+    /// tomorrow. Neither claim needs an English sentence, and no route could draw one.
+    @Test("every withholding reason is a distinct, stable raw value")
+    func withholdingReasonsAreDistinctAndStable() {
+        var seen: Set<String> = []
         for reason in QueryWithholdingReason.allCases {
-            #expect(reason.copyKey == "nudge.withheld.\(reason.rawValue)")
-            #expect(keys.insert(reason.copyKey).inserted, "duplicate copy key")
+            #expect(seen.insert(reason.rawValue).inserted, "duplicate raw value")
+            #expect(!reason.rawValue.isEmpty)
+            #expect(QueryWithholdingReason(rawValue: reason.rawValue) == reason)
         }
         #expect(QueryWithholdingReason.allCases.count == 12)
-    }
-
-    @Test(
-        "no withholding reason resolves to its own key",
-        .enabled(if: LocalizationLane.catalogsAreCompiled)
-    )
-    func withholdingCopyResolves() {
-        for reason in QueryWithholdingReason.allCases {
-            let rendered = String(localized: reason.copyResource)
-            #expect(rendered != reason.copyKey, "\(reason.copyKey) resolves to its own name")
-            #expect(!rendered.isEmpty)
-        }
     }
 }

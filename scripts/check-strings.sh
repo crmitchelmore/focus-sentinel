@@ -505,15 +505,13 @@ for condition, enum_name, file_name, namespace in BIJECTIONS:
         [f"{namespace}{suffix} names no case of {enum_name}" for suffix in sorted(suffixes - declared)],
     )
 
-# --- e05 R-96l: the deck matrix and four more bijections -----------------------------------
+# --- e05 R-96l: the deck matrix and two more bijections ------------------------------------
 #
-# Five assertions, and the first is different in kind from the rest.
+# Three assertions, and the first is different in kind from the rest.
 #
 #   the matrix   NudgeVoice x NudgeCopyKey  <-> nudge.<deck>.<situation>   (65 keys)
 #   R-96l        LadderRung.Kind            <-> nudge.rung.*
 #   R-96l        QueryableUncertainty       <-> nudge.query.reason.*
-#   R-96l        NudgeSuppressionReason     <-> nudge.suppressed.*
-#   R-96l        DeferralReason             <-> nudge.deferred.*
 #
 # The matrix is a **product** of two vocabularies rather than one, because a voice with a
 # missing line is not a missing sentence — it is a nudge that renders its own key to somebody
@@ -521,9 +519,13 @@ for condition, enum_name, file_name, namespace in BIJECTIONS:
 # exceptions: a key with no pair is a sentence the app can never say, and a pair with no key is
 # a line it would say wrongly.
 #
-# `nudge.withheld.*` is deliberately NOT here. Those keys ARE written out as literals in
-# `QueryWithholdingReason.copyKey`, so the generic reference check above already covers them in
-# both directions; adding a bijection would be the same assertion twice.
+# ## It was five, and the two that went were the ones a bijection could not save (focus-pzl)
+#
+# `NudgeSuppressionReason <-> nudge.suppressed.*` and `DeferralReason <-> nudge.deferred.*` were
+# both **green and both total** while all twenty-eight of their sentences were undrawable, and so
+# was the generic reference check over `nudge.withheld.*`. That is the lesson these three lines
+# are worth: a bijection proves a vocabulary is *complete*, never that it is *reachable*. Copy
+# for a closed vocabulary needs both, and the reachability half is the section below this one.
 #
 # **The tone assertion is not here either, and that is deliberate.** R-96f — no line under a
 # `nudge.*.query.*` key may accuse anybody — lives in `check-forbidden.sh`, where the
@@ -537,11 +539,6 @@ NUDGE_BIJECTIONS = (
         "R-96l", "QueryableUncertainty", "QueryableUncertainty.swift",
         "QueryableUncertainty", "nudge.query.reason.",
     ),
-    (
-        "R-96l", "NudgeSuppressionReason", "SuppressionStack.swift",
-        "NudgeSuppressionReason", "nudge.suppressed.",
-    ),
-    ("R-96l", "DeferralReason", "RungDelivery.swift", "DeferralReason", "nudge.deferred."),
 )
 
 # The matrix, first.
@@ -552,8 +549,8 @@ report(
 )
 
 deck_declared = {key for key in core_catalog if key.startswith("nudge.")}
-# Only the composed keys: `nudge.rung.*`, `nudge.suppressed.*` and friends are single-vocabulary
-# keys and are asserted by the four bijections below, not by the matrix.
+# Only the composed keys: `nudge.rung.*` and `nudge.query.reason.*` are single-vocabulary keys
+# and are asserted by the two bijections below, not by the matrix.
 deck_declared = {
     key
     for key in deck_declared

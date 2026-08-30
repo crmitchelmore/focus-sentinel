@@ -70,10 +70,16 @@ public struct QueryWarrant: Sendable, Equatable, Hashable {
 
 /// Why the app is not asking.
 ///
-/// A first-class answer for the same reason `SuppressionReason` is: a surface that can say why
-/// it said nothing is a surface a person can trust, and the query's silences are the ones U-1
-/// makes newly interesting. Every case has one String Catalog key and `check-strings.sh`
-/// asserts the bijection with `nudge.withheld.*` in both directions (R-96l).
+/// A first-class answer so that a call site has to say which silence it is handling rather than
+/// reading a `Bool` — and, since focus-pzl, **only** that. It used to carry twelve String Catalog
+/// keys under `nudge.withheld.*`, none of which any route could draw.
+///
+/// They were the third English rendering of one fact. `SuppressionReason` (e04, drawn) has nine
+/// cases, `NudgeSuppressionReason` (e05) has twelve, and this has twelve; eight names appear in
+/// all three. A person who is not being asked a question is, by construction, being left alone —
+/// there is no surface on which *"I decided not to ask you something"* is a sentence worth the
+/// interruption it would itself be, and if one is ever built it should draw the vocabulary the
+/// verdict inspector already draws rather than a fourth copy.
 ///
 /// The declaration order is R-84's evaluation order, restricted to the gates this function can
 /// see, with the **verdict gate lifted to the front** — see `QueryEligibility.decide(…)`.
@@ -114,30 +120,6 @@ public enum QueryWithholdingReason: String, Sendable, CaseIterable, Codable, Has
     /// needs, because it is cheaper — but never instantly (R-95, `queryDwellThreshold`).
     case withinDwellGrace
 
-    /// The String Catalog key for the sentence a surface draws when it stayed quiet.
-    public var copyKey: String {
-        switch self {
-        case .verdictRelevant: "nudge.withheld.verdictRelevant"
-        case .verdictUnrelated: "nudge.withheld.verdictUnrelated"
-        case .noActivePriority: "nudge.withheld.noActivePriority"
-        case .userIdle: "nudge.withheld.userIdle"
-        case .sessionPhaseForbids: "nudge.withheld.sessionPhaseForbids"
-        case .statusForbids: "nudge.withheld.statusForbids"
-        case .interruptionInFlight: "nudge.withheld.interruptionInFlight"
-        case .budgetExhausted: "nudge.withheld.budgetExhausted"
-        case .alreadyAsked: "nudge.withheld.alreadyAsked"
-        case .reasonNotAskable: "nudge.withheld.reasonNotAskable"
-        case .noSingleSubject: "nudge.withheld.noSingleSubject"
-        case .withinDwellGrace: "nudge.withheld.withinDwellGrace"
-        }
-    }
-
-    public var copyResource: LocalizedStringResource {
-        LocalizedStringResource(
-            String.LocalizationValue(copyKey),
-            bundle: .atURL(Bundle.module.bundleURL)
-        )
-    }
 }
 
 /// Whether the app may ask, and if not, why not.

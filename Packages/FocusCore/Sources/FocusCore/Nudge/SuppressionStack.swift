@@ -94,31 +94,21 @@ public enum NudgeSuppressionReason: String, Sendable, CaseIterable, Codable, Has
         self == .alreadyAsked ? [.query] : [.query, .accusation]
     }
 
-    /// The String Catalog key for the sentence a surface draws when it stayed quiet.
-    /// `check-strings.sh` asserts the bijection with `nudge.suppressed.*` (R-96l).
-    public var copyKey: String {
-        switch self {
-        case .noActivePriority: "nudge.suppressed.noActivePriority"
-        case .sensingPaused: "nudge.suppressed.sensingPaused"
-        case .sensitiveApplication: "nudge.suppressed.sensitiveApplication"
-        case .sessionPhaseForbids: "nudge.suppressed.sessionPhaseForbids"
-        case .userIdle: "nudge.suppressed.userIdle"
-        case .mediaInUse: "nudge.suppressed.mediaInUse"
-        case .presentationActive: "nudge.suppressed.presentationActive"
-        case .quietHours: "nudge.suppressed.quietHours"
-        case .interruptionInFlight: "nudge.suppressed.interruptionInFlight"
-        case .budgetExhausted: "nudge.suppressed.budgetExhausted"
-        case .alreadyAsked: "nudge.suppressed.alreadyAsked"
-        case .verdictDoesNotAuthorise: "nudge.suppressed.verdictDoesNotAuthorise"
-        }
-    }
-
-    public var copyResource: LocalizedStringResource {
-        LocalizedStringResource(
-            String.LocalizationValue(copyKey),
-            bundle: .atURL(Bundle.module.bundleURL)
-        )
-    }
+    // **This type carried twelve user-visible sentences and no surface could draw one**
+    // (focus-pzl). `nudge.suppressed.*` shipped in the compiled catalogue for the whole of e05;
+    // `copyResource` had zero call sites outside this package, and the name
+    // `NudgeSuppressionReason` appeared nowhere in `FocusUI`, `FocusHost` or `App` at all.
+    //
+    // The sentences were not deleted for being unused. They were deleted because the app
+    // **already has** a drawn vocabulary for "why I stayed quiet" — e04's `SuppressionReason`,
+    // rendered by `VerdictInspectorView.eligibility(_:)` under *"Silent because"* — and eight of
+    // the twelve gates below share a name with one of its nine cases. Drawing both would have put
+    // two differently-worded English sentences about the same silence on one screen, which is
+    // focus-doc's defect one pane over.
+    //
+    // The **type** is untouched and load-bearing: `gateNumber` derives R-84's evaluation order
+    // from `allCases`, `appliesTo` carries gate 11's kind-dependence, and the reason is recorded
+    // on every `InterventionRecord`. What went is the presentation nobody asked for.
 }
 
 /// What the stack concluded.
