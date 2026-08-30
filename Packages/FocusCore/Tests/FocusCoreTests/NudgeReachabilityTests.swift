@@ -75,10 +75,10 @@ struct NudgeReachabilityTests {
 
             let isLast = round == InterventionPolicy.ignoredAccusationBackoff
             #expect(
-                fatigue.state.accusationsHeldAtAmbient == isLast,
+                fatigue.state.isHeldAtAmbient(now: at) == isLast,
                 """
                 after \(round) dismissed nudge(s) the session hold was \
-                \(fatigue.state.accusationsHeldAtAmbient), expected \(isLast)
+                \(fatigue.state.isHeldAtAmbient(now: at)), expected \(isLast)
                 """
             )
         }
@@ -97,7 +97,7 @@ struct NudgeReachabilityTests {
                 kind: .accusation, subject: "com.example.decoy1", rung: .panel,
                 budget: .empty, fatigue: fatigue.state, snoozes: .none,
                 correctedSubjects: [], now: at
-            ) == .refused(.heldAtAmbient)
+            ) == .refused(.heldAtAmbient(until: fatigue.state.accusationsHeldUntil))
         )
     }
 
@@ -153,7 +153,7 @@ struct NudgeReachabilityTests {
     /// the hold is on.
     ///
     /// `FatigueController.resolvingAccusation(_:unanswered:now:)` writes `trips ? 0 : run`: the
-    /// counter is *zeroed* by the trip and the hold is recorded in `accusationsHeldAtAmbient`
+    /// counter is *zeroed* by the trip and the hold is recorded in `accusationsHeldUntil`
     /// instead. `FatigueState.hasReachedAccusationBackoff` compared the counter against the
     /// constant and was therefore `false` for every state the controller can produce — a
     /// permanent negative, deleted in focus-yxb. This is the property that made it one.
@@ -174,6 +174,6 @@ struct NudgeReachabilityTests {
             )
             at = at + RelevancePolicy.mandateCooldown
         }
-        #expect(fatigue.state.accusationsHeldAtAmbient)
+        #expect(fatigue.state.isHeldAtAmbient(now: at))
     }
 }

@@ -100,9 +100,12 @@ public enum InterventionPolicy {
     public static let ignoredQueryBackoff = 2
 
     /// **B.** Two delivered accusation rungs with no correction, snooze, pause or return
-    /// drop the ladder back to `.ambient` for the rest of the session. Boundary triple
+    /// drop the ladder back to `.ambient` for `backoffSpan`. Boundary triple
     /// 1 / 2 / 3. F-63's "back off when ignored", with the ambient rung retained because going
     /// fully silent would lose the one channel the person has not objected to.
+    ///
+    /// **The hold it arms is time-bounded, and was not** (focus-845). This constant's own value
+    /// is unchanged; what changed is the consequence of it firing. See `backoffSpan` below.
     ///
     /// **It moved with the rung count** (U-2), and the reason it was given at the time was wrong
     /// in a way worth writing down (focus-yxb).
@@ -135,10 +138,22 @@ public enum InterventionPolicy {
     /// session is the point at which the app is talking to itself. Boundary triple 1 / 2 / 3.
     public static let ignoredAccusationBackoff = 2
 
-    /// **B.** How long questions stay suspended after `ignoredQueryBackoff` trips. Boundary
-    /// triple 3599 / 3600 / 3601 — one hour, which is long enough to be a real rest and short
-    /// enough that a person who changes what they are doing is not ignored for the afternoon.
-    public static let queryBackoffSpan: Duration = .seconds(3600)
+    /// **B.** How long a tripped backoff lasts — **either** of them. Boundary triple
+    /// 3599 / 3600 / 3601 — one hour, which is long enough to be a real rest and short enough
+    /// that a person who changes what they are doing is not ignored for the afternoon.
+    ///
+    /// **It was `queryBackoffSpan`, and the accusation hold had no span at all** (focus-845).
+    /// `ignoredQueryBackoff` and `ignoredAccusationBackoff` are the same instrument aimed at the
+    /// two kinds — both are 2, both mean *"the app is talking to itself"* — but only the question
+    /// side was time-bounded. The accusation side set a `Bool` that nothing but `sessionEnded`
+    /// could clear, so two dismissals silenced the only rung that carries a sentence for the rest
+    /// of the session. Since U-2 cut the ladder to two rungs that is the whole speaking product,
+    /// muted by an afternoon's two clicks and never given back.
+    ///
+    /// One constant rather than two asserted equal, because a threshold with two homes is a
+    /// threshold that can be moved in one of them. The consequence is the policy stated plainly:
+    /// **a backoff this app imposes lasts an hour, whichever kind of interruption tripped it.**
+    public static let backoffSpan: Duration = .seconds(3600)
 
     // MARK: - The caps, and the budget they share (R-83)
 
@@ -254,7 +269,7 @@ public enum InterventionPolicy {
             kind: .behavioural,
             encoded: "\(ignoredQueryBackoff)",
             justification: "R-83",
-            // Two questions declined in a row, then silence for queryBackoffSpan.
+            // Two questions declined in a row, then silence for backoffSpan.
             witnesses: ["seq-0022"],
             mutations: ["1", "3"]
         ),
@@ -268,10 +283,14 @@ public enum InterventionPolicy {
             mutations: ["2", "4"]
         ),
         PolicyConstant(
-            name: "queryBackoffSpan",
+            name: "backoffSpan",
             kind: .behavioural,
-            encoded: encoded(queryBackoffSpan),
+            encoded: encoded(backoffSpan),
             justification: "R-83",
+            // seq-0022 asks two questions, is declined twice, is refused while the hour runs and
+            // asks again exactly an hour later. The accusation hold's half is driven in
+            // `FatigueControllerTests.theAccusationHoldExpires`, which folds the reducer's own
+            // events across the boundary.
             witnesses: ["seq-0022"],
             mutations: ["3599", "3601"]
         ),
@@ -385,7 +404,15 @@ public enum InterventionPolicy {
             + "trip' is true of LadderMachine, whose run resets with the drift subject, and false "
             + "of FatigueController, whose run is session-wide and would have reached 3 on a "
             + "third subject. Measured: the hold trips on the second dismissal of a session. The "
-            + "value is unchanged and the digest with it; only the claim about it is corrected"
+            + "value is unchanged and the digest with it; only the claim about it is corrected",
+        "focus-845 — queryBackoffSpan renamed backoffSpan, and the accusation hold now uses it. "
+            + "The value is unchanged at 3600 s; what changed is that a second consumer reads it. "
+            + "ignoredAccusationBackoff tripped a Bool that only sessionEnded could clear, so two "
+            + "dismissals held the ladder at the ambient rung for the rest of the session — and "
+            + "since U-2 the panel is the only rung that says anything, so that muted the product "
+            + "with no expiry, asymmetrically with its own twin ignoredQueryBackoff, which trips "
+            + "at the same count of 2 and is bounded to an hour. One span, two backoffs: a "
+            + "backoff this app imposes lasts an hour, whichever kind tripped it"
     ]
 
     /// `EngineStamp.interventionVersion`'s value: the count of `revisions`, so a version that

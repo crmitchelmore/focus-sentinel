@@ -22,13 +22,18 @@ public enum FatigueRefusal: Sendable, Equatable, Hashable {
     case snoozed(subject: String, remaining: Duration)
     /// The person stopped answering, so the app stopped asking.
     ///
-    /// Two unanswered questions suspend questions for `InterventionPolicy.queryBackoffSpan`;
-    /// three ignored accusation rungs hold the ladder at `.ambient` for the rest of the
-    /// session. Two unanswered questions is the point at which the app is talking to itself.
+    /// Two unanswered questions suspend questions for `InterventionPolicy.backoffSpan`. Two
+    /// unanswered questions is the point at which the app is talking to itself.
     case backedOff(until: Duration?)
     /// The ladder is held at the ambient rung, so nothing above it may be delivered. Not
     /// silence: the glyph is still on screen and still true.
-    case heldAtAmbient
+    ///
+    /// **It carries `until`, because it now has one** (focus-845). This was a case with no
+    /// payload beside a twin that had always carried one, and the missing payload was the
+    /// missing expiry: two ignored rungs held the ladder for the rest of the session. A person
+    /// who asks "why did it go quiet?" can now be told when it stops, which is the same answer
+    /// `backedOff` has always been able to give.
+    case heldAtAmbient(until: Duration?)
     /// Too soon after the last one of this kind. `queryCooldown` for a question — asserted equal
     /// to `RelevancePolicy.lookBackSpan`, so a question and a look-back agree on what "just now"
     /// means — and e04's own `mandateCooldown` for an accusation, unchanged.
@@ -171,8 +176,8 @@ public struct FatigueController: Sendable, Equatable {
         case .accusation:
             // The accusation backoff does not silence the ladder; it holds it at the ambient
             // rung, which is the one channel the person has not objected to.
-            if fatigue.accusationsHeldAtAmbient, rung != .ambient {
-                return .refused(.heldAtAmbient)
+            if fatigue.isHeldAtAmbient(now: now), rung != .ambient {
+                return .refused(.heldAtAmbient(until: fatigue.accusationsHeldUntil))
             }
         }
 
@@ -260,7 +265,7 @@ public struct FatigueController: Sendable, Equatable {
                 consecutiveUnansweredQueries: state.consecutiveUnansweredQueries,
                 consecutiveIgnoredAccusations: state.consecutiveIgnoredAccusations,
                 queriesSuspendedUntil: state.queriesSuspendedUntil,
-                accusationsHeldAtAmbient: state.accusationsHeldAtAmbient
+                accusationsHeldUntil: state.accusationsHeldUntil
             )
 
         case .delivered(.accusation):
@@ -270,7 +275,7 @@ public struct FatigueController: Sendable, Equatable {
                 consecutiveUnansweredQueries: state.consecutiveUnansweredQueries,
                 consecutiveIgnoredAccusations: state.consecutiveIgnoredAccusations,
                 queriesSuspendedUntil: state.queriesSuspendedUntil,
-                accusationsHeldAtAmbient: state.accusationsHeldAtAmbient
+                accusationsHeldUntil: state.accusationsHeldUntil
             )
 
         case .queryResolved(let outcome):
@@ -292,7 +297,7 @@ public struct FatigueController: Sendable, Equatable {
     /// An **answer** ends the run outright and lifts any suspension: the person is talking to
     /// the app again, and continuing to hold their questions would be punishing them for having
     /// engaged. Anything else — "Not now", Escape, a preemption, an expiry — extends it, and at
-    /// `ignoredQueryBackoff` the app stops asking for `queryBackoffSpan`.
+    /// `ignoredQueryBackoff` the app stops asking for `backoffSpan`.
     private static func resolvingQuery(
         _ state: FatigueState,
         answered: Bool,
@@ -305,7 +310,7 @@ public struct FatigueController: Sendable, Equatable {
                 consecutiveUnansweredQueries: 0,
                 consecutiveIgnoredAccusations: state.consecutiveIgnoredAccusations,
                 queriesSuspendedUntil: nil,
-                accusationsHeldAtAmbient: state.accusationsHeldAtAmbient
+                accusationsHeldUntil: state.accusationsHeldUntil
             )
         }
 
@@ -321,9 +326,9 @@ public struct FatigueController: Sendable, Equatable {
             consecutiveUnansweredQueries: trips ? 0 : run,
             consecutiveIgnoredAccusations: state.consecutiveIgnoredAccusations,
             queriesSuspendedUntil: trips
-                ? now + InterventionPolicy.queryBackoffSpan
+                ? now + InterventionPolicy.backoffSpan
                 : state.queriesSuspendedUntil,
-            accusationsHeldAtAmbient: state.accusationsHeldAtAmbient
+            accusationsHeldUntil: state.accusationsHeldUntil
         )
     }
 
@@ -331,7 +336,8 @@ public struct FatigueController: Sendable, Equatable {
     ///
     /// Anything the person actually did — a correction, a snooze, a pause, a return, a priority
     /// change — ends the run. A dismissal and an ignore extend it, and at
-    /// `ignoredAccusationBackoff` the ladder is held at `.ambient` for the rest of the session.
+    /// `ignoredAccusationBackoff` the ladder is held at `.ambient` for
+    /// `InterventionPolicy.backoffSpan`.
     ///
     /// **This is the consumer of that constant that can actually reach it** (focus-yxb). The run
     /// is a fact about the session and survives a change of drift subject, so two dismissals
@@ -339,9 +345,17 @@ public struct FatigueController: Sendable, Equatable {
     /// `NudgeReachabilityTests`. `LadderMachine`'s run is scoped to one subject and cannot pass
     /// one from anything the host can do, so this hold is the one a person actually meets.
     ///
-    /// **The hold is not lifted by a later correction**, which is R-83 read literally: "for the
-    /// rest of the session". A person who ignored two rungs and then corrected the third subject
-    /// has told the app two things, and the quieter of them is the one that stands.
+    /// **The hold lasts an hour and then lifts** (focus-845). It used to last "for the rest of
+    /// the session", which was R-83 read literally and, since U-2 cut the ladder to two rungs, a
+    /// mute rather than a backoff: the panel is the only rung that says anything, so two
+    /// dismissals ended the speaking product for the day. The previous round verified only that
+    /// the constant *fires*; the consequence of firing was the defect. The twin below it,
+    /// `resolvingQuery(_:answered:now:)`, trips at the same count of 2 and has always bounded
+    /// itself — this now reads the same span, so there is one policy rather than two postures.
+    ///
+    /// **The hold is still not lifted by a later correction.** A person who ignored two rungs and
+    /// then corrected the third subject has told the app two things, and the quieter of them is
+    /// the one that stands — for the hour it was granted, and no longer.
     private static func resolvingAccusation(
         _ state: FatigueState,
         unanswered: Bool,
@@ -354,7 +368,7 @@ public struct FatigueController: Sendable, Equatable {
                 consecutiveUnansweredQueries: state.consecutiveUnansweredQueries,
                 consecutiveIgnoredAccusations: 0,
                 queriesSuspendedUntil: state.queriesSuspendedUntil,
-                accusationsHeldAtAmbient: state.accusationsHeldAtAmbient
+                accusationsHeldUntil: state.accusationsHeldUntil
             )
         }
 
@@ -367,7 +381,13 @@ public struct FatigueController: Sendable, Equatable {
             consecutiveUnansweredQueries: state.consecutiveUnansweredQueries,
             consecutiveIgnoredAccusations: trips ? 0 : run,
             queriesSuspendedUntil: state.queriesSuspendedUntil,
-            accusationsHeldAtAmbient: state.accusationsHeldAtAmbient || trips
+            // **The hold is armed with an expiry, exactly as its twin above is** (focus-845).
+            // A run that trips while a hold is already running extends it from *now*, because
+            // two more dismissals inside the hour are two more refusals to engage — the same
+            // reading the query side gives its own `trips ? now + span` branch.
+            accusationsHeldUntil: trips
+                ? now + InterventionPolicy.backoffSpan
+                : state.accusationsHeldUntil
         )
     }
 }

@@ -207,7 +207,8 @@ struct InterruptionBudgetTests {
         #expect(fresh.permits(.query, now: .zero))
         #expect(fresh.permits(.accusation, now: .zero))
         #expect(!fresh.hasReachedQueryBackoff)
-        #expect(!fresh.accusationsHeldAtAmbient)
+        #expect(fresh.accusationsHeldUntil == nil)
+        #expect(!fresh.isHeldAtAmbient(now: .zero))
     }
 
     /// The two cooldowns are different numbers with different owners: e05's for a question,
@@ -234,7 +235,7 @@ struct InterruptionBudgetTests {
 
         let twice = FatigueState(
             consecutiveUnansweredQueries: InterventionPolicy.ignoredQueryBackoff,
-            queriesSuspendedUntil: .seconds(100) + InterventionPolicy.queryBackoffSpan
+            queriesSuspendedUntil: .seconds(100) + InterventionPolicy.backoffSpan
         )
         #expect(twice.hasReachedQueryBackoff)
         #expect(twice.isBackedOff(.query, now: .seconds(3600)))
@@ -250,7 +251,7 @@ struct InterruptionBudgetTests {
     /// rung, because going fully silent would lose the one channel the person has not objected
     /// to (F-63, F-146).
     ///
-    /// **The hold is read from `accusationsHeldAtAmbient`, and from nothing else** (focus-yxb).
+    /// **The hold is read from `isHeldAtAmbient(now:)`, and from nothing else** (focus-yxb).
     /// This used to assert `hasReachedAccusationBackoff` beside it, on a state built by passing
     /// the threshold straight into the initialiser — a state `FatigueController` never writes,
     /// because it zeroes the run at the moment it trips. The predicate was `false` for every
@@ -258,10 +259,13 @@ struct InterruptionBudgetTests {
     /// input. The reachable version of this claim lives in `NudgeReachabilityTests`.
     @Test("an ignored-accusation hold keeps the glyph rather than silencing it")
     func accusationBackoffHoldsRatherThanSilences() {
-        let ignored = FatigueState(accusationsHeldAtAmbient: true)
-        #expect(ignored.accusationsHeldAtAmbient)
+        let ignored = FatigueState(accusationsHeldUntil: .seconds(20_000))
+        #expect(ignored.isHeldAtAmbient(now: .seconds(10_000)))
         // Not a veto: the glyph still tells the truth.
         #expect(!ignored.isBackedOff(.accusation, now: .seconds(10_000)))
         #expect(ignored.permits(.accusation, now: .seconds(10_000)))
+
+        // …and it is a hold rather than a mute, so it ends (focus-845).
+        #expect(!ignored.isHeldAtAmbient(now: .seconds(20_000)))
     }
 }

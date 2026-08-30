@@ -16,7 +16,7 @@ struct InterventionPolicyTests {
     /// The committed digest. **Re-record this only together with a row appended to
     /// `InterventionPolicy.revisions`**, and only after the constant that moved has a boundary
     /// triple and a witness that would notice.
-    static let committedDigest: UInt64 = 0x6019_a443_3b8d_c261
+    static let committedDigest: UInt64 = 0x4b15_b93f_f3a0_e36b
 
     @Test("the intervention digest equals its committed literal")
     func digestIsCommitted() {
@@ -217,6 +217,39 @@ struct InterventionPolicyTests {
         #expect(InterventionPolicy.canonicalEncoding.contains("quietHoursDefault=none"))
     }
 
+    /// **Both backoffs trip at the same count and last the same span** (focus-845, R-83).
+    ///
+    /// The asymmetry this asserts away was a shipping defect, not an aesthetic one: the query
+    /// side armed `queriesSuspendedUntil` and the accusation side armed a `Bool` nothing but a
+    /// session end could clear. Since U-2 cut the ladder to two rungs the panel is the only rung
+    /// that says anything, so "for the rest of the session" muted the product on two clicks. One
+    /// span with two consumers is what makes the two halves unable to drift apart again; a
+    /// second constant asserted equal would be a threshold with two homes.
+    @Test("the two backoffs are one policy: same count, same hour")
+    func theTwoBackoffsAgree() {
+        #expect(
+            InterventionPolicy.ignoredQueryBackoff
+                == InterventionPolicy.ignoredAccusationBackoff
+        )
+        #expect(InterventionPolicy.backoffSpan == .seconds(3600))
+        #expect(InterventionPolicy.backoffSpan > .zero, "a backoff with no span is a mute")
+
+        // Both consumers read the one constant, and the reducer is what proves it: a tripped
+        // hold and a tripped suspension name the same instant when they trip together.
+        var controller = FatigueController()
+        for _ in 0..<InterventionPolicy.ignoredQueryBackoff {
+            controller.reduce(.queryResolved(.declined), now: .seconds(7))
+        }
+        for _ in 0..<InterventionPolicy.ignoredAccusationBackoff {
+            controller.reduce(.accusationResolved(.ignored), now: .seconds(7))
+        }
+        #expect(controller.state.queriesSuspendedUntil == controller.state.accusationsHeldUntil)
+        #expect(
+            controller.state.accusationsHeldUntil
+                == .seconds(7) + InterventionPolicy.backoffSpan
+        )
+    }
+
     @Test("the query ledger rides its priority's lifetime")
     func ledgerRetention() {
         #expect(InterventionPolicy.queryLedgerRetention == .withPriority)
@@ -227,7 +260,7 @@ struct InterventionPolicyTests {
     @Test("the version is the count of revisions, and every revision says what moved")
     func versionTracksTheRevisions() {
         #expect(InterventionPolicy.version == InterventionPolicy.revisions.count)
-        #expect(InterventionPolicy.version == 2)
+        #expect(InterventionPolicy.version == 3)
         for revision in InterventionPolicy.revisions {
             #expect(!revision.isEmpty, "a policy revision with no reason is a version churning")
         }

@@ -189,17 +189,26 @@ public struct FatigueState: Sendable, Equatable, Hashable {
     /// host can do (focus-yxb).
     ///
     /// It is **zeroed by the trip**, not left standing at the threshold — see
-    /// `FatigueController.resolvingAccusation(_:unanswered:now:)` — so `accusationsHeldAtAmbient`
+    /// `FatigueController.resolvingAccusation(_:unanswered:now:)` — so `isHeldAtAmbient(now:)`
     /// below is the only honest way to ask whether the hold is on.
     public let consecutiveIgnoredAccusations: Int
     /// When the query backoff lifts, on the monotonic clock. `nil` when no backoff is running.
     public let queriesSuspendedUntil: Duration?
-    /// Whether the ladder is held at the ambient rung for the rest of the session.
+    /// **When the ladder stops being held at the ambient rung**, on the monotonic clock. `nil`
+    /// when no hold is running.
     ///
-    /// **Not full silence.** The glyph still tells the truth, because that is the one channel
-    /// the person has not objected to and F-146's whole point is that the state is always
-    /// legible.
-    public let accusationsHeldAtAmbient: Bool
+    /// **It was a `Bool` and had no expiry at all** (focus-845). Nothing but `.sessionEnded`
+    /// could clear it, so two dismissals held the ladder at the ambient rung for the rest of the
+    /// session — and since U-2 the panel is the only rung that carries a sentence, so that was
+    /// the speaking product muted by two clicks with no way back. Its twin
+    /// `queriesSuspendedUntil` above trips at the same count and has always been bounded to
+    /// `InterventionPolicy.backoffSpan`; this now reads the same constant, so the asymmetry is
+    /// gone rather than merely documented.
+    ///
+    /// **Not full silence while it runs.** The glyph still tells the truth, because that is the
+    /// one channel the person has not objected to and F-146's whole point is that the state is
+    /// always legible.
+    public let accusationsHeldUntil: Duration?
 
     public init(
         lastQueryAt: Duration? = nil,
@@ -207,14 +216,14 @@ public struct FatigueState: Sendable, Equatable, Hashable {
         consecutiveUnansweredQueries: Int = 0,
         consecutiveIgnoredAccusations: Int = 0,
         queriesSuspendedUntil: Duration? = nil,
-        accusationsHeldAtAmbient: Bool = false
+        accusationsHeldUntil: Duration? = nil
     ) {
         self.lastQueryAt = lastQueryAt
         self.lastAccusationAt = lastAccusationAt
         self.consecutiveUnansweredQueries = consecutiveUnansweredQueries
         self.consecutiveIgnoredAccusations = consecutiveIgnoredAccusations
         self.queriesSuspendedUntil = queriesSuspendedUntil
-        self.accusationsHeldAtAmbient = accusationsHeldAtAmbient
+        self.accusationsHeldUntil = accusationsHeldUntil
     }
 
     /// A session in which nothing has been said yet.
@@ -252,9 +261,20 @@ public struct FatigueState: Sendable, Equatable, Hashable {
         case .accusation:
             // The accusation backoff does not silence the ladder; it holds it at the ambient
             // rung. That is the ladder's business (`LadderState.heldAtAmbient`), not a veto
-            // here, so this answers `false` and `accusationsHeldAtAmbient` is read instead.
+            // here, so this answers `false` and `isHeldAtAmbient(now:)` is read instead.
             return false
         }
+    }
+
+    /// **Whether the ladder is held at the ambient rung right now** (focus-845).
+    ///
+    /// The twin of `isBackedOff(.query, now:)`, and it is a *function of the clock* for the
+    /// reason that one is: a hold with no expiry is not a backoff, it is a mute. Reading the
+    /// stored instant directly would put the comparison at the call site, which is where the
+    /// missing expiry could hide again.
+    public func isHeldAtAmbient(now: Duration) -> Bool {
+        guard let until = accusationsHeldUntil else { return false }
+        return now < until
     }
 
     /// Whether fatigue permits this kind now — cooldown and backoff together.
@@ -272,7 +292,7 @@ public struct FatigueState: Sendable, Equatable, Hashable {
     // It read `consecutiveIgnoredAccusations >= ignoredAccusationBackoff`, and
     // `FatigueController.resolvingAccusation(…)` writes `trips ? 0 : run` — so the moment the run
     // reaches the threshold the counter is *zeroed* and the hold is recorded in
-    // `accusationsHeldAtAmbient` instead. The stored count therefore never exceeds
+    // `accusationsHeldUntil` instead. The stored count therefore never exceeds
     // `backoff - 1`, and the predicate answered `false` for **every** state the controller can
     // produce. Nothing in the app read it; two tests did, and both hand-built a state by passing
     // the threshold straight into the initialiser — a value the producer never writes, so the

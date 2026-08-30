@@ -218,7 +218,7 @@ struct FatigueControllerTests {
         }
 
         controller.reduce(.queryResolved(.declined), now: .seconds(100))
-        let until = Duration.seconds(100) + InterventionPolicy.queryBackoffSpan
+        let until = Duration.seconds(100) + InterventionPolicy.backoffSpan
         #expect(controller.state.queriesSuspendedUntil == until)
 
         #expect(Self.decide(kind: .query, fatigue: controller.state, now: until - .seconds(1))
@@ -254,7 +254,7 @@ struct FatigueControllerTests {
         }
         #expect(controller.state.consecutiveUnansweredQueries == 0)
 
-        let lifted = InterventionPolicy.queryBackoffSpan
+        let lifted = InterventionPolicy.backoffSpan
         controller.reduce(.queryResolved(.declined), now: lifted)
         #expect(controller.state.consecutiveUnansweredQueries == 1)
         #expect(controller.state.queriesSuspendedUntil == lifted)   // the old one, expired
@@ -273,33 +273,99 @@ struct FatigueControllerTests {
         }
     }
 
-    @Test("three ignored rungs hold the ladder at ambient, and the glyph still gets through")
+    @Test("two ignored rungs hold the ladder at ambient, and the glyph still gets through")
     func theAccusationBackoff() {
         var controller = FatigueController()
 
         for _ in 0..<(InterventionPolicy.ignoredAccusationBackoff - 1) {
             controller.reduce(.accusationResolved(.ignored), now: .seconds(0))
-            #expect(controller.state.accusationsHeldAtAmbient == false)
+            #expect(controller.state.accusationsHeldUntil == nil)
         }
         controller.reduce(.accusationResolved(.ignored), now: .seconds(0))
-        #expect(controller.state.accusationsHeldAtAmbient)
+        let until = Duration.seconds(0) + InterventionPolicy.backoffSpan
+        #expect(controller.state.accusationsHeldUntil == until)
+
+        let inside = until - .seconds(1)
 
         // Held is not silent. F-146's whole point is that the state is always legible, and the
         // ambient rung is the one channel the person has not objected to.
-        #expect(Self.decide(kind: .accusation, rung: .ambient, fatigue: controller.state)
-            == .permitted)
-        #expect(Self.decide(kind: .accusation, rung: .panel, fatigue: controller.state)
-            == .refused(.heldAtAmbient))
-        #expect(Self.decide(kind: .accusation, rung: .panel, fatigue: controller.state)
-            == .refused(.heldAtAmbient))
+        #expect(Self.decide(
+            kind: .accusation, rung: .ambient, fatigue: controller.state, now: inside
+        ) == .permitted)
+        #expect(Self.decide(
+            kind: .accusation, rung: .panel, fatigue: controller.state, now: inside
+        ) == .refused(.heldAtAmbient(until: until)))
 
         // And a question is not held by an accusation's backoff.
-        #expect(Self.decide(kind: .query, fatigue: controller.state) == .permitted)
+        #expect(Self.decide(kind: .query, fatigue: controller.state, now: inside) == .permitted)
+    }
+
+    /// **The half nobody wrote, and the reason the hold was a mute** (focus-845).
+    ///
+    /// `theAccusationBackoff` above proved the constant *fires* and stopped there — and the
+    /// consequence of firing was the defect: `accusationsHeldAtAmbient` was a `Bool` that only
+    /// `.sessionEnded` could clear, so two dismissals silenced the panel — since U-2 the only
+    /// rung that says anything — for the rest of the session. A trip with no expiry is not a
+    /// backoff. This drives the clock across the boundary, which is the assertion the previous
+    /// round could not have passed at any value of the span.
+    @Test("the accusation hold expires on the same span the question backoff uses")
+    func theAccusationHoldExpires() {
+        var controller = FatigueController()
+        for _ in 0..<InterventionPolicy.ignoredAccusationBackoff {
+            controller.reduce(.accusationResolved(.ignored), now: .seconds(100))
+        }
+
+        let until = Duration.seconds(100) + InterventionPolicy.backoffSpan
+        #expect(controller.state.accusationsHeldUntil == until)
+        #expect(controller.state.isHeldAtAmbient(now: until - .seconds(1)))
+
+        // One second before: the panel rung is still refused, and the refusal now says when it
+        // lifts, exactly as its twin `.backedOff(until:)` always has.
+        #expect(Self.decide(
+            kind: .accusation, rung: .panel, fatigue: controller.state, now: until - .seconds(1)
+        ) == .refused(.heldAtAmbient(until: until)))
+
+        // At the instant it lifts, and thereafter: the app may speak again.
+        #expect(!controller.state.isHeldAtAmbient(now: until))
+        #expect(Self.decide(
+            kind: .accusation, rung: .panel, fatigue: controller.state, now: until
+        ) == .permitted)
+        #expect(Self.decide(
+            kind: .accusation, rung: .panel, fatigue: controller.state,
+            now: until + .seconds(10_000)
+        ) == .permitted)
+
+        // The two backoffs are one policy, not two postures: both trip at a run of two and both
+        // last the same hour.
+        #expect(InterventionPolicy.ignoredAccusationBackoff
+            == InterventionPolicy.ignoredQueryBackoff)
+    }
+
+    /// A hold that trips again inside its own hour is extended from **now**, not left to expire
+    /// on the older instant — two more dismissals inside the hour are two more refusals to
+    /// engage. The query side has always read its own `trips ? now + span` branch this way.
+    @Test("a second trip inside the hour extends the hold from the new instant")
+    func aSecondTripExtendsTheHold() {
+        var controller = FatigueController()
+        for _ in 0..<InterventionPolicy.ignoredAccusationBackoff {
+            controller.reduce(.accusationResolved(.ignored), now: .seconds(0))
+        }
+        #expect(controller.state.accusationsHeldUntil == InterventionPolicy.backoffSpan)
+
+        // The trip zeroed the run, so the next hold has to be earned by another two.
+        #expect(controller.state.consecutiveIgnoredAccusations == 0)
+        controller.reduce(.accusationResolved(.ignored), now: .seconds(600))
+        #expect(controller.state.accusationsHeldUntil == InterventionPolicy.backoffSpan)
+        controller.reduce(.accusationResolved(.ignored), now: .seconds(900))
+        #expect(
+            controller.state.accusationsHeldUntil
+                == .seconds(900) + InterventionPolicy.backoffSpan
+        )
     }
 
     /// Asserted on the run **or** the hold, because with `ignoredAccusationBackoff == 2` (U-2)
     /// a second ignore does not merely lengthen the run — it completes it, which zeroes the
-    /// counter and sets `accusationsHeldAtAmbient`. Reading only the counter would call that
+    /// counter and arms `accusationsHeldUntil`. Reading only the counter would call that
     /// "the person ended the run", which is the opposite of what happened.
     @Test("anything the person actually did ends the accusation run")
     func whatEndsTheAccusationRun() {
@@ -309,7 +375,7 @@ struct FatigueControllerTests {
             controller.reduce(.accusationResolved(outcome), now: .seconds(0))
 
             let stillIgnoring = controller.state.consecutiveIgnoredAccusations > 0
-                || controller.state.accusationsHeldAtAmbient
+                || controller.state.isHeldAtAmbient(now: .seconds(0))
             #expect(stillIgnoring == outcome.isUnanswered, "\(outcome)")
         }
     }
@@ -448,7 +514,7 @@ struct FatigueControllerTests {
             consecutiveUnansweredQueries: 0,
             consecutiveIgnoredAccusations: 0,
             queriesSuspendedUntil: .seconds(100_000),
-            accusationsHeldAtAmbient: true
+            accusationsHeldUntil: .seconds(100_000)
         )
 
         // Everything is closed at once. The person's own instructions are reported first.
@@ -469,7 +535,8 @@ struct FatigueControllerTests {
     @Test("every refusal reports gate 10, and a permission reports no gate at all")
     func everyRefusalIsGateTen() {
         #expect(FatigueDecision.permitted.suppressionReason == nil)
-        #expect(FatigueDecision.refused(.heldAtAmbient).suppressionReason == .budgetExhausted)
+        #expect(FatigueDecision.refused(.heldAtAmbient(until: nil)).suppressionReason
+            == .budgetExhausted)
         #expect(FatigueDecision.refused(.cap(.dailyQueryCap)).suppressionReason == .budgetExhausted)
         #expect(NudgeSuppressionReason.budgetExhausted.gateNumber == 10)
     }
