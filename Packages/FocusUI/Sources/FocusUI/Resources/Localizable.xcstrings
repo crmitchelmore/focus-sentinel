@@ -2521,18 +2521,6 @@
         }
       }
     },
-    "settings.intervention.surface.notification" : {
-      "comment" : "A routing destination.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "A notification"
-          }
-        }
-      }
-    },
     "settings.intervention.surface.panel" : {
       "comment" : "A routing destination.",
       "extractionState" : "manual",
@@ -2553,18 +2541,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "The menu-bar popover"
-          }
-        }
-      }
-    },
-    "settings.intervention.surface.unavailable" : {
-      "comment" : "A routing destination that cannot be seen in the current state.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nowhere right now"
           }
         }
       }

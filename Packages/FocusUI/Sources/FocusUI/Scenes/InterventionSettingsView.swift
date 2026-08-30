@@ -367,14 +367,13 @@ public struct InterventionSettingsView: View {
                 .fixedSize(horizontal: false, vertical: true)
 
             ForEach(drawnRows, id: \.self) { row in
-                HStack(spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
-                    ShellText(resource: row.rung.copyResource, role: .footnote)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    ShellText(
-                        resource: ShellStrings.resource(Self.surfaceKey(row.route)),
-                        role: .footnote
-                    )
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                if let key = Self.surfaceKey(row.route) {
+                    HStack(spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
+                        ShellText(resource: row.rung.copyResource, role: .footnote)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        ShellText(resource: ShellStrings.resource(key), role: .footnote)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
                 }
             }
         }
@@ -391,16 +390,38 @@ public struct InterventionSettingsView: View {
         )
     }
 
-    nonisolated public static func surfaceKey(_ route: SurfaceRoute) -> ShellStringKey {
+    /// The sentence for a route, **or nothing when the pane has no business drawing one**
+    /// (focus-pzl).
+    ///
+    /// ## Why this went from total to partial
+    ///
+    /// `SurfaceRoute` is wider than this pane's domain by exactly two cases, and both of them
+    /// had a shipped sentence nobody could reach. `settings.intervention.surface.notification`
+    /// read *"A notification"* four lines under
+    /// `settings.intervention.routing.explanation` — *"Every step of a nudge appears inside
+    /// Focus. It never sends a notification, and never asks for permission to."* The catalogue
+    /// held the row that contradicted the app's own promise, and the switch arm that mentioned
+    /// the key was what passed it through the string lint.
+    ///
+    /// Neither can be handed to this function by anything the pane draws.
+    /// `SurfaceRouter.table(…)` pins `presentation: .notPresenting`, `media: .idle` and
+    /// `menuBarVisible: true`, so no row can be `.unavailable`; and no branch of `route(…)`
+    /// returns `.notification` at all since U-2 deferred the recommitment rung to focus-5ab —
+    /// the shipped binary says so about itself, with `surfacesARungCanReach = [menuBar, panel]`.
+    ///
+    /// ## What happens if that stops being true
+    ///
+    /// `routingMatrix` draws no row for a route with no sentence, and
+    /// `InterventionSettingsTests.everyDrawnRowHasASentence` fails over the whole voice × flag
+    /// cross-product the moment the router produces one. That is the difference this change is
+    /// about: the day focus-5ab puts a rung back on a notification, the gate says *"this route
+    /// has no copy"* instead of a person reading a sentence the app spent a year contradicting.
+    nonisolated public static func surfaceKey(_ route: SurfaceRoute) -> ShellStringKey? {
         switch route {
-        case .surface(let surface):
-            switch surface {
-            case .menuBar: .interventionSurfaceMenuBar
-            case .panel: .interventionSurfacePanel
-            case .notification: .interventionSurfaceNotification
-            case .popoverBadge: .interventionSurfacePopoverBadge
-            }
-        case .unavailable: .interventionSurfaceUnavailable
+        case .surface(.menuBar): .interventionSurfaceMenuBar
+        case .surface(.panel): .interventionSurfacePanel
+        case .surface(.popoverBadge): .interventionSurfacePopoverBadge
+        case .surface(.notification), .unavailable: nil
         }
     }
 

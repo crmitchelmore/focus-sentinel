@@ -85,23 +85,45 @@ struct InterventionSettingsTests {
     }
 
     /// The honest answer the pane promises: **no rung has nowhere to go** in the conditions the
-    /// table describes.
-    @Test("no row in the drawn matrix says a rung has nowhere to go")
-    func everyRungHasSomewhereToGo() {
+    /// table describes, **and every row the pane lays out has a sentence for its surface**.
+    ///
+    /// The second half is the one focus-pzl added, and it is the guard that replaces two deleted
+    /// strings. `surfaceKey` is partial now: `.surface(.notification)` and `.unavailable` answer
+    /// `nil`, because the pane had shipped copy for both and no route could produce either.
+    /// `routingMatrix` draws no row for a `nil`, so this is what stops that silence being a
+    /// silence — the day `SurfaceRouter` produces a route with no sentence, this fails here
+    /// rather than dropping a rung out of the pane on somebody's Mac.
+    @Test("every drawn row goes somewhere, and every drawn row has a sentence for where")
+    func everyDrawnRowHasASentence() {
+        var drawn: Set<ShellStringKey> = []
         for voice in NudgeVoice.allCases {
             for reduced in [false, true] {
                 let view = InterventionSettingsView(
                     settings: InterventionSettings(voice: voice, reducedInterruption: reduced)
                 )
+                #expect(!view.drawnRows.isEmpty)
                 for row in view.drawnRows {
                     #expect(row.route.surface != nil)
+                    let key = InterventionSettingsView.surfaceKey(row.route)
                     #expect(
-                        InterventionSettingsView.surfaceKey(row.route)
-                            != .interventionSurfaceUnavailable
+                        key != nil,
+                        "\(voice.rawValue)/reduced=\(reduced) drew \(row.rung.rawValue) with no "
+                            + "sentence for \(row.route)"
                     )
+                    if let key { drawn.insert(key) }
                 }
             }
         }
+        // Non-vacuity, and the census the deletion rests on: over the whole cross-product the
+        // pane reaches exactly three surfaces. A fourth appearing here means a route came back.
+        #expect(
+            drawn == [
+                .interventionSurfaceMenuBar,
+                .interventionSurfacePanel,
+                .interventionSurfacePopoverBadge
+            ],
+            "the pane reached \(drawn.map(\.rawValue).sorted())"
+        )
     }
 
     /// **The pane cannot draw a notification authorisation, because it does not hold one**
@@ -128,7 +150,18 @@ struct InterventionSettingsTests {
 
     // MARK: - Every closed vocabulary has a name in this pane
 
-    @Test("every voice and every surface has a label")
+    /// **The voices are total; the surfaces are deliberately not** (focus-pzl).
+    ///
+    /// This asserted that every `NudgeSurface` and every `DeferralReason` had a label, and it was
+    /// the proof that let two unreachable sentences ship: `NudgeSurface.notification` is declared
+    /// and reached by nothing, `.unavailable` cannot come out of `SurfaceRouter.table(…)` at all,
+    /// and a test that walks `allCases` through a mapping function cannot tell a route the pane
+    /// draws from a route the pane can be handed. What the pane *draws* is asserted by
+    /// `everyDrawnRowHasASentence`, over the router's own output.
+    ///
+    /// So the surface half is inverted: the two routes outside the pane's domain must have **no**
+    /// sentence, which is what stops the copy coming back without a route to reach it.
+    @Test("every voice has a label, and no route outside the pane's domain has one")
     func vocabulariesAreTotal() {
         var keys: Set<ShellStringKey> = []
         for voice in NudgeVoice.allCases {
@@ -136,17 +169,20 @@ struct InterventionSettingsTests {
         }
         #expect(keys.count == NudgeVoice.allCases.count)
 
-        keys.removeAll()
-        for surface in NudgeSurface.allCases {
-            keys.insert(InterventionSettingsView.surfaceKey(.surface(surface)))
+        for surface in NudgeSurface.allCases where surface != .notification {
+            #expect(InterventionSettingsView.surfaceKey(.surface(surface)) != nil)
         }
-        #expect(keys.count == NudgeSurface.allCases.count)
+        #expect(InterventionSettingsView.surfaceKey(.surface(.notification)) == nil)
         for reason in DeferralReason.allCases {
-            #expect(
-                InterventionSettingsView.surfaceKey(.unavailable(reason))
-                    == .interventionSurfaceUnavailable
-            )
+            #expect(InterventionSettingsView.surfaceKey(.unavailable(reason)) == nil)
         }
+
+        // The three that remain read differently from one another, so the column is a column.
+        let sentences = NudgeSurface.allCases
+            .compactMap { InterventionSettingsView.surfaceKey(.surface($0)) }
+            .map { ShellStrings.string($0) }
+        #expect(sentences.count == 3)
+        #expect(Set(sentences).count == 3, "two surfaces read the same: \(sentences)")
     }
 
     // MARK: - The two columns, and neither may do the other's job (focus-91d)
@@ -154,13 +190,14 @@ struct InterventionSettingsTests {
     /// **The vocabulary the surface column owns**, derived from the surface labels themselves
     /// rather than written down as a list somebody has to maintain.
     ///
-    /// Words of three letters or more, from every `NudgeSurface`'s own drawn label. The
-    /// unavailable label is deliberately not in here: *"Nowhere right now"* names an absence, not
-    /// a surface, and banning its words from the rung column would be banning ordinary English.
+    /// Words of three letters or more, from every drawn `NudgeSurface` label. The unavailable
+    /// label used to be excluded by hand here — *"Nowhere right now"* names an absence, not a
+    /// surface — and since focus-pzl there is no such label to exclude: `surfaceKey` answers
+    /// `nil` for every route this pane cannot be handed, so `compactMap` is the exclusion.
     static func surfaceVocabulary() -> Set<String> {
         var words: Set<String> = []
         for surface in NudgeSurface.allCases {
-            let key = InterventionSettingsView.surfaceKey(.surface(surface))
+            guard let key = InterventionSettingsView.surfaceKey(.surface(surface)) else { continue }
             let label = String(localized: ShellStrings.resource(key))
             words.formUnion(Self.words(in: label))
         }
@@ -237,7 +274,9 @@ struct InterventionSettingsTests {
                 )
                 for row in view.drawnRows {
                     let rung = String(localized: row.rung.copyResource)
-                    let key = InterventionSettingsView.surfaceKey(row.route)
+                    // A row with no key is not drawn at all, and `everyDrawnRowHasASentence`
+                    // is where that is a failure rather than a skip.
+                    guard let key = InterventionSettingsView.surfaceKey(row.route) else { continue }
                     let surface = String(localized: ShellStrings.resource(key))
                     #expect(
                         rung != surface,

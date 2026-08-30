@@ -379,11 +379,15 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case interventionQuietHoursExplanation = "settings.intervention.quietHours.explanation"
     case interventionRoutingHeading = "settings.intervention.routing.heading"
     case interventionRoutingExplanation = "settings.intervention.routing.explanation"
+    /// **Three surfaces, and there were five** (focus-pzl). `…surface.notification` read *"A
+    /// notification"* four lines under the routing explanation's promise that the app *"never
+    /// sends a notification, and never asks for permission to"*, and `…surface.unavailable` read
+    /// *"Nowhere right now"*. `SurfaceRouter.table(…)` can produce neither route, so both were
+    /// sentences in the shipped binary that no click could reach — and each was blessed by
+    /// `check-strings.sh` because a switch arm three files away mentioned its key.
     case interventionSurfaceMenuBar = "settings.intervention.surface.menuBar"
     case interventionSurfacePanel = "settings.intervention.surface.panel"
-    case interventionSurfaceNotification = "settings.intervention.surface.notification"
     case interventionSurfacePopoverBadge = "settings.intervention.surface.popoverBadge"
-    case interventionSurfaceUnavailable = "settings.intervention.surface.unavailable"
     case interventionCapsHeading = "settings.intervention.caps.heading"
     case interventionCapsQueriesPriority = "settings.intervention.caps.queriesPriority"
     case interventionCapsQueriesDay = "settings.intervention.caps.queriesDay"
