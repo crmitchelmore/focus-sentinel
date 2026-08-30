@@ -524,6 +524,213 @@ struct NudgeChargingInvariantTests {
         )
     }
 
+    // MARK: - A write is not automatically the rung's write
+
+    /// The loop's own projection, with a status of the caller's choosing.
+    ///
+    /// `NudgeHostFixture.menuBarPresentation(of:)` fixes the status at `.unrelated`, which is
+    /// what the drift lane is about. These two tests need the *other* thing that writes to the
+    /// item — a status change — while a rung stands under it.
+    static func presentation(
+        of host: NudgeHost,
+        status: FocusStatus
+    ) -> MenuBarPresentation {
+        MenuBarPresentation(
+            status: status,
+            snoozes: host.activeSnoozes(),
+            pendingQuery: host.pendingPopoverQuery,
+            pendingAccusation: host.pendingPopoverAccusation,
+            rung: host.currentRung,
+            rungSurface: host.landedRungSurface
+        )
+    }
+
+    /// **A write the rung did not cause must not pay for the rung** (focus-1b5).
+    ///
+    /// The item has two things to say — the status and the mark — and only one of them is the
+    /// rung. A second glyph rung on a second application finds the mark already `noticing`; if
+    /// the status then changes, the glyph really is reassigned, and a rule that asked only *"was
+    /// the item written to?"* would charge for it.
+    ///
+    /// This is the conjunct the seven-subject drive cannot reach on its own: there, two
+    /// consecutive `noticing` rungs mean `setOpenRung(_:)` requests no redraw at all, so no write
+    /// happens and the charge is refused one layer earlier. Here the write really happens.
+    @Test("a write about the status does not pay for the rung standing under it")
+    func aStatusWriteDoesNotPayForTheRung() throws {
+        let fixture = try NudgeHostFixture()
+        defer { fixture.tearDown() }
+        try fixture.wireMenuBarToTheLoop()
+        Self.namedSubjects(fixture)
+
+        // The first rung marks the item and is charged for it.
+        fixture.host.consider(
+            NudgeHostFixture.unrelatedJudgement(subject: Self.subjects[0])
+        )
+        NudgeHostFixture.settle()
+        try #require(fixture.menuBar.markOnTheItem == .noticing, "the first rung never marked")
+        fixture.clock.advance(by: .seconds(700))
+
+        // A second rung, about a **different** application. The mark carries no subject, so the
+        // item says exactly what it already said.
+        fixture.host.consider(
+            NudgeHostFixture.unrelatedJudgement(subject: Self.subjects[1])
+        )
+        NudgeHostFixture.settle()
+        try #require(fixture.host.landedRungSurface == .menuBar)
+        let chargesAtLanding = fixture.host.chargesPaidFor.count
+
+        // Now the status changes under it — an ordinary thing that happens many times an hour —
+        // and the glyph really is reassigned.
+        let writesBefore = fixture.menuBar.glyphWriteCount
+        fixture.menuBar.update(Self.presentation(of: fixture.host, status: .relevant))
+        NudgeHostFixture.settle()
+
+        try #require(
+            fixture.menuBar.glyphWriteCount > writesBefore,
+            "the status change wrote nothing to the item, so this test drives nothing"
+        )
+        #expect(
+            fixture.menuBar.markOnTheItem == .noticing,
+            "the mark went away with the status, so the two are not separable here"
+        )
+        #expect(
+            fixture.host.chargesPaidFor.count == chargesAtLanding,
+            """
+            a write about the status paid for a rung the item never announced — receipts \
+            \(fixture.host.chargesPaidFor.map(\.channel.rawValue))
+            """
+        )
+        try Self.assertTheJoin(fixture)
+    }
+
+    /// **A write while the badge holds the mark must not pay for the rung under it**
+    /// (focus-nrl).
+    ///
+    /// The third conjunct, driven: with a question waiting behind the click the item is drawn
+    /// from the **maximum** of the two marks, so it says `waiting` however many times it is
+    /// written. A rule that asked only *"was the item written to?"* — or *"is it marked at
+    /// all?"* — would charge for a rung the item has never mentioned.
+    @Test("a write that says waiting does not pay for the rung under the badge")
+    func aWaitingWriteDoesNotPayForTheRung() throws {
+        let fixture = try NudgeHostFixture()
+        defer { fixture.tearDown() }
+        try fixture.wireMenuBarToTheLoop()
+        Self.namedSubjects(fixture)
+
+        fixture.host.choose(reducedInterruption: true)
+        fixture.host.consider(NudgeHostFixture.uncertainJudgement(subject: Self.subjects[1]))
+        NudgeHostFixture.settle()
+        try #require(fixture.menuBar.markOnTheItem == .waiting, "the badge never marked the item")
+
+        fixture.host.consider(
+            NudgeHostFixture.unrelatedJudgement(subject: Self.subjects[0])
+        )
+        NudgeHostFixture.settle()
+        try #require(fixture.host.landedRungSurface == .menuBar, "the rung did not reach the glyph")
+        let chargesAtLanding = fixture.host.chargesPaidFor.count
+
+        // The status changes: the item is written, and what it says is still the badge's word.
+        let writesBefore = fixture.menuBar.glyphWriteCount
+        fixture.menuBar.update(Self.presentation(of: fixture.host, status: .relevant))
+        NudgeHostFixture.settle()
+
+        try #require(
+            fixture.menuBar.glyphWriteCount > writesBefore,
+            "the status change wrote nothing to the item, so this test drives nothing"
+        )
+        #expect(
+            fixture.menuBar.markOnTheItem == .waiting,
+            "the badge stopped inviting the click that the question is still waiting behind"
+        )
+        #expect(
+            fixture.host.chargesPaidFor.count == chargesAtLanding,
+            """
+            a write that says `waiting` paid for a rung standing underneath it — receipts \
+            \(fixture.host.chargesPaidFor.map(\.channel.rawValue))
+            """
+        )
+        try Self.assertTheJoin(fixture)
+    }
+
+    /// **Six glyph landings the person really saw still leave the accusation cap unspent**
+    /// (focus-ndh).
+    ///
+    /// focus-ndh's acceptance criteria asks for a driven budget rather than a predicate:
+    /// `LadderRung.Kind.ambient.makesAnAccusation` was already `false`, already existed, and was
+    /// already ignored by the line that summed the rows.
+    ///
+    /// Six **perceptible** landings, which is what makes this a proof of the cap rather than of
+    /// the charge: a break between each one clears the mark, so every landing really does change
+    /// the menu bar and every one is honestly charged. Before this round all six spent
+    /// `dailyAccusationCap`, and the panel rung — the only rung with a sentence on it — was
+    /// unreachable for the rest of the day.
+    @Test("six glyph landings the person saw leave the day's accusations unspent")
+    func sixPerceptibleGlyphLandingsSpendNoAccusation() throws {
+        let fixture = try NudgeHostFixture()
+        defer { fixture.tearDown() }
+        try fixture.wireMenuBarToTheLoop()
+        Self.namedSubjects(fixture)
+
+        var charged = 0
+        for index in 0..<InterventionPolicy.dailyAccusationCap {
+            let subject = Self.subjects[index % Self.subjects.count]
+            let round = try Self.drive(
+                fixture,
+                NudgeHostFixture.unrelatedJudgement(subject: subject),
+                subject: subject,
+                index: index
+            )
+            Self.assertTheInvariant(round)
+            charged += round.chargedAccusations
+            // A break: the ladder de-escalates and the mark comes off, so the next landing has
+            // something new to say.
+            fixture.host.phaseLeftFocus()
+            NudgeHostFixture.settle()
+            fixture.clock.advance(by: RelevancePolicy.mandateCooldown + .seconds(1))
+        }
+
+        // Non-vacuity: if the landings were not perceptible this proves nothing about the cap.
+        #expect(
+            charged == InterventionPolicy.dailyAccusationCap,
+            "only \(charged) of the landings were charged, so this drives no cap at all"
+        )
+
+        let budget = fixture.host.todaysUsage()
+        #expect(
+            budget.interruptionsToday == InterventionPolicy.dailyAccusationCap,
+            "a glyph landing stopped costing the person a moment of their attention"
+        )
+        #expect(
+            budget.accusationsToday == 0,
+            """
+            the glyph, which accuses nobody, spent \(budget.accusationsToday) of the day's \
+            \(InterventionPolicy.dailyAccusationCap) accusations
+            """
+        )
+        #expect(
+            budget.permits(.accusation),
+            "six silent marks made the panel rung unreachable for the rest of the day"
+        )
+        #expect(budget.bindingLimit(for: .accusation) == nil)
+
+        // And the seventh drift still speaks, which is the decision focus-ndh asked to be read.
+        let seventh = try Self.drive(
+            fixture,
+            NudgeHostFixture.unrelatedJudgement(subject: Self.subjects[0]),
+            subject: Self.subjects[0],
+            index: InterventionPolicy.dailyAccusationCap
+        )
+        Self.assertTheInvariant(seventh)
+        #expect(
+            seventh.chargedAccusations > 0,
+            """
+            the seventh drift was silenced by six glyph landings — \
+            \(String(describing: fixture.host.lastDecision))
+            """
+        )
+        try Self.assertTheJoin(fixture)
+    }
+
     // MARK: - focus-nrl, driven end to end
 
     /// **A pending badge nudge hides the glyph rung, so the glyph rung is charged nothing — and
