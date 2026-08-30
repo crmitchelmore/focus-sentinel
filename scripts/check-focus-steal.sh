@@ -80,14 +80,41 @@ trap 'cleanup' EXIT INT TERM
 # The independent observer. `lsappinfo front` prints the front application's ASN and
 # `lsappinfo info -only bundleid` turns it into a bundle identifier; neither call is
 # permission-gated, and both run in **this** process rather than in the app under test.
+#
+# **An unreadable observer prints nothing, and the sentinel is unreadable.** The old guard checked
+# only that `lsappinfo front` printed *something*, then handed whatever followed the first `=` back
+# as a bundle identifier. When the front ASN resolves to no bundle id — which is what `lsappinfo`
+# does for a process with no bundle, and is reproducible on demand:
+#
+#     $ /usr/bin/lsappinfo info -only bundleid "ASN:0x0-0xffffff:"
+#     "CFBundleIdentifier"=[ NULL ]
+#
+# — `${line#*=}` passed `[ NULL ] ` through as if it were an identifier. It is not empty, so the
+# `-z` guards below let the stage run; the app then reported its own honest reading, the two were
+# compared as strings at *the app and the observer agree about who is frontmost*, and the stage
+# printed a RED gate naming a focus theft that had not happened. A gate that can fail the
+# application for the observer's own blindness is worse than no gate: it teaches a reader to
+# discount it.
+#
+# So the result is validated as an identifier rather than trusted as one. A bundle identifier is a
+# non-empty run of `[A-Za-z0-9._-]` and nothing else — `[ NULL ]` fails on the brackets and the
+# spaces, and so does every other diagnostic shape `lsappinfo` can print. Anything that does not
+# parse is reported as **no reading**, and the callers below turn no reading into a failure that
+# names the observer.
 observe_frontmost() {
-    local asn line
+    local asn line value
     asn="$("$LSAPPINFO" front 2>/dev/null)"
     [[ -n "$asn" ]] || { print -r -- ""; return 0 }
     line="$("$LSAPPINFO" info -only bundleid "$asn" 2>/dev/null)"
     # `"CFBundleIdentifier"="com.google.Chrome"` → `com.google.Chrome`
-    line="${line#*=}"
-    print -r -- "${line//\"/}"
+    [[ "$line" == *=* ]] || { print -r -- ""; return 0 }
+    value="${line#*=}"
+    value="${value//\"/}"
+    # A bundle identifier carries no whitespace, so stripping it cannot corrupt a real one and it
+    # collapses `[ NULL ] ` to `[NULL]`, which the character check then rejects outright.
+    value="${value//[[:space:]]/}"
+    [[ -n "$value" && "$value" != *[^A-Za-z0-9._-]* ]] || { print -r -- ""; return 0 }
+    print -r -- "$value"
 }
 
 print "FOCUS-STEAL — the panel takes nothing (§4.5, R-89, P-139)"
@@ -111,6 +138,9 @@ print "observer: frontmost before = ${FRONT_BEFORE:-<none>}"
 
 if [[ -z "$FRONT_BEFORE" ]]; then
     print -u2 "FAIL: the observer could not read a frontmost application"
+    print -u2 "      lsappinfo printed no ASN, or an ASN that resolves to no bundle identifier."
+    print -u2 "      Reading 1 is unavailable, so this stage cannot be green — but note that this"
+    print -u2 "      names the OBSERVER, not the app: nothing here has been measured about it yet."
     exit 1
 fi
 if [[ "$FRONT_BEFORE" == "$BUNDLE_ID" ]]; then
@@ -144,6 +174,20 @@ print "settled after ${waited}s"
 
 FRONT_AFTER="$(observe_frontmost)"
 print "observer: frontmost after  = ${FRONT_AFTER:-<none>}"
+
+# **The second half of the same repair.** An observer that goes unreadable *after* the show used to
+# reach the assertions below as an empty string or, before the parse was validated, as `[ NULL ] `
+# — and every one of reading 1's comparisons then failed, printing "the frontmost application is
+# unchanged" and "the app and the observer agree about who is frontmost" as failures of the
+# application. Neither is a statement about the application when the observer has no reading to
+# compare. The stage still cannot be green without reading 1; it must simply say whose fault it is.
+if [[ -z "$FRONT_AFTER" ]]; then
+    print -u2 "FAIL: the observer could not read a frontmost application after the show"
+    print -u2 "      It read '$FRONT_BEFORE' before. Reading 1 needs both, so this stage fails —"
+    print -u2 "      but it is the OBSERVER that failed. Readings 2, 3 and 4 are in $OUT and are"
+    print -u2 "      taken in-process; nothing here says the panel took anything."
+    exit 1
+fi
 
 if [[ ! -s "$OUT" ]]; then
     print -u2 "FAIL: the app wrote no nudge report at $OUT within ${SETTLE_TIMEOUT}s"
