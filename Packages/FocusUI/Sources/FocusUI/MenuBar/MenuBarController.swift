@@ -832,11 +832,13 @@ public final class MenuBarController {
     /// **Put an already-open popover back under the item it hangs from** (focus-5yu).
     ///
     /// A nudge arriving in a popover somebody is already looking at replaces its content view
-    /// controller, and the replacement is a different height. Measured on the real popover:
-    /// opened on a status row it stood at (1383, 830, 326, 466)… after the question arrived and
-    /// made it 466 points tall, it was still at y = 830, so it now spanned 830 → 1296 on a
-    /// 1080-point display. It had grown **upward**, 216 points of it above the top of the screen
-    /// and its arrow nowhere near the item, and the question was in the part that was gone.
+    /// controller, and the replacement is a different height. Measured on the real popover,
+    /// opened on a plain status row and then handed a question: it read (1383, 830, 326, 466) —
+    /// the origin it had at the smaller size, with the new height — so it spanned 830 → 1296 on a
+    /// 1080-point display. It had grown **upward**: 216 points above the top of the screen, its
+    /// arrow nowhere near the item, and the question in the part that was gone. Asked for again
+    /// after the assignment, the same popover reads (1383, 588, 326, 466) — top edge at 1054,
+    /// under the item, whole.
     ///
     /// `NSPopover` re-lays-out for a new content size but does not re-place itself for one, so
     /// the placement is asked for again here — the same call `togglePopover()` makes, with the
