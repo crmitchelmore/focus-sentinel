@@ -396,4 +396,21 @@ extension FocusSchemaV4.InterventionRecord {
 
     /// Whether this row spends a unit of the day's budget. **Only a delivery does** (R-81).
     public var spendsBudget: Bool { disposition == .delivered }
+
+    /// **Whether this row spends one of the day's six accusations** (focus-ndh).
+    ///
+    /// Delegated to `InterventionEvent.spendsTheAccusationCap` rather than restated here: the
+    /// rule is *"a rung that accuses nobody spends no accusation"*, it is derived from
+    /// `LadderRung.Kind.makesAnAccusation`, and a second copy of it on the stored row is a second
+    /// place for it to be got wrong. The columns this reads — the disposition, the kind and the
+    /// rung — are the ones R-79 commits.
+    public var spendsTheAccusationCap: Bool {
+        InterventionEvent(
+            kind: kind,
+            rung: rung,
+            subject: subject,
+            surface: surface,
+            disposition: disposition
+        ).spendsTheAccusationCap
+    }
 }

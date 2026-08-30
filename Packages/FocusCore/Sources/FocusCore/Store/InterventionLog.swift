@@ -198,7 +198,13 @@ public final class InterventionLog {
                 queriesAllPriorities += 1
                 if let priorityID, row.priorityID == priorityID { queriesForPriority += 1 }
             case .accusation:
-                accusations += 1
+                // **A rung that accuses nobody spends no accusation** (focus-ndh). The
+                // interruption above is charged either way — the glyph really did take a moment
+                // of the person's attention — and `dailyAccusationCap` is a cap on *sentences*,
+                // which the ambient rung is not. Every ambient landing used to spend one, so six
+                // silent marks made the panel rung, the only rung that carries a sentence and the
+                // whole correction economy, unreachable for the rest of the day.
+                if row.spendsTheAccusationCap { accusations += 1 }
             }
         }
 

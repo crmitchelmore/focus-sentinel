@@ -143,6 +143,37 @@ public struct InterventionEvent: Sendable, Equatable, Hashable {
 
     /// Whether this event spends a cap. **Only a delivery does** (R-81, R-83).
     public var spendsBudget: Bool { disposition == .delivered }
+
+    /// **Whether this event spends one of the day's six ACCUSATIONS** (focus-ndh, R-83).
+    ///
+    /// Not the same question as `spendsBudget`, and the difference is one rung. Both kinds cost
+    /// the person an interruption — *"a person asked ten questions has been interrupted ten
+    /// times"* — so `dailyInterruptionCap` is spent by everything delivered and this changes
+    /// none of that. `dailyAccusationCap` is a cap on **accusations**, and the ambient rung makes
+    /// none: `LadderRung.Kind.ambient.makesAnAccusation` is `false` by the ladder's own
+    /// derivation, `NudgeSurface.menuBar.offersAnAnswer` is `false` because there is nothing on a
+    /// glyph to answer, and R-87 keeps it on through a snooze precisely because it is a *state*
+    /// and not a sentence.
+    ///
+    /// Measured before this line existed: seven drifts seven hundred seconds apart produced six
+    /// ambient rows, `accusationsToday` 6 of 6, the query budget squeezed from four remaining to
+    /// one, and decision 7 `silent(budgetExhausted)`. The panel rung — the only rung that carries
+    /// a sentence, a subject and the whole correction economy — could not be raised for the rest
+    /// of that day and was never raised at all. R-80's escalation story was unreachable on any
+    /// day that drifts more than six times, which is an ordinary day.
+    ///
+    /// Said in the vocabulary the ladder already has rather than in a new one: the row keeps
+    /// `kind == .accusation` and keeps its `rung` column, so the ambient rung stays visible in
+    /// the record (focus-sq7) and the Intervention pane goes on drawing it. What changed is which
+    /// cap the sum lands in.
+    ///
+    /// A row with **no** rung named is not a ladder rung at all — a notification response, an
+    /// older row — and an accusation-kind row that names no rung is charged as one, because
+    /// silently exempting it would be a way to spend nothing by writing nothing down.
+    public var spendsTheAccusationCap: Bool {
+        guard spendsBudget, kind == .accusation else { return false }
+        return rung?.makesAnAccusation ?? true
+    }
 }
 
 /// **Counters, and nothing else** (R-93, F-107).

@@ -224,9 +224,13 @@ struct NudgeHostBadgeAccusationTests {
         )
         let budget = fixture.host.todaysUsage()
         #expect(
-            budget.accusationsToday == 1,
+            budget.accusationsToday == 0,
             "the day's accusation budget was charged for a badge nobody opened"
         )
+        // **The one delivery is the ambient glyph, and it spends an interruption and not an
+        // accusation** (focus-ndh). The glyph took a moment of the person's attention and is
+        // counted for it; it accuses nobody — `LadderRung.Kind.ambient.makesAnAccusation` is
+        // `false` — so `dailyAccusationCap`, which is a cap on sentences, is untouched.
         #expect(budget.interruptionsToday == 1)
         let badgeRows = try fixture.interventions().filter { $0.surface == .popoverBadge }
         #expect(
@@ -249,7 +253,10 @@ struct NudgeHostBadgeAccusationTests {
         try fixture.wireMenuBarToTheLoop()
 
         Self.climbToTheBadge(fixture, via: .reducedInterruption)
-        try #require(fixture.host.todaysUsage().accusationsToday == 1)
+        // The ambient rung has landed and is charged one *interruption*, and no accusation: the
+        // glyph accuses nobody (focus-ndh).
+        try #require(fixture.host.todaysUsage().interruptionsToday == 1)
+        try #require(fixture.host.todaysUsage().accusationsToday == 0)
 
         // The click. `onDidShow` is `nil` so the stage leaves the shipping wire alone.
         try MenuBarStage.open(
@@ -260,7 +267,10 @@ struct NudgeHostBadgeAccusationTests {
 
         #expect(fixture.menuBar.isShowing(.accusation), "the popover is not showing the rung")
         #expect(fixture.host.deliveredCount == 2, "the rung the person is looking at was not counted")
-        #expect(fixture.host.todaysUsage().accusationsToday == 2)
+        // The badge carries the **panel** rung, which does accuse somebody, so this one spends
+        // an accusation as well as an interruption (focus-ndh).
+        #expect(fixture.host.todaysUsage().accusationsToday == 1)
+        #expect(fixture.host.todaysUsage().interruptionsToday == 2)
 
         let badge = try #require(
             try fixture.interventions().first { $0.surface == .popoverBadge },
@@ -289,7 +299,8 @@ struct NudgeHostBadgeAccusationTests {
             showing: NudgeHostFixture.menuBarPresentation(of: fixture.host)
         )
         NudgeHostFixture.settle()
-        try #require(fixture.host.todaysUsage().accusationsToday == 2)
+        try #require(fixture.host.todaysUsage().accusationsToday == 1)
+        try #require(fixture.host.todaysUsage().interruptionsToday == 2)
 
         fixture.menuBar.closePopover()
         NudgeHostFixture.settle()
@@ -304,8 +315,12 @@ struct NudgeHostBadgeAccusationTests {
         fixture.host.popoverPresented()
 
         #expect(
-            fixture.host.todaysUsage().accusationsToday == 2,
+            fixture.host.todaysUsage().accusationsToday == 1,
             "the same rung was charged again for a second look"
+        )
+        #expect(
+            fixture.host.todaysUsage().interruptionsToday == 2,
+            "the same rung interrupted the person again for a second look"
         )
         let badgeRows = try fixture.interventions().filter { $0.surface == .popoverBadge }
         #expect(badgeRows.count == 1, "one rung, \(badgeRows.count) rows")

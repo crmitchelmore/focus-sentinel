@@ -454,4 +454,70 @@ struct InterventionLogTests {
         #expect(try log.purgeAll() == 0)
         #expect(try log.purge(priorityID: kept) == 0)
     }
+
+    /// **The ambient rung spends an interruption and not an accusation** (focus-ndh, R-83).
+    ///
+    /// Folded over the whole ladder rather than asserted at one point, and folded over the
+    /// **cap** rather than over the predicate: `LadderRung.Kind.ambient.makesAnAccusation` was
+    /// already `false`, already existed, and was already ignored by the line that summed the
+    /// rows — so asserting it back would be asserting a value that had never been read.
+    ///
+    /// The consequence this holds is R-80's escalation story. Six glyph landings used to spend
+    /// the whole of `dailyAccusationCap`, so the panel rung — the only rung that carries a
+    /// sentence, a subject and the correction economy — was unreachable for the rest of any day
+    /// that drifted more than six times.
+    @MainActor
+    @Test("every rung is an interruption; only the rungs that accuse spend an accusation")
+    func onlyARungThatAccusesSpendsAnAccusation() throws {
+        let (log, container) = try Self.makeLog()
+        defer { withExtendedLifetime(container) {} }
+        let priorityID = UUID()
+
+        // One delivered rung of every kind the ladder has, twice over, plus the whole
+        // accusation cap's worth of ambient ones.
+        for _ in 0..<InterventionPolicy.dailyAccusationCap {
+            try log.record(
+                Self.delivered(.accusation, rung: .ambient, surface: .menuBar),
+                priorityID: priorityID
+            )
+        }
+
+        let afterTheGlyphs = try log.budget(on: log.today, priorityID: priorityID)
+        #expect(
+            afterTheGlyphs.interruptionsToday == InterventionPolicy.dailyAccusationCap,
+            "a glyph landing is still a moment of the person's attention and is still counted"
+        )
+        #expect(
+            afterTheGlyphs.accusationsToday == 0,
+            "the glyph, which accuses nobody, spent the day's accusations"
+        )
+        #expect(
+            afterTheGlyphs.permits(.accusation),
+            "six silent marks made the panel rung unreachable for the rest of the day"
+        )
+
+        // And the rung that does accuse still spends one.
+        try log.record(
+            Self.delivered(.accusation, rung: .panel, surface: .panel),
+            priorityID: priorityID
+        )
+        let afterThePanel = try log.budget(on: log.today, priorityID: priorityID)
+        #expect(afterThePanel.accusationsToday == 1)
+        #expect(afterThePanel.interruptionsToday == InterventionPolicy.dailyAccusationCap + 1)
+
+        // The rule, read off the ladder rather than off a list written here: every rung whose
+        // own `makesAnAccusation` is true spends one, and no rung whose is false does. A third
+        // rung added above the panel inherits the obligation rather than escaping it.
+        for rung in LadderRung.Kind.allCases {
+            let event = Self.delivered(.accusation, rung: rung, surface: .panel)
+            #expect(
+                event.spendsTheAccusationCap == rung.makesAnAccusation,
+                "the \(rung.rawValue) rung's cap and its own sentence disagree"
+            )
+            #expect(event.spendsBudget, "a delivered rung did not cost an interruption")
+        }
+        // Non-vacuity: the fold above must have covered both answers.
+        #expect(LadderRung.Kind.allCases.contains { $0.makesAnAccusation })
+        #expect(LadderRung.Kind.allCases.contains { !$0.makesAnAccusation })
+    }
 }
