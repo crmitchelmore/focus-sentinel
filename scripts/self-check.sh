@@ -1782,6 +1782,82 @@ check(
     sentence,
 )
 
+# --- the same seam, over inputs that CAN fail (focus-2pd) --------------------------------------
+#
+# The three readings above are all about ONE subject: this process's own identifier, which is
+# running by definition. Its own comment in `SelfCheck.swift` said so — "the lookup either
+# produces a name or the fix is not in the binary" — which is the honest description of a fixed
+# point, not of a test. Every branch of `SubjectNaming` that can go wrong is unreachable from
+# that input: the installed-but-not-running lookup, the origin derivation, the whitespace guard
+# and the identifier fallback.
+#
+# So the binary now walks all five and the gate judges each. The running reading stays and is
+# named the control it is.
+naming = panel.get("subjectNaming") or {}
+check(
+    bool(naming),
+    "the binary reported the subject seam over more than its own identifier",
+    sorted(naming),
+)
+
+running = naming.get("running") or {}
+check(
+    running.get("namedNobody") is False and running.get("isANameNotTheKey") is True,
+    "control: the running application resolves to a name rather than to its own key",
+    running,
+)
+
+# An origin is not an application. It has no localised name to have been looked up, so the host
+# is DERIVED — and the one wrong answer available here is a browser's name for a site.
+origin = naming.get("origin") or {}
+check(
+    origin.get("namedNobody") is False
+    and origin.get("identifier") == "https://docs.google.com"
+    and origin.get("displayName") == "docs.google.com",
+    "an origin is named by its host, never by a browser and never by the whole URL",
+    origin,
+)
+
+# e04's mixed drift carries "". A nudge that named nobody must go on naming nobody: all three of
+# nil, empty and whitespace are the same absence, and none of them may acquire a blank name.
+for label in ("whitespace", "empty", "nothing"):
+    absence = naming.get(label) or {}
+    check(
+        absence.get("namedNobody") is True,
+        f"a subject of {label} names nobody rather than acquiring a blank name",
+        absence,
+    )
+
+# The last resort, and the reason it is not the empty string: an identifier is ugly, an empty
+# sentence is a bug the person is being asked to answer.
+absent = naming.get("notInstalled") or {}
+check(
+    absent.get("namedNobody") is False
+    and absent.get("displayName") == "com.example.focus.sentinel.absent"
+    and absent.get("isANameNotTheKey") is False,
+    "an identifier nothing answers to falls back to itself, never to an empty sentence",
+    absent,
+)
+
+# **Installed and not running** — focus-7gc's second branch, which this process's own identifier
+# can never reach. It is the one reading that cannot be guaranteed on an arbitrary Mac, so a
+# skip is reported by name and read as a skip here rather than as a pass.
+anchor = naming.get("installedNotRunning") or {}
+if anchor.get("skipped") is True:
+    print(f"SKIP  installed-but-not-running: {anchor.get('reason')}")
+else:
+    check(
+        anchor.get("namedNobody") is False and anchor.get("isANameNotTheKey") is True,
+        "an application installed and NOT running is named from its bundle, not by its key",
+        anchor,
+    )
+    check(
+        bool(anchor.get("returnTargetName"))
+        and anchor.get("returnTargetName") == anchor.get("displayName"),
+        "the sentence and the 'Back to …' button call the same not-running application the same",
+        (anchor.get("displayName"), anchor.get("returnTargetName")),
+    )
+
 # --- the dark-mode probe, which used to be light-pinned itself (focus-7wy) ----------------------
 #
 # `panelReport()` built the panel with no `traits:` argument, so it took the default —

@@ -786,6 +786,91 @@ enum SelfCheck {
     /// or brings anything forward — and `check-forbidden.sh` (R-96m) makes that structural by
     /// confining `orderFrontRegardless` to the controller's one show function and banning the
     /// call that would take focus outright.
+    /// **The subject seam, walked over inputs that can FAIL** (focus-2pd).
+    ///
+    /// ## What was wrong with the reading it joins
+    ///
+    /// `panelReport()` resolved a subject for `FocusStore.bundleIdentifier` — this process's own
+    /// identifier — and reported the sentence. Its own comment said why that is green: the app is
+    /// running by definition, so the workspace lookup either produces a name or the fix is not in
+    /// the build. That is a fixed point wearing the clothes of ground truth, the same family as
+    /// the `everyAccusationRouteCanBeAnswered` tautology. Every branch of `SubjectNaming` that
+    /// can go wrong is unreachable from that one input.
+    ///
+    /// ## The five readings, and why each one can fail
+    ///
+    /// | reading | the input | what would break it |
+    /// |---|---|---|
+    /// | `running` | this process | nothing — kept as the control, and labelled as one |
+    /// | `installedNotRunning` | a bundle on this disk that is **not** running | focus-7gc's second branch: `applicationURL(for:)` then `applicationName(at:)`. Before e623445 this fell straight through to the identifier |
+    /// | `origin` | `https://docs.google.com` | an origin has no application to have a name; the host must be derived and no browser may be named |
+    /// | `whitespace` | `"   "` | e04's mixed drift carries `""`; a subject that named nobody must go on naming nobody rather than acquiring a blank name |
+    /// | `notInstalled` | an identifier nothing answers to | the last resort. It must be the identifier and never the empty string, because an empty sentence is a bug the person is asked to answer |
+    ///
+    /// The second is the interesting one and it is the one that **cannot be guaranteed on an
+    /// arbitrary Mac**, so it is reported as `skipped` with a named reason rather than passing
+    /// when no such bundle is found. A probe that quietly passes when it could not run is the
+    /// defect this whole entry is about, one level up.
+    @MainActor
+    static func subjectNamingReport() -> [String: Any] {
+        let workspace = SystemReturnWorkspace()
+        let naming = SubjectNaming(workspace: workspace)
+        var report: [String: Any] = [:]
+
+        func reading(_ identifier: String?) -> [String: Any] {
+            guard let subject = naming.subject(identifier) else {
+                return ["namedNobody": true]
+            }
+            return [
+                "namedNobody": false,
+                "identifier": subject.identifier,
+                "displayName": subject.displayName,
+                // The claim the whole seam exists for: the sentence half is a NAME, not a second
+                // copy of the storage key.
+                "isANameNotTheKey": subject.displayName != subject.identifier
+            ]
+        }
+
+        report["running"] = reading(FocusStore.bundleIdentifier)
+        report["origin"] = reading("https://docs.google.com")
+        report["whitespace"] = reading("   ")
+        report["empty"] = reading("")
+        report["nothing"] = reading(nil)
+        report["notInstalled"] = reading("com.example.focus.sentinel.absent")
+
+        // **Installed and not running** — found rather than assumed, from applications every Mac
+        // ships. The probe confirms both halves before it believes the answer: the bundle is on
+        // this disk, and nothing with that identifier is running right now. Launching one would
+        // be the probe changing the world it is measuring, so it does not.
+        let candidates = [
+            "com.apple.Chess", "com.apple.Stickies", "com.apple.Dictionary",
+            "com.apple.Grapher", "com.apple.ScriptEditor2", "com.apple.TextEdit",
+            "com.apple.Calculator", "com.apple.Preview", "com.apple.Console"
+        ]
+        let anchor = candidates.first { identifier in
+            workspace.applicationURL(for: identifier) != nil
+                && workspace.localizedNameOfRunningApplication(identifier) == nil
+        }
+        if let anchor {
+            var found = reading(anchor)
+            found["skipped"] = false
+            found["anchor"] = anchor
+            // The same seam `ReturnToTask` uses, asked the same question — so a divergence
+            // between the sentence and the "Back to …" button shows up as two readings that
+            // disagree rather than as a panel nobody photographed.
+            found["returnTargetName"] = ReturnToTask
+                .target(anchor: anchor, workspace: workspace)?.displayName ?? ""
+            report["installedNotRunning"] = found
+        } else {
+            report["installedNotRunning"] = [
+                "skipped": true,
+                "reason": "no candidate application is installed on this Mac and not running",
+                "candidates": candidates
+            ]
+        }
+        return report
+    }
+
     @MainActor
     static func panelReport() -> [String: Any] {
         let composition = AppComposition.shared
@@ -807,11 +892,17 @@ enum SelfCheck {
         //
         // The panel a person meets said *"Is com.figma.Desktop part of …?"* for the whole of e05
         // and this probe could not have noticed: it drew a panel and measured its window. The
-        // subject here is resolved by `SubjectNaming` against the real `SystemReturnWorkspace` —
-        // and the identifier it is asked about is **this process's own**, which is running by
-        // definition, so the lookup either produces a name or the fix is not in the binary.
-        // `self-check.sh` fails the gate when the drawn sentence carries the identifier.
+        // subject here is resolved by `SubjectNaming` against the real `SystemReturnWorkspace`.
+        //
+        // **The identifier below is this process's own, and on its own that proved nothing**
+        // (focus-2pd). It is running by definition, so the running branch of `SubjectNaming` is
+        // the one input where a name is guaranteed available — a fixed point, green whatever the
+        // rest of the seam does. It is kept, because the sentence the panel draws has to come
+        // from somewhere and this is the one subject the probe can be certain of; what it is no
+        // longer is the *whole* proof. `subjectNamingReport()` below walks the inputs that can
+        // fail.
         let naming = SubjectNaming(workspace: SystemReturnWorkspace())
+        report["subjectNaming"] = subjectNamingReport()
         guard let subject = naming.subject(FocusStore.bundleIdentifier) else {
             // Unreachable — the identifier is a non-empty constant — and **reported** rather
             // than forced. A probe that trapped here would take the whole self-check with it,
