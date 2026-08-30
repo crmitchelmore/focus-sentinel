@@ -129,6 +129,57 @@ struct CapabilityContractTotalityTests {
         )
     }
 
+    /// **The Privacy pane may not tell a person they are running a reduced product because of a
+    /// permission this app never wanted** (focus-i1g, U-2).
+    ///
+    /// The defect this pins was user-reachable on **every fresh install**: `.notifications` sits
+    /// at `.notRequested` there, so `CapabilityMatrixView` drew its fallback lines, and the
+    /// `.nudgeLadder` cell said `.degraded(to: .frontmostApplication)` — rendered as *"Falls back
+    /// to 'Which app is in front' and keeps working"*. One settings tab away the app says every
+    /// step of a nudge appears inside Focus and it never asks permission to send one. Both cannot
+    /// be true.
+    ///
+    /// The suite could not see it because the only assertion aimed at this row —
+    /// `suppressionInputsFailQuiet` — checks the *suppress-only* direction over four other
+    /// capabilities. Nothing pinned this cell, so the number of tests that would have failed if
+    /// the ladder had quietly grown a dependence on notifications was zero.
+    ///
+    /// So the claim is asserted in the direction that makes it true rather than as a literal:
+    /// **no consumer degrades on notifications, because no rung can route to one.** The second
+    /// half is enumerated over the router's whole input space rather than asserted about the one
+    /// call the author had in mind — if a future rung ever *does* route to a notification, this
+    /// fails here and the contract must be re-argued before the pane can go on saying nothing
+    /// depends on it.
+    @Test("nothing degrades without notifications, because no rung can route to one")
+    func notificationsCostThisLadderNothing() {
+        for consumer in SensingConsumer.allCases {
+            #expect(
+                CapabilityContract.fallback(for: .notifications, consumer: consumer)
+                    == .fullFunction,
+                """
+                \(consumer) declares a degraded behaviour for a missing notification grant. \
+                The Privacy pane renders that sentence to every fresh install, where the \
+                capability is .notRequested — so it must be true of the shipping router, or \
+                deleted.
+                """
+            )
+        }
+
+        // …and here is why it is true, over the router's whole input space rather than at the one
+        // call this file's author had in mind. `SurfaceRouterTests.everyCell` is the same 160-cell
+        // fold `noCellReachesANotification` uses, borrowed rather than copied so the two claims
+        // cannot come to disagree about what "every cell" means.
+        var cells = 0
+        SurfaceRouterTests.everyCell { rung, _, _, _, _, voice, route in
+            cells += 1
+            #expect(
+                route.surface != .notification,
+                "\(rung)/\(voice) routes to a notification, so the contract cell above is a lie"
+            )
+        }
+        #expect(cells == 160, "the router's input space changed under this claim")
+    }
+
     /// Lock detection's primary signal *is* an ordinary activation — `com.apple.loginwindow`
     /// becoming frontmost, 1.5 ms before the undocumented notification (probe P-87). So this
     /// degradation is very nearly the same mechanism, not a consolation prize.

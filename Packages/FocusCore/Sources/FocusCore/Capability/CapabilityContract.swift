@@ -135,17 +135,30 @@ public enum CapabilityContract {
         // Every missing suppression input makes the ladder quieter, never louder. That
         // asymmetry is the whole design: a nudge that should not have fired costs trust, and a
         // nudge that did not fire costs a nudge.
+        //
+        // **`.notifications` is `.fullFunction`, and that is a fact about the router rather than
+        // a kindness** (focus-i1g, U-2). It used to say `.degraded(to: .frontmostApplication)`,
+        // which the Privacy pane rendered — on every fresh install, where the capability sits at
+        // `.notRequested` — as *"Falls back to 'Which app is in front' and keeps working"*. There
+        // is nothing to fall back **from**: `SurfaceRouter.route(rung:…)` takes no authorisation
+        // and has only an `.ambient` and a `.panel` branch, no production code reads
+        // `Capability.notifications` at all, and the Release self-check asserts that no rung
+        // routes to a notification. So the pane was telling a person they were running a reduced
+        // product — on the one surface whose contract is to say plainly what it cannot do, and
+        // which carries no call to action they could have used to resolve it — about a permission
+        // this app was repaired never to want. `notificationsCostThisLadderNothing` pins the cell
+        // and enumerates the router that justifies it.
         case .nudgeLadder:
             switch capability {
             case .frontmostApplication: return .showUnavailable
-            case .windowMetadata, .notifications, .onDeviceModel:
+            case .windowMetadata, .onDeviceModel:
                 return .degraded(to: .frontmostApplication)
             case .accessibilityWindowContext: return .degraded(to: .windowMetadata)
             case .cameraActivity: return .degraded(to: .microphoneActivity)
             case .idle, .systemLifecycle, .displayGeometry, .presentation,
                  .microphoneActivity:
                 return .suppressOnly
-            case .screenCapture: return .fullFunction
+            case .screenCapture, .notifications: return .fullFunction
             }
 
         // A T3 nicety, and the one consumer permitted to simply not be there.

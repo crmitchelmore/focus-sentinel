@@ -40,7 +40,16 @@ public enum Capability: String, Sendable, CaseIterable, Codable, Hashable {
     case accessibilityWindowContext
     /// Pixel capture. Parked by the Feasibility Court (dissent D-04).
     case screenCapture
-    /// User notifications. e05's, and the first ask this programme ever makes.
+    /// User notifications. **Declared, read by nothing, and never asked for** (U-2, focus-wy0,
+    /// focus-i1g).
+    ///
+    /// It was written down as *"e05's, and the first ask this programme ever makes"*. The
+    /// programme makes no ask: `requestAuthorization` is nowhere in this repository, the
+    /// notification rung went with the recommitment rung deferred to focus-5ab, and every cell of
+    /// `CapabilityContract` for this capability is `.fullFunction` — nothing degrades when it is
+    /// missing, because nothing consults it. What survives is a *reading* the self-check reports
+    /// so the `notification-denied` gate stage can say which grant state this Mac was in while
+    /// every rung still landed on an in-app surface.
     case notifications
     /// Apple's on-device model. e06's.
     case onDeviceModel
