@@ -681,6 +681,21 @@ check_outside "R-70n" "no rule is constructed with the session scope" \
 #        is the most a grep can offer here; the totality claim is `SubjectSentenceTests`, which
 #        renders every deck crossed with every subject shape and asserts both directions.
 #
+# R-96p  **The charge has exactly one producer, and it is a measurement** (focus-1b5,
+#        focus-nrl). `PerceptibleChange(` may appear in exactly one file, and that file is
+#        `PerceptibleChange.swift` — the type whose only public producer,
+#        `proven(on:from:to:)`, takes two readings of the real surfaces and answers `nil`
+#        unless the person was shown something. `NudgeHost` cannot spend a unit of anybody's
+#        day without holding one, so charging while invisible is unrepresentable rather than
+#        merely tested for.
+#
+#        In the shape R-96c pins `LadderRung(`, and for the identical reason: the rung is the
+#        unit of escalation and its provenance IS the no-escalation invariant, and this is the
+#        unit of *spending* — its provenance IS the invariant that the app charges only for
+#        what it showed. Three consecutive rounds fixed one instance each of "charged while
+#        invisible" and left the shape intact, because the rule lived in a doc comment beside
+#        the code that broke it.
+#
 # R-96d  No shared protocol over the two authorisations. `: NudgeAuthorisation`-shaped
 #        conformances are banned outright — a shared abstraction is the elegant refactor
 #        that would quietly destroy the guarantee while looking like an improvement.
@@ -802,6 +817,10 @@ NUDGE_DRAWING_FILES=(
 # The one file permitted to show the panel (R-96m). It arrives in T133.
 PANEL_SHOW_FILE="Packages/FocusUI/Sources/FocusUI/Nudge/NudgePanelController.swift"
 
+# The one file permitted to construct a `PerceptibleChange` — the receipt without which nothing
+# may be charged (R-96p, focus-1b5, focus-nrl).
+PERCEPTION_FILE="Packages/FocusCore/Sources/FocusCore/Nudge/PerceptibleChange.swift"
+
 # The one file permitted to ADD `.fullScreenAuxiliary` to a collection behaviour (R-96n).
 PANEL_BEHAVIOUR_FILE="Packages/FocusUI/Sources/FocusUI/Nudge/NudgePanel.swift"
 
@@ -888,6 +907,33 @@ else
             rc=1
         else
             print "ok   [R-96c] $ladder_file does not name QueryWarrant"
+        fi
+    done
+fi
+
+# R-96p — **the charge has exactly one producer, and it is a measurement** (focus-1b5,
+# focus-nrl). `PerceptibleChange` is the receipt `NudgeHost` must hold before it may spend a unit
+# of the person's day, and `PerceptibleChange.proven(on:from:to:)` is the only thing that makes
+# one. Pinned in the shape R-96c pins the ladder's unit, and for the identical reason: three
+# consecutive rounds fixed one instance of "charged while invisible" and left the shape that
+# produces it, because the rule lived in a doc comment beside the code that broke it. A second
+# construction site is the round-five version of this defect, and it is a diff in this line.
+count_files "R-96p" "PerceptibleChange is constructed in exactly one file" \
+    'PerceptibleChange(' 1 App Packages
+# And that file is the type's own, which is also the only file permitted to read a raw
+# observation into a verdict. Comment-stripped, exactly as `count_files` counts.
+perception_files=(${(f)"$(grep -rnF --include='*.swift' --exclude-dir='.build' -- 'PerceptibleChange(' App Packages 2>/dev/null | strip_comments | cut -d: -f1 | sort -u)"})
+if (( ${#perception_files} == 0 )) || [[ -z "${perception_files[1]}" ]]; then
+    print -u2 "FAIL [R-96p] nothing constructs a PerceptibleChange — the charge has no receipt"
+    rc=1
+else
+    for perception_file in $perception_files; do
+        if [[ "$perception_file" == "$PERCEPTION_FILE" ]]; then
+            print "ok   [R-96p] $perception_file is the sanctioned producer"
+        else
+            print -u2 "FAIL [R-96p] $perception_file constructs a PerceptibleChange"
+            print -u2 "    A charge is proven by measuring a surface, in $PERCEPTION_FILE alone."
+            rc=1
         fi
     done
 fi
