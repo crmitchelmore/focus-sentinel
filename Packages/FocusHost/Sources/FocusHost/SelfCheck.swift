@@ -57,6 +57,19 @@ enum SelfCheck {
     /// about 73 ms after launch. The interval costs nothing on a machine that takes longer.
     static let activationPollInterval: TimeInterval = 0.05
 
+    /// How long a probe that **needs the front** may spend getting it back before it declares
+    /// its reading NOT TAKEN (focus-jax).
+    ///
+    /// `comeForward` establishes the front once, at launch, and `activation` records that it
+    /// worked. What nothing recovered from is the front being lost *afterwards*: another
+    /// application coming forward part-way through a report that takes a second and a half of
+    /// run loop is an ordinary event on a Mac, and it left `undoReport` reading a menu bar
+    /// nobody had validated. Measured on this machine, activation lands on the second poll —
+    /// three seconds is sixty of them, and a probe that still cannot get the front after that
+    /// is in a world it cannot take its reading in, which is a different sentence from "the
+    /// Edit menu is broken".
+    static let frontRecoveryDeadline: TimeInterval = 3.0
+
     /// Seed a session into a store of its own and exit (R-46).
     static let seedArgument = "--focus-session-seed"
 
@@ -317,6 +330,40 @@ enum SelfCheck {
     @MainActor
     static func liveCockpitWindow() -> NSWindow? {
         NSApp.windows.first { $0.identifier?.rawValue == ShellWindow.cockpit.id }
+    }
+
+    /// **Get the front back for a reading that needs it, and say whether it worked** (focus-jax).
+    ///
+    /// `comeForward` runs once, at launch, and `activation` records what it achieved. This is the
+    /// same request re-issued at the moment of a reading that depends on it, because the front is
+    /// not a property of the code — it is a property of the machine, and any other application
+    /// coming forward takes it away. Returns whether the process is, right now, in the state
+    /// AppKit needs to validate a menu item; the caller reports that rather than assuming it.
+    @MainActor
+    static func regainFront(within seconds: TimeInterval = frontRecoveryDeadline) -> Bool {
+        let started = ProcessInfo.processInfo.systemUptime
+        while true {
+            if editMenuObstacle().isEmpty { return true }
+            if ProcessInfo.processInfo.systemUptime - started >= seconds { return false }
+            NSApp.activate(ignoringOtherApps: true)
+            liveCockpitWindow()?.makeKeyAndOrderFront(nil)
+            settle(forSeconds: activationPollInterval)
+        }
+    }
+
+    /// What stands between this process and a menu reading AppKit would validate — empty when
+    /// nothing does.
+    ///
+    /// One sentence per obstacle, in the order they are reached, so a NOT TAKEN reading names
+    /// which of the three it hit instead of leaving a reader to infer it from a false boolean.
+    @MainActor
+    static func editMenuObstacle() -> String {
+        if !NSApp.isActive { return "the application was not frontmost" }
+        guard let key = NSApp.keyWindow else { return "the application had no key window" }
+        if let cockpit = liveCockpitWindow(), key !== cockpit {
+            return "the key window was not the cockpit"
+        }
+        return ""
     }
 
     // MARK: - Report
@@ -2003,6 +2050,30 @@ enum SelfCheck {
     /// earlier the same day. Whether a field editor exists at all depends on what the cockpit is
     /// drawing, which depends on the store: it is app state, not code, and reading it as a verdict
     /// on the code is what a probe that does not state its preconditions invites.
+    ///
+    /// ## The two preconditions beside that one, which were reported and never asked (focus-jax)
+    ///
+    /// The paragraph above stated *one* precondition — the field editor — and the gate asserts it.
+    /// `applicationIsActive` and `hasKeyWindow` sat in the same dictionary, reported and asserted
+    /// by nobody, and they are the two that failed: five gate runs on one tree, runs 2 and 3 red
+    /// on the same six assertions, `undoManagerTitle` reading `Undo Change Priority` in all ten
+    /// readings. The wiring was correct every time. The app had come forward at launch — the
+    /// `activation` block passed — and had lost the front again by the time this probe ran, which
+    /// is a fact about the Mac and not about the Edit menu.
+    ///
+    /// So the reading is split in two, and each half says what it needs:
+    ///
+    /// * **Front-free.** `cockpitUndoManagerIsJournal`, `undoManagerTitle` and
+    ///   `undoManagerTitleAfterUndo` are facts about objects. They are taken and asserted in every
+    ///   run, and a regression in `adoptUndoManager` or in the journal's action name fails on them
+    ///   whatever this machine was doing with its front.
+    /// * **Front-bound.** Only AppKit's own validation — the four title and enablement readings off
+    ///   the live menu item — needs the app active with the cockpit key. Those state their
+    ///   precondition through `menuReadingWasTaken`, the front is *asked for again* immediately
+    ///   before they are taken, and an obstacle that outlasts `frontRecoveryDeadline` makes them
+    ///   **NOT TAKEN** rather than six failures of unrelated code. A machine that never lets the
+    ///   app forward at all still fails, loudly, on the `activation` block — this is only about
+    ///   losing a front that was already won.
     @MainActor
     static func undoReport() -> [String: Any] {
         var report: [String: Any] = [:]
@@ -2019,12 +2090,36 @@ enum SelfCheck {
         let manager = AppComposition.shared.priorityHost.journalUndoManager
         guard let manager else {
             report["available"] = false
+            report["menuReadingWasTaken"] = false
+            report["menuReadingNotTakenBecause"] = "the priority journal has no undo manager"
             return report
         }
         report["available"] = true
         report["groupsByEvent"] = manager.groupsByEvent
+
+        // --- the half of F-93 that needs nothing from the window server ----------------------
+        //
+        // **Taken in every run, including one where the menu cannot be read** (focus-jax). The
+        // claim "the journal is the manager the cockpit hands to the responder chain" is a fact
+        // about objects, not about who is frontmost, and it is the half a regression in
+        // `adoptUndoManager` breaks. Reading it off `liveCockpitWindow()` rather than off
+        // `NSApp.keyWindow` is what makes it front-free: the cockpit exists whether or not this
+        // process is active, and the key window does not.
+        let cockpit = liveCockpitWindow()
+        report["cockpitWindowExists"] = cockpit != nil
+        report["cockpitUndoManagerIsJournal"] = cockpit != nil && cockpit?.undoManager === manager
+
+        // --- the preconditions of the half that does, asked before it is taken ---------------
+        //
+        // `comeForward` established the front at launch and `activation` records that it worked;
+        // by the time this probe runs, a second and a half of run loop later, another application
+        // may have taken it back. That is an ordinary event on a Mac and it is not a defect in
+        // the Edit menu, so it is asked for again and then **stated**.
+        let frontRegained = regainFront()
+        report["frontRegained"] = frontRegained
         report["applicationIsActive"] = NSApp.isActive
         report["hasKeyWindow"] = NSApp.keyWindow != nil
+        let obstacleBefore = editMenuObstacle()
 
         // --- the chain this reading is taken through, before anything is done about it --------
         let window = NSApp.keyWindow
@@ -2052,8 +2147,13 @@ enum SelfCheck {
             let taskID = try store.createTask(intent: "Self-check scripted mutation")
             try store.activate(taskID: taskID, undo: manager)
 
+            // Front-free, and therefore asserted in every run: the action name P-50 measured is
+            // one the *manager* carries, and `undoMenuItemTitle` is the sentence AppKit would
+            // build out of it. A journal that stopped naming its operations fails here whether
+            // or not this Mac let the app keep the front.
             report["actionName"] = manager.undoActionName
             report["undoManagerTitle"] = manager.undoMenuItemTitle
+            report["canUndo"] = manager.canUndo
             let afterMutation = editMenuUndoItem()
             report["menuItemTitle"] = afterMutation?.title ?? ""
             report["enabled"] = afterMutation?.isEnabled ?? false
@@ -2061,6 +2161,7 @@ enum SelfCheck {
             if manager.canUndo { manager.undo() }
 
             report["undoManagerTitleAfterUndo"] = manager.undoMenuItemTitle
+            report["canUndoAfterUndo"] = manager.canUndo
             let afterUndo = editMenuUndoItem()
             report["menuItemTitleAfterUndo"] = afterUndo?.title ?? ""
             report["enabledAfterUndo"] = afterUndo?.isEnabled ?? false
@@ -2068,6 +2169,19 @@ enum SelfCheck {
             report["available"] = false
             report["error"] = "\(error)"
         }
+
+        // **Asked again at the far end, because the front can be lost mid-reading** (focus-jax).
+        //
+        // Everything between the two questions is one `menuItemTitle` after another, and the
+        // obstacle that matters is the one that was in the way when they were taken — not the one
+        // in the way when the probe started. Both ends clear is the only state in which the four
+        // title-and-enablement readings below describe an Edit menu somebody validated; anything
+        // else, and they describe a background application's menu bar, which is `Undo`, disabled,
+        // however many operations the journal holds.
+        let obstacleAfter = editMenuObstacle()
+        let obstacle = obstacleBefore.isEmpty ? obstacleAfter : obstacleBefore
+        report["menuReadingWasTaken"] = obstacle.isEmpty
+        report["menuReadingNotTakenBecause"] = obstacle
 
         return report
     }

@@ -200,6 +200,7 @@ committed_digest = sys.argv[5]
 committed_intervention_digest = sys.argv[6]
 
 failures = []
+not_taken_readings = []
 
 
 def check(condition, message, detail=None):
@@ -211,6 +212,24 @@ def check(condition, message, detail=None):
             line += f"\n      got: {detail!r}"
         failures.append(line)
         print(line, file=sys.stderr)
+
+
+def not_taken(subject, reason, detail=None):
+    """A reading whose PRECONDITION was not met — never a verdict on the code (focus-jax).
+
+    This is the third outcome, and it exists because the gate spent two runs in five naming six
+    failures of the Edit-menu integration when the only fact was that `NSApp.isActive` was false.
+    A reading that could not be taken is NOT TAKEN: it is not a pass, so it is listed loudly at
+    the end and never counted as coverage, and it is not a failure, so it never attributes a
+    machine's behaviour to a line of code. Anything that would still be true of a background
+    application is asserted OUTSIDE the branch that calls this, so a probe cannot go quiet by
+    losing its preconditions.
+    """
+    line = f"NOT TAKEN: {subject} — {reason}"
+    if detail is not None:
+        line += f"\n      {detail}"
+    not_taken_readings.append(line)
+    print(line)
 
 
 CMD = 1 << 20          # NSEvent.ModifierFlags.command
@@ -567,55 +586,124 @@ print(f"note axIsProcessTrusted = {report.get('axIsProcessTrusted')!r} (recorded
 # `windowUndoManagerIsJournal`; a probe that read the menu mid-edit fails on
 # `firstResponderIsFieldEditor`; and only a genuine break in the menu integration reaches the
 # four title and enablement assertions below, which are unchanged.
+#
+# ## The two preconditions in the same dictionary that nothing asked (focus-jax)
+#
+# Five gate runs on one tree: 1, 4 and 5 green, 2 and 3 red on the SAME SIX assertions in
+# different configurations. Identical test counts, identical digests, and `undoManagerTitle`
+# reading `Undo Change Priority` in ALL TEN readings — the wiring was correct every time. The one
+# fact that differed: `applicationIsActive` and `hasKeyWindow` were false in exactly those two
+# readings. The probe reported both; this script asserted NEITHER, so the gate named six failures
+# of the Edit-menu integration when the only fact was that another application had taken the
+# front part-way through a report that spends a second and a half turning the run loop.
+#
+# The block is split the way the claim is. The FRONT-FREE half — the cockpit window's manager, the
+# journal's own action name before and after the undo — is asserted in every run: those are facts
+# about objects and a regression in `adoptUndoManager` fails on them whatever this Mac was doing.
+# The FRONT-BOUND half is AppKit's own validation, which cannot be taken by a background
+# application at all; the probe asks for the front back before taking it and states whether it got
+# it, and an obstacle that outlasts the recovery deadline makes those four readings **NOT TAKEN**
+# rather than four failures of code that did not change. A machine that never lets the app forward
+# in the first place still fails loudly, by name, in the `activation` block far above.
 
 undo = report.get("undo") or {}
 check(undo.get("available") is True, "the cockpit window has an undo manager", undo)
+
+# --- front-free: asserted in every run, taken or not ------------------------------------------
 check(
-    undo.get("keyWindowIsCockpit") is True,
-    "the undo reading was taken through the cockpit's own window",
-    undo.get("keyWindowIsCockpit"),
-)
-check(
-    undo.get("windowUndoManagerIsJournal") is True,
-    "the journal registers on the manager the key window hands to the responder chain (F-93)",
-    undo.get("windowUndoManagerIsJournal"),
+    undo.get("cockpitWindowExists") is True,
+    "the cockpit window exists to carry the journal's undo manager",
+    undo.get("cockpitWindowExists"),
 )
 check(
-    undo.get("firstResponderIsFieldEditor") is False,
-    "no field editor stands between the Edit menu and the window's undo manager",
-    undo.get("firstResponderIsFieldEditor"),
+    undo.get("cockpitUndoManagerIsJournal") is True,
+    "the journal IS the undo manager the cockpit hands to the responder chain (F-93, front-free)",
+    undo.get("cockpitUndoManagerIsJournal"),
 )
 check(
-    undo.get("responderUndoManagerIsJournal") is True,
-    "the responder chain the Edit menu is validated against resolves to the journal's manager",
-    undo.get("responderUndoManagerIsJournal"),
-)
-print(
-    "note the reading before editing ended: "
-    f"firstResponderWasFieldEditor={undo.get('firstResponderWasFieldEditor')!r}, "
-    f"menuItemTitleWhileEditing={undo.get('menuItemTitleWhileEditing')!r} "
-    "(recorded, never asserted — a focused text field owning Undo is macOS working)"
+    undo.get("undoManagerTitle") == "Undo Change Priority",
+    "the journal's own manager names the operation 'Undo Change Priority' (P-50, front-free)",
+    undo.get("undoManagerTitle"),
 )
 check(
-    undo.get("menuItemTitle") == "Undo Change Priority",
-    "the Edit menu reads 'Undo Change Priority' after one scripted mutation",
-    undo.get("menuItemTitle"),
+    undo.get("canUndo") is True,
+    "the journal's manager holds the scripted mutation and can take it back",
+    undo.get("canUndo"),
 )
 check(
-    undo.get("enabled") is True,
-    "the Edit menu's Undo item is enabled after that mutation",
-    undo.get("enabled"),
+    undo.get("undoManagerTitleAfterUndo") == "Undo",
+    "the journal's own manager reads plain 'Undo' again after taking it (front-free)",
+    undo.get("undoManagerTitleAfterUndo"),
 )
 check(
-    undo.get("menuItemTitleAfterUndo") == "Undo",
-    "the Edit menu reads plain 'Undo' again after taking it",
-    undo.get("menuItemTitleAfterUndo"),
+    undo.get("canUndoAfterUndo") is False,
+    "the journal's manager has nothing left to undo after taking it",
+    undo.get("canUndoAfterUndo"),
 )
-check(
-    undo.get("enabledAfterUndo") is False,
-    "the Edit menu's Undo item is disabled again after taking it",
-    undo.get("enabledAfterUndo"),
-)
+
+# --- front-bound: AppKit's own validation, which a background application cannot take ---------
+if undo.get("menuReadingWasTaken") is not True:
+    not_taken(
+        "the Edit menu's own validation (F-93)",
+        undo.get("menuReadingNotTakenBecause") or "no reason reported",
+        "frontRegained={!r} applicationIsActive={!r} hasKeyWindow={!r}; "
+        "declined to judge menuItemTitle={!r} enabled={!r}".format(
+            undo.get("frontRegained"),
+            undo.get("applicationIsActive"),
+            undo.get("hasKeyWindow"),
+            undo.get("menuItemTitle"),
+            undo.get("enabled"),
+        ),
+    )
+else:
+    check(
+        undo.get("keyWindowIsCockpit") is True,
+        "the undo reading was taken through the cockpit's own window",
+        undo.get("keyWindowIsCockpit"),
+    )
+    check(
+        undo.get("windowUndoManagerIsJournal") is True,
+        "the journal registers on the manager the key window hands to the responder chain (F-93)",
+        undo.get("windowUndoManagerIsJournal"),
+    )
+    check(
+        undo.get("firstResponderIsFieldEditor") is False,
+        "no field editor stands between the Edit menu and the window's undo manager",
+        undo.get("firstResponderIsFieldEditor"),
+    )
+    check(
+        undo.get("responderUndoManagerIsJournal") is True,
+        "the responder chain the Edit menu is validated against resolves to the journal's manager",
+        undo.get("responderUndoManagerIsJournal"),
+    )
+    print(
+        "note the reading before editing ended: "
+        f"firstResponderWasFieldEditor={undo.get('firstResponderWasFieldEditor')!r}, "
+        f"menuItemTitleWhileEditing={undo.get('menuItemTitleWhileEditing')!r}, "
+        f"editingEnded={undo.get('editingEnded')!r} "
+        "(recorded, never asserted — a focused text field owning Undo is macOS working, and "
+        "`responderUndoManagerIsJournal` above cannot pass vacuously without a responder)"
+    )
+    check(
+        undo.get("menuItemTitle") == "Undo Change Priority",
+        "the Edit menu reads 'Undo Change Priority' after one scripted mutation",
+        undo.get("menuItemTitle"),
+    )
+    check(
+        undo.get("enabled") is True,
+        "the Edit menu's Undo item is enabled after that mutation",
+        undo.get("enabled"),
+    )
+    check(
+        undo.get("menuItemTitleAfterUndo") == "Undo",
+        "the Edit menu reads plain 'Undo' again after taking it",
+        undo.get("menuItemTitleAfterUndo"),
+    )
+    check(
+        undo.get("enabledAfterUndo") is False,
+        "the Edit menu's Undo item is disabled again after taking it",
+        undo.get("enabledAfterUndo"),
+    )
 
 # --- the application target's own wiring (focus-cp2) ------------------------------------------
 #
@@ -2106,6 +2194,15 @@ check(
 # ------------------------------------------------------------------------------------------
 
 print()
+# **Listed, never counted as coverage** (focus-jax). A NOT TAKEN reading is not a pass, and a run
+# in which one of them went quiet has to say so in the same breath as it says OK — otherwise a
+# probe that stopped being takeable becomes a probe that stopped being a probe, and the gate
+# reports green for the absence of evidence.
+if not_taken_readings:
+    print(f"NOT TAKEN — {len(not_taken_readings)} reading(s) whose precondition was not met:")
+    for line in not_taken_readings:
+        print(f"  {line}")
+    print()
 if failures:
     print(f"SELF-CHECK FAILED — {len(failures)} assertion(s)", file=sys.stderr)
     sys.exit(1)
