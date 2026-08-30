@@ -1557,7 +1557,32 @@ final class NudgeHost {
     /// receipt commit together or neither does, so the app is never in the state where it has
     /// learned the answer but forgotten the asking.
     func answer(_ answer: QueryAnswer) {
-        defer { closeSurfaces(endingAnyQuestionAs: .answered) }
+        // **Answering a question ends the question, and nothing else** (focus-ti4, focus-nrl).
+        //
+        // This was `closeSurfaces(endingAnyQuestionAs: .answered)`, which is *take everything
+        // down*: the question, then `panel.hide()`, then `forgetOpenRung()`. The last two belong
+        // to a session ending or a commitment changing, and they are wrong here — an answer is a
+        // statement about one subject, and the accusation standing beside it is about another.
+        //
+        // Found by folding the charging invariant over the space rather than down a scenario.
+        // With a question waiting behind the click and an ambient rung under it, the sequence was:
+        // the rung lands, the item goes on drawing the badge's `waiting` so nothing is charged
+        // (focus-nrl, repaired) — then the answer clears the badge, the redraw drops the item to
+        // the rung's own `noticing`, **the rung is charged for that write**, and the very next
+        // statement forgets the rung and writes the item back to `unmarked`. Two assignments in
+        // one turn, a charge taken for the first, and a person who saw a flash between two frames
+        // if they saw anything at all. That is this epic's defect one generalisation further out,
+        // and the honest repair is not to refuse the charge — the item really did change — but to
+        // stop destroying a rung nobody asked to have destroyed.
+        //
+        // R-87 is the same ruling from the other side: the ambient rung stays on through a
+        // *snooze*, because it is a state and not a sentence. A question about another
+        // application is far less than a snooze.
+        //
+        // `endOpenQuestion(_:)` still takes down the surface the question was on — it hides the
+        // panel for a panel question and redraws the popover for a badge one — so the surface
+        // half of the exit is unchanged. What is gone is the collateral.
+        defer { endOpenQuestion(.answered) }
 
         // **One guard, because there is one value** (focus-zrs). This was two — the warrant, then
         // `guard let priorityID = openQuestionPriorityID else { return }` inside the `do` — and
