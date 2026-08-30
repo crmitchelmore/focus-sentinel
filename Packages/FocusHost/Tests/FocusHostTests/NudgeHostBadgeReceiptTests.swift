@@ -48,7 +48,7 @@ struct NudgeHostBadgeReceiptTests {
         )
         NudgeHostFixture.settle()
         try #require(
-            fixture.menuBar.isShowing(.query),
+            fixture.menuBar.isDrawing(.query),
             "the popover is not showing the question, so it was never delivered"
         )
     }

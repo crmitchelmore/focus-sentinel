@@ -133,9 +133,9 @@ struct NudgeChargingInvariantTests {
                 && fixture.panel.showing == .accusation,
             panelShowsTheQuestion: fixture.panel.isVisible && fixture.panel.showing == .question,
             popoverShowsTheAccusation: fixture.menuBar.isPopoverShown
-                && fixture.menuBar.isShowing(.accusation),
+                && fixture.menuBar.isDrawing(.accusation),
             popoverShowsTheQuestion: fixture.menuBar.isPopoverShown
-                && fixture.menuBar.isShowing(.query)
+                && fixture.menuBar.isDrawing(.query)
         )
     }
 

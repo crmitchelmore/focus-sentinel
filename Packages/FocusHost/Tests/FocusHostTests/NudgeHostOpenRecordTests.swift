@@ -96,11 +96,11 @@ struct NudgeHostOpenRecordTests {
         }
 
         try #require(
-            fixture.menuBar.isShowing(.accusation),
+            fixture.menuBar.isDrawing(.accusation),
             "the popover is not showing the rung, so it was never delivered"
         )
         try #require(
-            fixture.menuBar.isShowing(.query),
+            fixture.menuBar.isDrawing(.query),
             "the popover is not showing the question, so it was never delivered"
         )
     }

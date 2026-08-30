@@ -143,7 +143,7 @@ struct NudgeHostQuestionTests {
             onDidShow: { fixture.host.popoverPresented() }
         )
 
-        #expect(fixture.menuBar.isShowing(.query))
+        #expect(fixture.menuBar.isDrawing(.query))
         #expect(fixture.host.deliveredCount == 1, "the popover opened on the question and nothing counted it")
         let rows = try fixture.interventions()
         #expect(rows.count == 1)

@@ -846,20 +846,143 @@ public final class MenuBarController {
 
     public var isPopoverShown: Bool { popover.isShown }
 
-    /// **Whether one kind of nudge is on screen in the popover right now** (focus-kby, focus-xix,
-    /// U-1).
+    /// **Whether the popover's picture contains one kind of nudge** (focus-kby, focus-xix, U-1).
     ///
     /// Both halves are load-bearing and both were knowable and unread: a popover that is open
     /// but showing snoozes is not showing a nudge, and a nudge in a popover nobody has opened is
-    /// a nudge nobody has seen. This is the whole of the badge route's readability reading, and
-    /// the nudge loop counts no badge delivery without it.
+    /// a nudge nobody has seen.
     ///
     /// **It takes the kind as an argument**, because it used to exist for the question alone
     /// (`isShowingQuery`, ten call sites) and not at all for a rung (zero) — which is precisely
     /// the shape of focus-xix: the loop could not ask whether the accusation had been looked at,
     /// so it assumed.
-    public func isShowing(_ nudge: MenuBarNudge) -> Bool {
+    ///
+    /// ## This is not the reading a charge may be taken on, and it was called `isShowing`
+    ///
+    /// Under that name it was read as the whole of the badge route's readability, and it is two
+    /// booleans: a popover 3127 points tall with its arrow at the menu bar satisfies both of them
+    /// while every correction it offers is above the top of the display. `decisionSurfaceReading(of:)`
+    /// is the reading, this is one of its conjuncts, and the rename is what makes the difference
+    /// a compiler error at every call site rather than a distinction a reader has to hold.
+    ///
+    /// It survives as its own question because the **orphan** invariant asks exactly it:
+    /// `NudgeHost.orphanedNudgeSurfaces` is about a nudge the host has forgotten while a person
+    /// can still press something on it, and an action scrolled below the fold is one scroll away
+    /// from being pressed. Answering that question with the stricter reading would file the
+    /// dangerous case as no case at all.
+    public func isDrawing(_ nudge: MenuBarNudge) -> Bool {
         popover.isShown && presentation.isCarrying(nudge)
+    }
+
+    /// **Whether the popover is a surface a person could actually decide on** (focus-5yu,
+    /// focus-vpu, focus-kby, U-1).
+    ///
+    /// The panel has had this reading since focus-vpu and the popover had nothing: the badge's
+    /// delivery was counted on `popover.isShown && presentation.isCarrying(nudge)` — two booleans,
+    /// never a geometry — so a rung whose Pause and Change priority were off the bottom of the
+    /// display still spent one of the day's six accusations, one of its eight interruptions, and
+    /// armed the 600-second cooldown. Measured before the repair: the real popover stood 483
+    /// points above the top of a 1080-point display with a 21-character priority, and 2755 with a
+    /// 185-character one.
+    ///
+    /// It is the panel's own predicate, on the panel's own value type, taken with four
+    /// differences that are all facts about this surface rather than choices:
+    ///
+    /// * **`isVisible` is `isDrawing(_:)`**, not `NSPopover.isShown` alone. A popover open on
+    ///   snoozes is not a surface for a nudge that is not in it — and without that conjunct the
+    ///   reading would be vacuously true whenever the popover carries nothing, because a nudge
+    ///   that is not there offers no actions to find missing.
+    /// * **The offered actions are read off the presentation this controller is drawing**, so
+    ///   the set that is required to be reachable and the set that was drawn cannot be two
+    ///   different lists.
+    /// * **The content bounds are the size the popover was laid out at**, which is a fact since
+    ///   `popoverController()` committed one and was not before.
+    /// * **The container is the display's whole frame, not its visible frame.** Measured: the
+    ///   shipping popover's window reads (1384, 300, 326, 754) on a display whose visible frame
+    ///   is (0, 89, 1920, 961) — its top edge stands 4 points inside the menu-bar strip that
+    ///   `visibleFrame` excludes, because that is where its arrow points. Judged against
+    ///   `visibleFrame` a perfectly drawn popover would read "not wholly on a display", and every
+    ///   badge nudge in the programme would be unchargeable for a reason that is about the menu
+    ///   bar rather than about the person.
+    public func decisionSurfaceReading(of nudge: MenuBarNudge) -> DecisionSurfaceReading {
+        DecisionSurfaceReachability.evaluate(
+            isVisible: isDrawing(nudge),
+            surfaceFrame: popoverFrame,
+            screens: Self.popoverContainers(displays()),
+            contentBounds: ScreenRect(
+                x: 0,
+                y: 0,
+                width: popoverLayout.size.width,
+                height: popoverLayout.size.height
+            ),
+            actionTargets: currentPopoverActionFrames.map { identifier, rect in
+                ActionHitTarget(
+                    identifier: identifier,
+                    frame: ScreenRect(
+                        x: rect.origin.x,
+                        y: rect.origin.y,
+                        width: rect.width,
+                        height: rect.height
+                    )
+                )
+            },
+            offering: offeredIdentifiers(of: nudge)
+        )
+    }
+
+    /// Every action the popover is offering for one kind of nudge, by the identifier the layout
+    /// reports it under. Empty when it is carrying no nudge of that kind — which is a true
+    /// statement about a surface that is offering nothing, and never a reachable one, because
+    /// `isDrawing(_:)` is a conjunct of the reading above.
+    public func offeredIdentifiers(of nudge: MenuBarNudge) -> [String] {
+        switch nudge {
+        case .query: presentation.pendingQuery?.offeredAnswerIdentifiers ?? []
+        case .accusation: presentation.pendingAccusation?.offeredActionIdentifiers ?? []
+        }
+    }
+
+    /// The popover's own window, as AppKit placed it, or `.zero` when there is no popover on
+    /// screen to have one — which reads as "not wholly on a display" and refuses the charge.
+    public var popoverFrame: ScreenRect {
+        guard let window = popover.contentViewController?.view.window else { return .zero }
+        return ScreenRect(
+            x: window.frame.origin.x,
+            y: window.frame.origin.y,
+            width: window.frame.width,
+            height: window.frame.height
+        )
+    }
+
+    /// The size the popover was last laid out at. Published so the self-check and the test lane
+    /// can read the number the shipping controller committed to rather than one they supplied.
+    public var currentPopoverLayout: PopoverLayout { popoverLayout }
+
+    /// **The containers a popover has to fit inside** (focus-5yu).
+    ///
+    /// Each display, with its visible frame replaced by its whole frame. See
+    /// `decisionSurfaceReading(of:)`: a popover hangs from the menu bar and its arrow is drawn in
+    /// the strip `visibleFrame` excludes, so the visible frame is the wrong container for this
+    /// surface and the right one for the panel, which is placed inside it deliberately.
+    public static func popoverContainers(_ screens: [DisplayGeometry]) -> [DisplayGeometry] {
+        screens.map { display in
+            DisplayGeometry(
+                displayID: display.displayID,
+                screenIndex: display.screenIndex,
+                isPrimary: display.isPrimary,
+                frame: display.frame,
+                visibleFrame: display.frame,
+                backingScaleFactor: display.backingScaleFactor
+            )
+        }
+    }
+
+    /// The frames the **current** popover layout reported, and nothing else.
+    ///
+    /// A layout that has been replaced describes a popover nobody is looking at any more; under
+    /// default-deny the honest answer for one is "no frames", which reads as unreachable rather
+    /// than as reachable-because-it-used-to-be.
+    private var currentPopoverActionFrames: [String: CGRect] {
+        reportedPopoverFrames.generation == popoverLayoutGeneration ? reportedPopoverFrames.frames : [:]
     }
 
     public func closePopover() {

@@ -265,7 +265,7 @@ struct NudgeHostBadgeAccusationTests {
         )
         NudgeHostFixture.settle()
 
-        #expect(fixture.menuBar.isShowing(.accusation), "the popover is not showing the rung")
+        #expect(fixture.menuBar.isDrawing(.accusation), "the popover is not showing the rung")
         #expect(fixture.host.deliveredCount == 2, "the rung the person is looking at was not counted")
         // The badge carries the **panel** rung, which does accuse somebody, so this one spends
         // an accusation as well as an interruption (focus-ndh).
@@ -422,7 +422,7 @@ struct NudgeHostBadgeAccusationTests {
 
         Self.climbToTheBadge(fixture, via: .reducedInterruption)
         try Self.openThePopoverOnTheBadge(fixture)
-        try #require(fixture.menuBar.isShowing(.accusation))
+        try #require(fixture.menuBar.isDrawing(.accusation))
 
         // A different application, once the mandate cooldown has passed — otherwise the decider
         // is silent and nothing is replaced, which would make this test pass by measuring
@@ -439,7 +439,7 @@ struct NudgeHostBadgeAccusationTests {
             "the rung is still on the badge, so this proves nothing about the redraw"
         )
         #expect(
-            !fixture.menuBar.isShowing(.accusation),
+            !fixture.menuBar.isDrawing(.accusation),
             """
             the popover is still offering answers for a rung the loop has replaced; a click on \
             them would be written against the new one
@@ -466,7 +466,7 @@ struct NudgeHostBadgeAccusationTests {
             showing: MenuBarPresentation(status: .unrelated, pendingAccusation: stranded)
         )
         NudgeHostFixture.settle()
-        try #require(fixture.menuBar.isShowing(.accusation))
+        try #require(fixture.menuBar.isDrawing(.accusation))
 
         // The loop lets the rung go — a phase change, a session end — while the popover keeps the
         // presentation it was last handed, which is exactly what a hosting controller does.

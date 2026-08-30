@@ -22,8 +22,15 @@ public enum PerceptionChannel: String, Sendable, CaseIterable, Codable, Hashable
     /// second accusation in the same frame is a different sentence, which the glyph's two-state
     /// mark can never be.
     case panelWindow
-    /// The popover, open, with this nudge drawn in it. A state, for the panel's reason:
-    /// `NSPopover.isShown` is a reading of the real popover, and the row carries the subject.
+    /// The popover, open, with this nudge drawn in it **and every action it offers in reach**.
+    /// A state, for the panel's reason: `NSPopover.isShown` is a reading of the real popover, and
+    /// the row carries the subject.
+    ///
+    /// **The reach clause is focus-5yu's** and it is the same clause `panelWindow` has carried
+    /// since focus-vpu. Without it this channel was two booleans — the popover is open, the
+    /// popover is carrying this — on the one surface in the app that had committed to no size:
+    /// measured, a popover 3127 points tall on a 1080-point display, with the corrections 2755
+    /// points above the top of the screen, satisfied both.
     case popoverContents
     /// A posted banner. **Nothing in this app posts one** (U-2, focus-wy0), and nothing can
     /// observe one either — so this channel is unprovable by construction, and a rung misrouted
@@ -36,7 +43,8 @@ public enum PerceptionChannel: String, Sendable, CaseIterable, Codable, Hashable
 /// Every field is a reading of a live AppKit object taken by the host — a count of assignments
 /// that actually happened to an `NSStatusBarButton`, the mark that button is actually drawing,
 /// `NSWindow.isVisible` conjoined with a hit test of the offered actions, `NSPopover.isShown`
-/// conjoined with what the popover is carrying. **Not one field is a predicate about a surface**,
+/// conjoined with what the popover is carrying and with where that content actually laid its
+/// actions out. **Not one field is a predicate about a surface**,
 /// which is the distinction three rounds of this defect turned on: `reachesThePersonOnLanding`
 /// answers `true` for `.menuBar` and cannot fail, and it was read as though it were evidence.
 public struct SurfaceObservation: Sendable, Equatable, Hashable {
@@ -54,7 +62,9 @@ public struct SurfaceObservation: Sendable, Equatable, Hashable {
     /// Whether the panel is on screen, showing this kind of nudge, with every action it offers
     /// somewhere the person could click.
     public let panelIsShowingTheNudge: Bool
-    /// Whether the popover is open and drawing this kind of nudge.
+    /// Whether the popover is open, drawing this kind of nudge, with every action it offers
+    /// somewhere the person could click — the same three-part reading `panelIsShowingTheNudge`
+    /// above is, taken on the surface that had none (focus-5yu).
     public let popoverIsShowingTheNudge: Bool
 
     public init(
@@ -205,7 +215,7 @@ extension NudgeSurface {
     /// |---|---|---|
     /// | `menuBar` | `menuBarItem` | the item was written to, and it started saying `noticing` |
     /// | `panel` | `panelWindow` | the window is up, with every correction in reach |
-    /// | `popoverBadge` | `popoverContents` | the popover is open and drawing this nudge |
+    /// | `popoverBadge` | `popoverContents` | the popover is open, drawing this nudge, with every action in reach |
     /// | `notification` | `banner` | nothing; no rung routes here and nothing can observe one |
     ///
     /// Stated on the surface, beside `menuBarAttention` and `reachesThePersonOnLanding`, for the

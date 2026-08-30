@@ -1275,8 +1275,8 @@ final class NudgeHost {
     /// Every field is read off a live AppKit object: counts of assignments that really happened
     /// to the `NSStatusBarButton`, the mark that button is really drawing, `NSWindow.isVisible`
     /// conjoined with a hit test of the actions on offer, and `NSPopover.isShown` conjoined with
-    /// what the popover is carrying. Not one of them is a predicate about a surface, which is the
-    /// distinction the whole of this round turns on.
+    /// what the popover is carrying and with where that layout put the actions. Not one of them
+    /// is a predicate about a surface, which is the distinction the whole of this round turns on.
     ///
     /// - Parameters:
     ///   - nudge: which half of the loop is asking, because the panel and the popover each carry
@@ -1303,12 +1303,21 @@ final class NudgeHost {
         let panelIsShowingTheNudge = panel.isVisible
             && panel.showing == panelKind
             && panel.decisionSurfaceReading(offering: actions).everyActionIsReachable
+        // **And the popover takes a reading too** (focus-5yu). This line was
+        // `menuBar.isPopoverShown && menuBar.isShowing(nudge)` — two booleans and no geometry, on
+        // the one surface in the app that had committed to no size. A popover measured at 3127
+        // points on a 1080-point display satisfies both of them with every correction it offers
+        // above the top of the screen, and the badge rung was charged an accusation, an
+        // interruption and a 600-second cooldown for it. It is now the same conjunction the panel
+        // above makes, in the same order and for the same reason.
+        let popoverIsShowingTheNudge = menuBar.isDrawing(nudge)
+            && menuBar.decisionSurfaceReading(of: nudge).everyActionIsReachable
         return SurfaceObservation(
             menuBarWrites: menuBar.glyphWriteCount,
             menuBarAnnouncements: menuBar.announcementCount,
             markOnTheItem: menuBar.markOnTheItem,
             panelIsShowingTheNudge: panelIsShowingTheNudge,
-            popoverIsShowingTheNudge: menuBar.isPopoverShown && menuBar.isShowing(nudge)
+            popoverIsShowingTheNudge: popoverIsShowingTheNudge
         )
     }
 
@@ -2064,17 +2073,22 @@ final class NudgeHost {
     /// the accusation can be left in exactly the same state on exactly the same two surfaces,
     /// with a worse consequence, because `resolve(…)` does *not* drop the click: it applies the
     /// correction to whatever rung this host is holding now. So the invariant that watched one
-    /// half now watches both, and `MenuBarNudge.allCases` in `isShowing(_:)` is what stops a
+    /// half now watches both, and `MenuBarNudge.allCases` in `isDrawing(_:)` is what stops a
     /// third from being watched for one and not the other.
+    ///
+    /// **`isDrawing(_:)` and deliberately not `decisionSurfaceReading(of:)`** (focus-5yu). This
+    /// invariant is about a nudge a person can still press something on, and an action scrolled
+    /// below the fold is one scroll away from being pressed. The stricter reading is what decides
+    /// a *charge*; asking it here would file the dangerous case as no case at all.
     var orphanedNudgeSurfaces: [NudgeSurface] {
         var orphans: Set<NudgeSurface> = []
         if openQuestion == nil {
             if panel.isVisible, panel.showing == .question { orphans.insert(.panel) }
-            if menuBar.isShowing(.query) { orphans.insert(.popoverBadge) }
+            if menuBar.isDrawing(.query) { orphans.insert(.popoverBadge) }
         }
         if openRung == nil {
             if panel.isVisible, panel.showing == .accusation { orphans.insert(.panel) }
-            if menuBar.isShowing(.accusation) { orphans.insert(.popoverBadge) }
+            if menuBar.isDrawing(.accusation) { orphans.insert(.popoverBadge) }
         }
         return orphans.sorted { $0.rawValue < $1.rawValue }
     }
@@ -2159,18 +2173,28 @@ final class NudgeHost {
         }
     }
 
-    /// **Whether the popover is open and showing one kind of nudge** (focus-kby, focus-xix).
+    /// **Whether the popover is a surface this question could be read and answered on**
+    /// (focus-kby, focus-xix, focus-5yu).
     ///
-    /// `MenuBarController.isPopoverShown` and `isShowing(_:)` are both knowable and were both
+    /// `MenuBarController.isPopoverShown` and `isDrawing(_:)` are both knowable and were both
     /// unread. A closed popover is `unknowable` rather than `notReadable`: nothing can be
     /// established about a surface that is not on screen, and both answers refuse the write.
     ///
     /// **One function taking the kind**, rather than one that hard-codes the question. That
     /// hard-coding was focus-xix's root at this level: the reading existed, the rung had no way
     /// to ask for it, and the branch that should have taken it assumed instead.
+    ///
+    /// **And the open case is a geometry now, not a second boolean** (focus-5yu). The `.panel`
+    /// case above has asked `everyActionIsReachable` since focus-vpu; this one asked whether the
+    /// popover was carrying the question, which a popover whose three answers are off the bottom
+    /// of the display answers yes to. A receipt written on that reading silences the question for
+    /// the life of the priority.
     private func badgeReadability(of nudge: MenuBarNudge) -> SurfaceReadability {
         guard menuBar.isPopoverShown else { return .unknowable }
-        return menuBar.isShowing(nudge) ? .readable : .notReadable
+        guard menuBar.isDrawing(nudge) else { return .notReadable }
+        return menuBar.decisionSurfaceReading(of: nudge).everyActionIsReachable
+            ? .readable
+            : .notReadable
     }
 
     /// A question that has ended, offered to the ledger.
