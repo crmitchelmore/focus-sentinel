@@ -998,25 +998,25 @@
       }
     },
     "nudge.rung.ambient" : {
-      "comment" : "Ladder rung 1: the menu-bar glyph changes and nothing else happens.",
+      "comment" : "Ladder rung 1, named by what it is rather than by where it appears — the routing table's other column says the surface (focus-91d).",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "A quiet change in the menu bar"
+            "value" : "A quiet signal, with nothing to answer"
           }
         }
       }
     },
     "nudge.rung.panel" : {
-      "comment" : "Ladder rung 2: the compact non-activating panel with the correction economy.",
+      "comment" : "Ladder rung 2, named by what it is rather than by where it appears: it is drawn as a panel, a menu-bar badge or a popover row depending on the deck and the settings (focus-91d).",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "A small panel you can answer"
+            "value" : "Something you can answer"
           }
         }
       }

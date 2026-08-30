@@ -141,6 +141,112 @@ struct InterventionSettingsTests {
         }
     }
 
+    // MARK: - The two columns, and neither may do the other's job (focus-91d)
+
+    /// **The vocabulary the surface column owns**, derived from the surface labels themselves
+    /// rather than written down as a list somebody has to maintain.
+    ///
+    /// Words of three letters or more, from every `NudgeSurface`'s own drawn label. The
+    /// unavailable label is deliberately not in here: *"Nowhere right now"* names an absence, not
+    /// a surface, and banning its words from the rung column would be banning ordinary English.
+    static func surfaceVocabulary() -> Set<String> {
+        var words: Set<String> = []
+        for surface in NudgeSurface.allCases {
+            let key = InterventionSettingsView.surfaceKey(.surface(surface))
+            let label = String(localized: ShellStrings.resource(key))
+            words.formUnion(Self.words(in: label))
+        }
+        return words
+    }
+
+    /// Articles. They belong to no column: a rung named *"The next step"* would share "the" with
+    /// *"The menu-bar popover"* and be describing nothing about a surface.
+    static let articles: Set<String> = ["the", "and"]
+
+    static func words(in sentence: String) -> Set<String> {
+        Set(
+            sentence.lowercased()
+                .split(whereSeparator: { !$0.isLetter && $0 != "-" })
+                .map(String.init)
+                .filter { $0.count >= 3 }
+        ).subtracting(Self.articles)
+    }
+
+    /// **A routing row must never name a rung by an affordance its own surface does not offer**
+    /// (focus-91d).
+    ///
+    /// ## The defect
+    ///
+    /// `nudge.rung.panel` was *"A small panel you can answer"* and the pane draws it beside the
+    /// route. Under the Silent-and-visual deck the row read **"A small panel you can answer │
+    /// Menu bar"**: a panel, in the menu bar, where nothing can be answered — on the one surface
+    /// whose whole design principle (R-82) is that it *is* the behaviour, so the copy cannot
+    /// drift. And it was not one deck. With reduced interruption on — a checkbox, and what macOS
+    /// Reduce Motion forces — every deck drew "A small panel you can answer │ The menu-bar
+    /// popover". `nudge.rung.ambient` had the mirror of it: *"A quiet change in the menu bar"*,
+    /// which puts the surface column's answer in the rung column and reads as a tautology beside
+    /// it.
+    ///
+    /// ## The rule, rather than the cell
+    ///
+    /// The rung column names the **step**; the surface column names the **place**. Neither may
+    /// do the other's job, and that is checkable without knowing which deck anybody is holding:
+    /// no rung's label may use any word the surface labels use. A rung named for a surface is
+    /// wrong wherever it is drawn — including the popover's *"Next nudge: …"* belief row, which
+    /// draws the same `copyResource` with no second column to correct it, which is why the fold
+    /// below covers every rung and not only the rows this pane happens to lay out.
+    @Test(
+        "no rung is named for a surface, in any deck or either flag",
+        .enabled(if: LocalizationLane.catalogsAreCompiled)
+    )
+    func noRungIsNamedForASurface() {
+        let forbidden = Self.surfaceVocabulary()
+        #expect(!forbidden.isEmpty, "the surface labels resolved to nothing, so this proves nothing")
+
+        // Every rung, wherever it is drawn — the pane's rung column and the popover's belief row
+        // read the same resource.
+        for rung in LadderRung.Kind.allCases {
+            let label = String(localized: rung.copyResource)
+            #expect(label != rung.copyKey, "\(rung.rawValue) resolved to its own key")
+            let overlap = Self.words(in: label).intersection(forbidden).sorted()
+            #expect(
+                overlap.isEmpty,
+                """
+                the rung \(rung.rawValue) is named by the surface column's own vocabulary \
+                \(overlap): "\(label)". The rung column says which step; the surface column \
+                says where it appears.
+                """
+            )
+        }
+
+        // And every row this pane actually lays out, over every deck and both flags — because
+        // the defect was a *pair* of cells, and a rung label can only be judged beside the
+        // surface it was drawn next to.
+        for voice in NudgeVoice.allCases {
+            for reduced in [false, true] {
+                let view = InterventionSettingsView(
+                    settings: InterventionSettings(voice: voice, reducedInterruption: reduced)
+                )
+                for row in view.drawnRows {
+                    let rung = String(localized: row.rung.copyResource)
+                    let key = InterventionSettingsView.surfaceKey(row.route)
+                    let surface = String(localized: ShellStrings.resource(key))
+                    #expect(
+                        rung != surface,
+                        "\(voice.rawValue)/reduced=\(reduced) drew one sentence twice: \(rung)"
+                    )
+                    #expect(
+                        Self.words(in: rung).intersection(Self.words(in: surface)).isEmpty,
+                        """
+                        \(voice.rawValue)/reduced=\(reduced) drew "\(rung) │ \(surface)", \
+                        which names the rung by its surface
+                        """
+                    )
+                }
+            }
+        }
+    }
+
     // MARK: - Quiet hours: off by default, and no bundled window (R-85)
 
     @Test("the shipped default is no window at all")

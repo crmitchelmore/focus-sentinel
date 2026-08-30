@@ -65,6 +65,18 @@ public struct LadderRung: Sendable, Equatable, Hashable {
 
         /// The String Catalog key for this rung's label. `check-strings.sh` asserts the
         /// bijection with `nudge.rung.*` in both directions (R-96l).
+        ///
+        /// **A rung's label names the rung, never the surface it lands on** (focus-91d). The
+        /// Intervention pane draws this beside `SurfaceRouter`'s own route, one column each, and
+        /// `.panel` read *"A small panel you can answer"* — so under the Silent-and-visual deck
+        /// the row said **"A small panel you can answer │ Menu bar"**, and under reduced
+        /// interruption every deck said it beside "The menu-bar popover". The same resource is
+        /// the popover's *"Next nudge: …"* row, which has no second column to correct it.
+        ///
+        /// A rung is one step of the ladder; where it appears is the router's answer and changes
+        /// with the deck, the flag, a running microphone and a hidden menu bar.
+        /// `InterventionSettingsTests.noRungIsNamedForASurface` holds the two vocabularies apart
+        /// over every deck and both flags.
         public var copyKey: String {
             switch self {
             case .ambient: "nudge.rung.ambient"
