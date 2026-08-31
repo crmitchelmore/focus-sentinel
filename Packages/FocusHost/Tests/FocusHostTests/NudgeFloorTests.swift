@@ -141,11 +141,17 @@ struct NudgeFloorTests {
 
     /// One drift into one application, through the shipping verdict stream, followed by a break
     /// that takes the mark off the item so the next landing has something new to say.
+    ///
+    /// - Parameter advanceBy: how far the clock moves during that break. Defaults to past
+    ///   `mandateCooldown`, which is what a suite about a whole day wants; a suite about the
+    ///   cooldown itself has to stay inside it, and a default that could not be overridden is why
+    ///   no proof in this file ever drove gate 4 (focus-uru).
     static func drift(
         _ root: AppComposition,
         clock: FixedMonotonicClock,
         into subject: String,
-        thenBreak: Bool = true
+        thenBreak: Bool = true,
+        advanceBy: Duration = RelevancePolicy.mandateCooldown + .seconds(1)
     ) throws -> Landing {
         let writesBefore = root.menuBar.glyphWriteCount
         let markBefore = root.menuBar.markOnTheItem
@@ -166,7 +172,7 @@ struct NudgeFloorTests {
         if thenBreak {
             root.nudgeHost.phaseLeftFocus()
             NudgeHostFixture.settle()
-            clock.advance(by: RelevancePolicy.mandateCooldown + .seconds(1))
+            clock.advance(by: advanceBy)
         }
         return landing
     }
@@ -637,5 +643,80 @@ struct NudgeFloorTests {
                 """
             )
         }
+    }
+
+    // MARK: - The floor's fourth half: the app's own cooldown between sentences
+
+    /// **A cooldown between sentences does not mute the glyph** (focus-uru).
+    ///
+    /// Gate 4 of `FatigueController.decide(…)` sat between two gates that had each been given the
+    /// ambient exemption and never got one, so `RelevancePolicy.mandateCooldown` — ten minutes,
+    /// the gap e04 keeps between accusations — silenced the status item as well. Measured before
+    /// the fold:
+    ///
+    ///     rung=ambient, gap=60s → refused(cooldown(remaining: 540s))
+    ///
+    /// **The cooldown is armed by a real panel accusation**, not by writing a `FatigueState`: the
+    /// same round that repaired this gate stopped a glyph landing from arming it at all
+    /// (`NudgeReplay` and `NudgeHost` both charged the fatigue reducer on a line the charge could
+    /// not reach), so a drive that armed it from a glyph would be testing the state the app can no
+    /// longer be in. Climbing to the panel is the one arrangement that arms it the way the product
+    /// does.
+    @Test("the ten minutes between two accusations do not take the status item with them")
+    func theGlyphSurvivesItsOwnCooldown() throws {
+        let clock = FixedMonotonicClock()
+        let (root, _) = try Self.joinedRoot(clock: clock)
+        defer { Self.tearDown(root) }
+
+        // Sustained drift on one subject until the ladder leaves the glyph and says something.
+        let subject = Self.subjects[0]
+        var reachedThePanel = false
+        for _ in 0..<10 {
+            root.relevanceHost.onJudgement?(NudgeHostFixture.unrelatedJudgement(subject: subject))
+            NudgeHostFixture.settle()
+            if root.nudgeHost.currentRung == .panel { reachedThePanel = true; break }
+            clock.advance(by: RelevancePolicy.escalationDwell + .seconds(1))
+        }
+        try #require(
+            reachedThePanel && root.nudgePanel.isVisible,
+            """
+            the ladder never reached the rung that speaks, so no accusation cooldown was ever \
+            armed and this drives nothing — \(String(describing: root.nudgeHost.lastDecision))
+            """
+        )
+
+        // The person deals with it and drifts into something else, well inside the ten minutes.
+        root.nudgeHost.answer(.notNow)
+        NudgeHostFixture.settle()
+        root.nudgeHost.phaseLeftFocus()
+        NudgeHostFixture.settle()
+        clock.advance(by: .seconds(60))
+
+        let landing = try Self.drift(
+            root,
+            clock: clock,
+            into: Self.subjects[1],
+            thenBreak: false
+        )
+        #expect(
+            landing.landedOn == .menuBar,
+            """
+            the gap the app keeps between two sentences took the status item with it — \
+            \(landing.summary), \(String(describing: root.nudgeHost.lastDecision))
+            """
+        )
+        #expect(landing.glyphWrites > 0, "the item was never written — \(landing.summary)")
+        #expect(
+            root.menuBar.markOnTheItem == .noticing,
+            "the item is drawing \(root.menuBar.markOnTheItem.rawValue) while the person drifts"
+        )
+
+        // The half that must NOT change: a second SENTENCE is still held back for the ten
+        // minutes. The cooldown does its job; it simply does not do it to the glyph.
+        #expect(
+            root.nudgeHost.currentRung == .ambient,
+            "a second accusation was raised inside the cooldown between two of them"
+        )
+        #expect(!root.nudgePanel.isVisible, "a second panel appeared inside the cooldown")
     }
 }

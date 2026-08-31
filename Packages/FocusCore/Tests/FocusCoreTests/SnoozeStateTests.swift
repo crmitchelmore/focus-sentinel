@@ -53,16 +53,39 @@ struct SnoozeStateTests {
         )
         #expect(book.suppresses(subject: Self.decoy, at: .seconds(60)))
 
+        // **The ruling, where it now lives** (focus-uru). `SnoozeBook.suppresses(rung:subject:at:)`
+        // was one of four spellings of "not the ambient rung"; the book now answers only about a
+        // subject and `SilenceSubject` answers about the rung, once, for all five fatigue gates.
+        #expect(FatigueRefusal.Kind.snoozed.subject == .theAppSpeaking)
+        #expect(!FatigueRefusal.Kind.snoozed.subject.silences(.ambient))
+        #expect(FatigueRefusal.Kind.snoozed.subject.silences(.panel))
+
+        // And the ruling driven through the controller a person actually meets, both ways round.
+        func decide(_ rung: LadderRung.Kind, subject: String) -> FatigueDecision {
+            FatigueController.decide(
+                kind: .accusation,
+                subject: subject,
+                rung: rung,
+                budget: .empty,
+                fatigue: .fresh,
+                snoozes: book,
+                now: .seconds(60)
+            )
+        }
         #expect(
-            !book.suppresses(rung: .ambient, subject: Self.decoy, at: .seconds(60)),
+            decide(.ambient, subject: Self.decoy) == .permitted,
             "a snooze silenced the glyph, which is the one channel nobody objected to"
         )
-        #expect(book.suppresses(rung: .panel, subject: Self.decoy, at: .seconds(60)))
-        #expect(book.suppresses(rung: .panel, subject: Self.decoy, at: .seconds(60)))
+        #expect(
+            decide(.panel, subject: Self.decoy)
+                == .refused(.snoozed(subject: Self.decoy, remaining: .seconds(840))),
+            "a snooze did not stop the rung it was asked for"
+        )
 
         // …and no rung is suppressed for a subject nobody snoozed.
+        #expect(!book.suppresses(subject: Self.other, at: .seconds(60)))
         for rung in LadderRung.Kind.allCases {
-            #expect(!book.suppresses(rung: rung, subject: Self.other, at: .seconds(60)))
+            #expect(decide(rung, subject: Self.other) == .permitted)
         }
     }
 

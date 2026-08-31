@@ -188,6 +188,14 @@ public enum FatigueEvent: Sendable, Equatable, Hashable {
 /// because the honest answer to "why was it quiet?" is "because you told it to be", and an
 /// arithmetic reason offered ahead of an instruction would be the app taking credit for
 /// restraint the person imposed on it. The three that follow are ordered longest-lived first.
+///
+/// ## Which rungs each refusal applies to
+///
+/// **Not decided here, and not five times over** (focus-uru). `candidates(…)` below asks only
+/// *does this refusal apply to this moment?*; `FatigueRefusal.Kind.subject` answers *does it
+/// apply to this rung?*, once, in an exhaustive switch a seventh refusal cannot skip. Four of the
+/// five gates used to carry their own spelling of that rule and the fifth carried none, which is
+/// how a cooldown between **sentences** came to mute the one channel that makes none.
 public struct FatigueController: Sendable, Equatable {
     /// The session's fatigue. The day's spend is a separate value, read from the log.
     public private(set) var state: FatigueState
@@ -206,9 +214,12 @@ public struct FatigueController: Sendable, Equatable {
     ///     mixed accusation, which names nobody and can therefore be neither snoozed nor
     ///     corrected — offering "this is relevant" over "several unrelated apps" would write a
     ///     rule about something the person never pointed at.
-    ///   - rung: the accusation rung being considered, or `nil` for a question. Read twice: the
-    ///     ambient rung is never snoozed (R-87) and is the one rung a held ladder may still
-    ///     show (R-83).
+    ///   - rung: the accusation rung being considered, or `nil` for a question. **Read once, at
+    ///     the end, through `FatigueRefusal.Kind.subject`** (focus-uru): a refusal about the app
+    ///     speaking passes over a rung that says nothing — the snooze exemption of R-87, the
+    ///     held ladder of R-83, the caps of focus-2yy and this round's cooldown are all that one
+    ///     ruling — and a refusal about there being anything to be legible about, which is
+    ///     `corrected` alone, stops every rung.
     ///   - budget: the day's spend, from `InterventionLog.budget(on:priorityID:)`.
     ///   - fatigue: the session's cooldowns and runs.
     ///   - snoozes: what is snoozed and until when.
@@ -225,79 +236,118 @@ public struct FatigueController: Sendable, Equatable {
         correctedSubjects: Set<String> = [],
         now: Duration
     ) -> FatigueDecision {
-        // 1 — the person said this is real work. A correction suppresses harder than an ignore,
-        // because it removes the subject from the accusable set entirely rather than deferring
-        // it, and the backoff never has to see it again.
-        if let subject, correctedSubjects.contains(subject) {
-            return .refused(.corrected(subject: subject))
-        }
-
-        // 2 — the person snoozed it. The ambient rung is exempt: a person who snoozed a panel
-        // asked for quiet, not for a lie. A question has no rung, and `.panel` is what one
-        // renders on, so it is asked about a snoozed subject exactly as an accusation is not:
-        // snoozing Safari means "stop talking to me about Safari", and the kind of sentence the
-        // app was about to say does not change what the person asked for.
-        if let subject, snoozes.suppresses(rung: rung ?? .panel, subject: subject, at: now) {
-            let remaining = snoozes.snooze(for: subject)?.remaining(at: now) ?? .zero
-            return .refused(.snoozed(subject: subject, remaining: remaining))
-        }
-
-        // 3 — the person stopped answering.
-        switch kind {
-        case .query:
-            if fatigue.isBackedOff(.query, now: now) {
-                return .refused(.backedOff(until: fatigue.queriesSuspendedUntil))
-            }
-        case .accusation:
-            // The accusation backoff does not silence the ladder; it holds it at the ambient
-            // rung, which is the one channel the person has not objected to.
-            if fatigue.isHeldAtAmbient(now: now), rung != .ambient {
-                return .refused(.heldAtAmbient(until: fatigue.accusationsHeldUntil))
-            }
-        }
-
-        // 4 — too soon after the last one of this kind.
-        guard fatigue.cooledDown(kind, now: now) else {
-            return .refused(.cooldown(remaining: remainingCooldown(kind, fatigue: fatigue, now: now)))
-        }
-
-        // 5 — the caps, and the reserved unit inside them.
+        // **Every refusal is asked the same two questions: does it apply, and is it about a rung
+        // like this one?** (focus-uru).
         //
-        // **A rung is refused only by a cap it can spend** (focus-2yy, focus-d6r). Gates 1, 2 and
-        // 3 above all exempt the ambient rung by name — a correction is subject-scoped, a snooze
-        // is asked as `rung ?? .panel` precisely so that it never takes the glyph, and the
-        // ignored-accusation hold answers `rung != .ambient` with the comment *"the accusation
-        // backoff does not silence the ladder; it holds it at the ambient rung, which is the one
-        // channel the person has not objected to"*. This gate exempted nothing, so once the day's
-        // accusations were spent the glyph was refused too. Measured, six accusations spent and
-        // fatigue fresh:
+        // It used to be five hand-written early returns, and four of them grew their own bespoke
+        // exemption for the ambient rung, spelled four different ways: gate 1 is subject-scoped,
+        // gate 2 asked `rung ?? .panel` so a snooze could never take the glyph, gate 3 answered
+        // `rung != .ambient`, and gate 5 asked `InterruptionCharge`. **Gate 4 sat between the
+        // third and the fifth with none**, so the one channel that is supposed to survive
+        // everything was muted for `mandateCooldown` at a time by a cooldown belonging to the
+        // rung that speaks. Measured before this fold:
         //
-        //     rung=ambient accuses=false spendsAccusationCap=false
-        //       decision=refused(cap(dailyAccusationCap))
+        //     rung=ambient, gap=60s → refused(cooldown(remaining: 540s))
         //
-        // A rung that spends neither cap being refused by one is the status item going dark for
-        // the rest of a working day, which is F-146's *"the state is always legible"* broken by
-        // arithmetic and is exactly what gates 2 and 3 were written to prevent. `NudgeDecider`
-        // already states the intended rule one line above the call: *"the fatigue controller's
-        // answer depends on the rung — a held ladder still shows the glyph, and a snooze never
-        // touches it."*
+        // Two rounds swept this closed set by reading the gates in prose and each missed the same
+        // one. It is not swept by reading now: `FatigueRefusal.Kind.subject` is an exhaustive
+        // switch, so a seventh refusal does not compile until it has been ruled on, and the
+        // ruling is applied here rather than at five separate sites.
         //
-        // Asked through `InterruptionCharge`, which is the single derivation of *"did this speak
-        // to anybody?"*, rather than through a second copy of the predicate: a rule with two
-        // homes is a rule that can be moved in one of them, which is the whole of focus-d6r.
-        let charge = InterruptionCharge(
-            InterventionEvent(
-                kind: kind,
-                rung: rung,
-                subject: subject ?? "",
-                disposition: .delivered
-            )
-        )
-        if charge != nil, let limit = budget.bindingLimit(for: kind) {
-            return .refused(.cap(limit))
+        // The order is the one this type has always kept — corrected, snoozed, backoff, cooldown,
+        // cap — because the honest answer to "why was it quiet?" is the first that applied.
+        for refusal in candidates(
+            kind: kind,
+            subject: subject,
+            budget: budget,
+            fatigue: fatigue,
+            snoozes: snoozes,
+            correctedSubjects: correctedSubjects,
+            now: now
+        ) where refusal.subject.silences(rung) {
+            return .refused(refusal)
         }
 
         return .permitted
+    }
+
+    /// **Every refusal that applies right now, in evaluation order and before the rung is read.**
+    ///
+    /// Split out so the two questions stay separate: *does this refusal apply to this moment?* is
+    /// arithmetic about the day and the session, and *does it apply to this rung?* is
+    /// `SilenceSubject`'s single ruling. Mixing them is what produced four different spellings of
+    /// one exemption and one gate with none.
+    ///
+    /// Eager rather than lazy: all five are pure functions of values already in hand, and an
+    /// order that is a property of this array is an order a reader can check.
+    static func candidates(
+        kind: InterruptionKind,
+        subject: String?,
+        budget: InterruptionBudget,
+        fatigue: FatigueState,
+        snoozes: SnoozeBook,
+        correctedSubjects: Set<String>,
+        now: Duration
+    ) -> [FatigueRefusal] {
+        var refusals: [FatigueRefusal] = []
+
+        // 1 — the person said this is real work. A correction suppresses harder than an ignore,
+        // because it removes the subject from the accusable set entirely rather than deferring
+        // it, and the backoff never has to see it again. **The one refusal here whose subject is
+        // legibility**: a subject the person has just called real work is a subject the glyph
+        // must stop marking.
+        if let subject, correctedSubjects.contains(subject) {
+            refusals.append(.corrected(subject: subject))
+        }
+
+        // 2 — the person snoozed it. Asked of the **subject** alone now, not of
+        // `suppresses(rung: rung ?? .panel, …)`: snoozing Safari means "stop talking to me about
+        // Safari", the kind of sentence the app was about to say does not change what the person
+        // asked for, and R-87's *"never applied to the ambient rung"* is the ruling above rather
+        // than an argument threaded through a defaulted parameter.
+        if let subject, snoozes.suppresses(subject: subject, at: now) {
+            let remaining = snoozes.snooze(for: subject)?.remaining(at: now) ?? .zero
+            refusals.append(.snoozed(subject: subject, remaining: remaining))
+        }
+
+        // 3 — the person stopped answering. Two shapes, because a question is suspended outright
+        // and an accusation ladder is *held at the rung below*, which is a fact about the ladder
+        // rather than a veto here (`FatigueState.isBackedOff(.accusation, …)` answers `false` and
+        // says so).
+        switch kind {
+        case .query:
+            if fatigue.isBackedOff(.query, now: now) {
+                refusals.append(.backedOff(until: fatigue.queriesSuspendedUntil))
+            }
+        case .accusation:
+            if fatigue.isHeldAtAmbient(now: now) {
+                refusals.append(.heldAtAmbient(until: fatigue.accusationsHeldUntil))
+            }
+        }
+
+        // 4 — too soon after the last one of this kind. **The gate this round is about.** A
+        // cooldown is a minimum gap between *sentences*; the glyph makes none, spends neither
+        // cap, and costs a person nothing to have been shown twice — so it is `.theAppSpeaking`
+        // like the three around it, and the ruling above is what applies it.
+        if !fatigue.cooledDown(kind, now: now) {
+            refusals.append(.cooldown(remaining: remainingCooldown(kind, fatigue: fatigue, now: now)))
+        }
+
+        // 5 — the caps, and the reserved unit inside them. **A rung is refused only by a cap it
+        // can spend** (focus-2yy, focus-d6r), which is now the same sentence as gates 2, 3 and 4
+        // rather than a fifth spelling of it.
+        //
+        // The `InterruptionCharge` this gate used to construct is gone from here, and nothing is
+        // lost: `InterruptionCharge(_ event:)` answers `nil` exactly when
+        // `InterventionEvent.spendsTheInterruptionCap` is `false`, which for a delivery is
+        // `kind == .query || rung?.makesAnAccusation ?? true` — the predicate
+        // `SilenceSubject.ruling(for:)` reads. The rule kept its single home and moved up a
+        // level, where it now covers five gates instead of one.
+        if let limit = budget.bindingLimit(for: kind) {
+            refusals.append(.cap(limit))
+        }
+
+        return refusals
     }
 
     /// The same answer as a `Bool`, for `SuppressionStack.evaluate(…)`'s gate 10.

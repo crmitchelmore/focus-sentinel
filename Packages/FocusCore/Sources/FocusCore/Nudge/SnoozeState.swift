@@ -99,19 +99,17 @@ public struct SnoozeBook: Sendable, Equatable {
         storage[subject]?.suppresses(subject: subject, at: now) ?? false
     }
 
-    /// Whether this book suppresses a **rung** about a subject.
-    ///
-    /// **The ambient rung is never suppressed** (R-87). A person who snoozed a panel asked for
-    /// quiet, not for a lie: the glyph goes on saying `unrelated` because F-146's whole point
-    /// is that the state is always legible, and because the silent rung is the one channel
-    /// nobody has objected to.
-    public func suppresses(
-        rung: LadderRung.Kind,
-        subject: String,
-        at now: Duration
-    ) -> Bool {
-        rung != .ambient && suppresses(subject: subject, at: now)
-    }
+    // **`suppresses(rung:subject:at:)` is gone, and R-87 did not go with it** (focus-uru).
+    //
+    // It read `rung != .ambient && suppresses(subject:at:)` — the third of four spellings of one
+    // rule, beside the fatigue controller's `rung != .ambient`, its `InterruptionCharge` ask, and
+    // the suppression stack's `kind == .accusation, rung == .ambient`. Four homes for a rule is
+    // four places it can be moved in one of them, and the gate that had none is what this round
+    // repaired. The rule now lives in `SilenceSubject`, which
+    // `FatigueRefusal.Kind.snoozed.subject` names — and `FatigueController.decide(…)` applies
+    // once, to all five of its refusals, rather than threading it through a defaulted parameter
+    // here. `SnoozeStateTests.ambientRungIsNeverSnoozed` asks the ruling directly and drives the
+    // controller, so R-87 is proved where it is now decided.
 
     /// The snooze for a subject, if one is running.
     public func snooze(for subject: String) -> SnoozeState? { storage[subject] }

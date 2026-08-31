@@ -471,13 +471,51 @@ struct NudgeDeciderTests {
         let quiet = QuietHours(window: window)
         let midnight = Self.reference   // 2026-01-01T00:00:00Z, inside a 22:00–08:00 window
 
-        for verdict in [Verdict.uncertain, .unrelated] {
-            let decision = Self.decide(
-                Self.judgement(verdict: verdict, uncertainty: .noNegativeBasis),
+        // A question is a sentence, so quiet hours refuse it.
+        #expect(
+            Self.decide(
+                Self.judgement(verdict: .uncertain, uncertainty: .noNegativeBasis),
                 surroundings: Self.surroundings(quietHours: quiet, now: midnight)
-            )
-            #expect(decision.silence?.reason == .quietHours, "\(verdict)")
-        }
+            ).silence?.reason == .quietHours
+        )
+
+        // **And so is the panel rung** — the half that must not change. Driven from a ladder
+        // standing past the escalation dwell, because a fresh ladder offers the glyph and the
+        // glyph is what this gate now passes over.
+        let (ladder, later) = Self.standingAtThePanel()
+        let panel = Self.decide(
+            Self.judgement(verdict: .unrelated),
+            surroundings: Self.surroundings(quietHours: quiet, now: midnight, monotonic: later),
+            memory: NudgeMemory(ladder: ladder)
+        )
+        #expect(panel.silence?.reason == .quietHours, "the rung that speaks spoke during quiet hours")
+
+        // **The glyph is not** (focus-0y6). R-85 is a request that the app not SAY anything
+        // between two times — the request a snooze makes, and R-87 already ruled that a snooze
+        // never takes the glyph. F-146: the state is always legible.
+        let glyph = Self.decide(
+            Self.judgement(verdict: .unrelated),
+            surroundings: Self.surroundings(quietHours: quiet, now: midnight)
+        )
+        #expect(
+            glyph.rung?.kind == .ambient,
+            """
+            quiet hours took the status item with it — \(String(describing: glyph)). The glyph is \
+            a state, not a sentence.
+            """
+        )
+
+        // Non-vacuity for the pair: outside the window, the panel rung speaks.
+        let daytime = Self.reference.addingTimeInterval(12 * 3600)
+        let (day, dayLater) = Self.standingAtThePanel()
+        #expect(
+            Self.decide(
+                Self.judgement(verdict: .unrelated),
+                surroundings: Self.surroundings(quietHours: quiet, now: daytime, monotonic: dayLater),
+                memory: NudgeMemory(ladder: day)
+            ).rung?.kind == .panel,
+            "the ladder never reached the panel at all, so the row above refuses nothing"
+        )
 
         // The shipped default is off, with no bundled window: a default 22:00–08:00 would be the
         // app making a claim about a person's life it has no evidence for (R-85).
@@ -583,6 +621,23 @@ struct NudgeDeciderTests {
 
     // MARK: - The ladder, driven through the decider
 
+    /// **A ladder standing on a delivered ambient rung, past the escalation dwell** — so the next
+    /// candidate is the PANEL rung, the one that speaks.
+    ///
+    /// Needed by every gate whose ruling now differs between the two rungs (focus-0y6): asserting
+    /// "the gate refuses an accusation" on a fresh ladder asserts it of the glyph, which is
+    /// exactly the rung those gates must pass over. A test that only ever reached the ambient
+    /// rung could not tell a working gate from a deleted one.
+    static func standingAtThePanel(
+        at now: Duration = .seconds(10_000)
+    ) -> (ladder: LadderMachine, monotonic: Duration) {
+        var ladder = LadderMachine()
+        ladder.reduce(.mandate(ambientRung().mandate), now: now)
+        ladder.offer(at: now, budgetPermits: true)
+        ladder.reduce(.delivery(.delivered(.menuBar)), now: now)
+        return (ladder, now + RelevancePolicy.escalationDwell + .seconds(1))
+    }
+
     static func ambientRung() -> LadderRung {
         let judgement = judgement(verdict: .unrelated)
         guard let mandate = judgement.eligibility.mandate else {
@@ -682,14 +737,51 @@ struct NudgeDeciderTests {
             return
         }
 
+        // **The panel rung**, not the glyph: gate 9 is an occupancy rule and
+        // `NudgeSurface.menuBar.holdsTheInterruptionSlot` is `false`, so since focus-0y6 the
+        // ambient rung passes over it — see `theGlyphIsNotWithheldByAnOpenQuestion` below. What
+        // U-2 ruled out is a *panel* displacing a question, and that is what this drives.
+        let (ladder, later) = Self.standingAtThePanel()
         let decision = Self.decide(
             Self.judgement(verdict: .unrelated),
-            memory: NudgeMemory(slot: InterruptionSlot(holder: .query(warrant)))
+            surroundings: Self.surroundings(monotonic: later),
+            memory: NudgeMemory(slot: InterruptionSlot(holder: .query(warrant)), ladder: ladder)
         )
 
         #expect(decision.rung == nil, "the accusation was raised over an open question")
         #expect(decision.isSpeaking == false)
         #expect(decision.silence?.reason == .interruptionInFlight)
+    }
+
+    /// **And the glyph is not withheld by it** (focus-0y6).
+    ///
+    /// The other half of the ruling above, and the defect it repairs. Gate 9 is occupancy — one
+    /// open interruption at a time — and the ambient rung occupies nothing:
+    /// `NudgeSurface.menuBar.holdsTheInterruptionSlot` is `false`, which is why `NudgeHost.slot`
+    /// asks *where the rung landed* rather than whether one exists. Refusing the glyph here was
+    /// refusing a thing on the grounds of a property it does not have, and the consequence was
+    /// the status item going blank for as long as one question sat on the screen.
+    @Test("an open question withholds the panel rung and never the glyph")
+    func theGlyphIsNotWithheldByAnOpenQuestion() {
+        let asked = Self.decide(
+            Self.judgement(verdict: .uncertain, uncertainty: .noNegativeBasis, subject: Self.neutral)
+        )
+        guard let warrant = asked.warrant else {
+            Issue.record("the question the glyph was supposed to survive was never asked")
+            return
+        }
+
+        let decision = Self.decide(
+            Self.judgement(verdict: .unrelated),
+            memory: NudgeMemory(slot: InterruptionSlot(holder: .query(warrant)))
+        )
+        #expect(
+            decision.rung?.kind == .ambient,
+            """
+            one open question took the status item with it — \(String(describing: decision))
+            """
+        )
+        #expect(!NudgeSurface.menuBar.holdsTheInterruptionSlot)
     }
 
     /// And with nothing in the slot at all, the very same judgement does speak — so the test
