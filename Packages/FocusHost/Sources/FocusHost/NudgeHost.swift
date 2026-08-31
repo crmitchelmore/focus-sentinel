@@ -1390,16 +1390,12 @@ final class NudgeHost {
         of nudge: MenuBarNudge,
         panelActions: [String]? = nil
     ) -> SurfaceObservation {
-        let panelKind: NudgePanelKind
         let actions: [String]
         switch nudge {
-        case .query:
-            panelKind = .question
-            actions = panelActions ?? openQuestion?.actions ?? []
-        case .accusation:
-            panelKind = .accusation
-            actions = panelActions ?? openRung?.panelActions ?? []
+        case .query: actions = panelActions ?? openQuestion?.actions ?? []
+        case .accusation: actions = panelActions ?? openRung?.panelActions ?? []
         }
+        let panelKind = Self.panelKind(of: nudge)
         // Short-circuited deliberately: `decisionSurfaceReading(offering:)` lays the panel's
         // action frames out, and this function is called on every write to the status item.
         let panelIsShowingTheNudge = panel.isVisible
@@ -1421,6 +1417,19 @@ final class NudgeHost {
             panelIsShowingTheNudge: panelIsShowingTheNudge,
             popoverIsShowingTheNudge: popoverIsShowingTheNudge
         )
+    }
+
+    /// **Which panel draws which kind of nudge** — one mapping, read by the observation the
+    /// charge is proven from and by the orphan reading alike.
+    ///
+    /// It was written out twice, once as a `switch` inside `observation(of:)` and once as a pair
+    /// of hand-written `panel.showing == .accusation` clauses in `orphanedNudgeSurfaces`. Two
+    /// spellings of one table is the shape every bead in this sequence has.
+    private static func panelKind(of nudge: MenuBarNudge) -> NudgePanelKind {
+        switch nudge {
+        case .query: .question
+        case .accusation: .accusation
+        }
     }
 
     /// **An invitation that reached a surface and was never opened** (focus-sq7).
@@ -2164,6 +2173,20 @@ final class NudgeHost {
         // another badge rung. The last of those is why this is not folded into the mark below —
         // the mark is `.waiting` on both sides of a replacement, and the popover would go on
         // drawing the accusation this host has already forgotten.
+        // **And the panel is taken down when the rung leaves it** (focus-my0). The badge has had
+        // this since focus-uru — *"replacing a rung is as much a change as forgetting one"* —
+        // and the panel, which is the surface that carries a sentence and six things to press,
+        // had nothing. Driven: sustained drift into one application reaches its panel rung, then
+        // one judgement about a **second** application resets the ladder, the slot admits an
+        // accusation against an accusation, and the ambient rung replaces the panel rung. The
+        // panel stayed on screen naming the first application, with Pause and Change priority
+        // live, while `resolve(_:snoozeDuration:)` reads whatever rung this host is holding now —
+        // so the click would have written a correction about the wrong application.
+        //
+        // Asked of what the panel is actually drawing rather than of `before == .panel` alone: a
+        // panel showing a question is not this rung's to order out, and `endOpenQuestion(_:)` owns
+        // that half.
+        if before == .panel, after != .panel, panel.showing == .accusation { panel.hide() }
         let touchesTheBadge = before == .popoverBadge || after == .popoverBadge
         // **The status ITEM changed** (focus-mkk). This clause is the whole bead. `accuse(…)`
         // records the glyph landing as a delivery on the ground that "the glyph is redrawn on the
@@ -2206,15 +2229,35 @@ final class NudgeHost {
     /// invariant is about a nudge a person can still press something on, and an action scrolled
     /// below the fold is one scroll away from being pressed. The stricter reading is what decides
     /// a *charge*; asking it here would file the dangerous case as no case at all.
+    ///
+    /// **And it asks where the nudge is, not whether there is one** (focus-my0). This read
+    /// `openQuestion == nil` and `openRung == nil` — *"is this host holding nothing?"* — which is
+    /// the same question as the one in the title only if the loop holds at most one nudge at a
+    /// time across all surfaces. It does not, and that is deliberate: the glyph and the badge
+    /// exist precisely so an accusation can stand somewhere while something else is on the panel.
+    /// So the one state this reading was built for was a state it answered `[]` for. Driven:
+    /// drift into one application to its panel rung, then drift into a second, and the ambient
+    /// rung for the second replaces the panel rung for the first with the panel still up and
+    /// still clickable — `openRung != nil`, and the reading saw nothing, in every suite that
+    /// asserts it and in the self-check that publishes it.
+    ///
+    /// Over `MenuBarNudge.allCases` rather than as two hand-written pairs, for the reason
+    /// `popoverPresented()` and `settleCharges(at:)` are: the question and the accusation have
+    /// been given this treatment by hand before, and the hand has been wrong.
     var orphanedNudgeSurfaces: [NudgeSurface] {
         var orphans: Set<NudgeSurface> = []
-        if openQuestion == nil {
-            if panel.isVisible, panel.showing == .question { orphans.insert(.panel) }
-            if menuBar.isDrawing(.query) { orphans.insert(.popoverBadge) }
-        }
-        if openRung == nil {
-            if panel.isVisible, panel.showing == .accusation { orphans.insert(.panel) }
-            if menuBar.isDrawing(.accusation) { orphans.insert(.popoverBadge) }
+        for nudge in MenuBarNudge.allCases {
+            let heldOn: NudgeSurface?
+            switch nudge {
+            case .query: heldOn = openQuestion?.surface
+            case .accusation: heldOn = openRung?.landedOn
+            }
+            if panel.isVisible, panel.showing == Self.panelKind(of: nudge), heldOn != .panel {
+                orphans.insert(.panel)
+            }
+            if menuBar.isDrawing(nudge), heldOn != .popoverBadge {
+                orphans.insert(.popoverBadge)
+            }
         }
         return orphans.sorted { $0.rawValue < $1.rawValue }
     }
