@@ -113,7 +113,8 @@ struct MenuBarActionTotalityTests {
             CompositionRootWireTests.tearDown(root)
         }
 
-        root.perform(action)
+        let wire = try #require(root.menuBar.onAction, "the status item has nobody to tell")
+        wire(action)
 
         #expect(
             sink.commands.isEmpty,
@@ -145,7 +146,15 @@ struct MenuBarActionTotalityTests {
         }
 
         let requestsBefore = FocusCommandCenter.shared.cockpitRequests
-        root.perform(action)
+        // **Through the wire the status item calls, not past it** (focus-w3f).
+        //
+        // This was `root.perform(action)`, which is exactly what `CompositionRootWireTests`'
+        // doctrine forbids and says about `onCorrection` in so many words. The table below is
+        // exhaustive over `MenuBarAction`, and an exhaustive table over the wrong entry point is
+        // still not a test of the wire: `menuBar.onAction` could be replaced with `{ _ in }` and
+        // all thirteen items in the shipping menu would go dead with this suite green.
+        let wire = try #require(root.menuBar.onAction, "the status item has nobody to tell")
+        wire(action)
 
         switch effect {
         case .raisesTheCockpit:
