@@ -2221,6 +2221,17 @@ final class NudgeHost {
         if exit.leavesTheInterruptionUnanswered {
             complete(.ignored, recordID: question.recordID)
         }
+        // **And the run that bounds how often the app may ask** (focus-fwy). The accusation's twin,
+        // one function over: `FatigueController` heard about a question from `answer(_:)` alone, so
+        // `InterventionPolicy.ignoredQueryBackoff` counted only questions the person **pressed
+        // something on** — "Not now" and Escape extend the run because `.declined` is not an
+        // answer — and a question they never touched advanced nothing at all. ⌃⌘H is the exit that
+        // makes that reachable on purpose: F-81 says the question is still unanswered and will be
+        // offered again, and until this line nothing bounded how often.
+        if exit.countsAsAnUnansweredQuestion {
+            fatigue.reduce(.queryResolved(.expired), now: monotonicClock.elapsed)
+        }
+
         let surface = question.surface
 
         // One assignment, because the question is one value. It used to be six lines, and the

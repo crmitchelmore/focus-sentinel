@@ -125,4 +125,38 @@ public enum QuestionExit: String, Sendable, CaseIterable, Codable, Hashable {
         case .answered, .surfaceWentOutOfReach, .neverDelivered: false
         }
     }
+
+    /// **Whether `FatigueController`'s run of unanswered questions hears about it** (focus-fwy,
+    /// R-83, U-1).
+    ///
+    /// `InterventionPolicy.ignoredQueryBackoff` is the bound on *the app is asking and nobody is
+    /// answering*, and until focus-fwy the controller was told about a question from exactly one
+    /// place — `NudgeHost.answer(_:)`, which reduces `.queryResolved(answer.outcome)`. So the run
+    /// advanced only for a question the person **pressed something on**: "Not now" and Escape
+    /// extend it, because `AskedQuestionOutcome.declined` is not an answer. A question they never
+    /// touched advanced nothing at all.
+    ///
+    /// One exit answers `true`, and it is the accusation's own `RungExit.screenReclaimed` stated
+    /// for this half: ⌃⌘H is the person saying *take this off my screen*, the question was in
+    /// front of them, and F-81's ruling is that it is **still unanswered and will be offered
+    /// again**. Nothing bounded how often, which is what this is.
+    ///
+    /// The other three are `false` and each for its own reason:
+    ///
+    /// * `answered` — `answer(_:)` has already reduced the event that carries what they said.
+    /// * `surfaceWentOutOfReach` and `neverDelivered` — un-askings. R-81's rule is that a nudge
+    ///   nobody could see did not happen, and a backoff advanced by one would be the app punishing
+    ///   the person for a display it could not fit on.
+    /// * `worldMovedOn` — *"going for lunch is not an answer"* is focus-qds's ruling and it cuts
+    ///   both ways: a session ending, a break or a commitment change is the world ending the
+    ///   question, not the person ignoring it. It is also the clause that has to be `false` for
+    ///   the arithmetic to hold at all — `NudgeHost.sessionEnded()` reduces
+    ///   `FatigueEvent.sessionEnded`, which resets both runs, **before** it closes the surfaces, so
+    ///   a run advanced here would dirty one that had just been cleared.
+    public var countsAsAnUnansweredQuestion: Bool {
+        switch self {
+        case .screenReclaimed: true
+        case .answered, .worldMovedOn, .surfaceWentOutOfReach, .neverDelivered: false
+        }
+    }
 }

@@ -179,4 +179,234 @@ struct NudgeHostQuestionExitTests {
             """
         )
     }
+
+    // MARK: - What each exit tells the run that bounds how often the app may ask (focus-fwy)
+
+    /// What each exit must settle, stated as literals.
+    ///
+    /// The accusation's table is `NudgeRungExitTests.rows` and this is its twin, one function
+    /// over. `FatigueController` heard about a question from `answer(_:)` alone —
+    /// `.queryResolved(answer.outcome)` — so `InterventionPolicy.ignoredQueryBackoff` counted only
+    /// the questions the person **pressed something on**: "Not now" and Escape extend the run,
+    /// because `AskedQuestionOutcome.declined` is not an answer, and a question they never touched
+    /// advanced nothing at all.
+    struct BackoffRow: Sendable {
+        let exit: QuestionExit
+        /// `QuestionExit.recordsAnExpiry`, written out rather than read back.
+        let recordsAnExpiry: Bool
+        /// `QuestionExit.leavesTheInterruptionUnanswered`, written out.
+        let leavesTheInterruptionUnanswered: Bool
+        /// `QuestionExit.countsAsAnUnansweredQuestion`, written out.
+        let countsAsAnUnansweredQuestion: Bool
+        /// The run of unanswered questions afterwards. A count, not a flag: **double** counting is
+        /// a failure here as much as none is.
+        let unansweredRunAfter: Int
+        /// Why that is the right answer. Read by a person; the assertions check the rest.
+        let argument: String
+    }
+
+    /// **One row per `QuestionExit`.** A case missing here fails `theBackoffTableCoversEveryExit`.
+    nonisolated static let backoffRows: [BackoffRow] = [
+        BackoffRow(
+            exit: .answered,
+            recordsAnExpiry: false,
+            leavesTheInterruptionUnanswered: false,
+            countsAsAnUnansweredQuestion: false,
+            unansweredRunAfter: 0,
+            argument: """
+                `answer(_:)` has already reduced the event carrying what the person said, and \
+                "Yes, add it" is an answer — so the run ends outright rather than extending. A \
+                door that advanced it again would read 1 on the very question they just answered.
+                """
+        ),
+        BackoffRow(
+            exit: .worldMovedOn,
+            recordsAnExpiry: true,
+            leavesTheInterruptionUnanswered: true,
+            countsAsAnUnansweredQuestion: false,
+            unansweredRunAfter: 0,
+            argument: """
+                *"Going for lunch is not an answer"* is focus-qds's ruling and it cuts both ways: \
+                the world ended the question, the person did not, so the expiry is written down \
+                and neither run is advanced. It is also the clause the arithmetic needs — \
+                `sessionEnded()` reduces `FatigueEvent.sessionEnded`, which clears both runs, \
+                **before** it closes the surfaces, so a run advanced here would dirty one that had \
+                just been reset.
+                """
+        ),
+        BackoffRow(
+            exit: .surfaceWentOutOfReach,
+            recordsAnExpiry: false,
+            leavesTheInterruptionUnanswered: false,
+            countsAsAnUnansweredQuestion: false,
+            unansweredRunAfter: 0,
+            argument: """
+                An un-asking. R-81's rule is that a nudge nobody could see did not happen, so a \
+                backoff advanced by one would be the app holding its questions because of a \
+                display it could not fit on.
+                """
+        ),
+        BackoffRow(
+            exit: .neverDelivered,
+            recordsAnExpiry: false,
+            leavesTheInterruptionUnanswered: false,
+            countsAsAnUnansweredQuestion: false,
+            unansweredRunAfter: 0,
+            argument: """
+                The other un-asking, one moment earlier: the ask gave itself up before it reached \
+                anybody. There is no row and no asking, so there is nothing for a run to count.
+                """
+        ),
+        BackoffRow(
+            exit: .screenReclaimed,
+            recordsAnExpiry: false,
+            leavesTheInterruptionUnanswered: true,
+            countsAsAnUnansweredQuestion: true,
+            unansweredRunAfter: 1,
+            argument: """
+                F-81's ⌃⌘H, and `RungExit.screenReclaimed`'s twin. The question was in front of \
+                the person, they pressed a key to take it off their screen, and F-81's own \
+                sentence is that it is **still unanswered and will be offered again**. Until \
+                focus-fwy nothing bounded how often: the one exit that guarantees a re-ask was the \
+                one exit that told the backoff nothing.
+                """
+        )
+    ]
+
+    /// **The class, not the instance** — the run every exit leaves behind, folded over `allCases`.
+    ///
+    /// ## The vacuity guard
+    ///
+    /// This would still be green if:
+    ///
+    /// * **every literal below were edited to match a broken implementation.**
+    ///   `theBackoffRuleIsNeverAConstantFunction` is the guard: each property is answered both
+    ///   ways by the table, and the row that reaches `1` must be `screenReclaimed`.
+    /// * **the table asked the vocabulary instead of stating an answer.** It does not:
+    ///   `theQuestionVocabularyMatchesTheBackoffTable` compares a literal with `QuestionExit`'s own
+    ///   answer, so a table that read the property back — the *"proof written to the known
+    ///   failure"* shape — could not exist here.
+    /// * **a sixth exit were added and given no row.** `theBackoffTableCoversEveryExit` walks
+    ///   `QuestionExit.allCases`, and the `switch` in `everyExitSettlesTheUnansweredRun` is
+    ///   exhaustive, so a case can be neither undriven nor unstated.
+    /// * **the fatigue controller were never consulted by the loop at all.** It is: every row
+    ///   reads `FatigueController`'s real state off the shipping host after driving the shipping
+    ///   exit, and `answered` reaching `0` on a fresh run is what stops that reading being
+    ///   satisfied by a controller nobody ever reduced anything into.
+    @Test(
+        "every exit from an open question leaves the unanswered run where it belongs",
+        .enabled(if: LocalizationLane.catalogsAreCompiled),
+        arguments: NudgeHostQuestionExitTests.backoffRows
+    )
+    func everyExitSettlesTheUnansweredRun(row: BackoffRow) throws {
+        let fixture = try NudgeHostFixture()
+        defer { fixture.tearDown() }
+
+        if row.exit != .neverDelivered {
+            fixture.host.consider(NudgeHostFixture.uncertainJudgement(subject: Self.subject))
+            NudgeHostFixture.settle()
+            try #require(
+                fixture.panel.isVisible && fixture.panel.showing == .question,
+                "no question reached the panel, so \(row.exit.rawValue) drives nothing"
+            )
+            try #require(
+                fixture.host.fatigue.state.consecutiveUnansweredQueries == 0,
+                "the run was already dirty before the exit, so this row measures nothing"
+            )
+        }
+
+        switch row.exit {
+        case .answered:
+            fixture.host.answer(.yesAddIt)
+
+        case .worldMovedOn:
+            fixture.host.sessionEnded()
+
+        case .surfaceWentOutOfReach:
+            fixture.panel.displays = { NudgeHostDisplayChangeTests.displayTooSmall(for: 4_000) }
+            NudgeHostDisplayChangeTests.theDisplayConfigurationChanges()
+
+        case .screenReclaimed:
+            fixture.host.hideOverlays()
+
+        case .neverDelivered:
+            // An intent nobody would type makes a panel whose answers really are past the edge of
+            // the display, which is the situation `ask(…)` refuses to deliver into.
+            let long = try NudgeHostFixture(
+                intent: String(repeating: "an unanswerable ask ", count: 60)
+            )
+            defer { long.tearDown() }
+            long.host.consider(NudgeHostFixture.uncertainJudgement(subject: Self.subject))
+            NudgeHostFixture.settle()
+            #expect(
+                long.host.fatigue.state.consecutiveUnansweredQueries == row.unansweredRunAfter,
+                """
+                a question that reached nobody left the run at \
+                \(long.host.fatigue.state.consecutiveUnansweredQueries). \(row.argument)
+                """
+            )
+            return
+        }
+
+        NudgeHostFixture.settle()
+        #expect(
+            fixture.host.fatigue.state.consecutiveUnansweredQueries == row.unansweredRunAfter,
+            """
+            \(row.exit.rawValue) left the unanswered-question run at \
+            \(fixture.host.fatigue.state.consecutiveUnansweredQueries) rather than \
+            \(row.unansweredRunAfter). \(row.argument)
+            """
+        )
+    }
+
+    /// **Every exit the vocabulary declares has a row, and no two rows drive the same one.**
+    @Test("the backoff table covers every exit from an open question")
+    func theBackoffTableCoversEveryExit() {
+        let covered = Set(Self.backoffRows.map(\.exit))
+        for exit in QuestionExit.allCases {
+            #expect(
+                covered.contains(exit),
+                "\(exit.rawValue) ends a question and has no row saying what it tells the backoff"
+            )
+        }
+        #expect(covered.count == Self.backoffRows.count, "two rows drive the same exit")
+        #expect(Self.backoffRows.count == QuestionExit.allCases.count)
+        #expect(!QuestionExit.allCases.isEmpty, "a fold over an empty vocabulary proves nothing")
+    }
+
+    /// **The table's literals are the specification; `QuestionExit` is the implementation.**
+    @Test("every literal in the backoff table is the answer the vocabulary gives")
+    func theQuestionVocabularyMatchesTheBackoffTable() {
+        for row in Self.backoffRows {
+            #expect(
+                row.exit.recordsAnExpiry == row.recordsAnExpiry,
+                "\(row.exit.rawValue).recordsAnExpiry contradicts its row. \(row.argument)"
+            )
+            #expect(
+                row.exit.leavesTheInterruptionUnanswered == row.leavesTheInterruptionUnanswered,
+                """
+                \(row.exit.rawValue).leavesTheInterruptionUnanswered contradicts its row. \
+                \(row.argument)
+                """
+            )
+            #expect(
+                row.exit.countsAsAnUnansweredQuestion == row.countsAsAnUnansweredQuestion,
+                """
+                \(row.exit.rawValue).countsAsAnUnansweredQuestion contradicts its row. \
+                \(row.argument)
+                """
+            )
+        }
+    }
+
+    /// **The rule is never a constant function**, and the one exit that advances the run is the
+    /// one that guarantees the question comes back.
+    @Test("each property in the question vocabulary is answered both ways")
+    func theBackoffRuleIsNeverAConstantFunction() {
+        #expect(Set(Self.backoffRows.map(\.recordsAnExpiry)) == [true, false])
+        #expect(Set(Self.backoffRows.map(\.leavesTheInterruptionUnanswered)) == [true, false])
+        #expect(Set(Self.backoffRows.map(\.countsAsAnUnansweredQuestion)) == [true, false])
+        #expect(QuestionExit.screenReclaimed.countsAsAnUnansweredQuestion)
+        #expect(Set(Self.backoffRows.map(\.unansweredRunAfter)) == [0, 1])
+    }
 }
