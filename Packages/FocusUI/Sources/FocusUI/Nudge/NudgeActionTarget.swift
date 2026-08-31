@@ -100,22 +100,43 @@ struct NudgePanelContent: View {
     static let coordinateSpace = "focus.nudge.panel"
 
     let inset: Double
-    /// Whether the content is taller than the panel is allowed to be, and must therefore scroll.
+    /// **What gives way when the surface will not fit** (focus-din).
     ///
-    /// **Scrolling rather than clipping**, and the difference matters to the ledger: a clipped
-    /// action is invisible *and* unreported, while a scrolled one is reachable the moment the
-    /// person scrolls. Neither is counted as a delivered question until the reading says every
-    /// action is in reach — which, for content that has to scroll, it is not.
-    let scrolls: Bool
-    let content: AnyView
+    /// It was a `Bool` — *does this scroll?* — and a surface that scrolls its own actions is a
+    /// surface whose reading can never say they are reachable, so a nudge on one was never
+    /// charged and the ladder parked. The question is not whether the surface scrolls but **what
+    /// scrolls**, and there are three answers rather than two:
+    ///
+    /// * `nothingScrolls` draws the column exactly as it was written, which is what a surface that
+    ///   fits has always done;
+    /// * `theContextScrolls` puts the scroll around what the decision is *about* and leaves the
+    ///   actions in the viewport, so a person who never scrolls can still reach every one of them
+    ///   and a person who does cannot move them out of reach;
+    /// * `everythingScrolls` is the residual — the actions alone do not fit — and the reading
+    ///   then refuses the charge, which is the truth about that surface.
+    let overflow: DecisionSurfaceOverflow
+    let layout: DecisionSurfaceLayout
     let onFrames: (NudgeActionFrameSet) -> Void
 
     var body: some View {
         Group {
-            if scrolls {
-                ScrollView(.vertical) { padded }
-            } else {
-                padded
+            switch overflow {
+            case .nothingScrolls:
+                padded(layout.whole)
+            case .theContextScrolls:
+                // `spacing: 0` because each half carries its own inset: the gap between the last
+                // line of the context and the first action is the two insets, which is the gap the
+                // undivided column already draws between its sections.
+                VStack(spacing: 0) {
+                    // The scroll view is fully flexible and the decision is not, so a `VStack`
+                    // gives the decision its ideal height first and hands the scroll whatever is
+                    // left — which is the arithmetic `SurfaceSizeCommitments.overflow(…)` already
+                    // proved fits before choosing this branch.
+                    ScrollView(.vertical) { padded(layout.context) }
+                    padded(layout.decision)
+                }
+            case .everythingScrolls:
+                ScrollView(.vertical) { padded(layout.whole) }
             }
         }
         // **No `maxHeight` here, and that is a measurement decision.** This same view is what
@@ -133,8 +154,8 @@ struct NudgePanelContent: View {
         }
     }
 
-    private var padded: some View {
-        content
+    private func padded(_ view: AnyView) -> some View {
+        view
             .padding(inset)
             .frame(maxWidth: .infinity, alignment: .leading)
     }

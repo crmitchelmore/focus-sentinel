@@ -302,12 +302,13 @@ public final class NudgePanelController {
     ///
     /// A second hosting object rather than the live one because measuring must not disturb the
     /// view a person is looking at, and because the live one carries the frame reporter — asking
-    /// *it* to measure would collect the frames of a layout nobody was shown.
-    private let measurer = NSHostingController(rootView: AnyView(EmptyView()))
+    /// *it* to measure would collect the frames of a layout nobody was shown. It is built per
+    /// measurement inside `panelLayout(measuring:screens:)` now, which is what makes that function
+    /// `static` and therefore reachable from a lane with no window (focus-din).
 
     /// The content, before it was wrapped for the panel. Kept so a re-layout — a show, a screen
     /// change — can be performed without the caller handing the content in again.
-    private var content: AnyView = AnyView(EmptyView())
+    private var content: DecisionSurfaceLayout = .undivided(AnyView(EmptyView()))
     private var traits: AppearanceTraits = .systemDefault
 
     /// **The traits this panel was last drawn with** (focus-pq8).
@@ -330,6 +331,84 @@ public final class NudgePanelController {
     /// `nil` while the panel is off screen: `hide()` and `withdrawForPresentation()` both clear
     /// it, because a panel that has been ordered out is showing nobody anything.
     public private(set) var showing: NudgePanelKind?
+
+    /// **What gave way at the last layout** (focus-din). Published so a lane can read which of the
+    /// three the panel is in — and so a proof that the actions are reachable can say whether it was
+    /// taken on a surface that had to scroll at all, rather than passing vacuously on one that fit.
+    public private(set) var currentOverflow: DecisionSurfaceOverflow = .nothingScrolls
+
+    /// **The size this panel commits to for one content, and what gives way if it will not fit**
+    /// (focus-vpu, focus-din).
+    ///
+    /// A `static` over the split content rather than a method on the live controller, for the
+    /// reason `MenuBarController.popoverLayout(measuring:screens:)` is one: the number the
+    /// shipping panel is built at becomes a number a test can take — at either text scale, in
+    /// either appearance, on any display — without a window server. The panel's twin has been
+    /// reachable that way since focus-5yu and this one was not, so the surface with the older
+    /// reading was the one no lane could fold over.
+    ///
+    /// **Two measurements**: the whole surface, and its decision on its own at the same committed
+    /// width. A surface that will not fit gives way in whichever of the two ways those numbers
+    /// permit, so the choice between pinning the actions and scrolling everything is made on real
+    /// heights rather than on a hope that the buttons will fit.
+    public static func panelLayout(
+        measuring surface: DecisionSurfaceLayout,
+        screens: [DisplayGeometry]
+    ) -> PanelLayout {
+        let ceiling = maximumContentHeight(screens: screens)
+        let measured = measureAtCommittedWidth(surface.whole)
+        let commitment = SurfaceSizeCommitments.commit(
+            measuredHeight: measured,
+            width: contentWidth,
+            ceiling: ceiling,
+            minimum: startingSize.height
+        )
+        return PanelLayout(
+            size: CGSize(width: commitment.width, height: commitment.height),
+            overflow: SurfaceSizeCommitments.overflow(
+                measuredHeight: measured,
+                decisionHeight: measureAtCommittedWidth(surface.decision),
+                ceiling: ceiling,
+                minimumContextHeight: DecisionSurfaceLayout.minimumContextHeight
+            )
+        )
+    }
+
+    /// The size the panel is laid out at, and what gives way when it will not fit.
+    public struct PanelLayout: Sendable, Equatable, Hashable {
+        public let size: CGSize
+        public let overflow: DecisionSurfaceOverflow
+
+        public init(size: CGSize, overflow: DecisionSurfaceOverflow) {
+            self.size = size
+            self.overflow = overflow
+        }
+
+        /// Whether anything gives way at all.
+        public var scrolls: Bool { overflow != .nothingScrolls }
+    }
+
+    /// The wrapped height of one part of the content at the committed width.
+    ///
+    /// `NSHostingController.sizeThatFits(in:)` answers "how tall is this content when it is
+    /// **given this width**" — the wrapped truth. It is not `NSView.fittingSize`, which is
+    /// SwiftUI's *unconstrained* fitting size and is the number that drove the window to
+    /// 380 × 2212. `nothingScrolls` deliberately: this is the unclamped height, and a measurement
+    /// taken through a scroll view would answer whatever it was proposed.
+    private static func measureAtCommittedWidth(_ part: AnyView) -> Double {
+        NSHostingController(
+            rootView: AnyView(
+                NudgePanelContent(
+                    inset: contentInset,
+                    overflow: .nothingScrolls,
+                    layout: .undivided(part),
+                    onFrames: { _ in }
+                )
+            )
+        )
+        .sizeThatFits(in: CGSize(width: contentWidth, height: .greatestFiniteMagnitude))
+        .height
+    }
 
     /// Where every offered action landed, in the panel's content space, as the layout last
     /// reported it — **and which layout said so**. A reading from a layout the panel has since
@@ -526,10 +605,41 @@ public final class NudgePanelController {
 
     public func update(
         showing: NudgePanelKind,
-        content: some View,
+        content: some DecisionSurfaceContent,
         traits: AppearanceTraits = .systemDefault
     ) {
-        self.content = AnyView(content)
+        update(showing: showing, layout: content.surfaceLayout, traits: traits)
+    }
+
+    /// The same, for a caller with no decision to protect — the panel's own suites, which put
+    /// arbitrary content in a real window to measure it.
+    ///
+    /// **`undivided:` rather than a second `content:` overload, and the label is load-bearing**
+    /// (focus-din). With both spelled `content:` the two shipping entry points above would be an
+    /// overload-resolution question, and binding to this one would wrap a real decision surface as
+    /// undivided — which can never pin its actions, so every proof of the split would pass while
+    /// the running panel scrolled its buttons away exactly as before. A label the compiler checks
+    /// is not a question.
+    public func update(
+        showing: NudgePanelKind,
+        undivided content: some View,
+        traits: AppearanceTraits = .systemDefault
+    ) {
+        update(showing: showing, layout: .undivided(AnyView(content)), traits: traits)
+    }
+
+    /// The split, handed over directly.
+    ///
+    /// For a lane that has to drive the environment the surface is measured in — the text size in
+    /// particular, which is the person's own setting and is not something a controller has a seam
+    /// for. `modified(_:)` is how it is applied, so the measurement and all three renderings stay
+    /// in one environment.
+    public func update(
+        showing: NudgePanelKind,
+        layout: DecisionSurfaceLayout,
+        traits: AppearanceTraits = .systemDefault
+    ) {
+        self.content = layout
         self.showing = showing
         self.traits = traits
         // **The window's own appearance follows the traits too** (focus-pq8). SwiftUI's
@@ -575,35 +685,19 @@ public final class NudgePanelController {
     /// the action frames readable in the same turn, because SwiftUI delivers the preference the
     /// action targets publish during that layout rather than one pass later.
     private func layOutContent() {
-        let wrappedForMeasurement = AnyView(
-            NudgePanelContent(
-                inset: Self.contentInset,
-                scrolls: false,
-                content: content,
-                onFrames: { _ in }
-            )
-            .appearanceTraits(traits)
-        )
-        measurer.rootView = wrappedForMeasurement
-
-        let measured = measurer.sizeThatFits(
-            in: CGSize(width: Self.contentWidth, height: .greatestFiniteMagnitude)
-        )
-        let commitment = SurfaceSizeCommitments.commit(
-            measuredHeight: measured.height,
-            width: Self.contentWidth,
-            ceiling: Self.maximumContentHeight(screens: displays()),
-            minimum: Self.startingSize.height
-        )
-        let height = commitment.height
-        let scrolls = commitment.scrolls
+        // The traits go through the split rather than onto the wrapper alone, so the three
+        // renderings and the measurement taken of them are in one environment (focus-din).
+        let surface = content.modified { $0.appearanceTraits(traits) }
+        let panelLayout = Self.panelLayout(measuring: surface, screens: displays())
+        let height = panelLayout.size.height
+        let overflow = panelLayout.overflow
 
         layoutGeneration += 1
         hosting.rootView = AnyView(
             NudgePanelContent(
                 inset: Self.contentInset,
-                scrolls: scrolls,
-                content: content,
+                overflow: overflow,
+                layout: surface,
                 onFrames: { [weak self] reported in self?.reportedFrames = reported }
             )
             .environment(\.nudgeLayoutGeneration, layoutGeneration)
@@ -613,6 +707,7 @@ public final class NudgePanelController {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         )
 
+        currentOverflow = overflow
         let size = CGSize(width: Self.contentWidth, height: height)
         panel.contentMinSize = size
         panel.contentMaxSize = size

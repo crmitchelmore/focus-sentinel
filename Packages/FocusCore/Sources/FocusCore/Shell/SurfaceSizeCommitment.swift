@@ -112,3 +112,59 @@ public enum SurfaceSizeCommitments {
         )
     }
 }
+
+/// **How a surface that will not fit gives way** (focus-din).
+///
+/// A ceiling and a scroll made nothing get cut off, and it left a second question unanswered:
+/// *what scrolls?* A surface that scrolls its **decision** is a surface whose actions are below
+/// the fold — and `DecisionSurfaceReachability` correctly refuses to count a nudge whose actions
+/// a person cannot click, so a nudge on a scrolling surface was never charged at all, however long
+/// they looked at it. Measured through the shipping layout: at `accessibilityLarge` on a
+/// 1080-point display **every** popover state scrolls, so for a large-text user a badge rung was
+/// never delivered, `openRung` stayed unpaid, and the ladder parked for good.
+///
+/// Three answers, and the middle one is the repair:
+public enum DecisionSurfaceOverflow: String, Sendable, Equatable, Hashable, CaseIterable {
+    /// The whole surface fits. It is drawn as one column, in the order it was written.
+    case nothingScrolls
+    /// The surface does not fit, and the **context** gives way: the sentence, the reason and the
+    /// countdown scroll, and the actions stay in the viewport where a person who never scrolls can
+    /// still reach them. The reading is then a fact about the surface rather than about the scroll
+    /// offset, which is what makes it stable for somebody who scrolls too.
+    case theContextScrolls
+    /// The decision itself does not fit, so there is nothing to pin it against: the surface
+    /// scrolls whole. This is the honest residual — a display too small to show the actions at
+    /// this text size — and the reading says so rather than charging a rung nobody could answer.
+    case everythingScrolls
+
+    /// Whether the surface's own actions are guaranteed to be inside the content the person can
+    /// see, without scrolling.
+    public var decisionIsInTheViewport: Bool { self != .everythingScrolls }
+}
+
+extension SurfaceSizeCommitments {
+    /// **Which way a surface gives way**, as a pure function of three measurements (focus-din).
+    ///
+    /// - Parameters:
+    ///   - measuredHeight: the whole surface's wrapped height at the committed width.
+    ///   - decisionHeight: the offered actions' own wrapped height at the same width. `0` for a
+    ///     surface that is offering nothing, which cannot have its decision cut off.
+    ///   - ceiling: what the display can hold, or `nil` when nothing bounds the surface.
+    ///   - minimumContextHeight: how much of *what the decision is about* must still be on screen
+    ///     for the surface to be one a person could decide on. A row of buttons under nothing is
+    ///     not a decision surface, so a decision that would leave less than this behind is not
+    ///     pinned — the surface scrolls whole and the reading refuses the charge.
+    public static func overflow(
+        measuredHeight: Double,
+        decisionHeight: Double,
+        ceiling: Double?,
+        minimumContextHeight: Double
+    ) -> DecisionSurfaceOverflow {
+        guard let ceiling else { return .nothingScrolls }
+        guard measuredHeight > ceiling + tolerance else { return .nothingScrolls }
+        guard decisionHeight + minimumContextHeight <= ceiling + tolerance else {
+            return .everythingScrolls
+        }
+        return .theContextScrolls
+    }
+}

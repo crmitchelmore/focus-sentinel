@@ -247,7 +247,7 @@ struct MenuBarPopoverLayoutTests {
     func theUnconstrainedWidthIsTheSentence(cell: PopoverSpace.Cell) {
         guard cell.name.contains(".long.") else { return }
         let unconstrained = NSHostingController(
-            rootView: AnyView(Self.view(of: cell))
+            rootView: Self.surface(of: cell).whole
         ).view.fittingSize
         #expect(
             Double(unconstrained.width) > MenuBarController.popoverContentWidth * 2,
@@ -266,7 +266,7 @@ struct MenuBarPopoverLayoutTests {
     func whatScrolledAwayIsOutOfReach() throws {
         let cell = try #require(PopoverSpace.space.first { $0.name == "both.long.standard.light" })
         let layout = MenuBarController.popoverLayout(
-            measuring: Self.view(of: cell),
+            measuring: Self.surface(of: cell),
             screens: [PopoverSpace.shortDisplay]
         )
         let ceiling = try #require(
@@ -298,7 +298,7 @@ struct MenuBarPopoverLayoutTests {
     func noDisplayStillCommitsTheWidth() throws {
         let cell = try #require(PopoverSpace.space.first { $0.name == "both.long.accessibilityLarge.dark" })
         #expect(MenuBarController.popoverMaximumContentHeight(screens: []) == nil)
-        let layout = MenuBarController.popoverLayout(measuring: Self.view(of: cell), screens: [])
+        let layout = MenuBarController.popoverLayout(measuring: Self.surface(of: cell), screens: [])
         #expect(Double(layout.size.width) == MenuBarController.popoverContentWidth)
         #expect(!layout.scrolls, "a surface bounded by nothing acquired a scroll view anyway")
     }
@@ -335,16 +335,24 @@ struct MenuBarPopoverLayoutTests {
 
     // MARK: - The instruments
 
-    /// The shipping view, with the appearance and the text size of this cell — and no width.
-    static func view(of cell: PopoverSpace.Cell) -> some View {
+    /// The shipping view, split the way the shipping controller splits it, with the appearance
+    /// and the text size of this cell — and no width (focus-din).
+    ///
+    /// The environment goes through `modified(_:)` rather than onto the view, so all three
+    /// renderings and the measurement taken of them are in one environment. That is exactly what
+    /// `MenuBarController.popoverController()` does.
+    static func surface(of cell: PopoverSpace.Cell) -> DecisionSurfaceLayout {
         MenuBarPopoverView(presentation: cell.presentation)
-            .appearanceTraits(cell.traits)
-            .shellTextScale(cell.scale)
+            .surfaceLayout
+            .modified { $0.appearanceTraits(cell.traits).shellTextScale(cell.scale) }
     }
 
     /// The shipping layout function, on the shipping view, against the rig display.
     static func layout(of cell: PopoverSpace.Cell) -> MenuBarController.PopoverLayout {
-        MenuBarController.popoverLayout(measuring: view(of: cell), screens: [PopoverSpace.display])
+        MenuBarController.popoverLayout(
+            measuring: surface(of: cell),
+            screens: [PopoverSpace.display]
+        )
     }
 
     /// Where the layout actually put each action, collected through the preference the rows
@@ -357,8 +365,8 @@ struct MenuBarPopoverLayoutTests {
         var collected: [String: CGRect] = [:]
         let content = NudgePanelContent(
             inset: MenuBarController.popoverContentInset,
-            scrolls: layout.scrolls,
-            content: AnyView(view(of: cell)),
+            overflow: layout.overflow,
+            layout: surface(of: cell),
             onFrames: { collected.merge($0.frames) { _, latest in latest } }
         )
         .frame(width: layout.size.width, height: layout.size.height, alignment: .topLeading)

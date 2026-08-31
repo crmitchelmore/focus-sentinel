@@ -346,26 +346,35 @@ public final class MenuBarController {
     /// would then have to trust.
     public var onGlyphWritten: (() -> Void)?
 
-    /// **The size the popover is laid out at, and whether that content has to scroll**
-    /// (focus-5yu).
+    /// **The size the popover is laid out at, and what gives way when it will not fit**
+    /// (focus-5yu, focus-din).
     ///
-    /// A pair rather than a size alone, for `NudgePanelContent.scrolls`'s reason: a clipped
-    /// action is invisible *and* unreported, while a scrolled one is reachable the moment the
-    /// person scrolls — and neither is a nudge that may be charged until
+    /// A pair rather than a size alone, because a clipped action is invisible *and* unreported
+    /// while a scrolled one is not — and neither is a nudge that may be charged until
     /// `decisionSurfaceReading(of:)` says every action is in reach.
+    ///
+    /// **The flag became three values** (focus-din). *Does this scroll?* had no answer that let a
+    /// scrolling popover ever be charged: at `accessibilityLarge` on a 1080-point display every
+    /// state of this surface scrolls, so a large-text user's badge rung was never delivered and
+    /// the ladder parked. `DecisionSurfaceOverflow` says **what** scrolls, and its middle value
+    /// keeps the corrections and the answers in the viewport while the command centre above them
+    /// gives way.
     public struct PopoverLayout: Sendable, Equatable, Hashable {
         public let size: CGSize
-        public let scrolls: Bool
+        public let overflow: DecisionSurfaceOverflow
 
-        public init(size: CGSize, scrolls: Bool) {
+        public init(size: CGSize, overflow: DecisionSurfaceOverflow) {
             self.size = size
-            self.scrolls = scrolls
+            self.overflow = overflow
         }
+
+        /// Whether anything gives way at all. The reading `MenuBarPopoverLayoutTests` takes.
+        public var scrolls: Bool { overflow != .nothingScrolls }
 
         /// What a popover that has never been built is laid out at: nothing at all. Read as a
         /// content bounds it contains no action, which is what default-deny requires of a
         /// surface nobody has drawn.
-        public static let unbuilt = PopoverLayout(size: .zero, scrolls: false)
+        public static let unbuilt = PopoverLayout(size: .zero, overflow: .nothingScrolls)
     }
 
     /// **The width the popover commits to** (focus-5yu).
@@ -1043,20 +1052,23 @@ public final class MenuBarController {
     /// whose Pause button is off the bottom.
     private func popoverController() -> NSViewController {
         popoverLayoutGeneration += 1
-        let content = MenuBarPopoverView(presentation: presentation) { [weak self] action in
+        // The traits are applied through the split rather than to the view, so all three
+        // renderings — and the measurement taken of them — are in one environment (focus-din).
+        let surface = MenuBarPopoverView(presentation: presentation) { [weak self] action in
             self?.onAction?(action)
         }
-        .appearanceTraits(traits)
+        .surfaceLayout
+        .modified { $0.appearanceTraits(traits) }
 
-        let layout = Self.popoverLayout(measuring: content, screens: displays())
+        let layout = Self.popoverLayout(measuring: surface, screens: displays())
         popoverLayout = layout
 
         let hosting = NSHostingController(
             rootView: AnyView(
                 NudgePanelContent(
                     inset: Self.popoverContentInset,
-                    scrolls: layout.scrolls,
-                    content: AnyView(content),
+                    overflow: layout.overflow,
+                    layout: surface,
                     onFrames: { [weak self] reported in self?.reportedPopoverFrames = reported }
                 )
                 .environment(\.nudgeLayoutGeneration, popoverLayoutGeneration)
@@ -1109,7 +1121,7 @@ public final class MenuBarController {
         )
     }
 
-    /// **The size the popover commits to for one content, and whether that content scrolls.**
+    /// **The size the popover commits to for one content, and what gives way if it will not fit.**
     ///
     /// A `static` over the view rather than a method on the live controller, so the number the
     /// shipping popover is built at is the number a test or the self-check can take — at a
@@ -1117,32 +1129,52 @@ public final class MenuBarController {
     /// server, a status item or a click. The lane that recorded every popover baseline at a
     /// width it supplied itself is the reason this is reachable at all: a picture rendered at a
     /// width the test chose can never show the width being wrong.
+    ///
+    /// **Two measurements, not one** (focus-din). The whole surface is measured, and then its
+    /// **decision** — the pending accusation's corrections and the pending question's answers —
+    /// on its own at the same committed width. A surface that will not fit gives way in whichever
+    /// of the two ways those numbers permit, and a caller that hands in something with no
+    /// decision at all measures a zero for it, which is the honest height of nothing.
     public static func popoverLayout(
-        measuring content: some View,
+        measuring surface: DecisionSurfaceLayout,
         screens: [DisplayGeometry]
     ) -> PopoverLayout {
+        let ceiling = popoverMaximumContentHeight(screens: screens)
+        let measured = measureAtCommittedWidth(surface.whole)
+        let commitment = SurfaceSizeCommitments.commit(
+            measuredHeight: measured,
+            width: popoverContentWidth,
+            ceiling: ceiling
+        )
+        return PopoverLayout(
+            size: CGSize(width: commitment.width, height: commitment.height),
+            overflow: SurfaceSizeCommitments.overflow(
+                measuredHeight: measured,
+                decisionHeight: measureAtCommittedWidth(surface.decision),
+                ceiling: ceiling,
+                minimumContextHeight: DecisionSurfaceLayout.minimumContextHeight
+            )
+        )
+    }
+
+    /// The wrapped height of one part of the popover's content, at the width it commits to.
+    ///
+    /// `nothingScrolls` deliberately: this is the *unclamped* height, and a measurement taken
+    /// through a scroll view would answer whatever it was proposed.
+    private static func measureAtCommittedWidth(_ part: AnyView) -> Double {
         let measurer = NSHostingController(
             rootView: AnyView(
                 NudgePanelContent(
                     inset: popoverContentInset,
-                    scrolls: false,
-                    content: AnyView(content),
+                    overflow: .nothingScrolls,
+                    layout: .undivided(part),
                     onFrames: { _ in }
                 )
             )
         )
-        let measured = measurer.sizeThatFits(
+        return measurer.sizeThatFits(
             in: CGSize(width: popoverContentWidth, height: .greatestFiniteMagnitude)
-        )
-        let commitment = SurfaceSizeCommitments.commit(
-            measuredHeight: measured.height,
-            width: popoverContentWidth,
-            ceiling: popoverMaximumContentHeight(screens: screens)
-        )
-        return PopoverLayout(
-            size: CGSize(width: commitment.width, height: commitment.height),
-            scrolls: commitment.scrolls
-        )
+        ).height
     }
 }
 

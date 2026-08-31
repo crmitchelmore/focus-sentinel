@@ -544,7 +544,10 @@ struct NudgePanelTests {
         let name: String
         let scale: ShellTextScale
         let offered: [String]
-        let content: AnyView
+        /// The surface, **split the way the shipping controller splits it** (focus-din): the text
+        /// size goes through `modified(_:)` so the measurement and all three renderings are in one
+        /// environment, and the panel that is measured here is the panel that ships.
+        let content: DecisionSurfaceLayout
         /// What the panel is carrying, so a case cannot be added without saying (focus-v0u).
         let showing: NudgePanelKind
     }
@@ -557,19 +560,18 @@ struct NudgePanelTests {
                     name: "query.\(size.rawValue)",
                     scale: scale,
                     offered: queryPresentation.offeredAnswerIdentifiers,
-                    content: AnyView(
-                        QueryPanelView(presentation: queryPresentation).shellTextScale(scale)
-                    ),
+                    content: QueryPanelView(presentation: queryPresentation)
+                        .surfaceLayout
+                        .modified { $0.shellTextScale(scale) },
                     showing: .question
                 ),
                 PanelCase(
                     name: "accusation.\(size.rawValue)",
                     scale: scale,
                     offered: accusationPresentation.offeredActionIdentifiers,
-                    content: AnyView(
-                        AccusationPanelView(presentation: accusationPresentation)
-                            .shellTextScale(scale)
-                    ),
+                    content: AccusationPanelView(presentation: accusationPresentation)
+                        .surfaceLayout
+                        .modified { $0.shellTextScale(scale) },
                     showing: .accusation
                 )
             ]
@@ -595,7 +597,7 @@ struct NudgePanelTests {
     func everyOfferedActionIsReachable() throws {
         for panelCase in Self.cases() {
             let controller = Self.controller()
-            controller.update(showing: panelCase.showing, content: panelCase.content)
+            controller.update(showing: panelCase.showing, layout: panelCase.content)
             controller.show(presentationIsClear: true)
             defer { controller.hide() }
             Self.settle()
@@ -659,7 +661,7 @@ struct NudgePanelTests {
         var heights: [String: Double] = [:]
         for panelCase in Self.cases() {
             let controller = Self.controller()
-            controller.update(showing: panelCase.showing, content: panelCase.content)
+            controller.update(showing: panelCase.showing, layout: panelCase.content)
             controller.show(presentationIsClear: true)
             defer { controller.hide() }
             Self.settle()
@@ -819,8 +821,9 @@ struct NudgePanelTests {
         let controller = Self.controller()
         controller.update(
             showing: .accusation,
-            content: AccusationPanelView(presentation: enormous)
-                .shellTextScale(.accessibilityLarge)
+            layout: AccusationPanelView(presentation: enormous)
+                .surfaceLayout
+                .modified { $0.shellTextScale(.accessibilityLarge) }
         )
         controller.show(presentationIsClear: true)
         defer { controller.hide() }
@@ -933,7 +936,10 @@ struct NudgePanelTests {
         #expect(!verdict.isBroken, "\(verdict.summary)")
 
         // Now something with no action targets in it at all.
-        controller.update(showing: .accusation, content: Text(verbatim: "an interstitial with nothing to click"))
+        controller.update(
+            showing: .accusation,
+            undivided: Text(verbatim: "an interstitial with nothing to click")
+        )
 
         let afterwards = controller.decisionSurfaceReading(offering: offered)
         #expect(
@@ -958,7 +964,7 @@ struct NudgePanelTests {
     @Test("frames stamped with another layout are refused rather than believed")
     func framesStampedWithAnotherLayoutAreRefused() {
         let controller = Self.controller()
-        controller.update(showing: .accusation, content: StaleFrameReporter())
+        controller.update(showing: .accusation, undivided: StaleFrameReporter())
         controller.show(presentationIsClear: true)
         defer { controller.hide() }
         Self.settle()

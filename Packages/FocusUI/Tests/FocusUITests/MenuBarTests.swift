@@ -398,8 +398,8 @@ struct MenuBarTests {
         var collected: [String: CGRect] = [:]
         let content = NudgePanelContent(
             inset: 0,
-            scrolls: false,
-            content: AnyView(MenuBarPopoverView(presentation: presentation)),
+            overflow: .nothingScrolls,
+            layout: MenuBarPopoverView(presentation: presentation).surfaceLayout,
             onFrames: { collected.merge($0.frames) { _, latest in latest } }
         )
         let renderer = ImageRenderer(content: content.frame(width: 320))

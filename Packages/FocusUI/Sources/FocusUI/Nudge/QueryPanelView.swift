@@ -106,7 +106,7 @@ extension QueryAnswer {
 /// There is no "always"/"never"/"just this once" ladder, no severity picker and no free-text
 /// field. A question whose answer takes thought is a question that costs more than the silence
 /// it buys.
-public struct QueryPanelView: View {
+public struct QueryPanelView: DecisionSurfaceContent {
     private let presentation: QueryPresentation
     /// What the person clicked. **Internal, so the unit lane can invoke it directly**: the view
     /// decides nothing and writes nothing, and `QueryLedger.answer(…)` remains the single place
@@ -126,36 +126,61 @@ public struct QueryPanelView: View {
     }
 
     public var body: some View {
+        column { question; answers }
+    }
+
+    public static let decisionSurface: DecisionSurface = .questionPanel
+
+    /// **Which half of this panel is the decision** (focus-din).
+    ///
+    /// The question, the reason the app is asking and the sentence saying what a click writes are
+    /// what the decision is *about*; the three answers are the decision. When the panel has to
+    /// give way the first group scrolls and the answers stay in the viewport — a question whose
+    /// answers are below the fold is a question nobody was asked, and U-1's whole licence to
+    /// interrupt rests on the answer being one click away.
+    public var surfaceLayout: DecisionSurfaceLayout {
+        DecisionSurfaceLayout(
+            whole: AnyView(column { question; answers }),
+            context: AnyView(column { question }),
+            decision: AnyView(column { answers })
+        )
+    }
+
+    /// The one column every rendering of this panel is built in.
+    private func column<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: DesignTokens.spacing(spacing, scale: textScale)) {
-            NudgeText(
-                .queryPanelTitle,
-                voice: presentation.voice,
-                arguments: [presentation.subject.displayName, presentation.task],
-                role: .headline
-            )
-            .foregroundStyle(DesignTokens.Palette.primaryText)
-            .lineLimit(nil)
-            .fixedSize(horizontal: false, vertical: true)
-
-            // Why the app is asking. Not an apology and not a justification — a fact about what
-            // it knows, which is the only thing that makes "I cannot tell" trustworthy.
-            ShellText(resource: presentation.reason.copyResource, role: .footnote)
-                .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
-                .lineLimit(nil)
-                .fixedSize(horizontal: false, vertical: true)
-
-            // The scope, **before** the answer. A person who clicks "Yes" has been told what
-            // the click writes.
-            NudgeText(.queryPanelScopeApp, voice: presentation.voice, role: .footnote)
-                .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
-                .lineLimit(nil)
-                .fixedSize(horizontal: false, vertical: true)
-
-            answers
+            content()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text(verbatim: presentation.announcement()))
+    }
+
+    @ViewBuilder
+    private var question: some View {
+        NudgeText(
+            .queryPanelTitle,
+            voice: presentation.voice,
+            arguments: [presentation.subject.displayName, presentation.task],
+            role: .headline
+        )
+        .foregroundStyle(DesignTokens.Palette.primaryText)
+        .lineLimit(nil)
+        .fixedSize(horizontal: false, vertical: true)
+
+        // Why the app is asking. Not an apology and not a justification — a fact about what
+        // it knows, which is the only thing that makes "I cannot tell" trustworthy.
+        ShellText(resource: presentation.reason.copyResource, role: .footnote)
+            .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+            .lineLimit(nil)
+            .fixedSize(horizontal: false, vertical: true)
+
+        // The scope, **before** the answer. A person who clicks "Yes" has been told what
+        // the click writes.
+        NudgeText(.queryPanelScopeApp, voice: presentation.voice, role: .footnote)
+            .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+            .lineLimit(nil)
+            .fixedSize(horizontal: false, vertical: true)
     }
 
     private var answers: some View {

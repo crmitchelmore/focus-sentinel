@@ -164,7 +164,7 @@ extension CorrectionAction {
 /// **not** do is dim anything, block anything, quit anything or impose a friction timer (R-99).
 /// The difference a person sees is a line asking them to choose and a title drawn at the
 /// heading role; the difference in behaviour is that nothing takes it off screen for them.
-public struct AccusationPanelView: View {
+public struct AccusationPanelView: DecisionSurfaceContent {
     private let presentation: AccusationPresentation
     /// What the person did. The duration is the chosen snooze span, and is `nil` for every
     /// action that is not a snooze.
@@ -189,27 +189,57 @@ public struct AccusationPanelView: View {
     }
 
     public var body: some View {
+        column { context; actions }
+    }
+
+    public static let decisionSurface: DecisionSurface = .accusationPanel
+
+    /// **Which half of this panel is the decision** (focus-din).
+    ///
+    /// The accusation, the subject it is about and the snooze countdown are what the decision is
+    /// *about*; the six corrections are the decision. When the panel has to give way it is the
+    /// first group that scrolls, so a person at the largest text size still has every correction
+    /// in front of them — which is the difference between a rung that can be charged and a ladder
+    /// that parks.
+    ///
+    /// `whole` is built from the same two halves as `body`, so the split and the drawing cannot
+    /// describe two different panels.
+    public var surfaceLayout: DecisionSurfaceLayout {
+        DecisionSurfaceLayout(
+            whole: AnyView(column { context; actions }),
+            context: AnyView(column { context }),
+            decision: AnyView(column { actions })
+        )
+    }
+
+    /// The one column every rendering of this panel is built in, so the spacing, the width and
+    /// the accessibility grouping are stated once.
+    private func column<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: DesignTokens.spacing(spacing, scale: textScale)) {
-            header
-            if let subject = presentation.subject {
-                NudgeText(
-                    .accusationPanelBody,
-                    voice: presentation.voice,
-                    arguments: [subject.displayName, NudgeCopy.duration(presentation.dwelled)],
-                    role: .callout
-                )
-                .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
-                .lineLimit(nil)
-                .fixedSize(horizontal: false, vertical: true)
-            }
-            if let remaining = presentation.snoozeRemaining {
-                snoozeCountdown(remaining)
-            }
-            actions
+            content()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text(verbatim: presentation.announcement()))
+    }
+
+    @ViewBuilder
+    private var context: some View {
+        header
+        if let subject = presentation.subject {
+            NudgeText(
+                .accusationPanelBody,
+                voice: presentation.voice,
+                arguments: [subject.displayName, NudgeCopy.duration(presentation.dwelled)],
+                role: .callout
+            )
+            .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+            .lineLimit(nil)
+            .fixedSize(horizontal: false, vertical: true)
+        }
+        if let remaining = presentation.snoozeRemaining {
+            snoozeCountdown(remaining)
+        }
     }
 
     // MARK: - The parts

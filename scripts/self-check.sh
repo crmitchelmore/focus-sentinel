@@ -2075,6 +2075,46 @@ check(
     "the fullest popover is laid out at the committed width, at any priority length",
     popover.get("fullest"),
 )
+# **And what gives way when it will not fit** (focus-din).
+#
+# `scrolls` alone could not tell a surface a person can decide on from one that has parked the
+# ladder: the popover's actions were inside the scroll view, so any popover that scrolled had its
+# corrections below the fold, `DecisionSurfaceReachability` correctly refused the charge, nothing
+# re-took the reading when the person scrolled, and a large-text user's badge rung was never
+# delivered at all. The surface pins its decision now, and this is where the running binary says
+# which of the three ways it gave way.
+#
+# The value is asserted against the vocabulary rather than against one of its members, because
+# which one is right depends on the display the gate happens to run on — a machine too small to
+# show the actions must read `everythingScrolls`, and requiring otherwise would be requiring the
+# gate's own screen to be big.
+POPOVER_OVERFLOWS = {"nothingScrolls", "theContextScrolls", "everythingScrolls"}
+for popover_case in ("empty", "fullest"):
+    measured = popover.get(popover_case) or {}
+    check(
+        measured.get("overflow") in POPOVER_OVERFLOWS,
+        f"the {popover_case} popover says which way it gives way",
+        measured.get("overflow"),
+    )
+    check(
+        measured.get("scrolls") is (measured.get("overflow") != "nothingScrolls"),
+        f"the {popover_case} popover's scroll flag and its overflow are one fact",
+        (measured.get("scrolls"), measured.get("overflow")),
+    )
+    check(
+        measured.get("decisionIsInTheViewport")
+        is (measured.get("overflow") != "everythingScrolls"),
+        f"the {popover_case} popover's decision is in the viewport unless nothing could be",
+        (measured.get("decisionIsInTheViewport"), measured.get("overflow")),
+    )
+    print(
+        "note popover {}: {} x {}, {}".format(
+            popover_case,
+            measured.get("width"),
+            measured.get("height"),
+            measured.get("overflow"),
+        )
+    )
 
 check(
     nudge.get("surfacesWithNoWindowAndNoMark") == [],

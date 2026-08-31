@@ -1073,13 +1073,19 @@ enum SelfCheck {
 
         for (name, presentation) in popoverSurveyContents {
             let layout = MenuBarController.popoverLayout(
-                measuring: MenuBarPopoverView(presentation: presentation),
+                measuring: MenuBarPopoverView(presentation: presentation).surfaceLayout,
                 screens: screens
             )
             report[name] = [
                 "width": Double(layout.size.width),
                 "height": Double(layout.size.height),
                 "scrolls": layout.scrolls,
+                // **What gives way, not merely whether something does** (focus-din). A popover
+                // that scrolls its own corrections can never be charged, so `scrolls` alone left
+                // the report unable to tell a surface a person can decide on from one that has
+                // parked the ladder. This names which of the three it is.
+                "overflow": layout.overflow.rawValue,
+                "decisionIsInTheViewport": layout.overflow.decisionIsInTheViewport,
                 "isTheCommittedWidth":
                     Double(layout.size.width) == MenuBarController.popoverContentWidth
             ]

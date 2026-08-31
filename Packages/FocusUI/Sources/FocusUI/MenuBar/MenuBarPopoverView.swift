@@ -15,7 +15,7 @@ import SwiftUI
 ///
 /// It draws **no score and no streak** (D-01): there is no "you were distracted for 42 minutes
 /// today" here and no field one could be put in. What it shows are facts about right now.
-public struct MenuBarPopoverView: View {
+public struct MenuBarPopoverView: DecisionSurfaceContent {
     private let presentation: MenuBarPresentation
     /// What was clicked. **Internal, so the unit lane can invoke it directly**: the popover
     /// performs nothing and the composition root decides everything.
@@ -33,35 +33,113 @@ public struct MenuBarPopoverView: View {
         self.onAction = onAction
     }
 
+    /// **Every row this popover draws, in the Court's order** (focus-din).
+    ///
+    /// A named list rather than a sequence of statements in one `VStack`, because the popover is
+    /// drawn three ways now — whole, as context alone, and as decision alone — and three hand-
+    /// written columns would be three things to keep in step. This is the closed set; the three
+    /// renderings are folds over it, so a row added here appears in all of them or in none.
+    enum Section: String, CaseIterable {
+        case priority
+        case status
+        case belief
+        case accusation
+        case question
+        case snoozes
+        case session
+        case sensing
+        case openCockpit
+
+        /// Whether this row is part of the **decision** the popover is carrying.
+        ///
+        /// The pending accusation and the pending question are the only two rows that offer an
+        /// action a nudge is charged for. Everything else is a command centre a person clicked
+        /// into, and nothing in it is a nudge anybody is being asked to answer.
+        var isDecision: Bool { self == .accusation || self == .question }
+    }
+
     public var body: some View {
+        column(Section.allCases)
+    }
+
+    public static let decisionSurface: DecisionSurface = .menuBarPopover
+
+    /// **Which part of the popover is the decision** (focus-din).
+    ///
+    /// ## And why the pinned rows move to the foot
+    ///
+    /// R-91's order — the priority most prominent, then the timer, then the belief, then the
+    /// nudges — is the order of a surface a person can see all of. Once the popover has to scroll
+    /// that order stops being about prominence and starts being about which rows survive: at
+    /// `accessibilityLarge` on a 1080-point display **every** state of this popover scrolls, and
+    /// the accusation's corrections and the question's answers were the rows below the fold. A
+    /// nudge whose answers cannot be clicked is not charged, so the ladder parked.
+    ///
+    /// So when — and only when — the popover has to give way, the two nudge rows are pinned to
+    /// the foot and the command centre scrolls above them. The Court's order stands whenever the
+    /// popover fits, which is `nothingScrolls` and is what the great majority of people see;
+    /// pinned, the thing the app interrupted for is the thing that cannot be scrolled away from.
+    public var surfaceLayout: DecisionSurfaceLayout {
+        DecisionSurfaceLayout(
+            whole: AnyView(column(Section.allCases)),
+            context: AnyView(column(Section.allCases.filter { !$0.isDecision })),
+            decision: AnyView(column(Section.allCases.filter(\.isDecision)))
+        )
+    }
+
+    /// The popover's column, over whichever sections it is being asked to draw.
+    private func column(_ sections: [Section]) -> some View {
         VStack(alignment: .leading, spacing: DesignTokens.spacing(spacing, scale: textScale)) {
+            ForEach(sections, id: \.self) { section in
+                view(of: section)
+            }
+        }
+        .padding(DesignTokens.spacing(spacing, scale: textScale))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .contain)
+    }
+
+    /// One row, including the divider that introduces it.
+    ///
+    /// The divider travels **with** the section rather than being a statement between two of
+    /// them, so a section drawn on its own — the pinned decision — brings its own separator and a
+    /// section that is not drawn takes its separator with it.
+    @ViewBuilder
+    private func view(of section: Section) -> some View {
+        switch section {
+        case .priority:
             priority
+        case .status:
             statusRow
+        case .belief:
             belief
+        case .accusation:
             if let accusation = presentation.pendingAccusation {
                 Divider()
                 pendingAccusation(accusation)
             }
+        case .question:
             if let query = presentation.pendingQuery {
                 Divider()
                 pendingQuestion(query)
             }
+        case .snoozes:
             if !presentation.snoozes.isEmpty {
                 Divider()
                 snoozeList
             }
+        case .session:
             Divider()
             sessionControls
+        case .sensing:
             sensingSwitch
+        case .openCockpit:
             Button { onAction(.openCockpit) } label: {
                 ShellText(.menuBarOpenCockpit, role: .callout)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             .buttonStyle(.bordered)
         }
-        .padding(DesignTokens.spacing(spacing, scale: textScale))
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .accessibilityElement(children: .contain)
     }
 
     // MARK: - The priority, first
