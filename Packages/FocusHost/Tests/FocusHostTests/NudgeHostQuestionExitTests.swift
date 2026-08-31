@@ -34,6 +34,14 @@ struct NudgeHostQuestionExitTests {
     /// This replaces three tests that each asserted a different consequence of displacement. The
     /// ladder's entry rung is the menu-bar glyph, so the drift below is the commonest accusation
     /// there is — and on the unfixed loop it took the question off the screen.
+    ///
+    /// **The glyph is not what waits** (focus-0y6). The drive stopped at the ambient rung and read
+    /// `silent(interruptionInFlight)` as U-2 holding, when gate 9 is an occupancy rule and
+    /// `NudgeSurface.menuBar.holdsTheInterruptionSlot` is `false` — so what it was really reading
+    /// is the status item going blank for as long as a question sat on the screen. The glyph now
+    /// lands beside the question and the drive climbs one rung further, to the **panel**, which is
+    /// the rung U-2's ruling was always about. Every assertion about the question being untouched
+    /// is made twice: once under the rung that landed, once under the rung that waited.
     @Test(
         "an accusation raised over an open question leaves the question alone",
         .enabled(if: LocalizationLane.catalogsAreCompiled)
@@ -50,15 +58,38 @@ struct NudgeHostQuestionExitTests {
         fixture.host.consider(NudgeHostFixture.unrelatedJudgement(subject: Self.subject))
         NudgeHostFixture.settle()
 
-        // The accusation was withheld rather than raised.
+        // **The glyph landed** (focus-0y6). It occupies nothing a second nudge could want, so an
+        // occupancy rule has nothing to say about it — and the question is still on the screen
+        // beside it, which is the whole point.
         #expect(
-            fixture.host.lastDecision?.silence?.reason == .interruptionInFlight,
+            fixture.host.currentRung == .ambient,
             """
-            an accusation was raised over an open question: \
+            an open question took the status item with it: \
             \(String(describing: fixture.host.lastDecision))
             """
         )
         // The question is still on the screen, still owned, still answerable.
+        #expect(fixture.panel.isVisible && fixture.panel.showing == .question)
+        #expect(fixture.host.slot.openQuery != nil, "the question lost the slot it was holding")
+        #expect(fixture.host.orphanedNudgeSurfaces.isEmpty)
+
+        // **And the rung that SPEAKS waits** (U-2). Past the escalation dwell and past the gap the
+        // app keeps between two sentences, so the withholding below is gate 9's and nothing
+        // else's, the panel rung is due — and it is the one that would have taken the question off
+        // the screen.
+        fixture.clock.advance(by: RelevancePolicy.mandateCooldown + .seconds(1))
+        fixture.host.consider(NudgeHostFixture.unrelatedJudgement(subject: Self.subject))
+        NudgeHostFixture.settle()
+
+        #expect(
+            fixture.host.lastDecision?.silence?.reason == .interruptionInFlight,
+            """
+            the rung that speaks was raised over an open question: \
+            \(String(describing: fixture.host.lastDecision))
+            """
+        )
+        // The same three readings again, under the rung that waited rather than the one that
+        // landed: a withheld rung must leave the question exactly as untouched as a silent one.
         #expect(fixture.panel.isVisible && fixture.panel.showing == .question)
         #expect(fixture.host.slot.openQuery != nil, "the question lost the slot it was holding")
         #expect(fixture.host.orphanedNudgeSurfaces.isEmpty)
