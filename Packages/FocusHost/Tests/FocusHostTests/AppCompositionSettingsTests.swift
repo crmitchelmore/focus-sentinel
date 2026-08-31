@@ -82,6 +82,76 @@ struct AppCompositionSettingsTests {
         )
     }
 
+    /// **A second composition root over the same store file, folded over every preference the
+    /// type has** (focus-8ry).
+    ///
+    /// The two tests above are single-root and in-process, and that is how "never restored"
+    /// survived every gate: `storedAppearancePreference()` reads the store on demand and answered
+    /// correctly the whole time, while `appearance.preference` — the value the three scenes are
+    /// actually themed from — sat at the `.matchSystem` its stored-property initialiser gave it
+    /// until somebody opened the Settings window. The proof and the defect were indistinguishable
+    /// in one process.
+    ///
+    /// Over `allCases` rather than over one value, because the defect had a value that passes:
+    /// a launch that reads nothing answers `.matchSystem`, so a test that seeded `.matchSystem`
+    /// would agree with it. A fold cannot be written down that way — the case that agrees is in
+    /// the loop beside the two that do not, and adding a fourth preference to the type puts it
+    /// under this assertion without anybody remembering to.
+    @Test("every appearance preference survives a relaunch", arguments: AppearancePreference.allCases)
+    func theAppearanceSurvivesARelaunch(preference: AppearancePreference) {
+        let url = Self.temporaryStoreURL()
+        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+
+        do {
+            let first = Self.root(storeKind: .temporary(url))
+            defer { first.stop() }
+            first.applyAppearancePreference(preference)
+            #expect(first.appearance.preference == preference)
+        }
+
+        let second = Self.root(storeKind: .temporary(url))
+        defer { second.stop() }
+
+        // The store's own answer first, so a failure below is legible: this one failing means the
+        // write never landed, and this one passing while the next fails is the defect itself —
+        // the value is on disk and the shell is not reading it.
+        #expect(second.storedAppearancePreference() == preference)
+        // **Read at construction, before anything opens a window.** No `start()`, no
+        // `settingsWindowAppeared()`, no click: the person who never opens Settings is the person
+        // the defect was about.
+        #expect(second.appearance.preference == preference)
+        // …and resolved, which is what the windows are actually drawn from. A root that stored
+        // the preference and left the traits alone would satisfy the line above and still draw
+        // every surface in the system's scheme.
+        #expect(
+            second.appearance.traits.colorScheme
+                == preference.resolvedColorScheme(system: AppearanceObserver.systemColorScheme)
+        )
+    }
+
+    /// The launch read is the composition root's own, not a side effect of some other verb.
+    ///
+    /// Stated separately because the repair is one line in `init` and the thing that would undo
+    /// it is somebody moving it into `start()` or `joinHosts()` — both of which a menu-bar-only
+    /// launch does run, but neither of which the *unit* lane runs, and neither of which is where
+    /// the sensing settings are read.
+    @Test("the appearance is restored by construction alone, with nothing started")
+    func theAppearanceIsRestoredByConstructionAlone() {
+        let url = Self.temporaryStoreURL()
+        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+
+        do {
+            let first = Self.root(storeKind: .temporary(url))
+            defer { first.stop() }
+            first.setAppearancePreference(.dark)
+        }
+
+        let second = Self.root(storeKind: .temporary(url))
+        defer { second.stop() }
+        #expect(second.appearance.preference == .dark)
+        #expect(second.appearance.traits.colorScheme == .dark)
+    }
+
     // MARK: - The Intervention pane
 
     /// The pane's actions, performed. `onInterventionAction` is a bare reference to this method

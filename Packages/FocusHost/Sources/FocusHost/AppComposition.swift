@@ -158,7 +158,16 @@ public final class AppComposition {
     /// Colour had no test anywhere in the programme. It is still held in `@State` by the scene,
     /// because SwiftUI's observation is what redraws the windows when it republishes; the
     /// *instance* is this one.
-    public let appearance = AppearanceObserver()
+    ///
+    /// **Declared without an initialiser, and that is the repair** (focus-8ry). It was
+    /// `= AppearanceObserver()`, a stored-property initialiser, which can name no argument
+    /// because `self` does not exist yet — so it took the type's `.matchSystem` default and the
+    /// person's stored choice was read by nothing at launch. A stored-property initialiser is
+    /// the *shape* of the defect, not an instance of it: it is the one form of construction that
+    /// structurally cannot consult the store. `init` assigns it beside every other read-back, so
+    /// there is no longer a place where a launch-time setting could be given a default without
+    /// somebody writing that default down.
+    public let appearance: AppearanceObserver
 
     /// The menu-bar command centre. Installed in `start()`, because it touches `NSStatusBar`.
     let menuBar: MenuBarController
@@ -263,6 +272,24 @@ public final class AppComposition {
         // it is an app that is arguing with you.
         let events = ActivityEventStore(context: context, dateProvider: dateProvider)
         let settings = FocusStore.sensingSettings(in: context)
+
+        // **The appearance the person last chose, read here — beside the sensing settings, and
+        // for the same reason** (focus-8ry).
+        //
+        // Measured before this line existed: a store whose `ZAPPEARANCEPREFERENCERAW` was
+        // `light` produced `storedAppearancePreference = light` and
+        // `appearancePreference = matchSystem` on the same launch, and the whole shell — cockpit,
+        // menu-bar glyph, nudge panel, quick-capture panel — drew in the system scheme until the
+        // person happened to press Cmd-comma, at which point it flipped underneath them. The
+        // only two writes to `appearance.preference` were a click on the picker and the Settings
+        // window appearing, and a person who never opens Settings never gets their own setting.
+        //
+        // `ZSENSINGPAUSED` came back correctly on that same launch, because the line above reads
+        // it. Two stored settings, one read, one not — so the repair is to read this one where
+        // that one is read rather than at some later moment that would have to be remembered.
+        self.appearance = AppearanceObserver(
+            preference: FocusStore.appearancePreference(in: context)
+        )
 
         let (gate, exclusions) = Self.sensitivityLists(in: context, now: dateProvider.now)
 

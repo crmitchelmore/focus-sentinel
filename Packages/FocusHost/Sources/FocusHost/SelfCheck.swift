@@ -140,6 +140,16 @@ enum SelfCheck {
     /// value a frozen placeholder could not be carrying by coincidence.
     static let seededPriorityIntent = "Self-check seeded commitment"
 
+    /// **The appearance the seeded store remembers** (focus-8ry).
+    ///
+    /// `.light` rather than `.dark` or `.matchSystem`, and the choice is load-bearing twice
+    /// over. It is not the type's default, so a launch that never read the store answers
+    /// `matchSystem` and the reading separates the two programs on **any** Mac — where a probe
+    /// that seeded `matchSystem` would agree with the defect by construction. And it resolves to
+    /// one colour scheme whatever the Mac is set to, so `appearanceColorScheme` is a fixed string
+    /// this lane can assert rather than a value that depends on the developer's System Settings.
+    static let seededAppearancePreference = AppearancePreference.light
+
     /// **What the cockpit drew, against a store somebody seeded** (focus-h7h).
     ///
     /// One block, and one reason for it. The elapsed figure is the only boundary value that
@@ -196,6 +206,23 @@ enum SelfCheck {
             "drawnPriorityIntent": drawn[.priorityIntent] ?? "",
             "seededPriorityIntent": seededPriorityIntent,
             "drewInMilliseconds": drewInMilliseconds,
+            // **The setting that has to survive a relaunch, read on the launch after the one
+            // that wrote it** (focus-8ry).
+            //
+            // This is the lane that can see it, and the reason is the same one that put the
+            // elapsed figure here: the ordinary self-check opens the *person's* store, whose
+            // appearance is whatever they last chose — usually `matchSystem`, which the defect
+            // answers correctly by accident. The seeding launch above wrote `light`, so on this
+            // launch `matchSystem` is the defect's signature and nothing else's, on every Mac.
+            //
+            // Three readings and not one, because they fail differently: the preference is what
+            // the shell believes, the stored value is what the person chose, and the colour
+            // scheme is what the windows are actually drawn in. A wire that read the store and
+            // then failed to resolve the traits from it would pass the first two.
+            "appearancePreference": composition.appearance.preference.rawValue,
+            "storedAppearancePreference": composition.storedAppearancePreference().rawValue,
+            "appearanceColorScheme": composition.appearance.traits.colorScheme.rawValue,
+            "seededAppearancePreference": seededAppearancePreference.rawValue,
             "windowTitles": NSApp.windows.filter(\.isVisible).map(\.title).sorted()
         ]
     }
@@ -1724,15 +1751,30 @@ enum SelfCheck {
         // scenes inject, so a shell that stopped injecting them is a shell whose windows ignore
         // dark mode and every accessibility setting — which is what the mutation this block
         // exists for actually does.
+        //
+        // **Both sides of the comparison used to be the same value** (focus-8ry).
+        // `appearanceTraitsMatchTheSystem` was `traits.colorScheme ==
+        // composition.appearance.preference.resolvedColorScheme(system:)` — the observer's own
+        // in-memory preference resolved against the system and compared with the traits that
+        // preference had just produced. It reported `true` on the launch that drew a person's
+        // stored Light as Dark, and it could not have reported anything else: an equation with
+        // one variable on both sides is not a reading. The **stored** preference is the person's
+        // choice, so it is the one the shell is judged against.
         let traits = composition.appearance.traits
+        let stored = composition.storedAppearancePreference()
         report["appearancePreference"] = composition.appearance.preference.rawValue
         report["appearanceRefreshCount"] = composition.appearance.refreshCount
         report["appearanceColorScheme"] = traits.colorScheme.rawValue
         report["appearanceSystemColorScheme"] = AppearanceObserver.systemColorScheme.rawValue
         report["appearanceTraitsMatchTheSystem"] =
-            traits.colorScheme == composition.appearance.preference
-                .resolvedColorScheme(system: AppearanceObserver.systemColorScheme)
-        report["storedAppearancePreference"] = composition.storedAppearancePreference().rawValue
+            traits.colorScheme == stored.resolvedColorScheme(system: AppearanceObserver.systemColorScheme)
+        report["storedAppearancePreference"] = stored.rawValue
+        // **The two values that were printed side by side and never compared** (focus-8ry). The
+        // note under them said "(recorded, never asserted)" in as many words, and they disagreed
+        // on every seeded launch of the defect. Asserting it here is what makes the shell's live
+        // preference answerable to the store on the ordinary launch as well as the seeded one.
+        report["appearancePreferenceIsTheStored"] = composition.appearance.preference == stored
+
 
         // **The handoff, driven through the shell's own delivery point** (F-142).
         //
@@ -2628,6 +2670,19 @@ enum SelfCheck {
         let taskID = try priorities.createTask(intent: seededPriorityIntent)
         try priorities.activate(taskID: taskID, undo: nil)
 
+        // **An appearance as well as a session** (focus-8ry).
+        //
+        // The setting the person changes and the app has to hand back at the next launch. It is
+        // written here, into the same store, because the *only* reading that can tell "restored"
+        // from "never read" is a second process opening a store the first one wrote — and this
+        // lane already spans two. Written through the shipping verb, so a store this seed
+        // produces is one the app could have produced.
+        try FocusStore.setAppearancePreference(
+            seededAppearancePreference,
+            in: context,
+            now: wallNow
+        )
+
         let store = SessionStore(
             context: context,
             dateProvider: FixedDateProvider(now: startedAt),
@@ -2641,6 +2696,7 @@ enum SelfCheck {
             "store": storePath,
             "sessionID": sessionID.uuidString,
             "priorityIntent": seededPriorityIntent,
+            "appearancePreference": seededAppearancePreference.rawValue,
             // ISO-8601 with fractional seconds, so "byte-identical `startedAt`" is a string
             // comparison the checker can make rather than a float it has to round.
             "startedAt": iso8601(startedAt),

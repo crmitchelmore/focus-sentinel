@@ -855,10 +855,20 @@ check(
         shell.get("appearanceSystemColorScheme"),
     ),
 )
+# **The two values that were printed side by side and never compared** (focus-8ry). This note said
+# "(recorded, never asserted)" in as many words, and on a seeded launch the two disagreed: stored
+# `light`, live `matchSystem`. It is an assertion now. On the person's own store the two usually
+# agree at `matchSystem`, which is why the seeded lane above carries the load — but a launch that
+# stopped reading the store at all fails here too, for anybody who has ever chosen a scheme.
+check(
+    shell.get("appearancePreferenceIsTheStored") is True,
+    "the shell's live appearance preference is the one in the store",
+    (shell.get("appearancePreference"), shell.get("storedAppearancePreference")),
+)
 print(
-    f"note appearance preference={shell.get('appearancePreference')!r} "
-    f"stored={shell.get('storedAppearancePreference')!r} "
-    f"refreshCount={shell.get('appearanceRefreshCount')!r} (recorded, never asserted)"
+    f"note appearance refreshCount={shell.get('appearanceRefreshCount')!r} "
+    f"colorScheme={shell.get('appearanceColorScheme')!r} "
+    f"system={shell.get('appearanceSystemColorScheme')!r}"
 )
 
 # --- e02 · the quick-capture panel (F-06) -----------------------------------------------------
@@ -1336,6 +1346,44 @@ check(
     seeded_cockpit.get("drewWhatTheAppKnows") is True,
     "the cockpit drew every value the composition root handed it, against a seeded session",
     (seeded_cockpit.get("reading") or {}).get("summary"),
+)
+
+# --- the appearance a person chose, on the launch after the one that chose it (focus-8ry) ------
+#
+# The same fourth launch, and the same reason it exists. The ordinary self-check opens the
+# PERSON's store, whose appearance is whatever they last set — almost always `matchSystem`, which
+# a shell that never read the store answers correctly by accident. This store was seeded `light`
+# by the launch above, so `matchSystem` here is the defect's signature and nothing else's, on a
+# light Mac and a dark one alike.
+#
+# Measured before the repair, on two consecutive seeded launches: stored `light`, live
+# `matchSystem`, and the whole shell drawn Dark — until the person happened to press Cmd-comma,
+# at which point it flipped underneath them.
+seeded_appearance = seeded_cockpit.get("seededAppearancePreference")
+check(
+    seeded_appearance not in (None, "", "matchSystem"),
+    "the seeded appearance is a real choice, so 'never read the store' cannot answer it by accident",
+    seeded_appearance,
+)
+check(
+    seeded_cockpit.get("storedAppearancePreference") == seeded_appearance,
+    "the seeded appearance really is in the store this launch opened",
+    (seeded_cockpit.get("storedAppearancePreference"), seeded_appearance),
+)
+check(
+    seeded_cockpit.get("appearancePreference") == seeded_appearance,
+    "the shell restored the stored appearance at launch, without waiting for the Settings window",
+    (seeded_cockpit.get("appearancePreference"), seeded_appearance),
+)
+# …and it resolved it. A wire that read the store and then failed to recompute the traits from it
+# would satisfy the reading above and still draw every window in the system's scheme.
+check(
+    seeded_cockpit.get("appearanceColorScheme") == "light",
+    "the shell's windows are drawn in the scheme the stored preference resolves to",
+    (
+        seeded_cockpit.get("appearanceColorScheme"),
+        seeded_cockpit.get("appearancePreference"),
+    ),
 )
 
 # --- the Help menu holds nothing that opens an alert (focus-h7h) -------------------------------
