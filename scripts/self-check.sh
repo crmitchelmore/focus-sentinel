@@ -370,8 +370,11 @@ def check_shortcut(menu_title, item_title, key, mask):
         f"{item_title} is bound to the expected key equivalent",
         (item["keyEquivalent"], item["modifierMask"]),
     )
-    check(item["isEnabled"], f"{item_title} is enabled")
-    check(item["hasAction"], f"{item_title} has an action")
+    # **Not `isEnabled` and not `hasAction`** (focus-6uf). Both used to be asserted here as
+    # constants, and they were the gate ASSERTING the defect: every one of the app's own thirteen
+    # items had to be enabled, six of them were guarded no-ops in the state a person is in the
+    # first time they open the menu, and a fix would have looked like a regression. They are
+    # asserted per item against the availability predicate's own answer, in the fold below.
 
 
 # The three e02 priority commands, each with the key equivalent the registry declares.
@@ -400,8 +403,7 @@ if close_window:
         "Close Window is bound to Cmd-W",
         (close_window["keyEquivalent"], close_window["modifierMask"]),
     )
-    check(close_window["isEnabled"], "Close Window is enabled")
-    check(close_window["hasAction"], "Close Window has an action")
+    # Its enablement is the fold's, like every other registry item (focus-6uf).
 
 close_all = find("File", "Close All")
 check(
@@ -434,6 +436,163 @@ if help_items:
         (entry["keyEquivalent"], entry["modifierMask"]),
     )
     check(entry["hasAction"], "the Help item has an action")
+
+# --- every registry item is offered exactly when the app would carry it out (focus-6uf) ------
+#
+# The defect this replaces: all thirteen of the app's own menu items were permanently enabled,
+# six of them were guarded no-ops in the app's default state, and this script REQUIRED it —
+# `check(item["isEnabled"], …)` per item, plus the same for Close Window. A proof that pins the
+# bug, in the shape of the fixture named for the state it did not test.
+#
+# So it is a fold over the registry, and it has **two legs that do not come from the same place**:
+#
+#   1. the app's own predicate against this table, which is the rule stated independently here;
+#   2. the menu item AppKit actually drew against that same predicate, which is the wiring.
+#
+# Leg 1 alone is a mirror — a predicate mutated to `True` would agree with a menu built from it —
+# and leg 2 alone would be satisfied by a predicate that answers the same thing in every state.
+# Together, flipping one arm of `PriorityCommand.isAvailable(in:)` fails leg 1 and deleting the
+# `.disabled(…)` fails leg 2.
+commands = report.get("commands") or {}
+command_world = commands.get("world") or {}
+command_actions = commands.get("actions") or []
+
+MENU_FOR_PLACEMENT = {"file": "File", "view": "View", "help": "Help"}
+
+# Phases that end a session, spelled out rather than imported: this table is only worth having
+# because it is a second, independent statement of the rule.
+TERMINAL_PHASES = {"interrupted", "complete"}
+
+
+def expected_availability(action_id, world):
+    """Would this verb do anything, in the state the app reported?
+
+    Written from the guards the surfaces used to keep — `state.priority != nil`,
+    `state.session == nil`, `session.phase != .paused`, `!session.phase.isTerminal`,
+    `openRung != nil` — so that the app agreeing with it is a fact and not a tautology.
+    """
+    phase = world.get("sessionPhase")
+    has_session = phase is not None and phase != "none"
+    always = {
+        # Both land with no commitment: ⌘O opens the capture field rather than a file panel with
+        # nowhere to put its result.
+        "priority.new": True,
+        "context.addFiles": True,
+        # A switch has both positions in every state.
+        "sensing.pause": True,
+        # ⌘W is the registry's claim on the Mac's own close key, and AppKit contributes its own
+        # validated Close beside it.
+        "shell.closeWindow": True,
+        # F-81's panic key: a person presses it BECAUSE they do not know what is on their screen.
+        "nudge.hideOverlays": True,
+        # The popover exists for the life of the process.
+        "nudge.menuBar": True,
+        "shell.help": True,
+    }
+    if action_id in always:
+        return always[action_id]
+    if action_id == "priority.complete":
+        return world.get("hasPriority") is True
+    if action_id == "session.start":
+        return not has_session or phase in TERMINAL_PHASES
+    if action_id == "session.pause":
+        return has_session and phase != "paused" and phase not in TERMINAL_PHASES
+    if action_id == "session.complete":
+        return has_session and phase not in TERMINAL_PHASES
+    if action_id in ("nudge.relevant", "nudge.snooze"):
+        return world.get("hasOpenNudge") is True
+    raise KeyError(action_id)
+
+
+# The world the reading was taken in, printed rather than assumed: a per-item comparison means
+# nothing until a reader can see which state it was a comparison about.
+print(
+    "note command world: hasPriority={} sessionPhase={} hasOpenNudge={}".format(
+        command_world.get("hasPriority"),
+        command_world.get("sessionPhase"),
+        command_world.get("hasOpenNudge"),
+    )
+)
+check(
+    set(command_world) == {"hasPriority", "sessionPhase", "hasOpenNudge"},
+    "the app reported the whole world its menu availability is computed from",
+    sorted(command_world),
+)
+
+reported_ids = [action.get("id") for action in command_actions]
+# **The self-referential half.** The table above and the registry must name the same actions, in
+# both directions: an action added to the registry with no entry here is a rule this script never
+# checked, and an entry here for an action the registry no longer ships is a rule about nothing.
+KNOWN_COMMAND_IDS = {
+    "priority.new", "context.addFiles", "priority.complete", "session.start", "session.pause",
+    "session.complete", "sensing.pause", "shell.closeWindow", "nudge.relevant", "nudge.snooze",
+    "nudge.hideOverlays", "nudge.menuBar", "shell.help",
+}
+check(
+    set(reported_ids) == KNOWN_COMMAND_IDS,
+    "this script's availability table names exactly the actions the registry ships",
+    sorted(set(reported_ids) ^ KNOWN_COMMAND_IDS),
+)
+check(
+    len(reported_ids) == len(set(reported_ids)) and len(reported_ids) == 13,
+    "all thirteen of the app's own actions were reported, once each",
+    reported_ids,
+)
+
+for action in command_actions:
+    action_id = action.get("id")
+    title = action.get("title")
+    if action_id not in KNOWN_COMMAND_IDS:
+        continue
+    expected = expected_availability(action_id, command_world)
+    # Leg 1: the app's predicate says what this table says, for the state it is in.
+    check(
+        action.get("isAvailable") is expected,
+        f"{title!r} is offered exactly when the app could carry it out",
+        (action.get("isAvailable"), expected, command_world),
+    )
+    # Leg 2: the item AppKit drew agrees with it. A disabled SwiftUI menu item loses its action
+    # as well as its enablement, which is what stops its key equivalent firing — so both are the
+    # predicate's answer, and neither is a constant.
+    menu_title = MENU_FOR_PLACEMENT.get(action.get("placement"))
+    item = find(menu_title, title) if menu_title else None
+    check(item is not None, f"{title!r} is in the {menu_title} menu", item_titles(menu_title or ""))
+    if item:
+        check(
+            item["isEnabled"] is expected,
+            f"{title!r}'s menu item is enabled exactly when the app would accept it",
+            (item["isEnabled"], expected),
+        )
+        check(
+            item["hasAction"] is expected,
+            f"{title!r}'s menu item carries an action exactly when it is enabled",
+            (item["hasAction"], expected),
+        )
+
+# **The non-vacuity guard.** Every assertion above is satisfied by a run in which the predicate
+# answers the same thing for everything, as it did before this repair — thirteen `True`s matching
+# thirteen enabled items. So the measured state has to be one that actually withdraws something,
+# and it always is: nothing is nudging while the shell is being read, so the two nudge verbs are
+# withdrawn, and a session either exists (withdrawing Start) or does not (withdrawing Pause and
+# Finish).
+offered = [a for a in command_actions if a.get("isAvailable") is True]
+withdrawn = [a for a in command_actions if a.get("isAvailable") is False]
+check(
+    len(withdrawn) > 0,
+    "the measured state withdraws at least one item, so the comparison is not thirteen Trues",
+    [a.get("id") for a in command_actions],
+)
+check(
+    len(offered) > 0,
+    "the measured state still offers items, so the comparison is not thirteen Falses",
+    [a.get("id") for a in command_actions],
+)
+print(
+    "note {} of {} registry items offered, {} withdrawn: {}".format(
+        len(offered), len(command_actions), len(withdrawn),
+        ", ".join(sorted(a.get("id") for a in withdrawn)),
+    )
+)
 
 # App menu: Settings arrives from the `Settings` scene.
 settings = find("Focus Sentinel", "Settings…")

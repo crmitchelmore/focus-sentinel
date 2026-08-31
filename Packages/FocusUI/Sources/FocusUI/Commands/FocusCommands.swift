@@ -64,7 +64,7 @@ public struct ShellCommands: Commands {
     @ViewBuilder
     private func actionButtons(in placement: MenuPlacement) -> some View {
         ForEach(registry.actions(in: placement)) { action in
-            ShellActionButton(action: action, perform: perform)
+            ShellActionButton(action: action, commandCenter: commandCenter, perform: perform)
         }
     }
 
@@ -109,8 +109,27 @@ public struct ShellCommands: Commands {
 /// Split out so that the title, the key equivalent and the action all come from the same
 /// `ShellAction` value — there is no second place where a menu item's shortcut is written
 /// down, which is what stops the menu bar and the shortcut reference from disagreeing.
+///
+/// ## And whether it may be offered at all (focus-6uf)
+///
+/// This drew a plain `Button` with no `.disabled` of any kind, so all thirteen of the app's own
+/// menu items were permanently enabled — measured in the running binary, in the same report where
+/// AppKit's Edit menu correctly reported Undo, Cut and Paste disabled — and six of them were
+/// guarded no-ops in the state a person is in the first time they open the menu. Complete
+/// Priority with nothing committed, the three session verbs with no session, and the two nudge
+/// verbs with nothing on screen each ran a `guard … else { return }` and vanished.
+/// `CockpitView.swift` states the rule that breaks in its own comment — *"a shortcut that
+/// silently does nothing is a shortcut people stop trusting"* — and then implemented the silent
+/// nothing rather than withdrawing the item.
+///
+/// The world is read here, in the body, rather than passed in as a value: the provider the
+/// composition root installs reads `@Observable` hosts, so SwiftUI tracks the read and rebuilds
+/// this item when the answer changes. It is the same predicate `CockpitView.perform(_:)` and
+/// `NudgeHost.perform(_:)` refuse on, so a menu item and the control it duplicates cannot
+/// disagree about what the app would accept.
 private struct ShellActionButton: View {
     let action: ShellAction
+    let commandCenter: FocusCommandCenter
     let perform: (ShellActionEffect) -> Void
 
     var body: some View {
@@ -120,6 +139,7 @@ private struct ShellActionButton: View {
             Text(action.title)
         }
         .modifier(ShortcutModifier(shortcut: action.shortcut))
+        .disabled(!action.isAvailable(in: commandCenter.world))
     }
 }
 

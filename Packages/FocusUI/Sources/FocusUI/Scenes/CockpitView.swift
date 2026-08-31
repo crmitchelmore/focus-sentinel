@@ -299,13 +299,46 @@ public struct CockpitView: View {
     /// ⌘O with no priority is the one that needs explaining: there is nothing to attach
     /// context *to* until there is a commitment, so it asks for one rather than opening a file
     /// panel whose result would have nowhere to go.
+    /// **The world as this window can see it** (focus-6uf).
+    ///
+    /// Built from `state`, which is the same value the cockpit's own controls are drawn from, so
+    /// the menu item and the button it duplicates are answering one question about one reading.
+    ///
+    /// `hasOpenNudge` is `false` and that is a statement rather than a placeholder: the four e05
+    /// verbs are not the cockpit's — they act on whatever nudge surface is on screen, which this
+    /// window knows nothing about and should not — so this surface offers none of them, which is
+    /// exactly what the exhaustive switch's `break` already did for them.
+    private var commandWorld: ShellCommandWorld {
+        ShellCommandWorld(
+            hasPriority: state.priority != nil,
+            sessionPhase: state.session?.phase,
+            hasOpenNudge: false
+        )
+    }
+
     private func perform(_ command: PriorityCommand) {
+        // **The guards are one predicate now, and the menu keeps it too** (focus-6uf).
+        //
+        // Every `case` below used to re-state its own condition — `state.priority != nil`,
+        // `state.session == nil`, `session.phase != .paused` — and the menu item that sends the
+        // command stated none of them, so all thirteen items were permanently enabled and these
+        // verbs silently returned. `PriorityCommand.isAvailable(in:)` is the one place that rule
+        // lives; `ShellActionButton` disables on it, and this refuses on it, so a key equivalent
+        // that reached a stale menu still cannot perform a verb the app would reject.
+        //
+        // It is asked once, at the top, rather than per case: a `case` added without a guard is
+        // exactly how six of these became silent no-ops, and a rule stated at the door cannot be
+        // forgotten by the next arm.
+        //
+        // `addFilesToContext` is deliberately below it and not gated by it: with no commitment it
+        // opens the capture field rather than a file panel whose result would have nowhere to go,
+        // which is an effect and not a no-op, and `isAvailable(in:)` says so.
+        guard command.isAvailable(in: commandWorld) else { return }
         switch command {
         case .newPriority:
             isCapturing = true
             focus = .cockpitCaptureField
         case .completePriority:
-            guard state.priority != nil else { return }
             isCompleting = true
         case .addFilesToContext:
             guard state.priority != nil else {
@@ -317,18 +350,13 @@ public struct CockpitView: View {
 
         // The four e03 verbs. Each lands on the same host the cockpit's own control calls, so a
         // key equivalent and a click are one code path rather than two implementations of the
-        // same idea — and each guards on the machine's own rules rather than sending an event
-        // the transition table would reject.
+        // same idea — and the machine's own rules are the predicate above rather than three
+        // conditions written out here.
         case .startSession:
-            guard state.session == nil else { return }
             sessionActions?.startSession(kind: .openEnded, plannedSeconds: nil, deadlineAt: nil)
         case .pauseSession:
-            // ⌃⌘P on an already-paused session would be rejected `alreadyInPhase`, and a
-            // shortcut that silently does nothing is a shortcut people stop trusting.
-            guard let session = state.session, session.phase != .paused else { return }
             sessionActions?.pauseSession()
         case .completeSession:
-            guard let session = state.session, !session.phase.isTerminal else { return }
             sessionActions?.completeSession()
         case .pauseSensing:
             sessionActions?.setSensingPaused(!state.sensing.isPausedByUser)

@@ -523,6 +523,20 @@ final class NudgeHost {
     /// press"*, and there is no third state it can drift into.
     var openRungPanelActions: [String] { openRung?.panelActions ?? [] }
 
+    /// **Whether there is a nudge for the two View-menu verbs to answer** (focus-6uf).
+    ///
+    /// The exact condition `perform(_:)`'s two guards read, published so the menu item that sends
+    /// those commands can ask it rather than offering them always and dropping them silently.
+    var hasOpenNudge: Bool { openRung != nil }
+
+    /// The world as the nudge loop can see it.
+    ///
+    /// One field, and the other two left at their defaults, because the loop answers exactly the
+    /// two commands that turn on this one: a priority and a session are the cockpit's facts, and
+    /// the composition root is the only object that holds all three at once — which is why the
+    /// *menu's* world comes from there rather than from here.
+    var commandWorld: ShellCommandWorld { ShellCommandWorld(hasOpenNudge: hasOpenNudge) }
+
     private(set) var mandatesWithoutACommitment = 0
     private(set) var staleNotificationActions = 0
 
@@ -2646,12 +2660,16 @@ final class NudgeHost {
     /// and a click are one code path rather than two implementations of one idea.
     func perform(_ command: PriorityCommand) {
         turn.run {
+            // **The same predicate the menu item disables on** (focus-6uf). `guard openRung != nil`
+            // was written here twice and nowhere on the item that sends the command, so *Mark as
+            // Relevant* and *Snooze Nudge* were permanently enabled and silently did nothing with
+            // no nudge on screen. `ShellActionButton` withdraws them from `commandWorld` now, and
+            // this refuses on the same question — a stale menu cannot get a verb past the loop.
+            guard command.isAvailable(in: commandWorld) else { return }
             switch command {
             case .thisIsRelevant:
-                guard openRung != nil else { return }
                 resolve(.thisIsRelevant, snoozeDuration: nil)
             case .snoozeNudge:
-                guard openRung != nil else { return }
                 // The shortest span, because a menu item cannot offer three without three items and
                 // the shortest is the least presumptuous of them.
                 resolve(.snooze, snoozeDuration: InterventionPolicy.snoozeDurations.first)

@@ -617,6 +617,29 @@ public final class AppComposition {
         FocusCommandCenter.shared.observe { [weak self] command in
             self?.nudgeHost.perform(command)
         }
+
+        // **And the menu bar asks whether a command would do anything before offering it**
+        // (focus-6uf).
+        //
+        // All thirteen of the app's own items were permanently enabled, and six of them were
+        // guarded no-ops in the state a person is in the first time they open the menu — measured
+        // in the running binary, in the same report where AppKit's Edit menu correctly reported
+        // Undo, Cut and Paste disabled.
+        //
+        // This is the only object that holds all three facts at once, which is why the world is
+        // assembled here and nowhere else: the commitment is the priority host's, the phase is
+        // the session host's, and whether a nudge is on screen is the loop's. The **closure** is
+        // what makes it live: `ShellActionButton` calls it inside its own body, so SwiftUI's
+        // observation follows the reads into these three `@Observable` hosts and the menu is
+        // rebuilt whenever any of them moves. Nothing has to remember to push anything.
+        FocusCommandCenter.shared.provideWorld { [weak self] in
+            guard let self else { return .nothingIsCommitted }
+            return ShellCommandWorld(
+                hasPriority: priorityHost.state.priority != nil,
+                sessionPhase: sessionHost.snapshot?.phase,
+                hasOpenNudge: nudgeHost.hasOpenNudge
+            )
+        }
     }
 
     /// **Tell the loop about anything that ended what it was speaking about** (focus-d0a).

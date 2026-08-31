@@ -401,6 +401,12 @@ enum SelfCheck {
         // because performing ⌘W closes a window and ⌘, opens one — the probes change the
         // very state the survey is describing.
         let menu = menuTree()
+        // **Read in the same breath as the menu, and for the same reason the menu is read first**
+        // (focus-6uf). The gate asserts each item's `isEnabled` against the answer this predicate
+        // gives for the state the app is actually in, so the two have to describe one moment: the
+        // key-equivalent probes below close a window and open another, and an availability read
+        // taken after them would be a reading of a different app.
+        let commands = commandAvailabilityReport()
         let windows = windowReports()
         let cockpit = cockpitWindow(in: windows)
         // The undo probe reads the *system* Edit menu, so it has to run while the cockpit is
@@ -451,6 +457,7 @@ enum SelfCheck {
         root["displayName"] = Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName")
             as? String ?? ""
         root["menuBarTitles"] = menu.compactMap { $0["title"] as? String }
+        root["commands"] = commands
         root["menu"] = menu
         // **Which menus still hold an item that opens an alert** (focus-h7h).
         //
@@ -2633,6 +2640,44 @@ enum SelfCheck {
         return windows.first {
             ($0["titled"] as? Bool) == true && ($0["resizable"] as? Bool) == true
         }
+    }
+
+    /// **What the app would accept right now, per registered action** (focus-6uf).
+    ///
+    /// The other half of the menu reading. `menuTree()` says what the menu bar *drew*; this says
+    /// what `ShellAction.isAvailable(in:)` answered for the world the app is in — the same
+    /// predicate `ShellActionButton` disabled on, the same one `CockpitView.perform(_:)` and
+    /// `NudgeHost.perform(_:)` refuse on. The gate holds the two up beside each other, per item,
+    /// over the whole registry.
+    ///
+    /// It reports the **world** as well as the verdict, because a per-item comparison against a
+    /// predicate is satisfied by a predicate that answers the same thing for every state. The
+    /// world is what lets a reader see which state was measured, and it is what the gate's floor
+    /// on "some item is withdrawn" is read against.
+    @MainActor
+    static func commandAvailabilityReport() -> [String: Any] {
+        let world = FocusCommandCenter.shared.world
+        let registry = CommandRegistry.shell
+        return [
+            "world": [
+                "hasPriority": world.hasPriority,
+                // `"none"` rather than a null, so the field is a string in both cases and a gate
+                // reading it never has to decide what an absent phase means.
+                "sessionPhase": world.sessionPhase?.rawValue ?? "none",
+                "hasOpenNudge": world.hasOpenNudge
+            ],
+            "actions": registry.actions.map { action in
+                [
+                    "id": action.id,
+                    // The resolved title, because that is the only key the menu tree can be
+                    // joined on: `NSMenuItem.title` is a `String` and a registry entry is a
+                    // `ShellStringKey`, and a gate matching them by hand would be a third table.
+                    "title": String(localized: action.title),
+                    "placement": action.placement.rawValue,
+                    "isAvailable": action.isAvailable(in: world)
+                ]
+            }
+        ]
     }
 
     /// The whole of `NSApp.mainMenu`, one level deep.

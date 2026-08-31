@@ -1,3 +1,4 @@
+import FocusCore
 import SwiftUI
 
 /// Which menu an action belongs to.
@@ -133,6 +134,125 @@ public struct Shortcut: Sendable, Equatable, Hashable {
     }
 }
 
+/// **What the app can be asked to do right now** (focus-6uf).
+///
+/// The facts the command guards read, as one value, so the question *"would this verb do
+/// anything?"* has one answer rather than one per surface. Every field is something the
+/// composition root already knows and something an `@Observable` host publishes, which is what
+/// lets the menu bar read it during its own layout and redraw when it moves.
+///
+/// It carries **only** the facts a command's availability actually turns on. A world with a field
+/// nothing reads is a field that drifts, and the surfaces that would keep it in step are the two
+/// this type exists to stop disagreeing.
+public struct ShellCommandWorld: Sendable, Equatable, Hashable {
+    /// Whether a commitment exists for the priority verbs to act on.
+    public var hasPriority: Bool
+    /// The phase of the session the person is in, or `nil` when there is none.
+    ///
+    /// The phase rather than three booleans: *"there is a session"*, *"it is paused"* and *"it is
+    /// over"* are three readings of one value, and three booleans are three things to keep in
+    /// step. `SessionControls.verbButtons` already draws from the phase for the same reason.
+    public var sessionPhase: SessionPhase?
+    /// Whether a nudge is on screen for the two verbs that answer one.
+    public var hasOpenNudge: Bool
+
+    public init(
+        hasPriority: Bool = false,
+        sessionPhase: SessionPhase? = nil,
+        hasOpenNudge: Bool = false
+    ) {
+        self.hasPriority = hasPriority
+        self.sessionPhase = sessionPhase
+        self.hasOpenNudge = hasOpenNudge
+    }
+
+    /// **The world a process that has been told nothing is in**, and the honest default.
+    ///
+    /// Not a permissive one. A unit process, a preview and the moment before the composition root
+    /// installs its provider all have no priority, no session and no nudge — so every verb that
+    /// needs one is withdrawn, which is what the person would see if it really were true. A
+    /// default that answered *"everything is possible"* would put the defect back for exactly the
+    /// callers nobody drives.
+    public static let nothingIsCommitted = ShellCommandWorld()
+}
+
+extension PriorityCommand {
+    /// **Whether this verb would do anything, in this world** (focus-6uf).
+    ///
+    /// The guards were written three times — `CockpitView.perform(_:)` for the priority and
+    /// session verbs, `NudgeHost.perform(_:)` for the nudge ones, and nowhere at all for the menu
+    /// item that sends them, which is why all thirteen items were permanently enabled and six of
+    /// them silently did nothing in the state a person is in the first time they open the menu.
+    /// `CockpitView.swift` states the rule it broke in its own comment: *"a shortcut that
+    /// silently does nothing is a shortcut people stop trusting."*
+    ///
+    /// This is that rule, once. The menu disables what it cannot do; the two `perform`
+    /// implementations refuse the same thing by asking the same question, so a key equivalent
+    /// that slipped through a stale menu still cannot perform a verb the app would reject.
+    ///
+    /// **The three `true`s are decisions, not omissions.**
+    ///
+    /// * `newPriority` and `addFilesToContext` always land: with no commitment the second one
+    ///   opens the capture field rather than a file panel with nowhere to put its result, which
+    ///   is an effect and not a no-op.
+    /// * `pauseSensing` is a switch, and a switch has both positions in every state.
+    /// * `hideOverlays` is F-81's panic key. A person presses it *because* they do not know what
+    ///   is on their screen, and a panic key that greys itself out when the app believes nothing
+    ///   is showing would be unavailable in precisely the case where the app is wrong.
+    /// * `showMenuBar` opens the popover, which exists for the life of the process.
+    public func isAvailable(in world: ShellCommandWorld) -> Bool {
+        switch self {
+        case .newPriority, .addFilesToContext, .pauseSensing, .hideOverlays, .showMenuBar:
+            true
+        case .completePriority:
+            world.hasPriority
+        // **The three session verbs, from the phase, exactly as the cockpit already draws them.**
+        //
+        // `SessionControls.verbButtons` is the sibling the bead names: it draws only the verbs
+        // the machine would accept from the phase the session is in. The menu duplicated those
+        // verbs and kept `CockpitView.perform(_:)`'s guards instead, and the two disagreed in
+        // both directions — with a finished session the guards offered *Pause* (the machine would
+        // reject it) and refused *Start* (the cockpit draws its Start button for exactly that
+        // phase, so ⌃⌘S did nothing while the button beside it worked).
+        //
+        // The phase is the whole rule. A terminal session is over, so the only verb left is
+        // beginning again; a paused one may be finished but not paused twice; and with no session
+        // at all there is nothing to pause or finish.
+        case .startSession:
+            world.sessionPhase.map(\.isTerminal) ?? true
+        case .pauseSession:
+            world.sessionPhase.map { !$0.isTerminal && $0 != .paused } ?? false
+        case .completeSession:
+            world.sessionPhase.map { !$0.isTerminal } ?? false
+        // The two that answer a nudge. With none on screen there is nothing to be relevant and
+        // nothing to snooze, and the loop's own guards say so.
+        case .thisIsRelevant, .snoozeNudge:
+            world.hasOpenNudge
+        }
+    }
+}
+
+extension ShellActionEffect {
+    /// Whether the action carrying this effect would do anything, in this world.
+    ///
+    /// **`closeKeyWindow` and `openWindow` are always available, and both are reasoned.**
+    /// Opening a declared scene works with or without a window already on screen. ⌘W is the
+    /// registry's claim on the Mac's own close key — the File menu exists at all because
+    /// something had to claim it (see `CommandRegistry.shell`) — and AppKit contributes its own
+    /// validated `Close` beside it, which is the item that greys out when there is nothing to
+    /// close. Gating this one on a `NSApp.keyWindow` read would bind a key equivalent to a fact
+    /// no observation reports, so the menu would keep whatever answer it last computed and ⌘W
+    /// would go dead after a window closed.
+    public func isAvailable(in world: ShellCommandWorld) -> Bool {
+        switch self {
+        case .closeKeyWindow, .openWindow:
+            true
+        case .priority(let command):
+            command.isAvailable(in: world)
+        }
+    }
+}
+
 /// One shell action: what it is called, what it is bound to, where it lives, and what it
 /// does.
 public struct ShellAction: Sendable, Equatable, Hashable, Identifiable {
@@ -160,6 +280,14 @@ public struct ShellAction: Sendable, Equatable, Hashable, Identifiable {
 
     /// The localised title, from `FocusUI`'s own catalog.
     public var title: LocalizedStringResource { ShellStrings.resource(titleKey) }
+
+    /// **Whether this item may be offered at all, in this world** (focus-6uf).
+    ///
+    /// Read by `ShellActionButton` to decide `.disabled(…)`, by the two `perform`
+    /// implementations to refuse a verb they would otherwise silently drop, and by the
+    /// self-check so the gate can assert every item's `isEnabled` against it rather than
+    /// against a constant.
+    public func isAvailable(in world: ShellCommandWorld) -> Bool { effect.isAvailable(in: world) }
 }
 
 /// The single source of truth for every shell action.

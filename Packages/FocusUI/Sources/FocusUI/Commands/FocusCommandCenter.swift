@@ -112,6 +112,31 @@ public final class FocusCommandCenter {
     /// opens because the person pressed a button labelled *"Open Focus Sentinel"* needs neither.
     private var cockpitOpener: (() -> Void)?
 
+    /// **How the shell asks what the app can be asked to do** (focus-6uf).
+    ///
+    /// A closure rather than a stored value, and that is the whole design. The menu bar reads
+    /// `world` inside a `Commands` body; the closure the composition root installs reads
+    /// `priorityHost.state`, `sessionHost.snapshot` and the nudge loop — all `@Observable` — so
+    /// SwiftUI's observation follows the read straight through to the hosts and the menu is
+    /// re-evaluated when any of them moves. A pushed value would need somebody to remember to
+    /// push it, and *"a rule held in step by memory"* is the shape this repair exists to delete.
+    private var worldProvider: (() -> ShellCommandWorld)?
+
+    /// What the app can be asked to do right now.
+    ///
+    /// `nothingIsCommitted` until a root installs a provider, which is the honest answer for a
+    /// unit process and a preview: no priority, no session, no nudge, and every verb that needs
+    /// one withdrawn.
+    public var world: ShellCommandWorld { worldProvider?() ?? .nothingIsCommitted }
+
+    /// Install the one reading of the world.
+    ///
+    /// Idempotent and root-owned, in the shape `registerCockpitOpener` already established:
+    /// there is one composition root and it is the only object that can see all three facts.
+    public func provideWorld(_ read: @escaping () -> ShellCommandWorld) {
+        worldProvider = read
+    }
+
     /// Whether anything in this process can raise the cockpit.
     ///
     /// Read by the self-check, because "the opener was installed" is a wire like any other and a
