@@ -232,6 +232,42 @@ def not_taken(subject, reason, detail=None):
     print(line)
 
 
+# Every reading this script routed through `taken(...)`, by the JSON path of the fact that says
+# so. The sweep at the end of the file folds the report's own takenness facts over this set, so a
+# probe added with a `wasTaken` and no branch fails rather than going quiet (focus-2uy.3).
+routed_readings = set()
+
+
+def taken(subject, path, detail=None):
+    """Route one reading that the MACHINE may legitimately refuse to give.
+
+    `path` is the dotted location in the self-check report of the pair every such reading
+    publishes — `<something>WasTaken` and `<something>NotTakenBecause`, or a probe dictionary's
+    own `wasTaken`/`notTakenBecause`. There is one mechanism because there was one defect: three
+    probes in three rounds each grew their own branch, and the two that never grew one
+    (`sensing.windowMetadata.countWasTaken` and `nudge.panel.deltaReadingWasTaken`) are what made
+    the gate red on this machine for a fact about who was using it.
+
+    Returns True when the reading WAS taken, so a caller's assertions live inside
+    `if taken(...):` and cannot run on a measurement nobody made.
+    """
+    routed_readings.add(path)
+    node = report
+    parts = path.split(".")
+    for part in parts[:-1]:
+        node = (node or {}).get(part) or {}
+    was_taken = node.get(parts[-1])
+    if was_taken is True:
+        return True
+    reason_key = parts[-1]
+    if reason_key.endswith("WasTaken"):
+        reason_key = reason_key[: -len("WasTaken")] + "NotTakenBecause"
+    else:
+        reason_key = "notTakenBecause"
+    not_taken(subject, node.get(reason_key) or "no reason reported", detail)
+    return False
+
+
 CMD = 1 << 20          # NSEvent.ModifierFlags.command
 SHIFT = 1 << 17        # NSEvent.ModifierFlags.shift
 OPTION = 1 << 19       # NSEvent.ModifierFlags.option
@@ -642,20 +678,18 @@ check(
 )
 
 # --- front-bound: AppKit's own validation, which a background application cannot take ---------
-if undo.get("menuReadingWasTaken") is not True:
-    not_taken(
-        "the Edit menu's own validation (F-93)",
-        undo.get("menuReadingNotTakenBecause") or "no reason reported",
-        "frontRegained={!r} applicationIsActive={!r} hasKeyWindow={!r}; "
-        "declined to judge menuItemTitle={!r} enabled={!r}".format(
-            undo.get("frontRegained"),
-            undo.get("applicationIsActive"),
-            undo.get("hasKeyWindow"),
-            undo.get("menuItemTitle"),
-            undo.get("enabled"),
-        ),
-    )
-else:
+if taken(
+    "the Edit menu's own validation (F-93)",
+    "undo.menuReadingWasTaken",
+    "frontRegained={!r} applicationIsActive={!r} hasKeyWindow={!r}; "
+    "declined to judge menuItemTitle={!r} enabled={!r}".format(
+        undo.get("frontRegained"),
+        undo.get("applicationIsActive"),
+        undo.get("hasKeyWindow"),
+        undo.get("menuItemTitle"),
+        undo.get("enabled"),
+    ),
+):
     check(
         undo.get("keyWindowIsCockpit") is True,
         "the undo reading was taken through the cockpit's own window",
@@ -1451,16 +1485,22 @@ check(
 # report now says `countWasTaken` as its own fact and names which of the two obstacles it hit,
 # so a run in which this graph never learned who was frontmost reads as NOT TAKEN rather than
 # as a window list that came back empty.
-check(
-    windows_read.get("countWasTaken") is True,
-    "the grant-free window list was READ AT ALL (a reading that could not be taken is NOT TAKEN)",
-    windows_read.get("countNotTakenBecause") or windows_read.get("count"),
-)
-check(
-    isinstance(windows_read.get("count"), int) and windows_read["count"] > 0,
-    "the grant-free window list returned rows",
-    windows_read.get("count"),
-)
+# **And it is routed, not asserted** (focus-2uy.3). This was a `check`, whose own message read
+# "a reading that could not be taken is NOT TAKEN" and whose mechanism was FAIL — the same
+# contradiction the panel's reading-1 assertion carried, forty lines above the neighbour that
+# already did it right. Measured in gate run lens6-1: the Debug launch could not read the window
+# list and the Release launch of the same code could, so one gate run produced two verdicts about
+# one tree, and the failing one was about the Mac.
+if taken(
+    "the grant-free window list",
+    "sensing.windowMetadata.countWasTaken",
+    "decodedKeys={!r}".format(windows_read.get("decodedKeys")),
+):
+    check(
+        isinstance(windows_read.get("count"), int) and windows_read["count"] > 0,
+        "the grant-free window list returned rows",
+        windows_read.get("count"),
+    )
 
 # F-32: `.combinedSessionState` counts a superset of the events `.hidSystemState` does, so the
 # hardware figure can never be the smaller of the two at a single instant. The tolerance is for
@@ -1491,17 +1531,18 @@ print(
 # `notTakenBecause` to tell them apart; this note asserted the first one in prose whichever it
 # was. A gate that names a cause it did not read is the failure this whole round is about, one
 # note smaller.
+# **And it goes through the same door as the other three** (focus-2uy.3). It had the only
+# not-taken branch in the file and it also had its own bespoke shape: a `suppressed` flag, a
+# string compared by hand, and a `print` that counted a stand-down as coverage. A stand-down is
+# still a reading nobody took — the quorum's three inputs are unavailable either way — so it is
+# a NOT TAKEN line like every other, and which of the two obstacles it was travels in the reason.
 presentation = sensing.get("presentation") or {}
-if presentation.get("suppressed"):
-    if presentation.get("notTakenBecause") == "theSensitivityGateStoodDown":
-        print("note the frontmost application was suppressed by the sensitivity gate")
-    else:
-        not_taken(
-            "the presentation quorum's three inputs",
-            presentation.get("notTakenBecause") or "the report named no obstacle at all",
-            "the graph was never told who was frontmost, which is not the gate standing down",
-        )
-else:
+if taken(
+    "the presentation quorum's three inputs",
+    "sensing.presentation.wasTaken",
+    "a stand-down is the gate working and 'nothing is frontmost' is the graph knowing nothing; "
+    "the reason above says which, and neither is a reading of the person's screen",
+):
     for signal in ("frontmostWindowFillsAScreen", "presentationOptionsSayFullScreen", "menuBarHidden"):
         check(
             isinstance(presentation.get(signal), bool),
@@ -2343,16 +2384,18 @@ check(
     "the probe put the appearance preference back where it found it",
     panel.get("appearanceRestored"),
 )
-# **Was it taken, and only then: did it move** (focus-2vi). One assertion used to carry both
-# questions, and when `NSWorkspace.shared.frontmostApplication` came back nil at both ends it
-# printed `got: ('', '')` — a message about the frontmost application not being byte-identical,
-# for a pair of readings in which there was no frontmost application to be identical to. The
-# nil now serialises as `null` and is asked about first, by name.
-check(
-    panel.get("frontmostWasReadBothTimes") is True,
-    "reading 1 was TAKEN at both ends — nil frontmost is NOT TAKEN, never an application",
-    (before.get("frontmostBundleIdentifier"), after.get("frontmostBundleIdentifier")),
-)
+# **Was it taken, and only then: did it move** (focus-2vi, focus-2uy.3). One assertion used to
+# carry both questions, and when `NSWorkspace.shared.frontmostApplication` came back nil at both
+# ends it printed `got: ('', '')` — a message about the frontmost application not being
+# byte-identical, for a pair of readings in which there was no frontmost application to be
+# identical to. The nil now serialises as `null` and is asked about first, by name.
+#
+# **And it is asked by the NOT-TAKEN branch below, not by a `check` here** (focus-2uy.3). Its own
+# title said "nil frontmost is NOT TAKEN" and it was written as a `check`, which is a FAIL: the
+# title named the mechanism and the code named a defect. `deltaReadingWasTaken` now carries
+# "the front was never read" as its first case, so this reading is taken in exactly one place and
+# an unread front costs the run a NOT TAKEN line rather than three failures of R-89.
+
 # Reading 3 is absolute here as well: the panel becomes key only when a person clicks it, and
 # that is true whether or not the application is active. It is asserted OUTSIDE the branch
 # below, because nothing about it depends on who happened to be frontmost.
@@ -2374,14 +2417,15 @@ check(
 # is the world moving, and the reading is NOT TAKEN. The absolute form of the claim is §4.5's
 # `focus-steal` stage, which launches the app with `open -g -a` — never frontmost, which is the
 # posture a nudge really fires in (P-128, P-139) — and it is unaffected by any of this.
-if panel.get("deltaReadingWasTaken") is not True:
-    not_taken(
-        "R-89's four focus deltas around the nudge panel",
-        panel.get("deltaNotTakenBecause") or "no reason reported",
-        "reading 3 (the panel is not the key window) was taken absolutely and passed; "
-        "the absolute form of the rest is the focus-steal stage",
-    )
-else:
+if taken(
+    "R-89's four focus deltas around the nudge panel",
+    "nudge.panel.deltaReadingWasTaken",
+    "reading 1 was READ before={!r} after={!r}; reading 3 (the panel is not the key "
+    "window) was taken absolutely and passed; the absolute form of the rest is the "
+    "focus-steal stage".format(
+        before.get("frontmostBundleIdentifier"), after.get("frontmostBundleIdentifier")
+    ),
+):
     check(
         bool(before.get("frontmostBundleIdentifier"))
         and before.get("frontmostBundleIdentifier") == after.get("frontmostBundleIdentifier"),
@@ -2441,6 +2485,63 @@ check(
 )
 
 # ------------------------------------------------------------------------------------------
+# **The sweep: every reading the machine may refuse to give goes through the one door**
+# (focus-2uy.3, repair doctrine clause 2).
+#
+# The class this closes is not "one probe had no branch". It is that a probe's takenness was a
+# thing each probe remembered, so three of them grew a branch over three rounds and two never did
+# — and both of the two were what made this gate red for a fact about who was using the Mac.
+#
+# So the fold is over the REPORT, not over a list kept here: every key in the self-check JSON
+# whose name ends in `WasTaken`, and every dictionary in it carrying a bare `wasTaken`, is a
+# reading that says it may be unavailable, and every one of them must have been routed through
+# `taken(...)`. A probe added tomorrow with a `wasTaken` and no branch fails this line; a probe
+# that loses its takenness fact fails the floor below it.
+takenness_facts = set()
+
+
+def sweep_takenness(node, path=""):
+    if isinstance(node, dict):
+        for key, value in node.items():
+            here = f"{path}.{key}" if path else key
+            if key == "wasTaken" or (key.endswith("WasTaken") and isinstance(value, bool)):
+                takenness_facts.add(here)
+            sweep_takenness(value, here)
+    elif isinstance(node, list):
+        for index, value in enumerate(node):
+            sweep_takenness(value, f"{path}[{index}]")
+
+
+sweep_takenness(report)
+unrouted = sorted(takenness_facts - routed_readings)
+check(
+    not unrouted,
+    "every reading that can be unavailable is routed through the one NOT-TAKEN mechanism",
+    unrouted,
+)
+# **The non-vacuity floor.** The check above is satisfied by a report with no takenness facts at
+# all, which is exactly what deleting the pair from a probe produces — the reading goes back to
+# being a `check` that fails for the machine, and the sweep says nothing. Four probes publish
+# one today; the floor is those four, named, so losing one is a red run rather than a quieter one.
+EXPECTED_TAKENNESS_FACTS = {
+    "undo.menuReadingWasTaken",
+    "sensing.windowMetadata.countWasTaken",
+    "sensing.presentation.wasTaken",
+    "nudge.panel.deltaReadingWasTaken",
+}
+check(
+    EXPECTED_TAKENNESS_FACTS <= takenness_facts,
+    "every probe that may be unavailable still publishes whether its reading was taken",
+    sorted(EXPECTED_TAKENNESS_FACTS - takenness_facts),
+)
+# And that the routing is not a set nobody put anything in: a `taken(...)` that stopped being
+# called would leave `routed_readings` short while the sweep above still passed on a report whose
+# facts had gone with it.
+check(
+    routed_readings >= EXPECTED_TAKENNESS_FACTS,
+    "every one of those four readings was actually routed on this run",
+    sorted(EXPECTED_TAKENNESS_FACTS - routed_readings),
+)
 
 print()
 # **Listed, never counted as coverage** (focus-jax). A NOT TAKEN reading is not a pass, and a run
