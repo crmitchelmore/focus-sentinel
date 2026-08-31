@@ -188,6 +188,10 @@ struct NudgeHostTurnSeamTests {
         // A rung nobody saw is still a thing the app did, and it still has a row (focus-sq7):
         // "charge nothing" must not be reachable by making the landing invisible to the record.
         #expect(try fixture.host.deliveredRowsToday() == fixture.host.chargesPaidFor.count)
+        #expect(
+            fixture.host.proofsOfferedOutsideATurn == 0,
+            "\(exit): a proof was offered with no turn open, so its seam is somebody else's event"
+        )
     }
 
     /// **And the seam still charges for what survives the turn** (focus-my0).
@@ -235,5 +239,6 @@ struct NudgeHostTurnSeamTests {
         // over the same rows, and both have to be right.
         #expect(fixture.host.todaysUsage().interruptionsToday == 1)
         #expect(try fixture.host.deliveredRowsToday() == fixture.host.chargesPaidFor.count)
+        #expect(fixture.host.proofsOfferedOutsideATurn == 0)
     }
 }

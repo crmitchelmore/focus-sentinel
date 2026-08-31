@@ -526,6 +526,29 @@ final class NudgeHost {
     private(set) var mandatesWithoutACommitment = 0
     private(set) var staleNotificationActions = 0
 
+    /// **A proof offered while no turn was open** (focus-my0) — always zero, and it is the one
+    /// number that says the seam is actually reached.
+    ///
+    /// `SettledObservation` makes charging from a mid-turn reading unrepresentable, and that is
+    /// the half of focus-my0 the type system holds. The other half is plumbing: every door into
+    /// this object from outside has to run inside `turn.run { … }`, and a door added without one
+    /// is a rule somebody has to remember — which is precisely the shape this epic keeps finding.
+    ///
+    /// The failure it would cause is late rather than dishonest: an offer made outside a turn is
+    /// settled at the *next* seam, against a reading of surfaces that really had stopped moving,
+    /// so nothing imperceptible is charged either way. What is lost is the tie between the write
+    /// and the charge — a rung would be paid for by an event that had nothing to do with it. So it
+    /// is a reading rather than a fault to the person: stated as a count, beside the other two, so
+    /// the unit lane and `--focus-self-check` can read it and a regression is a number.
+    ///
+    /// It is zero by construction today, and it is **falsifiable by mutation**, which is this
+    /// programme's bar for a reading nothing can currently drive: deleting `turn.run` from any
+    /// entry point turns it non-zero on the next drive that reaches it. Measured with the wrapper
+    /// removed from `menuBarItemRedrawn()`: two drives in `NudgeChargingInvariantTests` report 1
+    /// each — the two that write to the status item from outside the loop, which is exactly the
+    /// path a composition root takes on its five-second refresh.
+    private(set) var proofsOfferedOutsideATurn = 0
+
     init(
         context: ModelContext,
         sessionRules: SessionRuleBox,
@@ -1280,6 +1303,7 @@ final class NudgeHost {
     /// It was `deliverPendingBadgeQuestion()`, and it proved the change on the spot from a reading
     /// taken mid-turn. That is what a settled reading now makes impossible.
     private func offerQuestionForProof() {
+        noteTheTurn()
         armedProofs.insert(.query)
     }
 
@@ -1294,7 +1318,15 @@ final class NudgeHost {
     /// forgot to wire `MenuBarController.onGlyphWritten` still charges nothing for a glyph rung,
     /// exactly as before. The seam settles what was offered, never everything it can find.
     private func offerRungForProof() {
+        noteTheTurn()
         armedProofs.insert(.accusation)
+    }
+
+    /// Whether this offer was made inside a turn — see `proofsOfferedOutsideATurn`.
+    private func noteTheTurn() {
+        guard !turn.isOpen else { return }
+        proofsOfferedOutsideATurn += 1
+        logger.fault("a proof was offered outside a turn, so its seam is somebody else's event")
     }
 
     /// **The surfaces have stopped moving; now ask what the person could have seen** (focus-my0).

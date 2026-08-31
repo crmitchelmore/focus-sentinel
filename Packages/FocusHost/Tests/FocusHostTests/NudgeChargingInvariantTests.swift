@@ -166,6 +166,18 @@ struct NudgeChargingInvariantTests {
     /// it is a charge that did not go through the door — which is the mutation this whole round
     /// exists to make impossible, and the reading that would catch a fifth way of writing one.
     static func assertTheJoin(_ fixture: NudgeHostFixture, cell: String = "") throws {
+        // **And every one of those receipts was settled at its own event's seam** (focus-my0).
+        // Asserted here, in the helper every drive in this suite ends with, because the counter
+        // is zero by construction and a reading nothing drives is a reading nothing protects:
+        // what makes it mean something is that sixty grid cells and every scenario below run
+        // through it. Deleting `turn.run` from an entry point turns it non-zero here.
+        #expect(
+            fixture.host.proofsOfferedOutsideATurn == 0,
+            """
+            \(cell)\(fixture.host.proofsOfferedOutsideATurn) proof(s) were offered with no \
+            turn open, so a charge was settled at an unrelated event's seam
+            """
+        )
         let rows = try fixture.host.deliveredRowsToday()
         #expect(
             rows == fixture.host.chargesPaidFor.count,

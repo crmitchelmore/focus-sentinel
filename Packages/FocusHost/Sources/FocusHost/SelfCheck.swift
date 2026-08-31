@@ -768,6 +768,13 @@ enum SelfCheck {
         report["commitmentDisagreements"] = composition.priorityHost.commitmentDisagreements
         report["mandatesWithoutACommitment"] = host.mandatesWithoutACommitment
         report["staleNotificationActions"] = host.staleNotificationActions
+        // **And whether the seam is actually reached** (focus-my0). `SettledObservation` makes a
+        // charge from a mid-turn reading unrepresentable; what no type can hold is that every door
+        // into the loop opens a turn, because that is a wrapper somebody has to write. A door
+        // added without one does not charge for something imperceptible — it settles at somebody
+        // else's seam, which unties the charge from the write that earned it — so this is a
+        // reading rather than a refusal, and it is the number that says the plumbing is whole.
+        report["proofsOfferedOutsideATurn"] = host.proofsOfferedOutsideATurn
 
         // Every rung, with nothing presenting and no call in progress — which is the state the
         // settings pane's matrix describes.

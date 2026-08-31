@@ -2029,6 +2029,15 @@ check(
     "no notification action from a rung that is over reached the loop",
     nudge.get("staleNotificationActions"),
 )
+# focus-my0's other half. The type system holds "no charge from a reading taken mid-turn"; nothing
+# but a wrapper holds "every door into the loop opens a turn", so this is the reading that says the
+# wrapper is on all of them. Zero by construction today and falsifiable by mutation: delete
+# `turn.run` from any entry point and this goes non-zero on the next drive that reaches it.
+check(
+    nudge.get("proofsOfferedOutsideATurn") == 0,
+    "every proof was offered inside a turn, so every charge was settled at its own seam",
+    nudge.get("proofsOfferedOutsideATurn"),
+)
 
 # D-06 as amended by U-2: two rungs, no more and no fewer — asserted in the running application
 # as well as in the policy manifest and the evaluation report. The third rung, explicit
