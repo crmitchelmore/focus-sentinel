@@ -216,6 +216,9 @@ struct NudgeDayShapeTests {
         /// The subject the rung the app spoke with was raised about, read off the loop's own
         /// presentation at the moment it spoke.
         let spokenAbout: [String?]
+        /// `NudgeHost.decisionCount` — the loop's own count of judgements it decided about, read
+        /// off the shipping object rather than counted here, so a day whose judgements never
+        /// reached `consider(_:)` cannot claim to have happened.
         let considered: Int
         let deliveredRows: Int
         let budget: InterruptionBudget
@@ -248,28 +251,26 @@ struct NudgeDayShapeTests {
         var landings: [NudgeSurface?] = []
         var subjects: [String] = []
         var spokenAbout: [String?] = []
-        var considered = 0
+        let decisionsBefore = root.nudgeHost.decisionCount
 
         for beat in beats {
             switch beat {
             case .drift(let subject):
-                let rungBefore = root.nudgeHost.currentRung
                 root.relevanceHost.onJudgement?(
                     NudgeHostFixture.unrelatedJudgement(subject: subject)
                 )
                 NudgeHostFixture.settle()
-                considered += 1
-                let rung = root.nudgeHost.currentRung
                 subjects.append(subject)
-                // Only a rung the loop actually moved to is this drift's answer. A ladder standing
-                // where it already stood said nothing new, and recording it as an arrival is how a
-                // day of silence reads like a day of nudges.
-                let moved = rung != rungBefore || root.nudgeHost.lastDecision?.rung != nil
-                rungs.append(moved ? rung : nil)
-                landings.append(moved ? root.nudgeHost.landedRungSurface : nil)
-                spokenAbout.append(
-                    moved ? root.nudgeHost.lastDecision?.rung?.subject : nil
-                )
+                // **One reading, and it is the decision's own.** Whether this drift was answered
+                // is `lastDecision.rung != nil` and nothing else: a ladder standing where it
+                // already stood said nothing new, and a `.silent` or `.deferred` decision reached
+                // nobody however the state moved underneath it. Asking a second question — "did
+                // `currentRung` change?" — would be a second predicate that has to agree with this
+                // one, and the two disagree exactly where a deferral is.
+                let spoke = root.nudgeHost.lastDecision?.rung
+                rungs.append(spoke?.kind)
+                landings.append(spoke == nil ? nil : root.nudgeHost.landedRungSurface)
+                spokenAbout.append(spoke?.subject)
 
             case .wait(let interval):
                 clock.advance(by: interval)
@@ -302,7 +303,7 @@ struct NudgeDayShapeTests {
             landings: landings,
             subjects: subjects,
             spokenAbout: spokenAbout,
-            considered: considered,
+            considered: root.nudgeHost.decisionCount - decisionsBefore,
             deliveredRows: rows,
             budget: try log.budget(on: log.today, priorityID: priorityID)
         )
@@ -317,8 +318,11 @@ struct NudgeDayShapeTests {
     static func assertTheDay(_ day: Day) {
         // — the day really happened —
         #expect(
-            day.considered == day.drifts && day.drifts > 0,
-            "the loop was never driven, so this day asserts nothing — \(day.summary)"
+            day.drifts > 0 && day.considered >= day.drifts,
+            """
+            the loop decided about \(day.considered) judgement(s) across \(day.drifts) drift(s), \
+            so some of this day never reached consider(_:) — \(day.summary)
+            """
         )
         #expect(
             day.deliveredRows > 0,
