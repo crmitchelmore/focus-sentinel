@@ -220,8 +220,21 @@ extension ShellSettingsConnection: ShellDrawnConnection {
             "intervention.quietHours.endMinuteOfDay": .drawn([.quietHours]),
             "intervention.usage.queriesForPriorityToday": .drawn([.interruptionUsage]),
             "intervention.usage.queriesAllPrioritiesToday": .drawn([.interruptionUsage]),
-            "intervention.usage.accusationsToday": .drawn([.interruptionUsage]),
-            "intervention.usage.interruptionsToday": .drawn([.interruptionUsage])
+            // **There is no `intervention.usage.interruptionsToday` here, and its absence is the
+            // point** (focus-d6r). This map is a map of *stored properties* — the walk is
+            // `Mirror` over the compiled type, and its whole claim is that it "knows only what
+            // the type has". `InterruptionBudget.interruptionsToday` stopped being a field and
+            // became an arithmetic: it is `queriesAllPrioritiesToday + accusationsToday`, so that
+            // a day on which the shared budget is spent and neither counter has moved has no
+            // spelling. An echo for it would be `strandedPaths`, which is this reading's name for
+            // *"the map has drifted"* — and it did drift, which is how the totality lane caught
+            // the change.
+            //
+            // The row it draws is not unwatched. All four usage rows report through the one
+            // `ShellRenderedField.interruptionUsage`, which `ShellRenderFidelity` still compares,
+            // and the two counters the fourth row is computed from are mapped immediately above
+            // and below.
+            "intervention.usage.accusationsToday": .drawn([.interruptionUsage])
         ]
     }
 }
