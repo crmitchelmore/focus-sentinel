@@ -992,6 +992,26 @@ else
     done
 fi
 
+# R-96u — **an accusation's charge is DERIVED from the rung it landed on, never stated**
+# (focus-uru). `InterruptionCharge` has two initialisers and only one of them asks the question:
+# `init(_ kind:)` is total, and `init?(_ event:)` answers `nil` for a rung that spoke to nobody.
+#
+# The total one cannot go — a question always speaks, carries no rung, and has no
+# `InterventionEvent` at the moment the fatigue reducer is folded — so the pin is on the KIND
+# rather than on the initialiser. Four rounds gave the derivation to one more consequence and
+# left the next: focus-ndh gave it `dailyAccusationCap`, focus-d6r `dailyInterruptionCap` one
+# line above it, focus-2yy the cap gate, and focus-uru `RelevancePolicy.mandateCooldown` one line
+# BELOW the charge, where both production lanes read
+#
+#     if let charge = InterruptionCharge(event, …) { charges.append(charge) }
+#     fatigue = FatigueController.reduce(fatigue, event: .delivered(.accusation), now: now)
+#
+# `FatigueEvent.delivered` now takes the charge, which makes the pair one decision. This is what
+# stops the fifth round writing the charge out by hand instead: an accusation whose charge is
+# stated has not been asked whether it spoke to anybody, and the glyph is the answer that differs.
+check_set "R-96u" "no delivery states an accusation's charge instead of deriving it from its rung" \
+    '\.delivered\(InterruptionCharge\(\.accusation' App Packages
+
 # R-96s — **a reading becomes evidence in exactly one place, and it is the end of a turn**
 # (focus-my0). `PerceptibleChange.proven(on:from:to:)` takes a `SettledObservation` as its *after*
 # half and nothing else will do, so this is the rule that says where one can come from: a

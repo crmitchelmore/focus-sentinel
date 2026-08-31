@@ -380,11 +380,23 @@ struct FatigueControllerTests {
         var controller = FatigueController()
         #expect(controller.state.lastQueryAt == nil)
 
+        // A question always speaks, so its charge is **stated**. An accusation's is **derived**
+        // from the rung it landed on and nothing else will do (R-96u, focus-uru): stating one
+        // here would be the seam this suite is about being crossed inside its own proof.
         controller.reduce(.delivered(InterruptionCharge(.query)), now: .seconds(300))
         #expect(controller.state.lastQueryAt == .seconds(300))
         #expect(controller.state.lastAccusationAt == nil)
 
-        controller.reduce(.delivered(InterruptionCharge(.accusation)), now: .seconds(400))
+        let spoken = InterventionEvent(
+            kind: .accusation,
+            rung: .panel,
+            subject: Self.decoy,
+            surface: .panel,
+            disposition: .delivered
+        )
+        let charge = InterruptionCharge(spoken)
+        #expect(charge != nil, "a panel rung that reached somebody derived no charge")
+        if let charge { controller.reduce(.delivered(charge), now: .seconds(400)) }
         #expect(controller.state.lastAccusationAt == .seconds(400))
         #expect(controller.state.lastQueryAt == .seconds(300))
     }
