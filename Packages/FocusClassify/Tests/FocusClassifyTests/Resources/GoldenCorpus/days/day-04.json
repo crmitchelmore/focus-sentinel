@@ -1,0 +1,192 @@
+{
+  "id": "day-04",
+  "note": "The day the person HOPS, and the reading it is committed for is interruptions = 2 rather than 0 (focus-f2a). day-01 to day-03 are a day with three commitments, a day of questions and a day of silence; not one of them contains a person who drifts into more than one application, so the corpus could not see the defect an independent ship lens measured on the shipping composition root: over 40-45 minutes and 14-16 drifts into nine applications, hasSpokenToday = false, accusationsToday = 0 and the panel never appeared. LadderMachine.arrive reset the ladder whenever the live mandate named a different subject, so escalation required two consecutive mandates about the SAME bundle identifier - and nobody losing an afternoon drifts that tidily. Replayed against that reducer this fixture reads 'interruptions 0 != 2; step 7 nudge accuse:ambient != accuse:panel; step 15 nudge accuse:ambient != accuse:panel': four glyph landings, no sentence, and a day that cost the person nothing because the app said nothing. What the day now scripts is the whole ruling and its limit together. The person works in Pages, drifts into Steam for 92 seconds and is marked; comes back and HOLDS the return past driftResetGrace, which clears the accumulator; drifts into Discord and is met by the PANEL, because drift accumulates against the person and not against a bundle identifier and a subject change is not a fresh start. Then it does it twice more, and the ladder alternates: the third drift is met at the glyph again, because the ladder had topped out and a change of subject at the top ENDS the run - a second panel would be a repetition rather than an escalation (U-2, R-80). Four rungs and two interruptions: only the two panel rungs carry a sentence and only they spend a unit of the day, which is the same arithmetic seq-0021 and seq-0031 were re-recorded onto.",
+  "segments": [
+    {
+      "priority": {
+        "intent": "Write the Q3 proposal for Acme",
+        "doneWhen": "sent to Dana",
+        "revision": 1
+      },
+      "contextPack": [
+        {
+          "kind": "app",
+          "value": "com.apple.Pages"
+        }
+      ],
+      "rules": [
+        {
+          "authority": "global",
+          "subjectKind": "app",
+          "subject": "com.valvesoftware.steam",
+          "verdict": "unrelated"
+        },
+        {
+          "authority": "global",
+          "subjectKind": "app",
+          "subject": "com.hnc.Discord",
+          "verdict": "unrelated"
+        },
+        {
+          "authority": "global",
+          "subjectKind": "app",
+          "subject": "com.spotify.client",
+          "verdict": "unrelated"
+        }
+      ],
+      "steps": [
+        {
+          "advanceSeconds": 0,
+          "bundleID": "com.apple.Pages",
+          "expect": {
+            "verdict": "relevant",
+            "drift": "aligned",
+            "accumulatedSeconds": 0
+          }
+        },
+        {
+          "advanceSeconds": 600,
+          "bundleID": "com.apple.Pages",
+          "expect": {
+            "verdict": "relevant",
+            "drift": "aligned",
+            "accumulatedSeconds": 0
+          }
+        },
+        {
+          "advanceSeconds": 0,
+          "bundleID": "com.valvesoftware.steam",
+          "expect": {
+            "verdict": "unrelated",
+            "drift": "grace",
+            "accumulatedSeconds": 0
+          }
+        },
+        {
+          "advanceSeconds": 92,
+          "bundleID": "com.valvesoftware.steam",
+          "expect": {
+            "verdict": "unrelated",
+            "drift": "sustained",
+            "nudge": "accuse:ambient",
+            "accumulatedSeconds": 92
+          }
+        },
+        {
+          "advanceSeconds": 30,
+          "bundleID": "com.apple.Pages",
+          "expect": {
+            "verdict": "relevant",
+            "drift": "cooldown",
+            "accumulatedSeconds": 0
+          }
+        },
+        {
+          "advanceSeconds": 300,
+          "bundleID": "com.apple.Pages",
+          "expect": {
+            "verdict": "relevant",
+            "drift": "aligned",
+            "accumulatedSeconds": 0
+          }
+        },
+        {
+          "advanceSeconds": 0,
+          "bundleID": "com.hnc.Discord",
+          "expect": {
+            "verdict": "unrelated",
+            "drift": "grace",
+            "accumulatedSeconds": 0
+          }
+        },
+        {
+          "advanceSeconds": 92,
+          "bundleID": "com.hnc.Discord",
+          "expect": {
+            "verdict": "unrelated",
+            "drift": "sustained",
+            "nudge": "accuse:panel",
+            "accumulatedSeconds": 92
+          }
+        },
+        {
+          "advanceSeconds": 30,
+          "bundleID": "com.apple.Pages",
+          "expect": {
+            "verdict": "relevant",
+            "drift": "cooldown",
+            "accumulatedSeconds": 0
+          }
+        },
+        {
+          "advanceSeconds": 300,
+          "bundleID": "com.apple.Pages",
+          "expect": {
+            "verdict": "relevant",
+            "drift": "aligned",
+            "accumulatedSeconds": 0
+          }
+        },
+        {
+          "advanceSeconds": 0,
+          "bundleID": "com.spotify.client",
+          "expect": {
+            "verdict": "unrelated",
+            "drift": "grace",
+            "accumulatedSeconds": 0
+          }
+        },
+        {
+          "advanceSeconds": 92,
+          "bundleID": "com.spotify.client",
+          "expect": {
+            "verdict": "unrelated",
+            "drift": "sustained",
+            "nudge": "accuse:ambient",
+            "accumulatedSeconds": 92
+          }
+        },
+        {
+          "advanceSeconds": 30,
+          "bundleID": "com.apple.Pages",
+          "expect": {
+            "verdict": "relevant",
+            "drift": "cooldown",
+            "accumulatedSeconds": 0
+          }
+        },
+        {
+          "advanceSeconds": 300,
+          "bundleID": "com.apple.Pages",
+          "expect": {
+            "verdict": "relevant",
+            "drift": "aligned",
+            "accumulatedSeconds": 0
+          }
+        },
+        {
+          "advanceSeconds": 0,
+          "bundleID": "com.valvesoftware.steam",
+          "expect": {
+            "verdict": "unrelated",
+            "drift": "grace",
+            "accumulatedSeconds": 0
+          }
+        },
+        {
+          "advanceSeconds": 92,
+          "bundleID": "com.valvesoftware.steam",
+          "expect": {
+            "verdict": "unrelated",
+            "drift": "sustained",
+            "nudge": "accuse:panel",
+            "accumulatedSeconds": 92
+          }
+        }
+      ]
+    }
+  ],
+  "expectQueries": 0,
+  "expectAccusations": 4,
+  "expectInterruptions": 2
+}

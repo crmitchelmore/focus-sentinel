@@ -15,9 +15,17 @@ import Testing
 /// | `day-01` | three commitments in one day — `dailyQueryCapAllPriorities`' witness |
 /// | `day-02` | one long commitment with many askable subjects, across a relaunch |
 /// | `day-03` | the day the app says **nothing** |
+/// | `day-04` | the day the person **hops** — drift, return, drift, into four applications |
 ///
 /// Every one of them carries the things a real day has and a fixture usually does not: a break, a
 /// pause, an idle span, a presentation, a priority change and a relaunch.
+///
+/// **day-04 is the shape none of the first three had** (focus-f2a). Not one of them contains a
+/// person who drifts into more than one application, so the corpus could not see the defect a ship
+/// lens measured on the shipping composition root — sixteen drifts into nine applications, and
+/// `hasSpokenToday = false`. It is committed for the reading `interruptions = 2`: against the
+/// pre-repair reducer the same day replays as four glyph landings, no sentence and a day that cost
+/// the person nothing.
 @Suite("Day replay")
 struct DayReplayTests {
     static var harness: DayReplayHarness { DayReplayHarness(runner: CorpusFixtures.runner) }
@@ -118,6 +126,49 @@ struct DayReplayTests {
     /// **A guardian that could not produce a silent day would be a guardian nobody keeps
     /// installed.** Every gate that buys silence is exercised in turn, and the day ends with
     /// nothing said.
+    /// **The day the corpus did not have, and the two halves of the ruling it holds** (focus-f2a).
+    ///
+    /// The floor: a day of drift into four applications reaches the rung that carries a sentence,
+    /// twice, and costs the person the two units those sentences are worth. The ceiling, in the
+    /// same fixture: the ladder **alternates**, because a change of subject at the top rung ends
+    /// the run rather than buying a second panel. Asserted on the fixture's own committed
+    /// expectations rather than on the transcript, so the claim is the one a reader checks.
+    @Test("day-04 hops between applications and is answered at the rung that speaks")
+    func dayFourHopsAndIsSpokenTo() throws {
+        let fixture = try #require(try Self.days().first { $0.id == "day-04" })
+        let subjects = Set(fixture.segments.flatMap(\.steps).compactMap(\.subject))
+        #expect(
+            subjects.count >= 4,
+            "day-04 is the hopping day and it visits \(subjects.count) application(s)"
+        )
+        #expect(fixture.expectInterruptions > 0, "day-04 is committed for a day the app spoke on")
+
+        let transcript = Self.harness.replay(fixture)
+        #expect(
+            transcript.interruptionCount == fixture.expectInterruptions,
+            "day-04 cost \(transcript.interruptionCount) and claims \(fixture.expectInterruptions)"
+        )
+        // The alternation, read off the day's own nudges: no two panel rungs running.
+        var rungs: [LadderRung.Kind] = []
+        for step in fixture.segments.flatMap(\.steps) {
+            guard case .accuse(let rung) = step.expect.nudge else { continue }
+            rungs.append(rung)
+        }
+        #expect(
+            rungs.contains(.panel),
+            "day-04 never climbed, so it is day-03 with more applications in it — \(rungs)"
+        )
+        #expect(
+            rungs.contains(.ambient),
+            "day-04 never showed the glyph first, so it skipped a rung — \(rungs)"
+        )
+        let repeated = zip(rungs, rungs.dropFirst()).contains { $0 == .panel && $1 == .panel }
+        #expect(
+            !repeated,
+            "day-04 says its sentence twice running, which is a repetition — \(rungs)"
+        )
+    }
+
     @Test("day-03 is a whole day with no interruption at all")
     func theQuietDayIsSilent() throws {
         let fixture = try #require(try Self.days().first { $0.id == "day-03" })
