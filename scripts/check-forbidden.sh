@@ -696,6 +696,21 @@ check_outside "R-70n" "no rule is constructed with the session scope" \
 #        invisible" and left the shape intact, because the rule lived in a doc comment beside
 #        the code that broke it.
 #
+# R-96s  **A reading becomes evidence in exactly one place, and it is the end of a turn**
+#        (focus-my0). `SettledObservation(` may appear in exactly one file, and that file is
+#        `PerceptibleChange.swift` — where the memberwise initialiser is `fileprivate` and
+#        `SurfaceTurn.Seam.settled(_:)` is the only producer. R-96p's own shape, one level
+#        down, and it exists because R-96p held while its purpose was defeated: the receipt
+#        really was produced by `proven(on:from:to:)`, from two real readings of real
+#        surfaces, and the *after* reading had been taken in the middle of a call stack that
+#        went on to undo everything it recorded. Measured on the shipping loop, taking a break
+#        with a badge question pending charged an accusation for a mark that was put on the
+#        item and taken off it before AppKit composited anything, and wrote the row
+#        `accusation/delivered/menuBar/ignored` on a day nobody clicked anything.
+#
+#        A second construction site is that defect's next costume: it would let any call site
+#        bless its own mid-turn reading, which is exactly what the type exists to stop.
+#
 # R-96r  **The budget has exactly one construction site, and every move through it is a
 #        sentence** (focus-d6r). `InterruptionBudget(` may appear in exactly one file, and that
 #        file is `InterruptionBudget.swift` — where the memberwise initialiser is private,
@@ -852,6 +867,10 @@ PANEL_SHOW_FILE="Packages/FocusUI/Sources/FocusUI/Nudge/NudgePanelController.swi
 # may be charged (R-96p, focus-1b5, focus-nrl).
 PERCEPTION_FILE="Packages/FocusCore/Sources/FocusCore/Nudge/PerceptibleChange.swift"
 
+# The one file permitted to bless a reading as taken at a seam — the same file, because the seam
+# and the receipt it feeds are one invariant (R-96s, focus-my0).
+SETTLED_READING_FILE="Packages/FocusCore/Sources/FocusCore/Nudge/PerceptibleChange.swift"
+
 # The one file permitted to construct an `InterruptionBudget` — the value whose every move is a
 # sentence somebody was actually made (R-96r, focus-d6r).
 BUDGET_FILE="Packages/FocusCore/Sources/FocusCore/Nudge/InterruptionBudget.swift"
@@ -968,6 +987,31 @@ else
         else
             print -u2 "FAIL [R-96p] $perception_file constructs a PerceptibleChange"
             print -u2 "    A charge is proven by measuring a surface, in $PERCEPTION_FILE alone."
+            rc=1
+        fi
+    done
+fi
+
+# R-96s — **a reading becomes evidence in exactly one place, and it is the end of a turn**
+# (focus-my0). `PerceptibleChange.proven(on:from:to:)` takes a `SettledObservation` as its *after*
+# half and nothing else will do, so this is the rule that says where one can come from: a
+# `fileprivate` initialiser and `SurfaceTurn.Seam.settled(_:)`, which is handed out by nothing but
+# the end of a turn. Without it every call site could bless its own mid-turn reading again, and
+# the charge for a mark that was put up and taken down inside one call stack — measured, with the
+# row `accusation/delivered/menuBar/ignored` — comes straight back.
+count_files "R-96s" "SettledObservation is constructed in exactly one file" \
+    'SettledObservation(' 1 App Packages
+settled_files=(${(f)"$(grep -rnF --include='*.swift' --exclude-dir='.build' -- 'SettledObservation(' App Packages 2>/dev/null | strip_comments | cut -d: -f1 | sort -u)"})
+if (( ${#settled_files} == 0 )) || [[ -z "${settled_files[1]}" ]]; then
+    print -u2 "FAIL [R-96s] nothing blesses a reading as settled — no charge can be proven"
+    rc=1
+else
+    for settled_file in $settled_files; do
+        if [[ "$settled_file" == "$SETTLED_READING_FILE" ]]; then
+            print "ok   [R-96s] $settled_file is the sanctioned producer"
+        else
+            print -u2 "FAIL [R-96s] $settled_file blesses its own reading as settled"
+            print -u2 "    A reading is evidence only at a turn's seam, in $SETTLED_READING_FILE."
             rc=1
         fi
     done

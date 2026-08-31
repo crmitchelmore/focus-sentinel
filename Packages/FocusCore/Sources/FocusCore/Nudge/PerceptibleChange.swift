@@ -90,6 +90,158 @@ public struct SurfaceObservation: Sendable, Equatable, Hashable {
         panelIsShowingTheNudge: false,
         popoverIsShowingTheNudge: false
     )
+
+    /// **Whether this reading shows `surface` saying what the nudge needs it to say** — the
+    /// *state* half of the channel's question, asked without the *difference* half.
+    ///
+    /// It exists because two different questions were being asked of the same fields by two
+    /// different pieces of code. *"Is this panel a surface the person could decide on?"* is a
+    /// question about the **surface**, asked once at the show so an unusable panel becomes a
+    /// deferral rather than a nudge; *"did the person perceive a change?"* is a question about
+    /// the **person**, and it is `PerceptibleChange.proven(on:from:to:)`'s. `accuse(…)` and
+    /// `ask(…)` used to ask the first by calling the second, which is why the charge and the
+    /// deferral had to be decided in the same breath — and why the charge could not be moved to
+    /// the seam without inventing a second rule about panels for a future round to find out of
+    /// step with this one. There is one rule; the difference is which half of it is being asked.
+    public func carries(_ surface: NudgeSurface) -> Bool {
+        switch surface.perceptionChannel {
+        case .menuBarItem: markOnTheItem == surface.menuBarAttention
+        case .panelWindow: panelIsShowingTheNudge
+        case .popoverContents: popoverIsShowingTheNudge
+        case .banner: false
+        }
+    }
+}
+
+/// **A reading of surfaces that have stopped moving** (focus-my0).
+///
+/// A `SurfaceObservation` can be taken at any instant, including an instant that never reaches a
+/// screen. This is one that was taken at a **seam** — the end of a turn, after everything that
+/// turn was going to do to the surfaces has been done — and it is the only kind of reading
+/// `PerceptibleChange.proven(on:from:to:)` will accept as the *after* half of a proof.
+///
+/// ## The measured defect, which the three conjuncts were all true of
+///
+/// `NudgeHost.closeSurfaces(endingAnyQuestionAs:)` ends the open question, hides the panel and
+/// forgets the open rung in **one synchronous main-actor call stack**. With a badge question
+/// pending and a glyph rung standing invisibly under it — the state the `markOnTheItem` conjunct
+/// below calls *"the ordinary state of every Reduce Motion user and everybody on a call"* — the
+/// first of those three statements drops the item's mark from `waiting` to the rung's own
+/// `noticing` and writes the item; the third puts it back to `unmarked`. Between them AppKit
+/// composites nothing. Measured on the shipping loop: `writesDuringTeardown=2`, `chargesDelta=1`,
+/// `markAfter=unmarked`, one row reading `accusation/delivered/menuBar/ignored`, one of the day's
+/// eight interruptions spent — nobody having clicked anything.
+///
+/// Every conjunct of the invariant was satisfied. The item really was written to, it really was
+/// not saying `noticing` before, and at the instant the reading was taken it really was saying
+/// `noticing`. What was false is the thing the reading was standing in for: **that a person could
+/// have seen it.** A change undone within the same turn is not a perceptible change, and the
+/// invariant could not tell, because it was handed a reading of a state that never survived to a
+/// frame.
+///
+/// ## Why this is a type and not a check
+///
+/// For `PerceptibleChange`'s own reason, stated below and now applied one level down. The five
+/// entry points that share `closeSurfaces`' shape could each have been taught to charge later,
+/// and that is the repair this epic has now made four times: fix the instance, leave the shape.
+/// The shape here is *"take a reading whenever you like and call it evidence"*, so the reading
+/// itself is the thing that is now type-checked. The memberwise initialiser is `fileprivate` and
+/// `SurfaceTurn.Seam.settled(_:)` is the only producer in the programme — pinned there by
+/// `check-forbidden.sh` (R-96s) exactly as this file's other receipt is pinned by R-96p — and a
+/// `Seam` is handed out by nothing but the end of a turn. **Proving a change from a reading taken
+/// mid-turn is not a bug in this programme; it is a thing that cannot be written down.**
+public struct SettledObservation: Sendable, Equatable, Hashable {
+    /// What the surfaces were saying once they had stopped moving.
+    public let reading: SurfaceObservation
+
+    /// **The only initialiser, and it is `fileprivate`.** See `SurfaceTurn.Seam.settled(_:)`.
+    fileprivate init(reading: SurfaceObservation) {
+        self.reading = reading
+    }
+}
+
+/// **One turn of the loop, and the seam at the end of it** (focus-my0).
+///
+/// A turn is everything the nudge loop does from one outside event: a judgement arriving, a click,
+/// a phase change, the display changing under a panel. Within a turn the surfaces are *moving* —
+/// a question is cleared, a presentation is rebuilt, an item is written, a rung is forgotten —
+/// and nothing AppKit draws is settled until the call stack unwinds and the main runloop gets its
+/// turn back. The seam is that moment, and it is the only moment a reading of the surfaces is
+/// evidence about what a person could have seen.
+///
+/// ## Why the turn is the host's own entry point rather than the runloop
+///
+/// The bead offered three mechanisms: a frame boundary, a deferral to the next runloop pass, or
+/// refusing to prove a change whose surface is torn down in the same call stack. This is the
+/// third, made positive: the proof is not *refused* by recognising a teardown — recognising
+/// teardowns one at a time is the method that produced four rounds of this defect — it is simply
+/// **taken later**, when there is nothing left in flight to undo it.
+///
+/// A `DispatchQueue.main.async` hop would be closer to the literal compositing boundary and it
+/// buys nothing this does not: everything that could undo the change has already run by the time
+/// the outermost call returns, because the loop is `@MainActor` and re-entrant only through its
+/// own synchronous callbacks. What it would cost is determinism — every drive in the suite, and
+/// the self-check, would have to pump a runloop to find out what the app charged, and a charge
+/// you have to wait for is a charge a test can miss.
+///
+/// ## What it is still green for, deliberately
+///
+/// A change that is undone in a **later** turn. A rung charged at this seam and torn down two
+/// milliseconds later by the next event really was on screen for a frame, and this type takes no
+/// view on whether that was long enough — that is a question about duration, and nothing in this
+/// programme measures one yet.
+@MainActor
+public final class SurfaceTurn {
+    public init() {}
+
+    /// What to do at the seam. Set once, by the object whose turns these are.
+    public var atSeam: (@MainActor (Seam) -> Void)?
+
+    /// How deep the current turn is. A turn entered from inside another turn is the same turn:
+    /// `menuBarItemRedrawn()` reached through a redraw that `setOpenRung(_:)` asked for is not a
+    /// new event, it is the middle of the one already being served.
+    private var depth = 0
+
+    /// Whether the seam handler is running, so that anything it does cannot open a second seam
+    /// underneath itself.
+    private var settling = false
+
+    /// Whether a turn is open — the reading that says *"the surfaces may still be moving"*.
+    public var isOpen: Bool { depth > 0 }
+
+    /// Run `body` as part of one turn, and reach the seam when the outermost one ends.
+    ///
+    /// The seam runs on the way out of a throwing body too: a turn that failed half way through
+    /// has left the surfaces in whatever state it left them, and that state is exactly the one a
+    /// person is about to see.
+    @discardableResult
+    public func run<T>(_ body: () throws -> T) rethrows -> T {
+        depth += 1
+        defer {
+            depth -= 1
+            if depth == 0, !settling {
+                settling = true
+                atSeam?(Seam())
+                settling = false
+            }
+        }
+        return try body()
+    }
+
+    /// **The witness that a reading was taken at a seam**, and the only producer of a
+    /// `SettledObservation`.
+    ///
+    /// Handed to the seam handler and to nobody else. It carries no state because it is not a
+    /// value about the surfaces; it is a value about *when*, and the only thing that can make one
+    /// is the end of a turn.
+    public struct Seam {
+        fileprivate init() {}
+
+        /// Bless a reading taken now, at the seam, as evidence.
+        public func settled(_ reading: SurfaceObservation) -> SettledObservation {
+            SettledObservation(reading: reading)
+        }
+    }
 }
 
 /// **A change the person could perceive — and the only thing this app is allowed to charge for**
@@ -148,8 +300,11 @@ public struct PerceptibleChange: Sendable, Equatable, Hashable {
     /// - Parameters:
     ///   - surface: where the nudge landed. Its `perceptionChannel` chooses the question asked.
     ///   - before: the reading taken immediately before the landing was allowed to redraw
-    ///     anything.
-    ///   - after: the reading taken now.
+    ///     anything. An ordinary `SurfaceObservation`, because it is a baseline rather than
+    ///     evidence: what it has to be true of is the surfaces the change is measured *from*.
+    ///   - after: the reading taken at the seam, once the surfaces had stopped moving. It is a
+    ///     `SettledObservation` and nothing else will do — see that type for the day's
+    ///     interruption that a mid-turn reading of a mark that never reached a frame paid for.
     /// - Returns: the receipt, or `nil` — which means *"charge nothing"*, and never *"charge a
     ///   little less"*.
     ///
@@ -180,22 +335,23 @@ public struct PerceptibleChange: Sendable, Equatable, Hashable {
     public static func proven(
         on surface: NudgeSurface,
         from before: SurfaceObservation,
-        to after: SurfaceObservation
+        to settled: SettledObservation
     ) -> PerceptibleChange? {
+        let after = settled.reading
         switch surface.perceptionChannel {
         case .menuBarItem:
             let itemMoved = after.menuBarWrites > before.menuBarWrites
                 || after.menuBarAnnouncements > before.menuBarAnnouncements
             guard itemMoved,
-                  before.markOnTheItem != surface.menuBarAttention,
-                  after.markOnTheItem == surface.menuBarAttention
+                  !before.carries(surface),
+                  after.carries(surface)
             else { return nil }
 
         case .panelWindow:
-            guard after.panelIsShowingTheNudge else { return nil }
+            guard after.carries(surface) else { return nil }
 
         case .popoverContents:
-            guard after.popoverIsShowingTheNudge else { return nil }
+            guard after.carries(surface) else { return nil }
 
         case .banner:
             // Unobservable, therefore unprovable, therefore free. Nothing routes here (U-2) and

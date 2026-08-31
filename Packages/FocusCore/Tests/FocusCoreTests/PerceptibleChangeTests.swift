@@ -10,7 +10,26 @@ import Testing
 /// Every case here is a *pair* of `SurfaceObservation`s, and the assertion is always the same
 /// one: a receipt exists exactly when something moved on the surface's own channel.
 @Suite("A charge needs a change the person could perceive")
+@MainActor
 struct PerceptibleChangeTests {
+    /// **A reading blessed by a real seam** (focus-my0).
+    ///
+    /// Every fold below is about *what* was on the surfaces, so each one needs an `after` half
+    /// that the type will accept — and there is exactly one way to get one, which is to let a
+    /// `SurfaceTurn` finish. Written as a helper rather than as a stub because a stub would be a
+    /// second producer, and the whole of focus-my0 is that a reading nothing vouched for was
+    /// treated as evidence.
+    static func settled(_ reading: SurfaceObservation) -> SettledObservation {
+        var blessed: SettledObservation?
+        let turn = SurfaceTurn()
+        turn.atSeam = { seam in blessed = seam.settled(reading) }
+        turn.run {}
+        guard let blessed else {
+            fatalError("a turn ended without reaching its seam")
+        }
+        return blessed
+    }
+
     /// Every reading a surface can be in, as a small closed set the folds below cross.
     static func readings() -> [SurfaceObservation] {
         var all: [SurfaceObservation] = []
@@ -60,7 +79,9 @@ struct PerceptibleChangeTests {
         var refused = 0
         for before in Self.readings() {
             for after in Self.readings() {
-                let change = PerceptibleChange.proven(on: .menuBar, from: before, to: after)
+                let change = PerceptibleChange.proven(
+                    on: .menuBar, from: before, to: Self.settled(after)
+                )
                 let itemMoved = after.menuBarWrites > before.menuBarWrites
                     || after.menuBarAnnouncements > before.menuBarAnnouncements
                 let expected = itemMoved
@@ -106,7 +127,9 @@ struct PerceptibleChangeTests {
             popoverIsShowingTheNudge: false
         )
         #expect(
-            PerceptibleChange.proven(on: .menuBar, from: atLanding, to: whileTheBadgeIsUp) == nil,
+            PerceptibleChange.proven(
+                on: .menuBar, from: atLanding, to: Self.settled(whileTheBadgeIsUp)
+            ) == nil,
             "a rung the item never mentioned was charged"
         )
         // The question is answered, the badge goes, the item falls to the rung's own mark.
@@ -118,7 +141,9 @@ struct PerceptibleChangeTests {
             popoverIsShowingTheNudge: false
         )
         #expect(
-            PerceptibleChange.proven(on: .menuBar, from: atLanding, to: afterTheBadgeGoes) != nil,
+            PerceptibleChange.proven(
+                on: .menuBar, from: atLanding, to: Self.settled(afterTheBadgeGoes)
+            ) != nil,
             "the item said the rung's own mark and the rung was still not charged"
         )
     }
@@ -143,7 +168,7 @@ struct PerceptibleChangeTests {
         )
         #expect(
             PerceptibleChange.proven(
-                on: .menuBar, from: alreadyNoticing, to: laterStillNoticing
+                on: .menuBar, from: alreadyNoticing, to: Self.settled(laterStillNoticing)
             ) == nil
         )
     }
@@ -157,9 +182,13 @@ struct PerceptibleChangeTests {
         var popoverCharges = 0
         for before in Self.readings() {
             for after in Self.readings() {
-                let onPanel = PerceptibleChange.proven(on: .panel, from: before, to: after)
+                let onPanel = PerceptibleChange.proven(
+                    on: .panel, from: before, to: Self.settled(after)
+                )
                 #expect((onPanel != nil) == after.panelIsShowingTheNudge)
-                let onBadge = PerceptibleChange.proven(on: .popoverBadge, from: before, to: after)
+                let onBadge = PerceptibleChange.proven(
+                    on: .popoverBadge, from: before, to: Self.settled(after)
+                )
                 #expect((onBadge != nil) == after.popoverIsShowingTheNudge)
                 if onPanel != nil { panelCharges += 1 }
                 if onBadge != nil { popoverCharges += 1 }
@@ -177,12 +206,65 @@ struct PerceptibleChangeTests {
         for before in Self.readings() {
             for after in Self.readings() {
                 #expect(
-                    PerceptibleChange.proven(on: .notification, from: before, to: after) == nil
+                    PerceptibleChange.proven(
+                        on: .notification, from: before, to: Self.settled(after)
+                    ) == nil
                 )
                 pairs += 1
             }
         }
         #expect(pairs > 0, "no readings were folded, so this proves nothing")
+    }
+
+    /// **A turn entered from inside a turn is the same turn** (focus-my0).
+    ///
+    /// The nudge loop reaches its own entry points through its own synchronous callbacks: a
+    /// landing asks the composition root for a redraw, the redraw writes the item, and the write
+    /// calls `menuBarItemRedrawn()` — which is an entry point, in the middle of the one already
+    /// being served. If that inner call reached a seam, the charge would be proven against a
+    /// reading taken exactly where the defect took it, and the whole repair would be a no-op.
+    @Test("the seam is reached once, when the outermost turn ends")
+    func aNestedTurnReachesNoSeam() {
+        let turn = SurfaceTurn()
+        var seams = 0
+        var openAtSeam: [Bool] = []
+        turn.atSeam = { _ in
+            seams += 1
+            openAtSeam.append(turn.isOpen)
+        }
+        turn.run {
+            #expect(turn.isOpen)
+            #expect(seams == 0)
+            turn.run {
+                #expect(turn.isOpen)
+            }
+            #expect(seams == 0, "an inner turn reached a seam of its own")
+            turn.run {
+                turn.run {}
+            }
+            #expect(seams == 0, "a doubly nested turn reached a seam of its own")
+        }
+        #expect(seams == 1)
+        #expect(openAtSeam == [false], "the seam ran while the surfaces were still moving")
+        #expect(!turn.isOpen)
+        // And the next event is its own turn, with its own seam.
+        turn.run {}
+        #expect(seams == 2)
+    }
+
+    /// **The seam is reached on the way out of a turn that threw**, because a turn that failed
+    /// half way through has still left the surfaces in the state a person is about to see.
+    @Test("a turn that throws still reaches its seam")
+    func aThrowingTurnReachesItsSeam() {
+        struct Stop: Error {}
+        let turn = SurfaceTurn()
+        var seams = 0
+        turn.atSeam = { _ in seams += 1 }
+        #expect(throws: Stop.self) {
+            try turn.run { throw Stop() }
+        }
+        #expect(seams == 1)
+        #expect(!turn.isOpen, "a turn that threw was left open")
     }
 
     /// **A proof names its own surface**, so one cannot be spent on another. The host reads the
@@ -196,10 +278,14 @@ struct PerceptibleChangeTests {
             panelIsShowingTheNudge: true,
             popoverIsShowingTheNudge: true
         )
-        let change = PerceptibleChange.proven(on: .panel, from: .nothingSeen, to: shown)
+        let change = PerceptibleChange.proven(
+            on: .panel, from: .nothingSeen, to: Self.settled(shown)
+        )
         #expect(change?.surface == .panel)
         #expect(change?.channel == .panelWindow)
-        let badge = PerceptibleChange.proven(on: .popoverBadge, from: .nothingSeen, to: shown)
+        let badge = PerceptibleChange.proven(
+            on: .popoverBadge, from: .nothingSeen, to: Self.settled(shown)
+        )
         #expect(badge?.surface == .popoverBadge)
         #expect(badge?.channel == .popoverContents)
     }
