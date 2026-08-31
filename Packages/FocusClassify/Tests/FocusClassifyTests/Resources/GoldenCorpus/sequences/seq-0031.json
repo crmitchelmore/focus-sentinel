@@ -1,6 +1,6 @@
 {
   "id": "seq-0031",
-  "note": "reservedAccusationUnits, which is the one rule in the budget that is not arithmetic. Seven of the day's eight shared units are spent — three questions and four rungs — and both kinds are then offered. The question is refused although a unit remains, because that unit is the accusation's; the accusation takes it. Running out of budget on questions and therefore being unable to say 'you are off task' is the failure that defeats the product, and this is the fixture that makes the reservation observable rather than merely written down.",
+  "note": "reservedAccusationUnits, which is the one rule in the budget that is not arithmetic. Seven of the day's eight shared units are spent — three questions and four PANEL rungs — and both kinds are then offered. The question is refused although a unit remains, because that unit is the accusation's; the accusation climbs to the panel and takes it. Running out of budget on questions and therefore being unable to say 'you are off task' is the failure that defeats the product. RE-RECORDED (focus-d6r): the four rungs that spent the seven units were ambient glyph landings, which spend nothing, and the rung that took the last unit was one too — so the fixture named for the accusation's reserved unit proved that a picture could take it. Each accusation is now an ambient landing escalated into a panel rung, and only the panel rung is charged.",
   "snapshot": {
     "priority": {
       "intent": "Write the Q3 proposal for Acme",
@@ -101,9 +101,6 @@
         "drift": "sustained",
         "nudge": "accuse:ambient",
         "accumulatedSeconds": 92
-      },
-      "then": {
-        "accusationOutcome": "returned"
       }
     },
     {
@@ -122,7 +119,7 @@
       "expect": {
         "verdict": "unrelated",
         "drift": "sustained",
-        "nudge": "accuse:ambient",
+        "nudge": "accuse:panel",
         "accumulatedSeconds": 92
       },
       "then": {
@@ -147,6 +144,26 @@
         "drift": "sustained",
         "nudge": "accuse:ambient",
         "accumulatedSeconds": 92
+      }
+    },
+    {
+      "advanceSeconds": 601,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "nudge": "silent:verdictDoesNotAuthorise",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 92,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "sustained",
+        "nudge": "accuse:panel",
+        "accumulatedSeconds": 92
       },
       "then": {
         "accusationOutcome": "returned"
@@ -169,6 +186,69 @@
         "verdict": "unrelated",
         "drift": "sustained",
         "nudge": "accuse:ambient",
+        "accumulatedSeconds": 92
+      }
+    },
+    {
+      "advanceSeconds": 601,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "nudge": "silent:verdictDoesNotAuthorise",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 92,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "sustained",
+        "nudge": "accuse:panel",
+        "accumulatedSeconds": 92
+      },
+      "then": {
+        "accusationOutcome": "returned"
+      }
+    },
+    {
+      "advanceSeconds": 601,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "nudge": "silent:verdictDoesNotAuthorise",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 92,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "sustained",
+        "nudge": "accuse:ambient",
+        "accumulatedSeconds": 92
+      }
+    },
+    {
+      "advanceSeconds": 601,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "nudge": "silent:verdictDoesNotAuthorise",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 92,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "sustained",
+        "nudge": "accuse:panel",
         "accumulatedSeconds": 92
       },
       "then": {
@@ -223,13 +303,33 @@
         "drift": "sustained",
         "nudge": "accuse:ambient",
         "accumulatedSeconds": 92
+      }
+    },
+    {
+      "advanceSeconds": 601,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "nudge": "silent:budgetExhausted",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 92,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "sustained",
+        "nudge": "accuse:panel",
+        "accumulatedSeconds": 92
       },
       "then": {
         "accusationOutcome": "returned"
       }
     }
   ],
-  "expectMandates": 5,
+  "expectMandates": 10,
   "expectQueries": 3,
-  "expectAccusations": 5
+  "expectAccusations": 10
 }

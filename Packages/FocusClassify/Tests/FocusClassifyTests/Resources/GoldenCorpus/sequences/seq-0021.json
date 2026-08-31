@@ -1,6 +1,6 @@
 {
   "id": "seq-0021",
-  "note": "dailyAccusationCap and dailyInterruptionCap, in one day. Four questions are offered and six accusation rungs are delivered; EIGHT interruptions reach the person, which is the shared cap, and the last two questions are refused because the accusations spent the budget. The two limits must genuinely compete or 'shared' is a word with no consequence — dailyInterruptionCap is deliberately less than dailyQueryCap plus dailyAccusationCap, and this is the fixture in which that arithmetic is felt.",
+  "note": "dailyAccusationCap and dailyInterruptionCap, in one day, spent by things that actually say something (focus-d6r). Two questions are answered and twelve accusation rungs are delivered — six ambient glyph landings and the six PANEL rungs they escalate into — and EIGHT interruptions reach the person, which is the shared cap, so the last two subjects are refused. The two limits must genuinely compete or 'shared' is a word with no consequence; dailyInterruptionCap is deliberately less than dailyQueryCap plus dailyAccusationCap, and this is the fixture in which that arithmetic is felt. RE-RECORDED: every accusation in this day used to be accuse:ambient and each was de-escalated by a 'returned' outcome, so the ladder never climbed and the budget this fixture exhausted was exhausted ENTIRELY BY GLYPH LANDINGS — six pictures nobody was spoken to by, certified here as the reason the app fell silent. That is focus-d6r's defect committed as expected behaviour, and it survived focus-ndh because focus-ndh repaired InterventionLog.budget and not NudgeReplay, so this lane went on measuring the old arithmetic. The rungs that spend a cap are the rungs that carry a sentence.",
   "snapshot": {
     "priority": {
       "intent": "Write the Q3 proposal for Acme",
@@ -79,9 +79,6 @@
         "drift": "sustained",
         "nudge": "accuse:ambient",
         "accumulatedSeconds": 92
-      },
-      "then": {
-        "accusationOutcome": "returned"
       }
     },
     {
@@ -99,7 +96,7 @@
       "expect": {
         "verdict": "unrelated",
         "drift": "sustained",
-        "nudge": "accuse:ambient",
+        "nudge": "accuse:panel",
         "accumulatedSeconds": 92
       },
       "then": {
@@ -123,9 +120,6 @@
         "drift": "sustained",
         "nudge": "accuse:ambient",
         "accumulatedSeconds": 92
-      },
-      "then": {
-        "accusationOutcome": "returned"
       }
     },
     {
@@ -143,7 +137,7 @@
       "expect": {
         "verdict": "unrelated",
         "drift": "sustained",
-        "nudge": "accuse:ambient",
+        "nudge": "accuse:panel",
         "accumulatedSeconds": 92
       },
       "then": {
@@ -167,6 +161,25 @@
         "drift": "sustained",
         "nudge": "accuse:ambient",
         "accumulatedSeconds": 92
+      }
+    },
+    {
+      "advanceSeconds": 601,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 92,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "sustained",
+        "nudge": "accuse:panel",
+        "accumulatedSeconds": 92
       },
       "then": {
         "accusationOutcome": "returned"
@@ -188,6 +201,107 @@
         "verdict": "unrelated",
         "drift": "sustained",
         "nudge": "accuse:ambient",
+        "accumulatedSeconds": 92
+      }
+    },
+    {
+      "advanceSeconds": 601,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 92,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "sustained",
+        "nudge": "accuse:panel",
+        "accumulatedSeconds": 92
+      },
+      "then": {
+        "accusationOutcome": "returned"
+      }
+    },
+    {
+      "advanceSeconds": 601,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 92,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "sustained",
+        "nudge": "accuse:ambient",
+        "accumulatedSeconds": 92
+      }
+    },
+    {
+      "advanceSeconds": 601,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 92,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "sustained",
+        "nudge": "accuse:panel",
+        "accumulatedSeconds": 92
+      },
+      "then": {
+        "accusationOutcome": "returned"
+      }
+    },
+    {
+      "advanceSeconds": 601,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 92,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "sustained",
+        "nudge": "accuse:ambient",
+        "accumulatedSeconds": 92
+      }
+    },
+    {
+      "advanceSeconds": 601,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 92,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "sustained",
+        "nudge": "accuse:panel",
         "accumulatedSeconds": 92
       },
       "then": {
@@ -235,7 +349,7 @@
       }
     }
   ],
-  "expectMandates": 6,
+  "expectMandates": 12,
   "expectQueries": 2,
-  "expectAccusations": 6
+  "expectAccusations": 12
 }

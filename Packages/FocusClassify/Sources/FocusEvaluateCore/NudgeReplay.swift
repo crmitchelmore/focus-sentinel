@@ -409,8 +409,25 @@ public struct NudgeWorld: Sendable, Equatable {
         case .surface(let surface):
             if rung.kind.rank > 0, standing != rung.kind.rank - 1 { escalationsFromDeferred += 1 }
             ladder.reduce(.delivery(route.delivery), now: now)
-            accusationsToday += 1
-            interruptionsToday += 1
+            // **The row first, and the caps from the row** (focus-ndh, focus-d6r).
+            //
+            // It was `accusationsToday += 1; interruptionsToday += 1`, unconditionally, on a
+            // branch that cannot see which rung it is folding — so this lane charged the ambient
+            // glyph for both caps long after `InterventionLog.budget` had stopped charging it for
+            // either. Two implementations of *what one rung costs*, and only the store's was ever
+            // repaired: the report's `nudge.*` numbers were computed against the pre-focus-ndh
+            // arithmetic. Built from the same `InterventionEvent` the counters take, and asked
+            // the same two questions the store asks of a stored row, so the lane that measures
+            // the day and the lane that lives it cannot disagree about the price of a rung.
+            let event = InterventionEvent(
+                kind: .accusation,
+                rung: rung.kind,
+                subject: rung.subject ?? "",
+                surface: surface,
+                disposition: .delivered
+            )
+            if event.spendsTheAccusationCap { accusationsToday += 1 }
+            if event.spendsTheInterruptionCap { interruptionsToday += 1 }
             fatigue = FatigueController.reduce(fatigue, event: .delivered(.accusation), now: now)
             // **Only a surface with something to press occupies the slot** (focus-k42, U-2), the
             // same rule `NudgeHost` applies. A glyph or a badge is a delivery and not an
@@ -420,15 +437,7 @@ public struct NudgeWorld: Sendable, Equatable {
                 slot = InterruptionSlot(holder: .accusation(rung))
             }
             deliveredAccusations += 1
-            counters.record(
-                InterventionEvent(
-                    kind: .accusation,
-                    rung: rung.kind,
-                    subject: rung.subject ?? "",
-                    surface: surface,
-                    disposition: .delivered
-                )
-            )
+            counters.record(event)
 
         case .unavailable(let reason):
             ladder.reduce(.delivery(route.delivery), now: now)
