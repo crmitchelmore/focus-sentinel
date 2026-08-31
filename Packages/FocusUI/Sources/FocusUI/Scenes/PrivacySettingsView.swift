@@ -25,6 +25,10 @@ public struct PrivacySettingsView: View {
     private let summary: SensingSummary
     private let capabilities: CapabilityMatrix
     private let verdict: VerdictSnapshot?
+    /// The displays this pane bounds itself against; `nil` for the live ones. Injectable for the
+    /// reason `NudgePanelController.displays` is: the display this defect is worst on is a 13-inch
+    /// laptop, and no lane can hand the pane one if it reads `NSScreen` for itself.
+    private let screens: ShellScreens
 
     @Environment(\.appearanceTraits) private var traits
     @Environment(\.shellTextScale) private var textScale
@@ -35,12 +39,14 @@ public struct PrivacySettingsView: View {
         storeURL: URL = FocusStore.applicationSupportURL,
         summary: SensingSummary = .inactive,
         capabilities: CapabilityMatrix = CapabilityMatrix(),
-        verdict: VerdictSnapshot? = nil
+        verdict: VerdictSnapshot? = nil,
+        screens: ShellScreens = nil
     ) {
         self.storeURL = storeURL
         self.summary = summary
         self.capabilities = capabilities
         self.verdict = verdict
+        self.screens = screens
     }
 
     /// The strings this pane draws. Non-empty by construction, and asserted so: a Settings
@@ -56,18 +62,40 @@ public struct PrivacySettingsView: View {
             .capabilityExplanation
         ] + VerdictInspectorView.contentKeys
 
+    /// **The pane, bounded** (focus-nu6).
+    ///
+    /// This used to be `content` and nothing else — one column, no scroll view, no height of any
+    /// kind — inside a window whose only commitment was `minWidth: 460`. The column measures
+    /// 2 699 points at the shipping text size, which is taller than any display made, so the
+    /// capability table and the verdict inspector below it were off the bottom of the screen on
+    /// every Mac at every window width, and no gesture in macOS reached them.
+    ///
+    /// The scroll view that would have fixed that was **deleted on purpose**, and the note left
+    /// behind said why: a pane inside one rendered blank under `ImageRenderer`, so the committed
+    /// baseline would have been a picture of nothing. That is the product being reshaped to suit
+    /// the harness. The scroll is back; what changed instead is the harness's subject, which is
+    /// `content` below — and the reason is now a test that re-measures it every run rather than a
+    /// comment, because the note's diagnosis was also wrong. See `BoundedSurfaceTests`.
     public var body: some View {
-        content
-            .defaultFocus($focus, .privacyRevealStore)
+        BoundedSurface(
+            width: ShellSurfaceBounds.settingsWidth,
+            ceiling: ShellSurfaceBounds.settingsCeiling(
+                screens: screens ?? NudgePanelController.currentScreens()
+            )
+        ) {
+            content
+        }
+        .defaultFocus($focus, .privacyRevealStore)
     }
 
-    /// Laid out as one column with no scroll view, and that is a rendering decision with a
-    /// measurement behind it: a `ScrollView` reports no intrinsic height, so under
-    /// `ImageRenderer` this pane rasterised as a blank 1040×2699 rectangle with 1 040 ink pixels
-    /// — the committed baseline would have been a picture of nothing. Measured here, on this
-    /// machine, the first time the capability table was put inside one. The Settings window
-    /// sizes itself to the tab's content instead.
-    private var content: some View {
+    /// **One column, every pixel of ink this pane draws, and no scroll view.**
+    ///
+    /// Internal rather than private because this is what the baseline lane renders:
+    /// `ImageRenderer` cannot rasterise a `ScrollView` at all — measured, not inferred — so the
+    /// picture has to be taken of the column, and the container around it is proved structurally
+    /// instead. Neither half is the harness dictating the layout: the shipping pane scrolls, and
+    /// what the snapshot is a picture of is the thing that has pixels in it.
+    var content: some View {
         VStack(alignment: .leading, spacing: spacing) {
             ShellText(.settingsPrivacyStatement)
                 .lineLimit(nil)

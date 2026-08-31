@@ -83,7 +83,8 @@ struct BoundedSurfaceTests {
             abs(committed - natural) <= SurfaceSizeCommitments.tolerance,
             "a \(natural)-point column opened at \(committed) points"
         )
-        #expect(!Self.scrolls(surface, atHeight: committed))
+        let scrolls = Self.scrolls(surface, atHeight: committed)
+        #expect(!scrolls, "a surface that fits drew a scroll bar")
     }
 
     // MARK: - Over the ceiling
@@ -103,8 +104,9 @@ struct BoundedSurfaceTests {
             committed <= Self.ceiling + SurfaceSizeCommitments.tolerance,
             "\(natural) points of content opened a surface \(committed) points tall"
         )
+        let scrolls = Self.scrolls(surface, atHeight: Self.ceiling)
         #expect(
-            Self.scrolls(surface, atHeight: Self.ceiling),
+            scrolls,
             """
             the surface clamped \(natural) points of content to \(committed) and drew no scroll \
             view: everything past the clamp is laid out and unreachable
@@ -123,9 +125,10 @@ struct BoundedSurfaceTests {
             let surface = Self.surface(rows: rows)
             let committed = Self.height(of: surface)
             let wasClamped = committed < natural - SurfaceSizeCommitments.tolerance
+            let scrolls = Self.scrolls(surface, atHeight: committed)
             #expect(committed <= Self.ceiling + SurfaceSizeCommitments.tolerance)
             #expect(
-                !wasClamped || Self.scrolls(surface, atHeight: committed),
+                !wasClamped || scrolls,
                 "\(rows) rows: \(natural) points cut to \(committed) with no scroll view"
             )
         }
@@ -151,7 +154,8 @@ struct BoundedSurfaceTests {
         let natural = Self.height(of: Column(rows: 60).frame(width: Self.width, alignment: .leading))
         let surface = Self.surface(rows: 60, ceiling: nil)
         #expect(abs(Self.height(of: surface) - natural) <= SurfaceSizeCommitments.tolerance)
-        #expect(!Self.scrolls(surface, atHeight: natural))
+        let scrolls = Self.scrolls(surface, atHeight: natural)
+        #expect(!scrolls, "an unbounded surface drew a scroll bar")
     }
 
     // MARK: - The reason the ScrollView was deleted, recorded as a measurement

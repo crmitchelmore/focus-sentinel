@@ -377,7 +377,20 @@ public struct ShellSettingsView: View {
             .tabItem { tabLabel(.privacy) }
             .tag(SettingsTab.privacy)
         }
-        .frame(minWidth: 460, minHeight: 520)
+        // **A committed width and a ceiling, not a pair of minimums** (focus-nu6).
+        //
+        // `minWidth: 460, minHeight: 520` is a floor and nothing else: it says how small the
+        // window may be and never how large, so a tab whose content ran to 2 699 points opened a
+        // window 2 699 points tall and put its own lower half off the bottom of the display. The
+        // panes bound themselves now — each is a `BoundedSurface` at the same width and the same
+        // display-derived ceiling — and what is left here is the window agreeing to those
+        // numbers rather than contradicting them.
+        .frame(width: ShellSurfaceBounds.settingsWidth)
+        .frame(maxHeight: ShellSurfaceBounds.settingsCeiling().map { CGFloat($0) })
+        // The same `fixedSize` the panes use, and for the same measured reason: a `maxHeight`
+        // frame reports the whole proposal, so without it the General tab — three controls —
+        // would open a window as tall as the display.
+        .fixedSize(horizontal: false, vertical: true)
         // **The values are reported by the panes now, not by this window** (focus-7ow).
         //
         // They used to be reported here, and the reason was measured: a macOS `TabView` builds

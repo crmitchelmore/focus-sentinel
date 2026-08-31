@@ -69,7 +69,20 @@ enum SnapshotComponent: String, CaseIterable, Sendable {
         case .shortcutsHelp:
             return AnyView(ShortcutsHelpContent(registry: .shell))
         case .privacySettings:
-            return AnyView(PrivacySettingsView(storeURL: Self.storeURL))
+            // **The pane's `content`, not its `body`** (focus-nu6).
+            //
+            // The body is a `BoundedSurface`, and past its ceiling that is a `ScrollView` —
+            // which `ImageRenderer` cannot rasterise at all. Measured, and re-measured every run
+            // by `BoundedSurfaceTests.imageRendererStillCannotDrawAScrollView`: a column renders
+            // at the right size with 295 654 ink pixels, and the same column inside a scroll view
+            // renders at the same size with **zero**.
+            //
+            // The pane used to have no scroll view for exactly this reason — the shipping layout
+            // was cut to suit this lane, and a person could not read the pane on any display as a
+            // result. Rendering the column is the other repair: this lane keeps proving what it
+            // is the right instrument for, which is what the pane *looks like*, and the container
+            // around it is proved structurally where a picture cannot go.
+            return AnyView(PrivacySettingsView(storeURL: Self.storeURL).content)
         default:
             preconditionFailure("unhandled snapshot component \(rawValue)")
         }

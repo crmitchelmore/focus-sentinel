@@ -94,6 +94,19 @@ public struct BoundedSurface<Content: View>: View {
     }
 }
 
+/// **Which displays a hosted surface bounds itself against** (focus-nu6).
+///
+/// The panel takes its displays through an injectable `displays` closure and the popover takes
+/// them as an argument, precisely so a test can hand either one a 13-inch laptop and read what it
+/// does. A surface that reads `NSScreen.screens` itself can only ever be measured against whatever
+/// display the machine running the gate happens to have — which means the interesting case, the
+/// small display this defect is worst on, is unreachable from every lane.
+///
+/// So each hosted surface takes an optional display list. `nil` means the live screens, so the
+/// shipping app is bounded whether or not anybody remembers to inject anything, and a test that
+/// hands over a laptop gets a deterministic ceiling.
+public typealias ShellScreens = [DisplayGeometry]?
+
 /// The ceilings the surfaces without a window controller are held to.
 ///
 /// Each is `SurfaceSizeCommitments.ceiling` with that surface's own three facts: what it reserves

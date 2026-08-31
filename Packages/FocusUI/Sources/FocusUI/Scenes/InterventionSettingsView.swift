@@ -90,6 +90,9 @@ public struct InterventionSettingsView: View {
     private let settings: InterventionSettings
     /// What was clicked. **Internal, so the unit lane can invoke it directly.**
     let onAction: (InterventionSettingsAction) -> Void
+    /// The displays this pane bounds itself against; `nil` for the live ones. See
+    /// `PrivacySettingsView.screens`.
+    private let screens: ShellScreens
 
     @Environment(\.appearanceTraits) private var traits
     @Environment(\.shellTextScale) private var textScale
@@ -97,9 +100,11 @@ public struct InterventionSettingsView: View {
 
     public init(
         settings: InterventionSettings,
+        screens: ShellScreens = nil,
         onAction: @escaping (InterventionSettingsAction) -> Void = { _ in }
     ) {
         self.settings = settings
+        self.screens = screens
         self.onAction = onAction
     }
 
@@ -113,12 +118,25 @@ public struct InterventionSettingsView: View {
     /// (`end` may be less than `start`), so this is arithmetic rather than a rule.
     nonisolated public static let minutesPerDay = 1_440
 
-    /// Laid out as one column with **no scroll view**, and that is a rendering decision with a
-    /// measurement behind it — the same one `PrivacySettingsView` records. A `ScrollView`
-    /// reports no intrinsic height, so under `ImageRenderer` a pane inside one rasterises as a
-    /// blank rectangle and the committed baseline would be a picture of nothing. The Settings
-    /// window sizes itself to the tab's content instead.
+    /// **The pane, bounded** (focus-nu6). Its column runs to five sections, a routing matrix and
+    /// a table of caps, and it had no height commitment of any kind — the same defect
+    /// `PrivacySettingsView` had, recorded in the same words, for the same reason: the scroll view
+    /// was deleted so the snapshot lane would render something. The scroll is back and the lane
+    /// renders `content` instead.
     public var body: some View {
+        BoundedSurface(
+            width: ShellSurfaceBounds.settingsWidth,
+            ceiling: ShellSurfaceBounds.settingsCeiling(
+                screens: screens ?? NudgePanelController.currentScreens()
+            )
+        ) {
+            content
+        }
+    }
+
+    /// **One column, every pixel of ink this pane draws, and no scroll view** — what the baseline
+    /// lane renders, for the reason `PrivacySettingsView.content` gives.
+    var content: some View {
         VStack(alignment: .leading, spacing: DesignTokens.spacing(spacing, scale: textScale)) {
             // **All five fields of `InterventionSettings`, each reported beside the section that
             // draws it** (focus-7ow).
