@@ -36,6 +36,29 @@ struct NudgeHostQuestionTests {
         .map { "verylongsegmentnumber\($0)" }
         .joined(separator: ".")
 
+    /// A display on which **no** decision can be pinned, whatever the copy resolves to
+    /// (focus-din).
+    ///
+    /// Chosen by the arithmetic rather than by a measurement, which is the point: the panel's
+    /// ceiling is `min(800, visible − 2 × edgeMargin)` floored at its own starting height, so 100
+    /// visible points is a ceiling of 52 — **below `DecisionSurfaceLayout.minimumContextHeight`
+    /// on its own**, so `SurfaceSizeCommitments.overflow(…)` answers `everythingScrolls` for a
+    /// decision of any height at all.
+    ///
+    /// A display picked from a measured decision would not do. The two lanes resolve the three
+    /// answers to different strings — the inner loop to their keys, the gate to real copy — so a
+    /// 200-point display that could not pin the keys pinned the sentences, and the same tree gave
+    /// two answers. Measured, and it is why this constant is derived from the two constants above
+    /// rather than from a panel.
+    static let tooShortForAnyDecision = DisplayGeometry(
+        displayID: 77,
+        screenIndex: 0,
+        isPrimary: true,
+        frame: ScreenRect(x: 0, y: 0, width: 1440, height: 189),
+        visibleFrame: ScreenRect(x: 0, y: 89, width: 1440, height: 100),
+        backingScaleFactor: 2
+    )
+
     // MARK: - Mutation 1 — the reading taken when the question goes up
 
     /// **A question on a panel nobody can answer is deferred, and nothing is written down.**
@@ -44,14 +67,22 @@ struct NudgeHostQuestionTests {
     /// delivered" is satisfied just as well by a loop that never asks anything, so the same
     /// fixture shape is driven twice and the difference between the two is the whole claim.
     ///
-    /// Gated on the compiled catalogs because the overflow is produced by real copy: in the
-    /// inner loop the String Catalog is not processed, `Is {subject} part of {task}?` resolves to
-    /// its key, and a panel of 191 points is not the layout this is about. The gate lane compiles
-    /// it, which is the lane this must hold in.
-    @Test(
-        "a question on a panel whose answers are out of reach is deferred, never delivered",
-        .enabled(if: LocalizationLane.catalogsAreCompiled)
-    )
+    /// **What "out of reach" means since focus-din**, and why this needs a display as well as a
+    /// sentence.
+    ///
+    /// A long question used to put the three answers below the fold, because the whole panel was
+    /// inside the scroll view. It is not any more: a decision surface never scrolls its decision,
+    /// so a question of any length keeps its answers in the viewport and — correctly — is
+    /// delivered. The case this test is about survives in one shape only: a surface on which the
+    /// **answers themselves** do not fit, which is `everythingScrolls` and is a fact about the
+    /// display rather than about the copy.
+    ///
+    /// So the overflow is driven from both ends. The sentence is still real and still enormous,
+    /// which is what makes the panel one the layout genuinely has to clamp; and the display is
+    /// injected through the panel's own seam, small enough that three buttons cannot be pinned
+    /// against it. That also takes the catalog gate off: the claim no longer depends on which
+    /// lane resolved the copy, so it holds in the inner loop and in the gate alike.
+    @Test("a question on a panel whose answers are out of reach is deferred, never delivered")
     func aQuestionNobodyCouldAnswerIsDeferred() throws {
         // The control: an ordinary subject, an ordinary panel, one delivered question.
         let ordinary = try NudgeHostFixture()
@@ -72,6 +103,9 @@ struct NudgeHostQuestionTests {
         // the fold. Nothing is delivered, nothing is counted, and the subject stays askable.
         let overflowing = try NudgeHostFixture()
         defer { overflowing.tearDown() }
+        // A display too short to hold three buttons, so the decision cannot be pinned against it
+        // and the panel scrolls whole — the one shape in which a person really cannot answer.
+        overflowing.panel.displays = { [Self.tooShortForAnyDecision] }
         overflowing.host.consider(
             NudgeHostFixture.uncertainJudgement(subject: Self.overflowingSubject)
         )
