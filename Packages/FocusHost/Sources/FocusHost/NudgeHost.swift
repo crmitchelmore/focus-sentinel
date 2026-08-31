@@ -1490,12 +1490,30 @@ final class NudgeHost {
             at: dateProvider.now,
             snoozeDuration: snoozeDuration
         )
-        apply(outcome, action: action, now: now, priorityID: priorityID)
-
+        // **The record is completed before the world moves** (focus-mwm).
+        //
+        // This was below `apply(…)`, and `apply(…)` is the statement that hands the outcome to
+        // whoever performs it — which for "Pause" is now e03's session machine, reached directly.
+        // Pausing takes the session out of `.focus`, `NudgeLifecycleWatch` turns that level into
+        // an edge, and `phaseLeftFocus()` closes the open rung as **`.ignored`** — all of it
+        // synchronously, inside this function, before the line that used to write the outcome.
+        // `InterventionLog.complete` is first-wins, so the day's record said the person had
+        // ignored the very nudge they had just answered.
+        //
+        // Measured only once "Pause" actually paused: with the cockpit closed the old code sent a
+        // command into a buffer and nothing moved, and with it open `CorrectionTotalityTests`
+        // registered a handler that recorded the command and did not pause either. The falsified
+        // row was reachable in the shipping app the whole time, on the ordinary path, whenever the
+        // main window happened to be open.
+        //
+        // Recording first is not "record before you know": the refusal above has already run, so
+        // by this line the loop has decided the click is one it will honour.
         if let interventionOutcome = Self.outcome(of: action) {
             complete(interventionOutcome, recordID: recordID)
             fatigue.reduce(.accusationResolved(interventionOutcome), now: now)
         }
+
+        apply(outcome, action: action, now: now, priorityID: priorityID)
 
         if let deEscalation = action.deEscalation {
             ladder.reduce(.deEscalated(deEscalation), now: now)
