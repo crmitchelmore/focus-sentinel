@@ -219,7 +219,7 @@ public final class NudgePanelController {
     /// point is here so the assertion is about a layout escape rather than about a rounding
     /// difference in some future AppKit — the defect it exists to catch overshot by **two
     /// thousand** points, so nothing real can hide inside it.
-    public static let sizeTolerance: Double = 1
+    public static let sizeTolerance: Double = SurfaceSizeCommitments.tolerance
 
     /// The window itself. **Internal, not public**: R-89's properties are asserted on this
     /// object by the unit lane through `@testable import`, and nothing outside this package has
@@ -525,11 +525,14 @@ public final class NudgePanelController {
         let measured = measurer.sizeThatFits(
             in: CGSize(width: Self.contentWidth, height: .greatestFiniteMagnitude)
         )
-        let ceiling = Self.maximumContentHeight(screens: displays())
-        let height = min(max(measured.height, Self.startingSize.height), ceiling)
-        // A hair of slack, so a content that measures a fraction over the ceiling because of a
-        // rounding difference does not acquire a scroll view it has no use for.
-        let scrolls = measured.height > ceiling + Self.sizeTolerance
+        let commitment = SurfaceSizeCommitments.commit(
+            measuredHeight: measured.height,
+            width: Self.contentWidth,
+            ceiling: Self.maximumContentHeight(screens: displays()),
+            minimum: Self.startingSize.height
+        )
+        let height = commitment.height
+        let scrolls = commitment.scrolls
 
         layoutGeneration += 1
         hosting.rootView = AnyView(
@@ -563,12 +566,18 @@ public final class NudgePanelController {
     /// bottom, whichever is smaller. A ceiling taken from a constant alone would put a panel off
     /// the bottom of a small display; one taken from the display alone would let a nudge fill a
     /// laptop screen, which is a nudge that has stopped being proportionate.
+    ///
+    /// **The arithmetic is `SurfaceSizeCommitments`' now, not this file's** (focus-nu6). It was
+    /// written here, and then written again — differently — for the popover, and five other
+    /// surfaces got no copy of it at all. What is left here is what is genuinely the panel's own:
+    /// its margin, its proportionality limit, and its floor.
     public static func maximumContentHeight(screens: [DisplayGeometry]) -> Double {
-        guard let display = DisplayMapper.primaryScreen(in: screens) else {
-            return absoluteMaximumHeight
-        }
-        let usable = display.visibleFrame.height - edgeMargin - edgeMargin
-        return max(min(absoluteMaximumHeight, usable), startingSize.height)
+        SurfaceSizeCommitments.ceiling(
+            screens: screens,
+            reserving: edgeMargin + edgeMargin,
+            absoluteMaximum: absoluteMaximumHeight,
+            minimum: startingSize.height
+        ) ?? absoluteMaximumHeight
     }
 
     /// The size the window is actually at, as opposed to any size anybody committed to.

@@ -400,7 +400,7 @@ public final class MenuBarController {
     /// How far over the ceiling a measurement may land before the content is given a scroll
     /// view. One point, for `NudgePanelController.sizeTolerance`'s reason: a layout escape is
     /// measured in hundreds or thousands of points and a rounding difference in fractions of one.
-    public static let popoverSizeTolerance: Double = 1
+    public static let popoverSizeTolerance: Double = SurfaceSizeCommitments.tolerance
 
     private var statusItem: NSStatusItem?
     private let popover = NSPopover()
@@ -1095,9 +1095,18 @@ public final class MenuBarController {
     /// With no display to read — a headless test rig, a Mac between display configurations —
     /// the answer is `nil`: nothing bounds a surface nobody can point at, and
     /// `popoverLayout(measuring:screens:)` then commits the measured height and scrolls nothing.
+    ///
+    /// **The arithmetic is `SurfaceSizeCommitments`' now** (focus-nu6): one copy, shared with the
+    /// panel and with the five surfaces that never had one. What stays here is what is the
+    /// popover's own — the space its arrow and its bottom margin reserve, and the fact that it
+    /// has no proportionality limit of its own.
     public static func popoverMaximumContentHeight(screens: [DisplayGeometry]) -> Double? {
-        guard let display = DisplayMapper.primaryScreen(in: screens) else { return nil }
-        return display.visibleFrame.height - popoverChromeAllowance - popoverEdgeMargin
+        SurfaceSizeCommitments.ceiling(
+            screens: screens,
+            reserving: popoverChromeAllowance + popoverEdgeMargin,
+            absoluteMaximum: nil,
+            minimum: 0
+        )
     }
 
     /// **The size the popover commits to for one content, and whether that content scrolls.**
@@ -1125,17 +1134,14 @@ public final class MenuBarController {
         let measured = measurer.sizeThatFits(
             in: CGSize(width: popoverContentWidth, height: .greatestFiniteMagnitude)
         )
-        guard let ceiling = popoverMaximumContentHeight(screens: screens) else {
-            return PopoverLayout(
-                size: CGSize(width: popoverContentWidth, height: measured.height),
-                scrolls: false
-            )
-        }
+        let commitment = SurfaceSizeCommitments.commit(
+            measuredHeight: measured.height,
+            width: popoverContentWidth,
+            ceiling: popoverMaximumContentHeight(screens: screens)
+        )
         return PopoverLayout(
-            size: CGSize(width: popoverContentWidth, height: min(measured.height, ceiling)),
-            // A hair of slack, so a content that measures a fraction over the ceiling because of
-            // a rounding difference does not acquire a scroll view it has no use for.
-            scrolls: measured.height > ceiling + popoverSizeTolerance
+            size: CGSize(width: commitment.width, height: commitment.height),
+            scrolls: commitment.scrolls
         )
     }
 }
