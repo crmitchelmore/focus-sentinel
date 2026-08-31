@@ -145,10 +145,26 @@ public enum FatigueDecision: Sendable, Equatable, Hashable {
 /// interruption budget cares about kinds, and one event type covering both would be a type that
 /// had to be filtered at every call site.
 public enum FatigueEvent: Sendable, Equatable, Hashable {
-    /// An interruption of this kind reached somebody. **Only a delivery starts a cooldown** —
-    /// a deferred rung nobody could see and a suppressed one the app chose not to make both
-    /// leave this state untouched (R-81).
-    case delivered(InterruptionKind)
+    /// **An interruption reached somebody and cost them something.**
+    ///
+    /// Only a delivery starts a cooldown — a deferred rung nobody could see and a suppressed one
+    /// the app chose not to make both leave this state untouched (R-81).
+    ///
+    /// **It carries the charge rather than the kind** (focus-uru). It was `.delivered(kind)`, and
+    /// at both of its production call sites the line above it derived an `InterruptionCharge`
+    /// from the delivered event — the single derivation of *"did this speak to anybody?"* — and
+    /// then folded this reducer **unconditionally on the next line**:
+    ///
+    ///     if let charge = InterruptionCharge(event, priorityID: …) { charges.append(charge) }
+    ///     fatigue = FatigueController.reduce(fatigue, event: .delivered(.accusation), now: now)
+    ///
+    /// So a glyph landing spent no cap and armed a 600-second cooldown, and the cooldown is a
+    /// spend: it is the gap the app keeps between sentences, and the glyph makes none. That is
+    /// the same half-treatment `PerceptibleChange` closed for the ledger and `InterruptionCharge`
+    /// closed for the caps, surviving one line below each of them. Taking the charge makes the
+    /// pair one decision — there is no charge for a rung that spoke to nobody, so there is no way
+    /// to spell the event either.
+    case delivered(InterruptionCharge)
     /// A question is over. `AskedQuestionOutcome.isAnswer` is what decides whether the run of
     /// unanswered questions continues or ends.
     case queryResolved(AskedQuestionOutcome)
@@ -414,25 +430,30 @@ public struct FatigueController: Sendable, Equatable {
         now: Duration
     ) -> FatigueState {
         switch event {
-        case .delivered(.query):
-            return FatigueState(
-                lastQueryAt: now,
-                lastAccusationAt: state.lastAccusationAt,
-                consecutiveUnansweredQueries: state.consecutiveUnansweredQueries,
-                consecutiveIgnoredAccusations: state.consecutiveIgnoredAccusations,
-                queriesSuspendedUntil: state.queriesSuspendedUntil,
-                accusationsHeldUntil: state.accusationsHeldUntil
-            )
-
-        case .delivered(.accusation):
-            return FatigueState(
-                lastQueryAt: state.lastQueryAt,
-                lastAccusationAt: now,
-                consecutiveUnansweredQueries: state.consecutiveUnansweredQueries,
-                consecutiveIgnoredAccusations: state.consecutiveIgnoredAccusations,
-                queriesSuspendedUntil: state.queriesSuspendedUntil,
-                accusationsHeldUntil: state.accusationsHeldUntil
-            )
+        case .delivered(let charge):
+            // Switched over the charge's kind, exhaustively — a `where` clause and a catch-all
+            // would put the accusation on the arm that also catches whatever a third kind turned
+            // out to be.
+            switch charge.kind {
+            case .query:
+                return FatigueState(
+                    lastQueryAt: now,
+                    lastAccusationAt: state.lastAccusationAt,
+                    consecutiveUnansweredQueries: state.consecutiveUnansweredQueries,
+                    consecutiveIgnoredAccusations: state.consecutiveIgnoredAccusations,
+                    queriesSuspendedUntil: state.queriesSuspendedUntil,
+                    accusationsHeldUntil: state.accusationsHeldUntil
+                )
+            case .accusation:
+                return FatigueState(
+                    lastQueryAt: state.lastQueryAt,
+                    lastAccusationAt: now,
+                    consecutiveUnansweredQueries: state.consecutiveUnansweredQueries,
+                    consecutiveIgnoredAccusations: state.consecutiveIgnoredAccusations,
+                    queriesSuspendedUntil: state.queriesSuspendedUntil,
+                    accusationsHeldUntil: state.accusationsHeldUntil
+                )
+            }
 
         case .queryResolved(let outcome):
             return resolvingQuery(state, answered: outcome.isAnswer, now: now)

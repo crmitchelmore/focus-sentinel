@@ -380,11 +380,11 @@ struct FatigueControllerTests {
         var controller = FatigueController()
         #expect(controller.state.lastQueryAt == nil)
 
-        controller.reduce(.delivered(.query), now: .seconds(300))
+        controller.reduce(.delivered(InterruptionCharge(.query)), now: .seconds(300))
         #expect(controller.state.lastQueryAt == .seconds(300))
         #expect(controller.state.lastAccusationAt == nil)
 
-        controller.reduce(.delivered(.accusation), now: .seconds(400))
+        controller.reduce(.delivered(InterruptionCharge(.accusation)), now: .seconds(400))
         #expect(controller.state.lastAccusationAt == .seconds(400))
         #expect(controller.state.lastQueryAt == .seconds(300))
     }

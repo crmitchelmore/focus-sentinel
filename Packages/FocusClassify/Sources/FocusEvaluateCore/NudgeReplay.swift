@@ -433,10 +433,18 @@ public struct NudgeWorld: Sendable, Equatable {
                 surface: surface,
                 disposition: .delivered
             )
+            //
+            // **The charge and the cooldown are one decision** (focus-uru). The `reduce` below
+            // used to sit on the next line, outside the `if`, folding `.delivered(.accusation)`
+            // unconditionally — so the glyph spent no cap and armed a 600-second cooldown, and a
+            // cooldown is a spend: it is the gap the app keeps between sentences and the glyph
+            // makes none. `FatigueEvent.delivered` now takes the charge, so there is no way to
+            // spell the event for a rung that spoke to nobody and the pair cannot be
+            // half-applied.
             if let charge = InterruptionCharge(event, priorityID: activePriorityID) {
                 charges.append(charge)
+                fatigue = FatigueController.reduce(fatigue, event: .delivered(charge), now: now)
             }
-            fatigue = FatigueController.reduce(fatigue, event: .delivered(.accusation), now: now)
             // **Only a surface with something to press occupies the slot** (focus-k42, U-2), the
             // same rule `NudgeHost` applies. A glyph or a badge is a delivery and not an
             // occupation: nothing can take an ambient rung down, so a glyph that held the slot
@@ -483,8 +491,12 @@ public struct NudgeWorld: Sendable, Equatable {
                 openQueryKey = key
             }
             deliveredQuerySubjects.append(warrant.subject.identifier)
-            charges.append(InterruptionCharge(.query, priorityID: activePriorityID))
-            fatigue = FatigueController.reduce(fatigue, event: .delivered(.query), now: now)
+            // One charge, spent on both — the accusation branch's rule, applied here too. A
+            // question always speaks, so there is no `if` to be on the wrong side of; what there
+            // was, was two constructions of one value, which is the same seam one step earlier.
+            let charge = InterruptionCharge(.query, priorityID: activePriorityID)
+            charges.append(charge)
+            fatigue = FatigueController.reduce(fatigue, event: .delivered(charge), now: now)
             // **The same rule the accusation branch above applies, applied to the question**
             // (focus-k42, U-2). A question on the badge is an invitation behind a click: it is a
             // delivery and not an occupation, and a badge that held the slot would withhold every

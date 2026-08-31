@@ -1238,7 +1238,7 @@ final class NudgeHost {
     ) {
         deliveredCount += 1
         chargesPaidFor.append(change)
-        fatigue.reduce(.delivered(.query), now: now)
+        fatigue.reduce(.delivered(InterruptionCharge(.query, priorityID: priorityID)), now: now)
         openQuestion?.recordID = write(
             InterventionEvent(
                 kind: .query,
@@ -1565,17 +1565,32 @@ final class NudgeHost {
     ) {
         deliveredCount += 1
         chargesPaidFor.append(change)
-        fatigue.reduce(.delivered(.accusation), now: monotonicClock.elapsed)
-        openRung?.recordID = write(
-            InterventionEvent(
-                kind: .accusation,
-                rung: rung.kind,
-                subject: rung.subject ?? "",
-                surface: change.surface,
-                disposition: .delivered
-            ),
-            priorityID: priorityID
+
+        // **The row, and the charge FROM the row** — the shape `NudgeReplay` uses, for the same
+        // reason. The event is built once and every consumer is derived from it, so the record
+        // and the price of the rung cannot disagree.
+        let event = InterventionEvent(
+            kind: .accusation,
+            rung: rung.kind,
+            subject: rung.subject ?? "",
+            surface: change.surface,
+            disposition: .delivered
         )
+
+        // **The cooldown is a spend, and it is charged like one** (focus-uru). This line read
+        // `fatigue.reduce(.delivered(.accusation), …)`, unconditionally, on a branch that reaches
+        // the glyph as well as the panel — so an ambient rung that spent neither cap still armed
+        // `RelevancePolicy.mandateCooldown`. `InterruptionCharge` is the single derivation of
+        // *"did this speak to anybody?"* and `FatigueEvent.delivered` now takes one, so the
+        // question is asked once and answered for both.
+        //
+        // The **row** is written either way and that is deliberate: a delivered ambient rung is a
+        // delivery — the Intervention pane draws it, `deferredRungShare` counts it (focus-sq7) —
+        // and it is not an interruption.
+        if let charge = InterruptionCharge(event, priorityID: priorityID) {
+            fatigue.reduce(.delivered(charge), now: monotonicClock.elapsed)
+        }
+        openRung?.recordID = write(event, priorityID: priorityID)
     }
 
     @discardableResult

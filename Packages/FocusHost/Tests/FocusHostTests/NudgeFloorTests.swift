@@ -719,4 +719,68 @@ struct NudgeFloorTests {
         )
         #expect(!root.nudgePanel.isVisible, "a second panel appeared inside the cooldown")
     }
+
+
+    // MARK: - The seam between what a rung costs and what it delays
+
+    /// **A glyph landing does not push the rung that speaks out by the gap between two
+    /// sentences** (focus-uru).
+    ///
+    /// `deliveredRung(…)` folded `fatigue.reduce(.delivered(.accusation), …)` unconditionally, on
+    /// the line below the one that derives an `InterruptionCharge` — so a rung that spent neither
+    /// cap still armed `RelevancePolicy.mandateCooldown`. That is 600 s against the ladder's own
+    /// `escalationDwell` of 300 s, so the app marked somebody and then could not follow it up for
+    /// twice as long as the ladder had asked for.
+    ///
+    /// **The drive is exactly one dwell**, deliberately. Every existing climb in this file
+    /// advances by `mandateCooldown + 1` between judgements, which is past both spans — so none of
+    /// them could tell the ladder's dwell from a cooldown a glyph had armed, and that is why this
+    /// went four rounds. `DeliveryCostSeamTests` folds the same seam over every rung; this is the
+    /// host lane's own half, through the shipping composition root.
+    @Test("a glyph landing leaves the panel rung reachable at the ladder's own dwell")
+    func aGlyphLandingDoesNotDelayTheRungThatSpeaks() throws {
+        let clock = FixedMonotonicClock()
+        let (root, priorityID) = try Self.joinedRoot(clock: clock)
+        defer { Self.tearDown(root) }
+
+        let subject = Self.subjects[0]
+        let landing = try Self.drift(root, clock: clock, into: subject, thenBreak: false)
+        try #require(
+            landing.landedOn == .menuBar && landing.wasPerceived,
+            "the glyph never landed, so nothing could have armed a cooldown — \(landing.summary)"
+        )
+
+        // Exactly one escalation dwell later — and well inside the ten minutes the app keeps
+        // between two sentences.
+        clock.advance(by: RelevancePolicy.escalationDwell + .seconds(1))
+        #expect(
+            RelevancePolicy.escalationDwell < RelevancePolicy.mandateCooldown,
+            "the two spans are equal, so this drive can no longer tell them apart"
+        )
+
+        root.relevanceHost.onJudgement?(NudgeHostFixture.unrelatedJudgement(subject: subject))
+        NudgeHostFixture.settle()
+
+        #expect(
+            root.nudgeHost.currentRung == .panel,
+            """
+            the ladder was held at the glyph past its own dwell by a rung that spent nothing — \
+            \(String(describing: root.nudgeHost.lastDecision))
+            """
+        )
+        #expect(
+            root.nudgePanel.isVisible && root.nudgePanel.showing == .accusation,
+            "the panel rung was reached and no window carrying it appeared"
+        )
+
+        // And the day's account of itself says what it should: one sentence, not two.
+        let log = InterventionLog(
+            context: root.modelContainer.mainContext,
+            dateProvider: FixedDateProvider(now: NudgeHostFixture.reference),
+            calendar: NudgeHostFixture.londonCalendar
+        )
+        let budget = try log.budget(on: log.today, priorityID: priorityID)
+        #expect(budget.accusationsToday == 1, "the glyph landing was charged an accusation")
+        #expect(budget.interruptionsToday == 1, "the glyph landing spent a shared unit")
+    }
 }
