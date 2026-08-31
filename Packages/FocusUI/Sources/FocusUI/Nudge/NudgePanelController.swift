@@ -120,6 +120,70 @@ public final class NudgePanelController {
                 && applicationKeyWindowIsNil == before.applicationKeyWindowIsNil
         }
 
+        /// **The same two conjunctions, in three values rather than two** (focus-rxc).
+        ///
+        /// `tookNothing(comparedTo:)` and `changedNothing(comparedTo:)` are `Bool`, and a `Bool`
+        /// has no room for the thing that actually happens on a contended machine: reading 1 was
+        /// not taken. Both guard against that — correctly, because `nil == nil` satisfying "the
+        /// frontmost application is unchanged" is a proof resting on a measurement nobody made —
+        /// and, having guarded, the only value they have left to return is `false`. So an
+        /// unreadable frontmost is reported as **the panel stole focus**, which is a red gate over
+        /// a property of `NSWorkspace`. Measured: one gate run in six, under contention.
+        ///
+        /// This is the same claim with the third value available. Readings 2, 3 and 4 are taken
+        /// from the window and the application and are **always** available, so they are still
+        /// judged when reading 1 is missing — an unreadable frontmost costs the probe reading 1
+        /// and nothing else, rather than costing it all four.
+        ///
+        /// - Parameter before: the readings taken before the show.
+        /// - Returns: `.broken` only for a theft that was actually observed.
+        public func focusVerdict(comparedTo before: FocusReadings) -> ProbeOutcome {
+            if applicationIsActive {
+                return .broken("showing the panel activated the application")
+            }
+            if panelIsKey {
+                return .broken("showing the panel made it the key window")
+            }
+            if !applicationKeyWindowIsNil {
+                return .broken("showing the panel installed a key window on the application")
+            }
+            guard frontmostWasRead, before.frontmostWasRead else {
+                return .notTaken(.frontmostApplicationUnavailable)
+            }
+            guard frontmostBundleIdentifier == before.frontmostBundleIdentifier else {
+                return .broken(
+                    """
+                    showing the panel moved the front from \
+                    \(before.frontmostBundleIdentifier ?? "nothing") to \
+                    \(frontmostBundleIdentifier ?? "nothing")
+                    """
+                )
+            }
+            return .holds
+        }
+
+        /// The `changedNothing` half, in the same three values and for the same reason: the
+        /// ordinary self-check runs in a process that is legitimately active, so what it can claim
+        /// is that showing the panel **moved** nothing.
+        public func changeVerdict(comparedTo before: FocusReadings) -> ProbeOutcome {
+            if applicationIsActive != before.applicationIsActive {
+                return .broken("showing the panel changed whether the application was active")
+            }
+            if panelIsKey != before.panelIsKey {
+                return .broken("showing the panel changed which window was key")
+            }
+            if applicationKeyWindowIsNil != before.applicationKeyWindowIsNil {
+                return .broken("showing the panel changed whether the application had a key window")
+            }
+            guard frontmostWasRead, before.frontmostWasRead else {
+                return .notTaken(.frontmostApplicationUnavailable)
+            }
+            guard frontmostBundleIdentifier == before.frontmostBundleIdentifier else {
+                return .broken("showing the panel moved the frontmost application")
+            }
+            return .holds
+        }
+
         /// The report the self-check serialises and `focus-steal` reads.
         ///
         /// Reading 1 is `null` when it was not taken, never `""`. The empty string was the same

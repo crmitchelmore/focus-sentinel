@@ -110,6 +110,32 @@ public enum DecisionSurfaceReachability {
     /// SwiftUI frame and an AppKit content rect is measured in fractions of one.
     public static let tolerance: Double = 1
 
+    /// **The reading, in the three values the situation has** (focus-rxc).
+    ///
+    /// `everyActionIsReachable` is a `Bool`, and one of the ways it goes false is a property of
+    /// the machine rather than of the surface: with no display attached, `isWhollyOnAScreen` is
+    /// false because there is no screen for the window to be wholly on. In the shipping app that
+    /// conflation is harmless — a Mac with no display genuinely has no surface a person can reach
+    /// — but in a lane it means a headless run reports *"the panel is off screen"*, which is a
+    /// defect the run did not observe.
+    ///
+    /// This is the same reading with `notTaken` available, for the call sites whose screen list is
+    /// the live `NSScreen.screens` rather than a fixture. A lane that hands over its own displays
+    /// should keep asserting on `everyActionIsReachable` directly: a fixture is never unavailable,
+    /// and routing it through here would only make a total assertion look conditional.
+    ///
+    /// - Parameters:
+    ///   - reading: what `evaluate(…)` returned.
+    ///   - screens: the display list it was evaluated against.
+    public static func verdict(
+        _ reading: DecisionSurfaceReading,
+        screens: [DisplayGeometry]
+    ) -> ProbeOutcome {
+        guard !screens.isEmpty else { return .notTaken(.noDisplayAttached) }
+        guard reading.everyActionIsReachable else { return .broken(reading.summary) }
+        return .holds
+    }
+
     /// - Parameters:
     ///   - isVisible: `NSWindow.isVisible`.
     ///   - surfaceFrame: the window's frame, in AppKit screen coordinates.

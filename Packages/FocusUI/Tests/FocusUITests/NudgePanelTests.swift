@@ -167,7 +167,20 @@ struct NudgePanelTests {
         // 4 — the same fact from the application's side.
         #expect(after.applicationKeyWindowIsNil)
 
-        #expect(after.tookNothing(comparedTo: before))
+        // **The conjunction, in three values** (focus-rxc).
+        //
+        // This was `#expect(after.tookNothing(comparedTo: before))`, and it went red whenever
+        // `NSWorkspace.frontmostApplication` answered `nil` at either end — a property of the
+        // machine, measured in one gate run in six under contention. The guard inside
+        // `tookNothing` is right to refuse a proof from an unmade measurement; a `Bool` simply had
+        // no value left but `false` to refuse it with, so "could not measure" arrived as "the
+        // panel stole focus".
+        //
+        // Readings 2, 3 and 4 are asserted above and are always available, so nothing is lost:
+        // an unreadable frontmost costs this probe reading 1 and no more.
+        let outcome = after.focusVerdict(comparedTo: before)
+        if let banner = outcome.banner { print(banner) }
+        #expect(!outcome.isBroken, "\(outcome.summary)")
     }
 
     /// `tookNothing(comparedTo:)` is the conjunction, and it must fail on **each** of the four
@@ -263,6 +276,71 @@ struct NudgePanelTests {
         #expect(!missingAfter.changedNothing(comparedTo: takenBefore))
         #expect(!takenAfter.tookNothing(comparedTo: missingBefore))
         #expect(!takenAfter.changedNothing(comparedTo: missingBefore))
+    }
+
+    /// **The same cross product, in the three values the situation actually has** (focus-rxc).
+    ///
+    /// The suite above is right about what must not be *claimed* and says nothing about what a
+    /// run should therefore **cost**. Every one of its three missing-reading cells returns
+    /// `false`, and `false` is the defect's value — so the gate reported a `nil` from
+    /// `NSWorkspace` as the panel stealing focus, in one run of six under contention.
+    ///
+    /// So the same sixteen-cell grid, judged by `focusVerdict`: the three cells where reading 1
+    /// is missing must read **NOT TAKEN**, and — this is the half that keeps the repair from
+    /// being a way to go quiet — a real theft must still read **broken**, including when reading
+    /// 1 is missing at the same time. A missing reading 1 costs the probe reading 1. It does not
+    /// buy an amnesty on readings 2, 3 and 4.
+    @Test("an unreadable frontmost reads NOT TAKEN, and never hides a theft")
+    func anUnreadableFrontmostReadsNotTaken() {
+        func readings(
+            _ frontmost: String?,
+            active: Bool = false,
+            key: Bool = false,
+            keyWindowIsNil: Bool = true
+        ) -> NudgePanelController.FocusReadings {
+            NudgePanelController.FocusReadings(
+                frontmostBundleIdentifier: frontmost,
+                applicationIsActive: active,
+                panelIsKey: key,
+                applicationKeyWindowIsNil: keyWindowIsNil,
+                panelIsVisible: true
+            )
+        }
+
+        let taken = readings("com.example.Decoy")
+        let missing = readings(nil)
+
+        // The one cell that may make a claim.
+        #expect(taken.focusVerdict(comparedTo: taken) == .holds)
+        #expect(taken.changeVerdict(comparedTo: taken) == .holds)
+
+        // The three in which reading 1 is missing at one end or both: not a failure, and not a
+        // measurement either.
+        for (after, before) in [(missing, missing), (missing, taken), (taken, missing)] {
+            let outcome = after.focusVerdict(comparedTo: before)
+            #expect(
+                outcome == .notTaken(.frontmostApplicationUnavailable),
+                "an unreadable frontmost was reported as \(outcome.summary)"
+            )
+            #expect(!outcome.isBroken, "a property of NSWorkspace failed the gate")
+            #expect(after.changeVerdict(comparedTo: before).obstacle == .frontmostApplicationUnavailable)
+        }
+
+        // **The half that keeps this honest.** Readings 2, 3 and 4 are always available, so a
+        // theft is still a theft while reading 1 is missing.
+        for stolen in [
+            readings(nil, active: true),
+            readings(nil, key: true),
+            readings(nil, keyWindowIsNil: false)
+        ] {
+            #expect(
+                stolen.focusVerdict(comparedTo: missing).isBroken,
+                "an unreadable frontmost bought an amnesty on a focus theft"
+            )
+        }
+
+        // And a front that really moved is broken, not merely unproven.
+        #expect(readings("com.example.Other").focusVerdict(comparedTo: taken).isBroken)
     }
 
     /// The serialised form the gate reads. A missing reading 1 is `null` — never `""`, which is
@@ -533,16 +611,24 @@ struct NudgePanelTests {
                     + "\(reading.summary)"
             )
 
+            // **Through the verdict, not the Bool** (focus-rxc). This panel's displays are the
+            // live `NSScreen.screens`, and `isWhollyOnAScreen` is false with none attached —
+            // which is a property of the machine, not of the panel. A headless run reads NOT
+            // TAKEN and stays green; a panel that really is unreachable is still red.
+            let verdict = DecisionSurfaceReachability.verdict(
+                reading,
+                screens: NudgePanelController.currentScreens()
+            )
+            if let banner = verdict.banner { print(banner) }
             #expect(
-                reading.everyActionIsReachable,
-                "\(panelCase.name): \(reading.summary) in a \(frame.width) x \(frame.height) panel"
+                !verdict.isBroken,
+                "\(panelCase.name): \(verdict.summary) in a \(frame.width) x \(frame.height) panel"
             )
             #expect(
                 controller.hitTestsEveryAction(offering: panelCase.offered),
                 "\(panelCase.name): a click at the centre of an offered action hits nothing"
             )
             #expect(reading.isVisible)
-            #expect(reading.isWhollyOnAScreen)
 
             // The width is the commitment.
             #expect(abs(frame.width - NudgePanelController.contentWidth) <= Self.sizeTolerance)
@@ -631,7 +717,12 @@ struct NudgePanelTests {
         Self.settle()
 
         let offered = Self.queryPresentation.offeredAnswerIdentifiers
-        #expect(controller.decisionSurfaceReading(offering: offered).everyActionIsReachable)
+        let onADisplay = DecisionSurfaceReachability.verdict(
+            controller.decisionSurfaceReading(offering: offered),
+            screens: NudgePanelController.currentScreens()
+        )
+        if let banner = onADisplay.banner { print(banner) }
+        #expect(!onADisplay.isBroken, "\(onADisplay.summary)")
 
         controller.panel.setFrameOrigin(NSPoint(x: 0, y: -1186))
         let reading = controller.decisionSurfaceReading(offering: offered)
@@ -745,7 +836,13 @@ struct NudgePanelTests {
         // 2212-point window again.
         #expect(abs(frame.height - ceiling) <= Self.sizeTolerance)
         let reading = controller.decisionSurfaceReading(offering: enormous.offeredActionIdentifiers)
-        #expect(reading.isWhollyOnAScreen)
+        // Not asserted as a `Bool`: with no display attached there is no screen for the panel to
+        // be wholly on, and that is the machine's property rather than the panel's (focus-rxc).
+        let onADisplay: ProbeOutcome = NudgePanelController.currentScreens().isEmpty
+            ? .notTaken(.noDisplayAttached)
+            : (reading.isWhollyOnAScreen ? .holds : .broken("the clamped panel left its display"))
+        if let banner = onADisplay.banner { print(banner) }
+        #expect(!onADisplay.isBroken, "\(onADisplay.summary)")
 
         // And the honest reading: the actions are down there somewhere, and this is not a surface
         // a question may be counted as delivered on.
@@ -828,7 +925,12 @@ struct NudgePanelTests {
         // The layout reported every action, and the reading is a reading of this layout.
         let onTheNudge = controller.decisionSurfaceReading(offering: offered)
         #expect(onTheNudge.unreportedActions.isEmpty)
-        #expect(onTheNudge.everyActionIsReachable)
+        let verdict = DecisionSurfaceReachability.verdict(
+            onTheNudge,
+            screens: NudgePanelController.currentScreens()
+        )
+        if let banner = verdict.banner { print(banner) }
+        #expect(!verdict.isBroken, "\(verdict.summary)")
 
         // Now something with no action targets in it at all.
         controller.update(showing: .accusation, content: Text(verbatim: "an interstitial with nothing to click"))

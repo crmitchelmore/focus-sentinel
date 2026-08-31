@@ -122,10 +122,17 @@ struct MenuBarPopoverReadingTests {
         // The measurement that started this bead: unmeasured, this popover stood 483 points above
         // the top of the display with a 21-character priority and 2755 with a long one.
         let reading = controller.decisionSurfaceReading(of: .accusation)
+        // **Not a `Bool`** (focus-rxc): the popover is judged against the live `NSScreen.screens`,
+        // and with none attached there is no display for it to be wholly on — a property of the
+        // machine, which used to arrive as "the popover is off screen".
+        let onADisplay: ProbeOutcome = NudgePanelController.currentScreens().isEmpty
+            ? .notTaken(.noDisplayAttached)
+            : (reading.isWhollyOnAScreen ? .holds : .broken(reading.summary))
+        if let banner = onADisplay.banner { print(banner) }
         #expect(
-            reading.isWhollyOnAScreen,
+            !onADisplay.isBroken,
             """
-            not wholly on a display: the popover is at \(controller.popoverFrame), \
+            \(onADisplay.summary): the popover is at \(controller.popoverFrame), \
             its item at \(controller.buttonFrame as Any)
             """
         )
@@ -148,10 +155,15 @@ struct MenuBarPopoverReadingTests {
 
         for nudge in MenuBarNudge.allCases {
             let reading = controller.decisionSurfaceReading(of: nudge)
+            let verdict = DecisionSurfaceReachability.verdict(
+                reading,
+                screens: NudgePanelController.currentScreens()
+            )
+            if let banner = verdict.banner { print(banner) }
             #expect(
-                reading.everyActionIsReachable,
+                !verdict.isBroken,
                 """
-                \(nudge): \(reading.summary) — the popover is at \(controller.popoverFrame), \
+                \(nudge): \(verdict.summary) — the popover is at \(controller.popoverFrame), \
                 laid out at \(controller.currentPopoverLayout)
                 """
             )
@@ -183,7 +195,12 @@ struct MenuBarPopoverReadingTests {
         )
         #expect(reading.unreportedActions.isEmpty, "a correction was drawn nowhere at all")
         if !controller.currentPopoverLayout.scrolls {
-            #expect(reading.everyActionIsReachable, "\(reading.summary)")
+            let verdict = DecisionSurfaceReachability.verdict(
+                reading,
+                screens: NudgePanelController.currentScreens()
+            )
+            if let banner = verdict.banner { print(banner) }
+            #expect(!verdict.isBroken, "\(verdict.summary)")
         }
     }
 
