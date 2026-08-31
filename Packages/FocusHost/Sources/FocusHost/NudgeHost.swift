@@ -71,8 +71,9 @@ final class NudgeHost {
     ///
     /// Every door into this object from outside — a judgement, a click, a redraw, a phase change,
     /// the display changing — runs inside `turn.run { … }`, and nothing is charged until the
-    /// outermost one ends. That is the whole of focus-my0: `closeSurfaces(endingAnyQuestionAs:)`
-    /// clears the question, hides the panel and forgets the rung in one synchronous call stack,
+    /// outermost one ends. That is the whole of focus-my0:
+    /// `closeSurfaces(endingAnyQuestionAs:andAnyRungAs:)`
+    /// clears the question, hides the panel and ends the rung in one synchronous call stack,
     /// and the first of those three statements makes the item say the rung's own mark for as long
     /// as it takes to reach the third. AppKit composites nothing in between, so the charge that
     /// was taken from a reading in the middle was taken for a frame that never existed.
@@ -832,8 +833,10 @@ final class NudgeHost {
     /// that reached nobody went on holding the one interruption slot for the rest of the session.
     ///
     /// The rung is therefore recorded **only where it lands**, carrying the surface it landed on.
-    /// Every path that reaches nobody calls `forgetOpenRung()` instead: a rung with no surface is
-    /// not a quieter interruption, it is not an interruption at all.
+    /// The path that reaches nobody has already called `endOpenRung(.replaced)`, once, above the
+    /// route: a rung with no surface is not a quieter interruption, it is not an interruption at
+    /// all, and whether *this* rung found one is a fact about this rung rather than about the one
+    /// it displaced.
     private func accuse(
         rung: LadderRung,
         route: SurfaceRoute,
@@ -863,6 +866,40 @@ final class NudgeHost {
         ladder.offer(at: surroundings.monotonic, budgetPermits: true)
 
         let presentation = accusationPresentation(for: rung, commitment: commitment)
+
+        // **What every surface was doing before this rung was allowed to touch one**
+        // (focus-1b5, focus-nrl). Taken once, above everything below, because every branch needs
+        // the same baseline and a branch that took its own could take it after its own redraw —
+        // which is the difference between measuring a change and asserting one.
+        //
+        // **Above the line that ends the rung this loop is already holding**, and that order is
+        // load-bearing (focus-s4m). `PerceptibleChange.proven(on:from:to:)`'s second conjunct is
+        // *"the item was not already saying this"*; a baseline taken after the old rung's mark had
+        // been taken off the item would read `unmarked`, and two consecutive glyph rungs — the
+        // picture focus-1b5 measured six charges against one write for — would become chargeable
+        // again.
+        let observedBeforeLanding = observation(of: .accusation)
+
+        // **The rung this loop is holding ends here, before the next one lands** (focus-s4m,
+        // focus-fwy).
+        //
+        // One statement covering what used to be four — the three `forgetOpenRung()` calls in the
+        // deferral branches below and the replacement hidden inside `setOpenRung(_:)` — because
+        // whether the *new* rung finds a surface is a fact about the new rung, and the old one is
+        // over either way. `RungExit.replaced` is what that means.
+        //
+        // **Before `landed(on:)`, and that is why it cannot live inside the assignment.**
+        // `RungExit.countsAsAnIgnoredAccusation` reduces `LadderEvent.rungIgnored`, and
+        // `LadderMachine.ignore(now:)` reads the state it is standing in — so an ignore reduced
+        // after the new delivery had been recorded would be counted against the rung that has just
+        // landed rather than the one that just ended, and at the top rung it would return the
+        // ladder to `.idle` and destroy the panel delivery in the same breath as making it.
+        //
+        // The extra status-item write this can cost inside one turn is exactly what `SurfaceTurn`
+        // exists to absorb: the charge is settled at the seam, from the baseline above, once
+        // nothing is left in flight to undo the surface.
+        endOpenRung(.replaced)
+
         guard let surface = route.surface else {
             record(
                 deferral: route.deferralReason ?? .noSurfaceAvailable,
@@ -871,16 +908,10 @@ final class NudgeHost {
                 priorityID: priorityID
             )
             // Reached nobody at all, so there is no rung on any surface — and nothing may go on
-            // holding the interruption slot in its name (focus-k42).
-            forgetOpenRung()
+            // holding the interruption slot in its name (focus-k42). The line that gives it back
+            // is `endOpenRung(.replaced)` above, which has already run.
             return
         }
-
-        // **What every surface was doing before this rung was allowed to touch one**
-        // (focus-1b5, focus-nrl). Taken once, above the switch, because every branch below needs
-        // the same baseline and a branch that took its own could take it after its own redraw —
-        // which is the difference between measuring a change and asserting one.
-        let observedBeforeLanding = observation(of: .accusation)
 
         switch surface {
         case .menuBar, .popoverBadge:
@@ -990,9 +1021,9 @@ final class NudgeHost {
                     subject: rung.subject,
                     priorityID: priorityID
                 )
-                // The panel has just been hidden, so this rung is on no surface at all. It gives
-                // the slot back and stops offering corrections nobody can see (focus-k42).
-                forgetOpenRung()
+                // The panel has just been hidden, so this rung is on no surface at all. The slot
+                // was given back and the corrections nobody can see were withdrawn by
+                // `endOpenRung(.replaced)` above (focus-k42, focus-s4m).
                 return
             }
             // Landed, answerable, and therefore genuinely occupying the one interruption slot —
@@ -1031,7 +1062,6 @@ final class NudgeHost {
                 subject: rung.subject,
                 priorityID: priorityID
             )
-            forgetOpenRung()
 
         }
     }
@@ -1066,7 +1096,7 @@ final class NudgeHost {
         )
         // **Nothing is taken down here** (focus-2rg, U-2).
         //
-        // This line was `forgetOpenRung()`, unconditional, and it is preemption's other direction
+        // This line forgot the open rung, unconditional, and it is preemption's other direction
         // outliving the mechanism. Ask what it could still reach: `slot.offering(warrant)` above
         // withholds against any rung that `holdsTheInterruptionSlot`, so a rung on the **panel**
         // never gets here. What did was exactly the two rungs that hold no slot — the ambient
@@ -1102,7 +1132,7 @@ final class NudgeHost {
             // **A question that reached no surface at all is over** (focus-k42's shape, on the
             // question side). `record(deferral:)` writes `disposition = deferred`, which is
             // R-81's *"reached nobody"* — and this object used to keep the question anyway, with
-            // a `nil` surface, unanswerable and unexpirable. `accuse(…)` calls `forgetOpenRung()`
+            // a `nil` surface, unanswerable and unexpirable. `accuse(…)` ends its own open rung
             // on precisely this path; this is the same statement, and it is made before the
             // deferral is written so no reader can observe the two disagreeing.
             endOpenQuestion(.neverDelivered)
@@ -1723,10 +1753,10 @@ final class NudgeHost {
             // the question affordance in full; a correction aimed at an accusation must not spend
             // it.
             if let openQuestion, openQuestion.surface == .panel {
-                closeSurfaces(endingAnyQuestionAs: .worldMovedOn)
+                closeSurfaces(endingAnyQuestionAs: .worldMovedOn, andAnyRungAs: .answered)
             } else {
                 panel.hide()
-                forgetOpenRung()
+                endOpenRung(.answered)
             }
         }
     }
@@ -1769,7 +1799,7 @@ final class NudgeHost {
             // **Answering a question ends the question, and nothing else** (focus-ti4, focus-nrl).
             //
             // This was `closeSurfaces(endingAnyQuestionAs: .answered)`, which is *take everything
-            // down*: the question, then `panel.hide()`, then `forgetOpenRung()`. The last two
+            // down*: the question, then `panel.hide()`, then the rung. The last two
             // belong to a session ending or a commitment changing, and they are wrong here — an
             // answer is a statement about one subject, and the accusation standing beside it is
             // about another.
@@ -2033,11 +2063,18 @@ final class NudgeHost {
         // ordered out by `endOpenQuestion(_:)` on its way through; the withdrawal below is still
         // what drops `.fullScreenAuxiliary`, which `hide()` does not.
         //
-        // The slot is released by this and `forgetOpenRung()` and by nothing else: it is derived
+        // The slot is released by this and `endOpenRung(_:)` and by nothing else: it is derived
         // from the question and the rung, so forgetting them **is** giving it back (focus-zrs).
         endOpenQuestion(.worldMovedOn)
         panel.withdrawForPresentation()
-        forgetOpenRung()
+        // **And the ladder is finally told** (focus-s4m). This was `forgetOpenRung()`, which
+        // touched no ladder state at all — so the promise three paragraphs up was kept for the
+        // *rung* the ladder was standing on and broken for the delivery underneath it: the panel
+        // came off the screen, `deliveredAt` stayed written, the escalation clock went on running
+        // through the presentation, and at the top rung `candidate(at:budgetPermits:)` answered
+        // `nil` for the rest of the run. `RungExit.presentationWithdrew` takes the delivery back,
+        // which is what "resumes at the rung it never left" has always meant.
+        endOpenRung(.presentationWithdrew)
     }
 
     // MARK: - The display changed under something that was already up (focus-56y)
@@ -2107,32 +2144,29 @@ final class NudgeHost {
                 """
             )
             panel.hide()
-            // Before the deferral is written, so the record and the ladder agree: the attempt ended
-            // as a deferral, and there is no delivery left standing for it to have escalated from.
-            //
-            // **Both halves of "un-delivered", together** (focus-mfc). `ladder.undeliver` stops the
-            // escalation clock; `InterventionLog.withdraw` stops the spend. Without the second one
-            // a rung nobody saw kept `disposition == .delivered`, which is exactly what
-            // `spendsBudget` reads, so the stranded nudge went on charging the day's interruption
-            // budget — and under U-1 the budget is what decides whether the app may speak again.
-            ladder.undeliver(at: monotonicClock.elapsed)
-            // The rung's own key, not the live pointer (focus-lmo): this row is a statement about
-            // the accusation that was stranded, and that accusation was about one commitment.
-            undeliverRecord(
-                open.recordID,
-                kind: .accusation,
-                subject: open.rung.subject,
-                priorityID: open.priorityID
-            )
-            forgetOpenRung()
+            // **One door, and the take-back is what the door is for** (focus-s4m). This was three
+            // statements — `ladder.undeliver`, `undeliverRecord(…)` and `forgetOpenRung()` — and
+            // it was the *only* one of the six rung endings that took a delivery back. Two of the
+            // other five needed one and had none. `RungExit.displayStranded` is this ending stated
+            // as a case, and `takesBackTheDelivery` is the property the other two are now measured
+            // against rather than compared with by eye.
+            endOpenRung(.displayStranded)
         }
     }
 
-    /// Everything comes down, and any open question ends by the named exit.
-    private func closeSurfaces(endingAnyQuestionAs exit: QuestionExit) {
-        endOpenQuestion(exit)
+    /// Everything comes down, and each open nudge ends by the exit named for it.
+    ///
+    /// **Two exits, because there are two nudges** (focus-s4m). This took one, and the rung's half
+    /// was `forgetOpenRung()` — a call that says nothing about *why*, which is how the same
+    /// statement came to serve a correction the person pressed, a session that ended and an
+    /// application that quit. `RungExit` makes the caller say which.
+    private func closeSurfaces(
+        endingAnyQuestionAs questionExit: QuestionExit,
+        andAnyRungAs rungExit: RungExit
+    ) {
+        endOpenQuestion(questionExit)
         panel.hide()
-        forgetOpenRung()
+        endOpenRung(rungExit)
     }
 
     /// **The one door out of an open question** (focus-v0u).
@@ -2187,7 +2221,6 @@ final class NudgeHost {
         if exit.leavesTheInterruptionUnanswered {
             complete(.ignored, recordID: question.recordID)
         }
-
         let surface = question.surface
 
         // One assignment, because the question is one value. It used to be six lines, and the
@@ -2219,81 +2252,155 @@ final class NudgeHost {
         )
     }
 
-    /// **The one place `openRung` is written** — `endOpenQuestion(_:)`'s twin, for the twin
-    /// reason (focus-uru, focus-v0u, focus-xix).
+    /// **The one door out of a delivered rung** — `endOpenQuestion(_:)`'s twin, for the twin
+    /// reason (focus-s4m, focus-fwy, focus-uru, focus-v0u, focus-xix).
+    ///
+    /// A question's ending has been a closed vocabulary with one door since focus-v0u. A rung's
+    /// ending was six hand-written doors, and the three things an ending has to settle — the
+    /// ladder, the row, the two backoffs — were distributed across them by memory. Two of the six
+    /// told the ladder nothing at all: `hideOverlays()` left it standing at
+    /// `.engaged(rung: .panel, deliveredAt:)` with `candidate(at:budgetPermits:)` answering `nil`
+    /// for ever, so ⌃⌘H **permanently silenced the only rung that says anything**, and
+    /// `withdrawForPresentation()` had the same hole under a doc comment promising the opposite.
+    ///
+    /// So every consequence moves onto `RungExit`, where it is a property of the *kind* of ending
+    /// rather than a line a caller can omit, and this is the only place in this object that lets a
+    /// rung go. `RungExit`'s three `switch`es are exhaustive: a seventh door does not compile
+    /// until somebody has ruled on the ladder, the row and the backoffs for it.
     ///
     /// The badge's answers go with the rung they belonged to. An open popover still offering
     /// *"this is relevant"* for a rung this host has forgotten is the accusation half of
     /// focus-v0u's orphan, and `resolve(…)` would drop the click in a `guard`.
-    ///
-    /// **And replacing a rung is as much a change as forgetting one.** `forgetOpenRung()` had the
-    /// redraw and the two assignments in `accuse(…)` did not — so a rung that was on the badge and
-    /// was replaced by one on the glyph or the panel left the popover drawing the *old*
-    /// accusation, and a click on it would have been applied to the new rung: a correction about
-    /// the wrong application, written under `resolve(…)`'s reading of whatever this host is
-    /// holding now. The redraw fires whenever the badge's contents change in either direction, and
-    /// there is no assignment left that can skip it.
-    private func setOpenRung(_ rung: OpenRung?) {
+    private func endOpenRung(_ exit: RungExit) {
+        guard let leaving = openRung else { return }
+        let now = monotonicClock.elapsed
+
         // **Before the rung this host is holding is let go of** (focus-sq7). Replacement counts as
-        // much as forgetting: `LadderMachine.arrive(_:)` resets for a different subject, so a
-        // fresh ambient rung replaces a badge rung and the first invitation used to vanish with no
-        // row at all.
+        // much as forgetting: a fresh rung replaces a badge rung and the first invitation used to
+        // vanish with no row at all.
         recordUnopenedInvitation(.accusation)
+
+        if exit.takesBackTheDelivery {
+            // **Both halves of "un-delivered", together** (R-81, focus-mfc). `ladder.undeliver`
+            // stops the escalation clock and puts the ladder back where it stood, so the same rung
+            // is offered again; `undeliverRecord(…)` stops the spend, because a nudge nobody could
+            // answer that kept `disposition == .delivered` went on charging the day's interruption
+            // budget — and under U-1 the budget is what decides whether the app may speak again.
+            //
+            // The rung's own key, not the live pointer (focus-lmo): this row is a statement about
+            // the accusation that was taken back, and that accusation was about one commitment.
+            ladder.undeliver(at: now)
+            // **And only a rung somebody was shown has a spend to take off.** The ladder is told
+            // either way — `landed(on:)` advances it whether or not the seam could prove anybody
+            // saw the rung — but the budget is not: an unpaid rung has no delivered row, and
+            // `recordUnopenedInvitation(.accusation)` above has already written the `unopened` one
+            // that is true of it. `undeliverRecord(…)` writes a fresh deferral when it finds no
+            // open row to turn, which is right for a delivery whose write failed and wrong here:
+            // it would record one attempt twice, as a deferral and as an unopened invitation.
+            if leaving.perceived != nil {
+                undeliverRecord(
+                    leaving.recordID,
+                    kind: .accusation,
+                    subject: leaving.rung.subject,
+                    priorityID: leaving.priorityID
+                )
+            }
+        }
         // **The question's treatment, given to the accusation** (focus-gmr's shape). A rung that
-        // was delivered and is now being replaced or forgotten with nothing pressed on it was
-        // ignored, which is what `InterventionPolicy.ignoredAccusationBackoff` is named for — and
-        // its row said `delivered` with no outcome for ever, exactly as the question's did. The
-        // bead named only the question; every bead in this sequence is a treatment one half
-        // received and the other did not, so both halves get it. `complete(_:recordID:)` refuses
-        // a second call and refuses a row that is no longer a delivery, so a correction that has
-        // already filled this in and a rung whose delivery has just been withdrawn are both safe.
-        complete(.ignored, recordID: openRung?.recordID)
-        let before = openRung?.landedOn
-        openRung = rung
-        let after = rung?.landedOn
-        // The popover's *contents* changed: a badge rung arriving, leaving, or being replaced by
-        // another badge rung. The last of those is why this is not folded into the mark below —
-        // the mark is `.waiting` on both sides of a replacement, and the popover would go on
-        // drawing the accusation this host has already forgotten.
-        // **And the panel is taken down when the rung leaves it** (focus-my0). The badge has had
-        // this since focus-uru — *"replacing a rung is as much a change as forgetting one"* —
-        // and the panel, which is the surface that carries a sentence and six things to press,
-        // had nothing. Driven: sustained drift into one application reaches its panel rung, then
-        // one judgement about a **second** application resets the ladder, the slot admits an
-        // accusation against an accusation, and the ambient rung replaces the panel rung. The
-        // panel stayed on screen naming the first application, with Pause and Change priority
-        // live, while `resolve(_:snoozeDuration:)` reads whatever rung this host is holding now —
-        // so the click would have written a correction about the wrong application.
+        // was delivered and is now being replaced, hidden or outlived with nothing pressed on it
+        // was ignored, and its row said `delivered` with no outcome for ever, exactly as the
+        // question's did. `complete(_:recordID:)` is first-wins and refuses a row that is no
+        // longer a delivery, so a correction that has already filled this in is safe — and the
+        // take-back above is why this is asked of the exit rather than done unconditionally: a row
+        // being withdrawn from the day's spend must not also carry an outcome.
+        if exit.leavesTheInterruptionUnanswered {
+            complete(.ignored, recordID: leaving.recordID)
+        }
+        // **The two instruments named for "the app is talking to itself"** (focus-fwy). Both are
+        // bounded by `InterventionPolicy.ignoredAccusationBackoff` and both were reduced from one
+        // place — `resolve(_:snoozeDuration:)`, for the single non-de-escalating correction there
+        // is — so they counted accusations the person clicked away and never the ones they left on
+        // screen and pressed a key to be rid of.
         //
-        // Asked of what the panel is actually drawing rather than of `before == .panel` alone: a
+        // **Asked of the rung twice as well as of the exit**, and both clauses were measured
+        // rather than reasoned. `makesAnAccusation` is the ladder's own derivation of *"does this
+        // rung say something a person could answer?"*, the one `SilenceSubject` and
+        // `InterventionEvent.spendsTheAccusationCap` already read: the glyph accuses nobody, so it
+        // cannot be ignored, and without this the ordinary glyph-to-panel escalation would spend a
+        // step of the backoff on the app's own climb. `perceived` is `PerceptibleChange`'s receipt
+        // and it is the whole of what *"it reached them"* means: without it, a panel rung routed to
+        // the popover badge under the silent-and-visual deck — landed, never opened, charged
+        // nothing — counted as an accusation somebody ignored, and two of them held the app silent
+        // for `InterventionPolicy.backoffSpan`.
+        if exit.countsAsAnIgnoredAccusation,
+            leaving.rung.kind.makesAnAccusation,
+            leaving.perceived != nil {
+            ladder.reduce(.rungIgnored, now: now)
+            fatigue.reduce(.accusationResolved(.ignored), now: now)
+        }
+
+        openRung = nil
+        // **And the panel is taken down when the rung leaves it** (focus-my0). The badge has had
+        // this since focus-uru — *"replacing a rung is as much a change as forgetting one"* — and
+        // the panel, which is the surface that carries a sentence and six things to press, had
+        // nothing. Driven: sustained drift into one application reaches its panel rung, then one
+        // judgement about a **second** application resets the ladder and the ambient rung replaces
+        // the panel rung. The panel stayed on screen naming the first application, with Pause and
+        // Change priority live, while `resolve(_:snoozeDuration:)` reads whatever rung this host is
+        // holding now — so the click would have written a correction about the wrong application.
+        //
+        // Asked of what the panel is actually drawing rather than of `landedOn == .panel` alone: a
         // panel showing a question is not this rung's to order out, and `endOpenQuestion(_:)` owns
         // that half.
-        if before == .panel, after != .panel, panel.showing == .accusation { panel.hide() }
+        if leaving.landedOn == .panel, panel.showing == .accusation { panel.hide() }
+        redrawTheMenuBar(movingFrom: leaving.landedOn, to: nil)
+
+        assert(openRung == nil, "a rung ended by \(exit.rawValue) and is somehow still open")
+    }
+
+    /// **The one place a rung that has landed is written down**, and it ends nothing.
+    ///
+    /// Every ending goes through `endOpenRung(_:)`, including the replacement that used to be
+    /// hidden here: `accuse(…)` calls it before `landed(on:)`, because
+    /// `RungExit.countsAsAnIgnoredAccusation` reduces an event `LadderMachine` interprets against
+    /// the state it is standing in, and an ignore reduced after the new delivery had been recorded
+    /// would be counted against the rung that has just landed. So by this line there is nothing to
+    /// let go of, and the assertion says so rather than a comment hoping it.
+    private func setOpenRung(_ rung: OpenRung) {
+        assert(openRung == nil, "a rung landed on top of one this host had not ended")
+        openRung = rung
+        redrawTheMenuBar(movingFrom: nil, to: rung.landedOn)
+    }
+
+    /// Ask the composition root to redraw the menu bar, when this rung's move changed what it is
+    /// drawing.
+    ///
+    /// The popover's *contents* changed: a badge rung arriving, leaving, or being replaced by
+    /// another badge rung. That last one is why this is not folded into the mark below — the mark
+    /// is `.waiting` on both sides of a replacement, and the popover would go on drawing the
+    /// accusation this host has already forgotten.
+    ///
+    /// **And the status ITEM changed** (focus-mkk). `accuse(…)` records the glyph landing as a
+    /// delivery on the ground that "the glyph is redrawn on the next refresh", and until that
+    /// clause nothing asked for one: the redraw was requested only when the badge was involved, so
+    /// an ambient rung landed, was charged, and reached a menu bar that would not be told about it
+    /// until the next five-second corroboration tick — which drew from the status and the timer
+    /// anyway, and both were unchanged.
+    ///
+    /// Asked as `menuBarAttention`, which is the surface's own answer, rather than as
+    /// `== .menuBar`: a fifth surface that the item speaks for inherits the redraw instead of
+    /// needing a second clause here.
+    private func redrawTheMenuBar(movingFrom before: NudgeSurface?, to after: NudgeSurface?) {
         let touchesTheBadge = before == .popoverBadge || after == .popoverBadge
-        // **The status ITEM changed** (focus-mkk). This clause is the whole bead. `accuse(…)`
-        // records the glyph landing as a delivery on the ground that "the glyph is redrawn on the
-        // next refresh", and until this line nothing asked for one: the redraw was requested only
-        // when the badge was involved, so an ambient rung landed, was charged, and reached a menu
-        // bar that would not be told about it until the next five-second corroboration tick —
-        // which drew from the status and the timer anyway, and both were unchanged.
-        //
-        // Asked as `menuBarAttention`, which is the surface's own answer, rather than as
-        // `== .menuBar`: a fifth surface that the item speaks for inherits the redraw instead of
-        // needing a second clause here.
         let markChanged = (before?.menuBarAttention ?? .unmarked)
             != (after?.menuBarAttention ?? .unmarked)
         if touchesTheBadge || markChanged { onQuestionSurfacesChanged?() }
     }
 
-    /// Forget the rung on the surface and the corrections it was offering.
-    private func forgetOpenRung() {
-        setOpenRung(nil)
-    }
-
     /// **A nudge the person can still see and answer that this host has forgotten** — and it is
     /// always empty (focus-v0u, focus-xix).
     ///
-    /// The invariant `endOpenQuestion(_:)` and `setOpenRung(_:)` exist to keep, stated as a
+    /// The invariant `endOpenQuestion(_:)` and `endOpenRung(_:)` exist to keep, stated as a
     /// reading rather than as a comment so the unit lane can drive every exit and the self-check
     /// can report it. A non-empty answer is the defect itself: a live panel or an open popover
     /// offering answers that `answer(_:)` or `resolve(_:snoozeDuration:)` will drop in a `guard`,
@@ -2371,7 +2478,7 @@ final class NudgeHost {
     func phaseLeftFocus() {
         turn.run {
             ladder.reduce(.deEscalated(.phaseLeftFocus), now: monotonicClock.elapsed)
-            closeSurfaces(endingAnyQuestionAs: .worldMovedOn)
+            closeSurfaces(endingAnyQuestionAs: .worldMovedOn, andAnyRungAs: .worldMovedOn)
         }
     }
 
@@ -2394,7 +2501,7 @@ final class NudgeHost {
     /// touched: quitting is not a correction and must not read as one.
     func applicationWillTerminate() {
         turn.run {
-            closeSurfaces(endingAnyQuestionAs: .worldMovedOn)
+            closeSurfaces(endingAnyQuestionAs: .worldMovedOn, andAnyRungAs: .worldMovedOn)
         }
     }
 
@@ -2562,7 +2669,7 @@ final class NudgeHost {
     private func clearSessionState() {
         snoozes = .none
         correctedSubjects = []
-        closeSurfaces(endingAnyQuestionAs: .worldMovedOn)
+        closeSurfaces(endingAnyQuestionAs: .worldMovedOn, andAnyRungAs: .worldMovedOn)
     }
 
     // MARK: - What the surfaces and the self-check read
@@ -2711,7 +2818,21 @@ final class NudgeHost {
             // prove readable. A rule that holds by accident of statement order is not a rule;
             // `screenReclaimed` is F-81 stated as a case.
             endOpenQuestion(.screenReclaimed)
-            forgetOpenRung()
+            // **And the rung gets the same exit, which is the whole of focus-s4m.** This was
+            // `forgetOpenRung()`, which touched no ladder state, so the ladder stayed
+            // `.engaged(rung: .panel, deliveredAt:)`: `arrive(_:)` returns to `.idle` only at the
+            // top rung and only for a different subject, and on the same subject
+            // `candidate(at:budgetPermits:)` answers `rung.escalated(for:)`, which is `nil` there —
+            // which `NudgeDecider.accuse(…)` turns into `.silent(.budgetExhausted)`. One press of
+            // ⌃⌘H and the only rung that says anything never spoke again for the rest of the run.
+            //
+            // `RungExit.screenReclaimed` is the question's own treatment given to the accusation:
+            // the delivery stands, because the person saw it — they pressed a key to make it go
+            // away — the row is completed `.ignored`, and both backoffs hear about it. What it is
+            // not is a take-back: putting the ladder back where it stood would put the same panel
+            // in front of them at the next mandate, which is the app arguing with the one command
+            // it has for *stop showing me things*.
+            endOpenRung(.screenReclaimed)
             // The rows go with the values that carried them: there is no shared `openRecordID` left
             // to clear, and forgetting the question and the rung above **is** forgetting their rows
             // (focus-xix). It used to be a third line here, and a third line is a third thing a

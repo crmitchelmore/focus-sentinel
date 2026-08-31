@@ -673,7 +673,7 @@ enum SelfCheck {
         // **A nudge on the screen that the loop has forgotten** — always empty (focus-v0u,
         // focus-xix).
         //
-        // The invariant `NudgeHost.endOpenQuestion(_:)` and `NudgeHost.setOpenRung(_:)` exist to
+        // The invariant `NudgeHost.endOpenQuestion(_:)` and `NudgeHost.endOpenRung(_:)` exist to
         // keep, read off the shipping graph in the shipping process. A non-empty list is the
         // defect itself: a live panel or an open popover offering answers that `answer(_:)` will
         // drop in a `guard` — or, worse, that `resolve(_:snoozeDuration:)` will apply to a
@@ -787,6 +787,22 @@ enum SelfCheck {
 
         report["questionExitsWritingAnExpiry"] = QuestionExit.allCases
             .filter(\.recordsAnExpiry)
+            .map(\.rawValue)
+            .sorted()
+
+        // **And the other half of the same reading** (focus-s4m). The two lines above have said
+        // since focus-h0s that a question's ending is a closed vocabulary with its obligations
+        // placed on the exit; the accusation's ending was six hand-written doors and had no
+        // reading at all, which is this round's instance of the shape every bead in this sequence
+        // has. Two of those doors told the ladder nothing, and one of them — ⌃⌘H — left it standing
+        // at a rung `candidate(at:budgetPermits:)` answers `nil` from for ever.
+        report["rungExitsDeclared"] = RungExit.allCases.map(\.rawValue).sorted()
+        // **Which of them are R-81 take-backs**, named rather than counted, for the reason
+        // `questionExitsWritingAnExpiry` is named: an exit quietly joining or leaving the
+        // withdrawing set is the edit that matters, and it is the edit the shipping app has no
+        // other way to report.
+        report["rungExitsTakingBackTheDelivery"] = RungExit.allCases
+            .filter(\.takesBackTheDelivery)
             .map(\.rawValue)
             .sorted()
 

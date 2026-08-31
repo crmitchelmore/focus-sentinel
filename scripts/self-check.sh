@@ -2282,6 +2282,37 @@ check(
     nudge.get("questionExitsWritingAnExpiry"),
 )
 
+# **And a rung's ending is a vocabulary too** (focus-s4m).
+#
+# The two checks above have held the question's exits closed since focus-h0s. The accusation's
+# were SIX HAND-WRITTEN DOORS and this file said nothing about them, which is this round's
+# instance of the shape every bead in this sequence has: a treatment one half received and the
+# other did not. Two of the six told the ladder nothing at all — `hideOverlays()` left it at
+# `.engaged(rung: .panel, deliveredAt:)`, where `candidate(at:budgetPermits:)` answers `nil` for
+# ever, so ⌃⌘H permanently silenced the only rung that says anything.
+#
+# **Six**, and exact equality rather than a floor, for `questionExitsDeclared`'s reason: a floor
+# cannot see an exit being removed. The sixth is `worldMovedOn` — a session ending, a break, a
+# commitment change or a quit — which nobody had counted as a door at all.
+check(
+    len(nudge.get("rungExitsDeclared") or []) == 6,
+    "every way a delivered rung can end is enumerated",
+    nudge.get("rungExitsDeclared"),
+)
+# **And exactly the two that mean the app took the surface away withdraw the delivery** (R-81).
+#
+# Named rather than counted. `displayStranded` had its take-back before this round and is the
+# calibration; `presentationWithdrew` is the one whose own doc comment promised it and whose code
+# did nothing. `screenReclaimed` is deliberately NOT here: the person saw the panel — they pressed
+# a key to make it go away — so withdrawing the row would say nobody was shown anything, and
+# putting the ladder back where it stood would put the same panel in front of them at the next
+# mandate. It is completed `ignored` and counted against both backoffs instead.
+check(
+    nudge.get("rungExitsTakingBackTheDelivery") == ["displayStranded", "presentationWithdrew"],
+    "exactly the endings where the app took the surface away un-deliver the rung",
+    nudge.get("rungExitsTakingBackTheDelivery"),
+)
+
 # **The active priority is still one fact** (focus-zrs).
 #
 # The invariant above reads EMPTY throughout the defect this round is about, which is the whole

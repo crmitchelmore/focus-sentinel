@@ -256,8 +256,8 @@ struct NudgeHostDisplayChangeTests {
         )
         // **And it gains no outcome** (focus-gmr). An outcome is what the person did about an
         // interruption that reached them, and this one has just been declared to have reached
-        // nobody. `forgetOpenRung()` runs on the very next line of `displaysChanged()` and now
-        // completes a let-go-of rung as `.ignored`, so without
+        // nobody. `endOpenRung(.displayStranded)` is the one statement `displaysChanged()` makes
+        // now, and `RungExit.leavesTheInterruptionUnanswered` is `false` for it — so without
         // `InterventionLog.complete(_:outcome:)`'s "only a delivery gains an outcome" guard this
         // withdrawn row would say somebody ignored something the app says they never saw.
         #expect(
