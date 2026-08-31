@@ -19,6 +19,11 @@ public enum ReadingObstacle: String, Sendable, Equatable, Hashable, CaseIterable
     case noKeyWindow
     /// The journal the probe would have read its undo from was never installed.
     case noUndoManager
+    /// Another application came frontmost while the probe's subject was on screen. A panel can
+    /// only ever move the front *toward* this process, so a front that ended on somebody else is
+    /// the world moving under the probe — a delta taken across it describes whoever is using the
+    /// Mac rather than the surface being measured.
+    case frontMovedToAnotherApplication
 
     /// The sentence a report or a log line carries. One per obstacle, so a NOT TAKEN reading
     /// always names which of them stopped it.
@@ -32,6 +37,9 @@ public enum ReadingObstacle: String, Sendable, Equatable, Hashable, CaseIterable
             "the application had no key window to read through"
         case .noUndoManager:
             "no undo manager was installed on the journal"
+        case .frontMovedToAnotherApplication:
+            "another application came frontmost while the surface was up, so the delta is about "
+                + "the world rather than about the surface"
         }
     }
 }
@@ -131,5 +139,59 @@ public enum ProbeOutcome: Sendable, Equatable, Hashable {
             "notTakenBecause": obstacle?.rawValue ?? "",
             "summary": summary
         ]
+    }
+}
+
+/// **Whether a before/after pair taken around a surface may be judged at all** (focus-2uy.3).
+///
+/// R-89's four focus readings are a *delta*: two readings of who was frontmost, taken two and a
+/// half seconds apart with a panel shown between them. Three things can stop that delta being
+/// about the panel, and only one of them was ever asked:
+///
+/// | the run | what it learned |
+/// |---|---|
+/// | the front was never read at either end | nothing at all — there is no delta between two absences |
+/// | the front did not move | the readings are about the panel, and the delta may be judged |
+/// | the front moved and ended on **us** | the panel took the front: the defect R-89 forbids |
+/// | the front moved and ended elsewhere | the world moved under the probe |
+///
+/// The first row is the one that was missing, and it was missing in a way that read as the
+/// second: the "did it move" predicate conjoined "was it read", so two unread ends produced
+/// *did not move*, which published the delta as **taken**. Measured in gate run lens6-1 — both
+/// ends `null`, the delta reported taken, and three assertions failing on `(None, None)` while
+/// the only fact in evidence was that somebody was using the Mac.
+///
+/// A pure function of five measured values, for the reason `DecisionSurfaceReachability` is one:
+/// the whole table is then reachable from a test process with no window server, and the four
+/// rows are four cells rather than four things a reader has to believe.
+///
+/// This answers **whether the delta may be judged**, never whether it is clean. `.holds` is
+/// "go ahead and compare the two readings"; the comparison itself is the caller's, and the caller
+/// is what turns red.
+public enum SurfaceDeltaReading {
+    /// - Parameters:
+    ///   - frontWasReadBefore: whether the frontmost application could be read before the show.
+    ///   - frontWasReadAfter: whether it could be read after it.
+    ///   - frontBefore: who was frontmost before, or `nil` for a reading that was not taken.
+    ///   - frontAfter: who was frontmost after, or `nil` for the same.
+    ///   - ourIdentifier: this process's own bundle identifier, so "ended on us" is a comparison
+    ///     rather than a guess.
+    public static func evaluate(
+        frontWasReadBefore: Bool,
+        frontWasReadAfter: Bool,
+        frontBefore: String?,
+        frontAfter: String?,
+        ourIdentifier: String
+    ) -> ProbeOutcome {
+        // First, because it is a precondition of the other three rather than a fourth alternative
+        // to them: a delta between two readings neither of which exists is not a delta.
+        guard frontWasReadBefore, frontWasReadAfter else {
+            return .notTaken(.frontmostApplicationUnavailable)
+        }
+        let moved = frontBefore != frontAfter
+        guard moved else { return .holds }
+        // A panel can only ever move the front TOWARD this process, so a front that ended on us
+        // is the failure the probe exists to find and is handed back to the caller to judge.
+        return frontAfter == ourIdentifier ? .holds : .notTaken(.frontMovedToAnotherApplication)
     }
 }

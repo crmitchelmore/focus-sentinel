@@ -1376,7 +1376,9 @@ enum SelfCheck {
         // is a value, and reading 1 not having been taken is not a value.
         report["frontmostBeforeShow"] = before.frontmostBundleIdentifier.map { $0 as Any } ?? NSNull()
         report["frontmostAfterShow"] = after.frontmostBundleIdentifier.map { $0 as Any } ?? NSNull()
-        report["frontmostWasReadBothTimes"] = before.frontmostWasRead && after.frontmostWasRead
+        // **Whether reading 1 was taken at all**, which is the conjunct the delta below forgot.
+        let frontWasReadBothTimes = before.frontmostWasRead && after.frontmostWasRead
+        report["frontmostWasReadBothTimes"] = frontWasReadBothTimes
 
         // **Whose front moved, and in which direction** (focus-jax, focus-doy set B).
         //
@@ -1387,27 +1389,51 @@ enum SelfCheck {
         // measured it: the frontmost application went from this app to a Chrome PWA the app under
         // test cannot activate, and the gate reported two failures of R-89.
         //
-        // A panel can only ever move the front TOWARD this process, so the direction decides:
+        // A panel can only ever move the front TOWARD this process, so the direction decides —
+        // and **there are four rows, not three** (focus-2uy.3):
         //
+        //   the front was never read                nothing was measured — NOT TAKEN
         //   the front did not move                  the readings are about the panel, and taken
         //   the front moved and ended on US         the panel took it — a real R-89 failure
         //   the front moved and ended elsewhere     the world moved, and the reading is NOT TAKEN
+        //
+        // The first row used to fall into the second. `frontMoved` conjoins *was it read* into
+        // *did it move*, so a run in which `NSWorkspace.shared.frontmostApplication` answered
+        // `nil` at both ends produced *did not move* and published the delta as **taken** — a
+        // reading that was never made, reported as made. Measured, gate run lens6-1:
+        // `frontmostBeforeShow` and `frontmostAfterShow` both `null`,
+        // `frontmostWasReadBothTimes` false, `deltaReadingWasTaken` **true**, and three
+        // assertions failing on `(None, None)` — the gate naming R-89 for the fact that somebody
+        // was using the Mac.
+        //
+        // The table itself is `SurfaceDeltaReading.evaluate(…)`, in `FocusCore`, so it is a pure
+        // function of five measured values that a test process with no window server can fold
+        // over the whole cross product; and its answer is a `ProbeOutcome`, which is the one
+        // mechanism this programme has for a reading a machine may not let it take. What stays
+        // here is the reading of the live AppKit values.
         //
         // Reading 3 — the panel is not the key window — needs none of this and stays absolute,
         // and so does §4.5's `focus-steal` stage, which makes R-89's claim from outside the
         // process against an app launched with `open -g -a` and never brought forward at all.
         let ourIdentifier = Bundle.main.bundleIdentifier ?? ""
-        let frontMoved = before.frontmostWasRead
-            && after.frontmostWasRead
+        let frontMoved = frontWasReadBothTimes
             && before.frontmostBundleIdentifier != after.frontmostBundleIdentifier
-        let frontEndedOnUs = after.frontmostBundleIdentifier == ourIdentifier
         report["frontMovedDuringTheShow"] = frontMoved
-        report["deltaReadingWasTaken"] = !frontMoved || frontEndedOnUs
-        report["deltaNotTakenBecause"] = (!frontMoved || frontEndedOnUs)
-            ? ""
-            : "another application came frontmost while the panel was up: "
-                + "\(before.frontmostBundleIdentifier ?? "none") -> "
+        let deltaReading = SurfaceDeltaReading.evaluate(
+            frontWasReadBefore: before.frontmostWasRead,
+            frontWasReadAfter: after.frontmostWasRead,
+            frontBefore: before.frontmostBundleIdentifier,
+            frontAfter: after.frontmostBundleIdentifier,
+            ourIdentifier: ourIdentifier
+        )
+        report["deltaReadingWasTaken"] = deltaReading.wasTaken
+        // The obstacle's own sentence, and then the two identifiers it is about, so a NOT TAKEN
+        // line in the stage log names the case *and* the applications that produced it.
+        report["deltaNotTakenBecause"] = deltaReading.obstacle.map { obstacle in
+            obstacle.sentence
+                + ": \(before.frontmostBundleIdentifier ?? "none") -> "
                 + "\(after.frontmostBundleIdentifier ?? "none")"
+        } ?? ""
         // Two conjunctions, and the difference between them is the posture this process is in.
         //
         // `tookNothing` is R-89's **absolute** form — frontmost unchanged, `NSApp.isActive`
@@ -1489,9 +1515,10 @@ enum SelfCheck {
             "countWasTaken": windowCount != nil,
             "count": windowCount.map { $0 as Any } ?? NSNull()
         ]
-        if let obstacle = host.frontmostReadingObstacle {
-            windowMetadata["countNotTakenBecause"] = obstacle.rawValue
-        }
+        // Always present, `""` when the reading was taken, for the reason the pair exists at all:
+        // a gate stage routes every one of these through one mechanism, and a key that appears
+        // only on the failing branch is a key that stage cannot fold over (focus-2uy.3).
+        windowMetadata["countNotTakenBecause"] = host.frontmostReadingObstacle?.rawValue ?? ""
         report["windowMetadata"] = windowMetadata
 
         // Both idle sources on every sample. `hardwareSeconds >= sessionSeconds` is a property
@@ -1522,7 +1549,12 @@ enum SelfCheck {
                 "presentationOptionsSayFullScreen": signals.presentationOptionsSayFullScreen,
                 "menuBarHidden": signals.menuBarHidden,
                 "agreementCount": signals.agreementCount,
-                "isPresenting": state.isPresenting
+                "isPresenting": state.isPresenting,
+                // The same pair every other unavailable reading in this report publishes, so the
+                // gate routes this one through the one NOT-TAKEN mechanism rather than through a
+                // branch of its own (focus-2uy.3).
+                "wasTaken": true,
+                "notTakenBecause": ""
             ]
         } else {
             // `suppressed: true` alone said "the gate stood down" about a graph that in the
@@ -1531,6 +1563,7 @@ enum SelfCheck {
             // it now, and a reader can tell the gate working from the graph knowing nothing.
             report["presentation"] = [
                 "suppressed": true,
+                "wasTaken": false,
                 "notTakenBecause": host.frontmostReadingObstacle?.rawValue ?? ""
             ]
         }
