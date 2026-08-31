@@ -23,7 +23,8 @@ public enum DeferralReason: String, Sendable, CaseIterable, Codable, Hashable {
     ///
     /// **Unreachable at HEAD, and gated as such** (U-2). No rung routes to a notification since
     /// the recommitment rung was deferred to focus-5ab, so nothing can produce this reason; the
-    /// self-check asserts `"notification" not in surfacesARungCanReach` in every run. It is
+    /// self-check pins `surfacesARungCanReach == [menuBar, panel, popoverBadge]` — the whole
+    /// 160-cell fold, both directions — in every run. It is
     /// declared, rather than deleted with its string, for the reason `NudgeSurface.notification`
     /// is: `SurfaceRoute` is switched over totally in the settings pane and in the router, and a
     /// missing case buys a `default:` arm — which is how an unreachable path becomes an

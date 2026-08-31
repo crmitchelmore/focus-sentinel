@@ -255,9 +255,23 @@ if table:
         "no rung routes to a notification",
         surfaces(table),
     )
+    # **The whole input space, and the set pinned in both directions** (focus-3vb). This used to be
+    # a set built from the two-cell `routes` table above — every rung asked once at
+    # `.notPresenting`, `.idle`, `reducedInterruption: false`, `menuBarVisible: true`,
+    # `voice: .standard` — so a notification route reachable under Reduce Motion, a running
+    # microphone, `silentVisual` or a hidden menu bar was invisible to it. The fold is now 160
+    # cells, its size is asserted before the set it qualifies, and the honest set is three: the
+    # badge really is reachable, under exactly the conditions the two-cell table pinned away.
+    every_rung_cells = (report.get("ladderRungsDeclared") or 0) * 2 * 2 * 2 * 2 * 5
     check(
-        report.get("surfacesARungCanReach") == ["menuBar", "panel"],
-        "the only surfaces any rung reaches are the glyph and the panel",
+        report.get("surfacesARungCanReachCellsChecked") == every_rung_cells,
+        f"the surfaces-a-rung-reaches fold covers all {every_rung_cells} cells rather than two",
+        report.get("surfacesARungCanReachCellsChecked"),
+    )
+    check(
+        report.get("surfacesARungCanReach") == ["menuBar", "panel", "popoverBadge"],
+        "over the whole input space a rung reaches the glyph, the panel and the badge, and "
+        "nothing else — so no rung reaches a notification",
         report.get("surfacesARungCanReach"),
     )
     top = [entry for entry in table if entry.get("rung") == "panel"]

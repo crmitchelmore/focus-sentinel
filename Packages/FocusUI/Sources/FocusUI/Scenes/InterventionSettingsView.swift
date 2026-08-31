@@ -424,7 +424,9 @@ public struct InterventionSettingsView: View {
     /// `SurfaceRouter.table(…)` pins `presentation: .notPresenting`, `media: .idle` and
     /// `menuBarVisible: true`, so no row can be `.unavailable`; and no branch of `route(…)`
     /// returns `.notification` at all since U-2 deferred the recommitment rung to focus-5ab —
-    /// the shipped binary says so about itself, with `surfacesARungCanReach = [menuBar, panel]`.
+    /// the shipped binary says so about itself, with
+    /// `surfacesARungCanReach == [menuBar, panel, popoverBadge]` — pinned in both directions over
+    /// the whole 160-cell input space, not searched for one name in a two-cell table (focus-3vb).
     ///
     /// ## What happens if that stops being true
     ///

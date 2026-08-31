@@ -2415,9 +2415,35 @@ check(
 # displaced. Both halves are gone. There is no preemption to settle anything, and the recommitment
 # rung the notification existed to carry is deferred to focus-5ab — so the surfaces a rung can
 # reach are the app's own, and that is asserted in the running application rather than argued.
+# **PINNED, IN BOTH DIRECTIONS, OVER THE WHOLE SPACE** (focus-3vb). This line was
+# `"notification" not in surfacesARungCanReach`, and it failed in two independent ways at once.
+#
+# A membership test cannot see a surface APPEARING. Route every rung to the badge, or to a fifth
+# surface added tomorrow, and `not in` stays green — it can only ever notice the one name written
+# in it. The subject of this reading is a SET, and the only honest assertion about a set is the
+# set.
+#
+# And the set it searched was two cells wide: `routes` asks each rung exactly once at
+# `.notPresenting`, `.idle`, `reducedInterruption: false`, `menuBarVisible: true`,
+# `voice: .standard`. A notification route reachable under Reduce Motion, a running microphone,
+# `silentVisual` or a hidden menu bar was invisible to it — and because `notification-denied` runs
+# against the DEBUG product, this was the only "no notification" reading taken at the artefact this
+# programme ships.
+#
+# It is now the same 160-cell fold `accusationRouteCellsChecked` counts, over every rung instead of
+# the accusing ones. The honest answer is THREE surfaces: `popoverBadge` is genuinely reachable
+# under exactly the conditions the two-cell table pinned away. A reading that said two was not a
+# stronger claim; it was a narrower one.
+EVERY_RUNG_ROUTE_CELLS = 2 * 2 * 2 * 2 * 2 * 5  # rung × presenting × mic × flag × menuBar × deck
 check(
-    "notification" not in (nudge.get("surfacesARungCanReach") or []),
-    "no rung reaches a notification: the ladder is entirely in-app",
+    nudge.get("surfacesARungCanReachCellsChecked") == EVERY_RUNG_ROUTE_CELLS,
+    f"the surfaces-a-rung-reaches fold covers all {EVERY_RUNG_ROUTE_CELLS} cells rather than two",
+    nudge.get("surfacesARungCanReachCellsChecked"),
+)
+check(
+    nudge.get("surfacesARungCanReach") == ["menuBar", "panel", "popoverBadge"],
+    "over the whole input space a rung reaches the glyph, the panel and the badge — and nothing "
+    "else, so no rung reaches a notification",
     nudge.get("surfacesARungCanReach"),
 )
 

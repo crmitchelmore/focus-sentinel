@@ -581,6 +581,32 @@ enum SelfCheck {
     /// and the number of cells visited, so a fold that quietly shrinks is visible as a number
     /// rather than as an unchanged `true`.
     nonisolated static func accusationRouteAudit() -> (cells: Int, unanswerable: [String]) {
+        let audit = routeAudit(over: LadderRung.Kind.allCases.filter(\.makesAnAccusation))
+        return (audit.cells, audit.unanswerable)
+    }
+
+    /// **Every route the requested rungs can take, over the whole input space** (focus-3vb).
+    ///
+    /// One fold, parameterised by the rungs it visits, because there were two questions being
+    /// asked of one space and only one of them was being folded. `accusationRouteAudit()` above is
+    /// this fold over the accusing rungs; `surfacesARungCanReach` is this fold's `surfaces` over
+    /// **all** of them.
+    ///
+    /// That second reading used to be `Set(routes.compactMap { $0["surface"] })` — a fold over the
+    /// two-cell `routes` table, every rung asked exactly once at `.notPresenting`, `.idle`,
+    /// `reducedInterruption: false`, `menuBarVisible: true`, `voice: .standard`. It is the ONLY
+    /// "no rung reaches a notification" reading the Release lane takes, and a notification route
+    /// reachable under Reduce Motion, a running microphone, `silentVisual` or a hidden menu bar
+    /// was invisible to it. Widening it costs nothing — the fold already existed — and it is the
+    /// difference between a claim about two cells and a claim about a hundred and sixty.
+    ///
+    /// Returns the offending cells named, so a red gate says which rung under which conditions;
+    /// the surfaces actually reached, sorted, so the set can be pinned rather than searched; and
+    /// the number of cells visited, so a fold that quietly shrinks is visible as a number rather
+    /// than as an unchanged `true`.
+    nonisolated static func routeAudit(
+        over rungs: [LadderRung.Kind]
+    ) -> (cells: Int, surfaces: [String], unanswerable: [String]) {
         let presenting = PresentationState(
             signals: PresentationSignals(
                 frontmostWindowFillsAScreen: true,
@@ -591,9 +617,10 @@ enum SelfCheck {
             isPresenting: true
         )
         var unanswerable: [String] = []
+        var reached: Set<String> = []
         var cells = 0
 
-        for rung in LadderRung.Kind.allCases where rung.makesAnAccusation {
+        for rung in rungs {
             for presentation in [PresentationState.notPresenting, presenting] {
                 for media in [MediaActivity.idle, MediaActivity(microphoneRunning: true)] {
                     for reduced in [false, true] {
@@ -608,6 +635,9 @@ enum SelfCheck {
                                     menuBarVisible: menuBar,
                                     voice: voice
                                 )
+                                if let surface = route.surface {
+                                    reached.insert(surface.rawValue)
+                                }
                                 guard let surface = route.surface, !surface.offersAnAnswer else {
                                     continue
                                 }
@@ -623,7 +653,7 @@ enum SelfCheck {
                 }
             }
         }
-        return (cells, Set(unanswerable).sorted())
+        return (cells, reached.sorted(), Set(unanswerable).sorted())
     }
 
     /// One delivered rung of a kind, as the value the two cap predicates are asked of.
@@ -895,13 +925,26 @@ enum SelfCheck {
             !(($0["surface"] as? String) ?? "").isEmpty
         }
         report["everyRungIsInApp"] = routes.allSatisfy { ($0["isInApp"] as? Bool) == true }
-        // **Every surface any rung can reach** (U-2). Since the recommitment rung was deferred to
-        // focus-5ab there is no rung a notification can carry, and this is the reading that says
-        // so from inside the running application rather than from a table a reader has to
-        // interpret. It was computed across four authorisation states; one is now the whole of it.
-        report["surfacesARungCanReach"] = Set(
-            routes.compactMap { $0["surface"] as? String }.filter { !$0.isEmpty }
-        ).sorted()
+        // **Every surface any rung can reach, over the WHOLE input space** (U-2, focus-3vb).
+        //
+        // Since the recommitment rung was deferred to focus-5ab there is no rung a notification can
+        // carry, and this is the reading that says so from inside the running application rather
+        // than from a table a reader has to interpret.
+        //
+        // **It was two cells wide.** `routes` above asks each rung exactly once, pinned at
+        // `.notPresenting`, `.idle`, `reducedInterruption: false`, `menuBarVisible: true`,
+        // `voice: .standard` — and this is the ONLY "no rung reaches a notification" reading the
+        // Release lane takes, because `notification-denied` runs against the Debug product. A
+        // notification route reachable under Reduce Motion, a running microphone, `silentVisual`
+        // or a hidden menu bar was invisible to it, which is to say: invisible to every reading
+        // that gates the artefact this programme ships.
+        //
+        // It is now the same fold `accusationRouteAudit()` runs, over every rung instead of the
+        // accusing ones — 160 cells — and the count is published beside it so a fold that quietly
+        // shrinks is a number rather than an unchanged list.
+        let rungAudit = routeAudit(over: LadderRung.Kind.allCases)
+        report["surfacesARungCanReach"] = rungAudit.surfaces
+        report["surfacesARungCanReachCellsChecked"] = rungAudit.cells
         // **Every accusation this app can raise lands somewhere it can be answered** (focus-uru).
         //
         // The table above is computed at `reducedInterruption: false` alone, which is precisely
