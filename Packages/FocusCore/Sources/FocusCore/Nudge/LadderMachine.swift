@@ -270,6 +270,14 @@ public struct LadderMachine: Sendable, Equatable {
         // silent would lose the one channel the person has not objected to, and the glyph is
         // the channel that costs them nothing. The ladder drops to the bottom and holds there
         // for the rest of the session.
+        //
+        // **"Costs them nothing" is now true of the arithmetic as well** (focus-d6r). It was
+        // the surviving half of a contradiction: `InterventionCounters` said the shared budget
+        // was "spent by everything delivered", which made the rung this line retains cost a unit
+        // of the day — so the channel kept *because* it is free was the channel that silenced
+        // the other one. `InterventionEvent.spendsTheInterruptionCap` is where that was settled,
+        // in favour of this sentence and of `dailyInterruptionCap`'s own words, which are
+        // "questions and accusations together".
         state = .heldAtAmbient(rung: LadderRung.entry(for: rung.mandate), since: now)
     }
 

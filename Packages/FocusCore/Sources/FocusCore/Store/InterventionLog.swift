@@ -201,19 +201,28 @@ public final class InterventionLog {
         var interruptions = 0
 
         for row in try records(on: day) where row.spendsBudget {
+            // **A rung that accuses nobody spends nothing at all** (focus-ndh, focus-d6r).
+            //
+            // `spendsTheInterruptionCap` is the sanctioned reading and the sum is folded through
+            // it rather than through `spendsBudget`, because `spendsBudget` was the line that
+            // charged the glyph. focus-ndh guarded the accusation branch below and left this
+            // total unguarded one line above it: every ambient landing went on spending the
+            // *shared* budget, and the shared budget binds both kinds, so eight silent marks
+            // made `permits(.accusation)` and `permits(.query)` alike answer `false` on a day
+            // the app had said nothing at all. Measured before this line moved: interruptions 8,
+            // accusations 0, bindingLimit `.dailyInterruptionCap`.
+            guard row.spendsTheInterruptionCap else { continue }
             interruptions += 1
             switch row.kind {
             case .query:
                 queriesAllPriorities += 1
                 if let priorityID, row.priorityID == priorityID { queriesForPriority += 1 }
             case .accusation:
-                // **A rung that accuses nobody spends no accusation** (focus-ndh). The
-                // interruption above is charged either way — the glyph really did take a moment
-                // of the person's attention — and `dailyAccusationCap` is a cap on *sentences*,
-                // which the ambient rung is not. Every ambient landing used to spend one, so six
-                // silent marks made the panel rung, the only rung that carries a sentence and the
-                // whole correction economy, unreachable for the rest of the day.
-                if row.spendsTheAccusationCap { accusations += 1 }
+                // Reached only by a row that already passed the guard above, so the two sums
+                // cannot disagree about what a rung cost: `dailyAccusationCap` is a cap on
+                // *sentences*, which the ambient rung is not, and the interruption it did not
+                // make was not counted either.
+                accusations += 1
             }
         }
 

@@ -146,10 +146,8 @@ public struct InterventionEvent: Sendable, Equatable, Hashable {
 
     /// **Whether this event spends one of the day's six ACCUSATIONS** (focus-ndh, R-83).
     ///
-    /// Not the same question as `spendsBudget`, and the difference is one rung. Both kinds cost
-    /// the person an interruption — *"a person asked ten questions has been interrupted ten
-    /// times"* — so `dailyInterruptionCap` is spent by everything delivered and this changes
-    /// none of that. `dailyAccusationCap` is a cap on **accusations**, and the ambient rung makes
+    /// Not the same question as `spendsBudget`, and the difference is one rung.
+    /// `dailyAccusationCap` is a cap on **accusations**, and the ambient rung makes
     /// none: `LadderRung.Kind.ambient.makesAnAccusation` is `false` by the ladder's own
     /// derivation, `NudgeSurface.menuBar.offersAnAnswer` is `false` because there is nothing on a
     /// glyph to answer, and R-87 keeps it on through a snooze precisely because it is a *state*
@@ -173,6 +171,45 @@ public struct InterventionEvent: Sendable, Equatable, Hashable {
     public var spendsTheAccusationCap: Bool {
         guard spendsBudget, kind == .accusation else { return false }
         return rung?.makesAnAccusation ?? true
+    }
+
+    /// **Whether this event spends one of the day's eight INTERRUPTIONS** (focus-d6r, R-83).
+    ///
+    /// The twin `spendsTheAccusationCap` was given and this one was not, and the omission is
+    /// focus-ndh's own defect one cap over. That repair guarded the accusation sum and left the
+    /// interruption sum **one line above it** unguarded, so every ambient glyph landing went on
+    /// spending the *shared* budget — and since `dailyInterruptionCap` is the conjunct in
+    /// `InterruptionBudget.remaining(for:)` that binds **both** kinds, eight silent marks made
+    /// `permits(.accusation)` and `permits(.query)` alike answer `false`. Measured on the
+    /// shipping store before this property existed, one landing at a time:
+    ///
+    ///     landing 6  interruptions=6  accusations=0  permits(.accusation)=true   permits(.query)=true
+    ///     landing 7  interruptions=7  accusations=0  permits(.accusation)=true   permits(.query)=FALSE
+    ///     landing 8  interruptions=8  accusations=0  permits(.accusation)=FALSE  permits(.query)=false
+    ///                                                bindingLimit = .dailyInterruptionCap
+    ///
+    /// A day on which the app had accused nobody, asked nobody anything and said not one
+    /// sentence, and could no longer say one. The proof that six landings leave the *accusation*
+    /// cap unspent was true and beside the point: the panel rung was unreachable through the
+    /// other cap.
+    ///
+    /// **Which of the two sentences about the glyph is true.** `InterventionCounters` said the
+    /// shared budget "is spent by everything delivered"; `LadderMachine.ignore(now:)` says the
+    /// glyph "is the channel that costs them nothing", which is the entire reason F-63's backoff
+    /// **retains** the ambient rung instead of going silent. They cannot both be true and the
+    /// ladder's is the one that holds, on the policy constant's own words: `dailyInterruptionCap`
+    /// is *"the shared interruption budget: questions and accusations together"*, and the ambient
+    /// rung is neither — `LadderRung.Kind.ambient.makesAnAccusation` is `false` by the ladder's
+    /// own derivation, and R-87 keeps the mark on through a snooze precisely because it is a
+    /// **state** and not a sentence. A thing that survives a snooze cannot be one of the eight
+    /// interruptions a person is spared. So the constant was right and the sum was wrong.
+    ///
+    /// Read as the disjunction rather than as `spendsBudget`: a question always costs a unit,
+    /// and an accusation costs one exactly when it accuses somebody. The two caps therefore
+    /// move together or not at all, which is what makes *"charged the day and said nothing"*
+    /// arithmetically impossible rather than merely unwritten.
+    public var spendsTheInterruptionCap: Bool {
+        spendsBudget && (kind == .query || spendsTheAccusationCap)
     }
 }
 

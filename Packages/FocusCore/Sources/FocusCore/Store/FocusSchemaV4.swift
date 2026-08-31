@@ -397,20 +397,35 @@ extension FocusSchemaV4.InterventionRecord {
     /// Whether this row spends a unit of the day's budget. **Only a delivery does** (R-81).
     public var spendsBudget: Bool { disposition == .delivered }
 
-    /// **Whether this row spends one of the day's six accusations** (focus-ndh).
+    /// **This row as the value the two cap predicates are asked of** (focus-ndh, focus-d6r).
     ///
-    /// Delegated to `InterventionEvent.spendsTheAccusationCap` rather than restated here: the
-    /// rule is *"a rung that accuses nobody spends no accusation"*, it is derived from
-    /// `LadderRung.Kind.makesAnAccusation`, and a second copy of it on the stored row is a second
-    /// place for it to be got wrong. The columns this reads — the disposition, the kind and the
-    /// rung — are the ones R-79 commits.
-    public var spendsTheAccusationCap: Bool {
+    /// One reconstruction rather than one per predicate, so a third cap cannot be given a
+    /// differently-built event to answer about. The columns it reads — the disposition, the kind
+    /// and the rung — are the ones R-79 commits.
+    private var budgetEvent: InterventionEvent {
         InterventionEvent(
             kind: kind,
             rung: rung,
             subject: subject,
             surface: surface,
             disposition: disposition
-        ).spendsTheAccusationCap
+        )
     }
+
+    /// **Whether this row spends one of the day's six accusations** (focus-ndh).
+    ///
+    /// Delegated to `InterventionEvent.spendsTheAccusationCap` rather than restated here: the
+    /// rule is *"a rung that accuses nobody spends no accusation"*, it is derived from
+    /// `LadderRung.Kind.makesAnAccusation`, and a second copy of it on the stored row is a second
+    /// place for it to be got wrong.
+    public var spendsTheAccusationCap: Bool { budgetEvent.spendsTheAccusationCap }
+
+    /// **Whether this row spends one of the day's eight interruptions** (focus-d6r).
+    ///
+    /// The twin the row was not given. `spendsTheAccusationCap` above was delegated here in
+    /// focus-ndh and its sibling was left as `spendsBudget` at the one call site that sums the
+    /// shared budget, which is how eight glyph landings came to silence the panel rung on a day
+    /// the app had accused nobody. Delegated for the same reason and by the same route: a rule
+    /// with two homes is a rule that can be moved in one of them.
+    public var spendsTheInterruptionCap: Bool { budgetEvent.spendsTheInterruptionCap }
 }

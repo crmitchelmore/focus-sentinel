@@ -455,27 +455,37 @@ struct InterventionLogTests {
         #expect(try log.purge(priorityID: kept) == 0)
     }
 
-    /// **The ambient rung spends an interruption and not an accusation** (focus-ndh, R-83).
+    /// **A rung that accuses nobody spends NEITHER cap** (focus-ndh, focus-d6r, R-83).
     ///
     /// Folded over the whole ladder rather than asserted at one point, and folded over the
     /// **cap** rather than over the predicate: `LadderRung.Kind.ambient.makesAnAccusation` was
     /// already `false`, already existed, and was already ignored by the line that summed the
     /// rows — so asserting it back would be asserting a value that had never been read.
     ///
-    /// The consequence this holds is R-80's escalation story. Six glyph landings used to spend
-    /// the whole of `dailyAccusationCap`, so the panel rung — the only rung that carries a
-    /// sentence, a subject and the correction economy — was unreachable for the rest of any day
-    /// that drifted more than six times.
+    /// **Its assertion on the shared cap is inverted, and that inversion is the bead**
+    /// (focus-d6r). This test used to read `interruptionsToday == dailyAccusationCap` after six
+    /// ambient rows, with the message *"a glyph landing is still a moment of the person's
+    /// attention and is still counted"* — so it **pinned** the defect it was written beside.
+    /// Driven to the cap it happened to name it looked sound: six landings, two units left, the
+    /// panel still reachable. Driven to `dailyInterruptionCap` it is the same failure focus-ndh
+    /// repaired, one cap over — eight silent marks, `permits(.accusation)` false,
+    /// `accusationsToday` zero. The count this suite drives is therefore the cap that **binds**,
+    /// not the cap the previous bead named.
+    ///
+    /// The consequence both halves hold is R-80's escalation story: the panel rung is the only
+    /// rung that carries a sentence, a subject and the correction economy, and it must not be
+    /// spendable by a picture.
     @MainActor
-    @Test("every rung is an interruption; only the rungs that accuse spend an accusation")
+    @Test("a rung that accuses nobody spends neither the day's accusations nor its interruptions")
     func onlyARungThatAccusesSpendsAnAccusation() throws {
         let (log, container) = try Self.makeLog()
         defer { withExtendedLifetime(container) {} }
         let priorityID = UUID()
 
-        // One delivered rung of every kind the ladder has, twice over, plus the whole
-        // accusation cap's worth of ambient ones.
-        for _ in 0..<InterventionPolicy.dailyAccusationCap {
+        // **The whole shared budget's worth of ambient landings**, which is the count that binds
+        // both kinds — deliberately not `dailyAccusationCap`, the count the previous bead named
+        // and the count under which this defect was invisible.
+        for _ in 0..<InterventionPolicy.dailyInterruptionCap {
             try log.record(
                 Self.delivered(.accusation, rung: .ambient, surface: .menuBar),
                 priorityID: priorityID
@@ -484,8 +494,12 @@ struct InterventionLogTests {
 
         let afterTheGlyphs = try log.budget(on: log.today, priorityID: priorityID)
         #expect(
-            afterTheGlyphs.interruptionsToday == InterventionPolicy.dailyAccusationCap,
-            "a glyph landing is still a moment of the person's attention and is still counted"
+            afterTheGlyphs.interruptionsToday == 0,
+            """
+            \(afterTheGlyphs.interruptionsToday) of the day's \
+            \(InterventionPolicy.dailyInterruptionCap) interruptions were spent on a mark that \
+            accuses nobody and survives a snooze
+            """
         )
         #expect(
             afterTheGlyphs.accusationsToday == 0,
@@ -493,29 +507,45 @@ struct InterventionLogTests {
         )
         #expect(
             afterTheGlyphs.permits(.accusation),
-            "six silent marks made the panel rung unreachable for the rest of the day"
+            """
+            \(InterventionPolicy.dailyInterruptionCap) silent marks made the panel rung — the \
+            only rung that carries a sentence — unreachable for the rest of the day
+            """
         )
+        #expect(
+            afterTheGlyphs.permits(.query),
+            "the question budget was spent by marks nobody was asked anything by"
+        )
+        #expect(afterTheGlyphs.bindingLimit(for: .accusation) == nil)
 
-        // And the rung that does accuse still spends one.
+        // And the rung that does accuse still spends both.
         try log.record(
             Self.delivered(.accusation, rung: .panel, surface: .panel),
             priorityID: priorityID
         )
         let afterThePanel = try log.budget(on: log.today, priorityID: priorityID)
         #expect(afterThePanel.accusationsToday == 1)
-        #expect(afterThePanel.interruptionsToday == InterventionPolicy.dailyAccusationCap + 1)
+        #expect(afterThePanel.interruptionsToday == 1)
 
         // The rule, read off the ladder rather than off a list written here: every rung whose
         // own `makesAnAccusation` is true spends one, and no rung whose is false does. A third
-        // rung added above the panel inherits the obligation rather than escaping it.
+        // rung added above the panel inherits the obligation rather than escaping it — and it
+        // inherits it on **both** caps, which is the treatment the twin was not given.
         for rung in LadderRung.Kind.allCases {
             let event = Self.delivered(.accusation, rung: rung, surface: .panel)
             #expect(
                 event.spendsTheAccusationCap == rung.makesAnAccusation,
                 "the \(rung.rawValue) rung's cap and its own sentence disagree"
             )
-            #expect(event.spendsBudget, "a delivered rung did not cost an interruption")
+            #expect(
+                event.spendsTheInterruptionCap == rung.makesAnAccusation,
+                "the \(rung.rawValue) rung interrupts somebody it does not speak to"
+            )
+            #expect(event.spendsBudget, "a delivered rung was not recorded as a delivery")
         }
+        // And a question spends the shared cap whatever else it does: the two kinds really do
+        // compete, which is the whole meaning of the word *shared*.
+        #expect(Self.delivered(.query, rung: nil, surface: .panel).spendsTheInterruptionCap)
         // Non-vacuity: the fold above must have covered both answers.
         #expect(LadderRung.Kind.allCases.contains { $0.makesAnAccusation })
         #expect(LadderRung.Kind.allCases.contains { !$0.makesAnAccusation })

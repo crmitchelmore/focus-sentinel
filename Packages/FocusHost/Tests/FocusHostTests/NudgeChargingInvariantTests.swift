@@ -652,27 +652,35 @@ struct NudgeChargingInvariantTests {
         try Self.assertTheJoin(fixture)
     }
 
-    /// **Six glyph landings the person really saw still leave the accusation cap unspent**
-    /// (focus-ndh).
+    /// **A whole shared budget's worth of glyph landings the person really saw leaves BOTH caps
+    /// unspent** (focus-ndh, focus-d6r).
     ///
-    /// focus-ndh's acceptance criteria asks for a driven budget rather than a predicate:
+    /// focus-ndh's acceptance criteria asked for a driven budget rather than a predicate:
     /// `LadderRung.Kind.ambient.makesAnAccusation` was already `false`, already existed, and was
     /// already ignored by the line that summed the rows.
     ///
-    /// Six **perceptible** landings, which is what makes this a proof of the cap rather than of
-    /// the charge: a break between each one clears the mark, so every landing really does change
-    /// the menu bar and every one is honestly charged. Before this round all six spent
-    /// `dailyAccusationCap`, and the panel rung — the only rung with a sentence on it — was
-    /// unreachable for the rest of the day.
-    @Test("six glyph landings the person saw leave the day's accusations unspent")
-    func sixPerceptibleGlyphLandingsSpendNoAccusation() throws {
+    /// **The count was `dailyAccusationCap` and that was the defect** (focus-d6r). This drive was
+    /// written to close focus-ndh and it drove exactly the constant focus-ndh's bead named —
+    /// six — so it stopped one landing before the cap that actually binds. Its own assertion
+    /// `interruptionsToday == dailyAccusationCap` was then *pinning* the failure: it stated, as a
+    /// requirement, that six pictures nobody was spoken to by had cost six of the day's eight
+    /// interruptions. Two more landings and `permits(.accusation)` and `permits(.query)` are both
+    /// false, on a day with `accusationsToday == 0`. Driven to `dailyInterruptionCap` now, which
+    /// is the cap that binds both kinds, and the number is read off the constant rather than off
+    /// a bead's sentence.
+    ///
+    /// The landings are **perceptible**, which is what makes this a proof of the caps rather than
+    /// of the charge: a break between each one clears the mark, so every landing really does
+    /// change the menu bar and every one is honestly a delivery.
+    @Test("a shared budget's worth of glyph landings leaves the day's caps unspent")
+    func perceptibleGlyphLandingsSpendNeitherCap() throws {
         let fixture = try NudgeHostFixture()
         defer { fixture.tearDown() }
         try fixture.wireMenuBarToTheLoop()
         Self.namedSubjects(fixture)
 
-        var charged = 0
-        for index in 0..<InterventionPolicy.dailyAccusationCap {
+        var delivered = 0
+        for index in 0..<InterventionPolicy.dailyInterruptionCap {
             let subject = Self.subjects[index % Self.subjects.count]
             let round = try Self.drive(
                 fixture,
@@ -681,7 +689,7 @@ struct NudgeChargingInvariantTests {
                 index: index
             )
             Self.assertTheInvariant(round)
-            charged += round.chargedAccusations
+            delivered += round.chargedAccusations
             // A break: the ladder de-escalates and the mark comes off, so the next landing has
             // something new to say.
             fixture.host.phaseLeftFocus()
@@ -689,16 +697,20 @@ struct NudgeChargingInvariantTests {
             fixture.clock.advance(by: RelevancePolicy.mandateCooldown + .seconds(1))
         }
 
-        // Non-vacuity: if the landings were not perceptible this proves nothing about the cap.
+        // Non-vacuity: if the landings were not perceptible this proves nothing about the caps.
         #expect(
-            charged == InterventionPolicy.dailyAccusationCap,
-            "only \(charged) of the landings were charged, so this drives no cap at all"
+            delivered == InterventionPolicy.dailyInterruptionCap,
+            "only \(delivered) of the landings were delivered, so this drives no cap at all"
         )
 
         let budget = fixture.host.todaysUsage()
         #expect(
-            budget.interruptionsToday == InterventionPolicy.dailyAccusationCap,
-            "a glyph landing stopped costing the person a moment of their attention"
+            budget.interruptionsToday == 0,
+            """
+            \(budget.interruptionsToday) of the day's \
+            \(InterventionPolicy.dailyInterruptionCap) interruptions were spent on a mark that \
+            accuses nobody, asks nobody anything and stays on through a snooze
+            """
         )
         #expect(
             budget.accusationsToday == 0,
@@ -709,23 +721,32 @@ struct NudgeChargingInvariantTests {
         )
         #expect(
             budget.permits(.accusation),
-            "six silent marks made the panel rung unreachable for the rest of the day"
+            """
+            \(InterventionPolicy.dailyInterruptionCap) silent marks made the panel rung — the \
+            only rung that carries a sentence — unreachable for the rest of the day
+            """
+        )
+        #expect(
+            budget.permits(.query),
+            "the question budget was spent by marks nobody was asked anything by"
         )
         #expect(budget.bindingLimit(for: .accusation) == nil)
+        #expect(budget.bindingLimit(for: .query) == nil)
 
-        // And the seventh drift still speaks, which is the decision focus-ndh asked to be read.
-        let seventh = try Self.drive(
+        // And the next drift still speaks, which is the decision focus-ndh asked to be read and
+        // the decision focus-d6r asks to be read one cap further out.
+        let next = try Self.drive(
             fixture,
             NudgeHostFixture.unrelatedJudgement(subject: Self.subjects[0]),
             subject: Self.subjects[0],
-            index: InterventionPolicy.dailyAccusationCap
+            index: InterventionPolicy.dailyInterruptionCap
         )
-        Self.assertTheInvariant(seventh)
+        Self.assertTheInvariant(next)
         #expect(
-            seventh.chargedAccusations > 0,
+            next.chargedAccusations > 0,
             """
-            the seventh drift was silenced by six glyph landings — \
-            \(String(describing: fixture.host.lastDecision))
+            the drift after \(InterventionPolicy.dailyInterruptionCap) glyph landings was \
+            silenced — \(String(describing: fixture.host.lastDecision))
             """
         )
         try Self.assertTheJoin(fixture)
