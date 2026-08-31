@@ -610,8 +610,8 @@ final class NudgeHost {
             rememberAnchor(judgement)
 
             let subject = NudgeDecider.querySubject(for: judgement)
-            // **The commitment gate 1 is decided by, and the key everything this judgement writes is
-            // scoped to — one value, read once** (focus-zrs). It was two: `surroundings`' own
+            // **The commitment gate 1 is decided by, and the key everything this judgement writes
+            // is scoped to — one value, read once** (focus-zrs). It was two: `surroundings`' own
             // `hasActivePriority` decided whether the app might speak, and a *second*, live
             // `priorities.activeTask()` decided what the interruption was about. Nothing enforced
             // that they agreed, and on a divergence the app spoke and then dropped the answer.
@@ -637,7 +637,10 @@ final class NudgeHost {
                 // asked and the budget **is** spent, which is silence — the pre-U-1 posture, which
                 // can never be worse than the shipped baseline.
                 logger.error(
-                    "the nudge stores refused a read: \(error.localizedDescription, privacy: .public)"
+                    """
+                    the nudge stores refused a read: \
+                    \(error.localizedDescription, privacy: .public)
+                    """
                 )
                 return
             }
@@ -1549,7 +1552,10 @@ final class NudgeHost {
             return try log.record(event, priorityID: priorityID)
         } catch {
             logger.error(
-                "the intervention log refused a write: \(error.localizedDescription, privacy: .public)"
+                """
+                the intervention log refused a write: \
+                \(error.localizedDescription, privacy: .public)
+                """
             )
             return nil
         }
@@ -1566,16 +1572,16 @@ final class NudgeHost {
         turn.run {
             // **An action that cannot write what it promises is refused whole** (focus-rdw).
             //
-            // Every surface withdraws these two when there is no session — `offeredActions` asks the
-            // same question this does — so no click can arrive here. It is a guard rather than a
-            // comment because the alternative shape is what the defect *was*: `apply(_:…)` returned
-            // early on the missing session id and the rest of this function ran on, completing the
-            // row as `.corrected`, spending fatigue and de-escalating the ladder for a write that
-            // never happened. Refusing before any of that is what makes "offered or nothing" one
-            // rule rather than two places that have to agree.
+            // Every surface withdraws these two when there is no session — `offeredActions` asks
+            // the same question this does — so no click can arrive here. It is a guard rather than
+            // a comment because the alternative shape is what the defect *was*: `apply(_:…)`
+            // returned early on the missing session id and the rest of this function ran on,
+            // completing the row as `.corrected`, spending fatigue and de-escalating the ladder for
+            // a write that never happened. Refusing before any of that is what makes "offered or
+            // nothing" one rule rather than two places that have to agree.
             //
-            // Nothing is taken off screen: a click the loop refused must not look to the person like
-            // a click it obeyed.
+            // Nothing is taken off screen: a click the loop refused must not look to the person
+            // like a click it obeyed.
             if action.requiresOpenSession, currentSessionID?() == nil {
                 logger.error(
                     """
@@ -1592,8 +1598,8 @@ final class NudgeHost {
             // **The rung's own key and the rung's own row, not the live pointer** (focus-lmo,
             // focus-xix). Read before `apply(…)`, which is the function that hands the outcome to
             // whoever writes it. The row is the rung's because the click was on the rung: a badge
-            // question can be delivered and open at the same moment, and the outcome of a correction
-            // belongs to the accusation it corrected.
+            // question can be delivered and open at the same moment, and the outcome of a
+            // correction belongs to the accusation it corrected.
             let priorityID = openRung?.priorityID
             let recordID = openRung?.recordID
 
@@ -1605,21 +1611,21 @@ final class NudgeHost {
             // **The record is completed before the world moves** (focus-mwm).
             //
             // This was below `apply(…)`, and `apply(…)` is the statement that hands the outcome to
-            // whoever performs it — which for "Pause" is now e03's session machine, reached directly.
-            // Pausing takes the session out of `.focus`, `NudgeLifecycleWatch` turns that level into
-            // an edge, and `phaseLeftFocus()` closes the open rung as **`.ignored`** — all of it
-            // synchronously, inside this function, before the line that used to write the outcome.
-            // `InterventionLog.complete` is first-wins, so the day's record said the person had
-            // ignored the very nudge they had just answered.
+            // whoever performs it — which for "Pause" is now e03's session machine, reached
+            // directly. Pausing takes the session out of `.focus`, `NudgeLifecycleWatch` turns that
+            // level into an edge, and `phaseLeftFocus()` closes the open rung as **`.ignored`** —
+            // all of it synchronously, inside this function, before the line that used to write the
+            // outcome. `InterventionLog.complete` is first-wins, so the day's record said the
+            // person had ignored the very nudge they had just answered.
             //
-            // Measured only once "Pause" actually paused: with the cockpit closed the old code sent a
-            // command into a buffer and nothing moved, and with it open `CorrectionTotalityTests`
-            // registered a handler that recorded the command and did not pause either. The falsified
-            // row was reachable in the shipping app the whole time, on the ordinary path, whenever the
-            // main window happened to be open.
+            // Measured only once "Pause" actually paused: with the cockpit closed the old code sent
+            // a command into a buffer and nothing moved, and with it open `CorrectionTotalityTests`
+            // registered a handler that recorded the command and did not pause either. The
+            // falsified row was reachable in the shipping app the whole time, on the ordinary path,
+            // whenever the main window happened to be open.
             //
-            // Recording first is not "record before you know": the refusal above has already run, so
-            // by this line the loop has decided the click is one it will honour.
+            // Recording first is not "record before you know": the refusal above has already run,
+            // so by this line the loop has decided the click is one it will honour.
             if let interventionOutcome = Self.outcome(of: action) {
                 complete(interventionOutcome, recordID: recordID)
                 fatigue.reduce(.accusationResolved(interventionOutcome), now: now)
@@ -1642,18 +1648,19 @@ final class NudgeHost {
             // was the fifth producer of `.worldMovedOn` and the only one that did not call
             // `expireOpenQuestion()` first, so Ctrl-Cmd-R aimed at the menu-bar glyph — or any
             // correction pressed on an accusation while a question stood on the panel — destroyed a
-            // question the person could see, wrote nothing about it, and asked it again later. It is
-            // not repaired by a sixth caller remembering: the record moved inside
+            // question the person could see, wrote nothing about it, and asked it again later. It
+            // is not repaired by a sixth caller remembering: the record moved inside
             // `endOpenQuestion(_:)`, which is the one door, and the exit carries whether one is
             // owed.
             //
             // This was `closeSurfaces(endingAnyQuestionAs: .worldMovedOn)` on the argument that a
-            // question still open at this point was an anomaly to be tidied away. It is no longer an
-            // anomaly: a badge question waiting behind a click does not hold the slot, so an
-            // accusation is admitted while one pends, and the unconditional form threw that question
-            // away — the badge went dark and the subject the person was about to be asked about was
-            // dropped — because they dismissed a nudge about something else. U-2 keeps the question
-            // affordance in full; a correction aimed at an accusation must not spend it.
+            // question still open at this point was an anomaly to be tidied away. It is no longer
+            // an anomaly: a badge question waiting behind a click does not hold the slot, so an
+            // accusation is admitted while one pends, and the unconditional form threw that
+            // question away — the badge went dark and the subject the person was about to be asked
+            // about was dropped — because they dismissed a nudge about something else. U-2 keeps
+            // the question affordance in full; a correction aimed at an accusation must not spend
+            // it.
             if let openQuestion, openQuestion.surface == .panel {
                 closeSurfaces(endingAnyQuestionAs: .worldMovedOn)
             } else {
@@ -1701,20 +1708,22 @@ final class NudgeHost {
             // **Answering a question ends the question, and nothing else** (focus-ti4, focus-nrl).
             //
             // This was `closeSurfaces(endingAnyQuestionAs: .answered)`, which is *take everything
-            // down*: the question, then `panel.hide()`, then `forgetOpenRung()`. The last two belong
-            // to a session ending or a commitment changing, and they are wrong here — an answer is a
-            // statement about one subject, and the accusation standing beside it is about another.
+            // down*: the question, then `panel.hide()`, then `forgetOpenRung()`. The last two
+            // belong to a session ending or a commitment changing, and they are wrong here — an
+            // answer is a statement about one subject, and the accusation standing beside it is
+            // about another.
             //
             // Found by folding the charging invariant over the space rather than down a scenario.
-            // With a question waiting behind the click and an ambient rung under it, the sequence was:
-            // the rung lands, the item goes on drawing the badge's `waiting` so nothing is charged
-            // (focus-nrl, repaired) — then the answer clears the badge, the redraw drops the item to
-            // the rung's own `noticing`, **the rung is charged for that write**, and the very next
-            // statement forgets the rung and writes the item back to `unmarked`. Two assignments in
-            // one turn, a charge taken for the first, and a person who saw a flash between two frames
-            // if they saw anything at all. That is this epic's defect one generalisation further out,
-            // and the honest repair is not to refuse the charge — the item really did change — but to
-            // stop destroying a rung nobody asked to have destroyed.
+            // With a question waiting behind the click and an ambient rung under it, the sequence
+            // was: the rung lands, the item goes on drawing the badge's `waiting` so nothing is
+            // charged (focus-nrl, repaired) — then the answer clears the badge, the redraw drops
+            // the item to the rung's own `noticing`, **the rung is charged for that write**, and
+            // the very next statement forgets the rung and writes the item back to `unmarked`. Two
+            // assignments in one turn, a charge taken for the first, and a person who saw a flash
+            // between two frames if they saw anything at all. That is this epic's defect one
+            // generalisation further out, and the honest repair is not to refuse the charge — the
+            // item really did change — but to stop destroying a rung nobody asked to have
+            // destroyed.
             //
             // R-87 is the same ruling from the other side: the ambient rung stays on through a
             // *snooze*, because it is a state and not a sentence. A question about another
@@ -1725,12 +1734,12 @@ final class NudgeHost {
             // half of the exit is unchanged. What is gone is the collateral.
             defer { endOpenQuestion(.answered) }
 
-            // **One guard, because there is one value** (focus-zrs). This was two — the warrant, then
-            // `guard let priorityID = openQuestionPriorityID else { return }` inside the `do` — and
-            // the second one is where the person's click went when the two readings of the active
-            // priority disagreed: dropped in silence, with the `defer` above tidying the panel away.
-            // A question that exists knows what commitment it is about, because it cannot be
-            // constructed without one.
+            // **One guard, because there is one value** (focus-zrs). This was two — the warrant,
+            // then `guard let priorityID = openQuestionPriorityID else { return }` inside the `do`
+            // — and the second one is where the person's click went when the two readings of the
+            // active priority disagreed: dropped in silence, with the `defer` above tidying the
+            // panel away. A question that exists knows what commitment it is about, because it
+            // cannot be constructed without one.
             guard let question = openQuestion else { return }
             let scope = CorrectionScope.from(question.warrant)
             let now = monotonicClock.elapsed
@@ -1755,7 +1764,10 @@ final class NudgeHost {
                 onCorrection?(outcome, question.priorityID)
             } catch {
                 logger.error(
-                    "the query ledger refused an answer: \(error.localizedDescription, privacy: .public)"
+                    """
+                    the query ledger refused an answer: \
+                    \(error.localizedDescription, privacy: .public)
+                    """
                 )
             }
 
@@ -1902,7 +1914,10 @@ final class NudgeHost {
             return try log.withdraw(recordID)
         } catch {
             logger.error(
-                "the intervention log refused a withdrawal: \(error.localizedDescription, privacy: .public)"
+                """
+                the intervention log refused a withdrawal: \
+                \(error.localizedDescription, privacy: .public)
+                """
             )
             return false
         }
@@ -1930,7 +1945,10 @@ final class NudgeHost {
             try log.complete(id, outcome: outcome)
         } catch {
             logger.error(
-                "the intervention log refused a completion: \(error.localizedDescription, privacy: .public)"
+                """
+                the intervention log refused a completion: \
+                \(error.localizedDescription, privacy: .public)
+                """
             )
         }
     }
@@ -2007,8 +2025,8 @@ final class NudgeHost {
                 // lives on the question now, so the order of these two lines is load-bearing.
                 let recordID = question.recordID
                 endOpenQuestion(.surfaceWentOutOfReach)
-                // The delivery is taken off the budget as well as off the screen (focus-mfc), against
-                // the question's own key rather than the live pointer (focus-lmo).
+                // The delivery is taken off the budget as well as off the screen (focus-mfc),
+                // against the question's own key rather than the live pointer (focus-lmo).
                 undeliverRecord(
                     recordID,
                     kind: .query,
@@ -2022,15 +2040,18 @@ final class NudgeHost {
             let reading = panel.decisionSurfaceReading(offering: open.panelActions)
             guard !reading.everyActionIsReachable else { return }
             logger.error(
-                "the display changed under a rung and stranded it: \(reading.summary, privacy: .public)"
+                """
+                the display changed under a rung and stranded it: \
+                \(reading.summary, privacy: .public)
+                """
             )
             panel.hide()
             // Before the deferral is written, so the record and the ladder agree: the attempt ended
             // as a deferral, and there is no delivery left standing for it to have escalated from.
             //
             // **Both halves of "un-delivered", together** (focus-mfc). `ladder.undeliver` stops the
-            // escalation clock; `InterventionLog.withdraw` stops the spend. Without the second one a
-            // rung nobody saw kept `disposition == .delivered`, which is exactly what
+            // escalation clock; `InterventionLog.withdraw` stops the spend. Without the second one
+            // a rung nobody saw kept `disposition == .delivered`, which is exactly what
             // `spendsBudget` reads, so the stranded nudge went on charging the day's interruption
             // budget — and under U-1 the budget is what decides whether the app may speak again.
             ladder.undeliver(at: monotonicClock.elapsed)
@@ -2427,7 +2448,10 @@ final class NudgeHost {
             return true
         } catch {
             logger.error(
-                "the question could not be recorded: \(error.localizedDescription, privacy: .public)"
+                """
+                the question could not be recorded: \
+                \(error.localizedDescription, privacy: .public)
+                """
             )
             return false
         }
@@ -2611,21 +2635,22 @@ final class NudgeHost {
             // It used to survive: the panel went away and the warrant and its readability stayed,
             // so the next thing to end a question — a session end, a phase change — read the
             // *previous* question's reading against a surface that had been gone for an hour, and
-            // the reading it read was the `isVisible` fallback's cheerful `true`. Nothing is written
-            // here, which is the whole of F-81: the person asked for their screen back, not to tell
-            // the app anything, so the question is still unanswered and will be offered again.
+            // the reading it read was the `isVisible` fallback's cheerful `true`. Nothing is
+            // written here, which is the whole of F-81: the person asked for their screen back, not
+            // to tell the app anything, so the question is still unanswered and will be offered
+            // again.
             //
-            // **And the exit says so** (focus-h0s). It travelled as `.worldMovedOn`, which is now the
-            // exit that *writes*, and it wrote nothing here only because the panel above had already
-            // been ordered out and `QuestionLedgerPolicy` refused a receipt it could not prove
-            // readable. A rule that holds by accident of statement order is not a rule;
+            // **And the exit says so** (focus-h0s). It travelled as `.worldMovedOn`, which is now
+            // the exit that *writes*, and it wrote nothing here only because the panel above had
+            // already been ordered out and `QuestionLedgerPolicy` refused a receipt it could not
+            // prove readable. A rule that holds by accident of statement order is not a rule;
             // `screenReclaimed` is F-81 stated as a case.
             endOpenQuestion(.screenReclaimed)
             forgetOpenRung()
-            // The rows go with the values that carried them: there is no shared `openRecordID` left to
-            // clear, and forgetting the question and the rung above **is** forgetting their rows
-            // (focus-xix). It used to be a third line here, and a third line is a third thing a path
-            // can fail to do.
+            // The rows go with the values that carried them: there is no shared `openRecordID` left
+            // to clear, and forgetting the question and the rung above **is** forgetting their rows
+            // (focus-xix). It used to be a third line here, and a third line is a third thing a
+            // path can fail to do.
         }
     }
 
