@@ -32,6 +32,21 @@ import Testing
 /// halves of *"the menu bar tells the loop what a person did"* — and only one of them had a
 /// driven proof, which is the shape every bead in this sequence has.
 ///
+/// **There were five more, and the sweep that found them is in
+/// `CompositionRootWireSweepTests`** (focus-w3f). The bead that asked for the glyph wire also
+/// asked for every *sibling* of it, on the grounds that repairs are what create these — and the
+/// sweep was done by mutation rather than by reading, because reading is what produced the table
+/// above and the table above is short by twelve. Of the seventeen wires the root makes, six could
+/// be replaced with a no-op and all 176 tests still passed. One of the six was not untested but
+/// **dead** — assigned in `init` and reassigned by `joinHosts()` ninety lines later, on the same
+/// property of the same object.
+///
+/// The worst of them is `menuBar.onAction`, which is nine lines *above* S1 on the same object and
+/// carries every one of the thirteen menu items. It looked covered:
+/// `MenuBarActionTotalityTests` is exhaustive over `MenuBarAction` and drove `root.perform(_:)`
+/// directly — the very thing the rule below forbids. An exhaustive table over the wrong entry
+/// point reads as coverage and is not.
+///
 /// `CompositionRootTests.thePopoverWireReachesTheLoop` asserted `!= nil`, which a no-op closure
 /// satisfies. `MenuBarPopoverTests` and `NudgeHostQuestionTests` install closures of **their
 /// own**, so the shipping wire was never run by anything. `CompositionRootTests` calls
