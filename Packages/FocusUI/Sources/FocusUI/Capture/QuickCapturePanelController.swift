@@ -41,6 +41,12 @@ public final class QuickCapturePanelController {
 
     private let panel: QuickCapturePanel
     private let model: QuickCaptureModel
+    /// The hosting view whose root is the bounded content, kept so a text-size or display change
+    /// can be laid out again rather than only at construction.
+    private let hosting: NSHostingView<AnyView>
+    /// The displays this panel bounds itself against; `nil` for the live ones. Injectable for the
+    /// reason every other surface's is: no lane can hand a panel a 13-inch laptop otherwise.
+    private let screens: ShellScreens
     /// The app that was frontmost when the panel was summoned, so ⌘Return can hand control
     /// back to it.
     private var interruptedApplication: NSRunningApplication?
@@ -59,14 +65,24 @@ public final class QuickCapturePanelController {
     /// scene's own wiring does.
     public private(set) var adoptedTraits: AppearanceTraits?
 
-    public init(traits: AppearanceTraits = .systemDefault) {
+    public init(traits: AppearanceTraits = .systemDefault, screens: ShellScreens = nil) {
+        self.screens = screens
         let model = QuickCaptureModel()
         model.traits = traits
         self.model = model
 
         panel = QuickCapturePanel(
-            contentRect: NSRect(x: 0, y: 0, width: 560, height: 140),
-            styleMask: [.titled, .closable, .utilityWindow],
+            contentRect: NSRect(
+                x: 0,
+                y: 0,
+                width: ShellSurfaceBounds.capturePanelWidth,
+                height: ShellSurfaceBounds.capturePanelMinimumHeight
+            ),
+            // **`.resizable`, which this style mask did not have** (focus-nu6). Without it the
+            // panel could neither grow nor be dragged, so at the largest accessibility text size
+            // its two fields and its Save button were laid out past the bottom of a 140-point
+            // window and there was no gesture in macOS that reached them.
+            styleMask: [.titled, .closable, .resizable, .utilityWindow],
             backing: .buffered,
             defer: false
         )
@@ -78,8 +94,13 @@ public final class QuickCapturePanelController {
         // would have to be rebuilt — which is the one thing the 34 ms depends on not doing.
         panel.isReleasedWhenClosed = false
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
-        panel.contentView = NSHostingView(rootView: QuickCaptureView(model: model))
-        panel.contentMinSize = NSSize(width: 520, height: 120)
+        // Built now, bounded, so `show()` is state changes on objects that already exist. The
+        // size is committed in `layOutContent()`, which `show()` runs: it depends on the person's
+        // text size and on which display the panel is being centred on, and both of those change
+        // while the process lives.
+        let hosting = NSHostingView(rootView: Self.bounded(model: model, screens: screens))
+        self.hosting = hosting
+        panel.contentView = hosting
 
         panel.onCancel = { [weak self] in self?.hide() }
         model.onCancel = { [weak self] in self?.hide() }
@@ -104,12 +125,81 @@ public final class QuickCapturePanelController {
         panel.isVisible
     }
 
+    /// **The panel's content, bounded** (focus-nu6).
+    ///
+    /// A `static` over the model rather than a method on the live controller, so the size the
+    /// shipping panel is built at is a size a test can take — at either text size, against any
+    /// display — without a window server.
+    @MainActor
+    static func bounded(model: QuickCaptureModel, screens: ShellScreens) -> AnyView {
+        AnyView(
+            BoundedSurface(
+                width: ShellSurfaceBounds.capturePanelWidth,
+                ceiling: ShellSurfaceBounds.capturePanelCeiling(
+                    screens: screens ?? NudgePanelController.currentScreens()
+                )
+            ) {
+                QuickCaptureView(model: model)
+            }
+        )
+    }
+
+    /// **Size the panel to what its content actually measures** (focus-nu6).
+    ///
+    /// The panel used to be built at a constant 560 × 140 with a `contentMinSize` and no way to
+    /// grow — which is the same defect the nudge panel had before focus-kby, arriving through a
+    /// style mask instead of a frame: at the largest accessibility text size the content needed
+    /// more than 140 points, got 140, and the Save button was laid out below the bottom edge.
+    ///
+    /// Run again on every `show()` rather than once at construction, because the two things it
+    /// depends on both change while the process lives: the person's text size, and which display
+    /// the panel is being centred on.
+    private func layOutContent() {
+        let measured = hosting.fittingSize
+        let ceiling = ShellSurfaceBounds.capturePanelCeiling(
+            screens: screens ?? NudgePanelController.currentScreens()
+        )
+        let commitment = SurfaceSizeCommitments.commit(
+            measuredHeight: Double(measured.height),
+            width: ShellSurfaceBounds.capturePanelWidth,
+            ceiling: ceiling,
+            minimum: ShellSurfaceBounds.capturePanelMinimumHeight
+        )
+        let size = NSSize(width: commitment.width, height: commitment.height)
+        // A floor and a ceiling rather than a pin: this panel is a typing surface, so a person who
+        // wants it larger may drag it — up to what the display can hold, past which the content
+        // scrolls rather than the window running off the screen.
+        panel.contentMinSize = NSSize(
+            width: ShellSurfaceBounds.capturePanelWidth,
+            height: ShellSurfaceBounds.capturePanelMinimumHeight
+        )
+        panel.contentMaxSize = NSSize(
+            width: ShellSurfaceBounds.capturePanelWidth,
+            height: ceiling ?? .greatestFiniteMagnitude
+        )
+        panel.setContentSize(size)
+        panel.layoutIfNeeded()
+    }
+
+    /// The size the panel is actually at, as opposed to any size anybody committed to.
+    public var contentSize: CGSize {
+        panel.contentRect(forFrameRect: panel.frame).size
+    }
+
+    /// **Whether a person can drag this panel larger.** Reported rather than assumed, because the
+    /// missing `.resizable` was invisible to every lane in the programme: a style mask is not a
+    /// frame, and no size assertion can see one.
+    public var isResizable: Bool {
+        panel.styleMask.contains(.resizable)
+    }
+
     /// Show the panel, focused and ready to type.
     ///
     /// Everything here is a state change on objects that already exist. Nothing is allocated,
     /// laid out for the first time, or loaded from a nib.
     public func show() {
         interruptedApplication = NSWorkspace.shared.frontmostApplication
+        layOutContent()
         if !hasBeenPositioned {
             panel.center()
             hasBeenPositioned = true
@@ -130,6 +220,9 @@ public final class QuickCapturePanelController {
     public func update(traits: AppearanceTraits) {
         model.traits = traits
         adoptedTraits = traits
+        // The traits carry Reduce Motion and the contrast settings, any of which can change the
+        // content's height. A panel already on screen has to follow.
+        layOutContent()
     }
 
     private func finish(_ result: QuickCaptureResult) {

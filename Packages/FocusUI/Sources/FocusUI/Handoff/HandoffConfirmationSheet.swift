@@ -24,6 +24,9 @@ import SwiftUI
 /// the user's priority. Cancel is.
 public struct HandoffConfirmationSheet: View {
     public let request: HandoffRequest
+    /// The displays this sheet bounds itself against; `nil` for the live ones. Injectable for
+    /// the reason every other surface's is: no lane can hand a sheet a 13-inch laptop otherwise.
+    private let screens: ShellScreens
     /// What is in the store right now, or `nil` if nothing is.
     public let current: PrioritySnapshot?
     public let replace: () -> Void
@@ -38,12 +41,14 @@ public struct HandoffConfirmationSheet: View {
         request: HandoffRequest,
         current: PrioritySnapshot?,
         replace: @escaping () -> Void,
-        cancel: @escaping () -> Void
+        cancel: @escaping () -> Void,
+        screens: ShellScreens = nil
     ) {
         self.request = request
         self.current = current
         self.replace = replace
         self.cancel = cancel
+        self.screens = screens
     }
 
     public var body: some View {
@@ -93,7 +98,7 @@ public struct HandoffConfirmationSheet: View {
             }
         }
         .padding(spacing * 2)
-        .frame(minWidth: 480, alignment: .leading)
+        .boundedSheet(width: ShellSurfaceBounds.handoffSheetWidth, screens: screens)
         .background(DesignTokens.Palette.windowBackground(for: traits))
         .defaultFocus($focus, .handoffCancel)
         .onExitCommand(perform: cancel)

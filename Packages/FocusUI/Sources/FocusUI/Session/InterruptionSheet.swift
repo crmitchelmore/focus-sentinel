@@ -32,6 +32,9 @@ public struct InterruptionSheet: View {
     /// The last application in front that was not this one, as a bundle identifier. `nil` when
     /// nothing has been observed — a first launch, or sensing switched off.
     public let lastActiveBundleID: String?
+    /// The displays this sheet bounds itself against; `nil` for the live ones. Injectable for
+    /// the reason every other surface's is: no lane can hand a sheet a 13-inch laptop otherwise.
+    private let screens: ShellScreens
 
     /// Stop the session, with the reason and the note as they stand.
     public let stop: (InterruptionReason, String?) -> Void
@@ -50,11 +53,13 @@ public struct InterruptionSheet: View {
     public init(
         lastActiveBundleID: String? = nil,
         stop: @escaping (InterruptionReason, String?) -> Void,
-        cancel: @escaping () -> Void
+        cancel: @escaping () -> Void,
+        screens: ShellScreens = nil
     ) {
         self.lastActiveBundleID = lastActiveBundleID
         self.stop = stop
         self.cancel = cancel
+        self.screens = screens
     }
 
     public var body: some View {
@@ -93,7 +98,7 @@ public struct InterruptionSheet: View {
             }
         }
         .padding(spacing * 2)
-        .frame(minWidth: 420, alignment: .leading)
+        .boundedSheet(width: ShellSurfaceBounds.interruptionSheetWidth, screens: screens)
         .defaultFocus($focus, .interruptReason)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text(ShellStrings.resource(.sessionInterruptHeading)))

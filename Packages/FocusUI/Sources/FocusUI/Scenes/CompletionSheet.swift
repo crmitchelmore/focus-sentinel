@@ -14,6 +14,9 @@ public struct CompletionSheet: View {
     /// The sentence being completed, shown so the sheet is about something rather than
     /// floating free of it.
     public let intent: String
+    /// The displays this sheet bounds itself against; `nil` for the live ones. Injectable for
+    /// the reason every other surface's is: no lane can hand a sheet a 13-inch laptop otherwise.
+    private let screens: ShellScreens
     /// Complete: what shipped, where to restart. Either may be `nil`.
     public let complete: (String?, String?) -> Void
     public let cancel: () -> Void
@@ -29,11 +32,13 @@ public struct CompletionSheet: View {
     public init(
         intent: String,
         complete: @escaping (String?, String?) -> Void,
-        cancel: @escaping () -> Void
+        cancel: @escaping () -> Void,
+        screens: ShellScreens = nil
     ) {
         self.intent = intent
         self.complete = complete
         self.cancel = cancel
+        self.screens = screens
     }
 
     public var body: some View {
@@ -92,7 +97,7 @@ public struct CompletionSheet: View {
             }
         }
         .padding(spacing * 2)
-        .frame(minWidth: 420, alignment: .leading)
+        .boundedSheet(width: ShellSurfaceBounds.completionSheetWidth, screens: screens)
         .background(DesignTokens.Palette.windowBackground(for: traits))
         .defaultFocus($focus, .completionShipped)
     }

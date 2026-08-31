@@ -190,3 +190,27 @@ public enum ShellSurfaceBounds {
         ) ?? capturePanelMaximumHeight
     }
 }
+
+extension View {
+    /// **Bound a sheet to the display it is being raised over** (focus-nu6).
+    ///
+    /// The three sheets each committed a `minWidth` and nothing else — a floor, which says how
+    /// small they may be and never how large. A sheet is modal over the window that raised it, so
+    /// content that outgrows the display cannot be scrolled to, dragged into view, or dismissed
+    /// past: `HandoffConfirmationSheet` bounds its input at 500 characters and the other two do
+    /// not bound theirs at all.
+    ///
+    /// Applied where the `minWidth` was, so the width becomes a commitment rather than a floor and
+    /// the height gains the ceiling and the scroll it never had.
+    @MainActor
+    public func boundedSheet(width: Double, screens: ShellScreens = nil) -> some View {
+        BoundedSurface(
+            width: width,
+            ceiling: ShellSurfaceBounds.sheetCeiling(
+                screens: screens ?? NudgePanelController.currentScreens()
+            )
+        ) {
+            self
+        }
+    }
+}
