@@ -37,14 +37,35 @@ enum MenuBarStage {
     /// The popover is deliberately **not** opened. A rung on the glyph is not behind a click, and
     /// a stage that opened one would be measuring the badge's path.
     static func install(_ controller: MenuBarController) throws {
-        _ = NSApplication.shared.setActivationPolicy(.accessory)
-        NSApplication.shared.activate(ignoringOtherApps: true)
-        NudgeHostFixture.settle(0.2)
+        activate()
         controller.install()
         try #require(
             controller.isItemVisible,
             "the status item is not on screen, so no count of writes to it is a reading"
         )
+    }
+
+    /// **The same, for an item the composition root has already installed** (focus-d6r).
+    ///
+    /// `AppComposition.startNudgeLoop()` calls `install()` itself, so a suite driving the
+    /// shipping root must not call it again — that would replace the status item the root is
+    /// holding, and every wire the root made would then be pointing at an item nobody redraws.
+    /// What such a suite still needs is the activation, for `install(_:)`'s own reason: an
+    /// inactive process is handed an invisible item, `redraw(force:)` refuses to write to one
+    /// (F-163), and a glyph rung whose whole content is that item would correctly reach nobody.
+    static func reveal(_ controller: MenuBarController) throws {
+        activate()
+        try #require(
+            controller.isItemVisible,
+            "the root's status item is not on screen, so no count of writes to it is a reading"
+        )
+    }
+
+    /// The activation both routes above need, in one place.
+    private static func activate() {
+        _ = NSApplication.shared.setActivationPolicy(.accessory)
+        NSApplication.shared.activate(ignoringOtherApps: true)
+        NudgeHostFixture.settle(0.2)
     }
 
     static func open(

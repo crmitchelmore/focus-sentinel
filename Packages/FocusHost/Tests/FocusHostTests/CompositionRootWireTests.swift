@@ -22,6 +22,16 @@ import Testing
 /// | S3 | `FocusCommandCenter.shared.observe` | `{ _ in }` | F-145's key equivalents reach the cockpit and not the loop |
 /// | S4 | `nudgeHost.currentSessionID` | `{ nil }` | `NudgeHost` returns early on `nil`, so "Not this time" silently stops working |
 ///
+/// **There is a fifth, and it is not in that table** (focus-d6r). `startNudgeLoop()` also wires
+/// `menuBar.onGlyphWritten`, the wire the ambient rung's whole accountability hangs from, and no
+/// test in this suite or anywhere else ran it: `menuBar.onGlyphWritten = { }` survived the entire
+/// lane. It is driven by `NudgeFloorTests.theGlyphWireChargesTheRungItFinallyDrew`, which lives
+/// beside the floor because finding the state in which that wire is load-bearing is the same
+/// question as finding the state in which the app goes quiet. It is named S5 there. Two of this
+/// suite's four rows have a twin one row over — the popover wire and the glyph wire are the two
+/// halves of *"the menu bar tells the loop what a person did"* — and only one of them had a
+/// driven proof, which is the shape every bead in this sequence has.
+///
 /// `CompositionRootTests.thePopoverWireReachesTheLoop` asserted `!= nil`, which a no-op closure
 /// satisfies. `MenuBarPopoverTests` and `NudgeHostQuestionTests` install closures of **their
 /// own**, so the shipping wire was never run by anything. `CompositionRootTests` calls
