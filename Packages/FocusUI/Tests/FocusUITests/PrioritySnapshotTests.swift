@@ -236,7 +236,11 @@ enum PriorityComponent: String, CaseIterable, Sendable {
 
     /// Everything wraps inside a fixed width, so growing text grows the *height* — which is
     /// what the dynamic-type and pseudo-localisation assertions read.
-    var width: CGFloat? { 520 }
+    var width: CGFloat? {
+        // The handoff sheet commits a width now, so it is photographed at the width it commits
+        // to, plus the harness's own 16-point padding on each side (focus-nu6).
+        self == .handoffConfirm ? ShellSurfaceBounds.handoffSheetWidth + 32 : 520
+    }
 
     /// Whether a pseudo-localised pass means anything for this component.
     ///
@@ -324,11 +328,16 @@ enum PriorityComponent: String, CaseIterable, Sendable {
             )
         case .handoffConfirm:
             AnyView(
+                // `screens: []` — no display, so the sheet's container draws its column whole
+                // (focus-nu6). `ImageRenderer` cannot draw the scroll view it reaches for past a
+                // ceiling, and the ceiling is read from the live display, so a picture of the
+                // bounded sheet would have dimensions that followed the monitor.
                 HandoffConfirmationSheet(
                     request: PriorityFixture.handoff,
                     current: PriorityFixture.priority(),
                     replace: {},
-                    cancel: {}
+                    cancel: {},
+                    screens: []
                 )
             )
         }

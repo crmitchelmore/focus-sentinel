@@ -88,14 +88,7 @@ public struct PrivacySettingsView: View {
         .defaultFocus($focus, .privacyRevealStore)
     }
 
-    /// **One column, every pixel of ink this pane draws, and no scroll view.**
-    ///
-    /// Internal rather than private because this is what the baseline lane renders:
-    /// `ImageRenderer` cannot rasterise a `ScrollView` at all — measured, not inferred — so the
-    /// picture has to be taken of the column, and the container around it is proved structurally
-    /// instead. Neither half is the harness dictating the layout: the shipping pane scrolls, and
-    /// what the snapshot is a picture of is the thing that has pixels in it.
-    var content: some View {
+    private var content: some View {
         VStack(alignment: .leading, spacing: spacing) {
             ShellText(.settingsPrivacyStatement)
                 .lineLimit(nil)

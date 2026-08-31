@@ -40,6 +40,14 @@ enum SnapshotComponent: String, CaseIterable, Sendable {
         switch self {
         case .statusRelevant, .statusUncertain, .statusUnrelated, .statusPaused, .statusBreak:
             nil
+        case .privacySettings:
+            // **The width the pane commits to**, plus the harness's own 16-point padding on each
+            // side, so the pane is proposed exactly `settingsWidth` and the picture has no dead
+            // band beside it (focus-nu6). A surface that commits a width must be photographed at
+            // it: a picture rendered at a width the test chose can never show the width being
+            // wrong, which is the defect `MenuBarController.popoverLayout` records for the
+            // popover baselines.
+            ShellSurfaceBounds.settingsWidth + 32
         default:
             520
         }
@@ -69,20 +77,28 @@ enum SnapshotComponent: String, CaseIterable, Sendable {
         case .shortcutsHelp:
             return AnyView(ShortcutsHelpContent(registry: .shell))
         case .privacySettings:
-            // **The pane's `content`, not its `body`** (focus-nu6).
+            // **The real pane, handed no display** (focus-nu6).
             //
-            // The body is a `BoundedSurface`, and past its ceiling that is a `ScrollView` —
-            // which `ImageRenderer` cannot rasterise at all. Measured, and re-measured every run
-            // by `BoundedSurfaceTests.imageRendererStillCannotDrawAScrollView`: a column renders
-            // at the right size with 295 654 ink pixels, and the same column inside a scroll view
-            // renders at the same size with **zero**.
+            // The pane is a `BoundedSurface` now, and two things about it are unrenderable here:
+            // past its ceiling the container is a `ScrollView`, which `ImageRenderer` cannot
+            // rasterise at all — re-measured every run by
+            // `BoundedSurfaceTests.imageRendererStillCannotDrawAScrollView` — and the ceiling
+            // itself is derived from the **live** display, so a picture of the bounded pane would
+            // have dimensions that depend on the monitor that recorded it. A baseline that
+            // changes with the machine is not a baseline.
             //
-            // The pane used to have no scroll view for exactly this reason — the shipping layout
-            // was cut to suit this lane, and a person could not read the pane on any display as a
-            // result. Rendering the column is the other repair: this lane keeps proving what it
-            // is the right instrument for, which is what the pane *looks like*, and the container
-            // around it is proved structurally where a picture cannot go.
-            return AnyView(PrivacySettingsView(storeURL: Self.storeURL).content)
+            // `screens: []` is the honest injection for both: with no display attached there is
+            // nothing to clamp to, the container draws the column whole, and the picture is a
+            // deterministic function of the committed code. It is the shipping view either way —
+            // the pane's own `@ScaledMetric` spacing and `@Environment` text scale are installed,
+            // which is exactly what reaching past `body` for an inner property lost: measured,
+            // that renders the pane 70 points short at `accessibilityLarge` because the spacing
+            // stops scaling.
+            //
+            // The pane used to have no scroll view at all, because one made this lane render a
+            // blank. That was the product cut to suit the harness; this is the harness measuring
+            // the product.
+            return AnyView(PrivacySettingsView(storeURL: Self.storeURL, screens: []))
         default:
             preconditionFailure("unhandled snapshot component \(rawValue)")
         }

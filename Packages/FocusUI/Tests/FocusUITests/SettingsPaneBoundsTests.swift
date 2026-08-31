@@ -80,17 +80,23 @@ struct SettingsPaneBoundsTests {
         return found
     }
 
-    /// Each pane twice: the column it draws, and the pane a person is actually handed.
+    /// Each pane twice: **the same shipping view with no display**, which is the column it draws
+    /// unbounded, and the pane bounded by a laptop.
+    ///
+    /// Not an inner `content` property. Reaching past `body` for one evaluates the column outside
+    /// the view's own body, so its `@ScaledMetric` spacing and `@Environment` text scale are never
+    /// installed — measured, that is a pane 70 points shorter at `accessibilityLarge` than the one
+    /// a person is handed, and every height below would have been taken of a view nobody sees.
     static var panes: [(name: String, column: AnyView, pane: AnyView)] {
         [
             (
                 "privacy",
-                AnyView(PrivacySettingsView(storeURL: Self.storeURL).content),
+                AnyView(PrivacySettingsView(storeURL: Self.storeURL, screens: [])),
                 AnyView(PrivacySettingsView(storeURL: Self.storeURL, screens: [Self.laptop]))
             ),
             (
                 "intervention",
-                AnyView(InterventionSettingsView(settings: .init()).content),
+                AnyView(InterventionSettingsView(settings: .init(), screens: [])),
                 AnyView(InterventionSettingsView(settings: .init(), screens: [Self.laptop]))
             )
         ]

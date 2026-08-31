@@ -134,9 +134,7 @@ public struct InterventionSettingsView: View {
         }
     }
 
-    /// **One column, every pixel of ink this pane draws, and no scroll view** — what the baseline
-    /// lane renders, for the reason `PrivacySettingsView.content` gives.
-    var content: some View {
+    private var content: some View {
         VStack(alignment: .leading, spacing: DesignTokens.spacing(spacing, scale: textScale)) {
             // **All five fields of `InterventionSettings`, each reported beside the section that
             // draws it** (focus-7ow).

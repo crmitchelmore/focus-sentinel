@@ -51,7 +51,12 @@ public struct HandoffConfirmationSheet: View {
         self.screens = screens
     }
 
+    /// **The sheet, bounded** (focus-nu6).
     public var body: some View {
+        content.boundedSheet(width: ShellSurfaceBounds.handoffSheetWidth, screens: screens)
+    }
+
+    private var content: some View {
         VStack(alignment: .leading, spacing: spacing) {
             ShellText(.handoffHeading, role: .title3)
                 .fontWeight(.semibold)
@@ -98,7 +103,7 @@ public struct HandoffConfirmationSheet: View {
             }
         }
         .padding(spacing * 2)
-        .boundedSheet(width: ShellSurfaceBounds.handoffSheetWidth, screens: screens)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(DesignTokens.Palette.windowBackground(for: traits))
         .defaultFocus($focus, .handoffCancel)
         .onExitCommand(perform: cancel)

@@ -434,7 +434,11 @@ struct InterventionSettingsTests {
 @Suite("Intervention settings snapshots", .enabled(if: LocalizationLane.catalogsAreCompiled))
 @MainActor
 struct InterventionSettingsSnapshotTests {
-    static let paneWidth: CGFloat = 460
+    /// The width the pane commits to, plus the harness's own 16-point padding on each side, so
+    /// the pane is proposed exactly `settingsWidth` (focus-nu6). `screens: []` at every call site
+    /// below is what makes the picture machine-independent: the container's ceiling is derived
+    /// from the live display, and a baseline whose dimensions follow the monitor is not one.
+    static let paneWidth: CGFloat = ShellSurfaceBounds.settingsWidth + 32
 
     /// The four states, as four **independent** cases rather than one loop.
     ///
@@ -458,7 +462,7 @@ struct InterventionSettingsSnapshotTests {
             return
         }
         try SnapshotHarness.assertSnapshot(
-            InterventionSettingsView(settings: settings),
+            InterventionSettingsView(settings: settings, screens: []),
             component: "interventionSettings.\(state)",
             variant: "light",
             width: Self.paneWidth
@@ -471,7 +475,7 @@ struct InterventionSettingsSnapshotTests {
     )
     func appearanceVariants(variant: String, size: SnapshotTypeSize) throws {
         try SnapshotHarness.assertSnapshot(
-            InterventionSettingsView(settings: InterventionSettingsFixture.midDay),
+            InterventionSettingsView(settings: InterventionSettingsFixture.midDay, screens: []),
             component: "interventionSettings",
             variant: variant,
             textScale: size.textScale,
