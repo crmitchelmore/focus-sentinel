@@ -395,4 +395,98 @@ struct NudgeFloorTests {
             "the glyph landing spent a unit of the shared budget"
         )
     }
+
+    // MARK: - The floor's other half: the glyph on a day the app has already spoken
+
+    /// **A day that has spent its six accusations still marks the status item** (focus-2yy).
+    ///
+    /// focus-d6r's sweep found the same shape one gate further down, inside the same function.
+    /// `FatigueController.decide` runs five gates and the first three all exempt the ambient rung
+    /// by name — a correction is subject-scoped, a snooze is asked as `rung ?? .panel` precisely
+    /// so it never takes the glyph, and the ignored-accusation hold answers `rung != .ambient`
+    /// with the comment *"the accusation backoff does not silence the ladder; it holds it at the
+    /// ambient rung, which is the one channel the person has not objected to"*. Gate 5, the caps,
+    /// exempted nothing. Measured, six accusations spent and fatigue fresh:
+    ///
+    ///     rung=ambient accuses=false spendsAccusationCap=false
+    ///       decision=refused(cap(dailyAccusationCap))
+    ///     rung=ambient, shared cap spent instead
+    ///       decision=refused(cap(dailyInterruptionCap))
+    ///
+    /// So a rung that spends neither cap was refused by both, and the consequence reaches the
+    /// person: `NudgeDecider` passes `budgetPermits: fatigue.isPermitted` into the suppression
+    /// stack for a rung of any kind, so after six panel accusations the status item stopped
+    /// saying anything for the rest of the local day. F-146's *"the state is always legible"*,
+    /// broken by arithmetic — which is precisely what gates 2 and 3 exist to prevent.
+    ///
+    /// The rows are written to the store rather than climbed to, deliberately: the budget is a
+    /// pure function of stored rows and this drive is about the **decision** the loop makes on a
+    /// day that has already happened, not about how that day was reached. The rung this asserts
+    /// on is climbed through the shipping loop like every other one here.
+    @Test("a day that has spent every accusation still marks the item when the person drifts")
+    func theGlyphSurvivesADaySpentToTheCap() throws {
+        let clock = FixedMonotonicClock()
+        let (root, priorityID) = try Self.joinedRoot(clock: clock)
+        defer { Self.tearDown(root) }
+
+        let log = InterventionLog(
+            context: root.modelContainer.mainContext,
+            dateProvider: FixedDateProvider(now: NudgeHostFixture.reference),
+            calendar: NudgeHostFixture.londonCalendar
+        )
+        // Six panel rungs: a heavy but ordinary day, and the whole of `dailyAccusationCap`.
+        for index in 0..<InterventionPolicy.dailyAccusationCap {
+            try log.record(
+                InterventionEvent(
+                    kind: .accusation,
+                    rung: .panel,
+                    subject: Self.subjects[index % Self.subjects.count],
+                    surface: .panel,
+                    disposition: .delivered
+                ),
+                priorityID: priorityID
+            )
+        }
+        let spent = try log.budget(on: log.today, priorityID: priorityID)
+        try #require(
+            !spent.permits(.accusation),
+            "the day is not actually spent, so this drives nothing"
+        )
+        try #require(spent.bindingLimit(for: .accusation) == .dailyAccusationCap)
+
+        // And now the person drifts into something new. The app may not say another sentence —
+        // it has said its six — and it must still tell them what it thinks.
+        let landing = try Self.drift(
+            root,
+            clock: clock,
+            into: Self.subjects[0],
+            thenBreak: false
+        )
+        #expect(
+            landing.landedOn == .menuBar,
+            """
+            a day of six accusations took the status item with it: the app went quiet about the \
+            person's own state — \(String(describing: root.nudgeHost.lastDecision))
+            """
+        )
+        #expect(
+            root.menuBar.markOnTheItem == .noticing,
+            "the item is drawing \(root.menuBar.markOnTheItem.rawValue) while the person drifts"
+        )
+        #expect(landing.glyphWrites > 0, "the item was never written — \(landing.summary)")
+
+        // The ladder stops there, which is the half that must NOT change: the rung that carries a
+        // sentence is still refused, because it is the rung that spends the cap that is spent.
+        #expect(
+            root.nudgeHost.currentRung == .ambient,
+            "the ladder climbed past the glyph on a day whose accusations are gone"
+        )
+        #expect(!root.nudgePanel.isVisible, "a seventh accusation reached the screen")
+        let after = try log.budget(on: log.today, priorityID: priorityID)
+        #expect(
+            after.accusationsToday == InterventionPolicy.dailyAccusationCap,
+            "the glyph the app was allowed to draw spent a seventh accusation"
+        )
+        #expect(after.interruptionsToday == InterventionPolicy.dailyAccusationCap)
+    }
 }

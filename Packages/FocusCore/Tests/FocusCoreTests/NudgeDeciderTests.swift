@@ -495,15 +495,67 @@ struct NudgeDeciderTests {
         #expect(decision.warrant == nil)
     }
 
-    @Test("gate 10: the caps, and the day's spend silences both kinds")
+    /// **Gate 10: the caps silence the sentences and leave the glyph alone** (focus-2yy).
+    ///
+    /// It asserted `.budgetExhausted` for both verdicts, which required the ambient rung — a mark
+    /// that spends neither cap — to be refused by one. Gates 1, 2 and 3 of `FatigueController`
+    /// each exempt that rung by name; this one exempted nothing, so a day that had spent its six
+    /// accusations went on to spend its status item as well, and the menu bar stopped saying
+    /// anything at all for the rest of it. That is F-146's *"the state is always legible"* broken
+    /// by arithmetic, and it is exactly what the ignored-accusation hold's `rung != .ambient` was
+    /// written to prevent.
+    ///
+    /// So the gate is asserted as the two different things it is. A **question** is a sentence and
+    /// is refused. An **accusation** is refused at the rung that makes one and permitted at the
+    /// rung that does not, which is the glyph — and the glyph is where it stops, because
+    /// `LadderMachine.candidate(…)` will not climb past a rung the budget has closed.
+    @Test("gate 10: the day's spend silences every sentence and leaves the glyph telling the truth")
     func gateTen() {
-        for verdict in [Verdict.uncertain, .unrelated] {
-            let decision = Self.decide(
-                Self.judgement(verdict: verdict, uncertainty: .noNegativeBasis),
-                memory: NudgeMemory(budget: Self.exhausted)
-            )
-            #expect(decision.silence?.reason == .budgetExhausted, "\(verdict)")
-        }
+        let question = Self.decide(
+            Self.judgement(verdict: .uncertain, uncertainty: .noNegativeBasis),
+            memory: NudgeMemory(budget: Self.exhausted)
+        )
+        #expect(question.silence?.reason == .budgetExhausted)
+
+        // The rung that accuses somebody is refused by the cap it would spend.
+        #expect(
+            !FatigueController.permits(
+                kind: .accusation,
+                subject: Self.decoy,
+                rung: .panel,
+                budget: Self.exhausted,
+                fatigue: .fresh,
+                now: .seconds(10_000)
+            ),
+            "a spent day still permitted the rung that carries a sentence"
+        )
+        // And the rung that accuses nobody is not, because it spends neither cap.
+        #expect(
+            FatigueController.permits(
+                kind: .accusation,
+                subject: Self.decoy,
+                rung: .ambient,
+                budget: Self.exhausted,
+                fatigue: .fresh,
+                now: .seconds(10_000)
+            ),
+            """
+            a day of six accusations took the status item as well, so the menu bar stopped \
+            telling the person what it thinks for the rest of it
+            """
+        )
+        // Driven rather than asserted on the predicate: the loop really does still mark the item.
+        let drift = Self.decide(
+            Self.judgement(verdict: .unrelated, uncertainty: nil),
+            memory: NudgeMemory(budget: Self.exhausted)
+        )
+        #expect(
+            drift.silence == nil,
+            """
+            the app went quiet about a person's own state on a day it had already said its six \
+            sentences — \(String(describing: drift.silence?.reason))
+            """
+        )
     }
 
     @Test("the gates are reported in R-84's order: the first that applied is the one told")

@@ -187,7 +187,38 @@ public struct FatigueController: Sendable, Equatable {
         }
 
         // 5 — the caps, and the reserved unit inside them.
-        if let limit = budget.bindingLimit(for: kind) {
+        //
+        // **A rung is refused only by a cap it can spend** (focus-2yy, focus-d6r). Gates 1, 2 and
+        // 3 above all exempt the ambient rung by name — a correction is subject-scoped, a snooze
+        // is asked as `rung ?? .panel` precisely so that it never takes the glyph, and the
+        // ignored-accusation hold answers `rung != .ambient` with the comment *"the accusation
+        // backoff does not silence the ladder; it holds it at the ambient rung, which is the one
+        // channel the person has not objected to"*. This gate exempted nothing, so once the day's
+        // accusations were spent the glyph was refused too. Measured, six accusations spent and
+        // fatigue fresh:
+        //
+        //     rung=ambient accuses=false spendsAccusationCap=false
+        //       decision=refused(cap(dailyAccusationCap))
+        //
+        // A rung that spends neither cap being refused by one is the status item going dark for
+        // the rest of a working day, which is F-146's *"the state is always legible"* broken by
+        // arithmetic and is exactly what gates 2 and 3 were written to prevent. `NudgeDecider`
+        // already states the intended rule one line above the call: *"the fatigue controller's
+        // answer depends on the rung — a held ladder still shows the glyph, and a snooze never
+        // touches it."*
+        //
+        // Asked through `InterruptionCharge`, which is the single derivation of *"did this speak
+        // to anybody?"*, rather than through a second copy of the predicate: a rule with two
+        // homes is a rule that can be moved in one of them, which is the whole of focus-d6r.
+        let charge = InterruptionCharge(
+            InterventionEvent(
+                kind: kind,
+                rung: rung,
+                subject: subject ?? "",
+                disposition: .delivered
+            )
+        )
+        if charge != nil, let limit = budget.bindingLimit(for: kind) {
             return .refused(.cap(limit))
         }
 
