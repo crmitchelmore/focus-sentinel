@@ -79,12 +79,51 @@ public enum PriorityCommand: String, Sendable, CaseIterable, Hashable {
 ///
 /// A single instance, because the app has a single cockpit: `Window`, not `WindowGroup`, so
 /// there is exactly one surface that could ever register.
+///
+/// ## The buffer is armed by a window opening, and by nothing else (focus-mwm)
+///
+/// "The window takes a run loop turn to exist, so the command waits for it" is the **whole**
+/// justification for holding a command, and it is only true when something has actually asked a
+/// window to exist. It was not true of every other caller: `send` stored the command whenever no
+/// handler was registered, so the menu-bar popover's four buttons and the nudge panel's Pause and
+/// Change priority — none of which opened anything — dropped their commands into a buffer that
+/// would be emptied the next time the person happened to open the cockpit, or never.
+///
+/// So the raise moved **into** this object. `send` opens the cockpit itself for every command
+/// whose `opensCockpit` is true, which is one place instead of one per caller, and it buffers
+/// only when it actually did so. Everything else it cannot deliver it **refuses**, out loud, in
+/// its return value — which is not `@discardableResult`, so a caller cannot fail to have an
+/// opinion about a command that went nowhere.
 @MainActor
 public final class FocusCommandCenter {
     public static let shared = FocusCommandCenter()
 
     private var handler: ((PriorityCommand) -> Void)?
     private var pending: PriorityCommand?
+
+    /// How the cockpit window is brought into existence and to the front.
+    ///
+    /// Supplied by `ShellCommands`, which is the one thing in the application that holds
+    /// SwiftUI's `openWindow` — and it has to be SwiftUI's. Measured in the shipping process by
+    /// `SelfCheck.cockpitRenderingReport`: a launch that inherits a closed cockpit has **no
+    /// `NSWindow` for it at all**, so there is nothing for AppKit to order front; only
+    /// `openWindow(id:)` can create one. This is deliberately not `NSApp.activate` or
+    /// `makeKeyAndOrderFront` — R-96e bans both outside two pinned files, and a window this app
+    /// opens because the person pressed a button labelled *"Open Focus Sentinel"* needs neither.
+    private var cockpitOpener: (() -> Void)?
+
+    /// Whether anything in this process can raise the cockpit.
+    ///
+    /// Read by the self-check, because "the opener was installed" is a wire like any other and a
+    /// wire nobody asserts is a wire that goes quiet. `false` in a unit process, which is what
+    /// makes `.undeliverable` a state the unit lane can drive.
+    public var canRaiseCockpit: Bool { cockpitOpener != nil }
+
+    /// How many times the cockpit has been asked to come forward.
+    ///
+    /// Observable whether an opener is installed or not, so a test can prove the *request* was
+    /// made without a scene graph to answer it.
+    public private(set) var cockpitRequests = 0
     /// Additional listeners, delivered **after** the registered handler.
     ///
     /// Not a second buffer — that is the thing this type's documentation rules out, and the
@@ -121,12 +160,78 @@ public final class FocusCommandCenter {
         observers.append(observer)
     }
 
-    public func send(_ command: PriorityCommand) {
+    /// Install the one route to the cockpit window.
+    ///
+    /// Idempotent: `ShellCommands` installs it every time its `body` is evaluated, and the
+    /// closure it installs is the same closure over the same scene.
+    public func registerCockpitOpener(_ open: @escaping () -> Void) {
+        cockpitOpener = open
+    }
+
+    /// **Bring the cockpit forward**, and say whether anything could.
+    ///
+    /// A verb of its own because one surface asks for exactly this and nothing else: the
+    /// popover's *"Open Focus Sentinel"* button, whose string's own comment reads *"bring the
+    /// main window forward"*. It used to send `.newPriority` — which, with the cockpit closed,
+    /// went into the buffer and did nothing at all, and with the cockpit open behind another
+    /// application set `isCapturing` on a window nobody could see.
+    @discardableResult
+    public func requestCockpit() -> Bool {
+        cockpitRequests += 1
+        guard let cockpitOpener else { return false }
+        cockpitOpener()
+        return true
+    }
+
+    /// Deliver a command, and say what became of it.
+    ///
+    /// The result is **not** `@discardableResult` on purpose. Every caller has to say what it
+    /// means to do about a command that landed nowhere, because the defect this shape replaces
+    /// was five callers that had never been asked the question.
+    public func send(_ command: PriorityCommand) -> CommandDelivery {
+        // **The raise is here, once, rather than at each call site.** `ShellCommands.perform`
+        // used to do it, and it was the only caller that did; the two that did not are the ones
+        // a person reaches with the main window shut.
+        if command.opensCockpit {
+            requestCockpit()
+        }
+
         if let handler {
             handler(command)
-        } else {
-            pending = command
+            notify(command)
+            return .delivered
         }
+
+        notify(command)
+
+        // Held **only** because a window is on its way to answer it. Without an opener there is
+        // no window coming, and storing the command would be storing it for ever.
+        if command.opensCockpit, canRaiseCockpit {
+            pending = command
+            return .awaitingCockpit
+        }
+        // The e05 verbs are the nudge loop's, and the loop listens as an observer for the life of
+        // the process — so "no handler" is not "nowhere to land" for them.
+        return observers.isEmpty ? .undeliverable : .delivered
+    }
+
+    private func notify(_ command: PriorityCommand) {
         for observer in observers { observer(command) }
     }
+}
+
+/// **What became of a command.** Total, and returned rather than logged, because the three
+/// outcomes are three different facts about somebody's click (focus-mwm).
+public enum CommandDelivery: String, Sendable, Equatable, CaseIterable {
+    /// A live listener performed it — the cockpit's registered handler, an observer, or both.
+    case delivered
+    /// Nothing was listening, the cockpit has been asked to open, and it will be delivered the
+    /// moment that window registers. The one case the buffer was written for.
+    case awaitingCockpit
+    /// Nothing was listening and nothing is coming. **It will never land**, and a caller that
+    /// records an effect after seeing this is recording something that did not happen.
+    case undeliverable
+
+    /// Whether the person's click reached, or will reach, something that can carry it out.
+    public var willLand: Bool { self != .undeliverable }
 }

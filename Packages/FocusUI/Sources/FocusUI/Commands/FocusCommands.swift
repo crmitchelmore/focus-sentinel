@@ -31,6 +31,21 @@ public struct ShellCommands: Commands {
 
     public var body: some Commands {
         CommandGroup(replacing: .newItem) {
+            // **The application's one route to the cockpit window, handed to the one object that
+            // needs it** (focus-mwm).
+            //
+            // `openWindow` is an environment value, so it exists only while something is being
+            // evaluated — and a `Commands` body is evaluated when AppKit builds the main menu,
+            // at launch, whether the cockpit is open or not. That is the property this needs: the
+            // menu-bar popover and the nudge panel are reachable with the main window shut, and
+            // neither of them is anywhere SwiftUI's environment reaches.
+            //
+            // It is a declaration in a result builder rather than a statement in `perform`,
+            // because `perform` runs on a click and the surfaces that need the opener are not
+            // this one. `CockpitView.body` records its render through the same idiom.
+            //
+            // Idempotent: the same closure over the same scene, re-installed on every evaluation.
+            let _ = commandCenter.registerCockpitOpener { openWindow(id: ShellWindow.cockpit.id) }
             actionButtons(in: .file)
         }
 
@@ -74,10 +89,17 @@ public struct ShellCommands: Commands {
             // answering a nudge from the keyboard must not raise a window on top of the work
             // the person was asked to go back to, and "hide all overlays" that opened one would
             // be doing the opposite of what it says.
-            if command.opensCockpit {
-                openWindow(id: ShellWindow.cockpit.id)
-            }
-            commandCenter.send(command)
+            //
+            // Both of those sentences are still true and neither is written here any more
+            // (focus-mwm). `if command.opensCockpit { openWindow(…) }` was on this line and on
+            // no other, so it was a rule this one caller kept and the two callers a person
+            // reaches with the cockpit shut did not. It is the centre's now, which is why this
+            // is one statement: a menu item sends, and what a send *means* is one definition.
+            //
+            // The result is discarded here and nowhere else in the application. A menu item can
+            // always be carried out: every `ShellActionEffect.priority` command either opens the
+            // cockpit or is one of the nudge verbs the loop observes for the life of the process.
+            _ = commandCenter.send(command)
         }
     }
 }

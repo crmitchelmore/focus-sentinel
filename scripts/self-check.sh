@@ -865,6 +865,19 @@ check(
     "the shell's live appearance preference is the one in the store",
     (shell.get("appearancePreference"), shell.get("storedAppearancePreference")),
 )
+# --- the cockpit can be opened from a surface that is not the cockpit (focus-mwm) -------------
+#
+# The popover's "Open Focus Sentinel" button asks the command centre to raise the main window, and
+# the only thing that can answer is the closure `ShellCommands` installs out of SwiftUI's
+# `openWindow`. Measured before the repair: the button sent `.newPriority` down a channel whose
+# only listener is the cockpit's own view, so with the window closed it did nothing at all, and
+# with the window open behind another application it set a capture flag on a window nobody could
+# see. Nothing but a launch with a real scene graph can take this reading.
+check(
+    shell.get("canRaiseCockpit") is True,
+    "the shell installed the one route that can open the cockpit window",
+    shell.get("canRaiseCockpit"),
+)
 print(
     f"note appearance refreshCount={shell.get('appearanceRefreshCount')!r} "
     f"colorScheme={shell.get('appearanceColorScheme')!r} "

@@ -747,6 +747,21 @@ check_outside "R-70n" "no rule is constructed with the session scope" \
 #        instrument the original gate read. The two calls look identical in a diff, so the
 #        difference is held by a lint rather than by a reviewer's memory.
 #
+# R-96q  **A command reaches the cockpit's channel from the menu bar and from nowhere else**
+#        (focus-mwm). `FocusCommandCenter.send(...)` delivers to a handler that only
+#        `CockpitView.onAppear` registers, so a caller outside the menu is a caller whose click
+#        does nothing whenever the person has closed the main window — which for a menu-bar app
+#        is the ordinary state, not an edge. Measured: the popover's Open / Start / Pause /
+#        Complete and the nudge panel's Pause and Change priority, six controls, all silent with
+#        the cockpit shut, and Pause additionally wrote a completed correction and let the
+#        session run on.
+#
+#        Pinned to `FocusCommands.swift` — the menu bar itself, which is only reachable while
+#        this application is active and which is where the raise is now performed. Every other
+#        surface calls the host it means (`sessionHost`, `nudgeHost`, `quickCapturePanel`) or
+#        asks for the window by name (`requestCockpit()`), and a seventh control that reaches
+#        for the buffer instead is a diff in this line.
+#
 # R-96n  `.fullScreenAuxiliary` is CONDITIONAL, and the condition is the presentation gate.
 #        The flag may be ADDED to a collection behaviour in exactly one file and on exactly
 #        one expression — the true branch of `collectionBehavior(presentationIsClear:)` — it
@@ -937,6 +952,18 @@ else
         fi
     done
 fi
+
+# R-96q — the cockpit's channel has one shipping caller, and it is the menu bar.
+#
+# `FocusCommandCenter` is a `@MainActor` singleton reached as `.shared`, so the two shapes a new
+# caller can take are `FocusCommandCenter.shared.send(` and `<some>commandCenter.send(`. Both are
+# matched. `requestCockpit()` is deliberately NOT matched: it is the verb a surface uses to ask
+# for the window by name, it opens one rather than storing a command against one, and it reports
+# whether anything could.
+check_outside "R-96q" "only the menu bar sends a command down the cockpit's channel" \
+    '(FocusCommandCenter\.shared|[Cc]ommandCenter)\.send\(' \
+    App Packages/*/Sources \
+    --allow Packages/FocusUI/Sources/FocusUI/Commands/FocusCommands.swift
 
 # R-96d — no shared abstraction over the two authorisations, and no retroactive conformance
 # added to either of them. The elegant refactor is the one that would destroy the guarantee.

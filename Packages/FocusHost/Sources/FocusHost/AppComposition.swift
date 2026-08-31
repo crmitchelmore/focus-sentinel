@@ -741,14 +741,37 @@ public final class AppComposition {
                 priorityHost.registerLearnedRuleUndo(id: committed.id)
             }
         case .pause:
-            // e03's own machine, never a second pause concept (F-64). It travels down the same
-            // one channel every menu item uses, so a pause from a nudge and a pause from ⌃⌘P are
-            // literally the same command.
-            FocusCommandCenter.shared.send(.pauseSession)
+            // **e03's own machine, reached directly** (F-64, focus-mwm).
+            //
+            // This was `FocusCommandCenter.shared.send(.pauseSession)`, on the argument that a
+            // pause from a nudge and a pause from ⌃⌘P should be *the same command*. What they
+            // have to be the same is the same **destination**, and the channel was the wrong
+            // thing to share: the cockpit's registered handler is the only thing that answers a
+            // command, the handler is registered by `CockpitView.onAppear` and unregistered by
+            // its `onDisappear`, and a nudge panel appears by construction while the person is
+            // working in another application — so the cockpit being closed is the common case
+            // here, not the corner. Measured: with the window shut, Pause wrote a completed
+            // correction, spent fatigue, de-escalated the ladder, took the panel down, and the
+            // session kept running.
+            //
+            // `SessionHost` is the app's only `SessionActing` and it is what the cockpit's own
+            // handler calls, so this is the same code path with one fewer window in it. No guard,
+            // because the machine is the authority: a pause of an already-paused session is
+            // rejected `alreadyInPhase` and recorded, which is a truthful outcome rather than a
+            // silent one.
+            sessionHost.pauseSession()
         case .priorityChangeRequested:
-            // e02's confirm surface. **Never** a silent replacement (F-142): the command opens
-            // the capture field, and the person types and confirms.
-            FocusCommandCenter.shared.send(.newPriority)
+            // **e02's confirm surface — the one this action's own documentation names**
+            // (F-142, focus-mwm).
+            //
+            // `CorrectionAction.changePriority` is documented as *"Opens e02's quick-capture
+            // confirm surface"*, and it did not: it sent `.newPriority` to the cockpit, which
+            // with the window closed opened nothing at all. The quick-capture panel is the
+            // surface that works from anywhere — it is built at launch, it activates because the
+            // person asked for a field to type in, and it is the same panel the global hot key
+            // raises. **Never** a silent replacement: it opens the capture field, and the person
+            // types and confirms.
+            quickCapturePanel.show()
         case .sessionRule, .receiptOnly, .snooze, .returnToTask, .nothing:
             break
         }
@@ -756,12 +779,36 @@ public final class AppComposition {
     }
 
     /// A click in the menu bar.
-    private func perform(_ action: MenuBarAction) {
+    ///
+    /// Internal rather than private, for the reason `perform(_ outcome:priorityID:)` is
+    /// (focus-mwm). It had **zero** references anywhere in `Packages/FocusHost/Tests` and no
+    /// self-check probe drove one either, so the four buttons that reached nothing when the
+    /// cockpit was closed were covered only by `MenuBarTests.popoverReportsActions` — a test
+    /// titled *"every popover control reports its own typed request"* whose body calls the
+    /// closure the test itself injected. It observes no effect, and there was none to observe.
+    func perform(_ action: MenuBarAction) {
         switch action {
-        case .openCockpit: FocusCommandCenter.shared.send(.newPriority)
-        case .startSession: FocusCommandCenter.shared.send(.startSession)
-        case .pauseSession: FocusCommandCenter.shared.send(.pauseSession)
-        case .completeSession: FocusCommandCenter.shared.send(.completeSession)
+        // **Four buttons that did nothing whenever the cockpit was closed** (focus-mwm).
+        //
+        // All four were `FocusCommandCenter.shared.send(…)`, and the centre delivers to the
+        // cockpit's registered handler or to nothing. A menu-bar app whose command centre stops
+        // working when its main window is shut has it exactly backwards: the popover is the
+        // surface that exists *for* that state.
+        //
+        // `setSensingPaused` below was already right, and it is the pattern the other four now
+        // follow — the host, directly, with no window in the path. The one that genuinely needs
+        // a window asks for one by name.
+        case .openCockpit:
+            // The button's string is `shell.menuBar.openCockpit` — "Open Focus Sentinel",
+            // comment *"Popover action: bring the main window forward"*. It sent `.newPriority`,
+            // which with the cockpit closed opened nothing and with the cockpit open behind
+            // another application set `isCapturing` on a window the person could not see.
+            FocusCommandCenter.shared.requestCockpit()
+        case .startSession:
+            // No guard: `SessionStore.start` throws `sessionAlreadyOpen`, which is recorded.
+            sessionHost.startSession(kind: .openEnded, plannedSeconds: nil, deadlineAt: nil)
+        case .pauseSession: sessionHost.pauseSession()
+        case .completeSession: sessionHost.completeSession()
         case .setSensingPaused(let paused): sessionHost.setSensingPaused(paused)
         case .cancelSnooze(let subject): nudgeHost.cancelSnooze(subject: subject.identifier)
         case .answerQuery(let answer): nudgeHost.answer(answer)

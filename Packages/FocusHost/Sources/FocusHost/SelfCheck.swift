@@ -1775,6 +1775,20 @@ enum SelfCheck {
         // preference answerable to the store on the ordinary launch as well as the seeded one.
         report["appearancePreferenceIsTheStored"] = composition.appearance.preference == stored
 
+        // **Something in this process can open the cockpit** (focus-mwm).
+        //
+        // The popover's *"Open Focus Sentinel"* button, whose string's comment reads "bring the
+        // main window forward", asks `FocusCommandCenter.requestCockpit()` for one — and the only
+        // thing that can answer is the closure `ShellCommands` installs out of SwiftUI's
+        // `openWindow`. It has to be SwiftUI's: this lane measured a launch inheriting a closed
+        // cockpit where `NSApp.windows` held only the menu-bar item, so there was no `NSWindow`
+        // for AppKit to order front and only `openWindow(id:)` could make one.
+        //
+        // A `Commands` body is evaluated when AppKit builds the main menu, at launch, whether the
+        // cockpit is open or not — which is the property the wire needs and the property this
+        // reading is about. Nothing else in the programme can observe it: `ShellCommands` lives in
+        // a scene, and a unit process has no scene.
+        report["canRaiseCockpit"] = FocusCommandCenter.shared.canRaiseCockpit
 
         // **The handoff, driven through the shell's own delivery point** (F-142).
         //

@@ -248,7 +248,9 @@ struct CompositionRootWireTests {
         NudgeHostFixture.settle()
         try #require(root.nudgePanel.isVisible, "there is no overlay for the command to hide")
 
-        FocusCommandCenter.shared.send(.hideOverlays)
+        // The nudge loop observes for the life of the process, so this lands with no window in
+        // the application at all — which is the state the assertion below is about.
+        #expect(FocusCommandCenter.shared.send(.hideOverlays) == .delivered)
 
         #expect(
             !root.nudgePanel.isVisible,

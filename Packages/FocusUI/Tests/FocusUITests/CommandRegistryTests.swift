@@ -112,9 +112,13 @@ struct CommandRegistryTests {
         let centre = FocusCommandCenter()
         var observed: [PriorityCommand] = []
         centre.observe { observed.append($0) }
+        // A window really is on its way, which since focus-mwm is what arms the buffer.
+        var raises = 0
+        centre.registerCockpitOpener { raises += 1 }
 
         // Nothing is registered yet, so this one is buffered for the window that will arrive.
-        centre.send(.newPriority)
+        #expect(centre.send(.newPriority) == .awaitingCockpit)
+        #expect(raises == 1)
         #expect(observed == [.newPriority])
 
         var handled: [PriorityCommand] = []
@@ -124,9 +128,11 @@ struct CommandRegistryTests {
         #expect(handled == [.newPriority])
         #expect(observed == [.newPriority])
 
-        centre.send(.hideOverlays)
+        #expect(centre.send(.hideOverlays) == .delivered)
         #expect(handled == [.newPriority, .hideOverlays])
         #expect(observed == [.newPriority, .hideOverlays])
+        // `hideOverlays` does not open the cockpit, so nothing was raised for it.
+        #expect(raises == 1)
     }
 
     @Test("every action has a menu placement")
@@ -239,25 +245,96 @@ struct CommandRegistryTests {
         // dropped on the floor.
         let centre = FocusCommandCenter()
         #expect(!centre.isConnected)
+        // **The window is on its way because this asked for it** (focus-mwm). The centre raises
+        // the cockpit itself now, and holds a command only when it did — so the opener is not
+        // scaffolding around the reading, it is the precondition the reading is about.
+        var raises = 0
+        centre.registerCockpitOpener { raises += 1 }
 
-        centre.send(.newPriority)
+        #expect(centre.send(.newPriority) == .awaitingCockpit)
+        #expect(raises == 1)
         var received: [PriorityCommand] = []
         centre.register { received.append($0) }
 
         #expect(centre.isConnected)
         #expect(received == [.newPriority])
 
-        centre.send(.completePriority)
+        #expect(centre.send(.completePriority) == .delivered)
         #expect(received == [.newPriority, .completePriority])
+        // Raised again even though the cockpit was listening: ⌘N with the window open but behind
+        // the Settings window has to bring it forward, which is what the caller this replaced did.
+        #expect(raises == 2)
 
         // Only the most recent unheard command is kept: someone who presses ⌘N and then ⌘O
         // before the window appears meant the second one.
         centre.unregister()
-        centre.send(.newPriority)
-        centre.send(.addFilesToContext)
+        #expect(centre.send(.newPriority) == .awaitingCockpit)
+        #expect(centre.send(.addFilesToContext) == .awaitingCockpit)
         var later: [PriorityCommand] = []
         centre.register { later.append($0) }
         #expect(later == [.addFilesToContext])
+    }
+
+    /// **Nothing is held for a window that is not coming** (focus-mwm).
+    ///
+    /// The buffer's whole justification is that the cockpit takes a run-loop turn to exist. With
+    /// nothing able to open one, a stored command is a command stored for ever — which is what
+    /// the menu-bar popover's four buttons and the nudge panel's Pause and Change priority did
+    /// with the main window shut. A refusal is the honest answer, and it is in the return value
+    /// rather than in a log, so a caller that records an effect afterwards has to ignore it on
+    /// purpose.
+    ///
+    /// Folded over `PriorityCommand.allCases`, because the previous repair of this shape was
+    /// correct for the one command in the bead: every verb the app has is driven here, in both
+    /// states, and the case that is added next is driven by the same loop.
+    @Test("with no cockpit to open, a command is refused rather than stored for ever")
+    @MainActor
+    func nothingIsBufferedWithoutAWindowComing() {
+        for command in PriorityCommand.allCases {
+            let centre = FocusCommandCenter()
+            #expect(!centre.canRaiseCockpit)
+
+            let outcome = centre.send(command)
+            #expect(outcome == .undeliverable, "\(command.rawValue) was not refused")
+            #expect(!outcome.willLand)
+            // The request was still made and is still countable, so "nothing could raise it" is
+            // distinguishable from "nothing asked".
+            #expect(centre.cockpitRequests == (command.opensCockpit ? 1 : 0))
+
+            // …and nothing was kept: a handler arriving later must not be handed a command from
+            // a moment that has passed.
+            var received: [PriorityCommand] = []
+            centre.register { received.append($0) }
+            #expect(received.isEmpty, "\(command.rawValue) was held in the buffer")
+        }
+    }
+
+    /// The other half of the same fold: with a listener present, every command lands.
+    @Test("every command lands when a surface is listening")
+    @MainActor
+    func everyCommandLandsWhenSomethingIsListening() {
+        for command in PriorityCommand.allCases {
+            let centre = FocusCommandCenter()
+            var received: [PriorityCommand] = []
+            centre.register { received.append($0) }
+            #expect(centre.send(command) == .delivered)
+            #expect(received == [command])
+        }
+    }
+
+    /// …and with only the nudge loop listening — which is the state the app is in whenever the
+    /// cockpit is closed — the four e05 verbs still land, because the loop observes for the life
+    /// of the process rather than registering with a window.
+    @Test("the nudge verbs land on an observer with no window anywhere")
+    @MainActor
+    func theNudgeVerbsLandOnAnObserver() {
+        for command in PriorityCommand.allCases where !command.opensCockpit {
+            let centre = FocusCommandCenter()
+            var observed: [PriorityCommand] = []
+            centre.observe { observed.append($0) }
+            #expect(centre.send(command) == .delivered)
+            #expect(observed == [command])
+        }
     }
 
     @Test("shortcut glyphs are drawn the way the Mac draws them")

@@ -55,8 +55,14 @@ struct CorrectionTotalityTests {
             case sessionRule
             /// A running snooze for the subject.
             case snooze
-            /// One command on the shared command centre.
-            case command(PriorityCommand)
+            /// The person's own pause, on e03's machine (focus-mwm). It was
+            /// `.command(.pauseSession)` — a send down a channel only the cockpit answers — and
+            /// this suite hid that by registering a handler of its own, which is a cockpit the
+            /// person did not have open.
+            case pausedTheSession
+            /// e02's quick-capture confirm surface, shown. `CorrectionAction.changePriority` is
+            /// documented as opening it and did not: it sent `.newPriority` to the cockpit.
+            case openedTheCaptureSurface
             /// Nothing at all — which is a promise as much as any other.
             case nothing
         }
@@ -75,10 +81,14 @@ struct CorrectionTotalityTests {
         case .snooze:
             Promise(isOffered: true, outcome: .snoozed, write: .snooze)
         case .changePriority:
-            Promise(isOffered: true, outcome: .priorityChanged, write: .command(.newPriority))
+            Promise(
+                isOffered: true,
+                outcome: .priorityChanged,
+                write: .openedTheCaptureSurface
+            )
         case .pause:
             sessionOpen
-                ? Promise(isOffered: true, outcome: .pausedSession, write: .command(.pauseSession))
+                ? Promise(isOffered: true, outcome: .pausedSession, write: .pausedTheSession)
                 : Promise(isOffered: false, outcome: nil, write: .nothing)
         case .returnToTask:
             // Never offered in this harness and for a reason that is not about sessions: the
@@ -94,6 +104,13 @@ struct CorrectionTotalityTests {
     }
 
     /// A recorder standing where the cockpit stands: the command centre's one handler.
+    ///
+    /// **It is a column of the fold now, not scaffolding** (focus-mwm). Installing one
+    /// unconditionally is what made this suite green for a defect it drives directly: with a
+    /// handler registered, every `send` lands, so `.pause` and `.changePriority` looked like they
+    /// worked — and the state the person is actually in when a nudge panel is up is the *other*
+    /// one. `CockpitView` registers this on `.onAppear` and unregisters it on `.onDisappear`, so
+    /// "no handler" is precisely "the cockpit window is closed".
     @MainActor
     final class CommandSink {
         private(set) var commands: [PriorityCommand] = []
@@ -103,20 +120,42 @@ struct CorrectionTotalityTests {
         func remove() { FocusCommandCenter.shared.unregister() }
     }
 
+    /// **Both states of the session and both states of the window**, spelled out because the
+    /// test framework's `arguments:` takes two collections and this fold has three axes.
+    nonisolated static let states: [(sessionOpen: Bool, cockpitIsOpen: Bool)] = [
+        (sessionOpen: true, cockpitIsOpen: true),
+        (sessionOpen: true, cockpitIsOpen: false),
+        (sessionOpen: false, cockpitIsOpen: true),
+        (sessionOpen: false, cockpitIsOpen: false)
+    ]
+
     /// **The cross product**, driven through the composition root the application ships.
+    ///
+    /// Three axes and a two-axis table, and that is the claim: **the window is not one of the
+    /// things a correction's promise depends on.** A nudge panel appears by construction while
+    /// the person is working in another application, so the cockpit being closed is the common
+    /// case for every click made on one — and `promise(for:sessionOpen:)` does not take
+    /// `cockpitIsOpen`, so a write that only happens in one column fails here by name.
     @Test(
         "each correction is offered only where it can write, and writes exactly that",
-        arguments: CorrectionAction.allCases, [true, false]
+        arguments: CorrectionAction.allCases, Self.states
     )
-    func eachCorrectionKeepsItsPromise(_ action: CorrectionAction, sessionOpen: Bool) throws {
+    func eachCorrectionKeepsItsPromise(
+        _ action: CorrectionAction,
+        state: (sessionOpen: Bool, cockpitIsOpen: Bool)
+    ) throws {
+        let sessionOpen = state.sessionOpen
+        let cockpitIsOpen = state.cockpitIsOpen
         let clock = FixedMonotonicClock()
         let (root, priorityID) = try CompositionRootWireTests.joinedRoot(clock: clock)
         let sink = CommandSink()
-        sink.install()
+        if cockpitIsOpen { sink.install() }
         defer {
             sink.remove()
+            root.quickCapturePanel.hide()
             CompositionRootWireTests.tearDown(root)
         }
+        #expect(FocusCommandCenter.shared.isConnected == cockpitIsOpen)
 
         if sessionOpen {
             root.sessionActions.startSession(kind: .openEnded, plannedSeconds: nil, deadlineAt: nil)
@@ -170,13 +209,28 @@ struct CorrectionTotalityTests {
             #expect(sessionRules.first?.subject == Self.subject)
         case .snooze:
             #expect(snoozes.contains { $0.subject.identifier == Self.subject })
-        case .command(let expected):
-            #expect(sink.commands.contains(expected), "\(action) sent no \(expected)")
+        case .pausedTheSession:
+            // The session itself, not a command about one. `.paused` is the phase a `.user`
+            // pause leaves it in, and only a `.user` resume lifts it.
+            #expect(
+                root.sessionHost.snapshot?.phase == .paused,
+                "\(action) did not pause the session (cockpitIsOpen=\(cockpitIsOpen))"
+            )
+        case .openedTheCaptureSurface:
+            #expect(
+                root.quickCapturePanel.isVisible,
+                "\(action) did not open the capture surface (cockpitIsOpen=\(cockpitIsOpen))"
+            )
         case .nothing:
             #expect(rulesAfter.count == rulesBefore, "\(action) wrote a rule it does not promise")
             #expect(sessionRules.isEmpty, "\(action) wrote a session rule it does not promise")
             #expect(snoozes.isEmpty, "\(action) wrote a snooze it does not promise")
+            #expect(!root.quickCapturePanel.isVisible, "\(action) opened a surface it does not promise")
         }
+        // **No correction routes anything through the cockpit's buffer any more** (focus-mwm).
+        // The two that did are the two this table now names by their real destination, and a
+        // command sent from here with the window shut would be a command stored for ever.
+        #expect(sink.commands.isEmpty, "\(action) sent a command down a channel a window owns")
 
         // **And what it recorded**, which is the half that was false: the refused actions used to
         // complete their row as `.corrected` while writing nothing at all.
