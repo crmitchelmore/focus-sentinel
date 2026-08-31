@@ -347,17 +347,45 @@ final class SensingHost {
         /// The frontmost application is one the sensitivity gate stood down from. This is the
         /// gate working, and it is the honest answer rather than a zero.
         case theSensitivityGateStoodDown
+
+        /// **Which of the two a gate suppression is** (focus-2uy.3).
+        ///
+        /// Two of the gate's three reasons are the gate working: the application is on the list
+        /// this app ships or on the list this person added, and standing down from it is the
+        /// product doing its job. The third is not a decision about an application at all —
+        /// `.unbundled` means the activation carried no bundle identifier, so there was nothing
+        /// to check against a list and nothing is known about the screen. That is this enum's
+        /// **first** case, and reporting it as the second told a reader the gate had made a
+        /// judgement it never made.
+        init(standingDownFor reason: SensitiveReason) {
+            switch reason {
+            case .builtInList, .userList: self = .theSensitivityGateStoodDown
+            case .unbundled: self = .nothingIsFrontmost
+            }
+        }
     }
 
     /// Why the deeper readings below are unavailable right now, or `nil` when they are not.
     ///
     /// Read through exactly the same two steps `clearedFrontmost()` takes, so the reason a
     /// reading is missing and the fact that it is missing can never be two different answers.
+    ///
+    /// **And the gate's own three reasons are not one reason** (focus-2uy.3). This asked whether
+    /// a `ClearedActivation` came back and called every `nil` a stand-down — but
+    /// `SensitivityGate.evaluate(_:)` returns `.suppressed(reason: .unbundled)` when the
+    /// activation carries no bundle identifier at all, and *"this graph knows nothing about the
+    /// screen"* is the other case of this very enum. Measured in gate run lens6-1: the Debug
+    /// launch reported `notTakenBecause = "theSensitivityGateStoodDown"` with **nothing**
+    /// frontmost, and the gate printed *"the frontmost application was suppressed by the
+    /// sensitivity gate"* — an excuse that was not true, for a reading nobody took.
+    ///
+    /// A `switch` over `SensitiveReason` rather than a `nil` test, so the mapping is a fold over
+    /// a closed set: a fourth reason cannot be added without this file being told to say which of
+    /// the two obstacles it is.
     var frontmostReadingObstacle: FrontmostReadingObstacle? {
         guard let current = seededCurrent() else { return .nothingIsFrontmost }
-        return gate.evaluate(current).clearedActivation == nil
-            ? .theSensitivityGateStoodDown
-            : nil
+        guard let reason = gate.evaluate(current).suppressionReason else { return nil }
+        return FrontmostReadingObstacle(standingDownFor: reason)
     }
 
     /// The current on-screen window count, read through the gate like everything else. `nil`
