@@ -195,43 +195,24 @@ public final class InterventionLog {
     ///   leaves `queriesForPriorityToday` at zero, which is the honest answer when there is no
     ///   priority — and gate 1 will have suppressed the interruption anyway.
     public func budget(on day: LocalDay, priorityID: UUID?) throws -> InterruptionBudget {
-        var queriesForPriority = 0
-        var queriesAllPriorities = 0
-        var accusations = 0
-        var interruptions = 0
-
-        for row in try records(on: day) where row.spendsBudget {
-            // **A rung that accuses nobody spends nothing at all** (focus-ndh, focus-d6r).
-            //
-            // `spendsTheInterruptionCap` is the sanctioned reading and the sum is folded through
-            // it rather than through `spendsBudget`, because `spendsBudget` was the line that
-            // charged the glyph. focus-ndh guarded the accusation branch below and left this
-            // total unguarded one line above it: every ambient landing went on spending the
-            // *shared* budget, and the shared budget binds both kinds, so eight silent marks
-            // made `permits(.accusation)` and `permits(.query)` alike answer `false` on a day
-            // the app had said nothing at all. Measured before this line moved: interruptions 8,
-            // accusations 0, bindingLimit `.dailyInterruptionCap`.
-            guard row.spendsTheInterruptionCap else { continue }
-            interruptions += 1
-            switch row.kind {
-            case .query:
-                queriesAllPriorities += 1
-                if let priorityID, row.priorityID == priorityID { queriesForPriority += 1 }
-            case .accusation:
-                // Reached only by a row that already passed the guard above, so the two sums
-                // cannot disagree about what a rung cost: `dailyAccusationCap` is a cap on
-                // *sentences*, which the ambient rung is not, and the interruption it did not
-                // make was not counted either.
-                accusations += 1
-            }
+        // **A rung that accuses nobody spends nothing at all** (focus-ndh, focus-d6r).
+        //
+        // Folded through `InterruptionCharge`, which is the one place *"did this speak to
+        // anybody?"* is decided, rather than summed here into four locals. It was four locals,
+        // and the pass that filled the interruption one asked `spendsBudget` while the pass that
+        // filled the accusation one asked `spendsTheAccusationCap` — so focus-ndh's repair
+        // reached the second and left the first, and eight glyph landings went on making
+        // `permits(.accusation)` and `permits(.query)` alike answer `false` on a day the app had
+        // said nothing. There is now one question and one arithmetic, and `interruptionsToday` is
+        // derived from the two per-kind counters rather than summed beside them.
+        //
+        // `priorityID` is the active priority, for the per-priority query cap. `nil` leaves
+        // `queriesForPriorityToday` at zero, which is the honest answer when there is no
+        // priority — and gate 1 will have suppressed the interruption anyway.
+        let charges = try records(on: day).compactMap { row in
+            InterruptionCharge(row.budgetEvent, priorityID: row.priorityID)
         }
-
-        return InterruptionBudget(
-            queriesForPriorityToday: queriesForPriority,
-            queriesAllPrioritiesToday: queriesAllPriorities,
-            accusationsToday: accusations,
-            interruptionsToday: interruptions
-        )
+        return .spent(charges, underPriority: priorityID)
     }
 
     /// Deliveries of one kind on one local day.

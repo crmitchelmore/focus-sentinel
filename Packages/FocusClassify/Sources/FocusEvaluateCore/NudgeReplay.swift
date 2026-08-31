@@ -206,30 +206,37 @@ public struct NudgeWorld: Sendable, Equatable {
 
     public private(set) var ledger: Set<AskedQuestionKey> = []
 
-    /// The day's spend, **per priority and in total**.
+    /// **The day's sentences, in order** (focus-d6r).
     ///
-    /// Three counters rather than one `InterruptionBudget`, because the shipped budget is not a
-    /// value that accumulates: `InterventionLog.budget(on:priorityID:)` computes it by predicate
-    /// over stored rows, and its per-priority term is scoped to *the priority that is active
-    /// now*. A harness that carried one running count would charge a new commitment for the
-    /// questions asked under the old one — which is exactly the defect `dailyQueryCapAllPriorities`
-    /// exists to close, and it would have hidden it.
-    public private(set) var queriesByPriority: [UUID: Int] = [:]
-    public private(set) var queriesAllPrioritiesToday = 0
-    public private(set) var accusationsToday = 0
-    public private(set) var interruptionsToday = 0
-    /// Which priority the counts above are read against.
+    /// It was four running counters and a fourth summation over them, and that fourth summation
+    /// was the third independent answer in the programme to *"what did that rung cost?"* — it
+    /// charged the ambient glyph for the shared budget and for the accusation cap alike, long
+    /// after `InterventionLog.budget` had stopped charging it for either. A list of charges
+    /// instead, folded by the shipping `InterruptionBudget.spent(_:underPriority:)`, so this
+    /// lane's arithmetic *is* the app's arithmetic rather than a second copy of it.
+    ///
+    /// The per-priority term still comes off the charge's own priority rather than off a running
+    /// count, which is the reason the counters were separate in the first place: a harness that
+    /// carried one running count would charge a new commitment for the questions asked under the
+    /// old one — the defect `dailyQueryCapAllPriorities` exists to close.
+    public private(set) var charges: [InterruptionCharge] = []
+    /// Which priority the counts below are read against.
     public private(set) var activePriorityID: UUID?
 
-    /// The budget as the log would compute it for the active priority.
-    public var budget: InterruptionBudget {
-        InterruptionBudget(
-            queriesForPriorityToday: activePriorityID.flatMap { queriesByPriority[$0] } ?? 0,
-            queriesAllPrioritiesToday: queriesAllPrioritiesToday,
-            accusationsToday: accusationsToday,
-            interruptionsToday: interruptionsToday
-        )
+    /// The budget as the log would compute it for the active priority — by the same fold, from
+    /// the same type.
+    public var budget: InterruptionBudget { .spent(charges, underPriority: activePriorityID) }
+
+    /// Questions asked today, per priority. Derived, so it cannot drift from the budget.
+    public var queriesByPriority: [UUID: Int] {
+        charges.reduce(into: [:]) { totals, charge in
+            guard charge.kind == .query, let id = charge.priorityID else { return }
+            totals[id, default: 0] += 1
+        }
     }
+    public var queriesAllPrioritiesToday: Int { budget.queriesAllPrioritiesToday }
+    public var accusationsToday: Int { budget.accusationsToday }
+    public var interruptionsToday: Int { budget.interruptionsToday }
     public private(set) var fatigue: FatigueState = .fresh
     public private(set) var ladder = LadderMachine()
     public private(set) var slot: InterruptionSlot = .open
@@ -426,8 +433,9 @@ public struct NudgeWorld: Sendable, Equatable {
                 surface: surface,
                 disposition: .delivered
             )
-            if event.spendsTheAccusationCap { accusationsToday += 1 }
-            if event.spendsTheInterruptionCap { interruptionsToday += 1 }
+            if let charge = InterruptionCharge(event, priorityID: activePriorityID) {
+                charges.append(charge)
+            }
             fatigue = FatigueController.reduce(fatigue, event: .delivered(.accusation), now: now)
             // **Only a surface with something to press occupies the slot** (focus-k42, U-2), the
             // same rule `NudgeHost` applies. A glyph or a badge is a delivery and not an
@@ -475,11 +483,7 @@ public struct NudgeWorld: Sendable, Equatable {
                 openQueryKey = key
             }
             deliveredQuerySubjects.append(warrant.subject.identifier)
-            if let priorityID = activePriorityID {
-                queriesByPriority[priorityID, default: 0] += 1
-            }
-            queriesAllPrioritiesToday += 1
-            interruptionsToday += 1
+            charges.append(InterruptionCharge(.query, priorityID: activePriorityID))
             fatigue = FatigueController.reduce(fatigue, event: .delivered(.query), now: now)
             // **The same rule the accusation branch above applies, applied to the question**
             // (focus-k42, U-2). A question on the badge is an invitation behind a click: it is a
@@ -656,10 +660,7 @@ public struct NudgeWorld: Sendable, Equatable {
     /// in the **user's own calendar** empties the budget and nothing else — the receipts stay,
     /// because a question answered yesterday is still answered.
     public mutating func startNewDay() {
-        queriesByPriority = [:]
-        queriesAllPrioritiesToday = 0
-        accusationsToday = 0
-        interruptionsToday = 0
+        charges = []
     }
 
     /// A new priority. Every question legitimately re-opens, because a new commitment makes old

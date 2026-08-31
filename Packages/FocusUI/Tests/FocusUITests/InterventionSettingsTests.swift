@@ -6,6 +6,9 @@ import Testing
 @testable import FocusUI
 
 enum InterventionSettingsFixture {
+    /// The commitment the usage rows are summed against.
+    static let priority = UUID(uuidString: "5E771465-0000-4000-8000-000000000001")!
+
     /// The shipping default: quiet hours off, the Court's deck, nothing spent today. **This is
     /// the fresh-install state**, and the state the pane used to offer a system notification
     /// prompt in (focus-wy0).
@@ -13,11 +16,18 @@ enum InterventionSettingsFixture {
 
     /// A day partway through, so the usage rows have something to say.
     static let midDay = InterventionSettings(
-        usage: InterruptionBudget(
-            queriesForPriorityToday: 2,
-            queriesAllPrioritiesToday: 3,
-            accusationsToday: 2,
-            interruptionsToday: 5
+        // Folded from charges, because `InterruptionBudget` has no other producer (focus-d6r):
+        // two questions under this commitment, one under an earlier one, and two accusations —
+        // five interruptions, which the type derives rather than being told.
+        usage: .spent(
+            [
+                InterruptionCharge(.query, priorityID: priority),
+                InterruptionCharge(.query, priorityID: priority),
+                InterruptionCharge(.query, priorityID: UUID()),
+                InterruptionCharge(.accusation, priorityID: priority),
+                InterruptionCharge(.accusation, priorityID: priority)
+            ],
+            underPriority: priority
         )
     )
 

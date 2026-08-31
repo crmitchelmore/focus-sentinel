@@ -172,11 +172,11 @@ struct NudgeDeciderTests {
         )
     }
 
-    static let exhausted = InterruptionBudget(
-        queriesForPriorityToday: InterventionPolicy.dailyQueryCap,
-        queriesAllPrioritiesToday: InterventionPolicy.dailyQueryCapAllPriorities,
-        accusationsToday: InterventionPolicy.dailyAccusationCap,
-        interruptionsToday: InterventionPolicy.dailyInterruptionCap
+    static let exhausted = BudgetDay.spending(
+        queries: InterventionPolicy.dailyQueryCap,
+        otherPriorityQueries: InterventionPolicy.dailyQueryCapAllPriorities
+            - InterventionPolicy.dailyQueryCap,
+        accusations: InterventionPolicy.dailyAccusationCap
     )
 
     static func decide(

@@ -50,11 +50,8 @@ struct FatigueControllerTests {
         for kind in InterruptionKind.allCases {
             for queries in 0...6 {
                 for accusations in 0...7 {
-                    let budget = InterruptionBudget(
-                        queriesForPriorityToday: queries,
-                        queriesAllPrioritiesToday: queries,
-                        accusationsToday: accusations,
-                        interruptionsToday: queries + accusations
+                    let budget = BudgetDay.spending(
+                        queries: queries, accusations: accusations
                     )
                     let decision = Self.decide(kind: kind, rung: .panel, budget: budget)
                     let permits = FatigueController.permits(
@@ -108,12 +105,7 @@ struct FatigueControllerTests {
 
     @Test("the per-priority query cap bites first when it is the binding one")
     func thePerPriorityQueryCap() {
-        let budget = InterruptionBudget(
-            queriesForPriorityToday: InterventionPolicy.dailyQueryCap,
-            queriesAllPrioritiesToday: InterventionPolicy.dailyQueryCap,
-            accusationsToday: 0,
-            interruptionsToday: InterventionPolicy.dailyQueryCap
-        )
+        let budget = BudgetDay.spending(queries: InterventionPolicy.dailyQueryCap)
         #expect(Self.decide(kind: .query, budget: budget) == .refused(.cap(.dailyQueryCap)))
         #expect(Self.decide(kind: .accusation, rung: .panel, budget: budget) == .permitted)
     }
@@ -122,11 +114,9 @@ struct FatigueControllerTests {
     func theDayCapIsADayCap() {
         // One question for this priority, five across the day: a per-priority cap alone would
         // license three more. The number a person feels is questions-per-day.
-        let budget = InterruptionBudget(
-            queriesForPriorityToday: 1,
-            queriesAllPrioritiesToday: InterventionPolicy.dailyQueryCapAllPriorities,
-            accusationsToday: 0,
-            interruptionsToday: InterventionPolicy.dailyQueryCapAllPriorities
+        let budget = BudgetDay.spending(
+            queries: 1,
+            otherPriorityQueries: InterventionPolicy.dailyQueryCapAllPriorities - 1
         )
         #expect(budget.remaining(for: .query) == 0)
         #expect(Self.decide(kind: .query, budget: budget)
@@ -135,12 +125,7 @@ struct FatigueControllerTests {
 
     @Test("the accusation cap bites at six")
     func theAccusationCap() {
-        let budget = InterruptionBudget(
-            queriesForPriorityToday: 0,
-            queriesAllPrioritiesToday: 0,
-            accusationsToday: InterventionPolicy.dailyAccusationCap,
-            interruptionsToday: InterventionPolicy.dailyAccusationCap
-        )
+        let budget = BudgetDay.spending(accusations: InterventionPolicy.dailyAccusationCap)
         #expect(Self.decide(kind: .accusation, rung: .panel, budget: budget)
             == .refused(.cap(.dailyAccusationCap)))
     }
@@ -150,12 +135,10 @@ struct FatigueControllerTests {
         // Four questions and four accusations: neither per-kind cap has been reached, and the
         // shared budget is spent. Two budgets that cannot both be exhausted are not sharing
         // anything, which is why dailyInterruptionCap is deliberately less than 4 + 6.
-        let budget = InterruptionBudget(
-            queriesForPriorityToday: 2,
-            queriesAllPrioritiesToday: 4,
-            accusationsToday: 4,
-            interruptionsToday: InterventionPolicy.dailyInterruptionCap
+        let budget = BudgetDay.spending(
+            queries: 2, otherPriorityQueries: 2, accusations: 4
         )
+        #expect(budget.interruptionsToday == InterventionPolicy.dailyInterruptionCap)
         #expect(budget.queriesForPriorityToday < InterventionPolicy.dailyQueryCap)
         #expect(budget.accusationsToday < InterventionPolicy.dailyAccusationCap)
 
@@ -169,13 +152,7 @@ struct FatigueControllerTests {
 
     @Test("with one unit left and both offered, the accusation takes it")
     func theLastUnitBelongsToTheAccusation() {
-        let budget = InterruptionBudget(
-            queriesForPriorityToday: 2,
-            queriesAllPrioritiesToday: 2,
-            accusationsToday: 5,
-            interruptionsToday: InterventionPolicy.dailyInterruptionCap
-                - InterventionPolicy.reservedAccusationUnits
-        )
+        let budget = BudgetDay.spending(queries: 2, accusations: 5)
         #expect(budget.sharedRemaining == InterventionPolicy.reservedAccusationUnits)
 
         #expect(Self.decide(kind: .accusation, rung: .panel, budget: budget) == .permitted)
@@ -189,11 +166,8 @@ struct FatigueControllerTests {
             for accusations in 0...InterventionPolicy.dailyInterruptionCap {
                 let spent = queries + accusations
                 guard spent <= InterventionPolicy.dailyInterruptionCap else { continue }
-                let budget = InterruptionBudget(
-                    queriesForPriorityToday: 0,
-                    queriesAllPrioritiesToday: queries,
-                    accusationsToday: accusations,
-                    interruptionsToday: spent
+                let budget = BudgetDay.spending(
+                    otherPriorityQueries: queries, accusations: accusations
                 )
                 let left = InterventionPolicy.dailyInterruptionCap - spent
                 if left <= InterventionPolicy.reservedAccusationUnits {
@@ -394,12 +368,7 @@ struct FatigueControllerTests {
         #expect(controller.state == .fresh)
 
         // The day's caps are rows in a store. A person cannot clear them by ending a session.
-        let spent = InterruptionBudget(
-            queriesForPriorityToday: InterventionPolicy.dailyQueryCap,
-            queriesAllPrioritiesToday: InterventionPolicy.dailyQueryCap,
-            accusationsToday: 0,
-            interruptionsToday: InterventionPolicy.dailyQueryCap
-        )
+        let spent = BudgetDay.spending(queries: InterventionPolicy.dailyQueryCap)
         #expect(Self.decide(kind: .query, budget: spent, fatigue: controller.state)
             == .refused(.cap(.dailyQueryCap)))
     }
@@ -502,11 +471,11 @@ struct FatigueControllerTests {
         let snoozes = SnoozeBook([
             SnoozeState.starting(subject: Self.decoy, for: .seconds(600), now: .seconds(0))
         ])
-        let exhausted = InterruptionBudget(
-            queriesForPriorityToday: InterventionPolicy.dailyQueryCap,
-            queriesAllPrioritiesToday: InterventionPolicy.dailyQueryCapAllPriorities,
-            accusationsToday: InterventionPolicy.dailyAccusationCap,
-            interruptionsToday: InterventionPolicy.dailyInterruptionCap
+        let exhausted = BudgetDay.spending(
+            queries: InterventionPolicy.dailyQueryCap,
+            otherPriorityQueries: InterventionPolicy.dailyQueryCapAllPriorities
+                - InterventionPolicy.dailyQueryCap,
+            accusations: InterventionPolicy.dailyAccusationCap
         )
         let tired = FatigueState(
             lastQueryAt: .seconds(10),

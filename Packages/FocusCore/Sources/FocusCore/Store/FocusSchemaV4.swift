@@ -402,7 +402,7 @@ extension FocusSchemaV4.InterventionRecord {
     /// One reconstruction rather than one per predicate, so a third cap cannot be given a
     /// differently-built event to answer about. The columns it reads — the disposition, the kind
     /// and the rung — are the ones R-79 commits.
-    private var budgetEvent: InterventionEvent {
+    public var budgetEvent: InterventionEvent {
         InterventionEvent(
             kind: kind,
             rung: rung,

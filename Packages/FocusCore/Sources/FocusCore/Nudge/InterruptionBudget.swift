@@ -1,5 +1,43 @@
 import Foundation
 
+/// **One thing the app said, priced** (focus-d6r).
+///
+/// The unit `InterruptionBudget` moves by, and the reason the budget has no other mover. A charge
+/// exists for a **sentence** — a question or an accusation somebody was actually made — and for
+/// nothing else, so there is no value in the programme that means *"take a unit of the person's
+/// day and say nothing for it"*.
+///
+/// `init?(_:priorityID:)` below is where that is decided, once, from
+/// `InterventionEvent.spendsTheInterruptionCap`. A rung the ladder delivered to the glyph makes no
+/// charge at all rather than a smaller one: it accuses nobody, asks nobody anything, and R-87
+/// keeps it on through a snooze precisely because it is a **state** and not a sentence.
+public struct InterruptionCharge: Sendable, Equatable, Hashable {
+    /// Which kind of sentence it was. There is no third case, and that is the whole design: every
+    /// charge lands in one of the two per-kind counters as well as in the shared one.
+    public let kind: InterruptionKind
+    /// The commitment it was made under, for the per-priority query cap. `nil` for a charge made
+    /// with no priority active, which the per-priority term then never counts.
+    public let priorityID: UUID?
+
+    /// A sentence, priced. Total by construction: there is no way to spell a charge that says
+    /// nothing.
+    public init(_ kind: InterruptionKind, priorityID: UUID? = nil) {
+        self.kind = kind
+        self.priorityID = priorityID
+    }
+
+    /// **The one derivation from a recorded event, and it answers `nil` for a rung that speaks to
+    /// nobody** (focus-ndh, focus-d6r).
+    ///
+    /// Asked of `spendsTheInterruptionCap` rather than of `spendsBudget`, which is the line that
+    /// charged the glyph: a delivered ambient rung is a delivery — it is written down, the
+    /// Intervention pane draws it, `deferredRungShare` counts it — and it is not an interruption.
+    public init?(_ event: InterventionEvent, priorityID: UUID? = nil) {
+        guard event.spendsTheInterruptionCap else { return nil }
+        self.init(event.kind, priorityID: priorityID)
+    }
+}
+
 /// **What the day has already cost the person**, and what is left.
 ///
 /// Every count comes from persisted `InterventionRecord` rows keyed by `localDayKey` (R-79), so
@@ -18,9 +56,33 @@ import Foundation
 /// ## The last unit belongs to the accusation
 ///
 /// `reservedAccusationUnits` is the one rule in this file that is not arithmetic. Running out of
-/// budget on *questions* and therefore being unable to say "you are off task" is the failure
-/// that defeats the product, so a query may never spend the last unit of the shared budget —
+/// budget on *questions* and therefore being unable to say "you are off task" is the failure that
+/// defeats the product, so a query may never spend the last unit of the shared budget —
 /// and `InterruptionBudgetTests` asserts that over the whole grid rather than at one point.
+///
+/// ## **The floor: a budget spent on nothing cannot be written down** (focus-d6r)
+///
+/// `PerceptibleChange` made *"charged for something nobody saw"* unrepresentable. This is the
+/// same move on the other side of the road, and it closes the same family:
+///
+/// * **`interruptionsToday` is computed, not stored.** It is `queriesAllPrioritiesToday +
+///   accusationsToday` and there is no field it could disagree with them in. The state the bead
+///   measured — *eight interruptions, nought accusations, nought questions, `permits` false on
+///   both kinds* — is not a bug in an arithmetic any more; it is a value with no spelling.
+/// * **The memberwise initialiser is private and `spending(_:)` is the only mover** (R-96r, and
+///   `check-forbidden.sh` pins the construction site the way R-96p pins `PerceptibleChange`'s).
+///   Every producer in the programme folds `InterruptionCharge`s, and a charge exists only for a
+///   sentence. Three separate summations used to answer *"what did that rung cost?"* —
+///   `InterventionLog.budget`, this file's `spending(_:)`, and `NudgeWorld.recordAccusation` —
+///   and they gave three different answers, which is exactly how focus-ndh's repair reached one
+///   of them and not the other two.
+///
+/// What is deliberately **not** made unrepresentable is a day on which the app has spoken its
+/// six accusations and must now be quiet. That is the policy, working. The floor this file holds
+/// is the other one: *no reachable budget refuses an accusation without the app having made
+/// one*, and with the two clauses above it is a consequence of the arithmetic rather than a
+/// thing to remember. `InterruptionBudgetTests.theFloorHoldsOverEveryReachableDay` folds it over
+/// the closed spending algebra rather than asserting it at a point.
 public struct InterruptionBudget: Sendable, Equatable, Hashable {
     /// Questions already asked **for this priority**, today, in the user's own calendar.
     public let queriesForPriorityToday: Int
@@ -28,29 +90,37 @@ public struct InterruptionBudget: Sendable, Equatable, Hashable {
     /// per-priority cap is not a cap on anybody's day, because three priorities in one day
     /// would otherwise license three times as many questions.
     public let queriesAllPrioritiesToday: Int
-    /// Accusation rungs **delivered** today. A deferred rung spends nothing (R-81).
+    /// Accusation rungs that **accused somebody** today. A deferred rung spends nothing (R-81),
+    /// and neither does an ambient one, which accuses nobody (focus-ndh).
     public let accusationsToday: Int
-    /// Interruptions of both kinds delivered today — the shared budget's consumption.
-    public let interruptionsToday: Int
 
-    public init(
+    /// Interruptions of both kinds delivered today — the shared budget's consumption.
+    ///
+    /// **Computed, and that is the floor** (focus-d6r). It was a stored fourth field summed by a
+    /// separate pass over the same rows, and the pass disagreed with the other two: it charged
+    /// every delivered row, so a day of glyph landings drove this to `dailyInterruptionCap` with
+    /// both per-kind counters still at nought, and `remaining(for:)` — which conjoins the shared
+    /// cap into **both** kinds — then refused every question and every accusation for the rest of
+    /// the day. Derived from the two counters, that day cannot be represented: the app cannot
+    /// have been interrupted by more sentences than it made.
+    public var interruptionsToday: Int { queriesAllPrioritiesToday + accusationsToday }
+
+    /// **The only initialiser, and it is private.** See `spending(_:)` and `spent(_:underPriority:)`.
+    private init(
         queriesForPriorityToday: Int,
         queriesAllPrioritiesToday: Int,
-        accusationsToday: Int,
-        interruptionsToday: Int
+        accusationsToday: Int
     ) {
         self.queriesForPriorityToday = queriesForPriorityToday
         self.queriesAllPrioritiesToday = queriesAllPrioritiesToday
         self.accusationsToday = accusationsToday
-        self.interruptionsToday = interruptionsToday
     }
 
     /// A day on which the app has said nothing yet.
     public static let empty = InterruptionBudget(
         queriesForPriorityToday: 0,
         queriesAllPrioritiesToday: 0,
-        accusationsToday: 0,
-        interruptionsToday: 0
+        accusationsToday: 0
     )
 
     /// Units of the shared budget still unspent, never below zero.
@@ -119,27 +189,66 @@ public struct InterruptionBudget: Sendable, Equatable, Hashable {
         }
     }
 
-    /// The budget after one interruption of this kind has been **delivered**.
+    /// **Whether the app has said anything at all today.**
     ///
-    /// Only a delivery spends: a deferred rung nobody could see and a suppressed one the app
-    /// chose not to make both leave this value untouched (R-81).
+    /// The reading the floor is stated in. A day that has not spoken and cannot must not exist,
+    /// and since `interruptionsToday` is derived from these two counters it cannot: silence is
+    /// bought only with sentences.
+    public var hasSpokenToday: Bool { interruptionsToday > 0 }
+
+    /// The budget after one interruption of this kind has been **delivered** to the active
+    /// priority.
+    ///
+    /// Only a delivery spends: a deferred rung nobody could see, a suppressed one the app chose
+    /// not to make, and an ambient rung that accuses nobody all leave this value untouched
+    /// (R-81, focus-ndh).
     public func spending(_ kind: InterruptionKind) -> InterruptionBudget {
+        spending(kind, forActivePriority: true)
+    }
+
+    /// The budget after one recorded charge, read against the priority the caps are being summed
+    /// for.
+    ///
+    /// The per-priority term counts only a question asked under **this** commitment: a budget
+    /// summed under one key from rows written under another is a cap that silently stops
+    /// applying, and `nil` is the honest answer when there is no priority at all.
+    public func spending(_ charge: InterruptionCharge, underPriority active: UUID?) -> InterruptionBudget {
+        spending(
+            charge.kind,
+            forActivePriority: active != nil && charge.priorityID == active
+        )
+    }
+
+    /// **The one mover.** Every producer in the programme reaches the counters through here, so
+    /// the shared total and the two per-kind totals cannot be moved apart.
+    private func spending(
+        _ kind: InterruptionKind,
+        forActivePriority: Bool
+    ) -> InterruptionBudget {
         switch kind {
         case .query:
             InterruptionBudget(
-                queriesForPriorityToday: queriesForPriorityToday + 1,
+                queriesForPriorityToday: queriesForPriorityToday + (forActivePriority ? 1 : 0),
                 queriesAllPrioritiesToday: queriesAllPrioritiesToday + 1,
-                accusationsToday: accusationsToday,
-                interruptionsToday: interruptionsToday + 1
+                accusationsToday: accusationsToday
             )
         case .accusation:
             InterruptionBudget(
                 queriesForPriorityToday: queriesForPriorityToday,
                 queriesAllPrioritiesToday: queriesAllPrioritiesToday,
-                accusationsToday: accusationsToday + 1,
-                interruptionsToday: interruptionsToday + 1
+                accusationsToday: accusationsToday + 1
             )
         }
+    }
+
+    /// A whole day's charges, folded — what `InterventionLog.budget(on:priorityID:)` and the
+    /// replay's `NudgeWorld` both build with, so the lane that lives a day and the lane that
+    /// measures one cannot price a rung differently.
+    public static func spent(
+        _ charges: some Sequence<InterruptionCharge>,
+        underPriority active: UUID?
+    ) -> InterruptionBudget {
+        charges.reduce(.empty) { $0.spending($1, underPriority: active) }
     }
 
     /// A new local day, with the per-priority count carried by whichever priority is active.

@@ -696,6 +696,22 @@ check_outside "R-70n" "no rule is constructed with the session scope" \
 #        invisible" and left the shape intact, because the rule lived in a doc comment beside
 #        the code that broke it.
 #
+# R-96r  **The budget has exactly one construction site, and every move through it is a
+#        sentence** (focus-d6r). `InterruptionBudget(` may appear in exactly one file, and that
+#        file is `InterruptionBudget.swift` — where the memberwise initialiser is private,
+#        `interruptionsToday` is DERIVED from the two per-kind counters, and `spending(_:)` is
+#        the only mover. R-96p's twin, on the other side of the road: that one makes "charged
+#        for something nobody saw" unrepresentable, and this one makes "spent a unit of the
+#        day and said nothing" unrepresentable.
+#
+#        The shape it forbids is the one that produced the bead. Three files answered *"what
+#        did that rung cost?"* independently — `InterventionLog.budget` summed stored rows,
+#        `InterruptionBudget.spending(_:)` stepped a value, and `NudgeWorld.recordAccusation`
+#        counted the replayed day — and focus-ndh's repair reached one of the three. The other
+#        two went on charging the ambient glyph, so eight glyph landings made
+#        `permits(.accusation)` and `permits(.query)` alike answer false on a day the app had
+#        accused nobody and asked nobody anything.
+#
 # R-96d  No shared protocol over the two authorisations. `: NudgeAuthorisation`-shaped
 #        conformances are banned outright — a shared abstraction is the elegant refactor
 #        that would quietly destroy the guarantee while looking like an improvement.
@@ -836,6 +852,10 @@ PANEL_SHOW_FILE="Packages/FocusUI/Sources/FocusUI/Nudge/NudgePanelController.swi
 # may be charged (R-96p, focus-1b5, focus-nrl).
 PERCEPTION_FILE="Packages/FocusCore/Sources/FocusCore/Nudge/PerceptibleChange.swift"
 
+# The one file permitted to construct an `InterruptionBudget` — the value whose every move is a
+# sentence somebody was actually made (R-96r, focus-d6r).
+BUDGET_FILE="Packages/FocusCore/Sources/FocusCore/Nudge/InterruptionBudget.swift"
+
 # The one file permitted to ADD `.fullScreenAuxiliary` to a collection behaviour (R-96n).
 PANEL_BEHAVIOUR_FILE="Packages/FocusUI/Sources/FocusUI/Nudge/NudgePanel.swift"
 
@@ -948,6 +968,30 @@ else
         else
             print -u2 "FAIL [R-96p] $perception_file constructs a PerceptibleChange"
             print -u2 "    A charge is proven by measuring a surface, in $PERCEPTION_FILE alone."
+            rc=1
+        fi
+    done
+fi
+
+# R-96r — **the budget has exactly one construction site** (focus-d6r). R-96p's twin: that rule
+# makes a charge without a perceptible change unrepresentable, and this one makes a unit of the
+# day spent on nothing unrepresentable. The initialiser is private, `interruptionsToday` is
+# derived from the two per-kind counters, and `spending(_:)` is the only mover — so a second
+# construction site is the one diff that could put the fourth field, and the three disagreeing
+# summations, back.
+count_files "R-96r" "InterruptionBudget is constructed in exactly one file" \
+    'InterruptionBudget(' 1 App Packages
+budget_files=(${(f)"$(grep -rnF --include='*.swift' --exclude-dir='.build' -- 'InterruptionBudget(' App Packages 2>/dev/null | strip_comments | cut -d: -f1 | sort -u)"})
+if (( ${#budget_files} == 0 )) || [[ -z "${budget_files[1]}" ]]; then
+    print -u2 "FAIL [R-96r] nothing constructs an InterruptionBudget — the day has no budget"
+    rc=1
+else
+    for budget_file in $budget_files; do
+        if [[ "$budget_file" == "$BUDGET_FILE" ]]; then
+            print "ok   [R-96r] $budget_file is the sanctioned producer"
+        else
+            print -u2 "FAIL [R-96r] $budget_file constructs an InterruptionBudget"
+            print -u2 "    A day's spend is folded from InterruptionCharges, in $BUDGET_FILE alone."
             rc=1
         fi
     done

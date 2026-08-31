@@ -7,17 +7,23 @@ import Testing
 /// F-107).
 @Suite("Interruption budget")
 struct InterruptionBudgetTests {
+    /// **A day's spend, folded from charges** (focus-d6r).
+    ///
+    /// There is no `interruptions:` parameter and there cannot be one: `interruptionsToday` is
+    /// derived from the two per-kind counters, so a suite can no longer state a day in which the
+    /// shared budget is spent and nothing was said. Half this suite used to do exactly that —
+    /// see `theReserveHoldsOverEveryReachableDay` below, which was folded over `interruptions:`
+    /// alone and therefore proved the reserve over states the app cannot reach while leaving it
+    /// unproved over the states it can.
     static func budget(
         queriesForPriority: Int = 0,
         queriesAllPriorities: Int = 0,
-        accusations: Int = 0,
-        interruptions: Int = 0
+        accusations: Int = 0
     ) -> InterruptionBudget {
-        InterruptionBudget(
-            queriesForPriorityToday: queriesForPriority,
-            queriesAllPrioritiesToday: queriesAllPriorities,
-            accusationsToday: accusations,
-            interruptionsToday: interruptions
+        BudgetDay.spending(
+            queries: queriesForPriority,
+            otherPriorityQueries: max(0, queriesAllPriorities - queriesForPriority),
+            accusations: accusations
         )
     }
 
@@ -39,36 +45,142 @@ struct InterruptionBudgetTests {
     /// therefore being unable to say "you are off task" is the failure that defeats the
     /// product, so a query may never spend the last unit of the shared budget.
     ///
-    /// Asserted over the whole grid rather than at one point: for **every** reachable
-    /// consumption of the shared budget, the accusation's headroom is at least the query's, and
-    /// the query's is at least `reservedAccusationUnits` smaller than the raw remainder.
-    @Test("a query can never spend the reserved unit, at any point in the day")
-    func queryNeverSpendsTheReservedUnit() {
+    /// Folded over the whole **reachable** grid rather than at one point — and the word
+    /// *reachable* is focus-d6r's correction. This fold used to walk `interruptions:` from nought
+    /// to the cap with both per-kind counters held at nought, so every cell of it was a day on
+    /// which the shared budget had been spent and the app had said nothing: the state
+    /// `InterruptionBudget` no longer has a spelling for, and the state focus-d6r's defect
+    /// actually produced. The reserve was proved over ten days the app cannot have and left
+    /// unproved over every day it can.
+    @Test("a query can never spend the reserved unit, on any day the app can have had")
+    func theReserveHoldsOverEveryReachableDay() {
         let cap = InterventionPolicy.dailyInterruptionCap
-        for spent in 0...(cap + 2) {
-            let budget = Self.budget(interruptions: spent)
-            #expect(
-                budget.sharedRemainingForQueries
-                    == max(0, budget.sharedRemaining - InterventionPolicy.reservedAccusationUnits)
-            )
-            #expect(
-                budget.sharedRemainingForQueries <= budget.sharedRemaining,
-                "a query had more shared headroom than an accusation at \(spent) spent"
-            )
-            if budget.sharedRemaining <= InterventionPolicy.reservedAccusationUnits {
-                #expect(
-                    !budget.permits(.query),
-                    "a query was permitted with only the reserve left, at \(spent) spent"
+        var cells = 0
+        var refusedCells = 0
+        for questions in 0...cap {
+            for accusations in 0...cap where questions + accusations <= cap {
+                let budget = Self.budget(
+                    queriesForPriority: questions,
+                    queriesAllPriorities: questions,
+                    accusations: accusations
                 )
+                cells += 1
+                #expect(
+                    budget.interruptionsToday == questions + accusations,
+                    "the shared total and the sentences it is made of disagree"
+                )
+                #expect(
+                    budget.sharedRemainingForQueries
+                        == max(0, budget.sharedRemaining - InterventionPolicy.reservedAccusationUnits)
+                )
+                #expect(
+                    budget.sharedRemainingForQueries <= budget.sharedRemaining,
+                    """
+                    a query had more shared headroom than an accusation after \(questions) \
+                    question(s) and \(accusations) accusation(s)
+                    """
+                )
+                if budget.sharedRemaining <= InterventionPolicy.reservedAccusationUnits {
+                    refusedCells += 1
+                    #expect(
+                        !budget.permits(.query),
+                        """
+                        a query was permitted with only the reserve left, after \(questions) \
+                        question(s) and \(accusations) accusation(s)
+                        """
+                    )
+                }
             }
         }
+        // Non-vacuity, both ways: the fold must have covered cells on each side of the reserve.
+        #expect(cells > 0)
+        #expect(refusedCells > 0, "no cell in the fold ever reached the reserve")
+        #expect(refusedCells < cells, "every cell was at the reserve, so nothing was compared")
+    }
+
+    // MARK: - The floor (focus-d6r)
+
+    /// **No day the app can reach refuses an accusation without the app having made one.**
+    ///
+    /// The other side of `PerceptibleChange`'s road. That type made *"charged for something
+    /// nobody saw"* unrepresentable; this asserts the consequence of `interruptionsToday` being
+    /// derived rather than stored — that silence is bought only with sentences.
+    ///
+    /// Driven over the **closed spending algebra** rather than over a scenario: start from
+    /// `.empty`, and at every state take every move the caps still permit, to a fixed point. That
+    /// is every budget the app can ever be in, exhaustively, and the assertion is made in each
+    /// one. A day of glyph landings is absent from the walk for the reason that matters: a glyph
+    /// landing makes no `InterruptionCharge`, so it is not a move.
+    ///
+    /// Before focus-d6r the equivalent state was reachable in the store in eight steps and the
+    /// walk would have found it immediately: `interruptionsToday == 8`, `accusationsToday == 0`,
+    /// `permits(.accusation) == false`.
+    @Test("no reachable day refuses an accusation without the app having made one")
+    func theFloorHoldsOverEveryReachableDay() {
+        var seen: Set<InterruptionBudget> = [.empty]
+        var frontier: [InterruptionBudget] = [.empty]
+        var silenced = 0
+
+        while let budget = frontier.popLast() {
+            if !budget.permits(.accusation) {
+                silenced += 1
+                #expect(
+                    budget.accusationsToday > 0,
+                    """
+                    the app cannot accuse anybody and has accused nobody: \
+                    \(budget.queriesAllPrioritiesToday) question(s), \
+                    \(budget.accusationsToday) accusation(s), \
+                    \(budget.interruptionsToday) interruption(s), bound by \
+                    \(String(describing: budget.bindingLimit(for: .accusation)))
+                    """
+                )
+                #expect(
+                    budget.hasSpokenToday,
+                    "the app was silenced for the day without having said anything at all"
+                )
+            }
+            // Every unit of the shared budget is a sentence, in every state, by construction.
+            #expect(
+                budget.interruptionsToday
+                    == budget.queriesAllPrioritiesToday + budget.accusationsToday
+            )
+            for kind in InterruptionKind.allCases where budget.permits(kind) {
+                for underThisPriority in [true, false] {
+                    let next = budget.spending(
+                        InterruptionCharge(
+                            kind,
+                            priorityID: underThisPriority
+                                ? BudgetDay.priority : BudgetDay.otherPriority
+                        ),
+                        underPriority: BudgetDay.priority
+                    )
+                    if seen.insert(next).inserted { frontier.append(next) }
+                }
+            }
+        }
+
+        // Non-vacuity: the walk must have reached days on which the app really is quiet, or the
+        // implication above has nothing to imply about.
+        #expect(silenced > 0, "no reachable day ever refused an accusation, so this proves nothing")
+        #expect(seen.count > 1, "the walk never left the empty day")
+        // And the walk really does end where the shared cap says it does.
+        #expect(
+            seen.map(\.interruptionsToday).max() == InterventionPolicy.dailyInterruptionCap,
+            "the reachable days run past the shared cap"
+        )
     }
 
     /// **The load-bearing cell: one unit left, both offered, the accusation takes it.**
     @Test("with one unit of the shared budget left, the accusation wins and the query loses")
     func withOneUnitLeftTheAccusationWins() {
+        // Seven of the eight spent, on three questions and four accusations — a day the app
+        // can actually have had, rather than seven units taken by nothing. Neither per-kind cap
+        // is at its own limit, so the shared budget is unambiguously the one that binds.
         let oneLeft = Self.budget(
-            interruptions: InterventionPolicy.dailyInterruptionCap
+            queriesForPriority: 3, queriesAllPriorities: 3, accusations: 4
+        )
+        #expect(
+            oneLeft.interruptionsToday == InterventionPolicy.dailyInterruptionCap
                 - InterventionPolicy.reservedAccusationUnits
         )
         #expect(oneLeft.sharedRemaining == InterventionPolicy.reservedAccusationUnits)
@@ -89,12 +201,14 @@ struct InterruptionBudgetTests {
     @Test("the per-priority query cap bites at four")
     func perPriorityQueryCap() {
         for asked in 0..<InterventionPolicy.dailyQueryCap {
-            #expect(Self.budget(queriesForPriority: asked, interruptions: asked).permits(.query))
+            #expect(
+                Self.budget(queriesForPriority: asked, queriesAllPriorities: asked)
+                    .permits(.query)
+            )
         }
         let full = Self.budget(
             queriesForPriority: InterventionPolicy.dailyQueryCap,
-            queriesAllPriorities: InterventionPolicy.dailyQueryCap,
-            interruptions: InterventionPolicy.dailyQueryCap
+            queriesAllPriorities: InterventionPolicy.dailyQueryCap
         )
         #expect(!full.permits(.query))
         #expect(full.bindingLimit(for: .query) == .dailyQueryCap)
@@ -110,8 +224,7 @@ struct InterruptionBudgetTests {
     func allPrioritiesDayCap() {
         let day = Self.budget(
             queriesForPriority: 2,
-            queriesAllPriorities: InterventionPolicy.dailyQueryCapAllPriorities,
-            interruptions: InterventionPolicy.dailyQueryCapAllPriorities
+            queriesAllPriorities: InterventionPolicy.dailyQueryCapAllPriorities
         )
         #expect(day.queriesForPriorityToday < InterventionPolicy.dailyQueryCap)
         #expect(!day.permits(.query), "a third priority bought itself extra questions")
@@ -121,10 +234,7 @@ struct InterruptionBudgetTests {
 
     @Test("the accusation cap bites at six")
     func accusationCap() {
-        let full = Self.budget(
-            accusations: InterventionPolicy.dailyAccusationCap,
-            interruptions: InterventionPolicy.dailyAccusationCap
-        )
+        let full = Self.budget(accusations: InterventionPolicy.dailyAccusationCap)
         #expect(!full.permits(.accusation))
         #expect(full.bindingLimit(for: .accusation) == .dailyAccusationCap)
     }
@@ -144,9 +254,9 @@ struct InterruptionBudgetTests {
         let contended = Self.budget(
             queriesForPriority: InterventionPolicy.dailyQueryCap,
             queriesAllPriorities: InterventionPolicy.dailyQueryCap,
-            accusations: 4,
-            interruptions: InterventionPolicy.dailyInterruptionCap
+            accusations: 4
         )
+        #expect(contended.interruptionsToday == InterventionPolicy.dailyInterruptionCap)
         #expect(contended.accusationsToday < InterventionPolicy.dailyAccusationCap)
         #expect(!contended.permits(.accusation))
         #expect(contended.bindingLimit(for: .accusation) == .dailyInterruptionCap)
@@ -194,8 +304,9 @@ struct InterruptionBudgetTests {
     @Test("a new day starts empty")
     func newDayStartsEmpty() {
         let spent = Self.budget(
-            queriesForPriority: 4, queriesAllPriorities: 5, accusations: 3, interruptions: 8
+            queriesForPriority: 4, queriesAllPriorities: 5, accusations: 3
         )
+        #expect(spent.interruptionsToday == InterventionPolicy.dailyInterruptionCap)
         #expect(spent.startingNewDay() == .empty)
     }
 
