@@ -299,7 +299,8 @@ struct NudgeHostFixture {
         commitment: ActiveCommitment?,
         presentation: PresentationState = .notPresenting,
         media: MediaActivity = .idle,
-        menuBarVisible: Bool = true
+        menuBarVisible: Bool = true,
+        quietHours: QuietHours = .off
     ) -> NudgeSurroundings {
         NudgeSurroundings(
             commitment: commitment,
@@ -309,6 +310,7 @@ struct NudgeHostFixture {
             media: media,
             presentation: presentation,
             menuBarVisible: menuBarVisible,
+            quietHours: quietHours,
             now: reference,
             calendar: londonCalendar,
             monotonic: monotonic

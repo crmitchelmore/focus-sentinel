@@ -47,6 +47,10 @@ public enum NudgeSuppressionReason: String, Sendable, CaseIterable, Codable, Has
     case userIdle
     /// Gate 6 (e03, F-36). A microphone or camera is running: the person is on a call, and a
     /// panel over a call is a panel everybody else can see.
+    ///
+    /// **Subject: the app speaking** (focus-0y6). The sentence above names a panel, and the
+    /// glyph is not one. See `subject` below for why this is an exemption and gate 7 is a
+    /// deferral — the difference is that during a call the menu bar is still on screen.
     case mediaInUse
     /// Gate 7 (e03, F-35). A presentation or full-screen space is up.
     ///
@@ -57,6 +61,10 @@ public enum NudgeSuppressionReason: String, Sendable, CaseIterable, Codable, Has
     case presentationActive
     /// Gate 8 (e05, R-85). The person's own quiet hours. Not the system Focus, which this app
     /// makes no claim to read (P-137).
+    ///
+    /// **Subject: the app speaking** (focus-0y6). Somebody who sets quiet hours is asking the
+    /// app not to *say* anything between two times, which is the request a snooze makes — and
+    /// R-87 already ruled on a snooze: the glyph goes on telling the truth.
     case quietHours
     /// Gate 9 (e05, U-2). One open interruption at a time, **symmetrically**: whatever is
     /// already on screen keeps the slot, and whatever arrives second waits. The gate below is
@@ -67,6 +75,12 @@ public enum NudgeSuppressionReason: String, Sendable, CaseIterable, Codable, Has
     /// preemption, U-2 deleted it, and roughly eleven defects across seven repair rounds had
     /// lived in it. An accusation withheld here is **not lost**: no delivery is recorded and the
     /// escalation clock does not start, so the same rung is offered again on the next judgement.
+    ///
+    /// **Subject: the app speaking** (focus-0y6), and this is the sharpest of the three. It is an
+    /// occupancy rule, and `NudgeSurface.menuBar.holdsTheInterruptionSlot` is `false`: the glyph
+    /// was being refused by a rule it is explicitly excluded from — a thing refused on the
+    /// grounds of a property it does not have. One open question used to take the status item
+    /// with it for as long as it stayed on the screen.
     case interruptionInFlight
     /// Gate 10 (e05, R-83). A cap, a cooldown or a backoff. Queries and accusations keep
     /// separate caps *and* draw on one shared daily budget whose last unit is reserved for an
@@ -233,10 +247,13 @@ public enum SuppressionStack {
     /// - Parameters:
     ///   - kind: which interruption is being considered. Gate 11 is kind-dependent and nothing
     ///     else is.
-    ///   - rung: the accusation rung being considered, or `nil` for a question. Read by gate 7
-    ///     alone: the silent ambient rung is **deferred** under a presentation rather than
-    ///     suppressed, because the menu bar is hidden and the rung is undeliverable rather than
-    ///     unwanted (R-81, P-131).
+    ///   - rung: the accusation rung being considered, or `nil` for a question. **Read by every
+    ///     gate, through `NudgeSuppressionReason.subject`** (focus-0y6): a gate about the app
+    ///     speaking passes over a rung that says nothing, a gate about there being anything to be
+    ///     legible about stops every rung, and gate 7 — whose subject is the surface being on
+    ///     screen — **defers** rather than suppresses a rung that does not speak, because the
+    ///     menu bar is hidden and the rung is undeliverable rather than unwanted (R-81, P-131).
+    ///     `nil` speaks: a question is a sentence, and every gate applies to it.
     ///   - hasActivePriority: gate 1.
     ///   - sensingPaused: gate 2 — `AppSettingsRecord.sensingPaused`, F-119's one switch.
     ///   - sensitivity: gate 3 — e03's `SensitivityGate.evaluate(_:)` answer, already made.
@@ -278,59 +295,69 @@ public enum SuppressionStack {
         hasAsked: Bool,
         verdictAuthorises: Bool
     ) -> SuppressionOutcome {
-        // 1 — no active priority (e04).
-        guard hasActivePriority else { return .suppressed(.noActivePriority) }
+        // **Every gate is asked the same two questions, in this order: is it closed, and is it
+        // about a rung like this one?** (focus-0y6, focus-uru).
+        //
+        // It used to be twelve hand-written `guard`s, and exactly one of them — gate 7 — read
+        // the rung. The other eleven refused whatever they were handed, so three gates written
+        // about **interrupting somebody** were applied to the ambient glyph, which interrupts
+        // nobody: a running microphone, the person's own quiet hours, and an occupancy rule the
+        // glyph is explicitly excluded from (`NudgeSurface.menuBar.holdsTheInterruptionSlot` is
+        // `false`). The consequence is F-146's *"the state is always legible"* broken by rules
+        // aimed at something else — the status item goes dark while somebody is on a call, or
+        // after 22:00, or for as long as one question sits on the screen.
+        //
+        // `closing(_:when:rung:)` is the whole evaluation now. It returns `nil` for a gate that
+        // is open **and** for a gate that is not about this rung, which is what makes "pass over
+        // it and keep going" the same shape as "it did not close" — and it derives the deferral
+        // in gate 7's cell from `NudgeSuppressionReason.subject` rather than from an `if` that
+        // names `.ambient`, so that cell is now an instance of the rule instead of the exception
+        // that proved it.
+        let gates: [(NudgeSuppressionReason, Bool)] = [
+            // 1 — no active priority (e04).
+            (.noActivePriority, !hasActivePriority),
+            // 2 — the global pause switch (e03, F-119).
+            (.sensingPaused, sensingPaused),
+            // 3 — a sensitive application (e03, F-118). Read through e03's own decision type, so
+            // the subject is never named here — the activation was suppressed before the engine
+            // saw it, and this function never learns what it was.
+            (.sensitiveApplication, sensitivity.clearedActivation == nil),
+            // 4 — the session phase (e03, F-99). `.focus` alone.
+            (.sessionPhaseForbids, !phase.permitsIntervention),
+            // 5 — the person is away (e03, F-32), by the hardware idle source and their threshold.
+            (.userIdle, idle.isIdle(threshold: idleThresholdSeconds)),
+            // 6 — a microphone or camera is running (e03, F-36), if the user left that switch on.
+            (.mediaInUse, mediaSuppressionEnabled && media.suppressesIntervention),
+            // 7 — a presentation (e03, F-35). The menu bar is hidden, so a rung that does not
+            // speak is DEFERRED here rather than suppressed (R-81, P-131).
+            (.presentationActive, presentation.suppressesOverlays),
+            // 8 — quiet hours (e05, R-85). Default off.
+            (.quietHours, quietHours.isQuiet(at: now, calendar: calendar)),
+            // 9 — one open interruption at a time, symmetrically (e05, U-2). No arm reads `kind`:
+            // whatever is on screen keeps the slot and whatever arrives second waits.
+            (.interruptionInFlight, interruptionInFlight),
+            // 10 — the caps, the cooldown and the backoff (e05, R-83). Already computed, and
+            // already classified per refusal by `FatigueController.decide(…)` — which is why
+            // this gate's own subject is legibility and it never passes a rung over.
+            (.budgetExhausted, !budgetPermits),
+            // 11 — never twice (e05, R-78). Queries only; an accusation passes straight through,
+            // which `appliesTo` says and this conjunct spells.
+            (.alreadyAsked, kind == .query && hasAsked),
+            // 12 — the verdict gate (e04 R-55 / e05 R-76).
+            (.verdictDoesNotAuthorise, !verdictAuthorises)
+        ]
 
-        // 2 — the global pause switch (e03, F-119).
-        guard !sensingPaused else { return .suppressed(.sensingPaused) }
-
-        // 3 — a sensitive application (e03, F-118). Read through e03's own decision type, so
-        // the subject is never named here — the activation was suppressed before the engine
-        // saw it, and this function never learns what it was.
-        guard sensitivity.clearedActivation != nil else {
-            return .suppressed(.sensitiveApplication)
-        }
-
-        // 4 — the session phase (e03, F-99). `.focus` alone.
-        guard phase.permitsIntervention else { return .suppressed(.sessionPhaseForbids) }
-
-        // 5 — the person is away (e03, F-32), by the hardware idle source and their threshold.
-        guard !idle.isIdle(threshold: idleThresholdSeconds) else {
-            return .suppressed(.userIdle)
-        }
-
-        // 6 — a microphone or camera is running (e03, F-36), if the user left that switch on.
-        if mediaSuppressionEnabled, media.suppressesIntervention {
-            return .suppressed(.mediaInUse)
-        }
-
-        // 7 — a presentation (e03, F-35). The one gate whose answer depends on the rung: the
-        // silent ambient rung is DEFERRED, because the menu bar is hidden and nobody could have
-        // seen it (P-131) — an undeliverable rung is not a delivered rung (R-81).
-        if presentation.suppressesOverlays {
-            if kind == .accusation, rung == .ambient {
-                return .deferred(.menuBarHidden)
+        // The declaration order above **is** the evaluation order, and `gateNumber` derives the
+        // same order from `allCases`. `SuppressionStackTests.theStackEvaluatesEveryGateInOrder`
+        // holds the two together, so a gate added to the enum and forgotten here is red rather
+        // than silently skipped.
+        for (reason, isClosed) in gates where isClosed {
+            switch reason.subject.ruling(for: rung) {
+            case .silences: return .suppressed(reason)
+            case .defers(let deferral): return .deferred(deferral)
+            case .passes: continue
             }
-            return .suppressed(.presentationActive)
         }
-
-        // 8 — quiet hours (e05, R-85). Both kinds. Default off.
-        guard !quietHours.isQuiet(at: now, calendar: calendar) else {
-            return .suppressed(.quietHours)
-        }
-
-        // 9 — one open interruption at a time, symmetrically (e05, U-2). No arm reads `kind`:
-        // whatever is on screen keeps the slot and whatever arrives second waits.
-        guard !interruptionInFlight else { return .suppressed(.interruptionInFlight) }
-
-        // 10 — the caps, the cooldown and the backoff (e05, R-83).
-        guard budgetPermits else { return .suppressed(.budgetExhausted) }
-
-        // 11 — never twice (e05, R-78). Queries only; an accusation passes straight through.
-        if kind == .query, hasAsked { return .suppressed(.alreadyAsked) }
-
-        // 12 — the verdict gate (e04 R-55 / e05 R-76).
-        guard verdictAuthorises else { return .suppressed(.verdictDoesNotAuthorise) }
 
         return .permitted
     }

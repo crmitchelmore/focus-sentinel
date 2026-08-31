@@ -489,4 +489,153 @@ struct NudgeFloorTests {
         )
         #expect(after.interruptionsToday == InterventionPolicy.dailyAccusationCap)
     }
+
+    // MARK: - The floor's third half: the gates written about interrupting somebody
+
+    /// **The state stays legible through a call, a quiet hour and an open question** (focus-0y6,
+    /// focus-uru).
+    ///
+    /// `SuppressionGateWitnessTests` folds all twelve gates against both rungs; that suite drives
+    /// `SuppressionStack.evaluate(…)`, which is a pure function, and proves the *decision*. This
+    /// is the half it cannot reach: the shipping composition root, the real `NSStatusItem` the
+    /// root installed, and the question *did a person actually see anything?* — the lesson
+    /// `NudgeReachabilityTests` earned on focus-yxb, and the drive focus-0y6's acceptance
+    /// criteria ask for by name.
+    ///
+    /// Three conditions, one row each, and **each row asserts both halves**:
+    ///
+    /// 1. the gate really is closed — the app is asked a question it would otherwise ask, and
+    ///    goes silent naming *this* gate. Without that half a row that had failed to arrange its
+    ///    condition would assert that the glyph survives nothing at all;
+    /// 2. and the glyph lands anyway — on the real item, with a write somebody could have seen.
+    ///
+    /// Before this round each of the three took the status item with it: a microphone running, a
+    /// quiet window the person set, or one question sitting on the screen, and F-146's *"the
+    /// state is always legible"* was off for the duration.
+    struct Condition {
+        /// The gate this row closes, and the reason the app must name when it declines to speak.
+        let gate: NudgeSuppressionReason
+        /// Puts the world into the state that closes it, on a joined root.
+        let arrange: @MainActor (AppComposition, FixedMonotonicClock) throws -> Void
+        /// Why the glyph is exempt from this gate. Read by a person.
+        let argument: String
+    }
+
+    static let allDayQuietHours = QuietHours(
+        window: QuietHours.window(
+            fromHour: 0, minute: 0, toHour: 23, minute: 59,
+            calendar: NudgeHostFixture.londonCalendar
+        )
+    )
+
+    static let conditions: [Condition] = [
+        Condition(
+            gate: .mediaInUse,
+            arrange: { root, clock in
+                let commitment = ActiveCommitment(id: UUID(), intent: Self.intent)
+                root.nudgeHost.surroundings = {
+                    NudgeHostFixture.surroundings(
+                        monotonic: clock.elapsed,
+                        commitment: commitment,
+                        media: MediaActivity(microphoneRunning: true)
+                    )
+                }
+            },
+            argument: """
+                F-36 is about a panel over a screen share. The glyph is the status item that was \
+                already there, and the menu bar is still on screen — so this is an exemption, not \
+                gate 7's deferral.
+                """
+        ),
+        Condition(
+            gate: .quietHours,
+            arrange: { root, clock in
+                let commitment = ActiveCommitment(id: UUID(), intent: Self.intent)
+                root.nudgeHost.surroundings = {
+                    NudgeHostFixture.surroundings(
+                        monotonic: clock.elapsed,
+                        commitment: commitment,
+                        quietHours: Self.allDayQuietHours
+                    )
+                }
+            },
+            argument: """
+                R-85's window is a request not to SPEAK between two times — the same request a \
+                snooze makes, and R-87 already ruled that a snooze never takes the glyph.
+                """
+        ),
+        Condition(
+            gate: .interruptionInFlight,
+            arrange: { root, _ in
+                root.relevanceHost.onJudgement?(
+                    NudgeHostFixture.uncertainJudgement(subject: Self.subjects[2])
+                )
+                NudgeHostFixture.settle()
+                try #require(
+                    root.nudgePanel.isVisible && root.nudgePanel.showing == .question,
+                    "no question reached the panel, so nothing holds the interruption slot"
+                )
+            },
+            argument: """
+                An occupancy rule, and NudgeSurface.menuBar.holdsTheInterruptionSlot is false. \
+                The glyph was refused by a rule it is explicitly excluded from.
+                """
+        )
+    ]
+
+    @Test("a call, a quiet hour and an open question each silence the app and none takes the glyph")
+    func theGlyphSurvivesACallAQuietHourAndAnOpenQuestion() throws {
+        for condition in Self.conditions {
+            let clock = FixedMonotonicClock()
+            let (root, _) = try Self.joinedRoot(clock: clock)
+            defer { Self.tearDown(root) }
+
+            try condition.arrange(root, clock)
+
+            // **Half one: the gate really is closed, and the app names it.** A question is what
+            // this app is licensed to interrupt for, so a question refused *by this gate* is the
+            // strongest available evidence that the condition is in force.
+            root.relevanceHost.onJudgement?(
+                NudgeHostFixture.uncertainJudgement(subject: Self.subjects[1])
+            )
+            NudgeHostFixture.settle()
+            #expect(
+                root.nudgeHost.lastDecision?.silence?.reason == condition.gate,
+                """
+                \(condition.gate.rawValue): the app was still willing to speak, so this row \
+                arranges nothing — \(String(describing: root.nudgeHost.lastDecision))
+                """
+            )
+
+            // **Half two: and the glyph lands anyway.**
+            let landing = try Self.drift(
+                root,
+                clock: clock,
+                into: Self.subjects[0],
+                thenBreak: false
+            )
+            #expect(
+                landing.landedOn == .menuBar,
+                """
+                \(condition.gate.rawValue) took the status item with it: the app went quiet \
+                about the person's own state — \(landing.summary), \
+                \(String(describing: root.nudgeHost.lastDecision)). \(condition.argument)
+                """
+            )
+            #expect(
+                landing.glyphWrites > 0,
+                """
+                \(condition.gate.rawValue): the item was never written, so nobody could have \
+                perceived the mark — \(landing.summary)
+                """
+            )
+            #expect(
+                root.menuBar.markOnTheItem == .noticing,
+                """
+                \(condition.gate.rawValue): the item is drawing \
+                \(root.menuBar.markOnTheItem.rawValue) while the person drifts
+                """
+            )
+        }
+    }
 }
