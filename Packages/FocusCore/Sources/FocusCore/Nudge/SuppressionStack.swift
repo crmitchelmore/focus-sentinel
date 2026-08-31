@@ -83,6 +83,81 @@ public enum NudgeSuppressionReason: String, Sendable, CaseIterable, Codable, Has
     /// a question, each returning *before* it reads anything else.
     case verdictDoesNotAuthorise
 
+    /// **What this gate is about, and therefore which rungs it may silence** (focus-0y6,
+    /// focus-uru).
+    ///
+    /// The exhaustive `switch` is the mechanism. `focus-2yy`'s commit message enumerated *"gates
+    /// 1, 2 and 3 … gate 5"* and `focus-0y6`'s triage walked twelve gates and ruled on each, and
+    /// **both skipped gate 4** — because both swept a closed set by reading prose. A closed set
+    /// swept by reading is not swept. A thirteenth gate added below does not compile until it
+    /// has been ruled on here.
+    ///
+    /// The rulings, and the argument for each:
+    ///
+    /// | gate | subject | why |
+    /// |---|---|---|
+    /// | 1 `noActivePriority` | legibility | there is nothing to be off task *from*, so there is nothing true for the glyph to say |
+    /// | 2 `sensingPaused` | legibility | the observers are detached; the app does not know, and a mark would be a guess |
+    /// | 3 `sensitiveApplication` | legibility | the app must say nothing at all about what is on screen — and *"we did not look"* must never become a mark |
+    /// | 4 `sessionPhaseForbids` | legibility | on a break there is no drift to be legible about |
+    /// | 5 `userIdle` | legibility | nobody is looking at the menu bar either |
+    /// | 6 `mediaInUse` | **speaking** | ruled below |
+    /// | 7 `presentationActive` | **the surface** | the menu bar is hidden (P-131) — wanted and undeliverable, so a deferral |
+    /// | 8 `quietHours` | **speaking** | ruled below |
+    /// | 9 `interruptionInFlight` | **speaking** | ruled below |
+    /// | 10 `budgetExhausted` | legibility | ruled below — this gate deliberately does **not** classify |
+    /// | 11 `alreadyAsked` | speaking | a question is a sentence, and this gate is a question's alone |
+    /// | 12 `verdictDoesNotAuthorise` | legibility | the verdict authorises nothing, so there is nothing to mark |
+    ///
+    /// ## Gate 6, and why it is not gate 7
+    ///
+    /// F-36's own sentence is *"a microphone or camera is running: the person is on a call, and
+    /// **a panel over a call is a panel everybody else can see**"*. The gate is about a window
+    /// appearing over a screen share. The glyph is not a window: it is the same status item that
+    /// was already there, changing colour, naming nobody, revealing nothing about what the person
+    /// is doing that the item was not already free to show.
+    ///
+    /// The counter-argument is real and was weighed: a person on a call is a person who cannot
+    /// *act* on the mark, so a deferral — gate 7's answer — might be more honest than an
+    /// exemption. It is not, and the difference is deliverability. Gate 7 defers because the
+    /// menu bar is **not on screen**; a rung deferred there reached nobody, so R-81 forbids it
+    /// advancing the ladder or spending anything. During a call the menu bar is exactly where it
+    /// always is and the person can see it whenever they look up. Recording it as undeliverable
+    /// would be recording a falsehood in order to be tidy.
+    ///
+    /// ## Gates 8 and 9
+    ///
+    /// Gate 8 is R-85's own quiet hours, default off, and the person who sets them is asking the
+    /// app **not to speak** between two times. It is the same request a snooze makes, and R-87
+    /// already ruled on a snooze: the glyph goes on telling the truth, because a person who asked
+    /// for quiet did not ask for a lie.
+    ///
+    /// Gate 9 is the sharpest of the three. It is an **occupancy** rule — one open interruption
+    /// at a time — and `NudgeSurface.menuBar.holdsTheInterruptionSlot` is `false`, so the glyph
+    /// is refused by a rule it is explicitly excluded from. Refusing a thing on the grounds of a
+    /// property it does not have.
+    ///
+    /// ## Gate 10 does not classify, and that is its ruling
+    ///
+    /// Its detail vocabulary — `FatigueRefusal` — classifies for it, case by case, and one of
+    /// those cases is `.corrected`, whose subject is legibility: a subject the person has told us
+    /// is real work is a subject the glyph must **stop** marking. Ruling gate 10 as
+    /// `.theAppSpeaking` here would pass the glyph over a correction the person made, which is
+    /// the one fatigue refusal that must reach it. So the classification happens once, where the
+    /// detail is, and this gate takes whatever answer `FatigueController.decide(…)` already gave
+    /// for this rung.
+    public var subject: SilenceSubject {
+        switch self {
+        case .noActivePriority, .sensingPaused, .sensitiveApplication, .sessionPhaseForbids,
+             .userIdle, .budgetExhausted, .verdictDoesNotAuthorise:
+            .anythingToBeLegibleAbout
+        case .mediaInUse, .quietHours, .interruptionInFlight, .alreadyAsked:
+            .theAppSpeaking
+        case .presentationActive:
+            .theSurfaceBeingOnScreen(.menuBarHidden)
+        }
+    }
+
     /// Where this gate sits in R-84's stack, counting from one — derived from `allCases`, so
     /// the declaration order *is* the evaluation order and no numeric literal appears (R-96j).
     public var gateNumber: Int {

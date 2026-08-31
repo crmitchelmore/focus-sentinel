@@ -42,6 +42,81 @@ public enum FatigueRefusal: Sendable, Equatable, Hashable {
     /// task today" and "you have had five questions today" are different sentences and a person
     /// deserves the true one.
     case cap(InterruptionLimit)
+
+    /// **The closed set of refusals, without their payloads** (focus-uru).
+    ///
+    /// `FatigueRefusal` carries a subject, a remaining duration, an expiry and a limit, so it
+    /// cannot be `CaseIterable` itself — and for six rounds that meant the one vocabulary in this
+    /// programme with no way to be folded over was also the one accumulating defects. The other
+    /// two answers to *"why did the app go quiet?"* are `CaseIterable` and one of them,
+    /// `InterruptionLimit`, was folded against the ambient rung last round and has none.
+    ///
+    /// This is the fold-able shape: `allCases` is what `FatigueVocabularyTests` walks, so a
+    /// seventh refusal added above cannot reach a person without a witness row driving the state
+    /// that produces it.
+    public enum Kind: String, Sendable, CaseIterable, Codable, Hashable {
+        case corrected
+        case snoozed
+        case backedOff
+        case heldAtAmbient
+        case cooldown
+        case cap
+
+        /// **What this refusal is about, and therefore which rungs it may silence** (focus-uru).
+        ///
+        /// Gates 1, 2, 3 and — since focus-2yy — 5 of `FatigueController.decide(…)` each grew
+        /// their own bespoke exemption for the ambient rung, spelled four different ways: a
+        /// correction is subject-scoped, a snooze is asked as `rung ?? .panel`, the hold answers
+        /// `rung != .ambient`, and the caps ask `InterruptionCharge`. Gate 4 sits between the
+        /// third and the fifth and had none, so **the one channel that is supposed to survive
+        /// everything was muted for 600 s at a time by a cooldown belonging to the rung that
+        /// speaks.** Measured, before this property existed:
+        ///
+        ///     rung=ambient, gap=60s → refused(cooldown(remaining: 540s))
+        ///
+        /// Five of the six are about the app speaking, and the sixth is the reason the sixth
+        /// exists:
+        ///
+        /// * **`corrected` is legibility, and it is the only one.** The person clicked *"this is
+        ///   relevant"*. There is no longer anything to be off task about, so the glyph must
+        ///   **stop** marking them — a mark that survived a correction would be the app arguing
+        ///   with an instruction it was just given. This is also why gate 10 of
+        ///   `SuppressionStack` does not classify: if it did, it would pass the glyph over this.
+        /// * `snoozed` is R-87's own sentence — *"never applied to the ambient rung, because the
+        ///   glyph goes on telling the truth"*.
+        /// * `backedOff` is questions only, and a question always speaks.
+        /// * `heldAtAmbient` names the exemption in its own case name: the hold *is* the ladder
+        ///   standing at the rung this subject exempts.
+        /// * `cooldown` is a minimum gap between **sentences**. The glyph makes none, spends
+        ///   neither cap, and costs a person nothing to have been shown twice.
+        /// * `cap` is focus-2yy's ruling, restated where the other five are: *a rung is refused
+        ///   only by a cap it can spend*.
+        ///
+        /// **Never `.theSurfaceBeingOnScreen`.** `FatigueDecision` has two cases and no third, on
+        /// purpose: a deferral is the suppression stack's answer to give, and this controller
+        /// answers gate 10 with a `Bool`. `FatigueVocabularyTests` holds that over `allCases`.
+        public var subject: SilenceSubject {
+            switch self {
+            case .corrected: .anythingToBeLegibleAbout
+            case .snoozed, .backedOff, .heldAtAmbient, .cooldown, .cap: .theAppSpeaking
+            }
+        }
+    }
+
+    /// Which refusal this is, payload discarded.
+    public var kind: Kind {
+        switch self {
+        case .corrected: .corrected
+        case .snoozed: .snoozed
+        case .backedOff: .backedOff
+        case .heldAtAmbient: .heldAtAmbient
+        case .cooldown: .cooldown
+        case .cap: .cap
+        }
+    }
+
+    /// What this refusal is about — `kind.subject`, forwarded so a call site reads as one thing.
+    public var subject: SilenceSubject { kind.subject }
 }
 
 /// Whether the person may be interrupted once more, and if not, why not.
