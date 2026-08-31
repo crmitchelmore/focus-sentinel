@@ -103,12 +103,27 @@ public struct DayFixture: Sendable, Equatable {
         guard !segments.isEmpty else {
             throw CorpusDecodingError(path: id, reason: "has no segments")
         }
-        guard expectInterruptions == expectQueries + expectAccusations else {
+        // **Bounded by the two, not equal to their sum** (focus-d6r).
+        //
+        // It was an equality, and an equality is the claim that every rung interrupts somebody.
+        // It does not: `LadderRung.Kind.ambient.makesAnAccusation` is `false`, the glyph accuses
+        // nobody, asks nobody anything and stays on through a snooze, so it is a delivered rung
+        // that costs no unit of the day. What survives is both bounds — every question is an
+        // interruption, so the count cannot be below the questions, and nothing but a question or
+        // an accusing rung is one, so it cannot be above their sum.
+        guard expectInterruptions >= expectQueries else {
             throw CorpusDecodingError(
                 path: "\(id).expectInterruptions",
-                reason: "is \(expectInterruptions) but the day claims \(expectQueries) question(s) "
-                    + "and \(expectAccusations) rung(s) — a person asked ten questions has been "
-                    + "interrupted ten times, so the three numbers are one claim and must agree"
+                reason: "is \(expectInterruptions) but the day claims \(expectQueries) "
+                    + "question(s) — a person asked ten questions has been interrupted ten times"
+            )
+        }
+        guard expectInterruptions <= expectQueries + expectAccusations else {
+            throw CorpusDecodingError(
+                path: "\(id).expectInterruptions",
+                reason: "is \(expectInterruptions) but the day claims only \(expectQueries) "
+                    + "question(s) and \(expectAccusations) rung(s) — nothing else in this app "
+                    + "can interrupt anybody"
             )
         }
         guard expectInterruptions <= InterventionPolicy.dailyInterruptionCap else {

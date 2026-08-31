@@ -149,10 +149,15 @@ struct DayReplayTests {
             try DayFixture.decode(try StrictObject.parse(data: Data(text.utf8), path: "day-99"))
         }
 
-        // A person asked ten questions has been interrupted ten times: the three numbers are one
-        // claim.
+        // A person asked ten questions has been interrupted ten times: a day may never claim
+        // fewer interruptions than it claims questions.
         #expect(throws: CorpusDecodingError.self) {
-            try decode(json(queries: 2, accusations: 1, interruptions: 2))
+            try decode(json(queries: 2, accusations: 1, interruptions: 1))
+        }
+        // And nothing but a question or an accusing rung can interrupt anybody, so it may never
+        // claim more than their sum either.
+        #expect(throws: CorpusDecodingError.self) {
+            try decode(json(queries: 2, accusations: 1, interruptions: 4))
         }
         // Above dailyInterruptionCap.
         #expect(throws: CorpusDecodingError.self) {
@@ -160,6 +165,13 @@ struct DayReplayTests {
         }
         #expect(throws: Never.self) {
             try decode(json(queries: 2, accusations: 1, interruptions: 3))
+        }
+        // **And the case the equality used to forbid** (focus-d6r): a day with a rung that
+        // accuses nobody. `LadderRung.Kind.ambient.makesAnAccusation` is false, so an ambient
+        // landing is a delivered rung that costs no unit of the day — which is exactly what
+        // day-01 is, and the equality made that day unstatable.
+        #expect(throws: Never.self) {
+            try decode(json(queries: 2, accusations: 1, interruptions: 2))
         }
     }
 

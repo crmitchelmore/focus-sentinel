@@ -1,6 +1,6 @@
 {
   "id": "day-01",
-  "note": "dailyQueryCapAllPriorities' committed witness, and the defect it closes. Three commitments in one working day — a proposal in the morning, an audit after lunch, release notes in the afternoon — with a break, a presentation, an idle span and one real accusation. The per-priority cap alone would license twelve questions across three priorities and would be bounded only by the shared budget at seven; the day cap stops the fifth question being followed by a sixth, and it stops it under a FRESH priority whose own cap has barely been touched, which is exactly the shape of the hole. The number a person feels is questions-per-day, so that is the number with a constant, a fixture and a gated metric.",
+  "note": "dailyQueryCapAllPriorities' committed witness, and the defect it closes. Three commitments in one working day — a proposal in the morning, an audit after lunch, release notes in the afternoon — with a break, a presentation, an idle span and one real accusation. The per-priority cap alone would license twelve questions across three priorities and would be bounded only by the shared budget at seven; the day cap stops the fifth question being followed by a sixth, and it stops it under a FRESH priority whose own cap has barely been touched, which is exactly the shape of the hole. The number a person feels is questions-per-day, so that is the number with a constant, a fixture and a gated metric. The day's ONE accusation is an ambient glyph landing, so it costs no unit of the shared budget: five questions and one rung is six things the app put in front of somebody and FIVE interruptions (focus-d6r). expectInterruptions was 6, and the equality that required it — expectInterruptions == expectQueries + expectAccusations — was the claim that every rung interrupts somebody, which the ambient rung has never done.",
   "segments": [
     {
       "priority": {
@@ -296,5 +296,5 @@
   ],
   "expectQueries": 5,
   "expectAccusations": 1,
-  "expectInterruptions": 6
+  "expectInterruptions": 5
 }

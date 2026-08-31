@@ -221,9 +221,16 @@ public struct InterventionEvent: Sendable, Equatable, Hashable {
 /// judgement could be stored.
 public struct InterventionCounters: Sendable, Equatable, Hashable {
     public private(set) var byKind: [InterruptionKind: Int]
-    /// Deliveries alone, per kind — what the daily caps read. Kept apart from `byKind` because
-    /// a deferred rung is counted (so the share is visible) and spends nothing (R-81), and one
-    /// dictionary could not say both.
+    /// Deliveries alone, per kind. Kept apart from `byKind` because a deferred rung is counted
+    /// (so the share is visible) and spends nothing (R-81), and one dictionary could not say
+    /// both.
+    ///
+    /// **Not what the daily caps read, and it said it was** (focus-d6r). The caps are summed
+    /// from `spendsTheInterruptionCap` and `spendsTheAccusationCap`, which refuse an ambient rung
+    /// that accuses nobody; this counts every delivery, ambient rungs included, because what it
+    /// is for is the *record* — how many things the app put in front of somebody. Two different
+    /// questions, and a doc comment claiming they are one is how a maintainer comes to read this
+    /// number as a budget.
     public private(set) var deliveredByKind: [InterruptionKind: Int]
     public private(set) var byRung: [LadderRung.Kind: Int]
     public private(set) var bySurface: [NudgeSurface: Int]
@@ -307,7 +314,8 @@ public struct InterventionCounters: Sendable, Equatable, Hashable {
         return Double(count(.deferred)) / Double(all)
     }
 
-    /// Deliveries of one kind — what the daily caps read.
+    /// Deliveries of one kind — a count of the record, never of the budget (focus-d6r). See
+    /// `deliveredByKind`.
     public func delivered(_ kind: InterruptionKind) -> Int { deliveredByKind[kind] ?? 0 }
 
     /// Everything counted of one kind, whatever became of it.

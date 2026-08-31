@@ -15,7 +15,25 @@ public struct DayTranscript: Sendable, Equatable {
     public let queriesForBusiestPriority: Int
     public let world: NudgeWorld
 
-    public var interruptionCount: Int { queryCount + accusationCount }
+    /// **What the day actually cost the person** (focus-d6r).
+    ///
+    /// Read off the replayed world's own `InterruptionBudget` rather than summed here, and that
+    /// is the fix. It was `queryCount + accusationCount`, which counts every delivered rung — so
+    /// this was the fourth independent answer in the programme to *"what did that rung cost?"*,
+    /// and the one behind a **gated** number: `nudge.interruptionsPerFocusDayMax` is asserted
+    /// against `dailyInterruptionCap`, and it was counting ambient glyph landings as
+    /// interruptions. Measured on day-01, which delivers five questions and one ambient rung: the
+    /// gate read 6 where the app charges 5, and a day of ten glyph landings and no sentence at
+    /// all would have failed a cap it never went near.
+    ///
+    /// `deliveredNudgeCount` below is the other number and it is a different claim: how many
+    /// things the app said or drew, which is what a day fixture's `expectQueries` and
+    /// `expectAccusations` are about and what the record has to account for.
+    public var interruptionCount: Int { world.budget.interruptionsToday }
+
+    /// Everything the app put in front of somebody, whether or not it cost them a unit of the
+    /// day: questions plus every rung, ambient ones included.
+    public var deliveredNudgeCount: Int { queryCount + accusationCount }
 
     /// One line per step, in order. Printed on a failure, so a reviewer reads what the day
     /// actually was rather than which assertion tripped.
