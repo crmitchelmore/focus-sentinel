@@ -535,7 +535,12 @@ enum SelfCheck {
         // against committed literals, and one of them — `requestAuthorizationCallCount` — is
         // the number that discharges standing condition 5 for this epic.
         root["interventionDigest"] = nudge["interventionDigest"] ?? ""
-        root["notificationAuthorisation"] = nudge["notificationAuthorisation"] ?? ""
+        root["notificationAuthorisation"] = nudge["notificationAuthorisation"] ?? "unread"
+        root["notificationAuthorisationReads"] = nudge["notificationAuthorisationReads"] ?? -1
+        root["notificationAuthorisationDecodeTable"] =
+            nudge["notificationAuthorisationDecodeTable"] ?? ""
+        root["notificationAuthorisationDecodeCells"] =
+            nudge["notificationAuthorisationDecodeCells"] ?? -1
         root["requestAuthorizationCallCount"] = nudge["requestAuthorizationCallCount"] ?? -1
         root["ladderRungsDeclared"] = nudge["ladderRungsDeclared"] ?? -1
         return root
@@ -667,7 +672,27 @@ enum SelfCheck {
         // posts no notifications has no business publishing a belief about whether it may — and
         // it read `true` on this Mac in the same run that reported no rung can reach a
         // notification, which is two lines of one report contradicting each other.
-        report["notificationAuthorisation"] = host.notificationAuthorisation.rawValue
+        //
+        // **Three keys, because the old one was three claims wearing one name** (focus-652). The
+        // gate used to assert that this value was one of the four strings the decoder is *total
+        // over* — including for every unrecognised status, which falls to `.denied` — under a pass
+        // line that read *"the authorisation was read through getNotificationSettings"*. It could
+        // not see whether the read happened, and it was spelled exactly wide enough to cover both
+        // sides of an unsequenced one. So:
+        //
+        // * `notificationAuthorisationReads` says the read **happened**. Delete
+        //   `AppComposition.start()`'s one call and it is zero.
+        // * `notificationAuthorisation` says what it **found**, and is `"unread"` when nothing was
+        //   found — `notRequested` is a real OS answer and may not double as the absence of one.
+        // * `notificationAuthorisationDecodeTable` says how the boundary **decodes**, folded over
+        //   every raw status in `foldedRawStatuses` and pinned against a committed literal. That
+        //   is the mapping, which is behaviour; the codomain is a property of the type.
+        let authorisationWasRead = Self.awaitNotificationAuthorisation()
+        report["notificationAuthorisationReads"] = host.notificationAuthorisationReads
+        report["notificationAuthorisationWasRead"] = authorisationWasRead
+        report["notificationAuthorisation"] = host.notificationAuthorisation?.rawValue ?? "unread"
+        report["notificationAuthorisationDecodeTable"] = NotificationAuthorisation.decodeTable
+        report["notificationAuthorisationDecodeCells"] = NotificationAuthorisation.decodeTableCells
         report["requestAuthorizationCallCount"] = host.requestAuthorizationCallCount
 
         // **A nudge on the screen that the loop has forgotten** — always empty (focus-v0u,
@@ -2360,6 +2385,47 @@ enum SelfCheck {
     static func settle(forSeconds seconds: TimeInterval) {
         CFRunLoopRunInMode(.defaultMode, seconds, false)
     }
+
+    /// How long a self-check will wait for `getNotificationSettings` to answer before it reports
+    /// the authorisation as unread. P-134 measured the call answering in single-digit
+    /// milliseconds at zero grants; this is two orders of magnitude of headroom, and running out
+    /// of it is a reportable fact rather than a hang.
+    static let notificationReadDeadline: TimeInterval = 3
+
+    /// **Wait for the notification read to land before reporting what it said** (focus-652).
+    ///
+    /// `AppComposition.start()` fires `NotificationDelivery.refresh()` and returns; the completion
+    /// arrives on a later turn of the main run loop. Nothing sequenced that against report
+    /// assembly, so `notificationAuthorisation` was not this Mac's grant state at all — it was
+    /// **which side of a race the report was assembled on**. Measured across five gate runs at one
+    /// commit on one machine: `notRequested`, `notRequested`, `authorised`, `notRequested`, with
+    /// the two reports of a single run disagreeing with each other, and nineteen green stages
+    /// every time.
+    ///
+    /// So the report waits. It re-issues the read rather than assuming the launch one is still in
+    /// flight — a completion that already landed makes this return on the first line — and it
+    /// spins the run loop rather than sleeping, because the completion is delivered *on* that run
+    /// loop and `Thread.sleep` would guarantee the timeout it is trying to avoid.
+    ///
+    /// Returns whether a read landed. The caller publishes that; it never guesses on its behalf.
+    @MainActor
+    @discardableResult
+    static func awaitNotificationAuthorisation(
+        within seconds: TimeInterval = notificationReadDeadline
+    ) -> Bool {
+        let host = AppComposition.shared.nudgeHost
+        if host.notificationAuthorisationReads > 0 { return true }
+        AppComposition.shared.refreshNotificationAuthorisation()
+        let started = ProcessInfo.processInfo.systemUptime
+        while host.notificationAuthorisationReads == 0 {
+            if ProcessInfo.processInfo.systemUptime - started >= seconds { return false }
+            settle(forSeconds: notificationReadPollInterval)
+        }
+        return true
+    }
+
+    /// One turn of the run loop per poll, no more: the completion is dispatched onto it.
+    static let notificationReadPollInterval: TimeInterval = 0.02
 
     /// **Which of `App/`'s wires have fired, and which have not** (focus-2er).
     ///

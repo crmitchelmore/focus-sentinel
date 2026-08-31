@@ -63,6 +63,14 @@ COMMITTED_DIGEST=$(committed_literal \
 COMMITTED_INTERVENTION_DIGEST=$(committed_literal \
     "Packages/FocusCore/Tests/FocusCoreTests/InterventionPolicyTests.swift" \
     "committedDigest")
+# The committed decode table for the notification boundary (focus-652), read the same way from the
+# file that owns it. See the block at `notificationAuthorisationReads` below for what it replaced.
+COMMITTED_DECODE_TABLE=$(committed_literal \
+    "Packages/FocusUI/Tests/FocusUITests/NotificationDeliveryTests.swift" \
+    "committedDecodeTable")
+COMMITTED_DECODE_CELLS=$(committed_literal \
+    "Packages/FocusUI/Tests/FocusUITests/NotificationDeliveryTests.swift" \
+    "committedDecodeCells")
 
 APP="${1:-}"
 if [[ -z "$APP" ]]; then
@@ -182,7 +190,8 @@ fi
 print
 print "== assertions"
 python3 - "$OUT" "$SEED_JSON" "$RESTORE_JSON" "$COMMITTED_STAMP" "$COMMITTED_DIGEST" \
-    "$COMMITTED_INTERVENTION_DIGEST" "$COCKPIT_JSON" <<'PYTHON'
+    "$COMMITTED_INTERVENTION_DIGEST" "$COCKPIT_JSON" \
+    "$COMMITTED_DECODE_TABLE" "$COMMITTED_DECODE_CELLS" <<'PYTHON'
 import json
 import sys
 
@@ -198,6 +207,8 @@ with open(sys.argv[7]) as handle:
 committed_stamp = sys.argv[4]
 committed_digest = sys.argv[5]
 committed_intervention_digest = sys.argv[6]
+committed_decode_table = sys.argv[8]
+committed_decode_cells = sys.argv[9]
 
 failures = []
 not_taken_readings = []
@@ -2015,12 +2026,46 @@ check(
     "the application asked for no notification authorisation",
     report.get("requestAuthorizationCallCount"),
 )
+# **And this is what it means to say the authorisation was *read*** (focus-652).
+#
+# The line here used to be `notificationAuthorisation in ("authorised","denied","notRequested",
+# "provisional")` — the entire codomain of an exhaustive switch whose `default` arm is one of the
+# four. No integer the OS can send fails it, so no change to the decode could turn it red; and its
+# sentence claimed a read had happened, which it could not see. `refresh()` is asynchronous, and
+# `notRequested` was BOTH the OS's "never asked" and the field's pre-completion default, so the
+# check's value set was exactly the union of both sides of an unsequenced read. Four numbers from
+# one machine at one commit: notRequested, notRequested, authorised, notRequested.
+#
+# The read is now awaited, counted, and reported as `"unread"` when it did not land — and the
+# thing pinned is the DECODE, folded over every raw status and compared with the committed table.
 check(
-    report.get("notificationAuthorisation") in
-    ("authorised", "denied", "notRequested", "provisional"),
-    "the notification authorisation was read, and decoded to one of the four states",
+    report.get("notificationAuthorisationReads", 0) >= 1,
+    "getNotificationSettings was really read: at least one completion landed",
+    report.get("notificationAuthorisationReads"),
+)
+check(
+    report.get("notificationAuthorisation") != "unread",
+    "the run had a decoded authorisation in hand rather than the absence of one",
     report.get("notificationAuthorisation"),
 )
+check(
+    bool(committed_decode_table) and committed_decode_cells.isdigit(),
+    "the committed decode table was found in NotificationDeliveryTests",
+    (committed_decode_table, committed_decode_cells),
+)
+# The size of the fold before the fold's verdict: an equality over a table can be satisfied by
+# shrinking both sides together, and the count is the half that cannot be.
+check(
+    report.get("notificationAuthorisationDecodeCells") == int(committed_decode_cells or -1),
+    f"the boundary folded all {committed_decode_cells} raw statuses it can be handed",
+    report.get("notificationAuthorisationDecodeCells"),
+)
+check(
+    report.get("notificationAuthorisationDecodeTable") == committed_decode_table,
+    "the running boundary decodes every raw status exactly as the committed table says",
+    report.get("notificationAuthorisationDecodeTable"),
+)
+print(f"note this Mac reports {report.get('notificationAuthorisation')!r}")
 
 # 2a — **no question the person can still answer that the loop has forgotten** (focus-v0u).
 #

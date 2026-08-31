@@ -97,14 +97,25 @@ committed_literal() {
 COMMITTED_INTERVENTION_DIGEST=$(committed_literal \
     "Packages/FocusCore/Tests/FocusCoreTests/InterventionPolicyTests.swift" \
     "committedDigest")
+# The committed decode table, read the same way from the file that owns it (focus-652). It is the
+# subject of the reading that replaced "the authorisation is one of the four values the decoder is
+# total over" — a restatement of a codomain that no change to the decode could turn red.
+COMMITTED_DECODE_TABLE=$(committed_literal \
+    "Packages/FocusUI/Tests/FocusUITests/NotificationDeliveryTests.swift" \
+    "committedDecodeTable")
+COMMITTED_DECODE_CELLS=$(committed_literal \
+    "Packages/FocusUI/Tests/FocusUITests/NotificationDeliveryTests.swift" \
+    "committedDecodeCells")
 
 print
 print "== assertions"
-python3 - "$OUT" "$COMMITTED_INTERVENTION_DIGEST" <<'PYTHON'
+python3 - "$OUT" "$COMMITTED_INTERVENTION_DIGEST" \
+    "$COMMITTED_DECODE_TABLE" "$COMMITTED_DECODE_CELLS" <<'PYTHON'
 import json
 import sys
 
 report_path, committed_digest = sys.argv[1], sys.argv[2]
+committed_decode_table, committed_decode_cells = sys.argv[3], sys.argv[4]
 
 with open(report_path) as handle:
     report = json.load(handle)
@@ -139,12 +150,64 @@ check(
     "the application asked for no notification authorisation",
     report.get("requestAuthorizationCallCount"),
 )
+
+# --- the authorisation reading, which used to be a statement about a type (focus-652) ----------
+#
+# THIS BLOCK REPLACES A CHECK THAT COULD NOT GO RED. It read:
+#
+#     report["notificationAuthorisation"] in ("authorised","denied","notRequested","provisional")
+#
+# under the pass line "the authorisation was READ THROUGH getNotificationSettings". Those four
+# strings are the entire codomain of `NotificationAuthorisation.decode(authorizationStatus:)`,
+# which is an exhaustive switch with `default: .denied` — so every integer the OS can send, and
+# every integer it cannot, satisfies it by construction. It restated the decoder's type. And it
+# could not see the thing its own sentence claimed: `NotificationDelivery.refresh()` is
+# asynchronous, `AppComposition.start()` fires it and returns, and nothing sequenced it against
+# report assembly, so the reported value was WHICH SIDE OF A RACE the report landed on — five
+# gate runs at one commit on one machine gave notRequested, notRequested, authorised,
+# notRequested, with two reports of a single run disagreeing with each other and every stage
+# green. `notRequested` was simultaneously the OS's "never asked" and the field's pre-completion
+# initial value, and the check's value set was exactly the union of both sides of the race.
+#
+# Three readings replace it, and each of them has a state it goes red in:
+#
+#   1. the read HAPPENED            — delete AppComposition's one refresh() call and reads is 0
+#   2. the stage ran in the state its name claims — the report says what was FOUND, never "unread"
+#   3. the DECODE is the committed one — the mapping, folded whole and pinned to one literal
 check(
-    report.get("notificationAuthorisation")
-    in ("authorised", "denied", "notRequested", "provisional"),
-    "the authorisation was read through getNotificationSettings and decoded to one of four",
+    report.get("notificationAuthorisationReads", 0) >= 1,
+    "getNotificationSettings was really read: at least one completion landed",
+    report.get("notificationAuthorisationReads"),
+)
+check(
+    report.get("notificationAuthorisationWasRead") is True,
+    "the report waited for that read rather than racing it",
+    report.get("notificationAuthorisationWasRead"),
+)
+check(
+    report.get("notificationAuthorisation") != "unread",
+    "the stage ran with a decoded authorisation in hand, not with the absence of one",
     report.get("notificationAuthorisation"),
 )
+# The size of the fold before the fold's verdict (R-96o's shape): an equality over a table can be
+# satisfied by shrinking both sides together, and the count is what cannot be.
+check(
+    bool(committed_decode_table) and committed_decode_cells.isdigit(),
+    "the committed decode table was found in NotificationDeliveryTests",
+    (committed_decode_table, committed_decode_cells),
+)
+check(
+    report.get("notificationAuthorisationDecodeCells") == int(committed_decode_cells or -1),
+    f"the boundary folded all {committed_decode_cells} raw statuses",
+    report.get("notificationAuthorisationDecodeCells"),
+)
+check(
+    report.get("notificationAuthorisationDecodeTable") == committed_decode_table,
+    "the running boundary decodes every raw status exactly as the committed table says",
+    report.get("notificationAuthorisationDecodeTable"),
+)
+# The value itself stays a printed NOTE and is asserted by nothing: what a person set on this Mac
+# is not a property of this build, and a check on it would be a check on the machine.
 print(f"note this Mac reports {report.get('notificationAuthorisation')!r}")
 
 # **The routing does not read it, and the pane does not draw it** (focus-wy0).

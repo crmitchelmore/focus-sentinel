@@ -177,4 +177,112 @@ struct NotificationDeliveryTests {
         #expect(route == .surface(.panel))
         #expect(route.surface?.isInApp == true)
     }
+
+    // MARK: - The decode, folded over the whole raw space (focus-652)
+
+    /// **The committed decode table** — the one literal three legs compare against.
+    ///
+    /// `scripts/check-notification-denied.sh` and `scripts/self-check.sh` read this line out of
+    /// this file with the same `committed_literal` helper they read the intervention digest with,
+    /// and compare it against the table the *running binary* publishes. It is written down once,
+    /// here, so a decode change is one diff rather than a drift between a script and a switch.
+    static let committedDecodeTable = "-2:denied|-1:denied|0:notRequested|1:denied|2:authorised|3:provisional|4:provisional|5:denied|6:denied|7:denied|8:denied"
+
+    /// How many cells that table folded. Asserted before the table itself, everywhere, because a
+    /// fold that quietly shrinks is invisible in an unchanged verdict (R-96o).
+    static let committedDecodeCells = 11
+
+    /// **ONE fold over the WHOLE raw space, pinned in both directions.**
+    ///
+    /// This suite is what replaced the gate's *"the decoded value is one of these four strings"*.
+    /// That assertion's subject was the decoder's **codomain**, which is a property of the type:
+    /// every integer the OS can send, including one no build has seen, lands on one of the four by
+    /// construction, so no change to the mapping could turn it red. Its own pass line claimed the
+    /// authorisation had been *read*, which it could not see either.
+    ///
+    /// The subject here is the **mapping**. Every raw status in `foldedRawStatuses` is decoded and
+    /// the whole table is compared against one committed literal — so moving any cell, adding a
+    /// case, widening or narrowing the fold is a red line with the moved cell printed in it.
+    @Test("the whole decode table is the committed one, cell for cell")
+    func decodeTableIsPinned() {
+        // The size first, and it is not decoration: an equality over a table can be satisfied by
+        // shrinking both sides together, and the count is the thing that cannot be.
+        #expect(NotificationAuthorisation.decodeTableCells == Self.committedDecodeCells)
+        #expect(NotificationAuthorisation.foldedRawStatuses.count == Self.committedDecodeCells)
+        #expect(NotificationAuthorisation.decodeTable == Self.committedDecodeTable)
+        // …and the other direction, which is the half a `contains` would leave out: the committed
+        // literal describes this fold and no other.
+        #expect(Self.committedDecodeTable.split(separator: "|").count == Self.committedDecodeCells)
+    }
+
+    /// **The completeness check that fails when the space grows and the proof does not.**
+    ///
+    /// `NotificationAuthorisation` is `CaseIterable`. Add a fifth case and this line goes red
+    /// unless some raw status in the fold decodes to it — which is the correct demand: a state the
+    /// app can be in that no OS status produces is a state nothing can ever put it in, and a state
+    /// produced by a status outside the fold is a state the table above is silent about.
+    @Test("every declared authorisation is produced by some status in the fold, and no other is")
+    func theFoldCoversTheWholeVocabulary() {
+        let produced = Set(
+            NotificationAuthorisation.foldedRawStatuses
+                .map { NotificationAuthorisation.decode(authorizationStatus: $0) }
+        )
+        #expect(produced == Set(NotificationAuthorisation.allCases))
+    }
+
+    /// **The vacuity guard, stated rather than assumed.**
+    ///
+    /// What the two proofs above would still be green for, named so nobody has to re-derive it:
+    ///
+    /// 1. **A raw status outside `foldedRawStatuses`.** The fold is `-2...8`; a future OS sending
+    ///    `9` decodes to `.denied` by the `default` arm and no line here sees it. That is the
+    ///    conservative direction — an unknown status is never a grant — and
+    ///    `unknownStatusIsNeverAGrant` is the assertion that keeps it so, at `99` as well as `5`.
+    /// 2. **The table being constant for the wrong reason.** A decoder rewritten to `.denied`
+    ///    everywhere would fail `theFoldCoversTheWholeVocabulary`, but a table whose cells all
+    ///    agreed for some *other* reason would not — so this asserts the fold distinguishes, and
+    ///    by how much: four distinct states over eleven cells, and not one state eleven times.
+    /// 3. **Whether the read happened.** No line in this suite can see that; it is the running
+    ///    application's fact, and `authorisationReadCount` is where it is published.
+    @Test("the fold is not constant: it separates the four states over eleven cells")
+    func theFoldIsNotVacuous() {
+        let decoded = NotificationAuthorisation.foldedRawStatuses
+            .map { NotificationAuthorisation.decode(authorizationStatus: $0) }
+        #expect(decoded.count == Self.committedDecodeCells)
+        #expect(Set(decoded).count == NotificationAuthorisation.allCases.count)
+        #expect(!NotificationAuthorisation.decodeTable.isEmpty)
+    }
+
+    // MARK: - The read, as a fact about the run rather than about the type
+
+    /// **`nil` until a read lands, and `notRequested` never doubles as "unread"** (focus-652).
+    ///
+    /// The field used to start at `.notRequested`, which is also the OS's real answer for *"nobody
+    /// has ever asked"* — so no reader could tell a machine that had never been asked from a
+    /// completion that had not come back yet. `refresh(_:)` is asynchronous and the self-check did
+    /// not sequence it, so the reported authorisation was in fact which side of that race the
+    /// report landed on: five gate runs at one commit on one machine produced `notRequested`,
+    /// `notRequested`, `authorised`, `notRequested`, with two reports of a single run disagreeing.
+    @Test("before any read the boundary reports no authorisation at all, and no reads")
+    func theBoundaryStartsUnread() {
+        let delivery = NotificationDelivery(centre: StubNotificationCentre(status: 0))
+        #expect(delivery.authorisation == nil)
+        #expect(delivery.authorisationReadCount == 0)
+        // …and `notRequested` is still a reachable *answer*, which is what makes the distinction
+        // load-bearing rather than cosmetic.
+        delivery.refresh()
+        #expect(delivery.authorisation == .notRequested)
+        #expect(delivery.authorisationReadCount == 1)
+    }
+
+    /// Each completed read is counted, at every grant. This is the number the gate asserts
+    /// `>= 1` of, so a deleted `refresh()` call is a red stage rather than a silent default.
+    @Test("every completed read is counted", arguments: [0, 1, 2, 3])
+    func readsAreCounted(raw: Int) {
+        let delivery = NotificationDelivery(centre: StubNotificationCentre(status: raw))
+        delivery.refresh()
+        delivery.refresh()
+        #expect(delivery.authorisationReadCount == 2)
+        #expect(delivery.requestAuthorizationCallCount == 0)
+    }
 }

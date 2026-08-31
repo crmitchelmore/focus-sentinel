@@ -2899,7 +2899,12 @@ final class NudgeHost {
     /// **Must be zero in every automated run** (§3.F.37). Published here so the self-check does
     /// not have to reach into the notification boundary for it.
     var requestAuthorizationCallCount: Int { notifications.requestAuthorizationCallCount }
-    var notificationAuthorisation: NotificationAuthorisation { notifications.authorisation }
+    /// **`nil` until a read has landed** (focus-652). The self-check publishes `"unread"` for it
+    /// rather than a fifth enum case, so the absence of a reading is legible as an absence rather
+    /// than as `notRequested` — which is also a real OS answer.
+    var notificationAuthorisation: NotificationAuthorisation? { notifications.authorisation }
+    /// How many `getNotificationSettings` reads have completed in this process (focus-652).
+    var notificationAuthorisationReads: Int { notifications.authorisationReadCount }
 
     // MARK: - Helpers
 

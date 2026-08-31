@@ -94,6 +94,36 @@ extension NotificationAuthorisation {
         default: .denied
         }
     }
+
+    /// **The raw statuses the fold below covers**, and the reason it is a range rather than the
+    /// five cases the framework declares today.
+    ///
+    /// `UNAuthorizationStatus` is an `NSInteger` at the boundary, so the number that arrives is
+    /// whatever the running OS decides to send — including one no build of this app has seen. The
+    /// fold therefore covers the declared five, the two sentinels either side of them (a negative
+    /// status and one past the end, which is what a future case looks like on arrival), and four
+    /// more of the room a future release has to grow into.
+    public static let foldedRawStatuses: [Int] = Array(-2...8)
+
+    /// **The whole decode, folded once and written down once** (focus-652).
+    ///
+    /// This exists because the gate used to assert that the decoded value was one of the four the
+    /// decoder is *total over* — a restatement of the codomain, which no change to the decode
+    /// could make red. The subject of a reading about this boundary is the **mapping**, not the
+    /// enum, so the mapping is what is published and what is pinned: one string, compared against
+    /// one committed literal in `NotificationDeliveryTests`, in both directions.
+    ///
+    /// A `|`-separated `raw:state` table rather than a digest, so a red gate prints the cell that
+    /// moved instead of two hexadecimal numbers a reader has to go and decode by hand.
+    public static var decodeTable: String {
+        foldedRawStatuses
+            .map { "\($0):\(decode(authorizationStatus: $0).rawValue)" }
+            .joined(separator: "|")
+    }
+
+    /// How many cells the table above folded. Asserted **before** the table it qualifies, for
+    /// R-96o's reason: a fold that quietly shrinks is invisible in an unchanged verdict.
+    public static var decodeTableCells: Int { foldedRawStatuses.count }
 }
 
 /// The seam over `UNUserNotificationCenter`.
@@ -142,9 +172,25 @@ public final class NotificationDelivery {
     /// composition root, exactly as every other surface's callback is.
     public var onAction: ((NudgeNotificationResponse) -> Void)?
 
-    /// The last status read from `getNotificationSettings`. `notRequested` until the first read,
-    /// which is the honest default: the app has not looked, and it has certainly not asked.
-    public private(set) var authorisation: NotificationAuthorisation = .notRequested
+    /// The last status read from `getNotificationSettings` — **`nil` until one has landed**
+    /// (focus-652).
+    ///
+    /// It used to be `.notRequested` before the first read, and that made one value mean two
+    /// different things: the OS's *"nobody has ever asked"* and this object's *"the completion has
+    /// not come back yet"*. `refresh(_:)` is asynchronous and nothing sequenced it against the
+    /// self-check's report assembly, so the reported authorisation was in fact **which side of a
+    /// race the report landed on** — measured across five gate runs on one machine at one commit,
+    /// the two reports of a single run disagreed with each other, and every stage was green.
+    ///
+    /// An `Optional` is the honest shape: *unread* is not an authorisation state, and a reader who
+    /// needs to know the read happened can now find out.
+    public private(set) var authorisation: NotificationAuthorisation?
+
+    /// **How many reads have completed.** The reading that says the read *happened* — which is
+    /// what the `notification-denied` stage's pass line has always claimed and never tested.
+    /// `AppComposition.start()` has exactly one call to `refresh()`; delete it and this goes to
+    /// zero and the stage goes red, which is the whole point of counting it.
+    public private(set) var authorisationReadCount = 0
 
     /// **Must stay zero in every automated run** (§3.F.37, §4.5), and since focus-wy0 it cannot
     /// be anything else in any run at all: `requestAuthorization(` appears in **no** file of this
@@ -168,8 +214,10 @@ public final class NotificationDelivery {
     public func refresh(_ completion: (@MainActor (NotificationAuthorisation) -> Void)? = nil) {
         centre.authorizationStatus { [weak self] raw in
             guard let self else { return }
-            self.authorisation = NotificationAuthorisation.decode(authorizationStatus: raw)
-            completion?(self.authorisation)
+            let decoded = NotificationAuthorisation.decode(authorizationStatus: raw)
+            self.authorisation = decoded
+            self.authorisationReadCount += 1
+            completion?(decoded)
         }
     }
 
