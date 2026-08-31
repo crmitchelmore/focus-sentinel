@@ -1911,6 +1911,58 @@ check(
     nudge.get("dispositionsDeclared"),
 )
 
+# **THE FLOOR, in the running application** (focus-d6r).
+#
+# The three checks above are the ceiling's: they watch for something that starts charging. These
+# are their twin, and the epic had none — every proof in it answered "did the app charge for
+# something nobody saw?" and not one answered "on a day of sustained drift, did the app ever
+# speak?". The consequence was live and measured: `InterventionLog.budget` summed the day's
+# interruptions on `spendsBudget`, so eight ambient glyph landings spent the whole shared budget,
+# and that budget is the conjunct in `remaining(for:)` that binds BOTH kinds. At eight landings
+# `permits(.accusation)` and `permits(.query)` were both false, `accusationsToday` was nought, and
+# the panel rung — the only rung that carries a sentence, a subject and the whole correction
+# economy — could not be raised for the rest of that local day.
+#
+# Named rather than counted, for `dispositionsSpendingACap`'s reason: the danger is not how many
+# rungs there are but WHICH ones charge, and `["panel"]` says which one it is. A third rung above
+# the panel that accuses somebody joins both lists; the glyph joins neither, because it accuses
+# nobody, asks nobody anything, and R-87 keeps it on through a snooze precisely because it is a
+# state and not a sentence.
+check(
+    nudge.get("rungsSpendingTheAccusationCap") == ["panel"],
+    "only the rung that accuses somebody spends one of the day's accusations",
+    nudge.get("rungsSpendingTheAccusationCap"),
+)
+check(
+    nudge.get("rungsSpendingTheInterruptionCap") == ["panel"],
+    "only the rung that says something spends one of the day's interruptions",
+    nudge.get("rungsSpendingTheInterruptionCap"),
+)
+# And the day itself, priced by the shipping arithmetic: a whole shared budget's worth of glyph
+# landings must leave the app able to speak. This is the assertion the bead's own measurement
+# fails.
+glyph_day = nudge.get("budgetAfterADayOfGlyphLandings") or {}
+check(
+    glyph_day.get("interruptionsToday") == 0,
+    "a whole day of glyph landings spends none of the day's interruptions",
+    glyph_day,
+)
+check(
+    glyph_day.get("accusationsToday") == 0,
+    "a whole day of glyph landings spends none of the day's accusations",
+    glyph_day,
+)
+check(
+    glyph_day.get("permitsAccusation") is True,
+    "after a whole day of glyph landings the app can still accuse somebody",
+    glyph_day,
+)
+check(
+    glyph_day.get("permitsQuery") is True,
+    "after a whole day of glyph landings the app can still ask somebody something",
+    glyph_day,
+)
+
 # The exits are enumerated, and the unit lane walks every one of them. Asserted here so an exit
 # added to the enum is visible in the gate log rather than only in a test file.
 #

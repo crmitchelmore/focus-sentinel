@@ -614,6 +614,20 @@ enum SelfCheck {
         return (cells, Set(unanswerable).sorted())
     }
 
+    /// One delivered rung of a kind, as the value the two cap predicates are asked of.
+    ///
+    /// Built once so the floor's two readings cannot be asked about differently-shaped events —
+    /// the same reason `InterventionRecord.budgetEvent` exists (focus-d6r).
+    static func deliveredRung(_ kind: LadderRung.Kind) -> InterventionEvent {
+        InterventionEvent(
+            kind: .accusation,
+            rung: kind,
+            subject: "",
+            surface: kind.makesAnAccusation ? .panel : .menuBar,
+            disposition: .delivered
+        )
+    }
+
     @MainActor
     static func nudgeReport() -> [String: Any] {
         let composition = AppComposition.shared
@@ -685,6 +699,47 @@ enum SelfCheck {
             }
             .map(\.rawValue)
             .sorted()
+
+        // **THE FLOOR, published as a reading rather than asserted in a comment** (focus-d6r).
+        //
+        // `dispositionsSpendingACap` above is the ceiling's half: it watches for a disposition
+        // that starts charging. This is its twin and it was missing, which is exactly the shape
+        // this epic keeps producing — the danger is not only that something starts charging but
+        // that the wrong thing does, and the day is then spent on nothing.
+        //
+        // Measured before these lines existed: eight ambient glyph landings drove
+        // `interruptionsToday` to `dailyInterruptionCap` with `accusationsToday` at nought, and
+        // `remaining(for:)` conjoins the shared budget into BOTH kinds — so `permits(.accusation)`
+        // and `permits(.query)` were both false on a day the app had said nothing at all. The
+        // panel rung, the only rung that carries a sentence, was unreachable for the rest of it.
+        //
+        // A **pure** reading of the shipping types, like `surfacePerceptionChannels` beside it:
+        // an automated run raises no rung, so a reading of the live budget would be a reading of
+        // zero, and a reading that is constant is a reading a gate cannot use.
+        report["rungsSpendingTheAccusationCap"] = LadderRung.Kind.allCases
+            .filter { Self.deliveredRung($0).spendsTheAccusationCap }
+            .map(\.rawValue)
+            .sorted()
+        report["rungsSpendingTheInterruptionCap"] = LadderRung.Kind.allCases
+            .filter { Self.deliveredRung($0).spendsTheInterruptionCap }
+            .map(\.rawValue)
+            .sorted()
+        // A whole shared budget's worth of glyph landings, priced by the shipping arithmetic.
+        // `charged` must be nought and the app must still be able to speak.
+        let glyphDay = InterruptionBudget.spent(
+            (0..<InterventionPolicy.dailyInterruptionCap).compactMap { _ in
+                InterruptionCharge(Self.deliveredRung(.ambient))
+            },
+            underPriority: nil
+        )
+        report["budgetAfterADayOfGlyphLandings"] = [
+            "landings": InterventionPolicy.dailyInterruptionCap,
+            "interruptionsToday": glyphDay.interruptionsToday,
+            "accusationsToday": glyphDay.accusationsToday,
+            "permitsAccusation": glyphDay.permits(.accusation),
+            "permitsQuery": glyphDay.permits(.query),
+            "bindingLimit": glyphDay.bindingLimit(for: .accusation)?.rawValue ?? ""
+        ]
 
         report["questionExitsWritingAnExpiry"] = QuestionExit.allCases
             .filter(\.recordsAnExpiry)

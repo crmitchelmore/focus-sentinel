@@ -221,8 +221,10 @@ final class NudgeHost {
     ///
     /// Written down because the two are a pair that is *meant* to differ and would otherwise read
     /// as one fact held twice. These count what this object did since launch; the spend is
-    /// `InterventionLog.budget(on:priorityID:)`, summed from persisted rows on `spendsBudget`, and
-    /// it is the only figure any cap is decided by (R-83).
+    /// `InterventionLog.budget(on:priorityID:)`, folded from the delivered rows that
+    /// `InterruptionCharge` says actually said something, and it is the only figure any cap is
+    /// decided by (R-83). Not `spendsBudget`, which this comment named until focus-d6r and which
+    /// is `disposition == .delivered`: a glyph landing is a delivery and interrupts nobody.
     ///
     /// They part company at exactly one place, deliberately: `undeliverRecord(…)` takes a
     /// delivery off the budget when a rung is stranded or a question's answers go out of reach,

@@ -111,8 +111,10 @@ public final class InterventionLog {
 
     /// **Take back a delivery nobody ever saw** (R-81, U-1, focus-mfc).
     ///
-    /// `spendsBudget` is `disposition == .delivered`, and `budget(on:priorityID:)` and
-    /// `deliveredCount(kind:on:)` both sum on it. So a nudge the loop has *un-delivered* — a rung
+    /// `spendsBudget` is `disposition == .delivered`; `deliveredCount(kind:on:)` sums on it and
+    /// `budget(on:priorityID:)` folds the subset of it that actually said something (focus-d6r).
+    /// Either way a delivery is what a day's account is made of, so a nudge the loop has
+    /// *un-delivered* — a rung
     /// stranded by a display change, a question whose answers went off the edge of a projector —
     /// still spent a unit of the day's interruption budget for as long as the row said
     /// `delivered`. Under U-1 the budget is what decides whether the app may speak again at all:
