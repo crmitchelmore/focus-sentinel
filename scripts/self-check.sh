@@ -1938,6 +1938,49 @@ check(
     "only the rung that says something spends one of the day's interruptions",
     nudge.get("rungsSpendingTheInterruptionCap"),
 )
+# **AND WHICH GATES ARE EVEN ABOUT THE GLYPH** (focus-0y6, focus-uru).
+#
+# The two above are about what a rung COSTS. These are the same rule one level up: what may
+# SILENCE it. Three consecutive repairs applied that ruling to one more gate and left the next —
+# focus-2yy's commit message enumerates "gates 1, 2 and 3 ... gate 5", focus-0y6's triage walked
+# twelve gates and ruled on each, and both skipped gate 4 — because a closed set swept by reading
+# prose is not swept. Asserted here as three exact sets, so a thirteenth gate classified by
+# copying its neighbour is a diff in these lines rather than a silence in the menu bar.
+check(
+    nudge.get("gatesPassingOverTheGlyph")
+    == ["alreadyAsked", "interruptionInFlight", "mediaInUse", "quietHours"],
+    "the gates about the app SPEAKING pass over the rung that says nothing",
+    nudge.get("gatesPassingOverTheGlyph"),
+)
+check(
+    nudge.get("gatesDeferringTheGlyph") == ["presentationActive"],
+    "the one gate that defers the glyph is the one where the menu bar is not on screen",
+    nudge.get("gatesDeferringTheGlyph"),
+)
+# The other side, so this is not a lint that could be satisfied by exempting the glyph from
+# everything: a mark the app cannot have earned must still be stopped.
+check(
+    nudge.get("gatesSilencingTheGlyph")
+    == [
+        "budgetExhausted",
+        "noActivePriority",
+        "sensingPaused",
+        "sensitiveApplication",
+        "sessionPhaseForbids",
+        "userIdle",
+        "verdictDoesNotAuthorise",
+    ],
+    "the gates about there being anything to be legible about still stop the glyph",
+    nudge.get("gatesSilencingTheGlyph"),
+)
+# Gate 10 does not classify; its detail vocabulary does, and exactly one of the six may take the
+# status item — a correction, after which there is nothing left to be off task about.
+check(
+    nudge.get("fatigueRefusalsSilencingTheGlyph") == ["corrected"],
+    "the only fatigue refusal that stops the glyph is the person saying it is real work",
+    nudge.get("fatigueRefusalsSilencingTheGlyph"),
+)
+
 # And the day itself, priced by the shipping arithmetic: a whole shared budget's worth of glyph
 # landings must leave the app able to speak. This is the assertion the bead's own measurement
 # fails.

@@ -724,6 +724,43 @@ enum SelfCheck {
             .filter { Self.deliveredRung($0).spendsTheInterruptionCap }
             .map(\.rawValue)
             .sorted()
+
+        // **AND WHICH RUNGS EACH REASON FOR SILENCE IS EVEN ABOUT** (focus-0y6, focus-uru).
+        //
+        // The two readings above say which rungs SPEND something. These are the same rule one
+        // level up: which rungs each reason for going quiet may STOP. Three consecutive repairs
+        // applied that ruling to one more gate and left the next — focus-2yy's message enumerates
+        // "gates 1, 2 and 3 … gate 5" and focus-0y6's triage walked twelve gates and ruled on
+        // each, and both skipped gate 4 — because a closed set swept by reading prose is not
+        // swept. `SilenceSubject` is where it is decided now, in two exhaustive switches.
+        //
+        // Named rather than counted, for `rungsSpendingTheAccusationCap`'s reason: the danger is
+        // not how many gates there are but WHICH ones take the status item with them. And a
+        // **pure** reading of the shipping types, like the two above: an automated run closes no
+        // gate, so a reading of live silences would be a reading of zero, and a reading that is
+        // constant is a reading a gate cannot use.
+        report["gatesSilencingTheGlyph"] = NudgeSuppressionReason.allCases
+            .filter { $0.subject.ruling(for: .ambient) == .silences }
+            .map(\.rawValue)
+            .sorted()
+        report["gatesPassingOverTheGlyph"] = NudgeSuppressionReason.allCases
+            .filter { $0.subject.ruling(for: .ambient) == .passes }
+            .map(\.rawValue)
+            .sorted()
+        // R-81's cell: wanted, and undeliverable because the menu bar is not on screen.
+        report["gatesDeferringTheGlyph"] = NudgeSuppressionReason.allCases
+            .filter { reason in
+                if case .defers = reason.subject.ruling(for: .ambient) { return true }
+                return false
+            }
+            .map(\.rawValue)
+            .sorted()
+        // Gate 10's detail, which classifies for it. Exactly one of the six may take the glyph:
+        // a correction, which means there is nothing left to be off task about.
+        report["fatigueRefusalsSilencingTheGlyph"] = FatigueRefusal.Kind.allCases
+            .filter { $0.subject.silences(.ambient) }
+            .map(\.rawValue)
+            .sorted()
         // A whole shared budget's worth of glyph landings, priced by the shipping arithmetic.
         // `charged` must be nought and the app must still be able to speak.
         let glyphDay = InterruptionBudget.spent(
