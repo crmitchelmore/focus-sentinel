@@ -283,12 +283,21 @@ struct NudgeHostSlotOwnershipTests {
         #expect(fixture.host.pendingPopoverQuery != nil, "the accusation ate the pending question")
     }
 
-    /// **A question on the panel does still hold it, and the accusation waits** (U-2).
+    /// **A question on the panel does still hold it, and the rung that speaks waits** (U-2).
     ///
     /// The half of the cut that must survive the repair of the other half — the single most
     /// important line of the scope cut, asserted as behaviour. Without this, "release the slot"
     /// could be satisfied by releasing it always, and preemption would be back by omission.
-    @Test("a question on the panel holds the slot, and the accusation waits behind it")
+    ///
+    /// **"The accusation" is the rung that speaks, and this drove the glyph** (focus-0y6). Gate 9
+    /// is an occupancy rule and `NudgeSurface.menuBar.holdsTheInterruptionSlot` is `false`, so
+    /// withholding the ambient rung was refusing a thing on the grounds of a property it does not
+    /// have — the status item went blank for as long as the question sat on the screen, which is
+    /// the same failure the suite above this one repairs from the other side. The drive now climbs
+    /// one rung further: the glyph lands under the question, the **panel** rung is withheld, and
+    /// it arrives once the question has been answered. U-2 is not loosened; what changed is which
+    /// rung it was ever about.
+    @Test("a question on the panel holds the slot, and the rung that speaks waits behind it")
     func aPanelQuestionStillHoldsTheSlot() throws {
         let fixture = try NudgeHostFixture()
         defer { fixture.tearDown() }
@@ -309,11 +318,42 @@ struct NudgeHostSlotOwnershipTests {
             fixture.panel.showing == .question,
             "an accusation displaced the question U-1 licensed the interruption for"
         )
-        // **Withheld is not spent** (U-2). The ladder never left the ground: no delivery was
-        // recorded, so the escalation clock never started and the same rung is still there.
+        // **The glyph is not withheld** (focus-0y6). It occupies nothing a second nudge could
+        // want, so an occupancy rule has nothing to say about it — and the question is still on
+        // the screen beside it, which is the point.
         #expect(
-            fixture.host.currentRung == nil,
+            fixture.host.currentRung == .ambient,
+            """
+            an open question took the status item with it: \
+            \(String(describing: fixture.host.lastDecision))
+            """
+        )
+        #expect(fixture.host.slot.openQuery != nil, "the glyph took the slot it cannot hold")
+
+        // Past the escalation dwell — and past the gap between two sentences as well, so the
+        // rung below is refused by gate 9 and by nothing else — the PANEL rung is due. That is
+        // the one U-2 makes wait.
+        fixture.clock.advance(by: RelevancePolicy.mandateCooldown + .seconds(1))
+        fixture.host.consider(NudgeHostFixture.unrelatedJudgement(subject: Self.decoy))
+        NudgeHostFixture.settle()
+
+        #expect(
+            fixture.panel.showing == .question,
+            "the panel rung displaced the question U-1 licensed the interruption for"
+        )
+        // **Withheld is not spent** (U-2). The ladder never left the glyph: no delivery was
+        // recorded for the rung above it, so the escalation clock never restarted and the same
+        // rung is still there.
+        #expect(
+            fixture.host.currentRung == .ambient,
             "the withheld rung was consumed rather than kept for the next judgement"
+        )
+        #expect(
+            fixture.host.lastDecision?.silence?.reason == .interruptionInFlight,
+            """
+            the panel rung was refused for some other reason, so this drives gate 9 at neither \
+            rung — \(String(describing: fixture.host.lastDecision))
+            """
         )
 
         // The person answers — Escape on the question panel is "Not now", which is an answer —
@@ -326,11 +366,15 @@ struct NudgeHostSlotOwnershipTests {
         NudgeHostFixture.settle()
 
         #expect(
-            fixture.host.currentRung == .ambient,
+            fixture.host.currentRung == .panel,
             """
             the accusation was lost rather than delayed: \
             \(String(describing: fixture.host.lastDecision))
             """
+        )
+        #expect(
+            fixture.panel.isVisible && fixture.panel.showing == .accusation,
+            "the rung that waited arrived and carried no sentence"
         )
     }
 
