@@ -101,19 +101,34 @@ struct NudgeReachabilityTests {
         )
     }
 
-    /// **`LadderMachine`'s own run cannot pass one, in anything the host can do.**
+    /// **`LadderMachine`'s own run still cannot pass one, and the reason has changed** (focus-f2a).
     ///
-    /// Two things close it off, and this drives both: a *different* subject sends `arrive(_:)`
-    /// back to `.idle`, and the *same* subject has nothing above the panel for `candidate(…)` to
-    /// offer. Either way there is never a second rung for the host to ignore, so
-    /// `LadderState.heldAtAmbient` is not reachable from `NudgeHost`'s events and the ladder is
-    /// quiet for that subject by arithmetic rather than by decision.
+    /// Two things used to close it off: a *different* subject sent `arrive(_:)` back to `.idle`,
+    /// and the *same* subject had nothing above the panel for `candidate(…)` to offer. The first
+    /// is gone — a subject change now continues the climb, because drift accumulates against the
+    /// person and not against a bundle identifier — and the second no longer *strands* the ladder:
+    /// a dismissed top rung brings it down to the floor, which is the way down the reset was
+    /// providing.
+    ///
+    /// So the count is still one after every round, and now for one reason instead of two: the
+    /// ladder is put back at the bottom by the dismissal itself, and the next rung the host can
+    /// ignore is a fresh entry rung with a fresh run behind it. `LadderState.heldAtAmbient`
+    /// therefore remains unreachable from `NudgeHost`'s events, which is what the justification on
+    /// `InterventionPolicy.ignoredAccusationBackoff` says and what the round that wrote it
+    /// measured.
+    ///
+    /// **And the ladder is not left mute by coming down**, which is the assertion that inverted:
+    /// it used to offer nothing at all after a dismissal, for the rest of the session and however
+    /// long the person kept drifting. `NudgeDecider.accuse(…)` turns a `nil` candidate into
+    /// `.silent(.budgetExhausted)`, so that was the status item going quiet about somebody's own
+    /// state — F-146 again, one gate further along. It now offers the glyph, which spends nothing
+    /// and is the one channel nobody has objected to.
     ///
     /// It is asserted rather than repaired because it is **not** the whole picture: the replay
     /// model can script an ignored *ambient* rung — `seq-0023` in the evaluation corpus does
-    /// exactly that — and two ignores of one subject reach the hold there. Whether a glyph the
-    /// host offers no way to dismiss should be ignorable in the model is a question for the
-    /// round that owns the corpus. What is pinned here is the divergence itself, so it cannot
+    /// exactly that — and two ignores of one rung below the top reach the hold there. Whether a
+    /// glyph the host offers no way to dismiss should be ignorable in the model is a question for
+    /// the round that owns the corpus. What is pinned here is the divergence itself, so it cannot
     /// widen unnoticed.
     @Test("no drift the host can produce gives the ladder a second rung to ignore")
     func theLaddersOwnRunCannotPassOne() {
@@ -122,14 +137,20 @@ struct NudgeReachabilityTests {
         var at = Duration.seconds(0)
 
         for round in 1...4 {
-            Self.driftAndDismiss(
+            let rungs = Self.driftAndDismiss(
                 subject: "com.example.decoy\(round)", ladder: &ladder, fatigue: &fatigue, at: &at
             )
+            // **Non-vacuity.** A round that could not climb would satisfy everything below by
+            // having ignored nothing, which is the shape this whole suite exists to catch.
             #expect(
-                ladder.state.consecutiveIgnored == 1,
+                rungs?.entry == .ambient && rungs?.escalated == .panel,
+                "round \(round) never climbed, so it ignored nothing — \(String(describing: rungs))"
+            )
+            #expect(
+                ladder.state.consecutiveIgnored == 0,
                 """
                 round \(round) left the ladder's run at \(ladder.state.consecutiveIgnored); \
-                a subject change resets it, so it can only ever stand at one
+                a dismissed top rung puts the ladder back on the floor, and the floor keeps no run
                 """
             )
             if case .heldAtAmbient = ladder.state {
@@ -141,10 +162,13 @@ struct NudgeReachabilityTests {
                     """
                 )
             }
-            // The same subject, however long it goes on, offers nothing more to ignore.
+            // And the person is not left with a status item that has stopped saying anything.
             #expect(
-                ladder.candidate(at: at + .seconds(86_400), budgetPermits: true) == nil,
-                "round \(round): the ladder offered a rung after its subject was ignored"
+                ladder.candidate(at: at, budgetPermits: true)?.kind == .ambient,
+                """
+                round \(round): a dismissed panel left the ladder with nothing to offer, so the \
+                glyph went out too — \(String(describing: ladder.state))
+                """
             )
         }
     }

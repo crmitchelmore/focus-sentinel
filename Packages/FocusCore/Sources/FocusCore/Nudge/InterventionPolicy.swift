@@ -125,11 +125,14 @@ public enum InterventionPolicy {
     ///   the hold — whatever it was about. This constant fires, and `NudgeReachabilityTests`
     ///   drives the sequence that fires it. A backoff of 3 would have tripped too, on the third
     ///   subject; the old rationale was false, not merely unlucky.
-    /// * **`LadderMachine`'s run is per subject.** `arrive(_:)` resets to `.idle` for a different
-    ///   drift, and `candidate(…)` answers `nil` for the same one once it has been ignored, so
-    ///   the ladder's own count cannot pass 1 — measured above, in every round. From
-    ///   `NudgeHost`'s events, `LadderState.heldAtAmbient` is therefore unreachable and the
-    ///   ladder is quiet for a subject by arithmetic rather than by decision. The replay model
+    /// * **`LadderMachine`'s run does not survive the rung it is counting.** The count cannot pass
+    ///   1 — measured above, in every round — and since focus-f2a it is for one reason rather than
+    ///   two. The ladder's run *does* now cross a subject change, exactly as the fatigue
+    ///   controller's does; what ends it is that `.dismiss` is the only event that produces
+    ///   `.rungIgnored`, it can only be pressed on the top rung the host raises, and a top rung
+    ///   that was ignored puts the ladder back on the floor — where there is no run to keep. From
+    ///   `NudgeHost`'s events, `LadderState.heldAtAmbient` is therefore still unreachable and the
+    ///   ladder is quiet after a dismissal by arithmetic rather than by decision. The replay model
     ///   is not so limited: `seq-0023` scripts an ignored **ambient** rung, which the host offers
     ///   no way to produce, and reaches the ladder's own hold in two. That divergence is pinned
     ///   by `NudgeReachabilityTests` and belongs to the round that owns the corpus.
@@ -407,6 +410,14 @@ public enum InterventionPolicy {
             + "of FatigueController, whose run is session-wide and would have reached 3 on a "
             + "third subject. Measured: the hold trips on the second dismissal of a session. The "
             + "value is unchanged and the digest with it; only the claim about it is corrected",
+        "focus-f2a — the ladder's run no longer resets with the drift subject, so the halves of "
+            + "the correction above are no longer the reason the two consumers differ. Neither "
+            + "value moves and the digest with them: ignoredAccusationBackoff is still 2 and "
+            + "backoffSpan still an hour. What changed is that LadderMachine.arrive(_:) resets "
+            + "only at the top rung, so its run now crosses a subject change exactly as "
+            + "FatigueController's does, and is ended instead by the dismissal that puts a topped-"
+            + "out ladder back on the floor. LadderState.heldAtAmbient remains unreachable from "
+            + "NudgeHost's events, for that reason rather than for the subject reset",
         "focus-845 — queryBackoffSpan renamed backoffSpan, and the accusation hold now uses it. "
             + "The value is unchanged at 3600 s; what changed is that a second consumer reads it. "
             + "ignoredAccusationBackoff tripped a Bool that only sessionEnded could clear, so two "

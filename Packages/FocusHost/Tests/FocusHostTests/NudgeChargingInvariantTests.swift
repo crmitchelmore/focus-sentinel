@@ -210,34 +210,56 @@ struct NudgeChargingInvariantTests {
         }
     }
 
-    /// **focus-1b5's own drive: seven drifts into seven DIFFERENT applications.**
+    /// **focus-1b5's own drive: drifts into seven DIFFERENT applications.**
     ///
-    /// Measured before the repair: `charges = [1,1,1,1,1,1,0]`, `glyphWrites = [1,0,0,0,0,0,0]`,
+    /// Measured before that repair: `charges = [1,1,1,1,1,1,0]`, `glyphWrites = [1,0,0,0,0,0,0]`,
     /// `announcements = [1,0,0,0,0,0,0]`. Six charges, one write, and the whole day's accusation
     /// cap gone. The mark carries no subject, so it cannot distinguish *noticing app A* from
-    /// *noticing app B* — which is the point: a second accusation about a different application
-    /// was charged at full price while the person was shown a picture identical to the one
-    /// already on their screen.
+    /// *noticing app B* — which was the point: a second accusation about a different application
+    /// was charged at full price while the person was shown a picture identical to the one already
+    /// on their screen.
     ///
-    /// A single-subject drive cannot reach this, because the ladder holds one rung per subject.
-    @Test("seven drifts into seven different applications charge only what the item said")
+    /// **The shape of the day changed under it** (focus-f2a). A change of subject no longer
+    /// restarts the ladder, so seven different applications no longer produce seven ambient rungs
+    /// in a row: they produce a glyph, then the panel above it, then — the ladder having topped
+    /// out — a glyph again. The item's mark alternates `noticing`/`unmarked` with the panel, so
+    /// every landing really is a change and the run of six identical pictures this drive was
+    /// written to catch is a state the product can no longer be in. What is asserted is therefore
+    /// the invariant itself, folded over the shape the day actually has, with the cadence chosen
+    /// so that both sides of it are populated:
+    ///
+    /// * a judgement about a new application **inside** `escalationDwell` while the ladder stands
+    ///   at the glyph is refused, lands nothing and charges nothing — the round that keeps the
+    ///   implication from being vacuous;
+    /// * a judgement past it climbs, lands and is charged.
+    ///
+    /// And one fact the ruling makes true and this drive is the witness for: **the app never says
+    /// its sentence twice in a row.** Two panels back to back would be a repetition rather than an
+    /// escalation, and `LadderMachine.arrive(_:)`'s surviving reset is what stops it.
+    @Test("drifts into seven different applications charge only what the item said")
     func sevenDistinctSubjects() throws {
         let fixture = try NudgeHostFixture()
         defer { fixture.tearDown() }
         try fixture.wireMenuBarToTheLoop()
         Self.namedSubjects(fixture)
 
+        // Two judgements per application: one straight away, one a full dwell later. The first of
+        // each pair is the one the ladder may refuse, and refusing is half of what is measured.
         var rounds: [Round] = []
-        for (index, subject) in Self.subjects.enumerated() {
-            rounds.append(
-                try Self.drive(
-                    fixture,
-                    NudgeHostFixture.unrelatedJudgement(subject: subject),
-                    subject: subject,
-                    index: index
+        var index = 0
+        for subject in Self.subjects {
+            for advance in [Duration.seconds(60), RelevancePolicy.escalationDwell + .seconds(1)] {
+                rounds.append(
+                    try Self.drive(
+                        fixture,
+                        NudgeHostFixture.unrelatedJudgement(subject: subject),
+                        subject: subject,
+                        index: index
+                    )
                 )
-            )
-            fixture.clock.advance(by: .seconds(700))
+                index += 1
+                fixture.clock.advance(by: advance)
+            }
         }
 
         for round in rounds { Self.assertTheInvariant(round) }
@@ -252,6 +274,10 @@ struct NudgeChargingInvariantTests {
             "no rung ever reached the glyph, so this drive proves nothing"
         )
         #expect(
+            rounds.contains { $0.landedOn == .panel },
+            "no rung ever reached the rung that speaks, so this drives half a ladder"
+        )
+        #expect(
             rounds.contains { $0.charged > 0 },
             "nothing was charged in the whole drive, so the invariant had nothing to hold"
         )
@@ -262,13 +288,14 @@ struct NudgeChargingInvariantTests {
             \(rounds.map(\.summary).joined(separator: " | "))
             """
         )
-        // And the number the bead measured: one write, and therefore at most one charge.
-        let charged = rounds.filter { $0.charged > 0 }.count
+        // **And the app never said its sentence twice running.** Read off the rounds that were
+        // actually charged, so a drive that fell silent cannot satisfy it by saying nothing.
+        let spoken = rounds.filter { $0.charged > 0 }.map(\.landedOn)
         #expect(
-            charged == 1,
+            !zip(spoken, spoken.dropFirst()).contains { $0 == .panel && $1 == .panel },
             """
-            six of these seven landings changed nothing in the menu bar and \(charged) were \
-            charged — \(rounds.map(\.summary).joined(separator: " | "))
+            two panel rungs were delivered back to back, which is a repetition and not an \
+            escalation — \(rounds.map(\.summary).joined(separator: " | "))
             """
         )
     }
@@ -557,63 +584,28 @@ struct NudgeChargingInvariantTests {
         )
     }
 
-    /// **A write the rung did not cause must not pay for the rung** (focus-1b5).
+    /// **`aStatusWriteDoesNotPayForTheRung` stood here, and the state it drove is gone**
+    /// (focus-1b5, focus-f2a).
     ///
-    /// The item has two things to say — the status and the mark — and only one of them is the
-    /// rung. A second glyph rung on a second application finds the mark already `noticing`; if
-    /// the status then changes, the glyph really is reassigned, and a rule that asked only *"was
-    /// the item written to?"* would charge for it.
+    /// It read: a second glyph rung about a second application finds the mark already `noticing`,
+    /// so `setOpenRung(_:)` requests no redraw and the rung stands **unpaid**; the status then
+    /// changes, the glyph really is reassigned, and a rule that asked only *"was the item written
+    /// to?"* would settle the rung's charge on a write the rung did not cause.
     ///
-    /// This is the conjunct the seven-subject drive cannot reach on its own: there, two
-    /// consecutive `noticing` rungs mean `setOpenRung(_:)` requests no redraw at all, so no write
-    /// happens and the charge is refused one layer earlier. Here the write really happens.
-    @Test("a write about the status does not pay for the rung standing under it")
-    func aStatusWriteDoesNotPayForTheRung() throws {
-        let fixture = try NudgeHostFixture()
-        defer { fixture.tearDown() }
-        try fixture.wireMenuBarToTheLoop()
-        Self.namedSubjects(fixture)
-
-        // The first rung marks the item and is charged for it.
-        fixture.host.consider(
-            NudgeHostFixture.unrelatedJudgement(subject: Self.subjects[0])
-        )
-        NudgeHostFixture.settle()
-        try #require(fixture.menuBar.markOnTheItem == .noticing, "the first rung never marked")
-        fixture.clock.advance(by: .seconds(700))
-
-        // A second rung, about a **different** application. The mark carries no subject, so the
-        // item says exactly what it already said.
-        fixture.host.consider(
-            NudgeHostFixture.unrelatedJudgement(subject: Self.subjects[1])
-        )
-        NudgeHostFixture.settle()
-        try #require(fixture.host.landedRungSurface == .menuBar)
-        let chargesAtLanding = fixture.host.chargesPaidFor.count
-
-        // Now the status changes under it — an ordinary thing that happens many times an hour —
-        // and the glyph really is reassigned.
-        let writesBefore = fixture.menuBar.glyphWriteCount
-        fixture.menuBar.update(Self.presentation(of: fixture.host, status: .relevant))
-        NudgeHostFixture.settle()
-
-        try #require(
-            fixture.menuBar.glyphWriteCount > writesBefore,
-            "the status change wrote nothing to the item, so this test drives nothing"
-        )
-        #expect(
-            fixture.menuBar.markOnTheItem == .noticing,
-            "the mark went away with the status, so the two are not separable here"
-        )
-        #expect(
-            fixture.host.chargesPaidFor.count == chargesAtLanding,
-            """
-            a write about the status paid for a rung the item never announced — receipts \
-            \(fixture.host.chargesPaidFor.map(\.channel.rawValue))
-            """
-        )
-        try Self.assertTheJoin(fixture)
-    }
+    /// Since focus-f2a a change of subject does not restart the ladder, so a *second* rung about a
+    /// second application is the panel rung above the glyph — and `NudgeSurface.panel`'s
+    /// `menuBarAttention` is `.unmarked`, so the item's mark alternates rather than repeating. The
+    /// ladder cannot produce two consecutive glyph rungs for two applications, `forgetOpenRung()`
+    /// takes the mark off on every path that lets a rung go, and there is no remaining sequence in
+    /// which an unpaid rung stands under a `noticing` item. The test was deleted rather than
+    /// weakened into an assertion about idempotence, which is this repository's own rule for a
+    /// proof whose state the product can no longer be in — `focus-pzl` deleted routing rows the
+    /// router cannot draw and `focus-w3f` deleted a wire that could never fire.
+    ///
+    /// **The conjunct is not lost**: the reason a glyph rung goes unpaid is now focus-nrl's alone
+    /// — a question waiting behind the click holds the item at `waiting` — and the test below
+    /// drives exactly that, with the same status write as its cause. `focus-5xf` is filed to
+    /// re-establish a second unpaid-glyph state if a later rung or route creates one.
 
     /// **A write while the badge holds the mark must not pay for the rung under it**
     /// (focus-nrl).
@@ -926,6 +918,15 @@ struct NudgeChargingInvariantTests {
     /// the app did, and it gets a row — `unopened`, which spends nothing, because `spendsBudget`
     /// is `disposition == .delivered`. Without this, "stop charging for it" could be satisfied by
     /// making the whole landing invisible to the record, which is the opposite failure.
+    ///
+    /// **The arrangement moved with the ladder** (focus-f2a). It used to be *two different
+    /// applications in a row*, on the ground that the second glyph rung finds the item already
+    /// saying `noticing`; a change of subject no longer restarts the ladder, so the second
+    /// application climbs to the panel and the item's mark alternates instead of repeating. The
+    /// unpaid glyph rung is now focus-nrl's — a question waiting behind the click holds the item
+    /// at `waiting`, so a rung landing underneath it is perceptible to nobody — which is the one
+    /// remaining state of its kind (`focus-5xf`) and is the shipping state of everybody under
+    /// Reduce Motion.
     @Test("a rung nobody was shown is written down as unopened and spends nothing")
     func anUnperceivedRungIsStillRecorded() throws {
         let fixture = try NudgeHostFixture()
@@ -933,17 +934,30 @@ struct NudgeChargingInvariantTests {
         try fixture.wireMenuBarToTheLoop()
         Self.namedSubjects(fixture)
 
-        // Two different applications in a row: the second glyph rung finds the item already
-        // saying `noticing`, and the mark carries no subject.
-        for subject in Self.subjects.prefix(2) {
-            fixture.host.consider(NudgeHostFixture.unrelatedJudgement(subject: subject))
-            NudgeHostFixture.settle()
-            fixture.clock.advance(by: .seconds(700))
-        }
-        // A third landing, which is what makes the second one be let go of and therefore written.
-        fixture.host.consider(
-            NudgeHostFixture.unrelatedJudgement(subject: Self.subjects[2])
+        // A question on the badge, holding the item at `waiting`.
+        fixture.host.choose(reducedInterruption: true)
+        fixture.host.consider(NudgeHostFixture.uncertainJudgement(subject: Self.subjects[1]))
+        NudgeHostFixture.settle()
+        try #require(
+            fixture.menuBar.markOnTheItem == .waiting,
+            "the badge never marked the item, so no rung can land underneath it"
         )
+
+        // A glyph rung lands under it and is perceptible to nobody.
+        fixture.host.consider(NudgeHostFixture.unrelatedJudgement(subject: Self.subjects[0]))
+        NudgeHostFixture.settle()
+        try #require(
+            fixture.host.landedRungSurface == .menuBar,
+            "the rung did not reach the glyph, so this drives nothing"
+        )
+        try #require(
+            fixture.menuBar.markOnTheItem == .waiting,
+            "the item stopped inviting the click the question is waiting behind"
+        )
+
+        // The person takes their screen back without ever opening the popover, which is what makes
+        // the unpaid rung be let go of and therefore written down.
+        fixture.host.hideOverlays()
         NudgeHostFixture.settle()
 
         let rows = try fixture.interventions()

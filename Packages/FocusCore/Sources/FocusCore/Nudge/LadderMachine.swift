@@ -28,7 +28,7 @@ import Foundation
 ///
 /// Rung *n* → rung *n+1* requires **all** of:
 ///
-/// 1. the mandate is still live, and for the **same subject**;
+/// 1. a mandate is still live — **about anything**, see the ruling below;
 /// 2. the previous rung was **`delivered`** — not `deferred`, not `suppressed`;
 /// 3. `RelevancePolicy.escalationDwell` has elapsed **since that delivery**;
 /// 4. the budget permits (R-83), which the caller computes with `FatigueController`.
@@ -42,6 +42,83 @@ import Foundation
 /// do having never been shown the quietest. `.deferred` therefore writes **no** `deliveredAt`,
 /// which is what makes `nudge.escalationsFromDeferred == 0` a property of the arithmetic rather
 /// than of a separate check.
+///
+/// ## **The climb is the person's, not the application's** (focus-f2a, U-1)
+///
+/// `arrive(_:)` used to reset to `.idle` whenever the live mandate named a different subject, on
+/// the argument that *"a different subject is a different drift"*. Measured on the shipping
+/// composition root, that argument costs the product its whole purpose. A ship lens drove a
+/// commoner rhythm than sustained loyalty to one distraction — drift, return, drift, over
+/// forty-five minutes and sixteen drifts into nine applications — and read
+/// `hasSpokenToday = false`, `accusationsToday = 0`, the panel never once on screen. Twelve of the
+/// sixteen drifts showed the person **nothing at all**. Escalation required two consecutive
+/// mandates about the same bundle identifier, and nobody who is genuinely losing an afternoon
+/// drifts that tidily.
+///
+/// The user's standing ruling U-1 is directly on point and they made it against this programme's
+/// own Feasibility Court: *"we want to use implicit detection and guesses as default, but then
+/// assume it's not aligned if we can't tell… we are really trying to get them to focus."* The
+/// Court preferred silence; the user ruled that **silence defeats the product**. Applied one level
+/// up, that is: **drift accumulates against the person's attention, not against a bundle
+/// identifier, and a subject change is not a fresh start.**
+///
+/// So a mandate about a new subject **continues** the climb. The ladder keeps its height, its
+/// `deliveredAt` and its ignore run, and re-points `liveMandate` — and `candidate(at:budgetPermits:)`
+/// builds the rung it offers from **that** live mandate, so the sentence names what the person is
+/// doing now rather than the application they left.
+///
+/// ### With one exception, and it is R-80's own argument: **topping out is about the person too**
+///
+/// A change of subject continues the climb *while the ladder still has somewhere to climb*. Once
+/// it has delivered the loudest rung it has, it has said everything it can say, and a change of
+/// subject **ends the run**: `arrive(_:)` returns it to `.idle`, the panel comes down with the rung
+/// it was drawing, and the next sustained drift is met with the glyph again.
+///
+/// Two reasons, and they are one reason at two altitudes:
+///
+/// * **Proportionality.** R-80 is that the ladder never re-enters at the rung it left, *"because
+///   starting again at the rung the ladder left would punish somebody for having complied once"*.
+///   Carrying a *topped-out* ladder across a subject change would deliver a second panel — not an
+///   escalation, a **repetition**, and U-2's ladder tops out precisely so that there is no such
+///   thing. A glyph followed by a panel is the story working; a panel followed by a panel is the
+///   app saying the same thing twice and spending a second of the day's six accusations on it.
+/// * **The sentence has to be true.** A panel is deliberately sticky (R-89): it waits for an answer
+///   rather than vanishing when somebody clicks back into their work. So a panel that is up is a
+///   panel that stays up, drawing `rung.subject` and offering corrections that
+///   `CorrectionScope.from(rung.mandate)` will write about **that** application. If the ladder
+///   carried past the top, the run would end only on an answer, and until then the window would go
+///   on naming somewhere the person had left. Ending the run takes it down instead.
+///
+/// The rule, stated once: **the ladder climbs on the person's run of drift, and a change of subject
+/// continues that run until there is nothing left to climb to.**
+///
+/// ### What it costs, stated
+///
+/// The ladder now climbs on a run of drift that the person has not answered, so a glyph about one
+/// application can be followed by a panel about another that the person was never shown a glyph
+/// for. That is deliberate: the glyph is a mark on the status item saying *the app has noticed*,
+/// not a sentence about an application, and the thing the panel escalates is the noticing.
+///
+/// The shape a hopping day now produces is glyph, panel, glyph, panel — one sentence per climb and
+/// never two in a row — where before it produced glyph, glyph, glyph and never a sentence at all.
+///
+/// Nothing else was loosened, and the bargain U-1 rests on — an interruption is licensed by a
+/// cheap answer — is kept by six bounds that are all still in force:
+///
+/// * the engine issues at most one mandate per `RelevancePolicy.mandateCooldown` (600 s), so the
+///   ladder can take at most one step per ten minutes however many applications are involved;
+/// * fact 3 above, `escalationDwell` (300 s) since the last **delivery**;
+/// * `FatigueController` keeps `mandateCooldown` between two sentences, and the caps hold the day
+///   to `dailyAccusationCap` and `dailyInterruptionCap`;
+/// * the ladder tops out at the panel (U-2): a climb buys **one** sentence, never a second, and
+///   the clause above is what stops a change of subject buying another;
+/// * `FatigueController`'s session-wide run of ignored accusations trips at
+///   `InterventionPolicy.ignoredAccusationBackoff` and holds accusations for
+///   `InterventionPolicy.backoffSpan` — an hour — with the glyph exempt by name;
+/// * every de-escalation below still puts the ladder on the floor, and they are all facts about
+///   the *person*: a correction, a session rule, a snooze, a pause, a new priority, a return to
+///   task, a break, a session ending, or the engine deciding this is real work. What no longer
+///   puts it down is a fact about the *machine* — which window happens to be frontmost.
 ///
 /// ## De-escalation is immediate, total, and never partial
 ///
@@ -98,18 +175,27 @@ public struct LadderMachine: Sendable, Equatable {
             return LadderRung.entry(for: mandate)
 
         case .engaged(let rung, let deliveredAt, _):
-            // Fact 1. A different subject is not this ladder's business; `reduce(.mandate(_:))`
-            // has already reset to `.idle` for one, so this is a backstop rather than a path.
-            guard Self.sameSubject(rung.mandate, mandate) else { return nil }
+            // Fact 1 is `liveMandate` above, and **it no longer asks which subject** (focus-f2a).
+            // The subject test that stood here was the reset in `arrive(_:)` restated as a
+            // backstop. That reset now fires only at the top rung, where it leaves `.idle` rather
+            // than a state this branch can be reached in, so the backstop has nothing left to catch
+            // and is gone with it.
+            //
             // Fact 3. `escalationDwell` measured from the DELIVERY, which is the only reading a
             // `.deferred` rung never writes.
             guard now - deliveredAt >= RelevancePolicy.escalationDwell else { return nil }
             // Fact 4.
             guard budgetPermits else { return nil }
             // `nil` at the top: the ladder tops out at the PANEL and there is no third rung
-            // above it (U-2). `rung.escalated()` returns `nil` there, which is what makes this
-            // the whole of the top-out rather than a case somebody has to remember to add.
-            return rung.escalated()
+            // above it (U-2). `rung.escalated(for:)` returns `nil` there, which is what makes
+            // this the whole of the top-out rather than a case somebody has to remember to add.
+            //
+            // **Built for the LIVE mandate, never for the one the rung below carried.** That is
+            // the half of this ruling a reader of `arrive(_:)` alone would miss: the panel draws
+            // `rung.subject` and `resolve(_:snoozeDuration:)` scopes its correction with
+            // `CorrectionScope.from(rung.mandate)`, so a rung built from the old mandate would
+            // name — and write a rule about — the application the person has already left.
+            return rung.escalated(for: mandate)
 
         case .heldAtAmbient:
             // `InterventionPolicy.ignoredAccusationBackoff` rungs went unanswered — two — so the
@@ -174,11 +260,33 @@ public struct LadderMachine: Sendable, Equatable {
     // MARK: - The transitions
 
     /// A live mandate was observed.
+    ///
+    /// **The condition on the reset is the ruling** (focus-f2a). This function used to compare the
+    /// arriving mandate's subject with the one the standing rung was raised on and drop the ladder
+    /// to `.idle` whenever they differed. The whole of the argument for it — *"a different subject
+    /// is a different drift"* — is answered at the top of this file: drift accumulates against the
+    /// person, and the ladder's height is a fact about how long they have been away from the
+    /// commitment, not about their loyalty to one distraction. So the height, the `deliveredAt` the
+    /// escalation is measured from, and the ignore run carry across, and the rung the ladder next
+    /// offers is built from `liveMandate` in `candidate(at:budgetPermits:)`, which is where the new
+    /// subject gets named.
+    ///
+    /// What survives is the reset **at the top rung**, and its two arguments are written out above:
+    /// carrying a topped-out ladder across a subject change would deliver a second panel rather
+    /// than an escalation, and would leave a sticky panel naming an application the person had
+    /// already left. Asked as `kind.next == nil`, which is `escalated(for:)`'s own question and
+    /// needs no mandate to ask it — so a third rung added above the panel moves this clause up with
+    /// the ladder instead of leaving it pinned to a case name.
+    ///
+    /// `.heldAtAmbient` stands at the *ambient* rung, so it is not the top and a change of subject
+    /// does not lift it. That is deliberate, and it is the twin of `FatigueController`'s own hold,
+    /// which is session-wide and which nothing but time and an answered accusation clears: two
+    /// ignored accusations is a fact about the person, and whichever application they moved to next
+    /// has no bearing on it.
     private mutating func arrive(_ mandate: InterventionMandate) {
-        if let rung = state.rung, !Self.sameSubject(rung.mandate, mandate) {
-            // A different subject is a different drift. The ladder does not carry its height
-            // across: re-entry is at `.ambient`, for the new subject, exactly as it is after a
-            // de-escalation.
+        if let standing = state.rung,
+            standing.kind.next == nil,
+            !Self.namesTheSameSubject(standing.mandate, mandate) {
             state = .idle
             offered = nil
             stateBeforeDelivery = nil
@@ -262,7 +370,37 @@ public struct LadderMachine: Sendable, Equatable {
 
         let count = ignored + 1
         guard count >= InterventionPolicy.ignoredAccusationBackoff else {
-            state = .engaged(rung: rung, deliveredAt: deliveredAt, consecutiveIgnored: count)
+            // **A rung with nothing above it has nothing to hold position for** (focus-f2a).
+            //
+            // This clause is the way down that the subject reset was quietly providing, and
+            // removing that reset is what made its absence reachable. `candidate(…)` answers
+            // `nil` at the top rung, because `escalated(for:)` does — so a panel rung the person
+            // dismissed left the ladder standing at `.engaged(.panel, consecutiveIgnored: 1)`
+            // with no rung to offer and no ignore left to count, and the only thing that ever
+            // moved it on was a mandate about a *different* application. With the climb carried
+            // across subjects instead, that ladder would be stranded for the whole session after
+            // one dismissal: no panel, and — because `NudgeDecider.accuse(…)` turns a `nil`
+            // candidate into `.silent(.budgetExhausted)` — **no glyph either**, which is F-146's
+            // legibility lost to arithmetic for a second time.
+            //
+            // So the ladder comes down to the floor. It is neither a de-escalation (the mandate
+            // stays live: the person is still drifting and the status item must still say so) nor
+            // a hold (they dismissed one sentence, which is not the app talking to itself). The
+            // next sustained drift meets the glyph and may climb again, and the second dismissal
+            // is caught by `FatigueController`'s session-wide run — the consumer of
+            // `InterventionPolicy.ignoredAccusationBackoff` whose count really does cross a
+            // subject change, and whose hold is bounded to `backoffSpan` and exempts the glyph
+            // by name.
+            //
+            // Asked as `rung.kind.next`, which is the same question `escalated(for:)` asks and
+            // needs no mandate to ask it: a third rung added above the panel makes this clause
+            // stop firing at the panel by itself.
+            guard rung.kind.next == nil else {
+                state = .engaged(rung: rung, deliveredAt: deliveredAt, consecutiveIgnored: count)
+                return
+            }
+            state = .idle
+            offered = nil
             return
         }
 
@@ -283,11 +421,16 @@ public struct LadderMachine: Sendable, Equatable {
 
     /// Whether two mandates are about the same thing.
     ///
-    /// Mixed drift is compared as mixed rather than by name: an accusation about "several
-    /// unrelated apps" carries no subject to match on, and treating two mixed mandates as
-    /// different subjects would reset the ladder every observation and leave it permanently at
-    /// the ambient rung.
-    private static func sameSubject(
+    /// **One caller, and a much narrower job than it used to have** (focus-f2a). It was the whole
+    /// of *"a different subject is a different drift"* and it ran on every arrival; it now answers
+    /// one question in one place — *has the person moved on from the thing the app has already said
+    /// its loudest sentence about?* — and everywhere else a change of subject is a continuation the
+    /// ladder does not have to ask about.
+    ///
+    /// Mixed drift is compared as mixed rather than by name: an accusation about "several unrelated
+    /// apps" carries no subject to match on, and treating two mixed mandates as different subjects
+    /// would end the run every observation.
+    private static func namesTheSameSubject(
         _ lhs: InterventionMandate,
         _ rhs: InterventionMandate
     ) -> Bool {

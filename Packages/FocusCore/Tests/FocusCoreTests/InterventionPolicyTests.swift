@@ -260,7 +260,7 @@ struct InterventionPolicyTests {
     @Test("the version is the count of revisions, and every revision says what moved")
     func versionTracksTheRevisions() {
         #expect(InterventionPolicy.version == InterventionPolicy.revisions.count)
-        #expect(InterventionPolicy.version == 3)
+        #expect(InterventionPolicy.version == 4)
         for revision in InterventionPolicy.revisions {
             #expect(!revision.isEmpty, "a policy revision with no reason is a version churning")
         }

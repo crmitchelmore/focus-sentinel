@@ -13,7 +13,7 @@ import Foundation
 /// invariant.
 ///
 /// * The memberwise initialiser is `fileprivate`, and this file holds exactly two producers —
-///   `entry(for:)` and `escalated()` — both of which start from an `InterventionMandate`.
+///   `entry(for:)` and `escalated(for:)` — both of which start from an `InterventionMandate`.
 /// * There is **no overload taking a `QueryWarrant`, a `Verdict` or a `Bool`.** A question
 ///   carries no band and no stage, which the ladder requires, so an adapter could not be
 ///   written without inventing evidence — and inventing evidence is visible in a diff.
@@ -76,7 +76,7 @@ public struct LadderRung: Sendable, Equatable, Hashable {
         /// **That row's own label was wrong in the other direction** (focus-7to). It read
         /// *"Next nudge"* over `LadderState.rung`, which is the rung currently occupied — so the
         /// popover named a scheduled step beside a rung already on screen, and the ladder
-        /// schedules nothing: `escalated()` below says only what the next rung *would be*, and
+        /// schedules nothing: `escalated(for:)` below says only what the next rung *would be*, and
         /// four further facts decide whether it is ever reached.
         ///
         /// A rung is one step of the ladder; where it appears is the router's answer and changes
@@ -121,13 +121,23 @@ public struct LadderRung: Sendable, Equatable, Hashable {
         LadderRung(kind: Kind.allCases[0], mandate: mandate)
     }
 
-    /// The next rung up, for the same mandate, or `nil` at the top.
+    /// The next rung up, **for the mandate the ladder is climbing on now**, or `nil` at the top.
     ///
-    /// Whether escalation is *permitted* is `LadderMachine`'s question and needs four more
-    /// facts — a still-live mandate, a **delivered** previous rung (R-81), `escalationDwell`
-    /// elapsed since that delivery, and budget (R-83). This function only says what the next
-    /// rung would be.
-    public func escalated() -> LadderRung? {
+    /// Whether escalation is *permitted* is `LadderMachine`'s question and needs three more
+    /// facts — a still-live mandate, a **delivered** previous rung (R-81) whose delivery is still
+    /// the ladder's business, and budget (R-83). This function only says what the next rung
+    /// would be.
+    ///
+    /// **The mandate is a parameter, and that is the whole of focus-f2a's second half.** It read
+    /// `self.mandate` — the authorisation the rung *below* was raised on — which was sound only
+    /// because `LadderMachine` refused to escalate unless the live mandate named the same subject.
+    /// The ruling that a subject change continues the climb removes that guarantee, and a rung
+    /// built from the old mandate would be a panel naming the application the person has already
+    /// left: `AccusationPanelView` draws `rung.subject`, and the correction it offers is scoped by
+    /// `CorrectionScope.from(rung.mandate)`, so the sentence *and* the rule would both be about
+    /// the wrong thing. Asking the caller for the mandate makes that a question the compiler puts,
+    /// once, at every site that can produce a rung.
+    public func escalated(for mandate: InterventionMandate) -> LadderRung? {
         guard let next = kind.next else { return nil }
         return LadderRung(kind: next, mandate: mandate)
     }

@@ -97,7 +97,7 @@ struct LadderVocabularyTests {
             #expect(rung.mandate == mandate, "a rung lost its authorisation on the way up")
             #expect(rung.mandate.band >= RelevancePolicy.interventionBandFloor)
             visited.append(rung.kind)
-            guard let next = rung.escalated() else { break }
+            guard let next = rung.escalated(for: mandate) else { break }
             #expect(next.kind.rank == rung.kind.rank + 1, "escalation skipped a rung")
             rung = next
         }
@@ -115,9 +115,9 @@ struct LadderVocabularyTests {
         }
         // Including after a full climb: a new entry starts over, it does not resume.
         let mandate = Self.mandate()
-        let top = LadderRung.entry(for: mandate).escalated()
+        let top = LadderRung.entry(for: mandate).escalated(for: mandate)
         #expect(top?.kind == .panel)
-        #expect(top?.escalated() == nil, "the ladder climbed past the panel")
+        #expect(top?.escalated(for: mandate) == nil, "the ladder climbed past the panel")
         #expect(LadderRung.entry(for: mandate).kind == .ambient)
     }
 

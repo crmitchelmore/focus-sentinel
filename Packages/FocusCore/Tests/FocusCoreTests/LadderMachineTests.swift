@@ -318,28 +318,52 @@ struct LadderMachineTests {
         #expect(machine.state.consecutiveIgnored == 1)
     }
 
-    // MARK: - Subjects
+    // MARK: - Subjects, and the ruling that they do not restart the climb (focus-f2a)
 
-    @Test("a mandate about a different subject re-enters at the ambient rung")
-    func aDifferentSubjectRestartsTheClimb() {
+    /// **A glyph about one application, then a panel about another** (focus-f2a, U-1).
+    ///
+    /// This test asserted the opposite until this round, and the thing it asserted was the defect:
+    /// a ship lens drove sixteen drifts into nine applications through the shipping composition
+    /// root and read `accusationsToday == 0` and a panel that never appeared, because escalation
+    /// needed two consecutive mandates about the same bundle identifier. Drift accumulates against
+    /// the person, not against an identifier.
+    ///
+    /// Both halves are asserted, because the second is the one a reader of `arrive(_:)` alone
+    /// would miss: the climb continues, **and** the rung it continues to is built for the mandate
+    /// that is live now — not for the application the person has already left.
+    @Test("a mandate about a different subject continues the climb, and names the new subject")
+    func aDifferentSubjectContinuesTheClimb() {
         var machine = LadderMachine()
-        var at = Duration.seconds(0)
+        let at = Duration.seconds(0)
         _ = Self.delivering(&machine, mandate: Self.decoy, at: at)
-        at = at + RelevancePolicy.escalationDwell
-        machine.reduce(.mandate(Self.decoy), now: at)
-        machine.offer(at: at, budgetPermits: true)
-        machine.reduce(.delivery(.delivered(.panel)), now: at)
-        #expect(machine.state.rung?.kind == .panel)
+        #expect(machine.state.rung?.kind == .ambient)
 
-        machine.reduce(.mandate(Self.other), now: at)
+        let due = at + RelevancePolicy.escalationDwell
+        machine.reduce(.mandate(Self.other), now: due)
 
-        #expect(machine.state == .idle)
-        #expect(machine.candidate(at: at, budgetPermits: true)?.kind == .ambient)
-        #expect(machine.candidate(at: at, budgetPermits: true)?.mandate.subject == "com.apple.Safari")
+        // The height is kept: the glyph really was delivered and the person really is still away.
+        #expect(machine.state.rung?.kind == .ambient, "a change of subject unwound the climb")
+        let next = machine.candidate(at: due, budgetPermits: true)
+        #expect(next?.kind == .panel, "the ladder re-entered at the bottom for a second subject")
+        // And the sentence is about what they are doing now. `AccusationPanelView` draws this and
+        // `CorrectionScope.from(rung.mandate)` writes a rule from it.
+        #expect(next?.mandate.subject == "com.apple.Safari")
+        #expect(next?.subject == "com.apple.Safari")
+
+        // The dwell still binds across the change: a subject change buys no shortcut.
+        var impatient = LadderMachine()
+        _ = Self.delivering(&impatient, mandate: Self.decoy, at: at)
+        impatient.reduce(.mandate(Self.other), now: due - .seconds(1))
+        #expect(
+            impatient.candidate(at: due - .seconds(1), budgetPermits: true) == nil,
+            "a change of subject escalated inside the escalation dwell"
+        )
     }
 
-    @Test("two mixed mandates are the same subject, so the ladder does not restart every observation")
-    func mixedDriftIsOneSubject() {
+    /// Mixed drift never had a subject to match on, so it was the one shape the old rule already
+    /// let climb. It still climbs, and now for the same reason as every other shape.
+    @Test("mixed drift climbs, and so does mixed drift that becomes named drift")
+    func mixedDriftClimbsLikeAnyOther() {
         var machine = LadderMachine()
         _ = Self.delivering(&machine, mandate: Self.mixed, at: .seconds(0))
 
@@ -348,16 +372,76 @@ struct LadderMachineTests {
 
         #expect(machine.state.rung?.kind == .ambient)
         #expect(machine.candidate(at: due, budgetPermits: true)?.kind == .panel)
+        // Still nameless: a mandate about "several unrelated apps" must not be drawn as one of
+        // them, and the rung carries the live mandate, which is the mixed one.
         #expect(machine.candidate(at: due, budgetPermits: true)?.subject == nil)
     }
 
-    @Test("a mixed mandate and a named one are different subjects")
-    func mixedAndNamedAreDifferent() {
+    /// **The one reset that survives, and the two things it is for** (focus-f2a).
+    ///
+    /// A change of subject continues the climb *while there is somewhere to climb to*. At the top
+    /// there is not, so the run ends: a second panel would be a repetition rather than an
+    /// escalation, and — because a panel is sticky (R-89) — carrying on would leave a window naming
+    /// an application the person had already left, offering corrections scoped to it.
+    ///
+    /// Both halves are asserted. The reset happens **and** the ladder is standing somewhere the
+    /// next drift can be met from, which is the difference between ending a run and going silent.
+    @Test("a change of subject at the top rung ends the run and starts again at the glyph")
+    func aChangeOfSubjectAtTheTopEndsTheRun() {
         var machine = LadderMachine()
-        _ = Self.delivering(&machine, mandate: Self.decoy, at: .seconds(0))
-        machine.reduce(.mandate(Self.mixed), now: RelevancePolicy.escalationDwell)
+        var at = Duration.seconds(0)
+        _ = Self.delivering(&machine, mandate: Self.decoy, at: at)
+        at = at + RelevancePolicy.escalationDwell
+        machine.reduce(.mandate(Self.decoy), now: at)
+        machine.offer(at: at, budgetPermits: true)
+        machine.reduce(.delivery(.delivered(.panel)), now: at)
+        try! #require(machine.state.rung?.kind == .panel)
 
-        #expect(machine.state == .idle)
+        machine.reduce(.mandate(Self.other), now: at)
+
+        #expect(machine.state == .idle, "the topped-out ladder carried a second panel across")
+        #expect(machine.offered == nil, "an offer survived the end of the run")
+        let next = machine.candidate(at: at, budgetPermits: true)
+        #expect(next?.kind == .ambient, "the new subject was met above the glyph")
+        #expect(next?.mandate.subject == "com.apple.Safari")
+
+        // And the same subject at the top is not a change: the panel that is up stays up, and the
+        // ladder has nothing to add to it.
+        var staying = LadderMachine()
+        var stayingAt = Duration.seconds(0)
+        _ = Self.delivering(&staying, mandate: Self.decoy, at: stayingAt)
+        stayingAt = stayingAt + RelevancePolicy.escalationDwell
+        staying.reduce(.mandate(Self.decoy), now: stayingAt)
+        staying.offer(at: stayingAt, budgetPermits: true)
+        staying.reduce(.delivery(.delivered(.panel)), now: stayingAt)
+        staying.reduce(.mandate(Self.decoy), now: stayingAt + .seconds(86_400))
+        #expect(staying.state.rung?.kind == .panel)
+        #expect(staying.candidate(at: stayingAt + .seconds(86_400), budgetPermits: true) == nil)
+    }
+
+    /// The two directions across the mixed boundary, which is where a "same subject" comparison
+    /// used to answer `false` in both. Folded rather than written twice, so neither direction can
+    /// be repaired without the other.
+    @Test("a named rung followed by mixed drift, and mixed followed by named, both climb")
+    func theMixedBoundaryIsNotAReset() {
+        let crossings: [(standing: InterventionMandate, arriving: InterventionMandate, named: String?)] = [
+            (Self.decoy, Self.mixed, nil),
+            (Self.mixed, Self.decoy, "com.chrismitchelmore.FocusDecoy")
+        ]
+        for crossing in crossings {
+            var machine = LadderMachine()
+            _ = Self.delivering(&machine, mandate: crossing.standing, at: .seconds(0))
+            let due = RelevancePolicy.escalationDwell
+            machine.reduce(.mandate(crossing.arriving), now: due)
+
+            #expect(
+                machine.state.rung?.kind == .ambient,
+                "crossing the mixed boundary unwound the climb"
+            )
+            let next = machine.candidate(at: due, budgetPermits: true)
+            #expect(next?.kind == .panel, "crossing the mixed boundary re-entered at the bottom")
+            #expect(next?.subject == crossing.named, "the rung named the mandate it left behind")
+        }
     }
 
     // MARK: - Time, and replayability

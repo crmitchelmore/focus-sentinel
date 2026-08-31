@@ -67,7 +67,7 @@ struct InterruptionSlotTests {
             fatalError("e04's producer refused to mandate on inputs that must mandate")
         }
         var rung = LadderRung.entry(for: mandate)
-        while rung.kind != kind, let next = rung.escalated() { rung = next }
+        while rung.kind != kind, let next = rung.escalated(for: mandate) { rung = next }
         return rung
     }
 
