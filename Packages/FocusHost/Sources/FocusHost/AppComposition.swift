@@ -354,7 +354,19 @@ public final class AppComposition {
         // session, and the host is what the cockpit draws. Wiring them here is what keeps
         // either of them from having to know about the other's lifetime.
         sessions.sensing = sensing
-        sensing.onSessionChanged = { [weak sessions] in sessions?.refresh() }
+
+        // **`sensing.onSessionChanged` is NOT assigned here** (focus-w3f), and the omission is
+        // the point rather than an oversight. It was, on this line — and `sensing` is
+        // `sensingHost` and `sessions` is `sessionHost`, both assigned twenty lines above, so
+        // `joinHosts()` reassigned the very same property on the very same object ninety lines
+        // later and this one never survived to fire. Two spellings of one wire, the second
+        // silently replacing the first, which is exactly the hazard `startNudgeLoop()`'s own
+        // comment warns about for `onSnapshotInvalidated`.
+        //
+        // It was found by replacing it with a no-op and watching all 176 tests pass — which they
+        // did because there was nothing there to break. A dead assignment that reads as a live
+        // wire is worse than a missing one: it answers the question "is this joined up?" with a
+        // yes that is not true.
 
         // …and the cockpit value follows both of them. Assigned after `self` is fully
         // initialised, in `start()`, because the closure captures the composition root.
