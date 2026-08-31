@@ -394,7 +394,7 @@ struct SequenceReplayTests {
         #expect(transcript.queryCount == 2)
     }
 
-    /// **U-2, and the rule that replaced R-84a's asymmetry.**
+    /// **U-2, and the rule that replaced R-84a's asymmetry — now driven at both rungs.**
     ///
     /// An accusation arriving while a question is on screen is **withheld and waits**. It does
     /// not close the question, does not decline it and does not take the slot: the person
@@ -402,36 +402,70 @@ struct SequenceReplayTests {
     /// The rung is not lost by waiting — no delivery is recorded and the escalation clock does
     /// not start — and the question stays remembered, so it is never asked twice.
     ///
+    /// **"An accusation" meant the rung that speaks, and this fixture used to apply it to the
+    /// glyph as well** (focus-0y6). Gate 9 is an occupancy rule and
+    /// `NudgeSurface.menuBar.holdsTheInterruptionSlot` is `false`, so withholding the ambient rung
+    /// was refusing a thing on the grounds of a property it does not have — and the consequence
+    /// reached the person as the status item going blank for as long as one question sat on the
+    /// screen. The sequence now runs the question past **both** rungs: the glyph lands under it at
+    /// 142 s, the panel rung is withheld at 835 s, and it arrives at 1528 s once the question has
+    /// been answered. Nothing about U-2 is loosened; what changed is which rung the ruling was
+    /// ever about.
+    ///
     /// **This test was called `anAccusationPreemptsAQuestion` and its failure message read "the
     /// preempted question came back".** Its own fixture had said the opposite since U-2 deleted
     /// preemption, and the body passed throughout because the behaviour was right and only the
     /// caption was false. A green assertion under a false caption teaches the next reader the
     /// mechanism the product does not have, which is how preemption kept coming back. The
     /// assertions below now name the waiting rather than counting around it.
-    @Test("an accusation waits behind an open question, and the question is still remembered")
+    @Test("the panel rung waits behind an open question and the glyph does not")
     func anAccusationWaitsBehindAnOpenQuestion() throws {
         let fixture = try #require(try Self.fixtures().first { $0.id == "seq-0032" })
         let transcript = Self.harness.replay(fixture)
 
         #expect(transcript.queryCount == 1)
-        #expect(transcript.accusationCount == 1)
+        #expect(transcript.accusationCount == 2, "the glyph and the panel are two deliveries")
+
+        func index(ofRung rung: LadderRung.Kind) throws -> Int {
+            let found = transcript.records.firstIndex(where: { record in
+                if case .accuse(let delivered) = record.nudge { return delivered == rung }
+                return false
+            })
+            return try #require(found, "the \(rung.rawValue) rung never arrived at all")
+        }
 
         // **The withholding itself**, which counting alone cannot see: a preempting accusation
-        // and a waiting one both end with one query and one accusation in the transcript.
+        // and a waiting one both end with the same rungs in the transcript.
         let withheld = transcript.records.filter { $0.nudge == .silent(.interruptionInFlight) }
         #expect(!withheld.isEmpty, "the accusation never waited — nothing was withheld in flight")
 
-        // And it waited **before** it spoke: every withholding precedes the delivery.
-        let accusedAt = transcript.records.firstIndex { if case .accuse = $0.nudge { true } else { false } }
-        let deliveredAt = try #require(accusedAt, "the accusation never arrived at all")
+        // And the rung that SPEAKS waited: every withholding precedes the panel's delivery.
+        let panelAt = try index(ofRung: .panel)
         #expect(
             withheld.allSatisfy { record in
-                transcript.records.firstIndex(of: record).map { $0 < deliveredAt } ?? false
+                transcript.records.firstIndex(of: record).map { $0 < panelAt } ?? false
             },
-            "an accusation was withheld after it had already been delivered"
+            "an accusation was withheld after the panel rung had already been delivered"
         )
 
-        // The question was never closed as declined by the arrival of the accusation: the only
+        // **And the glyph did not.** It landed under the open question, before the withholding
+        // that held the panel back — the half that used to go the other way, silently.
+        let glyphAt = try index(ofRung: .ambient)
+        #expect(
+            glyphAt < panelAt,
+            "the ladder reached the panel without ever marking the item"
+        )
+        #expect(
+            withheld.contains { record in
+                transcript.records.firstIndex(of: record).map { $0 > glyphAt } ?? false
+            },
+            """
+            nothing was withheld after the glyph landed, so this fixture never puts the panel \
+            rung and an open question in the same moment and proves neither half
+            """
+        )
+
+        // The question was never closed as declined by the arrival of either rung: the only
         // thing that ends it is the person answering it.
         #expect(
             transcript.records.last?.nudge == .silent(.alreadyAsked),

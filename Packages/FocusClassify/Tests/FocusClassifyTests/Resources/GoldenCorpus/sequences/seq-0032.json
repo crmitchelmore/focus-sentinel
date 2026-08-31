@@ -1,6 +1,6 @@
 {
   "id": "seq-0032",
-  "note": "U-2, and the rule that replaced R-84a's asymmetry. A question is on screen when a mandate arrives; the accusation is WITHHELD as interruptionInFlight and WAITS. The question is not closed, not declined and not settled - the person finishes answering the cheap teaching question, and only then does the accusation arrive, at the ambient glyph. Preemption was where roughly eleven defects across seven repair rounds lived, and deleting it is also better product: the person is not interrupted twice about two different things in the same moment. The rung is not lost by waiting - no delivery is recorded and the escalation clock does not start, so the same rung is offered again on the next judgement.",
+  "note": "U-2, and the rule that replaced R-84a's asymmetry - now driven at BOTH rungs (focus-0y6). A question is on screen when a mandate arrives. The AMBIENT rung is not withheld: gate 9 is an occupancy rule, NudgeSurface.menuBar.holdsTheInterruptionSlot is false, and refusing the glyph because a question is open was refusing a thing on the grounds of a property it does not have - the status item went blank for as long as the question sat there. The PANEL rung IS withheld, and that is U-2's ruling: an accusation never displaces an open question, it waits. The question is not closed, not declined and not settled; the person finishes answering the cheap teaching question, and only then does the rung that speaks arrive. Preemption was where roughly eleven defects across seven repair rounds lived, and deleting it is also better product: the person is not interrupted twice about two different things in the same moment. The rung is not lost by waiting - no delivery is recorded and the escalation clock does not start, so the same rung is offered again on the next judgement.",
   "snapshot": {
     "priority": {
       "intent": "Write the Q3 proposal for Acme",
@@ -52,6 +52,24 @@
       "expect": {
         "verdict": "unrelated",
         "drift": "sustained",
+        "nudge": "accuse:ambient"
+      }
+    },
+    {
+      "advanceSeconds": 601,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "nudge": "silent:interruptionInFlight"
+      }
+    },
+    {
+      "advanceSeconds": 92,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "sustained",
         "nudge": "silent:interruptionInFlight"
       },
       "then": {
@@ -73,7 +91,7 @@
       "expect": {
         "verdict": "unrelated",
         "drift": "sustained",
-        "nudge": "accuse:ambient"
+        "nudge": "accuse:panel"
       },
       "then": {
         "accusationOutcome": "returned"
@@ -89,7 +107,7 @@
       }
     }
   ],
-  "expectMandates": 2,
+  "expectMandates": 3,
   "expectQueries": 1,
-  "expectAccusations": 1
+  "expectAccusations": 2
 }
