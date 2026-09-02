@@ -717,6 +717,98 @@ struct NudgeDeciderTests {
         )
         #expect(decision.isSpeaking == false)
         #expect(decision.silence?.reason == .budgetExhausted)
+        // **And the silence says which of the four it was** (focus-628). It reported
+        // `.budgetExhausted` for a dwell, a top-out, a refusal and a hold alike, which is three
+        // wrong answers to *"why did the app go quiet?"* out of four.
+        #expect(decision.silence?.ladder == .escalationDwell)
+    }
+
+    /// **The ladder's hold retains the mark it says it retains** (focus-628, focus-50m).
+    ///
+    /// `LadderState.heldAtAmbient`'s own doc has always read *"it does not go fully silent: the
+    /// glyph still tells the truth"*, and `candidate(at:budgetPermits:)` answered `nil` from that
+    /// state — which `accuse(…)` turned into `.silent(.budgetExhausted)`. So the one state whose
+    /// whole definition is *the ladder comes down to the rung that says nothing* delivered
+    /// nothing at all.
+    @Test("a ladder held at the ambient rung still marks the person")
+    func theHoldStillMarks() {
+        var ladder = LadderMachine()
+        let at = Duration.seconds(10_000)
+        ladder.reduce(.mandate(Self.ambientRung().mandate), now: at)
+        ladder.offer(at: at, budgetPermits: true)
+        ladder.reduce(.delivery(.delivered(.menuBar)), now: at)
+        for _ in 0..<InterventionPolicy.ignoredAccusationBackoff {
+            ladder.reduce(.rungIgnored, now: at)
+        }
+        guard case .heldAtAmbient = ladder.state else {
+            Issue.record("the ladder is not held, so this proves nothing")
+            return
+        }
+
+        let decision = Self.decide(
+            Self.judgement(verdict: .unrelated),
+            surroundings: Self.surroundings(monotonic: at + .seconds(60)),
+            memory: NudgeMemory(ladder: ladder)
+        )
+
+        #expect(decision.rung?.kind == .ambient, "the hold showed the person nothing at all")
+        #expect(decision.silence == nil)
+    }
+
+    /// **A refusal about the app SPEAKING passes the rung that says nothing — including when the
+    /// ladder wanted to climb** (focus-628, focus-fzf, F-63, R-87).
+    ///
+    /// `FatigueController` has applied `SilenceSubject`'s rule since focus-uru, and it applies it
+    /// to the rung it is *handed*. The ladder hands it an escalation, so a held or capped ladder
+    /// standing on the glyph had exactly one thing to offer and went completely quiet when it was
+    /// refused. Measured on the shipping root, that was eleven of sixteen drifts showing nothing.
+    @Test("a fatigue hold on the escalation leaves the glyph alone")
+    func aRefusedEscalationFallsBackToTheGlyph() {
+        let (ladder, monotonic) = Self.standingAtThePanel()
+        let held = FatigueState(
+            consecutiveIgnoredAccusations: 0,
+            accusationsHeldUntil: monotonic + InterventionPolicy.backoffSpan
+        )
+        // The escalation the ladder wants, and the refusal it meets.
+        #expect(ladder.candidate(at: monotonic, budgetPermits: true)?.kind == .panel)
+        #expect(
+            FatigueController.decide(
+                kind: .accusation,
+                subject: Self.ambientRung().subject,
+                rung: .panel,
+                budget: .empty,
+                fatigue: held,
+                now: monotonic
+            ).refusal?.kind == .heldAtAmbient
+        )
+
+        let decision = Self.decide(
+            Self.judgement(verdict: .unrelated),
+            surroundings: Self.surroundings(monotonic: monotonic),
+            memory: NudgeMemory(fatigue: held, ladder: ladder)
+        )
+
+        #expect(
+            decision.rung?.kind == .ambient,
+            "a backoff that exempts the ambient rung by name silenced it anyway"
+        )
+    }
+
+    /// The other half of the same rule: a refusal about **legibility** stops every rung, glyph
+    /// included, and the fallback must not smuggle one past it.
+    @Test("a correction stops the glyph as well, and the fallback does not smuggle one past it")
+    func aCorrectionStopsTheGlyphToo() {
+        let (ladder, monotonic) = Self.standingAtThePanel()
+        let subject = Self.ambientRung().subject ?? ""
+
+        let decision = Self.decide(
+            Self.judgement(verdict: .unrelated),
+            surroundings: Self.surroundings(monotonic: monotonic),
+            memory: NudgeMemory(correctedSubjects: [subject], ladder: ladder)
+        )
+
+        #expect(decision.rung == nil, "a corrected subject was marked anyway")
+        #expect(decision.silence?.reason == .budgetExhausted)
     }
 
     // MARK: - Neither interruption displaces the other, at the decider's level

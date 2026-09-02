@@ -284,15 +284,24 @@ public struct NudgeSilence: Sendable, Equatable, Hashable {
     public let query: QueryWithholdingReason?
     /// e04's own answer, when an accusation was considered.
     public let accusation: SuppressionReason?
+    /// **The ladder's own answer, when the ladder had nothing to climb to** (focus-628).
+    ///
+    /// The third of three, and the one that did not exist: a ladder with nothing to offer
+    /// arrived here as `.budgetExhausted` whether a cap had closed, a dwell had not elapsed, the
+    /// ladder had topped out or it was held at the ambient rung. Four facts reported as one, and
+    /// the report was wrong for three of them.
+    public let ladder: LadderSilence?
 
     public init(
         reason: NudgeSuppressionReason,
         query: QueryWithholdingReason? = nil,
-        accusation: SuppressionReason? = nil
+        accusation: SuppressionReason? = nil,
+        ladder: LadderSilence? = nil
     ) {
         self.reason = reason
         self.query = query
         self.accusation = accusation
+        self.ladder = ladder
     }
 }
 
@@ -455,17 +464,35 @@ public struct NudgeDecider: Sendable {
         // next, and the fatigue controller's answer depends on the rung — a held ladder still
         // shows the glyph, and a snooze never touches it. Asking in the other order would mean
         // checking a budget against a rung nobody had chosen yet.
-        guard let rung = ladder.candidate(at: surroundings.monotonic, budgetPermits: true) else {
-            // A live mandate with no rung to offer: either the escalation dwell has not
-            // elapsed, or the ladder is held at the ambient rung it has already delivered.
-            // Both are gate 10's business — "a cap, a cooldown or a backoff" — and both are
-            // "not now" rather than "not ever".
-            return .silent(
-                NudgeSilence(reason: .budgetExhausted, accusation: judgement.eligibility.suppressionReason)
-            )
+        //
+        // **And the answer is a silence with a subject now, not a `nil`** (focus-628, focus-50m).
+        // A ladder with nothing to climb to used to arrive here as a bare `nil` and leave as
+        // `.silent(.budgetExhausted)` — four different facts reported as one, and, because a
+        // silence with no subject cannot be asked *which rungs it applies to*, a silence that
+        // took the glyph with it. `SilenceSubject`'s whole rule is that a reason about the app
+        // **speaking** passes a rung that says nothing; `LadderSilence` is that vocabulary and
+        // `retainsTheAmbientRung` is where the rule is applied to it.
+        var rung: LadderRung
+        switch ladder.step(at: surroundings.monotonic, budgetPermits: true) {
+        case .rung(let climbing):
+            rung = climbing
+        case .silent(let silence):
+            guard silence.retainsTheAmbientRung, let retained = ladder.retainedRung else {
+                // Gate 10's business — "a cap, a cooldown or a backoff" — and "not now" rather
+                // than "not ever". The ladder's own reason travels on the silence so that the
+                // report says which of the four it was.
+                return .silent(
+                    NudgeSilence(
+                        reason: .budgetExhausted,
+                        accusation: judgement.eligibility.suppressionReason,
+                        ladder: silence
+                    )
+                )
+            }
+            rung = retained
         }
 
-        let fatigue = FatigueController.decide(
+        var fatigue = FatigueController.decide(
             kind: .accusation,
             subject: rung.subject,
             rung: rung.kind,
@@ -475,6 +502,38 @@ public struct NudgeDecider: Sendable {
             correctedSubjects: memory.correctedSubjects,
             now: surroundings.monotonic
         )
+
+        // **The refusal was read against the rung the ladder wanted to CLIMB to, and nobody asked
+        // it about the rung that says nothing** (focus-628, focus-fzf, F-63, R-87).
+        //
+        // `FatigueController.decide(…)` already applies `SilenceSubject` — a refusal about the app
+        // speaking passes the ambient rung — but it applies it to the rung it is *handed*, and the
+        // ladder hands it an escalation. So a held or capped ladder standing at `.engaged(.ambient,
+        // …)` had exactly one thing left to offer, the escalation, and when that was refused the
+        // app went completely quiet: measured on the shipping composition root, the sixteen-drift
+        // day showed the person nothing at all on eleven of them, with the glyph exempt by name in
+        // every rule involved.
+        //
+        // Asking a second time is the whole repair, and it asks the same function the same way —
+        // there is no second copy of the exemption here, only the rung the first reading never
+        // mentioned. A refusal whose subject is `.anythingToBeLegibleAbout` (a correction) refuses
+        // again and the app is silent, which is the ruling that case exists for.
+        if case .refused(let refusal) = fatigue,
+            rung.kind.makesAnAccusation,
+            refusal.subject.ruling(for: .ambient) == .passes,
+            let retained = ladder.retainedRung {
+            rung = retained
+            fatigue = FatigueController.decide(
+                kind: .accusation,
+                subject: rung.subject,
+                rung: rung.kind,
+                budget: memory.budget,
+                fatigue: memory.fatigue,
+                snoozes: memory.snoozes,
+                correctedSubjects: memory.correctedSubjects,
+                now: surroundings.monotonic
+            )
+        }
 
         // The slot, read through the type that owns the ruling rather than restated here. Since
         // U-2 an accusation is admitted against an empty slot and against another accusation, and

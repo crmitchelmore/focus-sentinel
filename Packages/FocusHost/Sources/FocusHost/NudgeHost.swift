@@ -863,7 +863,13 @@ final class NudgeHost {
         // Folded here rather than in `consider(_:)` because this is the branch that has a mandate:
         // the decision carries the rung, and the rung carries the mandate it was built for.
         ladder.reduce(.mandate(rung.mandate), now: surroundings.monotonic)
-        ladder.offer(at: surroundings.monotonic, budgetPermits: true)
+        // **The rung the decision carries, not a second derivation of it** (focus-628). This line
+        // used to re-run `candidate(at:budgetPermits:)` on the ladder that persists and trust the
+        // two answers to agree. They agreed only for as long as they were the same expression, and
+        // they stopped being one when a refusal about the app *speaking* could send the decider to
+        // `retainedRung`: the host would have recorded the escalation as offered and resolved the
+        // glyph's delivery against it.
+        ladder.offer(rung)
 
         let presentation = accusationPresentation(for: rung, commitment: commitment)
 

@@ -167,12 +167,31 @@ public struct LadderMachine: Sendable, Equatable {
     ///     place a cap lives.
     /// - Returns: the rung to attempt, or `nil`.
     public func candidate(at now: Duration, budgetPermits: Bool) -> LadderRung? {
-        guard let mandate = liveMandate else { return nil }
+        step(at: now, budgetPermits: budgetPermits).rung
+    }
 
-        switch state {
+    /// **The same query, with the silence named** (focus-628, focus-50m).
+    ///
+    /// `candidate(at:budgetPermits:)` answers `LadderRung?`, and for as long as it did, the four
+    /// different reasons it had for answering `nil` arrived at `NudgeDecider.accuse(…)` as one
+    /// fact — which reported all four as `.budgetExhausted` and, because a silence with no
+    /// subject cannot be asked which rungs it applies to, **took the glyph with it**. That is the
+    /// defect `SilenceSubject` exists to make impossible, on the one vocabulary that was not in
+    /// it. `LadderSilence` is the vocabulary; this is where it is produced.
+    ///
+    /// - Parameters:
+    ///   - now: a reading of the injected monotonic clock.
+    ///   - budgetPermits: whether `FatigueController` allows one more accusation. Read **only**
+    ///     for an escalation, as before.
+    public func step(at now: Duration, budgetPermits: Bool) -> LadderOffer {
+        guard let mandate = liveMandate else { return .silent(.noLiveMandate) }
+
+        // The hold's expiry, applied to the reading rather than to the stored state, because this
+        // is a pure query and a query that mutated would be a timer wearing a `func`.
+        switch state.afterTheHoldExpires(at: now) {
         case .idle:
             // Always the bottom of the ladder. `LadderRung.entry(for:)` has no other answer.
-            return LadderRung.entry(for: mandate)
+            return .rung(LadderRung.entry(for: mandate))
 
         case .engaged(let rung, let deliveredAt, _):
             // Fact 1 is `liveMandate` above, and **it no longer asks which subject** (focus-f2a).
@@ -183,9 +202,11 @@ public struct LadderMachine: Sendable, Equatable {
             //
             // Fact 3. `escalationDwell` measured from the DELIVERY, which is the only reading a
             // `.deferred` rung never writes.
-            guard now - deliveredAt >= RelevancePolicy.escalationDwell else { return nil }
+            guard now - deliveredAt >= RelevancePolicy.escalationDwell else {
+                return .silent(.escalationDwell)
+            }
             // Fact 4.
-            guard budgetPermits else { return nil }
+            guard budgetPermits else { return .silent(.budgetRefused) }
             // `nil` at the top: the ladder tops out at the PANEL and there is no third rung
             // above it (U-2). `rung.escalated(for:)` returns `nil` there, which is what makes
             // this the whole of the top-out rather than a case somebody has to remember to add.
@@ -195,7 +216,8 @@ public struct LadderMachine: Sendable, Equatable {
             // `rung.subject` and `resolve(_:snoozeDuration:)` scopes its correction with
             // `CorrectionScope.from(rung.mandate)`, so a rung built from the old mandate would
             // name — and write a rule about — the application the person has already left.
-            return rung.escalated(for: mandate)
+            guard let escalation = rung.escalated(for: mandate) else { return .silent(.toppedOut) }
+            return .rung(escalation)
 
         case .heldAtAmbient:
             // `InterventionPolicy.ignoredAccusationBackoff` rungs went unanswered — two — so the
@@ -205,8 +227,34 @@ public struct LadderMachine: Sendable, Equatable {
             // delivered at the ambient rung is still on screen and still telling the truth
             // (F-146) — but there is nothing new to show, and re-delivering the same glyph
             // every observation would spend the day's budget on a picture that never changed.
-            return nil
+            //
+            // **And it is a silence with a subject now, not a `nil`** (focus-628, focus-50m).
+            // `LadderSilence.heldAtAmbient.retainsTheAmbientRung` is `true`, so the decider asks
+            // for `retainedRung` below and the mark the hold's own doc comment promises is
+            // actually delivered — aimed at the application the person is in *now*, because a
+            // mark naming somewhere they left an hour ago is not the state being legible.
+            return .silent(.heldAtAmbient)
         }
+    }
+
+    /// **The rung the ladder can still deliver when something refuses the climb** (focus-628,
+    /// focus-50m, focus-fzf).
+    ///
+    /// The ambient rung, built for the **live** mandate — the channel that spends neither cap
+    /// (`InterventionEvent.spendsTheInterruptionCap`), holds no slot, and which R-87, F-63 and
+    /// `SilenceSubject.theAppSpeaking` all pass by name. A reason about the app *speaking* was
+    /// never a reason to stop marking somebody, and until this existed there was nothing for the
+    /// decider to fall back **to**: it had a `nil` and a suppression reason and no way to ask the
+    /// ladder for the rung the refusal did not apply to.
+    ///
+    /// `nil` when a rung that **speaks** is standing: taking a sentence off the screen to replace
+    /// it with a mark would be a climb-down, and R-80's argument against re-entering at the rung
+    /// the ladder left is the same argument. `LadderSilence.retainsTheAmbientRung` is `false` for
+    /// both silences that can be reached in that position, so this is a second lock on one door.
+    public var retainedRung: LadderRung? {
+        guard let mandate = liveMandate else { return nil }
+        guard state.deliveredRung?.kind.makesAnAccusation != true else { return nil }
+        return LadderRung.entry(for: mandate)
     }
 
     // MARK: - The reducer
@@ -221,6 +269,20 @@ public struct LadderMachine: Sendable, Equatable {
         return offered
     }
 
+    /// **Record the rung the decider chose, rather than deriving it a second time** (focus-628).
+    ///
+    /// `NudgeDecider.accuse(…)` works out which rung is next on a *copy* of this machine, and
+    /// `NudgeHost.accuse(…)` then re-derived the same answer on the machine that persists. Two
+    /// derivations of one decision agree only for as long as they are the same expression, and
+    /// they stopped being one the moment a refusal could send the decider to `retainedRung`: the
+    /// host would have recorded the escalation as offered and resolved the glyph's delivery
+    /// against it. The decision carries the rung; this is how it is handed over.
+    @discardableResult
+    public mutating func offer(_ rung: LadderRung) -> LadderRung {
+        offered = rung
+        return rung
+    }
+
     /// Fold one event in and return the new state.
     ///
     /// - Parameters:
@@ -229,6 +291,14 @@ public struct LadderMachine: Sendable, Equatable {
     ///     from here, so two replays of one transcript produce byte-identical states.
     @discardableResult
     public mutating func reduce(_ event: LadderEvent, now: Duration) -> LadderState {
+        // **The one thing time does on its own** (focus-50m). Applied here, above every event
+        // including `.tick`, so that a hold which has outlived `InterventionPolicy.backoffSpan`
+        // is gone before anything is decided against it — and so that the state a reader inspects
+        // is the state the ladder is really in rather than an expiry nobody has got round to.
+        // Still no timer (R-96i): the reading is injected, and two replays of one transcript
+        // expire the hold at the same instant.
+        state = state.afterTheHoldExpires(at: now)
+
         switch event {
         case .mandate(let mandate):
             arrive(mandate)
@@ -248,9 +318,10 @@ public struct LadderMachine: Sendable, Equatable {
             stateBeforeDelivery = nil
 
         case .tick:
-            // Time passing changes no state. The reading it carries is what `candidate(…)`
-            // consumes, and a ladder that mutated on a tick would be a ladder with a timer in
-            // it by another name.
+            // Time passing changes one thing and one only, and it is applied above: a hold that
+            // has outlived `backoffSpan` is over. Nothing else moves on a tick — the reading it
+            // carries is what `step(at:budgetPermits:)` consumes, and a ladder that climbed on a
+            // tick would be a ladder with a timer in it by another name.
             break
         }
 
@@ -303,6 +374,15 @@ public struct LadderMachine: Sendable, Equatable {
         switch delivery {
         case .delivered:
             guard let attempted else { return }
+            // **The hold absorbs its own rung** (focus-50m). The ladder came *down* to the
+            // ambient rung and holds there until `backoffSpan`; the mark it retains is delivered
+            // again on every live mandate, because a mark naming an application the person left
+            // is not the state being legible. What it must not do is start the climb again —
+            // `.engaged` here would give the next mandate an escalation to offer and the hold
+            // would have lasted exactly one delivery. Nothing above the ambient rung can be
+            // attempted from this state: `step(at:budgetPermits:)` answers `.silent(.heldAtAmbient)`
+            // and `retainedRung` is the entry rung, so `attempted` is the glyph by construction.
+            if case .heldAtAmbient = state { return }
             // Remembered before it is overwritten, so `undeliver(at:)` can put the ladder back
             // where it stood rather than guessing at it. There is nowhere else to recover it
             // from: the state before a rung was delivered is not a function of the rung.

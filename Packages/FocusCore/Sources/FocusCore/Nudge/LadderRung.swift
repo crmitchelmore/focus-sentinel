@@ -193,6 +193,185 @@ public enum LadderState: Sendable, Equatable, Hashable {
         case .engaged(_, _, let count): count
         }
     }
+
+    /// **The closed set of ladder states, payloads discarded** (focus-628, focus-1ua).
+    ///
+    /// `LadderState` carries a rung, a monotonic reading and a run count, so it cannot be
+    /// `CaseIterable` itself — which is exactly the position `FatigueRefusal` was in one round
+    /// ago, and for six rounds that meant the one answer to *"why did the app go quiet?"* nothing
+    /// could fold over was the one accumulating defects. `FatigueRefusal.Kind` is the shape that
+    /// ended it and this is the same shape: `allCases` is what `LadderSilenceTests` walks, so a
+    /// fourth state cannot reach a person without a witness row driving it.
+    public enum Kind: String, Sendable, CaseIterable, Codable, Hashable {
+        case idle
+        case engaged
+        case heldAtAmbient
+    }
+
+    /// Which state this is, payload discarded.
+    public var kind: Kind {
+        switch self {
+        case .idle: .idle
+        case .engaged: .engaged
+        case .heldAtAmbient: .heldAtAmbient
+        }
+    }
+
+    /// **The rung the ladder has DELIVERED and is still standing on**, if any (focus-50m).
+    ///
+    /// Not `rung`, and the difference is the whole of this round. `.heldAtAmbient` *occupies* the
+    /// ambient rung — `rung` answers it — but that rung was never delivered: `ignore(now:)` puts
+    /// the ladder down onto a rung built from the mandate, and nothing has shown it to anybody.
+    /// So a caller asking *"is there something on screen the person can see?"* must ask this and
+    /// not `rung`, and the hold's answer is `nil`: the mark is still owed.
+    public var deliveredRung: LadderRung? {
+        switch self {
+        case .idle, .heldAtAmbient: nil
+        case .engaged(let rung, _, _): rung
+        }
+    }
+
+    /// **The hold, with its expiry applied** (focus-50m, focus-845).
+    ///
+    /// `FatigueController`'s twin hold was time-bounded to `InterventionPolicy.backoffSpan` by
+    /// focus-845, on the argument that *"a backoff this app imposes lasts an hour, whichever kind
+    /// of interruption tripped it"* — and the ladder's own hold, the one whose case name that
+    /// refusal borrows, was left with no expiry at all. Two ignored rungs held it **for the rest
+    /// of the session**, which is a sentence no other backoff in this app is allowed to say.
+    ///
+    /// A pure function of an injected reading rather than a mutation on a timer (R-96i), so a
+    /// replayed transcript expires the hold at the same instant twice.
+    public func afterTheHoldExpires(at now: Duration) -> LadderState {
+        guard case .heldAtAmbient(_, let since) = self else { return self }
+        return now - since >= InterventionPolicy.backoffSpan ? .idle : self
+    }
+}
+
+/// **Why the ladder had nothing to climb to** — the fourth answer to *"why did the app go
+/// quiet?"*, and the one that had no vocabulary (focus-628, focus-50m, focus-1ua).
+///
+/// ## The defect this type is
+///
+/// `SilenceSubject`'s own doc states the rule absolutely: *"every reason the app has for going
+/// quiet declares its subject here, the evaluation applies it, and a new reason cannot be added
+/// without answering the question"*, and it names the two exhaustive switches that enforce it —
+/// `NudgeSuppressionReason.subject` and `FatigueRefusal.Kind.subject`. **`LadderMachine` was the
+/// third and it was in neither.** It silenced by *arithmetic* rather than by a gate:
+/// `candidate(at:budgetPermits:)` answered `nil`, `NudgeDecider.accuse(…)` turned that `nil` into
+/// `.silent(.budgetExhausted)`, and **the glyph went with it** — the one channel R-87, F-63 and
+/// F-146 all exempt by name, lost to a missing case rather than to any ruling.
+///
+/// This is `FatigueRefusal`'s position one round ago exactly, same table row with a new occupant,
+/// and it had already produced its first defect (focus-fzf) before it was folded.
+///
+/// ## The two facts each case declares, and the one derivation
+///
+/// * `subject` — what the silence is **about**, in `SilenceSubject`'s vocabulary. Four of the
+///   five are about the app *speaking*; the fifth is about there being anything to be legible
+///   about at all.
+/// * `refusesTheClimb` — whether something **stopped** the ladder, or whether the ladder is
+///   simply pacing itself. A refusal is somebody else's answer — a hold, a cap, a mandate that
+///   does not exist — and the rung the ladder last delivered may be long gone. The dwell is not:
+///   the rung it delivered a moment ago is still standing, still true, and re-delivering it would
+///   restart the very clock the dwell measures, so a ladder that "retained" its glyph through a
+///   dwell would never climb again.
+///
+/// `retainsTheAmbientRung` is the two of them put together, once, and it is the answer the
+/// decider reads instead of collapsing a `nil`.
+public enum LadderSilence: String, Sendable, CaseIterable, Codable, Hashable {
+    /// No mandate is live. The ladder is climbing for nobody.
+    case noLiveMandate
+    /// `RelevancePolicy.escalationDwell` has not elapsed since the last **delivery**. The ladder
+    /// has already said what it has to say for now, and the rung that said it is still standing.
+    case escalationDwell
+    /// The budget refused the escalation (fact 4). Read only when a caller asks with
+    /// `budgetPermits: false`; `NudgeDecider` asks with `true` and reads the refusal itself, so
+    /// that the *reason* reaches the log rather than a `Bool`.
+    case budgetRefused
+    /// The ladder is standing on the loudest rung it has and there is nothing above it (U-2).
+    case toppedOut
+    /// `InterventionPolicy.ignoredAccusationBackoff` rungs went unanswered, so the ladder came
+    /// **down** to the ambient rung and holds there until `InterventionPolicy.backoffSpan`.
+    ///
+    /// It does not go silent, and until focus-50m it did: the rung it came down to was never
+    /// delivered, `candidate(at:budgetPermits:)` answered `nil`, and the state the app calls
+    /// *"the glyph still tells the truth"* showed the person nothing at all.
+    case heldAtAmbient
+
+    /// **What this silence is about, and therefore which rungs it may silence** (focus-uru,
+    /// focus-628).
+    ///
+    /// Four of the five are about the app **speaking**: an escalation delayed, an escalation
+    /// refused, an escalation that does not exist, and a ladder held below the rung that speaks.
+    /// None of them is a reason to stop marking somebody who is off task, which is what
+    /// `SilenceSubject.ruling(for:)` says for them and what the arithmetic said the opposite of.
+    ///
+    /// `noLiveMandate` is the fifth and it is the one legibility case: with no mandate there is
+    /// nothing to be off task **about**, so a glyph that went on marking would not be telling the
+    /// truth — and the whole argument for exempting it is that it tells the truth.
+    public var subject: SilenceSubject {
+        switch self {
+        case .noLiveMandate: .anythingToBeLegibleAbout
+        case .escalationDwell, .budgetRefused, .toppedOut, .heldAtAmbient: .theAppSpeaking
+        }
+    }
+
+    /// **Whether something stopped the ladder, or the ladder is pacing itself.**
+    ///
+    /// The distinction decides whether the app still owes the person a mark, and it is not
+    /// derivable from the subject: `escalationDwell` and `heldAtAmbient` are both about the app
+    /// speaking and only one of them leaves the person unmarked.
+    ///
+    /// * `noLiveMandate` — the climb has no subject. A refusal, and the strongest one: its
+    ///   subject stops every rung, which is why this property alone is not the answer.
+    /// * `budgetRefused`, `heldAtAmbient` — a cap, a cooldown or a backoff said no. The rung the
+    ///   ladder last delivered may have ended an hour ago; the person is still drifting.
+    /// * `escalationDwell`, `toppedOut` — the ladder's own pacing, and in both the rung it
+    ///   delivered is **still standing**: the glyph within the dwell, the panel at the top. There
+    ///   is nothing new to show, and showing it again would take a sentence down to replace it
+    ///   with a mark.
+    public var refusesTheClimb: Bool {
+        switch self {
+        case .noLiveMandate, .budgetRefused, .heldAtAmbient: true
+        case .escalationDwell, .toppedOut: false
+        }
+    }
+
+    /// **Whether the app still owes the person the rung that says nothing.**
+    ///
+    /// The two facts above put together, in one place, exactly as `SilenceSubject.ruling(for:)`
+    /// is the one application of its own rule. `true` for `budgetRefused` and `heldAtAmbient`;
+    /// `false` for `noLiveMandate`, whose subject stops every rung, and for the two where the
+    /// ladder's own delivery is still on screen.
+    public var retainsTheAmbientRung: Bool {
+        refusesTheClimb && subject.ruling(for: .ambient) == .passes
+    }
+}
+
+/// **What the ladder would do now**: climb to a rung, or go quiet for a reason it can name.
+///
+/// The type that replaces `LadderRung?`. A `nil` candidate was four different facts collapsed
+/// into one, and the collapse is what let `NudgeDecider.accuse(…)` report every one of them as
+/// `.budgetExhausted` and take the glyph with it.
+public enum LadderOffer: Sendable, Equatable, Hashable {
+    case rung(LadderRung)
+    case silent(LadderSilence)
+
+    /// The rung, or `nil`. The shape `candidate(at:budgetPermits:)` keeps for callers that only
+    /// want to know whether there is one.
+    public var rung: LadderRung? {
+        switch self {
+        case .rung(let rung): rung
+        case .silent: nil
+        }
+    }
+
+    public var silence: LadderSilence? {
+        switch self {
+        case .rung: nil
+        case .silent(let silence): silence
+        }
+    }
 }
 
 /// The things that end a ladder outright.

@@ -270,12 +270,37 @@ struct LadderMachineTests {
         #expect(rung.kind == .ambient)
         #expect(since == at)
 
-        // Held is not silent — the glyph is still on screen and still true (F-146) — but there
-        // is nothing new to show, however long the person keeps drifting.
-        #expect(machine.candidate(at: at + .seconds(86_400), budgetPermits: true) == nil)
+        // Held is not silent, and **it is the ladder that has to say so** (focus-50m, focus-628).
+        // There is nothing to CLIMB to — that is what the hold is — but the rung that says
+        // nothing is still owed, and the silence names itself so the decider can ask.
+        let held = machine.step(at: at + .seconds(60), budgetPermits: true)
+        #expect(held.rung == nil)
+        #expect(held.silence == .heldAtAmbient)
+        #expect(held.silence?.retainsTheAmbientRung == true, "the hold stopped owing the mark")
+        #expect(machine.retainedRung?.kind == .ambient)
+
+        // **And it has an expiry** (focus-50m, focus-845). It used to hold for the rest of the
+        // session, which is a sentence no other backoff in this app is allowed to say: the twin
+        // hold in `FatigueController` was bounded to `InterventionPolicy.backoffSpan` a round ago
+        // on the argument that a backoff this app imposes lasts an hour.
+        #expect(
+            machine.candidate(
+                at: at + InterventionPolicy.backoffSpan - .seconds(1), budgetPermits: true
+            ) == nil,
+            "the hold lifted before backoffSpan had elapsed"
+        )
+        #expect(
+            machine.candidate(at: at + InterventionPolicy.backoffSpan, budgetPermits: true)?.kind
+                == .ambient,
+            "the hold outlived InterventionPolicy.backoffSpan"
+        )
+        #expect(
+            machine.candidate(at: at + .seconds(86_400), budgetPermits: true)?.kind == .ambient,
+            "a day later the ladder was still held"
+        )
     }
 
-    @Test("the hold survives more drift and lifts only on a de-escalation")
+    @Test("the hold survives more drift and lifts on a de-escalation or on its own expiry")
     func theHoldLiftsOnlyOnDeEscalation() {
         var machine = LadderMachine()
         _ = Self.delivering(&machine, mandate: Self.decoy, at: .seconds(0))
@@ -290,6 +315,17 @@ struct LadderMachineTests {
         machine.reduce(.deEscalated(.returnedToTask), now: .seconds(1010))
         machine.reduce(.mandate(Self.decoy), now: .seconds(1020))
         #expect(machine.candidate(at: .seconds(1020), budgetPermits: true)?.kind == .ambient)
+
+        // The other way out, on a ladder nobody de-escalated: time (focus-50m). Driven through
+        // the reducer rather than the query, because the state a reader inspects has to be the
+        // state the ladder is really in.
+        var patient = LadderMachine()
+        _ = Self.delivering(&patient, mandate: Self.decoy, at: .seconds(0))
+        for _ in 0..<InterventionPolicy.ignoredAccusationBackoff {
+            patient.reduce(.rungIgnored, now: .seconds(0))
+        }
+        patient.reduce(.tick(InterventionPolicy.backoffSpan), now: InterventionPolicy.backoffSpan)
+        #expect(patient.state == .idle, "a tick past backoffSpan left the hold standing")
     }
 
     @Test("an ignore before anything was delivered changes nothing")
