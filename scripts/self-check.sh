@@ -2215,6 +2215,20 @@ check(
     "getNotificationSettings was really read: at least one completion landed",
     report.get("notificationAuthorisationReads"),
 )
+# **And the report WAITED for it rather than racing it.**
+#
+# This lane could not make this assertion at all until the key was lifted to the root beside the
+# other four. `Reads >= 1` above is the weaker half of one repair: a completion that landed while
+# the report was already being assembled satisfies it, and that is exactly the race focus-652
+# measured — notRequested, notRequested, authorised, notRequested at one commit on one machine.
+# `notification-denied` has asserted this since focus-652 and it runs against the **Debug**
+# product; this script is the only reader of the notification boundary on the **Release** one, so
+# without this line the artefact that ships had the weaker of the two readings.
+check(
+    report.get("notificationAuthorisationWasRead") is True,
+    "the report waited for that read rather than racing it",
+    report.get("notificationAuthorisationWasRead"),
+)
 check(
     report.get("notificationAuthorisation") != "unread",
     "the run had a decoded authorisation in hand rather than the absence of one",
@@ -2362,9 +2376,15 @@ check(
     "only a delivery spends a cap, whatever the record has learned to say",
     nudge.get("dispositionsSpendingACap"),
 )
+# **The vocabulary, pinned rather than searched.** This read `"unopened" in dispositionsDeclared`
+# — a membership test, so a fifth disposition appearing, or any of the other three disappearing,
+# was invisible to it. The set is what the whole record is made of and what `spendsBudget` is a
+# predicate on, so it is pinned in both directions beside the cap claim above it.
 check(
-    "unopened" in (nudge.get("dispositionsDeclared") or []),
-    "the record can say a badge invitation was never opened",
+    nudge.get("dispositionsDeclared") == [
+        "deferred", "delivered", "suppressed", "unopened"
+    ],
+    "the record's dispositions are exactly these four, one of which is a badge nobody opened",
     nudge.get("dispositionsDeclared"),
 )
 
@@ -2548,9 +2568,15 @@ check(
 #
 # Exact equality rather than a floor: a floor cannot see an exit being *removed*, and both edits
 # this line has survived were removals. A count that only fails upward is half a lint.
+# **Named, not counted** (focus-gtr). A count fails on an exit joining or leaving and passes on
+# one being swapped for another or renamed — which is the same half-claim `querySurface in (…)`
+# made about the router, and the same half-claim `"unopened" in dispositionsDeclared` made below.
+# The set is small, closed and committed, so it is pinned in both directions.
 check(
-    len(nudge.get("questionExitsDeclared") or []) == 5,
-    "every way an open question can end is enumerated",
+    nudge.get("questionExitsDeclared") == [
+        "answered", "neverDelivered", "screenReclaimed", "surfaceWentOutOfReach", "worldMovedOn"
+    ],
+    "every way an open question can end is enumerated, and they are exactly these five",
     nudge.get("questionExitsDeclared"),
 )
 # **And exactly one of them owes the record** (focus-h0s).
@@ -2584,8 +2610,11 @@ check(
 # cannot see an exit being removed. The sixth is `worldMovedOn` — a session ending, a break, a
 # commitment change or a quit — which nobody had counted as a door at all.
 check(
-    len(nudge.get("rungExitsDeclared") or []) == 6,
-    "every way a delivered rung can end is enumerated",
+    nudge.get("rungExitsDeclared") == [
+        "answered", "displayStranded", "presentationWithdrew", "replaced", "screenReclaimed",
+        "worldMovedOn"
+    ],
+    "every way a delivered rung can end is enumerated, and they are exactly these six",
     nudge.get("rungExitsDeclared"),
 )
 # **And exactly the two that mean the app took the surface away withdraw the delivery** (R-81).

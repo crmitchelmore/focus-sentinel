@@ -552,6 +552,17 @@ enum SelfCheck {
         root["interventionDigest"] = nudge["interventionDigest"] ?? ""
         root["notificationAuthorisation"] = nudge["notificationAuthorisation"] ?? "unread"
         root["notificationAuthorisationReads"] = nudge["notificationAuthorisationReads"] ?? -1
+        // **The half the Release lane could not see** (focus-652's sibling). Four of the five keys
+        // focus-652 published were lifted here and `…WasRead` was not, so `self-check.sh` — which
+        // is the ONLY stage that reads the notification boundary on the **Release** product, since
+        // `notification-denied` and `focus-steal` both run against Debug — could assert that a
+        // read had *landed* but not that the report had **waited** for it. Those are the two
+        // halves of one repair: `Reads >= 1` is satisfied by a completion that arrived while the
+        // report was already being assembled, which is the race focus-652 measured four times.
+        // A key lifted for one lane and withheld from the other is this programme's commonest
+        // defect wearing a dictionary key.
+        root["notificationAuthorisationWasRead"] =
+            nudge["notificationAuthorisationWasRead"] ?? false
         root["notificationAuthorisationDecodeTable"] =
             nudge["notificationAuthorisationDecodeTable"] ?? ""
         root["notificationAuthorisationDecodeCells"] =
