@@ -266,7 +266,14 @@ if table:
     # microphone, `silentVisual` or a hidden menu bar was invisible to it. The fold is now 160
     # cells, its size is asserted before the set it qualifies, and the honest set is three: the
     # badge really is reachable, under exactly the conditions the two-cell table pinned away.
-    every_rung_cells = (report.get("ladderRungsDeclared") or 0) * route_space_cells
+    #
+    # **The size is a committed literal, not a number the report chose** (focus-bkf). Written as
+    # `report["ladderRungsDeclared"] * route_space_cells`, the expected value moved with the
+    # reading: a binary that declared one rung and folded 80 cells satisfied it exactly, which is
+    # the defect this row exists to catch, folded in half. The literal `2` is D-06-as-amended's
+    # rung count, asserted of the report in its own right above at `ladderRungsDeclared == 2`, and
+    # it is the same spelling `self-check.sh:2796` uses for the same fold.
+    every_rung_cells = 2 * route_space_cells
     check(
         report.get("surfacesARungCanReachCellsChecked") == every_rung_cells,
         f"the surfaces-a-rung-reaches fold covers all {every_rung_cells} cells rather than two",
