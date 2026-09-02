@@ -23,7 +23,7 @@ and `tuist` is not used.
 | `Packages/FocusUI` | every SwiftUI view, scene, command and design token |
 | `Packages/FocusHost` | the composition layer — `AppComposition` and the five hosts. The only module that imports more than one sibling package, and the reason it is a package rather than the app target is that `App/` is not one: no test bundle could import it, so every claim about the wiring in it was a source scan (see "Why the composition layer is a package" below) |
 | `Config/` | build inputs that are neither app source nor scripts. Exactly one file: `FocusSentinel-Info.plist`, the partial plist carrying `CFBundleURLTypes`. It lives here and **not** in `App/` — see "The project file" below |
-| `scripts/` | the build gate and its seventeen stages, plus the six live evidence lanes |
+| `scripts/` | the build gate and its twenty-two stages, plus the six live evidence lanes |
 | `Tools/windowid` | a test driver: window ids for `screencapture -l`, read from the public window list without ever asking for a window *name*. Not part of the shipping app's package graph |
 
 ---
@@ -122,14 +122,22 @@ the stage logs are the evidence, and they are kilobytes. A pinned `FOCUS_DERIVED
 | 9 | `self-check.sh` ×2 | the app's own zero-grant report of its menu bar, window and key equivalents — and, from e02, its declared URL schemes, its hot-key registration status, the Edit menu's undo title after one scripted in-process mutation, the pre-built capture panel's show latency, and the priority hero's point size against every other type role. From e03 it is **three launches**: the shell report, plus a session seeded back-dated ninety minutes into a store of its own and a **separate** launch that restores it. See "What the self-check adds in e03" below |
 | 9a | `check-focus-steal.sh` | **the panel takes nothing.** Launches the Debug app with `open -g -a` — a background application that has never been frontmost, which is the posture a nudge really fires in — shows the panel and asserts all four of R-89's grant-free readings. See "The nudge loop" below |
 | 9b | `check-notification-denied.sh` | **F-73's degraded path, and what discharges standing condition 5 for e05.** Zero grants, no prompt of any kind, and every rung of the ladder still reaches an in-app surface; `requestAuthorizationCallCount == 0` |
+| 9c | `check-focus-steal.sh` again | the same stage against the **Release** product — the artefact this programme ships. A whole-module-optimised binary is not the same binary, which is why the boundary and forbidden stages read both configurations; until this stage existed, every geometry reading in `check-focus-steal.sh` held of a build nobody installs |
+| 9d | `check-notification-denied.sh` again | the same, for the routing half: the 160-cell rung fold, the 80-cell question fold and `requestAuthorizationCallCount == 0`, read from the Release product |
 | 10 | `verify-project.sh` again | the build did not rewrite the project |
 
-**Twenty stages — it was nineteen until `unit-counts` was added.** Saying so plainly, because
-the epic's close condition names the count: `project`, `boundaries`, `forbidden`, `strings`,
-`build-debug`, `build-release`, `packaging`, `eval-clean`, `unit`, **`unit-counts`**,
-`evaluation`, `boundaries-binary`, `forbidden-binary`, `entitlements-debug`,
-`entitlements-release`, `selfcheck-debug`, **`focus-steal`**, **`notification-denied`**,
-`selfcheck-release`, `project-post`.
+**Twenty-two stages — it was twenty until `focus-steal-release` and
+`notification-denied-release` were added.** Saying so plainly, because the epic's close
+condition names the count: `project`, `boundaries`, `forbidden`, `strings`, `build-debug`,
+`build-release`, `packaging`, `eval-clean`, `unit`, **`unit-counts`**, `evaluation`,
+`boundaries-binary`, `forbidden-binary`, `entitlements-debug`, `entitlements-release`,
+`selfcheck-debug`, **`focus-steal`**, **`notification-denied`**, `selfcheck-release`,
+**`focus-steal-release`**, **`notification-denied-release`**, `project-post`.
+
+The two Release twins exist because a gate audit on 2026-09-02 found that `focus-steal` and
+`notification-denied` read the **Debug** product only, so `selfcheck-release` was the gate's
+sole reader of a Release artefact and its versions of those readings are thinner. Every
+assertion the two stages make now holds of the build that ships.
 
 `unit-counts` exists because a gate run on 2026-09-02 went 19 stages green while a test bundle
 died after its first suite: every test that ran passed, `xcodebuild` printed `** TEST FAILED **`

@@ -876,6 +876,28 @@ gate() {
         run_stage "selfcheck-release" "$LOG_DIR/focus-selfcheck-release.log" \
         scripts/self-check.sh "$DD/Build/Products/Release/FocusSentinel.app"
 
+    # 9c, 9d — the same two stages against the artefact this programme SHIPS (focus-bkf).
+    #
+    # Both stages above read the DEBUG product only, and `selfcheck-release` was the gate's sole
+    # reader of a Release artefact. So every geometry assertion in `check-focus-steal.sh` — the
+    # panel's committed width, its ceiling, the hit test at the centre of every action, the
+    # popover's two states — and every routing assertion in `check-notification-denied.sh` — the
+    # 160-cell rung fold, the 80-cell question fold, `requestAuthorizationCallCount == 0` — held
+    # of a build nobody installs, and `self-check.sh`'s Release twins of them are thinner. A
+    # whole-module-optimised binary is not the same binary: that is the reason the boundary and
+    # forbidden stages read both configurations one object at a time, and it applies here.
+    #
+    # The scripts take the app path, so this costs two `open -g -a` launches and no new
+    # machinery. They run last because they launch and kill the application, and the Debug
+    # instance must be gone before the Release one starts — `cleanup` in each script does that.
+    FOCUS_FOCUS_STEAL_JSON="$LOG_DIR/focus-focus-steal-release.json" \
+        run_stage "focus-steal-release" "$LOG_DIR/focus-focus-steal-release.log" \
+        scripts/check-focus-steal.sh "$DD/Build/Products/Release/FocusSentinel.app"
+
+    FOCUS_NOTIFICATION_DENIED_JSON="$LOG_DIR/focus-notification-denied-release.json" \
+        run_stage "notification-denied-release" "$LOG_DIR/focus-notification-denied-release.log" \
+        scripts/check-notification-denied.sh "$DD/Build/Products/Release/FocusSentinel.app"
+
     # 10 — project integrity again. Stages 5–7 are the ones that could provoke a rewrite.
     run_stage "project-post" "$LOG_DIR/focus-project-post.log" scripts/verify-project.sh
 
@@ -945,6 +967,10 @@ collect_evidence() {
         "focus-focus-steal.json:focus-steal.json"
         "focus-notification-denied.log:notification-denied.log"
         "focus-notification-denied.json:notification-denied.json"
+        "focus-focus-steal-release.log:focus-steal-release.log"
+        "focus-focus-steal-release.json:focus-steal-release.json"
+        "focus-notification-denied-release.log:notification-denied-release.log"
+        "focus-notification-denied-release.json:notification-denied-release.json"
         "focus-selfcheck-release.json:selfcheck-release.json"
         "focus-eval-clean.log:eval-clean.log"
         "focus-evaluation.log:evaluation.log"
