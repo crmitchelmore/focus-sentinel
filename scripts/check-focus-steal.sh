@@ -426,11 +426,27 @@ check(
 popover_ceiling = popover.get("maximumContentHeight")
 for state in ("empty", "fullest"):
     measured_popover = popover.get(state) or {}
+    # **The comparison is taken here, from the two numbers** (focus-bkf). This row read the
+    # binary's own `isTheCommittedWidth`, so a layout function that had stopped honouring its
+    # commitment could go on reporting that it had and this stage would believe it. The
+    # arithmetic below is the one the panel's width row does at :337-345; the published flag is
+    # then asserted to AGREE with it, which reads the binary's comparison without trusting it.
+    state_width = measured_popover.get("width")
+    is_committed = (
+        isinstance(state_width, (int, float))
+        and isinstance(popover_width, (int, float))
+        and abs(state_width - popover_width) <= tolerance
+    )
     check(
-        measured_popover.get("isTheCommittedWidth") is True,
+        is_committed,
         f"the {state} popover is the committed {popover_width} points wide "
-        f"(measured {measured_popover.get('width')})",
+        f"(measured {state_width})",
         measured_popover,
+    )
+    check(
+        measured_popover.get("isTheCommittedWidth") is is_committed,
+        f"the {state} popover's own width verdict agrees with the width it reported",
+        (measured_popover.get("isTheCommittedWidth"), state_width, popover_width),
     )
     popover_height = measured_popover.get("height")
     check(
