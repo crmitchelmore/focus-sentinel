@@ -535,6 +535,7 @@ evaluation_stage() {
         "$EVAL_REPORT" "$EVAL_STAGED_REPORT" "$EVAL_MARKER" "$GATE_RUN_ID" \
         "$COMMITTED_STAMP" "$COMMITTED_DIGEST" "$REPO_ROOT/$CORPUS_DIR" \
         "$COMMITTED_INTERVENTION_DIGEST" <<'PYTHON'
+import hashlib
 import json
 import os
 import sys
@@ -674,12 +675,47 @@ check(
     (report.get("corpusDigest"), recomputed),
 )
 
-# --- B5 · the bytes parsed are this run's copy --------------------------------------------
-check(
-    parsed_path and parsed_path != staging_path,
-    "B5 the parsed bytes are the per-run copy, not the shared staging file",
-    (parsed_path, staging_path),
-)
+# --- B5 · the bytes parsed are this run's copy of what the product wrote -------------------
+#
+# **This row used to compare two paths the script had computed from its own constants**
+# (focus-bkf): `parsed_path != staging_path` is a statement about two shell variables, and no
+# state of the product, the report or the filesystem could falsify it. It was green by
+# construction, under a sentence claiming something about bytes.
+#
+# The claim is about bytes, so bytes are what it reads. Three readings, and each has a state it
+# goes red in: the copy exists and is not empty; it is a *different file* from the staging one
+# (device and inode, not spelling, so a symlink or a second name for the same file is caught);
+# and it is byte-identical to the report `FocusEvaluate` actually wrote, which is what makes
+# "the copy is this run's evidence" a fact rather than a naming convention.
+try:
+    with open(parsed_path, "rb") as handle:
+        parsed_bytes = handle.read()
+    with open(staging_path, "rb") as handle:
+        staged_bytes = handle.read()
+    parsed_stat = os.stat(parsed_path)
+    staged_stat = os.stat(staging_path)
+except OSError as error:
+    parsed_bytes = staged_bytes = parsed_stat = staged_stat = None
+    check(False, "B5 both the parsed copy and the staged report could be read", str(error))
+
+if parsed_bytes is not None:
+    check(
+        len(parsed_bytes) > 0,
+        f"B5 the parsed copy carries the report's bytes ({len(parsed_bytes)} of them)",
+        parsed_path,
+    )
+    check(
+        (parsed_stat.st_dev, parsed_stat.st_ino) != (staged_stat.st_dev, staged_stat.st_ino),
+        "B5 the parsed bytes are the per-run copy, not the shared staging file",
+        (parsed_path, staging_path),
+    )
+    parsed_digest = hashlib.sha256(parsed_bytes).hexdigest()
+    staged_digest = hashlib.sha256(staged_bytes).hexdigest()
+    check(
+        parsed_digest == staged_digest,
+        f"B5 the copy is byte-identical to the report FocusEvaluate wrote ({parsed_digest[:16]})",
+        (parsed_digest, staged_digest),
+    )
 
 print()
 if failures:
