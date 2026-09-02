@@ -332,6 +332,128 @@ forbidden_binary_stage() {
     FOCUS_REQUIRE_BINARY_CHECK=1 scripts/check-forbidden.sh
 }
 
+# Stage 7' — unit-counts (focus-jg7). **The gate must be able to see a test bundle die.**
+#
+# ## What happened, and why the exit status did not catch it
+#
+# Gate run `finalgate`, 2026-09-02: 19 of 20 stages `EXIT=0`, `unit` `EXIT=65`, and EVERY TEST
+# PASSED — zero `Issue recorded` in a 124 000-line log, all six bundles printing `passed`. The
+# `FocusHost` bundle ran FIVE tests in ONE suite where it runs about 200, and then the run
+# ended. `xcodebuild` printed `** TEST FAILED **` with no failing-test summary, which is what a
+# bundle *dying* rather than a test *failing* looks like. The cause was a CoreAudio listener
+# calling `MainActor.assumeIsolated` off the main queue (focus-068): SIGTRAP, mid-suite.
+#
+# The exit status did catch that one. What it cannot catch is the same death on a run whose
+# `xcodebuild` recovers — `Restarting after unexpected exit, crash, or test timeout; summary
+# will include totals from previous launches` is a retry, and a retry that then passes exits
+# `0` having run a fraction of the suite. Totals: 1729 that day against 1863 the run before.
+# Nothing in the gate compared those numbers or complained.
+#
+# ## So three readings, and each has a state it goes red in
+#
+# 1. **The log names a death.** `Program crashed`, `Restarting after unexpected exit`, or a
+#    `Test Suite 'Selected tests' started` retry banner — measured absent from a clean six-bundle
+#    log (`focus-gate-20260831T215543Z-27482`: zero occurrences of all three) and present in the
+#    `finalgate` one. Judged REGARDLESS OF EXIT STATUS, because the recovering case is the one
+#    the exit status hides.
+# 2. **Six bundles reported.** Fewer `Test run with N tests` lines than the scheme has testables
+#    means a bundle produced no summary at all, which is the loudest form of the same failure.
+# 3. **Each bundle is at or above its committed floor**, from `Config/test-floors.txt`, paired
+#    with the summary lines POSITIONALLY in the scheme's testable order. Floors, never
+#    equalities: adding a test may not redden the gate, and losing one must.
+#
+# It is a stage of its own rather than a line inside `unit`, for the reason stage 7d is:
+# it has to fail the gate *on a number*, and a number that only lives inside an `.xcresult` is a
+# number nobody reads.
+unit_counts_stage() {
+    local log="$LOG_DIR/focus-test.log"
+    local floors="Config/test-floors.txt"
+    local rc=0
+
+    print "unit log:   $log"
+    print "floors:     $floors"
+
+    if [[ ! -f "$log" ]]; then
+        print -u2 "FAIL [unit-counts] there is no unit-lane log at $log"
+        print -u2 "    A missing log is not an absent reading, it is an unread one."
+        return 1
+    fi
+    if [[ ! -f "$floors" ]]; then
+        print -u2 "FAIL [unit-counts] the committed floors are missing at $floors"
+        return 1
+    fi
+
+    # --- 1: the log names a death ---------------------------------------------------------
+    local -a DEATH_MARKERS=(
+        "Program crashed"
+        "Restarting after unexpected exit"
+        "Test Suite 'Selected tests' started"
+    )
+    local marker hits
+    for marker in $DEATH_MARKERS; do
+        hits=$(grep -c -F -- "$marker" "$log")
+        if (( hits > 0 )); then
+            print -u2 "FAIL [unit-counts] the unit log contains '$marker' ($hits)"
+            print -u2 "    A bundle died or was restarted mid-run. Every test that ran may well"
+            print -u2 "    have passed; the ones that never ran are the reading that matters."
+            rc=1
+        else
+            print "ok   [unit-counts] no '$marker' in the unit log"
+        fi
+    done
+
+    # --- 2 and 3: the six summaries, positionally against the committed floors -------------
+    local -a NAMES FLOOR_VALUES COUNTS
+    local line name value
+    while IFS= read -r line; do
+        [[ "$line" == \#* || -z "${line// /}" ]] && continue
+        name="${line%% *}"
+        value="${line##* }"
+        NAMES+=("$name")
+        FLOOR_VALUES+=("$value")
+    done < "$floors"
+
+    COUNTS=(${(f)"$(grep -o 'Test run with [0-9]* tests' "$log" | grep -o '[0-9]*')"})
+
+    print "     [unit-counts] ${#NAMES} floors committed, ${#COUNTS} bundle summaries in the log"
+    if (( ${#COUNTS} < ${#NAMES} )); then
+        print -u2 "FAIL [unit-counts] only ${#COUNTS} of ${#NAMES} bundles reported a test run"
+        print -u2 "    Counts seen: ${COUNTS}"
+        print -u2 "    A bundle that printed no summary produced no evidence, whatever the"
+        print -u2 "    lane's exit status says."
+        rc=1
+    fi
+
+    local i floor count
+    for i in {1..${#NAMES}}; do
+        name="${NAMES[$i]}"
+        floor="${FLOOR_VALUES[$i]}"
+        count="${COUNTS[$i]:-}"
+        if [[ -z "$count" ]]; then
+            print -u2 "FAIL [unit-counts] $name reported no test count at all (floor $floor)"
+            rc=1
+            continue
+        fi
+        if (( count < floor )); then
+            print -u2 "FAIL [unit-counts] $name ran $count tests, below its committed floor of $floor"
+            print -u2 "    Either tests were deleted — in which case say so and lower the floor in"
+            print -u2 "    Config/test-floors.txt — or the bundle did not finish."
+            rc=1
+        else
+            print "ok   [unit-counts] $name ran $count tests (floor $floor)"
+        fi
+    done
+
+    if (( ${#COUNTS} > ${#NAMES} )); then
+        print -u2 "FAIL [unit-counts] ${#COUNTS} bundles reported but only ${#NAMES} floors are committed"
+        print -u2 "    A testable was added to the scheme without a floor. Add its line to"
+        print -u2 "    Config/test-floors.txt, in the scheme's order — the pairing is positional."
+        rc=1
+    fi
+
+    return $rc
+}
+
 # Stage 6b — eval-clean (R-75.1, R-75.3).
 #
 # Delete the shared staging directory in its entirety, then touch the marker every later
@@ -631,6 +753,11 @@ gate() {
     run_stage "unit" "$LOG_DIR/focus-test.log" \
         xcodebuild -workspace Focus.xcworkspace -scheme FocusUnitTests \
         -destination "$DESTINATION" -derivedDataPath "$DD" -resultBundlePath "$RB" test
+
+    # 7' — unit-counts. Immediately after `unit`, because it reads that stage's log, and
+    # before the snapshot copy so that a bundle which died is reported before anything else
+    # this run produces is read as though the suite had finished.
+    run_stage "unit-counts" "$LOG_DIR/focus-unit-counts.log" unit_counts_stage
 
     # 7a — take this run's own copy of the snapshot renders out of the shared staging
     # directory the test process chose. See the SNAPSHOT_STAGING note above for why the gate

@@ -114,6 +114,7 @@ the stage logs are the evidence, and they are kilobytes. A pinned `FOCUS_DERIVED
 | 6a | packaging | read from the two logs and the two products stages 5 and 6 just made: neither log contains `Copy Bundle Resources build phase contains`, neither product ships a `Contents/Resources/Info.plist`, and the merged `Contents/Info.plist` carries both the `focus` scheme and every generated key. See "The project file" |
 | 6b | `eval-clean` | **the only cleanup stage in the gate.** It removes `$FOCUS_EVAL_OUT` (default `$TMPDIR/focus-eval`) in its entirety and touches an mtime marker, immediately before `unit`. A missing directory is a pass; a failure to remove is a hard fail. See "The evaluation lane" below for why a gate needs one |
 | 7 | the unit lane | every package test target, headless |
+| 7' | `unit-counts` | **the gate can see a test bundle die.** Reads the unit lane's own log: no `Program crashed`, no `Restarting after unexpected exit`, no `Test Suite 'Selected tests' started` retry banner — *regardless of exit status*, because a retry that then passes exits `0` having run a fraction of the suite — six `Test run with N tests` summaries, and each `>=` its committed floor in `Config/test-floors.txt`, paired positionally with the scheme's testables. Floors, never equalities: adding a test may not redden the gate and losing one must. See `focus-jg7` |
 | 7d | `evaluation` | runs the `FocusEvaluate` **product**, copies its report into this run's log directory *before* anything parses it, applies five binding checks to that copy, and only then reports the metric verdict. See "The evaluation lane" |
 | 7b | `check-boundaries.sh` again | `nm -u FocusClassify.o` has no networking symbol — the binary-level form of the assertion, which needs a build product to exist |
 | 7c | `check-forbidden.sh` again | the binary half of SC-1: `nm -u` finds no `_kCGWindowName` in **seven products named one by one** — the app binary, `FocusCore.o`, `FocusSensing.o`, `FocusRules.o`, `FocusClassify.o`, `FocusUI.o` and `Tools/windowid` — while the four sanctioned window-list symbols are asserted **present** in `windowid`, so the check cannot pass by the tool being gutted. Under `FOCUS_REQUIRE_BINARY_CHECK=1` a *missing* product is a failure, not a skipped line. `windowid` is built by the stage itself, because it lives outside the workspace scheme |
@@ -123,11 +124,18 @@ the stage logs are the evidence, and they are kilobytes. A pinned `FOCUS_DERIVED
 | 9b | `check-notification-denied.sh` | **F-73's degraded path, and what discharges standing condition 5 for e05.** Zero grants, no prompt of any kind, and every rung of the ladder still reaches an in-app surface; `requestAuthorizationCallCount == 0` |
 | 10 | `verify-project.sh` again | the build did not rewrite the project |
 
-**Nineteen stages.** The count matters because the epic's close condition names it: `project`,
-`boundaries`, `forbidden`, `strings`, `build-debug`, `build-release`, `packaging`,
-`eval-clean`, `unit`, `evaluation`, `boundaries-binary`, `forbidden-binary`,
-`entitlements-debug`, `entitlements-release`, `selfcheck-debug`, **`focus-steal`**,
-**`notification-denied`**, `selfcheck-release`, `project-post`.
+**Twenty stages — it was nineteen until `unit-counts` was added.** Saying so plainly, because
+the epic's close condition names the count: `project`, `boundaries`, `forbidden`, `strings`,
+`build-debug`, `build-release`, `packaging`, `eval-clean`, `unit`, **`unit-counts`**,
+`evaluation`, `boundaries-binary`, `forbidden-binary`, `entitlements-debug`,
+`entitlements-release`, `selfcheck-debug`, **`focus-steal`**, **`notification-denied`**,
+`selfcheck-release`, `project-post`.
+
+`unit-counts` exists because a gate run on 2026-09-02 went 19 stages green while a test bundle
+died after its first suite: every test that ran passed, `xcodebuild` printed `** TEST FAILED **`
+with no failing-test summary, and the run's total was 1729 against 1863 the run before. Nothing
+compared those two numbers. A harness that can silently skip 177 tests and report green is a
+proof that cannot fail, which is the thing this repository exists to be rid of.
 
 ### What the self-check adds in e03
 
