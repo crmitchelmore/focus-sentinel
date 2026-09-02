@@ -59,10 +59,23 @@
 #
 # The one e05 addition is a ruling of the same kind (plan R-82, T137):
 #
-#   * **`UserNotifications` for `FocusUI`.** The top rung of the accusation ladder is a
-#     notification where the person has authorised one, and a notification is a surface — so it
-#     belongs in the package that owns surfaces, behind the `NotificationCentring` seam that
-#     lets every one of R-82's rulings be tested with no grant and no notification centre.
+#   * **`UserNotifications` for `FocusUI`.** **The justification here named the rung U-2 deleted**
+#     (focus-3vb, focus-484). It read "the top rung of the accusation ladder is a notification
+#     where the person has authorised one" — and since U-2 no rung routes to a notification at
+#     all, so this line was the enabling half of a ban nothing enforced: a reader checking why the
+#     framework is permitted found a reason that had stopped being true.
+#
+#     What the allowance is actually for now is **listening**. A banner an earlier build posted
+#     can still be sitting in Notification Centre for as long as the person leaves it there, and
+#     `NudgeHost.resolveFromNotification(…)` must be able to name the surface it came from in
+#     order to refuse the press. Two calls remain behind the `NotificationCentring` seam —
+#     `getNotificationSettings`, which P-134 measured never prompting, and a delegate that
+#     receives a press — and neither can post anything.
+#
+#     **The allowance is bounded at the artefact, not by this comment.** `check-forbidden.sh`'s
+#     R-96s asserts the shipped Mach-O carries none of the five posting selectors, with the two
+#     reading selectors as its non-vacuity control, on Debug and on Release. That is what makes
+#     U-2 structural rather than remembered.
 #     It costs the matrix nothing it was protecting: P-134 measured `getNotificationSettings`,
 #     `setNotificationCategories` and `add(_:)` all obtainable at zero grants and **none of them
 #     prompting**, and the one call that *would* prompt — `requestAuthorization` — is pinned by
