@@ -175,6 +175,8 @@ public final class PriorityStore {
         try context.save()
 
         undo?.registerUndo(withTarget: self) { store in
+            // `UndoManager` runs a registered handler synchronously on the thread that called
+            // `undo()`, and the only caller is the responder chain's Edit ▸ Undo, on main.
             MainActor.assumeIsolated {
                 inverse(store, undo)
             }
@@ -743,6 +745,8 @@ public final class PriorityStore {
         undo.beginUndoGrouping()
         undo.setActionName(UndoActionName.addRule.localizedName)
         undo.registerUndo(withTarget: self) { store in
+            // `UndoManager` runs a registered handler synchronously on the thread that called
+            // `undo()`, and the only caller is the responder chain's Edit ▸ Undo, on main.
             MainActor.assumeIsolated {
                 try? store.removeRule(id: id, undo: undo)
             }

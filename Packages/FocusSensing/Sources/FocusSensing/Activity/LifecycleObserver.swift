@@ -108,6 +108,8 @@ public final class LifecycleObserver {
 
         for name in Self.workspaceNotificationNames {
             let token = workspaceCentre.addObserver(for: name) { [weak self] payload in
+                // `SystemNotificationCentre.addObserver(for:handler:)` registers with
+                // `queue: .main`, so this arrives on the main queue by the seam's own contract.
                 MainActor.assumeIsolated { self?.receive(payload) }
             }
             workspaceTokens.append(token)
@@ -115,6 +117,8 @@ public final class LifecycleObserver {
 
         for name in Self.distributedNotificationNames {
             let token = distributedCentre.addObserver(for: name) { [weak self] payload in
+                // `SystemNotificationCentre.addObserver(for:handler:)` registers with
+                // `queue: .main`, so this arrives on the main queue by the seam's own contract.
                 MainActor.assumeIsolated { self?.receive(payload) }
             }
             distributedTokens.append(token)

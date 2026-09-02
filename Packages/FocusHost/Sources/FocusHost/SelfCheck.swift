@@ -346,6 +346,8 @@ enum SelfCheck {
                 return
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + activationPollInterval) {
+                // Submitted to the main queue on the line above; the isolation is a fact of
+                // this call rather than an assumption about a framework.
                 MainActor.assumeIsolated { attempt() }
             }
         }
@@ -3390,6 +3392,7 @@ public final class FocusAppDelegate: NSObject, NSApplicationDelegate {
         if SelfCheck.wantsCockpitOnly {
             SelfCheck.comeForward { _ in
                 DispatchQueue.main.asyncAfter(deadline: .now() + SelfCheck.settleDelay) {
+                    // Submitted to the main queue on the line above.
                     MainActor.assumeIsolated {
                         SelfCheck.runModeAndTerminate(writingTo: path) {
                             SelfCheck.cockpitRenderingReport()
@@ -3417,6 +3420,7 @@ public final class FocusAppDelegate: NSObject, NSApplicationDelegate {
             // One more turn of the run loop, then read the shell. Reading it inside
             // `applicationDidFinishLaunching` reports empty submenus and no windows.
             DispatchQueue.main.asyncAfter(deadline: .now() + SelfCheck.settleDelay) {
+                // Submitted to the main queue on the line above.
                 MainActor.assumeIsolated {
                     SelfCheck.runAndTerminate(writingTo: path, activation: activation)
                 }

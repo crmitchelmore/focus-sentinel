@@ -423,6 +423,9 @@ public struct ShellSettingsView: View {
         // the composition root drives them and watches its own graph move.
         .environment(\.shellRenderGeneration, generation)
         .onPreferenceChange(ShellRenderedValuesKey.self) { values in
+            // SwiftUI delivers preference changes on the main actor, and a hop would make the
+            // reading arrive one turn after the draw — the confusion the generation exists to
+            // make visible. Stated rather than hidden, as in `ShellRenderReport`.
             MainActor.assumeIsolated {
                 didDraw?(
                     ShellSettingsRendering(

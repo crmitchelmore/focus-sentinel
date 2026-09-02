@@ -576,6 +576,8 @@ public final class SessionStore {
         try context.save()
 
         manager?.registerUndo(withTarget: self) { store in
+            // `UndoManager` runs a registered handler synchronously on the thread that called
+            // `undo()`, and the only caller is the responder chain's Edit ▸ Undo, on main.
             MainActor.assumeIsolated {
                 inverse(store, manager)
             }

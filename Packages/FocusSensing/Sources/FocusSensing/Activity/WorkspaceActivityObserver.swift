@@ -272,6 +272,8 @@ public final class WorkspaceActivityObserver: ActivityObserving {
         let token = centre.addObserver(
             for: NSWorkspace.didActivateApplicationNotification
         ) { [weak self] payload in
+            // The seam registers with `queue: .main` (see `addObserver(for:handler:)` above),
+            // so this arrives on the main queue by contract rather than by hope.
             MainActor.assumeIsolated {
                 // Explicitly discarded: `receive` hands the accepted activation back for a
                 // test to assert on, and a debounced one back as `nil`. Neither is of any

@@ -73,6 +73,8 @@ public final class AppearanceObserver {
             object: nil,
             queue: .main
         ) { [weak self] _ in
+            // `queue: .main` above is the guarantee: `NotificationCenter` runs this block on
+            // the queue named at registration, so the isolation is not being assumed of a poster.
             MainActor.assumeIsolated {
                 self?.refresh()
             }
@@ -85,6 +87,8 @@ public final class AppearanceObserver {
             object: nil,
             queue: .main
         ) { [weak self] _ in
+            // `queue: .main` above is the guarantee: `NotificationCenter` runs this block on
+            // the queue named at registration, so the isolation is not being assumed of a poster.
             MainActor.assumeIsolated {
                 self?.refresh()
             }

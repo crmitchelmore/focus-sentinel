@@ -57,6 +57,13 @@ public final class PlatformCapabilityProbe: CapabilityProbing {
     /// every read below touches AppKit or CoreGraphics. The hop is `assumeIsolated` rather than
     /// a queue because this probe is only ever called from the main actor: at launch, on wake,
     /// on resume from pause, and from the self-check — all of which are main-actor moments.
+    ///
+    /// **That is a call-site inventory, not an API guarantee** (focus-068's audit). It is the
+    /// weaker of the two justifications this codebase uses for `assumeIsolated`, and it is the
+    /// one that can be invalidated by adding a caller rather than by a framework changing its
+    /// mind. It stands here because the requirement is synchronous — it returns the matrix — so
+    /// the alternative is not a hop but an `async` protocol. Whoever adds the fifth caller owns
+    /// re-reading this line.
     public nonisolated func probe(at instant: Date) -> CapabilityMatrix {
         MainActor.assumeIsolated { probeOnMainActor(at: instant) }
     }
