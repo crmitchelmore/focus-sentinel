@@ -2301,10 +2301,30 @@ check(
     "the popover reports the width it commits to",
     popover.get("committedWidth"),
 )
+# **The comparison is taken here, from the two numbers, rather than believed** (focus-bkf). This
+# row read `fullest.isTheCommittedWidth is True` — a boolean the binary under audit computes about
+# itself, so a layout function that had stopped honouring the commitment could go on reporting
+# that it had. The arithmetic is the same one `check-focus-steal.sh:337-345` already does for the
+# panel; the published flag is then asserted to AGREE with it, which is a reading of the binary's
+# own comparison rather than a substitute for one.
+POPOVER_WIDTH_TOLERANCE = 1.0
+fullest_popover = popover.get("fullest") or {}
+fullest_width = fullest_popover.get("width")
+committed_popover_width = popover.get("committedWidth")
+fullest_is_committed = (
+    isinstance(fullest_width, (int, float))
+    and isinstance(committed_popover_width, (int, float))
+    and abs(fullest_width - committed_popover_width) <= POPOVER_WIDTH_TOLERANCE
+)
 check(
-    (popover.get("fullest") or {}).get("isTheCommittedWidth") is True,
+    fullest_is_committed,
     "the fullest popover is laid out at the committed width, at any priority length",
-    popover.get("fullest"),
+    (fullest_width, committed_popover_width),
+)
+check(
+    fullest_popover.get("isTheCommittedWidth") is fullest_is_committed,
+    "the popover's own width verdict agrees with the width it reported",
+    (fullest_popover.get("isTheCommittedWidth"), fullest_width, committed_popover_width),
 )
 # **And what gives way when it will not fit** (focus-din).
 #
