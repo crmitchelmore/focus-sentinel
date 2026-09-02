@@ -83,7 +83,24 @@ public final class SystemAudioDeviceEnumerator: AudioDeviceEnumerating {
     private var deviceListeners: [AudioDeviceIdentifier: AudioObjectPropertyListenerBlock] = [:]
     private var deviceListListener: AudioObjectPropertyListenerBlock?
 
-    private let queue = DispatchQueue(label: "com.chrismitchelmore.FocusSentinel.audio-observation")
+    /// **The main queue, and it is the whole of focus-068's repair on this side.**
+    ///
+    /// `AudioObjectAddPropertyListenerBlock` dispatches the block on the queue it is given, and
+    /// the handler this class is asked to run is main-actor work: it re-enumerates and re-reads
+    /// through `MediaActivityObserver`. A private serial queue was installed here for a
+    /// concurrency the callback never had, and it made every delivery arrive off the main
+    /// thread — where `dispatch_assert_queue(main)` traps. The gate run of 2026-09-02 died in
+    /// exactly that block, on Thread 12, the first time a device changed state mid-run.
+    ///
+    /// Passing `DispatchQueue.main` costs nothing (there is no work here to keep off it) and
+    /// makes the delivery thread a fact of the registration rather than a hope about CoreAudio.
+    ///
+    /// Static and readable, so `MediaListenerIsolationTests` can pin the queue itself: the
+    /// repair is a property of this registration, and a test that could only observe its
+    /// *effect* would go green again the day somebody put a private queue back and a double
+    /// carried on calling handlers on main.
+    static let listenerQueue = DispatchQueue.main
+    private var queue: DispatchQueue { Self.listenerQueue }
 
     public init() {}
 
@@ -349,11 +366,32 @@ public final class MediaActivityObserver {
     public func attachListeners() {
         for device in devices where device.hasInput {
             enumerator.addListener(to: device.id) { [weak self] in
-                MainActor.assumeIsolated { _ = self?.refresh() }
+                Self.onMainActor { _ = self?.refresh() }
             }
         }
         enumerator.addDeviceListListener { [weak self] in
-            MainActor.assumeIsolated { self?.reattach() }
+            Self.onMainActor { self?.reattach() }
+        }
+    }
+
+    /// **Establish main-actor isolation rather than assert it** (focus-068).
+    ///
+    /// `SystemAudioDeviceEnumerator` registers on `DispatchQueue.main`, and CoreAudio dispatches
+    /// the block on the queue it was given, so in the shipping app this arm is already on the
+    /// main thread and the `assumeIsolated` below is correct by construction — no hop, no
+    /// latency, exactly what the code before this repair *intended*.
+    ///
+    /// But `attachListeners()` hands these blocks to *any* `AudioDeviceEnumerating`, and what
+    /// the previous version did was to **assert** a fact about a queue it does not choose. When
+    /// that assertion was wrong — a private serial queue, for six days — the process did not
+    /// mis-read a microphone, it died: `dispatch_assert_queue(main)` traps. A guarantee this
+    /// class cannot enforce is not one it may assume, so the thread is *checked* and, when it is
+    /// the wrong one, the work is moved rather than the process killed.
+    private nonisolated static func onMainActor(_ body: @escaping @MainActor () -> Void) {
+        if Thread.isMainThread {
+            MainActor.assumeIsolated { body() }
+        } else {
+            DispatchQueue.main.async { MainActor.assumeIsolated { body() } }
         }
     }
 

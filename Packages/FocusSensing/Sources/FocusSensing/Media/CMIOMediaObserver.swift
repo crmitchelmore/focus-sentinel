@@ -44,7 +44,12 @@ public protocol CameraDeviceEnumerating: AnyObject {
 @MainActor
 public final class SystemCameraDeviceEnumerator: CameraDeviceEnumerating {
     private var listeners: [CameraDeviceIdentifier: CMIOObjectPropertyListenerBlock] = [:]
-    private let queue = DispatchQueue(label: "com.chrismitchelmore.FocusSentinel.camera-observation")
+    /// The main queue, for the reason the audio enumerator's is (focus-068). The handler the
+    /// held re-probe path installs is empty today, so nothing traps here yet — which is exactly
+    /// why the queue is corrected now rather than when the hold is lifted and somebody writes
+    /// the obvious main-actor body into a block that was arriving on a private serial queue.
+    static let listenerQueue = DispatchQueue.main
+    private var queue: DispatchQueue { Self.listenerQueue }
 
     public init() {}
 

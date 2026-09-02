@@ -525,10 +525,18 @@ public final class NudgePanelController {
         // object so that a test can post the same notification rather than needing a second
         // monitor. It is the *notification wiring itself* that is then under test, which is the
         // half a direct call to the re-placement would leave unproven.
+        // `queue: .main` rather than `queue: nil` (focus-068). With `nil` the block runs
+        // synchronously on the POSTING thread, so `assumeIsolated` here was an assertion about
+        // whoever posts — AppKit always does so on the main thread, but the observation is
+        // deliberately registered against any object precisely so that other code can post it,
+        // and an assertion that traps is the wrong way to learn that somebody did it from a
+        // background thread. Naming the queue makes the delivery thread a fact of the
+        // registration; a post from the main thread is still delivered without a hop, because
+        // `NotificationCenter` runs the block immediately when the named queue is the current one.
         screenObservation.token = NotificationCenter.default.addObserver(
             forName: NSApplication.didChangeScreenParametersNotification,
             object: nil,
-            queue: nil
+            queue: .main
         ) { [weak self] _ in
             MainActor.assumeIsolated { self?.displayConfigurationChanged() }
         }
