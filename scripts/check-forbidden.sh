@@ -1421,23 +1421,63 @@ fi
 # it; Tools/windowid, which reads owner, layer, number and bounds and nothing else, lists
 # exactly those four and not the name.
 #
-# The object list is EXPLICIT, not a glob, and mirrors check-boundaries.sh naming
-# FocusClassify.o by path. P-108 measured that the five below are the complete set of package
-# objects, identically in Debug and Release. A glob plus an "at least one binary was seen"
-# counter is not the claim "every package object is clean": a build that emits four objects,
-# or a sixth package whose product is not named Focus*, would slip through it in silence.
-# Adding a package therefore fails this gate until its object is named here — which is exactly
-# the review moment a new package deserves (R-31).
+# ## Two corrections, both measured on this tree (focus-gtr)
+#
+# **1. The Debug row was reading a 58 KB dyld stub.** The list named
+# `Build/Products/Debug/FocusSentinel.app/Contents/MacOS/FocusSentinel`, and on this toolchain
+# that file is not the app: Xcode's debug-dylib layout leaves a launcher there whose entire
+# undefined-symbol table is thirty libSystem names — `_dlopen`, `_printf`, `_memcpy` — and puts
+# every line of the application in `FocusSentinel.debug.dylib` beside it. So the strongest form of
+# standing condition 1 printed `ok … does not reference kCGWindowName` on every gate run for a
+# file that references nothing at all, and would have gone on printing it with the banned key
+# written into `App/` in plain sight. The Release product is the merged one and does carry the
+# seven sanctioned symbols, and **Release was not in the list**.
+#
+# So the app's executable code is *resolved* per configuration rather than named, both files are
+# banned when both exist, and the **control below is what proves one of them is code**.
+#
+# **2. `FocusHost.o` was missing.** The comment here read "P-108 measured that the five below are
+# the complete set of package objects". Six packages ship: `FocusHost` — the composition root,
+# which is where the on-screen authorisation-surface scan reads the window list — was added after
+# that measurement and inherited no row.
+#
+# The object list is EXPLICIT, not a glob. A glob plus an "at least one binary was seen" counter
+# is not the claim "every package object is clean": a build that emits five objects, or a seventh
+# package whose product is not named Focus*, would slip through it in silence. Adding a package
+# therefore fails this gate until its object is named here — which is exactly the review moment a
+# new package deserves (R-31).
 print
 print "== SC-1: the binary half"
-SC1_REQUIRED=(
-    "$DERIVED_DATA/Build/Products/Debug/FocusSentinel.app/Contents/MacOS/FocusSentinel"
-    "$DERIVED_DATA/Build/Products/Debug/FocusCore.o"
-    "$DERIVED_DATA/Build/Products/Debug/FocusSensing.o"
-    "$DERIVED_DATA/Build/Products/Debug/FocusRules.o"
-    "$DERIVED_DATA/Build/Products/Debug/FocusClassify.o"
-    "$DERIVED_DATA/Build/Products/Debug/FocusUI.o"
-    Tools/windowid/.build/release/windowid
+
+# The app's executable code, per configuration, resolved rather than assumed. Both files are
+# checked when both exist; which one carries the code is what the control decides.
+app_code_files() {
+    local config="$1" app path
+    app="$DERIVED_DATA/Build/Products/$config/FocusSentinel.app/Contents/MacOS"
+    for path in "$app/FocusSentinel" "$app/FocusSentinel.debug.dylib"; do
+        [[ -f "$path" ]] && print -r -- "$path"
+    done
+}
+
+SC1_REQUIRED=()
+for config in Debug Release; do
+    SC1_REQUIRED+=(${(f)"$(app_code_files $config)"})
+    SC1_REQUIRED+=(
+        "$DERIVED_DATA/Build/Products/$config/FocusCore.o"
+        "$DERIVED_DATA/Build/Products/$config/FocusSensing.o"
+        "$DERIVED_DATA/Build/Products/$config/FocusRules.o"
+        "$DERIVED_DATA/Build/Products/$config/FocusClassify.o"
+        "$DERIVED_DATA/Build/Products/$config/FocusUI.o"
+        "$DERIVED_DATA/Build/Products/$config/FocusHost.o"
+    )
+done
+SC1_REQUIRED+=(Tools/windowid/.build/release/windowid)
+SC1_REQUIRED=(${SC1_REQUIRED:#})
+
+# The four keys the sanctioned readers really do take. Present-ness is asserted, not merely
+# absence of the banned one — see the control below.
+SC1_SANCTIONED_SYMBOLS=(
+    _kCGWindowBounds _kCGWindowLayer _kCGWindowNumber _kCGWindowOwnerName
 )
 
 sc1_binaries_seen=0
@@ -1458,21 +1498,88 @@ for binary in $SC1_REQUIRED; do
         print -u2 "FAIL [SC-1] $binary references kCGWindowName at the symbol level"
         rc=1
     else
-        print "ok   [SC-1] $binary does not reference kCGWindowName"
+        print "ok   [SC-1] ${binary:t} (${binary:h:t}) does not reference kCGWindowName"
     fi
 done
 
-# The tool must still do its job. An SC-1 check that passes because windowid was gutted is a
-# check that proves nothing.
-if [[ -f Tools/windowid/.build/release/windowid ]]; then
-    for symbol in _kCGWindowBounds _kCGWindowLayer _kCGWindowNumber _kCGWindowOwnerName; do
+# --- the control, and it is what the Debug row was missing -------------------------------------
+#
+# An absence check over an undefined-symbol table is satisfied by a table with nothing in it. The
+# `windowid` half of this control has existed since e03 — *"an SC-1 check that passes because
+# windowid was gutted is a check that proves nothing"* — and the identical hazard on the app's own
+# product was uncovered by nothing, which is how a 58 KB launcher came to be the file the gate
+# read. So every artefact that is *supposed* to reach the window list must still be seen reaching
+# it, by name, with the four sanctioned symbols the reader really takes.
+#
+# `FocusSensing.o` is where `SystemWindowList` compiles to. The app's code is wherever this
+# toolchain put it, so the assertion is that **at least one** of the resolved app files per
+# configuration carries all four — which is the reading that makes the ban above a statement about
+# code rather than about a stub.
+sc1_control_run=0
+for symbol in $SC1_SANCTIONED_SYMBOLS; do
+    if [[ -f Tools/windowid/.build/release/windowid ]]; then
+        sc1_control_run=1
         if nm -u Tools/windowid/.build/release/windowid 2>/dev/null | grep -q "^${symbol}\$"; then
-            print "ok   [SC-1] windowid still reads $symbol"
+            print "ok   [SC-1] control: windowid still reads $symbol"
         else
             print -u2 "FAIL [SC-1] windowid no longer reads $symbol — the tool has been gutted"
             rc=1
         fi
+    fi
+done
+
+for config in Debug Release; do
+    sensing_object="$DERIVED_DATA/Build/Products/$config/FocusSensing.o"
+    if [[ -f "$sensing_object" ]]; then
+        sc1_control_run=1
+        sensing_symbols=$(nm -u "$sensing_object" 2>/dev/null)
+        for symbol in $SC1_SANCTIONED_SYMBOLS; do
+            if print -r -- "$sensing_symbols" | grep -q "^${symbol}\$"; then
+                print "ok   [SC-1] control: $config FocusSensing.o still reads $symbol"
+            else
+                print -u2 "FAIL [SC-1] $config FocusSensing.o no longer reads $symbol"
+                print -u2 "    The object the window reader compiles into has stopped naming the"
+                print -u2 "    keys it takes, so the ban above is a statement about nothing."
+                rc=1
+            fi
+        done
+    fi
+
+    app_files=(${(f)"$(app_code_files $config)"})
+    app_files=(${app_files:#})
+    if (( ${#app_files} == 0 )); then
+        if [[ "${FOCUS_REQUIRE_BINARY_CHECK:-0}" == "1" ]]; then
+            print -u2 "FAIL [SC-1] FOCUS_REQUIRE_BINARY_CHECK=1 but the $config app has no executable"
+            rc=1
+        fi
+        continue
+    fi
+    sc1_control_run=1
+    carrier=""
+    for candidate in $app_files; do
+        candidate_symbols=$(nm -u "$candidate" 2>/dev/null)
+        missing=0
+        for symbol in $SC1_SANCTIONED_SYMBOLS; do
+            print -r -- "$candidate_symbols" | grep -q "^${symbol}\$" || missing=1
+        done
+        (( missing == 0 )) && carrier="$candidate"
     done
+    if [[ -n "$carrier" ]]; then
+        print "ok   [SC-1] control: the $config app's code is in ${carrier:t} and it reads the"
+        print "     four sanctioned window keys — so the ban above was applied to code"
+    else
+        print -u2 "FAIL [SC-1] no $config app file reads the four sanctioned window keys"
+        print -u2 "    Files examined: ${app_files:t}"
+        print -u2 "    Every one of them is a launcher or a stub, so 'does not reference"
+        print -u2 "    kCGWindowName' was true of a file with no application code in it. That is"
+        print -u2 "    the defect focus-gtr found: the Debug row read a 58 KB dyld shim."
+        rc=1
+    fi
+done
+
+if (( sc1_control_run == 0 )) && [[ "${FOCUS_REQUIRE_BINARY_CHECK:-0}" == "1" ]]; then
+    print -u2 "FAIL [SC-1] the non-vacuity control ran against nothing at all"
+    rc=1
 fi
 
 if (( sc1_binaries_seen == 0 )) && [[ "${FOCUS_REQUIRE_BINARY_CHECK:-0}" != "1" ]]; then
