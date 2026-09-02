@@ -34,8 +34,23 @@
 # keeps it explicitly (`= YES`), so the difference is a decision in the project file rather
 # than a default nobody looked at.
 #
-# The check asserts on named keys — never on dictionary equality — so a future toolchain that
-# injects some new unrelated key does not fail the gate for no reason.
+# ## The set is PINNED, in both directions — it used to be searched (focus-gtr)
+#
+# This file used to say: *"The check asserts on named keys — never on dictionary equality — so a
+# future toolchain that injects some new unrelated key does not fail the gate for no reason."*
+# **That is the event this stage exists to catch.** An injected key is exactly how
+# `get-task-allow` got into the Release product in the first place — the paragraph above is the
+# record of it — and a membership test over five forbidden names is green for the sixth. The
+# entitlement set of a signed product is a small, closed, *measured* set, so it is committed as a
+# literal per configuration and compared whole: a key missing is red, a key appearing is red.
+#
+# The values are pinned too, and `app-sandbox` is why. It ships `false`, deliberately, and the
+# grep this file used to run said only that the string appeared somewhere in the dump — so the
+# sandbox flipping to `true`, which would break every NSWorkspace read the app is built on,
+# passed. A key's presence is not its value.
+#
+# Non-vacuity is structural: the comparison is made against a **parsed plist**, and a dump that
+# parses to nothing fails by name instead of satisfying five absence checks at once.
 #
 # The full dump goes to stdout so the log doubles as evidence.
 set -u
@@ -79,56 +94,144 @@ fi
 print
 print "== assertions"
 
-FORBIDDEN_KEYS=(
-    "com.apple.security.network.client"
-    "com.apple.security.network.server"
-    "com.apple.developer.networking"
-    "com.apple.developer.icloud"
-    "com.apple.developer.aps-environment"
+# The machine-readable form of the same signature. Two invocations rather than one parse of the
+# human dump, because the human dump's shape is `codesign`'s to change and a check that depends on
+# it would be a check on a formatter.
+# One path and one trap: `"$(mktemp …).plist"` created a temp file and then wrote a *different*
+# one beside it, so every run leaked the empty original and the trap removed the wrong name.
+ENTITLEMENT_XML="$(mktemp -t focus-entitlements)"
+trap 'rm -f -- "$ENTITLEMENT_XML"' EXIT
+codesign -d --entitlements - --xml "$APP" > "$ENTITLEMENT_XML" 2>/dev/null
+
+# The path rather than the bytes, and a **quoted** heredoc: interpolating a signature into a
+# script is how a product's own content gets to decide what the script says.
+python3 - "$CONFIGURATION" "$ENTITLEMENT_XML" <<'PYTHON'
+import plistlib
+import sys
+
+configuration, xml_path = sys.argv[1], sys.argv[2]
+try:
+    with open(xml_path, "rb") as handle:
+        raw = handle.read()
+except OSError:
+    raw = b""
+
+failures = []
+
+
+def check(condition, message, detail=None):
+    if condition:
+        print(f"ok   {message}")
+        return
+    line = f"FAIL {message}"
+    if detail is not None:
+        line += f"\n      got: {detail!r}"
+    failures.append(line)
+    print(line, file=sys.stderr)
+
+
+# **The committed entitlement set, per configuration, measured on this tree.**
+#
+# Every key AND its value. `app-sandbox` is declared `false` on purpose — the app needs
+# NSWorkspace and Accessibility depth the sandbox forbids — so the posture is explicit rather than
+# absent; pinning the value is what makes "declared false" different from "declared".
+COMMITTED = {
+    # Debug keeps the injected base entitlements (CODE_SIGN_INJECT_BASE_ENTITLEMENTS = YES), and
+    # `get-task-allow` is what a debugger attaches through. Its disappearance is a signing
+    # configuration that changed without anyone deciding to.
+    "Debug": {
+        "com.apple.security.app-sandbox": False,
+        "com.apple.security.get-task-allow": True,
+    },
+    # Release is the shipped artefact and carries the sandbox declaration alone. A
+    # `get-task-allow` here lets any same-uid process attach a debugger and read the memory of an
+    # app whose entire premise is that what it observes never leaves the machine.
+    "Release": {
+        "com.apple.security.app-sandbox": False,
+    },
+}
+
+# The keys no configuration may ever carry. Implied by the exact comparison below and named
+# anyway, because a reader of a red log is owed the *reason* and not only the diff — and because
+# these five are the zero-networking guarantee spelled at the product level.
+FORBIDDEN = [
+    "com.apple.security.network.client",
+    "com.apple.security.network.server",
+    "com.apple.developer.networking",
+    "com.apple.developer.icloud",
+    "com.apple.developer.aps-environment",
+]
+
+try:
+    parsed = plistlib.loads(raw) if raw.strip() else None
+except Exception as error:  # noqa: BLE001 — any parse failure is the same verdict
+    parsed = None
+    print(f"note plist parse error: {error}")
+
+# **The non-vacuity floor, and it comes first.** A dump that parsed to nothing satisfies every
+# absence check below at once — which is a green stage for a signature nobody read.
+check(
+    isinstance(parsed, dict) and len(parsed) > 0,
+    "the product's entitlements were read as a plist and are not empty",
+    parsed,
 )
+entitlements = parsed if isinstance(parsed, dict) else {}
 
-for key in $FORBIDDEN_KEYS; do
-    if print -r -- "$DUMP" | grep -qF "$key"; then
-        print -u2 "FAIL: forbidden entitlement present: $key"
-        rc=1
-    else
-        print "ok   absent: $key"
-    fi
-done
+expected = COMMITTED.get(configuration)
+check(expected is not None, f"there is a committed entitlement set for {configuration}", configuration)
 
-if print -r -- "$DUMP" | grep -qF "com.apple.security.app-sandbox"; then
-    print "ok   present: com.apple.security.app-sandbox"
-else
-    print -u2 "FAIL: com.apple.security.app-sandbox is not declared at all"
-    rc=1
-fi
+if expected is not None and entitlements:
+    # **Pinned in both directions.** A key missing is as red as a key appearing, and the symmetric
+    # difference is what a reader needs to see.
+    check(
+        set(entitlements) == set(expected),
+        f"the {configuration} product carries exactly the committed entitlement keys",
+        sorted(set(entitlements) ^ set(expected)),
+    )
+    # And the values, because presence is not value: an app-sandbox flipped to true would pass
+    # every key comparison and break every NSWorkspace read the app is built on.
+    check(
+        entitlements == expected,
+        f"every committed {configuration} entitlement carries the value it was committed with",
+        {k: v for k, v in sorted(entitlements.items()) if expected.get(k, "<absent>") != v},
+    )
 
-if print -r -- "$DUMP" | grep -qF "com.apple.security.get-task-allow"; then
-    task_allow=present
-else
-    task_allow=absent
-fi
+# Named individually as well, so a red log says *which* guarantee broke rather than "the set
+# differs". These are a restatement of the comparison above and are deliberately not its
+# substitute — that substitution is the defect this block replaced.
+for key in FORBIDDEN:
+    check(key not in entitlements, f"absent: {key}")
 
-if [[ "$CONFIGURATION" == "Debug" ]]; then
-    if [[ "$task_allow" == "present" ]]; then
-        print "ok   present in Debug: com.apple.security.get-task-allow (injected so a debugger can attach)"
-    else
-        print -u2 "FAIL: com.apple.security.get-task-allow is absent from the Debug product."
-        print -u2 "      Debug carries it deliberately (CODE_SIGN_INJECT_BASE_ENTITLEMENTS = YES);"
-        print -u2 "      its disappearance means the signing configuration changed unnoticed."
-        rc=1
-    fi
-else
-    if [[ "$task_allow" == "absent" ]]; then
-        print "ok   absent in Release: com.apple.security.get-task-allow"
-    else
-        print -u2 "FAIL: com.apple.security.get-task-allow is present in the Release product."
-        print -u2 "      Release is the shipped artefact; that entitlement lets any same-uid"
-        print -u2 "      process attach a debugger and read the app's memory. Set"
-        print -u2 "      CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO in the Release configuration."
-        rc=1
-    fi
-fi
+check(
+    "com.apple.security.app-sandbox" in entitlements,
+    "present: com.apple.security.app-sandbox (declared, so the posture is explicit)",
+    sorted(entitlements),
+)
+if configuration == "Debug":
+    check(
+        entitlements.get("com.apple.security.get-task-allow") is True,
+        "present in Debug: com.apple.security.get-task-allow (a debugger can attach)",
+        entitlements.get("com.apple.security.get-task-allow"),
+    )
+else:
+    check(
+        "com.apple.security.get-task-allow" not in entitlements,
+        "absent in Release: com.apple.security.get-task-allow",
+        "Release is the shipped artefact; set CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO",
+    )
+
+# **The vacuity guard, stated.** This proves what is SIGNED INTO the product, and nothing about
+# what the system grants it at runtime: a TCC row is not an entitlement and no dump would show
+# one. It also says nothing about entitlements a future macOS honours implicitly. What it can no
+# longer be green for is the failure it exists to catch — a capability appearing in the shipped
+# artefact that nobody declared.
+
+print()
+if failures:
+    print(f"ENTITLEMENT SET FAILED — {len(failures)} assertion(s)", file=sys.stderr)
+    sys.exit(1)
+PYTHON
+(( $? != 0 )) && rc=1
 
 # --- e03: two usage-description keys that must be ABSENT --------------------------------------
 #
