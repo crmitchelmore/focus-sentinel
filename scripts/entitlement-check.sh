@@ -199,24 +199,31 @@ if expected is not None and entitlements:
 # Named individually as well, so a red log says *which* guarantee broke rather than "the set
 # differs". These are a restatement of the comparison above and are deliberately not its
 # substitute — that substitution is the defect this block replaced.
+#
+# **And they are labelled as restatements in the log** (focus-bkf). Not one of them can go red on
+# its own: the whole-dictionary comparison above fails first for every edit that would falsify
+# any of them, so counting these seven lines as seven readings would be counting one reading
+# seven times. They are here to name the guarantee a reader is looking for; the coverage is the
+# two rows above.
+print("     the seven lines below RESTATE the comparison above; none can fail on its own")
 for key in FORBIDDEN:
-    check(key not in entitlements, f"absent: {key}")
+    check(key not in entitlements, f"restatement — absent: {key}")
 
 check(
     "com.apple.security.app-sandbox" in entitlements,
-    "present: com.apple.security.app-sandbox (declared, so the posture is explicit)",
+    "restatement — present: com.apple.security.app-sandbox (declared, so the posture is explicit)",
     sorted(entitlements),
 )
 if configuration == "Debug":
     check(
         entitlements.get("com.apple.security.get-task-allow") is True,
-        "present in Debug: com.apple.security.get-task-allow (a debugger can attach)",
+        "restatement — present in Debug: com.apple.security.get-task-allow (a debugger can attach)",
         entitlements.get("com.apple.security.get-task-allow"),
     )
 else:
     check(
         "com.apple.security.get-task-allow" not in entitlements,
-        "absent in Release: com.apple.security.get-task-allow",
+        "restatement — absent in Release: com.apple.security.get-task-allow",
         "Release is the shipped artefact; set CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO",
     )
 
