@@ -119,12 +119,7 @@ public enum QuestionExit: String, Sendable, CaseIterable, Codable, Hashable {
     /// Stated here rather than at the call site for `recordsAnExpiry`'s reason: it is a property
     /// of the kind of ending, and a line a caller can omit is a line four callers remember and a
     /// fifth does not.
-    public var leavesTheInterruptionUnanswered: Bool {
-        switch self {
-        case .worldMovedOn, .screenReclaimed: true
-        case .answered, .surfaceWentOutOfReach, .neverDelivered: false
-        }
-    }
+    public var leavesTheInterruptionUnanswered: Bool { aftermath.outcome != nil }
 
     /// **Whether `FatigueController`'s run of unanswered questions hears about it** (focus-fwy,
     /// R-83, U-1).
@@ -153,10 +148,87 @@ public enum QuestionExit: String, Sendable, CaseIterable, Codable, Hashable {
     ///   the arithmetic to hold at all — `NudgeHost.sessionEnded()` reduces
     ///   `FatigueEvent.sessionEnded`, which resets both runs, **before** it closes the surfaces, so
     ///   a run advanced here would dirty one that had just been cleared.
-    public var countsAsAnUnansweredQuestion: Bool {
+    public var countsAsAnUnansweredQuestion: Bool { aftermath.advancesTheUnansweredRun }
+
+    /// **What this ending settles about the interruption — as ONE answer** (focus-qvy, focus-2uy.4).
+    ///
+    /// The two properties above are the row's last field and the run that bounds how often the app
+    /// may ask, and they were two independent exhaustive switches. Independent is the defect:
+    /// `worldMovedOn` writes `.ignored` to the row and advances no run, `screenReclaimed` does
+    /// both, and nothing said whether that difference was a **ruling** or the residue of two
+    /// rounds that each edited one switch. It is a ruling, and this is where it is made once —
+    /// four aftermaths, each carrying both consequences, so a sixth exit cannot answer one
+    /// question and be forgotten by the other.
+    public var aftermath: QuestionAftermath {
         switch self {
-        case .screenReclaimed: true
-        case .answered, .worldMovedOn, .surfaceWentOutOfReach, .neverDelivered: false
+        case .answered: .theyAnswered
+        case .worldMovedOn: .theWorldEndedIt
+        case .screenReclaimed: .theyIgnoredIt
+        case .surfaceWentOutOfReach, .neverDelivered: .nobodyCouldSeeIt
+        }
+    }
+
+    /// **Whether an invitation nobody opened is still owed a row of its own** (focus-sq7,
+    /// focus-6vz).
+    ///
+    /// `NudgeHost.recordUnopenedInvitation(_:)` writes *"this reached a surface and waited, and
+    /// nobody ever looked"*, and it keys on the receipt: a question that was never perceived is
+    /// unopened, whichever surface it was standing on. One ending is not that, and it is the one
+    /// where the app has **already** written a row: `ask(…)` refuses to deliver into an unreadable
+    /// panel or a surface that cannot carry a question, writes the deferral itself and ends the
+    /// question this way. A second row would be the loop counting one attempt twice, which is the
+    /// other half of focus-sq7's ruling — *a thing the app did gets a row*, and exactly one.
+    public var owesAnUnopenedRow: Bool {
+        switch self {
+        case .neverDelivered: false
+        case .answered, .worldMovedOn, .surfaceWentOutOfReach, .screenReclaimed: true
+        }
+    }
+}
+
+/// **What became of the interruption a question made** (focus-qvy, focus-2uy.4).
+///
+/// The row's last field and `FatigueController`'s run of unanswered questions, decided together.
+/// They are different questions — *how did this turn out?* and *is the app talking to itself?* —
+/// and for one exit they take different answers, which is exactly why they must be decided in one
+/// place: two switches that agree on three cases and differ on the fourth are indistinguishable
+/// from two switches one of which is wrong.
+public enum QuestionAftermath: String, Sendable, CaseIterable, Codable, Hashable {
+    /// The person pressed one of the answers. `NudgeHost.answer(_:)` owns both consequences: the
+    /// row is completed with what they said and `FatigueController` is told the outcome, so this
+    /// case must add nothing or one click would be counted twice.
+    case theyAnswered
+    /// **They were shown it, they acted on it, and they answered nothing.** ⌃⌘H: the question was
+    /// in front of them and they pressed a key to make it go away. The row says `ignored`, and
+    /// the run advances, because F-81's ruling is that the question is still unanswered and will
+    /// be offered again — and nothing bounded how often.
+    case theyIgnoredIt
+    /// **The world ended it while it stood in front of them.** A session ending, a break, a
+    /// commitment change. The row says `ignored` — an `InterventionRecord` that never says how an
+    /// interruption turned out is focus-gmr's defect — and the run does **not** advance, which is
+    /// focus-qds's ruling cutting both ways: going for lunch is not an answer, and it is not the
+    /// person ignoring the app either. It is also what the arithmetic requires:
+    /// `NudgeHost.sessionEnded()` reduces `FatigueEvent.sessionEnded`, which resets both runs,
+    /// before it closes the surfaces, so a run advanced here would dirty one just cleared.
+    case theWorldEndedIt
+    /// **Nobody could have seen it.** An unreadable panel at the ask, or a display that changed
+    /// under it. R-81: no row to complete, and a backoff advanced by one would be the app
+    /// punishing the person for a display it could not fit on.
+    case nobodyCouldSeeIt
+
+    /// What the row's one remaining field is set to, or `nil` to leave it alone.
+    public var outcome: InterventionOutcome? {
+        switch self {
+        case .theyIgnoredIt, .theWorldEndedIt: .ignored
+        case .theyAnswered, .nobodyCouldSeeIt: nil
+        }
+    }
+
+    /// Whether `InterventionPolicy.ignoredQueryBackoff`'s run hears about it.
+    public var advancesTheUnansweredRun: Bool {
+        switch self {
+        case .theyIgnoredIt: true
+        case .theyAnswered, .theWorldEndedIt, .nobodyCouldSeeIt: false
         }
     }
 }

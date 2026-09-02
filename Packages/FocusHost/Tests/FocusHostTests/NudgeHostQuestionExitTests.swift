@@ -201,6 +201,11 @@ struct NudgeHostQuestionExitTests {
         /// The run of unanswered questions afterwards. A count, not a flag: **double** counting is
         /// a failure here as much as none is.
         let unansweredRunAfter: Int
+        /// `QuestionExit.aftermath`, written out — the one answer the two properties above are
+        /// now derived from (focus-qvy).
+        let aftermath: QuestionAftermath
+        /// `QuestionExit.owesAnUnopenedRow`, written out (focus-6vz).
+        let owesAnUnopenedRow: Bool
         /// Why that is the right answer. Read by a person; the assertions check the rest.
         let argument: String
     }
@@ -213,6 +218,8 @@ struct NudgeHostQuestionExitTests {
             leavesTheInterruptionUnanswered: false,
             countsAsAnUnansweredQuestion: false,
             unansweredRunAfter: 0,
+            aftermath: .theyAnswered,
+            owesAnUnopenedRow: true,
             argument: """
                 `answer(_:)` has already reduced the event carrying what the person said, and \
                 "Yes, add it" is an answer — so the run ends outright rather than extending. A \
@@ -225,6 +232,8 @@ struct NudgeHostQuestionExitTests {
             leavesTheInterruptionUnanswered: true,
             countsAsAnUnansweredQuestion: false,
             unansweredRunAfter: 0,
+            aftermath: .theWorldEndedIt,
+            owesAnUnopenedRow: true,
             argument: """
                 *"Going for lunch is not an answer"* is focus-qds's ruling and it cuts both ways: \
                 the world ended the question, the person did not, so the expiry is written down \
@@ -240,6 +249,8 @@ struct NudgeHostQuestionExitTests {
             leavesTheInterruptionUnanswered: false,
             countsAsAnUnansweredQuestion: false,
             unansweredRunAfter: 0,
+            aftermath: .nobodyCouldSeeIt,
+            owesAnUnopenedRow: true,
             argument: """
                 An un-asking. R-81's rule is that a nudge nobody could see did not happen, so a \
                 backoff advanced by one would be the app holding its questions because of a \
@@ -252,6 +263,8 @@ struct NudgeHostQuestionExitTests {
             leavesTheInterruptionUnanswered: false,
             countsAsAnUnansweredQuestion: false,
             unansweredRunAfter: 0,
+            aftermath: .nobodyCouldSeeIt,
+            owesAnUnopenedRow: false,
             argument: """
                 The other un-asking, one moment earlier: the ask gave itself up before it reached \
                 anybody. There is no row and no asking, so there is nothing for a run to count.
@@ -263,6 +276,8 @@ struct NudgeHostQuestionExitTests {
             leavesTheInterruptionUnanswered: true,
             countsAsAnUnansweredQuestion: true,
             unansweredRunAfter: 1,
+            aftermath: .theyIgnoredIt,
+            owesAnUnopenedRow: true,
             argument: """
                 F-81's ⌃⌘H, and `RungExit.screenReclaimed`'s twin. The question was in front of \
                 the person, they pressed a key to take it off their screen, and F-81's own \
@@ -396,7 +411,61 @@ struct NudgeHostQuestionExitTests {
                 \(row.argument)
                 """
             )
+            // **And the one answer the two above are derived from** (focus-qvy). They were two
+            // independent exhaustive switches that agreed on three exits and differed on the
+            // fourth, and nothing said whether that difference was a ruling or the residue of two
+            // rounds each editing one switch.
+            #expect(
+                row.exit.aftermath == row.aftermath,
+                "\(row.exit.rawValue).aftermath contradicts its row. \(row.argument)"
+            )
+            #expect(
+                row.exit.owesAnUnopenedRow == row.owesAnUnopenedRow,
+                "\(row.exit.rawValue).owesAnUnopenedRow contradicts its row. \(row.argument)"
+            )
+            // The derivation itself, on this row rather than restated: the ledger disposition and
+            // the fatigue feed are one decision, so neither can be edited alone.
+            #expect(
+                row.leavesTheInterruptionUnanswered == (row.aftermath.outcome != nil),
+                """
+                \(row.exit.rawValue) writes an outcome its aftermath does not, or the other way \
+                round. \(row.argument)
+                """
+            )
+            #expect(
+                row.countsAsAnUnansweredQuestion == row.aftermath.advancesTheUnansweredRun,
+                """
+                \(row.exit.rawValue) advances a run its aftermath does not, or the other way \
+                round. \(row.argument)
+                """
+            )
         }
+
+        // — the vacuity guard on the derivation, stated —
+        //
+        // A single aftermath for every exit would satisfy every line above, and so would one in
+        // which the two consequences always agreed. Both are asserted false: the vocabulary is
+        // used more than once, and the one aftermath where the row says `ignored` while the run
+        // stands still is the ruling this repair exists to make explicit.
+        #expect(
+            Set(Self.backoffRows.map(\.aftermath)).count > 1,
+            "every exit has the same aftermath, so the vocabulary decides nothing"
+        )
+        #expect(
+            QuestionAftermath.allCases.contains {
+                $0.outcome != nil && !$0.advancesTheUnansweredRun
+            },
+            """
+            no aftermath writes an outcome without advancing the run, so focus-qds's ruling — the \
+            world ending a question is not the person ignoring it — has been collapsed away
+            """
+        )
+        #expect(
+            QuestionAftermath.allCases.contains {
+                $0.outcome != nil && $0.advancesTheUnansweredRun
+            },
+            "no aftermath does both, so the run can never advance at all"
+        )
     }
 
     /// **The rule is never a constant function**, and the one exit that advances the run is the
