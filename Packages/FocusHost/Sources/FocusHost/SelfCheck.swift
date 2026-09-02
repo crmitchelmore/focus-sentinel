@@ -929,22 +929,50 @@ enum SelfCheck {
             .filter { $0.subject.silences(.ambient) }
             .map(\.rawValue)
             .sorted()
-        // A whole shared budget's worth of glyph landings, priced by the shipping arithmetic.
-        // `charged` must be nought and the app must still be able to speak.
-        let glyphDay = InterruptionBudget.spent(
-            (0..<InterventionPolicy.dailyInterruptionCap).compactMap { _ in
-                InterruptionCharge(Self.deliveredRung(.ambient))
-            },
-            underPriority: nil
-        )
-        report["budgetAfterADayOfGlyphLandings"] = [
-            "landings": InterventionPolicy.dailyInterruptionCap,
-            "interruptionsToday": glyphDay.interruptionsToday,
-            "accusationsToday": glyphDay.accusationsToday,
-            "permitsAccusation": glyphDay.permits(.accusation),
-            "permitsQuery": glyphDay.permits(.query),
-            "bindingLimit": glyphDay.bindingLimit(for: .accusation)?.rawValue ?? ""
-        ]
+        // **A whole shared budget's worth of landings, priced by the shipping arithmetic — for
+        // EVERY rung, and with the number of charges the pricing actually folded** (focus-hqf).
+        //
+        // THE READING THIS REPLACES WAS TRUE OF AN EMPTY DAY. It folded `dailyInterruptionCap`
+        // *ambient* landings and reported `landings: dailyInterruptionCap` as a **constant**.
+        // `InterruptionCharge.init?(_:)` guards on `spendsTheInterruptionCap`; an ambient landing
+        // does not spend it, by design; so the `compactMap` yielded nothing and the budget being
+        // priced was `InterruptionBudget.empty`. All four assertions the gate made on it — nought
+        // interruptions, nought accusations, both permissions still true — are what an empty
+        // budget answers, for reasons with nothing to do with glyph landings. Measured against the
+        // Release `FocusCore.o` of gate run `floorgate-1`: charges folded 0, identical to `.empty`;
+        // the same fold over the panel rung folded 8.
+        //
+        // It is `NudgeFloorTests`' own rule 3 — *non-vacuity asserted in both directions* — written
+        // in the same round thirty lines of prose away, and not kept by the binary twin.
+        //
+        // So: **one fold over the whole rung vocabulary**, `chargesFolded` as `charges.count`
+        // rather than a constant, and the rung that DOES spend the cap folded by the same three
+        // lines rather than by a control written beside them. A rung added tomorrow gets a row
+        // here and fails the gate until somebody says what its day costs.
+        var dayByRung: [String: Any] = [:]
+        for kind in LadderRung.Kind.allCases {
+            let charges = (0..<InterventionPolicy.dailyInterruptionCap).compactMap { _ in
+                InterruptionCharge(Self.deliveredRung(kind))
+            }
+            let day = InterruptionBudget.spent(charges, underPriority: nil)
+            dayByRung[kind.rawValue] = [
+                "landings": InterventionPolicy.dailyInterruptionCap,
+                "chargesFolded": charges.count,
+                "interruptionsToday": day.interruptionsToday,
+                "accusationsToday": day.accusationsToday,
+                "permitsAccusation": day.permits(.accusation),
+                "permitsQuery": day.permits(.query),
+                "bindingLimit": day.bindingLimit(for: .accusation)?.rawValue ?? ""
+            ]
+        }
+        report["budgetAfterADayOfLandings"] = dayByRung
+        // The size of the fold beside the fold, so a vocabulary that shrank is a number rather
+        // than a table nobody counted.
+        report["budgetAfterADayOfLandingsRungs"] =
+            LadderRung.Kind.allCases.map(\.rawValue).sorted()
+        // The ambient row lifted under the name the gate has read since focus-d6r.
+        report["budgetAfterADayOfGlyphLandings"] =
+            dayByRung[LadderRung.Kind.ambient.rawValue] ?? [:]
 
         report["questionExitsWritingAnExpiry"] = QuestionExit.allCases
             .filter(\.recordsAnExpiry)

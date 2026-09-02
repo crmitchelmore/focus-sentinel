@@ -2438,15 +2438,82 @@ check(
     nudge.get("fatigueRefusalsSilencingTheGlyph"),
 )
 
-# And the day itself, priced by the shipping arithmetic: a whole shared budget's worth of glyph
-# landings must leave the app able to speak. This is the assertion the bead's own measurement
-# fails.
-glyph_day = nudge.get("budgetAfterADayOfGlyphLandings") or {}
+# --- the day itself, and the four readings that were true of an empty one (focus-hqf) ----------
+#
+# A whole shared budget's worth of landings must leave the app able to speak. THE FOUR ASSERTIONS
+# THIS BLOCK REPLACES WERE ALL SATISFIED BY A DAY ON WHICH NOTHING HAPPENED. The app folded
+# `dailyInterruptionCap` ambient landings through `InterruptionCharge.init?(_:)`, which guards on
+# `spendsTheInterruptionCap` — false for an ambient landing, by design — so the `compactMap`
+# yielded an empty array and the budget being priced was `InterruptionBudget.empty`. Nought
+# interruptions, nought accusations and both permissions still true are exactly what an empty
+# budget answers. Measured against the Release `FocusCore.o` of gate run `floorgate-1`: charges
+# folded 0, `identical to .empty` true; the same fold over the panel rung folded 8. The reading's
+# own `landings` field said `8`, and it was a constant.
+#
+# It is `NudgeFloorTests`' own rule 3 — *non-vacuity is asserted in both directions* — written in
+# the same round, thirty lines of prose away, and not kept by the binary twin of that suite.
+#
+# **One fold over the whole rung vocabulary**, and a table stated here that says what each rung's
+# day costs. The rung that spends nothing and the rung that spends everything are two rows of one
+# reading rather than a claim and a control written beside each other, so neither can be edited
+# without the other.
+day_by_rung = nudge.get("budgetAfterADayOfLandings") or {}
+DAY_COST_BY_RUNG = {
+    # The glyph carries no sentence and accuses nobody: `spendsTheInterruptionCap` is false for it
+    # and a whole day of it must cost nothing.
+    "ambient": 0,
+    # The panel is the only rung that speaks, so a whole day of it must exhaust the day. This is
+    # the row that makes the row above evidence: it is the same three lines of arithmetic, and a
+    # fold that has stopped building charges at all turns it red.
+    "panel": "every landing",
+}
+# **The self-referential completeness check.** The table and the app's rung vocabulary must name
+# the same rungs, in both directions: a rung added with no row here is a day this script never
+# priced, and a row here for a rung the ladder no longer has is a rule about nothing.
 check(
-    glyph_day.get("interruptionsToday") == 0,
-    "a whole day of glyph landings spends none of the day's interruptions",
-    glyph_day,
+    set(DAY_COST_BY_RUNG) == set(nudge.get("budgetAfterADayOfLandingsRungs") or [])
+    and set(day_by_rung) == set(DAY_COST_BY_RUNG),
+    "this script prices exactly the rungs the ladder declares",
+    sorted(set(DAY_COST_BY_RUNG) ^ set(nudge.get("budgetAfterADayOfLandingsRungs") or [])),
 )
+for rung, cost in sorted(DAY_COST_BY_RUNG.items()):
+    row = day_by_rung.get(rung) or {}
+    landings = row.get("landings")
+    expected = landings if cost == "every landing" else cost
+    check(
+        isinstance(landings, int) and landings > 0,
+        f"the {rung} day was a day: the fold ran over a whole shared budget's worth of landings",
+        row,
+    )
+    check(
+        row.get("chargesFolded") == expected,
+        f"a day of {rung} landings builds {cost} charge(s) — stated, never inferred from an "
+        "empty budget",
+        row,
+    )
+    check(
+        row.get("interruptionsToday") == expected,
+        f"and the {rung} day's charges were priced by the shipping arithmetic",
+        row,
+    )
+# **The non-vacuity guard.** Every line above is satisfied by a table in which every rung folds
+# nothing — which is precisely the state that produced this bead. The rows must therefore
+# disagree with each other: one rung costs nothing and one costs the whole day.
+folded = {rung: (day_by_rung.get(rung) or {}).get("chargesFolded") for rung in DAY_COST_BY_RUNG}
+check(
+    0 in folded.values() and any(
+        value == (day_by_rung.get(rung) or {}).get("landings") and value
+        for rung, value in folded.items()
+    ),
+    "the table discriminates: one rung's day costs nothing and another's costs the whole day",
+    folded,
+)
+# What it would still be green for, stated: a rung whose `spendsTheInterruptionCap` answer is
+# wrong in the SAME direction as this table's expectation, because both are written from
+# `InterruptionCharge.init?(_:)`. What it can no longer be green for is the failure it exists for
+# — an arithmetic that folded nothing at all.
+
+glyph_day = nudge.get("budgetAfterADayOfGlyphLandings") or {}
 check(
     glyph_day.get("accusationsToday") == 0,
     "a whole day of glyph landings spends none of the day's accusations",
@@ -2461,6 +2528,11 @@ check(
     glyph_day.get("permitsQuery") is True,
     "after a whole day of glyph landings the app can still ask somebody something",
     glyph_day,
+)
+check(
+    (day_by_rung.get("panel") or {}).get("permitsAccusation") is False,
+    "and a whole day of PANEL landings does exhaust it, so the three lines above mean something",
+    day_by_rung.get("panel"),
 )
 
 # The exits are enumerated, and the unit lane walks every one of them. Asserted here so an exit
