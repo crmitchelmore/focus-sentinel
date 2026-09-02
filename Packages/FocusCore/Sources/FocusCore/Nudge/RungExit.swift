@@ -69,26 +69,32 @@ public enum RungExit: String, Sendable, CaseIterable, Codable, Hashable {
     /// surface is a fact about the new rung, and this one is over either way. The ordinary
     /// escalation is one of these: the glyph is standing when the panel rung lands.
     ///
-    /// **The row is completed and neither backoff is told, and the second half of that is
-    /// measured rather than argued** (focus-fwy, focus-f2a). The bead asks for both, on the
-    /// ground that a person who never touches a nudge advances neither run. Driven, it puts the
-    /// app back under the floor focus-f2a raised: two panel rungs the person drifted away from
-    /// trip `InterventionPolicy.ignoredAccusationBackoff`, `FatigueController` holds accusations
-    /// for `backoffSpan`, and the ladder — standing at `.engaged(.ambient, …)` with only an
-    /// escalation left to offer — answers `nil` from `candidate(at:budgetPermits:)`, which
-    /// `NudgeDecider.accuse(…)` turns into `.silent(.budgetExhausted)`. **The glyph goes with it**,
-    /// though F-63's backoff exempts the ambient rung by name. Measured on the shipping
-    /// composition root: the silent-and-visual deck stopped speaking after five drifts with
-    /// `accusationsToday == 0`, and the lens's own sixteen-drift day showed the person nothing at
-    /// all on **eleven** of them.
+    /// **The row is completed and both backoffs are told** (focus-fwy, focus-fzf, focus-f2a).
     ///
-    /// That is `LadderState`'s missing `SilenceSubject` (focus-628) and the ladder's own hold
-    /// (focus-50m) reached through a new door, and it has to be repaired before this ending may
-    /// advance a backoff. Until then the honest line is the one that survives the measurement:
-    /// **the backoffs count the endings the PERSON caused, and a replacement is one the APP
-    /// caused** — the loop took the panel down to raise something else, and an app that read its
-    /// own escalation as *"you are ignoring me"* would be talking about itself. `screenReclaimed`
-    /// is on the other side of that line and is the case this vocabulary advances.
+    /// The argument for telling them is focus-fwy's: *somebody who never touches a nudge advances
+    /// neither run*, and a panel the person drifted straight past is the commonest way to not
+    /// touch one. The argument against was never a ruling — it was a **measurement**. Driven a
+    /// round ago, this line put the app back under focus-f2a's floor: two replaced panels trip
+    /// `InterventionPolicy.ignoredAccusationBackoff`, `FatigueController` holds accusations for
+    /// `backoffSpan`, and the ladder — standing at `.engaged(.ambient, …)` with only an escalation
+    /// left to offer — answered `nil` from `candidate(at:budgetPermits:)`, which
+    /// `NudgeDecider.accuse(…)` turned into `.silent(.budgetExhausted)`. **The glyph went with
+    /// it**, though F-63's backoff exempts the ambient rung by name. The silent-and-visual deck
+    /// stopped speaking after five drifts with `accusationsToday == 0`, and the lens's own
+    /// sixteen-drift day showed the person nothing at all on **eleven** of them.
+    ///
+    /// That was `LadderState`'s missing `SilenceSubject` (focus-628) and the ladder's unbounded
+    /// hold (focus-50m) reached through a new door, and both are repaired: the ladder's silences
+    /// are a folded vocabulary with a declared subject, the hold expires at `backoffSpan` and
+    /// retains the mark it always claimed to, and `NudgeDecider.accuse(…)` reads a refusal about
+    /// the app *speaking* against the rung that says nothing as well as the one that speaks. With
+    /// the arithmetic repaired the measurement is re-taken rather than the ruling re-argued, and
+    /// `NudgeDayShapeTests` is where it is taken.
+    ///
+    /// What has not changed is the other half of the door: `NudgeHost` reduces `.rungIgnored`
+    /// only for a leaving rung that `makesAnAccusation` — the app's own glyph-to-panel escalation
+    /// is not the person ignoring anything — and only for one the seam could prove somebody was
+    /// **shown**.
     case replaced
     /// **F-81: the person asked for their screen back.** ⌃⌘H, *Hide overlays*.
     ///
@@ -185,15 +191,23 @@ public enum RungExit: String, Sendable, CaseIterable, Codable, Hashable {
     /// who never touches a nudge could be shown the full `dailyAccusationCap` without either
     /// backoff advancing a single step.
     ///
-    /// **One exit answers `true`, and the line it draws is who caused the ending.** ⌃⌘H is the
-    /// person acting on the nudge: they read it, they pressed a key aimed at it, and they answered
-    /// nothing. Every other ending here was caused by the app or by the world:
+    /// **Two exits answer `true`, and the line they draw is what the PERSON did with the rung.**
+    /// ⌃⌘H is the person acting on the nudge: they read it, they pressed a key aimed at it, and
+    /// they answered nothing. A replacement is the person drifting on past a panel that was in
+    /// front of them and that they never touched — which is focus-fwy's whole argument, *somebody
+    /// who never touches a nudge advances neither run*, and it is the half that was **held with a
+    /// measurement** until focus-628 and focus-50m repaired what the measurement had found: a
+    /// held ladder answered `nil` from `candidate(at:budgetPermits:)` and the glyph went with it.
+    /// It does not any more — `LadderSilence.heldAtAmbient.retainsTheAmbientRung` is `true`, the
+    /// hold expires at `InterventionPolicy.backoffSpan`, and a refusal about the app *speaking*
+    /// is now read against the rung that says nothing as well as the one that speaks — so the
+    /// ending that focus-f2a's floor refused can ship. `NudgeDayShapeTests` is where that is
+    /// re-measured rather than argued.
+    ///
+    /// Every other ending here was caused by the app or by the world:
     ///
     /// * `answered` — `resolve(…)` has already reduced whichever of the two events the click
     ///   deserved, and a second would count one dismissal twice.
-    /// * `replaced` — the loop took this rung down to raise another. See the case's own note: it
-    ///   is the half of focus-fwy that is **held**, because driving it puts the app back under
-    ///   focus-f2a's floor by way of `LadderState`'s missing silence subject (focus-628).
     /// * `worldMovedOn` — ending a session is not ignoring a nudge, and `sessionEnded()` reduces
     ///   `FatigueEvent.sessionEnded` before it closes the surfaces, so an ignore counted here would
     ///   dirty a run that has just been reset.
@@ -207,8 +221,8 @@ public enum RungExit: String, Sendable, CaseIterable, Codable, Hashable {
     /// `PerceptibleChange` is the whole of what *"an accusation reached them"* means.
     public var countsAsAnIgnoredAccusation: Bool {
         switch self {
-        case .screenReclaimed: true
-        case .answered, .replaced, .presentationWithdrew, .displayStranded, .worldMovedOn: false
+        case .screenReclaimed, .replaced: true
+        case .answered, .presentationWithdrew, .displayStranded, .worldMovedOn: false
         }
     }
 }

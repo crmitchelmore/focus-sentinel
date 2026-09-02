@@ -61,11 +61,12 @@ import Testing
 ///   consequences belong to `resolve(_:snoozeDuration:)` rather than to `RungExit`, and its row's
 ///   literals are what stop the door double-counting: `ignoredRunAfter: 1` is the run the
 ///   *dismissal* advanced, and a door that advanced it again would read 2.
-/// * **the backoff advanced for every ending rather than for the one the person caused.**
-///   `ignoredRunAfter` is a count and five of the six rows expect `0`, so a door that told
-///   `FatigueController` about a replacement or a session ending fails here. That is not a
-///   hypothetical: driving `replaced` into the backoff put the app back under focus-f2a's floor,
-///   and `NudgeDayShapeTests` is where the measurement was taken.
+/// * **the backoff advanced for every ending rather than for the ones the person caused.**
+///   `ignoredRunAfter` is a count and four of the six rows expect `0`, so a door that told
+///   `FatigueController` about a session ending or a withdrawn delivery fails here. The two that
+///   expect `1` are the endings the person authored: ⌃⌘H, and a panel they drifted straight past
+///   (focus-fzf). Driving the second of those under the ladder's old arithmetic put the app back
+///   under focus-f2a's floor, and `NudgeDayShapeTests` is where that measurement is re-taken.
 @Suite("Every exit from a delivered rung, with the rung on the panel", .serialized)
 @MainActor
 struct NudgeRungExitTests {
@@ -115,21 +116,24 @@ struct NudgeRungExitTests {
             exit: .replaced,
             takesBackTheDelivery: false,
             leavesTheInterruptionUnanswered: true,
-            countsAsAnIgnoredAccusation: false,
+            countsAsAnIgnoredAccusation: true,
             ladderAfter: .ambient,
             holdsARungAfter: true,
-            ignoredRunAfter: 0,
+            ignoredRunAfter: 1,
             argument: """
                 The person drifted into a second application, the ladder's top rung reset, and the \
                 ambient glyph for the second replaced the panel for the first. The row is \
                 completed `ignored`, because an `InterventionRecord` that never says how an \
-                interruption turned out is focus-gmr's defect — and **the backoffs are not told**, \
-                which is focus-fwy's other half, held rather than shipped. Driving it put the app \
-                back under focus-f2a's floor: two replaced panels trip \
-                `ignoredAccusationBackoff`, the ladder is left at `.engaged(.ambient, …)` with \
-                only an escalation to offer, `candidate(at:budgetPermits:)` answers `nil`, and the \
-                glyph goes silent with the panel. The `0` below is that measurement, and it will \
-                read `1` once `LadderState` declares a silence subject (focus-628, focus-50m).
+                interruption turned out is focus-gmr's defect — and **both backoffs are told**, \
+                which is focus-fwy's other half and focus-fzf: somebody who never touches a nudge \
+                advances neither run, and drifting past a panel is the commonest way not to touch \
+                one. The `1` below read `0` for one round, and the reason was a measurement rather \
+                than a ruling: two replaced panels trip `ignoredAccusationBackoff`, the ladder was \
+                left at `.engaged(.ambient, …)` with only an escalation to offer, \
+                `candidate(at:budgetPermits:)` answered `nil`, and the glyph went silent with the \
+                panel. focus-628 and focus-50m repaired that — the ladder's silences declare a \
+                subject, the hold expires and retains the mark — so the ending ships and \
+                `NudgeDayShapeTests` re-takes the measurement.
                 """
         ),
         Row(
@@ -403,24 +407,21 @@ struct NudgeRungExitTests {
             """
         )
 
-        // 4a · **and no exit reaches the ladder's own hold** (focus-50m, re-checked).
+        // 4a · **and no single exit reaches the ladder's own hold** (focus-50m, re-checked with
+        // `replaced` counting).
         //
-        // `LadderState.heldAtAmbient` documents itself as *"not fully silent: the glyph still
-        // tells the truth"*, and `candidate(at:budgetPermits:)` answers `nil` there — which
-        // `NudgeDecider.accuse(…)` turns into `.silent(.budgetExhausted)`, so nothing lands on any
-        // surface including the status item, and the hold has no expiry. focus-50m records that it
-        // is unreachable from this loop's events and reachable only in the replay model.
-        //
-        // **Adding `RungExit.countsAsAnIgnoredAccusation` is exactly the edit that could have
-        // changed that**, so the claim is pinned here rather than left as a note. It holds because
-        // the door asks `LadderRung.Kind.makesAnAccusation` as well as the exit: only the top rung
-        // can be ignored through it, and `LadderMachine.ignore(now:)` puts the top rung on the
-        // floor before the run can reach `InterventionPolicy.ignoredAccusationBackoff`.
+        // The hold is no longer a trap — it expires at `InterventionPolicy.backoffSpan` and
+        // retains the mark, which is what let `replaced` ship (focus-fzf) — but it is still a
+        // state one ending must not be able to reach on its own: `LadderMachine`'s run is what
+        // `ignore(now:)` counts, and one ignore cannot be two. It holds because the door asks
+        // `LadderRung.Kind.makesAnAccusation` as well as the exit, so only the top rung can be
+        // ignored through it, and `ignore(now:)` puts the top rung on the floor before the run can
+        // reach `InterventionPolicy.ignoredAccusationBackoff`.
         if case .heldAtAmbient = fixture.host.ladder.state {
             Issue.record(
                 """
-                \(row.exit.rawValue) reached LadderState.heldAtAmbient, which answers nil from \
-                candidate(at:budgetPermits:) and has no expiry (focus-50m)
+                \(row.exit.rawValue) reached LadderState.heldAtAmbient on ONE ending, so the \
+                ladder's own run counted a single exit twice (focus-50m, focus-fzf)
                 """
             )
         }
