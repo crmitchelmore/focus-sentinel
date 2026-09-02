@@ -304,26 +304,62 @@ else
     print "source: no networking API named"
 fi
 
-CLASSIFY_OBJECT="$DERIVED_DATA/Build/Products/Debug/FocusClassify.o"
-if [[ -f "$CLASSIFY_OBJECT" ]]; then
-    undefined=$(nm -u "$CLASSIFY_OBJECT" 2>/dev/null \
+# **Both configurations, and a control** (focus-gtr).
+#
+# It read the Debug object alone. The artefact this programme ships is the Release one, and a
+# whole-module-optimised object is not the same object — the guarantee that matters is the one
+# about what shipped.
+#
+# And an absence check over an undefined-symbol table is satisfied by a table with nothing in it:
+# an object that failed to emit, or whose sources moved to another module, lists no networking
+# symbol for the same reason a clean one does. So the object must still be seen doing its job.
+# P-120 measured exactly what that looks like here: `FocusClassify.o` names seven NaturalLanguage
+# symbols and zero networking ones, and importing NaturalLanguage costs the zero-networking
+# guarantee nothing at all. The seven are the control.
+CLASSIFY_CONTROL_PATTERN='NLEmbedding|NLTagger|NLLanguageRecognizer'
+
+check_classify_object() {
+    local config="$1"
+    local object="$DERIVED_DATA/Build/Products/$config/FocusClassify.o"
+    if [[ ! -f "$object" ]]; then
+        if [[ "${FOCUS_REQUIRE_BINARY_CHECK:-0}" == "1" ]]; then
+            # After a build there is no excuse for the object to be missing, and a silent skip
+            # here would quietly retire the strongest form of the guarantee.
+            fail "FOCUS_REQUIRE_BINARY_CHECK=1 but there is no build product at $object"
+        else
+            # Before a build the object does not exist yet. Say so plainly rather than reporting
+            # a pass — the gate runs this script a second time after building, with
+            # FOCUS_REQUIRE_BINARY_CHECK=1, and that run is the one that proves it.
+            print "binary: SKIPPED — no build product at $object (the gate re-runs this after the build)"
+        fi
+        return
+    fi
+
+    local symbols undefined control
+    symbols=$(nm -u "$object" 2>/dev/null)
+    undefined=$(print -r -- "$symbols" \
         | grep -E 'nw_|CFNetwork|URLSession|CFURLConnection|SecureTransport')
     if [[ -n "$undefined" ]]; then
-        fail "FocusClassify.o has undefined networking symbols:"
+        fail "$config FocusClassify.o has undefined networking symbols:"
         print -u2 "$undefined"
     else
-        print "binary: nm -u $CLASSIFY_OBJECT — 0 networking symbols"
+        print "binary: nm -u $object — 0 networking symbols"
     fi
-elif [[ "${FOCUS_REQUIRE_BINARY_CHECK:-0}" == "1" ]]; then
-    # After a build there is no excuse for the object to be missing, and a silent skip here
-    # would quietly retire the strongest form of the guarantee.
-    fail "FOCUS_REQUIRE_BINARY_CHECK=1 but there is no build product at $CLASSIFY_OBJECT"
-else
-    # Before a build the object does not exist yet. Say so plainly rather than reporting a
-    # pass — the gate runs this script a second time after building, with
-    # FOCUS_REQUIRE_BINARY_CHECK=1, and that run is the one that proves it.
-    print "binary: SKIPPED — no build product at $CLASSIFY_OBJECT (the gate re-runs this after the build)"
-fi
+
+    control=$(print -r -- "$symbols" | grep -cE "$CLASSIFY_CONTROL_PATTERN")
+    if (( control > 0 )); then
+        print "binary: control — $config FocusClassify.o still names $control NaturalLanguage symbol(s)"
+    else
+        fail "$config FocusClassify.o names no NaturalLanguage symbol at all"
+        print -u2 "    The engine compiles into this object and reaches NLEmbedding and NLTagger."
+        print -u2 "    An object that names neither is not the engine, so '0 networking symbols'"
+        print -u2 "    is true of something other than the thing under test (P-120)."
+    fi
+}
+
+for config in Debug Release; do
+    check_classify_object "$config"
+done
 
 # --- FocusClassify probes no privacy boundary, proven on the object (e04 R-70i) -----------
 #
@@ -343,19 +379,22 @@ print "== FocusClassify probes no privacy boundary"
 
 PRIVACY_SYMBOL_PATTERN='CGWindowList|kCGWindow|AXUIElement|AXIsProcess|SCStream|SCShareableContent|CGDisplayStream|CGRequestScreenCapture|CGPreflightScreenCapture'
 
-if [[ -f "$CLASSIFY_OBJECT" ]]; then
-    probing=$(nm -u "$CLASSIFY_OBJECT" 2>/dev/null | grep -E "$PRIVACY_SYMBOL_PATTERN")
-    if [[ -n "$probing" ]]; then
-        fail "FocusClassify.o names a window-list, Accessibility or capture symbol:"
-        print -u2 "$probing"
+for config in Debug Release; do
+    classify_object="$DERIVED_DATA/Build/Products/$config/FocusClassify.o"
+    if [[ -f "$classify_object" ]]; then
+        probing=$(nm -u "$classify_object" 2>/dev/null | grep -E "$PRIVACY_SYMBOL_PATTERN")
+        if [[ -n "$probing" ]]; then
+            fail "$config FocusClassify.o names a window-list, Accessibility or capture symbol:"
+            print -u2 "$probing"
+        else
+            print "binary: nm -u $classify_object — 0 window-list/AX/capture symbols"
+        fi
+    elif [[ "${FOCUS_REQUIRE_BINARY_CHECK:-0}" == "1" ]]; then
+        fail "FOCUS_REQUIRE_BINARY_CHECK=1 but there is no build product at $classify_object"
     else
-        print "binary: nm -u $CLASSIFY_OBJECT — 0 window-list/AX/capture symbols"
+        print "binary: SKIPPED — no build product (the gate re-runs this after the build)"
     fi
-elif [[ "${FOCUS_REQUIRE_BINARY_CHECK:-0}" == "1" ]]; then
-    fail "FOCUS_REQUIRE_BINARY_CHECK=1 but there is no build product at $CLASSIFY_OBJECT"
-else
-    print "binary: SKIPPED — no build product (the gate re-runs this after the build)"
-fi
+done
 
 # --- e05 R-96k: the nudge module reaches for no sensing API, proven on the object ----------
 #
@@ -386,7 +425,11 @@ print
 print "== the nudge module reaches for no sensing API"
 
 NUDGE_SOURCE_DIR="Packages/FocusCore/Sources/FocusCore/Nudge"
-NUDGE_OBJECT="$DERIVED_DATA/Build/Products/Debug/FocusCore.o"
+# The control for this object, in the shape `FocusClassify.o`'s is: the nudge module's own router
+# is a defined symbol in it, so an object that has stopped containing the nudge cannot certify
+# that the nudge reaches no sensing API. Named rather than counted — `SurfaceRouter` is the one
+# type in this module every rung and every question goes through.
+NUDGE_CONTROL_PATTERN='SurfaceRouter'
 
 if [[ -d "$NUDGE_SOURCE_DIR" ]]; then
     nudge_source_hits=$(grep -rnE "$PRIVACY_SYMBOL_PATTERN|$NETWORK_SYMBOL_PATTERN" \
@@ -402,20 +445,34 @@ else
     fail "the nudge module has no source directory at $NUDGE_SOURCE_DIR"
 fi
 
-if [[ -f "$NUDGE_OBJECT" ]]; then
-    nudge_probing=$(nm -u "$NUDGE_OBJECT" 2>/dev/null \
+for config in Debug Release; do
+    nudge_object="$DERIVED_DATA/Build/Products/$config/FocusCore.o"
+    if [[ ! -f "$nudge_object" ]]; then
+        if [[ "${FOCUS_REQUIRE_BINARY_CHECK:-0}" == "1" ]]; then
+            fail "FOCUS_REQUIRE_BINARY_CHECK=1 but there is no build product at $nudge_object"
+        else
+            print "binary: SKIPPED — no build product (the gate re-runs this after the build)"
+        fi
+        continue
+    fi
+    nudge_probing=$(nm -u "$nudge_object" 2>/dev/null \
         | grep -E "$PRIVACY_SYMBOL_PATTERN|nw_|CFNetwork|URLSession|CFURLConnection|SecureTransport")
     if [[ -n "$nudge_probing" ]]; then
-        fail "the nudge object names a sensing or networking symbol:"
+        fail "the $config nudge object names a sensing or networking symbol:"
         print -u2 "$nudge_probing"
     else
-        print "binary: nm -u $NUDGE_OBJECT — 0 window-list/AX/capture/networking symbols"
+        print "binary: nm -u $nudge_object — 0 window-list/AX/capture/networking symbols"
     fi
-elif [[ "${FOCUS_REQUIRE_BINARY_CHECK:-0}" == "1" ]]; then
-    fail "FOCUS_REQUIRE_BINARY_CHECK=1 but there is no build product at $NUDGE_OBJECT"
-else
-    print "binary: SKIPPED — no build product (the gate re-runs this after the build)"
-fi
+    nudge_control=$(nm "$nudge_object" 2>/dev/null | grep -c "$NUDGE_CONTROL_PATTERN")
+    if (( nudge_control > 0 )); then
+        print "binary: control — $config FocusCore.o still carries $nudge_control SurfaceRouter symbol(s)"
+    else
+        fail "$config FocusCore.o carries no SurfaceRouter symbol at all"
+        print -u2 "    The nudge module compiles into this object. An object that no longer"
+        print -u2 "    contains it cannot certify that the nudge reaches no sensing API — the"
+        print -u2 "    absence above would be true of an object with nothing in it."
+    fi
+done
 
 # --- e04 R-70j: the FocusClassify framework row is asserted UNCHANGED ----------------------
 #
