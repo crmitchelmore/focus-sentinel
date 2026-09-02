@@ -147,4 +147,119 @@ struct SelfCheckAccusationAuditTests {
         #expect(audit.surfaces.count < NudgeSurface.allCases.count)
         #expect(audit.cells == Self.everyRungWholeSpace)
     }
+
+    // MARK: - The same fold, aimed at the question (focus-3vb's sibling)
+
+    /// **What the gate said about where a question goes, until this suite.**
+    ///
+    /// `querySurface in ("panel", "popoverBadge")` — in `self-check.sh` **and** in
+    /// `check-notification-denied.sh`, so on both the Debug and the Release lanes. It is
+    /// `surfacesARungCanReach`'s defect exactly, left standing in the question's half of the same
+    /// router one repair after the rung's half was fixed: a membership test over a two-element set,
+    /// taken at one cell of the space. Route every question to a notification and it stays green
+    /// for as long as that one cell still answers `panel`.
+    ///
+    /// The 30-cell `queryRoutes` table beside it varied deck, `reducedInterruption` and media and
+    /// pinned `.notPresenting` and `menuBarVisible: true` — the two axes the rung's fold had just
+    /// gained. Two folds over one router, each blind to what the other saw. `SelfCheck.routeSpace`
+    /// is now the single enumeration both are taken over.
+    static let surfacesAQuestionCanReach = ["panel", "popoverBadge"]
+
+    /// The size of the fold, asserted before the set it qualifies, and asserted to be **the same
+    /// space** the rung fold is taken over rather than a second one shaped like it.
+    @Test("the question fold covers the whole input space, not the one cell it used to")
+    func theQueryFoldCoversTheWholeSpace() {
+        let audit = SelfCheck.queryRouteAudit()
+        #expect(audit.cells == SelfCheck.routeSpace.count)
+        #expect(audit.cells * LadderRung.Kind.allCases.count == Self.everyRungWholeSpace)
+        #expect(audit.cells > 1)
+    }
+
+    /// **Pinned in both directions.** A surface leaving the set fails this as loudly as one
+    /// joining it — and `notification` joining it is what U-2 forbids and what a `in (…)` test
+    /// could not have seen.
+    @Test("over the whole space the only surfaces a question reaches are the panel and the badge")
+    func theSurfacesAQuestionCanReachArePinned() {
+        #expect(SelfCheck.queryRouteAudit().surfaces == Self.surfacesAQuestionCanReach)
+    }
+
+    /// Every cell a question is delivered to can carry one. The audit names the offenders, so a
+    /// red run says which conditions rather than answering a bare `false`.
+    @Test("no cell routes a question to a surface that cannot carry one")
+    func everyQueryCellCanCarryAQuestion() {
+        #expect(SelfCheck.queryRouteAudit().uncarryable == [])
+    }
+
+    /// **The completeness check for the question half.** Every declared surface is either reached
+    /// by the fold or named as one a question cannot go to, and the two lists must together be the
+    /// whole vocabulary — so a fifth surface fails this line until somebody says which it is.
+    @Test("every declared surface is either reached by the question fold or named unreachable")
+    func theQueryFoldAccountsForEverySurface() {
+        let reached = Set(SelfCheck.queryRouteAudit().surfaces)
+        let unreachable = Set(NudgeSurface.allCases.map(\.rawValue)).subtracting(reached)
+        #expect(unreachable == ["menuBar", "notification"])
+        #expect(reached.union(unreachable) == Set(NudgeSurface.allCases.map(\.rawValue)))
+    }
+
+    /// **The media axis is two values because the router has two, and that is measured here.**
+    ///
+    /// `routeSpace` folds `.idle` and a running microphone and not a running camera, which would
+    /// look like a hole. It is not one: `SurfaceRouter` reads media through
+    /// `MediaActivity.suppressesIntervention` alone, and that is `microphoneRunning ||
+    /// cameraRunning`. So a running camera routes exactly as a running microphone does — asserted
+    /// rather than assumed, for every rung and for the question, because a fold's axis being
+    /// complete is the one thing a bigger fold cannot tell you.
+    @Test("a running camera routes exactly as a running microphone, for every rung and the query")
+    func theMediaAxisIsWholeAtTwoValues() {
+        let microphone = MediaActivity(microphoneRunning: true)
+        let camera = MediaActivity(microphoneRunning: false, cameraRunning: true)
+        for rung in LadderRung.Kind.allCases {
+            for reduced in [false, true] {
+                for menuBar in [true, false] {
+                    for voice in NudgeVoice.allCases {
+                        #expect(
+                            SurfaceRouter.route(
+                                rung: rung, presentation: .notPresenting, media: microphone,
+                                reducedInterruption: reduced, menuBarVisible: menuBar, voice: voice
+                            )
+                                == SurfaceRouter.route(
+                                    rung: rung, presentation: .notPresenting, media: camera,
+                                    reducedInterruption: reduced, menuBarVisible: menuBar,
+                                    voice: voice
+                                )
+                        )
+                        #expect(
+                            SurfaceRouter.routeQuery(
+                                presentation: .notPresenting, media: microphone,
+                                reducedInterruption: reduced, menuBarVisible: menuBar, voice: voice
+                            )
+                                == SurfaceRouter.routeQuery(
+                                    presentation: .notPresenting, media: camera,
+                                    reducedInterruption: reduced, menuBarVisible: menuBar,
+                                    voice: voice
+                                )
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    /// **The vacuity guard for the question half**, stated rather than assumed.
+    ///
+    /// 1. **A dimension the space does not vary.** The same five axes as the rung fold, and the
+    ///    cell count above is what moves if a sixth input reaches `routeQuery(…)`.
+    /// 2. **A question drawn without asking the router.** This is a fold over the router. The
+    ///    surface a question is actually *put on* is `NudgeHost`'s business, and
+    ///    `NudgeHostQuestionTests` is where that lives.
+    /// 3. **A set that agrees for the wrong reason.** So the fold is asserted to discriminate:
+    ///    more than one surface reached, and at least one declared surface not reached.
+    @Test("the question fold discriminates: several surfaces reached, and at least one not")
+    func theQueryFoldIsNotVacuous() {
+        let audit = SelfCheck.queryRouteAudit()
+        #expect(audit.surfaces.count > 1)
+        #expect(audit.surfaces.count < NudgeSurface.allCases.count)
+        #expect(audit.badge > 0)
+        #expect(audit.panel > 0)
+    }
 }

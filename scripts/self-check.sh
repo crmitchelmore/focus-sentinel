@@ -2606,7 +2606,12 @@ check(
 # the accusing ones. The honest answer is THREE surfaces: `popoverBadge` is genuinely reachable
 # under exactly the conditions the two-cell table pinned away. A reading that said two was not a
 # stronger claim; it was a narrower one.
-EVERY_RUNG_ROUTE_CELLS = 2 * 2 * 2 * 2 * 2 * 5  # rung × presenting × mic × flag × menuBar × deck
+# **One space, named once.** `SelfCheck.routeSpace` is the enumeration both folds are taken over —
+# presenting × mic × flag × menuBar × deck — and the rung fold multiplies it by the rungs. Spelling
+# it this way is what makes the two numbers below unable to drift apart, which is the arithmetic
+# form of the defect this pair of readings is a repair for.
+ROUTE_SPACE_CELLS = 2 * 2 * 2 * 2 * 5  # presenting × mic × flag × menuBar × deck
+EVERY_RUNG_ROUTE_CELLS = 2 * ROUTE_SPACE_CELLS  # × the two rungs D-06-as-amended declares
 check(
     nudge.get("surfacesARungCanReachCellsChecked") == EVERY_RUNG_ROUTE_CELLS,
     f"the surfaces-a-rung-reaches fold covers all {EVERY_RUNG_ROUTE_CELLS} cells rather than two",
@@ -2659,30 +2664,53 @@ check(
     "every accusation route offers the person a way to answer back",
     nudge.get("accusationRoutesWithNoWayToAnswer"),
 )
-# A question is never a notification (R-82): its route takes no authorisation at all.
+# --- where a QUESTION goes, over the whole space and pinned in both directions ------------------
+#
+# THIS BLOCK REPLACES A CHECK THAT COULD NOT GO RED. It was:
+#
+#     nudge["querySurface"] in ("panel", "popoverBadge")
+#
+# under the pass line *"a question routes to an in-app surface and never to a notification"* — and
+# it is the defect focus-3vb deleted from the rung's half of this same router, one repair earlier,
+# left standing in the question's half. Both failures are in that one line. A membership test
+# cannot see a surface **appearing**: route every question to a notification and this stays green
+# for as long as the one cell it reads still answers `panel`. And the one cell it read was
+# `.notPresenting`, `.idle`, `reducedInterruption: false`, `menuBarVisible: true`, `.standard` —
+# the plainest conditions in the space.
+#
+# The 30-cell `queryRoutes` table below it was wider on three axes and blind on two: it varied
+# deck, flag and media and pinned presentation and menu-bar visibility, which are exactly the two
+# axes the rung's fold had just gained. Two folds over one router, each blind to what the other
+# saw. There is one space now — `SelfCheck.routeSpace` — and both audits are taken over it.
+#
+# The single cell survives as a **literal**, because the settings pane describes that row and a
+# person reads it.
 check(
-    nudge.get("querySurface") in ("panel", "popoverBadge"),
-    "a question routes to an in-app surface and never to a notification",
+    nudge.get("querySurface") == "panel",
+    "the row the settings pane describes routes a question to the panel",
     nudge.get("querySurface"),
 )
-
-# **Every deck and every flag, not only the cell that always answers `panel`** (focus-kby).
-#
-# This stage used to ask the router exactly one question — standard deck, reduced interruption
-# off, nothing playing — which always answers `.panel`. The badge route was therefore invisible
-# to every gate in the programme, and the badge route is the one the ledger was burning questions
-# on: the silentVisual deck, reduced interruption (forced on by Reduce Motion) and a live
-# microphone or camera, which is anybody on a call.
-query_routes = nudge.get("queryRoutes") or []
+# The size of the fold before the fold's verdict (R-96o's shape), and it is the SAME space the
+# rung fold is taken over, divided by the rungs — so the two numbers cannot drift apart.
+EVERY_QUERY_ROUTE_CELLS = ROUTE_SPACE_CELLS
 check(
-    len(query_routes) >= 15,
-    f"the router is exercised across every deck and flag ({len(query_routes)} cells)",
-    len(query_routes),
+    nudge.get("surfacesAQuestionCanReachCellsChecked") == EVERY_QUERY_ROUTE_CELLS,
+    f"the surfaces-a-question-reaches fold covers all {EVERY_QUERY_ROUTE_CELLS} cells rather "
+    "than one",
+    nudge.get("surfacesAQuestionCanReachCellsChecked"),
+)
+# **Pinned in both directions.** A surface leaving this set fails as loudly as one joining it, and
+# `notification` joining it is what U-2 forbids and what the membership test could not see.
+check(
+    nudge.get("surfacesAQuestionCanReach") == ["panel", "popoverBadge"],
+    "over the whole input space a question reaches the panel and the badge, and nothing else — "
+    "so no question reaches the glyph and none reaches a notification",
+    nudge.get("surfacesAQuestionCanReach"),
 )
 check(
     nudge.get("everyQueryRouteCanCarryAQuestion") is True,
     "every cell routes a question to a surface that can actually carry one",
-    [row for row in query_routes if not row.get("canCarryAQuestion")],
+    nudge.get("queryCellsThatCannotCarryAQuestion"),
 )
 check(
     (nudge.get("queryRoutesReachingTheBadge") or 0) > 0,

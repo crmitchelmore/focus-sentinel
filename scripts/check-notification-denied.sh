@@ -232,6 +232,10 @@ check(
 #
 # Whatever this Mac says about notifications, both rungs land on a surface a person can see —
 # and there is no longer a second answer for them to land differently in.
+# **One space, named once**, before either fold's verdict: the rung fold multiplies it by the
+# rungs and the query fold takes it as it is, so the two counts cannot drift apart.
+route_space_cells = 2 * 2 * 2 * 2 * 5  # presenting × mic × flag × menuBar × deck
+
 table = report.get("routes")
 check(bool(table), "the router's table was reported", table)
 if table:
@@ -262,7 +266,7 @@ if table:
     # microphone, `silentVisual` or a hidden menu bar was invisible to it. The fold is now 160
     # cells, its size is asserted before the set it qualifies, and the honest set is three: the
     # badge really is reachable, under exactly the conditions the two-cell table pinned away.
-    every_rung_cells = (report.get("ladderRungsDeclared") or 0) * 2 * 2 * 2 * 2 * 5
+    every_rung_cells = (report.get("ladderRungsDeclared") or 0) * route_space_cells
     check(
         report.get("surfacesARungCanReachCellsChecked") == every_rung_cells,
         f"the surfaces-a-rung-reaches fold covers all {every_rung_cells} cells rather than two",
@@ -288,11 +292,32 @@ if table:
             top[0],
         )
 
-# A question is never a notification (R-82): its route takes no authorisation at all.
+# --- where a QUESTION goes, over the whole space and pinned in both directions ------------------
+#
+# THIS BLOCK REPLACES A CHECK THAT COULD NOT GO RED, and it is focus-3vb's defect standing in the
+# question's half of the same router. It read
+# `report["querySurface"] in ("panel", "popoverBadge")` under the pass line *"a question routes to
+# an in-app surface and never to a notification"*. A membership test cannot see a surface
+# **appearing** — route every question to a notification and it stays green while that one cell
+# answers `panel` — and the one cell it read was the plainest in the space.
+#
+# `queryRouteAudit()` folds `routeQuery(…)` over `SelfCheck.routeSpace`, the same enumeration the
+# rung fold above is taken over, so the two claims about one router are now claims about one space.
 check(
-    report.get("querySurface") in ("panel", "popoverBadge"),
-    "a question routes to an in-app surface and never to a notification",
+    report.get("querySurface") == "panel",
+    "the row the settings pane describes routes a question to the panel",
     report.get("querySurface"),
+)
+check(
+    report.get("surfacesAQuestionCanReachCellsChecked") == route_space_cells,
+    f"the surfaces-a-question-reaches fold covers all {route_space_cells} cells rather than one",
+    report.get("surfacesAQuestionCanReachCellsChecked"),
+)
+check(
+    report.get("surfacesAQuestionCanReach") == ["panel", "popoverBadge"],
+    "over the whole input space a question reaches the panel and the badge, and nothing else — "
+    "so no question reaches the glyph and none reaches a notification",
+    report.get("surfacesAQuestionCanReach"),
 )
 
 # --- the correction economy has a surface to be on ---------------------------------------------

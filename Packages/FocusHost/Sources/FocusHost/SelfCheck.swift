@@ -622,6 +622,100 @@ enum SelfCheck {
     nonisolated static func routeAudit(
         over rungs: [LadderRung.Kind]
     ) -> (cells: Int, surfaces: [String], unanswerable: [String]) {
+        var unanswerable: [String] = []
+        var reached: Set<String> = []
+        var cells = 0
+
+        for rung in rungs {
+            for cell in routeSpace {
+                cells += 1
+                let route = SurfaceRouter.route(
+                    rung: rung,
+                    presentation: cell.presentation,
+                    media: cell.media,
+                    reducedInterruption: cell.reducedInterruption,
+                    menuBarVisible: cell.menuBarVisible,
+                    voice: cell.voice
+                )
+                if let surface = route.surface {
+                    reached.insert(surface.rawValue)
+                }
+                guard let surface = route.surface, !surface.offersAnAnswer else { continue }
+                unanswerable.append("\(rung.rawValue)/\(cell.name) -> \(surface.rawValue)")
+            }
+        }
+        return (cells, reached.sorted(), Set(unanswerable).sorted())
+    }
+
+    /// **The same fold, aimed at the question** (focus-3vb's sibling).
+    ///
+    /// A rung's routes have been folded over the whole input space since focus-3vb, and
+    /// `surfacesARungCanReach` is pinned in both directions over all 160 cells. **The question's
+    /// were not.** The gate's only claim about where a question goes was
+    /// `querySurface in ("panel", "popoverBadge")` — one cell of the space, at `.notPresenting`,
+    /// `.idle`, `reducedInterruption: false`, `menuBarVisible: true`, `.standard`, tested for
+    /// membership of a two-element set. Two failures in one line, and they are the two the round
+    /// that widened the rung's fold was written to end: a membership test cannot see a surface
+    /// *appearing* (route every question to a notification and the check stays green as long as
+    /// that one cell still answers `panel`), and the space it searched was one cell wide.
+    ///
+    /// The 30-cell `queryRoutes` table beside it was wider on three axes and blind on two:
+    /// it varied deck, `reducedInterruption` and media, and pinned `.notPresenting` and
+    /// `menuBarVisible: true` — which are exactly the two axes the rung's fold gained. So each of
+    /// the two folds over one router was blind to something the other saw.
+    ///
+    /// There is **one space** now, `routeSpace`, and both audits are taken over it. Two folds
+    /// over one router cannot drift apart when there is one enumeration.
+    ///
+    /// Returns the surfaces reached, sorted, so the set can be pinned rather than searched; the
+    /// cells that reach a surface a question cannot be carried on, named; and the number of cells
+    /// visited, so a fold that quietly shrinks is a number rather than an unchanged `true`.
+    nonisolated static func queryRouteAudit()
+        -> (cells: Int, surfaces: [String], uncarryable: [String], badge: Int, panel: Int) {
+        var uncarryable: [String] = []
+        var reached: Set<String> = []
+        var badge = 0
+        var panel = 0
+
+        for cell in routeSpace {
+            let route = SurfaceRouter.routeQuery(
+                presentation: cell.presentation,
+                media: cell.media,
+                reducedInterruption: cell.reducedInterruption,
+                menuBarVisible: cell.menuBarVisible,
+                voice: cell.voice
+            )
+            guard let surface = route.surface else { continue }
+            reached.insert(surface.rawValue)
+            if surface == .popoverBadge { badge += 1 }
+            if surface == .panel { panel += 1 }
+            if !surface.canCarryAQuestion {
+                uncarryable.append("\(cell.name) -> \(surface.rawValue)")
+            }
+        }
+        return (routeSpace.count, reached.sorted(), Set(uncarryable).sorted(), badge, panel)
+    }
+
+    /// **One enumeration of the router's whole input space, shared by both folds.**
+    ///
+    /// Five axes — presentation, media, `reducedInterruption`, menu-bar visibility and deck. The
+    /// rung fold multiplies it by `LadderRung.Kind.allCases`; the query fold takes it as it is.
+    ///
+    /// The media axis is two values and not four, and that is a measurement rather than a saving:
+    /// `SurfaceRouter` reads media through `MediaActivity.suppressesIntervention` alone, which is
+    /// `microphoneRunning || cameraRunning`, so a running camera routes exactly as a running
+    /// microphone does. `SelfCheckRouteSpaceTests` asserts that rather than assuming it, which is
+    /// what makes two values the whole axis instead of half of it.
+    nonisolated static var routeSpace: [
+        (
+            name: String,
+            presentation: PresentationState,
+            media: MediaActivity,
+            reducedInterruption: Bool,
+            menuBarVisible: Bool,
+            voice: NudgeVoice
+        )
+    ] {
         let presenting = PresentationState(
             signals: PresentationSignals(
                 frontmostWindowFillsAScreen: true,
@@ -631,44 +725,41 @@ enum SelfCheck {
             isUserExcluded: false,
             isPresenting: true
         )
-        var unanswerable: [String] = []
-        var reached: Set<String> = []
-        var cells = 0
-
-        for rung in rungs {
-            for presentation in [PresentationState.notPresenting, presenting] {
-                for media in [MediaActivity.idle, MediaActivity(microphoneRunning: true)] {
-                    for reduced in [false, true] {
-                        for menuBar in [true, false] {
-                            for voice in NudgeVoice.allCases {
-                                cells += 1
-                                let route = SurfaceRouter.route(
-                                    rung: rung,
+        var space: [
+            (
+                name: String,
+                presentation: PresentationState,
+                media: MediaActivity,
+                reducedInterruption: Bool,
+                menuBarVisible: Bool,
+                voice: NudgeVoice
+            )
+        ] = []
+        for presentation in [PresentationState.notPresenting, presenting] {
+            for media in [MediaActivity.idle, MediaActivity(microphoneRunning: true)] {
+                for reduced in [false, true] {
+                    for menuBar in [true, false] {
+                        for voice in NudgeVoice.allCases {
+                            var name = "\(voice.rawValue)/reduced=\(reduced)"
+                            name += "/menuBar=\(menuBar)"
+                            name += "/presenting=\(presentation.suppressesOverlays)"
+                            name += "/mic=\(media.suppressesIntervention)"
+                            space.append(
+                                (
+                                    name: name,
                                     presentation: presentation,
                                     media: media,
                                     reducedInterruption: reduced,
                                     menuBarVisible: menuBar,
                                     voice: voice
                                 )
-                                if let surface = route.surface {
-                                    reached.insert(surface.rawValue)
-                                }
-                                guard let surface = route.surface, !surface.offersAnAnswer else {
-                                    continue
-                                }
-                                var cell = "\(rung.rawValue)/\(voice.rawValue)"
-                                cell += "/reduced=\(reduced)/menuBar=\(menuBar)"
-                                cell += "/presenting=\(presentation.suppressesOverlays)"
-                                cell += "/mic=\(media.suppressesIntervention)"
-                                cell += " -> \(surface.rawValue)"
-                                unanswerable.append(cell)
-                            }
+                            )
                         }
                     }
                 }
             }
         }
-        return (cells, reached.sorted(), Set(unanswerable).sorted())
+        return space
     }
 
     /// One delivered rung of a kind, as the value the two cap predicates are asked of.
@@ -1007,7 +1098,9 @@ enum SelfCheck {
         ).children.compactMap(\.label).sorted()
 
         // The query's route, which takes no authorisation at all: **a question is never a
-        // notification** (R-82).
+        // notification** (R-82). The single cell the settings pane describes, kept as the table's
+        // own row and pinned to a literal — never searched for membership of a set, which is what
+        // it used to be and which could not see a surface *appearing*.
         let queryRoute = SurfaceRouter.routeQuery(
             presentation: .notPresenting,
             media: .idle,
@@ -1017,55 +1110,21 @@ enum SelfCheck {
         )
         report["querySurface"] = queryRoute.surface?.rawValue ?? ""
 
-        // **Every deck and every flag, not just the one cell that always answers `panel`**
-        // (focus-kby).
+        // **And the whole space, with the set pinned in both directions** (focus-3vb's sibling).
         //
-        // This stage used to ask the router exactly one question — the standard deck, reduced
-        // interruption off, nothing playing — which always answers `.panel`. The badge route was
-        // therefore invisible to every gate in the programme, and the badge route is the one the
-        // ledger was burning questions on: `silentVisual`, reduced interruption (forced on by
-        // Reduce Motion), and a live microphone or camera, which is anybody on a call. Three
-        // ordinary conditions, none of them exotic, none of them ever exercised.
-        //
-        // `routeQuery(…)` is a pure function of typed inputs, so the whole cross product costs
-        // nothing, prompts nothing and needs no grant.
-        var queryRoutes: [[String: Any]] = []
-        for voice in NudgeVoice.allCases {
-            for reduced in [false, true] {
-                let mediaStates: [(String, MediaActivity)] = [
-                    ("idle", .idle),
-                    ("microphone", MediaActivity(microphoneRunning: true)),
-                    ("camera", MediaActivity(microphoneRunning: false, cameraRunning: true))
-                ]
-                for (mediaName, media) in mediaStates {
-                    let route = SurfaceRouter.routeQuery(
-                        presentation: .notPresenting,
-                        media: media,
-                        reducedInterruption: reduced,
-                        menuBarVisible: true,
-                        voice: voice
-                    )
-                    queryRoutes.append([
-                        "voice": voice.rawValue,
-                        "reducedInterruption": reduced,
-                        "media": mediaName,
-                        "surface": route.surface?.rawValue ?? "",
-                        "deferralReason": route.deferralReason?.rawValue ?? "",
-                        "canCarryAQuestion": route.surface?.canCarryAQuestion ?? false
-                    ])
-                }
-            }
-        }
-        report["queryRoutes"] = queryRoutes
-        report["everyQueryRouteCanCarryAQuestion"] = queryRoutes.allSatisfy {
-            ($0["canCarryAQuestion"] as? Bool) == true
-        }
-        report["queryRoutesReachingTheBadge"] = queryRoutes.count {
-            ($0["surface"] as? String) == NudgeSurface.popoverBadge.rawValue
-        }
-        report["queryRoutesReachingThePanel"] = queryRoutes.count {
-            ($0["surface"] as? String) == NudgeSurface.panel.rawValue
-        }
+        // `queryRouteAudit()` is the same fold `surfacesARungCanReach` is taken over — literally
+        // the same `routeSpace` enumeration — so the question and the rung can no longer be blind
+        // to different axes of one router. What it replaces was a 30-cell table that varied deck,
+        // `reducedInterruption` and media while pinning `.notPresenting` and
+        // `menuBarVisible: true`: the two axes the rung's fold had just gained.
+        let queryAudit = queryRouteAudit()
+        report["surfacesAQuestionCanReach"] = queryAudit.surfaces
+        report["surfacesAQuestionCanReachCellsChecked"] = queryAudit.cells
+        report["queryCellsThatCannotCarryAQuestion"] = queryAudit.uncarryable
+        report["everyQueryRouteCanCarryAQuestion"] = queryAudit.uncarryable.isEmpty
+        report["queryRoutesReachingTheBadge"] = queryAudit.badge
+        report["queryRoutesReachingThePanel"] = queryAudit.panel
+
         // The badge is only a surface while the menu bar is on screen (P-131), and a question
         // routed to a hidden menu bar is a deferral rather than a question nobody answers.
         let hiddenMenuBar = SurfaceRouter.routeQuery(
