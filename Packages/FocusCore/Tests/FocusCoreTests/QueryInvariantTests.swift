@@ -68,9 +68,12 @@ struct QueryInvariantTests {
         if !budgetPermits { return .budgetExhausted }
         if hasAsked { return .alreadyAsked }
         if reason?.queryable == nil { return .reasonNotAskable }
+        // **Both producers of `noSingleSubject`, adjacent and above the dwell** (focus-w3z).
+        // They used to straddle it, which made the vocabulary's own declaration-order claim
+        // unprovable — a total order cannot visit one of its cases twice.
         if drift.isMixed { return .noSingleSubject }
-        if !dwellSatisfied { return .withinDwellGrace }
         if (judgedSubject ?? "").isEmpty { return .noSingleSubject }
+        if !dwellSatisfied { return .withinDwellGrace }
         return nil                                  // the one cell that warrants
     }
 

@@ -83,6 +83,13 @@ public struct QueryWarrant: Sendable, Equatable, Hashable {
 ///
 /// The declaration order is R-84's evaluation order, restricted to the gates this function can
 /// see, with the **verdict gate lifted to the front** — see `QueryEligibility.decide(…)`.
+///
+/// **That sentence was false, and it is now a proof** (focus-w3z). `decide(…)` produced
+/// `noSingleSubject` at two positions — `drift.isMixed` before `withinDwellGrace` and
+/// `QuerySubject.derive(…)` after it — so the declaration was not a total order at all and no
+/// reading could have made the claim true of it. The two producers are adjacent now, both above
+/// the dwell, and `QueryWithholdingTests` walks `allCases` in declaration order closing one gate
+/// at a time: a claim about an order is worth making only if something checks it.
 public enum QueryWithholdingReason: String, Sendable, CaseIterable, Codable, Hashable {
     /// The app is confident this is real work. **The only thing that buys silence** under U-1.
     case verdictRelevant
@@ -115,6 +122,11 @@ public enum QueryWithholdingReason: String, Sendable, CaseIterable, Codable, Has
     case reasonNotAskable
     /// Drift accumulated across several subjects, or the activation named none. *"Is something
     /// part of your task?"* is not a question, so it is not asked.
+    ///
+    /// **Two producers, and they are adjacent in `decide(…)`** (focus-w3z): the accumulator's
+    /// `isMixed`, and `QuerySubject.derive(…)` finding nothing to name. The second used to be
+    /// evaluated below the dwell, which is what made this type's declaration-order claim
+    /// unprovable.
     case noSingleSubject
     /// The person has only just arrived. A question may come at half the dwell an accusation
     /// needs, because it is cheaper — but never instantly (R-95, `queryDwellThreshold`).
@@ -232,12 +244,23 @@ public enum QueryEligibility: Sendable, Equatable, Hashable {
         guard budgetPermits else { return .withheld(.budgetExhausted) }
         guard !hasAsked else { return .withheld(.alreadyAsked) }
         guard let reason = uncertainty?.queryable else { return .withheld(.reasonNotAskable) }
+        // **Both producers of `noSingleSubject`, adjacent** (focus-w3z). The second one used to
+        // sit *below* the dwell guard, which made the declaration order this type claims to have
+        // impossible: a vocabulary cannot be a total order over an evaluation that visits one of
+        // its cases twice, on either side of another. They are one question — *is there a single
+        // thing to ask about?* — asked of the accumulator and then of the activation, and asking
+        // them together is what makes the claim above checkable.
+        //
+        // What it changes: a judgement that is inside the dwell grace **and** has no subject to
+        // name now reports `noSingleSubject` rather than `withinDwellGrace`. Neither warrants a
+        // question, so nothing the person sees moves; the reported reason is the more permanent
+        // of the two, which is the honest one to give.
         guard !drift.isMixed else { return .withheld(.noSingleSubject) }
-        guard dwellSatisfied else { return .withheld(.withinDwellGrace) }
         guard let subject = QuerySubject.derive(
             judgedSubject: judgedSubject,
             explanation: explanation
         ) else { return .withheld(.noSingleSubject) }
+        guard dwellSatisfied else { return .withheld(.withinDwellGrace) }
 
         return .warranted(
             QueryWarrant(
