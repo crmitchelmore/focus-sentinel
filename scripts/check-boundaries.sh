@@ -511,6 +511,63 @@ else
     print -u2 "    e04 adds an engine to this package and needs no new framework (R-70j, P-120)."
 fi
 
+# --- and the row is a fact about the BUILT OBJECT, not about this file (focus-bkf) ---------
+#
+# The comparison above reads one constant in this script against another constant in this script.
+# It is worth keeping — it names the row and says why it is pinned — but nothing a product, a
+# report or a log can do makes it fail, so on its own it is a restatement rather than coverage.
+#
+# What the object itself says: a Swift module that imports a framework emits
+# `__swift_FORCE_LOAD_$_swift<Framework>` as an undefined symbol, so `nm -u` over
+# `FocusClassify.o` names the overlay closure the engine actually links. Two readings, per
+# configuration:
+#
+#   1. the closure is the committed one, both directions — an `import CoreGraphics` in the engine
+#      adds a name here whatever the row says, and losing NaturalLanguage removes one;
+#   2. every framework the ROW permits is one the object demonstrably links — which is what makes
+#      widening the row red rather than quiet, because the widened row is then a promise about a
+#      product that does not keep it.
+#
+# `os` is the documented exception to (2) and is spelled out rather than glossed: it is a clang
+# module, `Logger` is inlined into the caller, and no overlay symbol is emitted for it.
+EXPECTED_CLASSIFY_OVERLAYS='CoreFoundation Dispatch Foundation IOKit NaturalLanguage ObjectiveC XPC _Builtin_float'
+CLASSIFY_FRAMEWORKS_WITHOUT_OVERLAY='os'
+
+for config in Debug Release; do
+    classify_object="$DERIVED_DATA/Build/Products/$config/FocusClassify.o"
+    if [[ ! -f "$classify_object" ]]; then
+        if [[ "${FOCUS_REQUIRE_BINARY_CHECK:-0}" == "1" ]]; then
+            fail "FOCUS_REQUIRE_BINARY_CHECK=1 but there is no build product at $classify_object"
+        else
+            print "binary: SKIPPED — no build product (the gate re-runs this after the build)"
+        fi
+        continue
+    fi
+    classify_overlays=$(nm -u "$classify_object" 2>/dev/null \
+        | sed -n 's/^__swift_FORCE_LOAD_\$_swift//p' | LC_ALL=C sort -u | tr '\n' ' ')
+    classify_overlays="${classify_overlays% }"
+    if [[ "$classify_overlays" == "$EXPECTED_CLASSIFY_OVERLAYS" ]]; then
+        print "binary: $config FocusClassify.o links exactly: $classify_overlays"
+    else
+        fail "the $config FocusClassify.o framework closure has changed"
+        print -u2 "    expected: $EXPECTED_CLASSIFY_OVERLAYS"
+        print -u2 "    found:    $classify_overlays"
+        print -u2 "    A framework appearing here is an import the row above did not authorise;"
+        print -u2 "    one disappearing means the object under test is no longer the engine."
+    fi
+    for framework in ${=ALLOWED_FRAMEWORKS[FocusClassify]}; do
+        if [[ " $classify_overlays " == *" $framework "* ]]; then
+            print "binary: control — the row's $framework is linked by $config FocusClassify.o"
+        elif [[ " $CLASSIFY_FRAMEWORKS_WITHOUT_OVERLAY " == *" $framework "* ]]; then
+            print "note   the row's $framework has no Swift overlay symbol and is not read here"
+        else
+            fail "the row permits $framework, which $config FocusClassify.o does not link"
+            print -u2 "    A row widened to admit a framework the engine does not use is a"
+            print -u2 "    permission granted in advance of the import that needs it (R-70j)."
+        fi
+    done
+done
+
 # --- e04 R-75/T103a: FocusEvaluate is a TEST-LANE product and is not in the shipping graph --
 #
 # R-75 moves the evaluation harness out of the test target, because a report emitted as a side
