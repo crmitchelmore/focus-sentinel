@@ -760,6 +760,16 @@ check_outside "R-70n" "no rule is constructed with the session scope" \
 #        getNotificationSettings, which never prompts; the app now needs not even that to
 #        decide anything, so SC-5 is discharged by the call not existing.
 #
+# R-96s  **The shipped Mach-O carries no notification-POSTING selector** (focus-3vb). R-96g is a
+#        source grep and every source grep can be defeated by building the string at runtime;
+#        this is the same claim measured on the artefact. U-2 is a user ruling — no rung routes
+#        to a notification, because the app asks for no system permission of any kind — and
+#        until this line the ruling had no enforcement at the binary at all: the router fold
+#        proves nothing about a path that reaches UNUserNotificationCenter without asking the
+#        router. Non-vacuity is a CONTROL rather than an argument: the reading half of the
+#        boundary must still be present in the same binary, so a check that passes because the
+#        framework was dropped fails instead.
+#
 # R-96h  `hidesOnDeactivate = true` and a `canBecomeMain` returning true are banned on any
 #        NSPanel subclass in the nudge module. Both are silent failures: the first makes
 #        the nudge vanish exactly when it is needed, the second activates the app.
@@ -1584,6 +1594,126 @@ fi
 
 if (( sc1_binaries_seen == 0 )) && [[ "${FOCUS_REQUIRE_BINARY_CHECK:-0}" != "1" ]]; then
     print "     [SC-1] binary half SKIPPED — nothing built yet (the gate re-runs this after the build)"
+fi
+
+# --- R-96s: SC-5's binary half — the shipped app cannot post a notification -------------------
+#
+# **What this exists to stop, and why the source lint is not enough.** U-2 ruled that no rung
+# routes to a notification. Three proofs already cover the ROUTER — the 160-cell fold the binary
+# runs, `SurfaceRouterTests.noCellReachesANotification`, and the pinned `surfacesARungCanReach`
+# — and not one of them says anything about a path that reaches `UNUserNotificationCenter`
+# *without* asking the router. `check-boundaries.sh` still permits `UserNotifications` for
+# `FocusUI`, because the boundary must go on decoding a press on a banner an earlier build
+# posted. So a future round could reinstate a posting call, pass every fold in the programme,
+# and fail nothing.
+#
+# Selectors, not source text. An Objective-C selector referenced by Swift is emitted into
+# `__TEXT,__objc_methname`, so it survives every way of spelling the call. Measured on the
+# Release Mach-O of this tree: all five banned names absent; `currentNotificationCenter` 2,
+# `getNotificationSettingsWithCompletionHandler:` 2, `UNUserNotificationCenter` 14.
+#
+# **Both configurations**, and the Release one is the artefact this programme ships — the whole
+# finding behind this rule is that the Release lane's readings were the weakest in the gate.
+print
+print "== R-96s: SC-5's binary half — no notification-posting selector in the shipped app"
+
+# The names a posting path cannot avoid: the two `add(_:)` selectors, the category registration
+# the app stopped making, the request that would prompt, and the two content/request classes a
+# banner has to be built out of.
+NOTIFICATION_POSTING_SELECTORS=(
+    addNotificationRequest
+    setNotificationCategories
+    requestAuthorizationWithOptions
+    UNMutableNotificationContent
+    UNNotificationRequest
+)
+# The control, and it is the load-bearing half of this check. A binary that dropped
+# UserNotifications entirely would carry none of the banned names either, and would pass a ban
+# that had become a statement about nothing. The app's remaining relationship with the
+# notification centre is LISTENING, and these are what listening leaves behind.
+NOTIFICATION_READING_SELECTORS=(
+    currentNotificationCenter
+    getNotificationSettingsWithCompletionHandler
+)
+
+# **The app's executable code, resolved rather than named** — the same correction SC-1 above
+# needed and for the same measured reason. Naming `Contents/MacOS/FocusSentinel` would aim the
+# Debug half of this ban at a 58 KB dyld launcher whose whole symbol table is libSystem, and the
+# control below would then fail for the launcher rather than pass for the app. `app_code_files`
+# returns both files when the debug-dylib layout is in use, so the ban covers the launcher too and
+# the control finds the code wherever the toolchain put it.
+#
+# **And the control is judged per configuration, not once for the pair.** A single flag across
+# both lanes is satisfied by whichever lane still carries a reading selector, so a Release build
+# that dropped `UserNotifications` entirely would pass a ban that had become a statement about
+# nothing — vouched for by the Debug binary beside it. The Release product is the artefact this
+# programme ships and it must answer for itself.
+r96s_binaries_seen=0
+for config in Debug Release; do
+    r96s_config_binaries=(${(f)"$(app_code_files $config)"})
+    r96s_config_binaries=(${r96s_config_binaries:#})
+    if (( ${#r96s_config_binaries} == 0 )); then
+        r96s_config_binaries=(
+            "$DERIVED_DATA/Build/Products/$config/FocusSentinel.app/Contents/MacOS/FocusSentinel"
+        )
+    fi
+
+    r96s_config_files_seen=0
+    r96s_reading_seen=0
+    for binary in $r96s_config_binaries; do
+        if [[ ! -f "$binary" ]]; then
+            if [[ "${FOCUS_REQUIRE_BINARY_CHECK:-0}" == "1" ]]; then
+                print -u2 "FAIL [R-96s] FOCUS_REQUIRE_BINARY_CHECK=1 but $binary does not exist"
+                rc=1
+            else
+                print "     [R-96s] $binary not built yet — the gate re-runs this after the build"
+            fi
+            continue
+        fi
+        r96s_binaries_seen=$(( r96s_binaries_seen + 1 ))
+        r96s_config_files_seen=$(( r96s_config_files_seen + 1 ))
+        binary_strings=$(strings -a -- "$binary" 2>/dev/null)
+
+        # The configuration is named in every line, because `${binary:t}` is `FocusSentinel` in
+        # both lanes and a log in which Debug and Release read identically is a log in which one
+        # of them can go missing unnoticed.
+        for selector in $NOTIFICATION_POSTING_SELECTORS; do
+            hits=$(print -r -- "$binary_strings" | grep -c -F -- "$selector")
+            if (( hits > 0 )); then
+                print -u2 "FAIL [R-96s] ${binary:t} ($config) carries $selector ($hits) — it can post a notification"
+                rc=1
+            else
+                print "ok   [R-96s] ${binary:t} ($config) carries no $selector"
+            fi
+        done
+
+        # The control, counted per FILE and judged per CONFIGURATION below. A launcher carries
+        # neither the banned names nor the reading ones, so demanding the control of every file
+        # would fail for the stub while the ban passed for it — the two halves of one wrong subject.
+        for selector in $NOTIFICATION_READING_SELECTORS; do
+            hits=$(print -r -- "$binary_strings" | grep -c -F -- "$selector")
+            if (( hits > 0 )); then
+                print "ok   [R-96s] control: ${binary:t} ($config) still reads the centre via $selector ($hits)"
+                r96s_reading_seen=1
+            fi
+        done
+    done
+
+    # The control's verdict, for THIS configuration. At least one of the files examined for it
+    # must still carry the reading half of the boundary: a binary that dropped
+    # `UserNotifications` entirely would carry none of the banned names either, and would pass a
+    # ban that had become a statement about nothing.
+    if (( r96s_config_files_seen > 0 )) && (( r96s_reading_seen == 0 )); then
+        print -u2 "FAIL [R-96s] no examined $config binary carries a notification-READING selector"
+        print -u2 "    The app's remaining relationship with the notification centre is listening —"
+        print -u2 "    getNotificationSettings and a delegate that receives a press. With neither in"
+        print -u2 "    the artefact, the ban above is true of a binary that has no boundary at all."
+        rc=1
+    fi
+done
+
+if (( r96s_binaries_seen == 0 )) && [[ "${FOCUS_REQUIRE_BINARY_CHECK:-0}" != "1" ]]; then
+    print "     [R-96s] SKIPPED — nothing built yet (the gate re-runs this after the build)"
 fi
 
 print
