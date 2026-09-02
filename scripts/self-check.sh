@@ -2319,13 +2319,27 @@ check(
 # which one is right depends on the display the gate happens to run on — a machine too small to
 # show the actions must read `everythingScrolls`, and requiring otherwise would be requiring the
 # gate's own screen to be big.
-POPOVER_OVERFLOWS = {"nothingScrolls", "theContextScrolls", "everythingScrolls"}
+#
+# **And the vocabulary is the binary's, pinned, rather than this script's copy of it** (focus-bkf).
+# Written as membership in a set spelled out here, this row was the whole codomain of a
+# `CaseIterable` decoder: no state the product can be in falsifies it, which is exactly the shape
+# focus-652 deleted one repair earlier — and this one runs on the RELEASE artefact. So the running
+# binary publishes its cases, the list is pinned in both directions against the committed literal
+# (a case leaving is as red as a case joining, `ladderSilencesDeclared`'s reason), and the
+# membership below reads the published list rather than a set this file could quietly widen.
+COMMITTED_POPOVER_OVERFLOWS = ["everythingScrolls", "nothingScrolls", "theContextScrolls"]
+check(
+    popover.get("overflowsDeclared") == COMMITTED_POPOVER_OVERFLOWS,
+    "every way the popover can give way is a folded, named case",
+    popover.get("overflowsDeclared"),
+)
+declared_overflows = popover.get("overflowsDeclared") or []
 for popover_case in ("empty", "fullest"):
     measured = popover.get(popover_case) or {}
     check(
-        measured.get("overflow") in POPOVER_OVERFLOWS,
+        bool(declared_overflows) and measured.get("overflow") in declared_overflows,
         f"the {popover_case} popover says which way it gives way",
-        measured.get("overflow"),
+        (measured.get("overflow"), declared_overflows),
     )
     check(
         measured.get("scrolls") is (measured.get("overflow") != "nothingScrolls"),

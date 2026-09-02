@@ -1357,6 +1357,15 @@ enum SelfCheck {
         report["maximumContentHeight"] =
             MenuBarController.popoverMaximumContentHeight(screens: screens) ?? -1
         report["isShown"] = AppComposition.shared.menuBar.isPopoverShown
+        // **The vocabulary, so the reading below is a claim and not a restatement of a type**
+        // (focus-bkf). `overflow` was asserted by the gate as membership in a three-element set
+        // written into the script — the entire codomain of a `CaseIterable` decoder, so no
+        // product state could falsify it, which is focus-652's shape verbatim. Publishing the
+        // cases lets the gate pin the vocabulary in both directions, as it does for
+        // `ladderSilencesDeclared`: a case leaving is as red as a case joining, and the
+        // membership test then reads the running binary's own enumeration rather than the
+        // script's copy of it.
+        report["overflowsDeclared"] = DecisionSurfaceOverflow.allCases.map(\.rawValue).sorted()
 
         for (name, presentation) in popoverSurveyContents {
             let layout = MenuBarController.popoverLayout(
