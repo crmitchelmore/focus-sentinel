@@ -435,7 +435,14 @@ struct MenuBarTests {
     /// The two together are the whole reading; this one alone is not, and used to claim to be.
     @Test("a question in a popover nobody has opened is not a question anybody is showing")
     func aQuestionIsNotShowingWhileThePopoverIsClosed() {
+        // A controller owns a real `NSPopover`, and installs a real status item the moment it is
+        // asked to. Both are taken back here so the process does not carry them for the rest of
+        // the run.
         let controller = MenuBarController()
+        defer {
+            controller.closePopover()
+            controller.remove()
+        }
 
         // Nothing installed, nothing open: the popover cannot be showing anything.
         controller.update(MenuBarFixture.presentation(pendingQuery: MenuBarFixture.query))
@@ -460,6 +467,10 @@ struct MenuBarTests {
     @Test("a question arriving while the popover is closed announces nothing")
     func nothingIsAnnouncedWhileThePopoverIsClosed() {
         let controller = MenuBarController()
+        defer {
+            controller.closePopover()
+            controller.remove()
+        }
         var announcements = 0
         controller.onPopoverDidShow = { announcements += 1 }
 

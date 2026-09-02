@@ -202,6 +202,9 @@ struct NudgeDayShapeTests {
         root.menuBar.closePopover()
         root.menuBar.remove()
         root.stop()
+        // The activation the stage needed is process-wide state, and it goes back with the
+        // surfaces (focus-tzj.5).
+        MenuBarStage.restoreActivationPolicy()
     }
 
     /// Everything one whole day did, read off the real surfaces and the real store.

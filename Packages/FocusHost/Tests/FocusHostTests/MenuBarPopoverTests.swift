@@ -44,6 +44,7 @@ struct MenuBarPopoverTests {
         defer {
             controller.closePopover()
             controller.remove()
+            MenuBarStage.restoreActivationPolicy()
         }
         var announcements = 0
 

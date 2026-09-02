@@ -278,6 +278,9 @@ struct NudgeHostFixture {
         panel.hide()
         menuBar.closePopover()
         menuBar.remove()
+        // The activation the stage needed to open a real popover is process-wide state, and it
+        // goes back with the surfaces (focus-tzj.5).
+        MenuBarStage.restoreActivationPolicy()
     }
 
     // MARK: - What the world is doing

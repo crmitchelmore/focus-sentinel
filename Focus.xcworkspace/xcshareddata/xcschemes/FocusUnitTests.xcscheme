@@ -79,6 +79,16 @@
             value = "xcodebuild"
             isEnabled = "YES">
          </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "SWT_SWIFT_ERROR_BACKTRACING_ENABLED"
+            value = "0"
+            isEnabled = "YES">
+         </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "SWT_FOUNDATION_ERROR_BACKTRACING_ENABLED"
+            value = "0"
+            isEnabled = "YES">
+         </EnvironmentVariable>
       </EnvironmentVariables>
    </TestAction>
    <AnalyzeAction

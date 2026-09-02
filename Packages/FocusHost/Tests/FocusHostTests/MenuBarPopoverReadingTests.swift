@@ -104,6 +104,7 @@ struct MenuBarPopoverReadingTests {
         defer {
             controller.closePopover()
             controller.remove()
+            MenuBarStage.restoreActivationPolicy()
         }
         try MenuBarStage.open(controller, showing: PopoverRig.carryingBoth(priority: priority))
         NudgeHostFixture.settle()
@@ -146,6 +147,7 @@ struct MenuBarPopoverReadingTests {
         defer {
             controller.closePopover()
             controller.remove()
+            MenuBarStage.restoreActivationPolicy()
         }
         try MenuBarStage.open(
             controller,
@@ -181,6 +183,7 @@ struct MenuBarPopoverReadingTests {
         defer {
             controller.closePopover()
             controller.remove()
+            MenuBarStage.restoreActivationPolicy()
         }
         try MenuBarStage.open(
             controller,

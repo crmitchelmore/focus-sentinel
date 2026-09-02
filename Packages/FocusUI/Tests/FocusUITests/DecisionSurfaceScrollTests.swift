@@ -425,7 +425,10 @@ struct DecisionSurfaceScrollTests {
             "the accusation panel's context is thinner than the floor it must keep"
         )
 
+        // The panels are real AppKit windows. A test that leaves them behind leaves a window
+        // per run for every later test in the process to be slowed by, and this suite makes two.
         let controller = NudgePanelController()
+        defer { controller.hide() }
         controller.displays = { [display] }
         controller.update(showing: .accusation, layout: cell.layout, traits: .light)
         #expect(
@@ -439,6 +442,7 @@ struct DecisionSurfaceScrollTests {
         // And a display with room for the whole panel gives way to nothing, so the branch is
         // reached by the content rather than by the controller always choosing it.
         let roomy = NudgePanelController()
+        defer { roomy.hide() }
         roomy.displays = { [Self.display] }
         roomy.update(showing: .accusation, layout: cell.layout, traits: .light)
         #expect(roomy.currentOverflow == .nothingScrolls)

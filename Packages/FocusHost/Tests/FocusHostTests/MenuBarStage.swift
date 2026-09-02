@@ -61,11 +61,37 @@ enum MenuBarStage {
         )
     }
 
+    /// What `NSApplication`'s activation policy was before this stage first changed it.
+    ///
+    /// `nil` means "nothing to put back": either the stage has not activated yet, or the last
+    /// activation has already been restored. Recorded once rather than per call, because the
+    /// second activation's "previous" value is the one the first one installed.
+    private static var policyBeforeActivation: NSApplication.ActivationPolicy?
+
     /// The activation both routes above need, in one place.
     private static func activate() {
-        _ = NSApplication.shared.setActivationPolicy(.accessory)
-        NSApplication.shared.activate(ignoringOtherApps: true)
+        let application = NSApplication.shared
+        if policyBeforeActivation == nil {
+            policyBeforeActivation = application.activationPolicy()
+        }
+        _ = application.setActivationPolicy(.accessory)
+        application.activate(ignoringOtherApps: true)
         NudgeHostFixture.settle(0.2)
+    }
+
+    /// **Put back what the stage changed** (focus-tzj.5).
+    ///
+    /// The activation policy is process-wide state, and this stage is the only thing in the
+    /// bundle that touches it — so a test that activates and never restores hands every later
+    /// test in the process an application posture no test asked for, and leaves the machine
+    /// running the gate with a foreground `xctest` for the rest of the run.
+    ///
+    /// A no-op when there is nothing to put back, so a `defer` may be written next to any
+    /// stage call without the caller having to know whether it was the one that activated.
+    static func restoreActivationPolicy() {
+        guard let policy = policyBeforeActivation else { return }
+        policyBeforeActivation = nil
+        _ = NSApplication.shared.setActivationPolicy(policy)
     }
 
     static func open(

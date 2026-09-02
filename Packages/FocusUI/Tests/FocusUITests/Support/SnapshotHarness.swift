@@ -84,6 +84,30 @@ enum SnapshotHarness {
         transform: ShellStringTransform = .identity,
         name: String
     ) throws -> Snapshot {
+        // **A name is a render's identity, and the lane now holds itself to that** (focus-tzj.5).
+        //
+        // Every render is written to `$FOCUS_SNAPSHOT_OUT/<name>.png` and compared against
+        // `__Snapshots__/<name>.png`, so two different pictures drawn under one name overwrite
+        // each other's evidence and are judged against one baseline. Nothing used to notice.
+        // This registry does: the same name under the same conditions is the control several
+        // suites deliberately re-render, and is fine; the same name under *different* conditions
+        // is that collision, and fails.
+        //
+        // It keeps the conditions and not the picture. Caching the `Snapshot` itself was
+        // measured: it saved 56 of 836 renders — about two seconds — and pinned every decoded
+        // pixel buffer in the run, some 2.7 GB, for the life of the process. The wrong trade.
+        let conditions = RenderConditions(
+            traits: traits,
+            textScale: textScale,
+            width: width,
+            transform: transform.name,
+            scale: scale
+        )
+        if let known = conditionsByName[name], known != conditions {
+            throw SnapshotFailure.nameCollision(name)
+        }
+        conditionsByName[name] = conditions
+
         let subject = content
             .shellStringTransform(transform)
             .appearanceTraits(traits)
@@ -118,24 +142,40 @@ enum SnapshotHarness {
             named: traits.colorScheme == .dark ? .darkAqua : .aqua
         )
         var rendered: CGImage?
-        if let appearance {
-            appearance.performAsCurrentDrawingAppearance { rendered = renderer.cgImage }
-        } else {
-            rendered = renderer.cgImage
+        SnapshotMetrics.measure(.render) {
+            if let appearance {
+                appearance.performAsCurrentDrawingAppearance { rendered = renderer.cgImage }
+            } else {
+                rendered = renderer.cgImage
+            }
         }
 
         guard let image = rendered else {
             throw SnapshotFailure.renderProducedNothing(name)
         }
 
-        let data = try PNGCompare.encode(image)
-        let pixels = try PNGCompare.pixels(of: image)
+        let data = try SnapshotMetrics.measure(.encode) { try PNGCompare.encode(image) }
+        let pixels = try SnapshotMetrics.measure(.pixels) { try PNGCompare.pixels(of: image) }
         let snapshot = Snapshot(name: name, data: data, pixels: pixels)
 
-        try write(snapshot)
-        Attachment.record(Attachment(data, named: "\(name).png"))
+        try SnapshotMetrics.measure(.write) {
+            try write(snapshot)
+            Attachment.record(Attachment(data, named: "\(name).png"))
+        }
         return snapshot
     }
+
+    /// Everything about a render other than the view itself.
+    private struct RenderConditions: Equatable {
+        let traits: AppearanceTraits
+        let textScale: ShellTextScale
+        let width: CGFloat?
+        let transform: String
+        let scale: CGFloat
+    }
+
+    /// What each name has already been rendered under. Conditions only — see above.
+    private static var conditionsByName: [String: RenderConditions] = [:]
 
     /// The canonical file name for a render: `<component>.<variant>.<scale>[.<suffix>].png`.
     static func name(
@@ -168,7 +208,8 @@ enum SnapshotHarness {
             return
         }
 
-        guard let baselineData = try? Data(contentsOf: baselineURL) else {
+        let read = SnapshotMetrics.measure(.baselineRead) { try? Data(contentsOf: baselineURL) }
+        guard let baselineData = read else {
             // Write the candidate so it can be read by eye, then fail. Recording is never
             // silent: a deleted or forgotten baseline must cost a red run, not pass because
             // the lane obligingly re-recorded whatever the code happens to draw today.
@@ -183,7 +224,31 @@ enum SnapshotHarness {
             )
         }
 
-        let baseline = try PNGCompare.decode(baselineData)
+        // **The fast path: identical bytes are the same picture** (focus-tzj.5).
+        //
+        // Measured over a whole gate run's renders against the committed baselines, 431 of 459
+        // are byte-for-byte identical; the other 28 differ only by anti-aliasing jitter, which
+        // is exactly what the tolerance below exists for. So the common case can be settled by
+        // a `memcmp` on data already in hand, and the baseline never decoded at all — which is
+        // where a third of this lane's wall time used to go.
+        //
+        // **This gives nothing away.** Byte-identical PNGs decode to identical pixels, so the
+        // comparison below is trivially within tolerance, and the render's ink count *is* the
+        // baseline's ink count — one scan discharges both of focus-pq8's obligations rather
+        // than skipping one of them. The blank-baseline half is still checked: a committed
+        // blank whose render matches it is still a blank render, and fails here.
+        if snapshot.data == baselineData {
+            try SnapshotMetrics.measure(.ink) {
+                try requireInk(snapshot.pixels, in: snapshot.name, side: "render and baseline")
+            }
+            SnapshotMetrics.note(&SnapshotMetrics.fastPathHits)
+            return
+        }
+        SnapshotMetrics.note(&SnapshotMetrics.fastPathMisses)
+
+        let baseline = try SnapshotMetrics.measure(.baselineDecode) {
+            try PNGCompare.decode(baselineData)
+        }
 
         // **A blank render is a failure, and so is a blank baseline** (focus-pq8).
         //
@@ -197,10 +262,14 @@ enum SnapshotHarness {
         // on certifying itself for ever. Ink is measured against the render's own top-left pixel
         // (see `PNGCompare.inkPixels`), so a legitimately dark picture is ink and a flat field of
         // any colour is not.
-        try requireInk(snapshot.pixels, in: snapshot.name, side: "render")
-        try requireInk(baseline, in: snapshot.name, side: "baseline")
+        try SnapshotMetrics.measure(.ink) {
+            try requireInk(snapshot.pixels, in: snapshot.name, side: "render")
+            try requireInk(baseline, in: snapshot.name, side: "baseline")
+        }
 
-        let comparison = PNGCompare.compare(snapshot.pixels, baseline)
+        let comparison = SnapshotMetrics.measure(.compare) {
+            PNGCompare.compare(snapshot.pixels, baseline)
+        }
 
         if !comparison.isWithinTolerance {
             // Both sides are attached, so a failure in a log is enough to see what changed.
@@ -287,6 +356,8 @@ enum SnapshotFailure: Error, CustomStringConvertible {
     case mismatch(String, String)
     /// A render or a committed baseline with nothing in it (focus-pq8).
     case blank(String, String, Double)
+    /// Two different pictures rendered under one name (focus-tzj.5).
+    case nameCollision(String)
 
     var description: String {
         switch self {
@@ -303,6 +374,13 @@ enum SnapshotFailure: Error, CustomStringConvertible {
             "no committed baseline for \(name): the candidate has been written to \(path) — read it, then re-run"
         case .mismatch(let name, let summary):
             "\(name) differs from its baseline: \(summary)"
+        case .nameCollision(let name):
+            """
+            \(name) was rendered twice under different conditions. A render's name is its \
+            evidence file — \(name).png — so two pictures under one name overwrite each \
+            other's evidence and compare against one baseline. Give the second one a name of \
+            its own
+            """
         }
     }
 }

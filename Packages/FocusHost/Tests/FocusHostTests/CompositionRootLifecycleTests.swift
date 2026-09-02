@@ -92,6 +92,9 @@ struct CompositionRootLifecycleTests {
         root.menuBar.closePopover()
         root.menuBar.remove()
         root.stop()
+        // The activation the stage needed is process-wide state, and it goes back with the
+        // surfaces (focus-tzj.5).
+        MenuBarStage.restoreActivationPolicy()
     }
 
     // MARK: - A different commitment
