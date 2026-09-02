@@ -1007,6 +1007,33 @@ enum SelfCheck {
             .filter(\.takesBackTheDelivery)
             .map(\.rawValue)
             .sorted()
+        // **And which of them the two backoffs hear about** (focus-fzf). The third of the three
+        // things an ending settles, published for the reason the first two are: this set gained a
+        // member this round — a panel the person drifted straight past — and the argument that
+        // held it out for a round was a *measurement* on the day shape, not a ruling. A set that
+        // can change on a measurement is a set the shipping app should be made to state.
+        report["rungExitsCountingAnIgnoredAccusation"] = RungExit.allCases
+            .filter(\.countsAsAnIgnoredAccusation)
+            .map(\.rawValue)
+            .sorted()
+
+        // **The fourth answer to "why did the app go quiet?", which had no vocabulary at all**
+        // (focus-628, focus-50m, focus-1ua).
+        //
+        // `NudgeSuppressionReason` and `FatigueRefusal.Kind` are published above and each declares
+        // a `SilenceSubject`. The ladder was the third and was in neither: it silenced by
+        // *arithmetic* — `candidate(at:budgetPermits:)` answered `nil`, `NudgeDecider.accuse(…)`
+        // reported `.budgetExhausted` for all four reasons alike, and the glyph went with it.
+        report["ladderStatesDeclared"] = LadderState.Kind.allCases.map(\.rawValue).sorted()
+        report["ladderSilencesDeclared"] = LadderSilence.allCases.map(\.rawValue).sorted()
+        // **Which of them still owe the person the rung that says nothing** — the reading the
+        // decider makes instead of collapsing a `nil`, named rather than counted, exactly as
+        // `gatesPassingOverTheGlyph` is. A silence quietly joining or leaving this set is the edit
+        // that decides whether a held ladder marks anybody at all.
+        report["ladderSilencesRetainingTheGlyph"] = LadderSilence.allCases
+            .filter(\.retainsTheAmbientRung)
+            .map(\.rawValue)
+            .sorted()
 
         // **Two readings of one fact, disagreeing** — always zero and always empty (focus-zrs).
         //

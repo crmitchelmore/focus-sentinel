@@ -2630,6 +2630,55 @@ check(
     "exactly the endings where the app took the surface away un-deliver the rung",
     nudge.get("rungExitsTakingBackTheDelivery"),
 )
+# **And exactly the two endings the PERSON authored advance the backoffs** (focus-fzf, focus-fwy).
+#
+# Named in both directions, like the take-backs above. `screenReclaimed` is somebody pressing ⌃⌘H
+# at the nudge; `replaced` is somebody drifting straight past a panel and never touching it —
+# focus-fwy's own argument, *a person who never touches a nudge advances neither run*, which was
+# held out for a round by a measurement rather than by a ruling. `answered` is deliberately NOT
+# here (`resolve(…)` has already counted the click, and a second would count one dismissal twice),
+# nor are the two take-backs (R-81: an un-delivery cannot be an ignore) or `worldMovedOn` (ending
+# a session is not ignoring a nudge).
+check(
+    nudge.get("rungExitsCountingAnIgnoredAccusation") == ["replaced", "screenReclaimed"],
+    "exactly the endings the person authored advance the two ignored-accusation runs",
+    nudge.get("rungExitsCountingAnIgnoredAccusation"),
+)
+
+# **The ladder's own silence is a vocabulary with a subject** (focus-628, focus-50m, focus-1ua).
+#
+# `SilenceSubject`'s doc states the rule absolutely — *every reason the app has for going quiet
+# declares its subject here* — and names the two exhaustive switches that enforce it. The ladder
+# was the third answer to the same question and was in neither: not `CaseIterable`, no subject,
+# and silencing by ARITHMETIC. `candidate(at:budgetPermits:)` answered `nil` for four different
+# reasons, `NudgeDecider.accuse(…)` reported all four as `.budgetExhausted`, and **the glyph went
+# with them** — including from `.heldAtAmbient`, whose own doc says *"it does not go fully silent:
+# the glyph still tells the truth"*.
+#
+# Exact equality on both, and both directions, for `rungExitsDeclared`'s reason: a floor cannot
+# see a case being removed, and the set below is the one that decides whether a held ladder marks
+# anybody at all.
+check(
+    nudge.get("ladderStatesDeclared") == ["engaged", "heldAtAmbient", "idle"],
+    "every state the ladder can be in is a folded, named case",
+    nudge.get("ladderStatesDeclared"),
+)
+check(
+    nudge.get("ladderSilencesDeclared")
+    == ["budgetRefused", "escalationDwell", "heldAtAmbient", "noLiveMandate", "toppedOut"],
+    "every reason the ladder has for having nothing to climb to is enumerated",
+    nudge.get("ladderSilencesDeclared"),
+)
+# The two that still owe the person the mark, named. `escalationDwell` and `toppedOut` are
+# deliberately absent — the rung the ladder delivered is still standing in both, and re-delivering
+# it through a dwell would restart the very clock the dwell measures, so the ladder would never
+# climb again. `noLiveMandate` is absent for the opposite reason: with no mandate there is nothing
+# to be off task about, and a mark that went on marking would not be telling the truth.
+check(
+    nudge.get("ladderSilencesRetainingTheGlyph") == ["budgetRefused", "heldAtAmbient"],
+    "exactly the ladder's refusals still owe the person the rung that says nothing",
+    nudge.get("ladderSilencesRetainingTheGlyph"),
+)
 
 # **The active priority is still one fact** (focus-zrs).
 #
