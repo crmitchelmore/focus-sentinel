@@ -1661,11 +1661,12 @@ check(
 # already did it right. Measured in gate run lens6-1: the Debug launch could not read the window
 # list and the Release launch of the same code could, so one gate run produced two verdicts about
 # one tree, and the failing one was about the Mac.
-if taken(
+window_count_was_taken = taken(
     "the grant-free window list",
     "sensing.windowMetadata.countWasTaken",
     "decodedKeys={!r}".format(windows_read.get("decodedKeys")),
-):
+)
+if window_count_was_taken:
     check(
         isinstance(windows_read.get("count"), int) and windows_read["count"] > 0,
         "the grant-free window list returned rows",
@@ -1778,18 +1779,146 @@ check(
     "all twelve capabilities are reported, in order",
     [c.get("capability") for c in capabilities],
 )
-STATES = {"available", "denied", "restricted", "unavailable", "notRequested"}
-for entry in capabilities:
+# --- the twelve states, read as a RUN rather than as the enum's codomain ----------------------
+#
+# THIS BLOCK REPLACES A CHECK THAT COULD NOT GO RED. It read, once per capability:
+#
+#     entry["state"] in {"available","denied","restricted","unavailable","notRequested"}
+#
+# under the pass line "carries one of the five declared states". Those five strings are the whole
+# of `CapabilityState`, a `String`-backed `CaseIterable` enum whose `rawValue` is one of them by
+# construction — so all twelve lines were satisfied by every value the type can hold, and no
+# behaviour of the app or the machine could turn one red. It is focus-652's shape exactly (*"the
+# value is one of the N values its own enum is total over"*), still standing twelve rows wide one
+# repair after that one was deleted.
+#
+# It also could not see the edit that actually matters, which is a **case joining or leaving the
+# vocabulary**: adding `.pending` to `CapabilityState` widened every one of the twelve lines and
+# failed none of them.
+#
+# Two readings replace it, and each has a state it goes red in.
+#
+# 1 — **The vocabulary, pinned in both directions.** The app publishes
+# `CapabilityState.allCases`; this is the committed literal, in declaration order, and a case
+# added, removed or renamed fails it.
+COMMITTED_CAPABILITY_STATES = [
+    "available", "denied", "restricted", "unavailable", "notRequested"
+]
+check(
+    report.get("capabilityStatesDeclared") == COMMITTED_CAPABILITY_STATES,
+    "the capability vocabulary is the committed five, in order and with nothing else in it",
+    report.get("capabilityStatesDeclared"),
+)
+
+# 2 — **Every state is the one the RULE produces, over the whole matrix.**
+#
+# `PlatformCapabilityProbe.states()` is nine decisions and three measurements. The nine are
+# constants of the build; the three are computed from readings this same report publishes
+# independently — the grant-free window list, the idle clock and the audio device enumeration —
+# and the fourth input, the display count, is read here through AppKit rather than through the
+# probe's own `SystemScreenList`, so the comparison is between two readings and not a mirror.
+#
+# The rule is restated here on purpose. That is the whole value of the leg: the matrix is what the
+# Settings Privacy pane draws, and a probe that stopped probing and answered `.available` twelve
+# times would have passed every line this block replaced.
+display_count = sensing.get("displayCount")
+input_devices = (sensing.get("media") or {}).get("inputDeviceCount")
+hardware_seconds = (sensing.get("idle") or {}).get("hardwareSeconds")
+window_rows = windows_read.get("count")
+
+CAPABILITY_RULE_CONSTANTS = {
+    # The bundle identifier rides on the activation notification; no platform state withholds it.
+    "frontmostApplication": "available",
+    # The lock primary is a public notification and subscribing to it needs nothing.
+    "systemLifecycle": "available",
+    # Pinned on every rig, camera or not: the held path was never entered (P-97/P-104, R-40).
+    "cameraActivity": "unavailable",
+    # Parked by the Court (D-04): there is nothing to probe because there is nothing to use.
+    "screenCapture": "unavailable",
+    # This epic has not asked, and in this epic it never will. Reporting `denied` for a question
+    # nobody put would be inventing a refusal.
+    "accessibilityWindowContext": "notRequested",
+    "notifications": "notRequested",
+    "onDeviceModel": "notRequested",
+}
+# The three the machine decides, each with the reading it is decided from. A reading that was not
+# taken makes its row unpredictable rather than wrong, so the row is routed rather than asserted.
+CAPABILITY_RULE_MEASURED = {
+    "windowMetadata": (
+        window_count_was_taken,
+        "available" if isinstance(window_rows, int) and window_rows > 0 else "unavailable",
+    ),
+    # The quorum's only input that can be unavailable is the window list, so it takes the same
+    # answer — which is also the pair that would come apart if one of them were special-cased.
+    "presentation": (
+        window_count_was_taken,
+        "available" if isinstance(window_rows, int) and window_rows > 0 else "unavailable",
+    ),
+    "idle": (
+        isinstance(hardware_seconds, (int, float)),
+        "available" if isinstance(hardware_seconds, (int, float)) else "unavailable",
+    ),
+    "displayGeometry": (
+        isinstance(display_count, int),
+        "available" if isinstance(display_count, int) and display_count > 0 else "unavailable",
+    ),
+    "microphoneActivity": (
+        isinstance(input_devices, int),
+        "available" if isinstance(input_devices, int) and input_devices > 0 else "unavailable",
+    ),
+}
+# **The self-referential completeness check.** The rule and the matrix must name the same twelve,
+# in both directions: a capability added to `Capability` with no rule here is a row this script
+# never checked, and a rule here for a capability the app no longer reports is a rule about
+# nothing.
+check(
+    set(CAPABILITY_RULE_CONSTANTS) | set(CAPABILITY_RULE_MEASURED)
+    == set(EXPECTED_CAPABILITIES),
+    "the rule this script states covers exactly the capabilities the app reports",
+    sorted(
+        (set(CAPABILITY_RULE_CONSTANTS) | set(CAPABILITY_RULE_MEASURED))
+        ^ set(EXPECTED_CAPABILITIES)
+    ),
+)
+by_capability = {c.get("capability"): c.get("state") for c in capabilities}
+for capability, expected in sorted(CAPABILITY_RULE_CONSTANTS.items()):
     check(
-        entry.get("state") in STATES,
-        f"{entry.get('capability')} carries one of the five declared states",
-        entry.get("state"),
+        by_capability.get(capability) == expected,
+        f"{capability} is {expected}, which is a decision of this build",
+        by_capability.get(capability),
     )
+for capability, (was_read, expected) in sorted(CAPABILITY_RULE_MEASURED.items()):
+    if not was_read:
+        not_taken(
+            f"the {capability} row of the capability matrix",
+            "the reading the probe computes it from was not taken",
+            by_capability.get(capability),
+        )
+        continue
+    check(
+        by_capability.get(capability) == expected,
+        f"{capability} is {expected}, which is what this machine's own reading says",
+        (by_capability.get(capability), expected),
+    )
+# **The non-vacuity guard.** Every line above is satisfied by a matrix that answers the same thing
+# for everything, which is exactly what a probe that stopped probing produces. The guard is a
+# reading of the REPORT: a check over this script's own literals cannot fail while the literals
+# are what they are, and a check that cannot fail is not one.
+check(
+    len(set(by_capability.values())) >= 3,
+    "the matrix the app reported is not one answer repeated twelve times",
+    sorted(set(by_capability.values())),
+)
+# **What this would still be green for**, stated rather than left to be re-derived: a probe that
+# reads the right inputs and files them under the wrong capability name would agree with a rule
+# restated the same wrong way, because both are written from `PlatformCapabilityProbe.states()`.
+# What it cannot survive is the failure this block exists for — a matrix that has stopped being a
+# measurement — because the three measured rows are compared against readings taken by other
+# instruments in this same report.
 
 # Nothing this epic actually uses may sit at `notRequested`: that state means "we have not asked
 # yet", and in e03 the app never asks at all, so a facility it uses reporting it would mean the
 # probe never ran.
-by_capability = {c.get("capability"): c.get("state") for c in capabilities}
 for capability in EXPECTED_CAPABILITIES[:8]:
     check(
         by_capability.get(capability) != "notRequested",

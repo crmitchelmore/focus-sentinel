@@ -498,6 +498,17 @@ enum SelfCheck {
         // --- e03 -------------------------------------------------------------------------
         root["sensing"] = sensing
         root["capabilities"] = capabilities
+        // **The vocabulary the states are drawn from, published so it can be PINNED** (focus-gtr).
+        //
+        // The gate used to assert that each of the twelve states was "one of the five declared
+        // states" — a set spelled out in the script and identical to `CapabilityState`'s entire
+        // codomain. Every value the type can hold satisfies it, so nothing the app could do turned
+        // it red; and it could not see the edit that matters, which is a **case joining or leaving
+        // the enum**. That is the same shape focus-652 deleted from the notification reading, still
+        // standing twelve rows wide. So the vocabulary itself is the reading, pinned against a
+        // committed literal in both directions, and the value is checked against the *rule* that
+        // produced it rather than against the set of things it could be.
+        root["capabilityStatesDeclared"] = CapabilityState.allCases.map(\.rawValue)
         root["authorisationSurfaces"] = surfaces.suspects
         root["onScreenWindowOwners"] = surfaces.owners
         // Read **after** the key-equivalent probes, and asserted equal to the value the sensing
@@ -1585,6 +1596,15 @@ enum SelfCheck {
         var report: [String: Any] = [:]
 
         report["isRunning"] = host.isRunning
+        // **One of the four inputs the capability matrix is computed from** (focus-gtr).
+        //
+        // `PlatformCapabilityProbe` answers `.displayGeometry` with
+        // `displays.isEmpty ? .unavailable : .available`. The gate can only check that the matrix
+        // agrees with the rule if it can see the rule's inputs, and the other three
+        // (`windowMetadata.count`, `idle.hardwareSeconds`, `media.inputDeviceCount`) are already
+        // in this report. This is the fourth, read through AppKit rather than through the probe's
+        // own `SystemScreenList`, so the comparison is between two readings and not a mirror.
+        report["displayCount"] = NSScreen.screens.count
         report["settingSensingPaused"] = host.settings.sensingPaused
         report["redundantActivations"] = host.redundantActivations
         report["cascade"] = host.cascade.map(\.rawValue)
