@@ -701,7 +701,23 @@ public final class AppComposition {
             media: sensingHost.mediaActivity,
             mediaSuppressionEnabled: true,
             presentation: sensingHost.presentationState,
-            menuBarVisible: !sensingHost.presentationState.suppressesOverlays,
+            // **Two facts, and the second one had no reading at all** (focus-zeq, P-131).
+            //
+            // This was `!presentationState.suppressesOverlays` alone: the full-screen space that
+            // collapses the menu-bar layer's owners from eleven to one while our own item stays
+            // *listed*. An item the app never installed — or one `MenuBarController.remove()`
+            // took out — is the same fact from the other direction, and the router could not see
+            // it: the rung landed on `.menuBar`, the ladder advanced, `redraw(force:)` correctly
+            // refused to write to an item nobody can see (F-163), the seam could prove nothing,
+            // and the loop said **nothing at all** about why. `DeferralReason.menuBarHidden` is
+            // the honest vocabulary for it and was already there.
+            //
+            // `isInstalled` and deliberately not `isItemVisible`: that property's own doc is that
+            // a status-item window stays listed when nobody can see it, so it is the wrong
+            // reading in the direction that matters — over-permissive — and the reading that
+            // catches the case it is right about is `suppressesOverlays` beside it.
+            menuBarVisible: menuBar.isInstalled
+                && !sensingHost.presentationState.suppressesOverlays,
             // **The person's own window, not the constant** (focus-z7g). This was
             // `QuietHours.off` unconditionally, which made gate 8 of the twelve-gate suppression
             // stack dead code in the shipping app: `evaluation.json` reported

@@ -96,6 +96,19 @@ final class NudgeHost {
     /// it again, which is what makes focus-nrl's rung recoverable.
     private var armedProofs: Set<MenuBarNudge> = []
 
+    /// **What each kind of nudge's surfaces were saying when they last stopped moving**
+    /// (focus-r28.1).
+    ///
+    /// Written at every seam and read as the *before* half of every proof. It exists because a
+    /// proof was a comparison between one composited state and one arbitrary instant: the *after*
+    /// half has been a `SettledObservation` since focus-my0, and the *before* half was an ordinary
+    /// reading taken mid-turn at the landing. A mark written and reverted earlier in the same turn
+    /// went into that baseline, and the rung it belonged to could never be proven afterwards.
+    ///
+    /// Keyed by `MenuBarNudge` because `observation(of:)` is: the panel and the popover each carry
+    /// one kind at a time, and *"a panel is up"* is not *"my panel is up"*.
+    private var settledSurfaces: [MenuBarNudge: SurfaceObservation] = [:]
+
     // MARK: - What the composition root wires in
 
     /// Everything the world is doing, gathered by the root from e03's sensing types.
@@ -873,18 +886,24 @@ final class NudgeHost {
 
         let presentation = accusationPresentation(for: rung, commitment: commitment)
 
-        // **What every surface was doing before this rung was allowed to touch one**
-        // (focus-1b5, focus-nrl). Taken once, above everything below, because every branch needs
-        // the same baseline and a branch that took its own could take it after its own redraw —
-        // which is the difference between measuring a change and asserting one.
+        // **What every surface was doing before this rung was allowed to touch one — as the
+        // person last saw them** (focus-1b5, focus-nrl, focus-r28.1).
         //
-        // **Above the line that ends the rung this loop is already holding**, and that order is
-        // load-bearing (focus-s4m). `PerceptibleChange.proven(on:from:to:)`'s second conjunct is
-        // *"the item was not already saying this"*; a baseline taken after the old rung's mark had
-        // been taken off the item would read `unmarked`, and two consecutive glyph rungs — the
-        // picture focus-1b5 measured six charges against one write for — would become chargeable
-        // again.
-        let observedBeforeLanding = observation(of: .accusation)
+        // It was `observation(of: .accusation)`, taken here, mid-turn. Both halves of a proof are
+        // supposed to be states AppKit could composite, and only one of them was: the *after* half
+        // has been a `SettledObservation` since focus-my0 and the *before* half was whatever the
+        // surfaces happened to be saying at this line. A transient mark written and reverted
+        // earlier in the same turn is recorded in it, `before.carries(surface)` is then true of a
+        // state nobody ever saw, and the rung becomes permanently unprovable — recorded unopened
+        // rather than charged. The direction is safe, which is why it survived a round; it is
+        // still a comparison against an arbitrary instant.
+        //
+        // `settledSurfaces` is the last reading taken at a **seam**, so a perceptible change is
+        // now the difference between two composited states. It also retires the ordering rule the
+        // comment here used to carry — *"above the line that ends the rung this loop is
+        // holding"* — because a baseline from the previous seam cannot be disturbed by anything
+        // this turn does, in either order.
+        let observedBeforeLanding = settledObservation(of: .accusation)
 
         // **The rung this loop is holding ends here, before the next one lands** (focus-s4m,
         // focus-fwy).
@@ -1153,12 +1172,10 @@ final class NudgeHost {
         openQuestion?.surface = surface
         openQuestion?.actions = presentation.offeredAnswerIdentifiers
         // **What every surface was doing before this question was allowed to touch one**
-        // (focus-1b5). The question path's twin of `accuse(…)`'s baseline, taken above the switch
-        // for the same reason: a branch that took its own could take it after its own redraw.
-        let observedBeforeAsking = observation(
-            of: .query,
-            panelActions: presentation.offeredAnswerIdentifiers
-        )
+        // (focus-1b5, focus-r28.1). The question path's twin of `accuse(…)`'s baseline, and the
+        // same repair: the last reading taken at a seam, so both halves of the proof are states
+        // that reached a frame.
+        let observedBeforeAsking = settledObservation(of: .query)
         openQuestion?.observedAtAsk = observedBeforeAsking
 
         switch surface {
@@ -1389,7 +1406,7 @@ final class NudgeHost {
     /// reason: the question and the rung have been given the same treatment by hand four times in
     /// this epic and the hand has been wrong three of them. The switch is exhaustive, so a third
     /// kind stops the build here.
-    private func settleCharges(at seam: SurfaceTurn.Seam) {
+    private func settleCharges(at seam: borrowing SurfaceTurn.Seam) {
         let offered = armedProofs
         armedProofs = []
         for nudge in MenuBarNudge.allCases where offered.contains(nudge) {
@@ -1398,6 +1415,22 @@ final class NudgeHost {
             case .accusation: proveOpenRung(at: seam)
             }
         }
+        // **And every seam leaves the baseline the next landing will be measured against**
+        // (focus-r28.1). Taken for both kinds, whether or not either was proven here: a rung that
+        // lands three turns from now is measured against what the surfaces were saying when they
+        // last stopped moving, and the kind it lands as is not known yet.
+        for nudge in MenuBarNudge.allCases {
+            settledSurfaces[nudge] = observation(of: nudge)
+        }
+    }
+
+    /// **What the surfaces were saying when they last stopped moving** (focus-r28.1).
+    ///
+    /// The *before* half of every proof. `.nothingSeen` until the first seam, which is the
+    /// honest reading for a process whose surfaces have never settled: nothing has been drawn,
+    /// nothing is up, and the item is bare.
+    private func settledObservation(of nudge: MenuBarNudge) -> SurfaceObservation {
+        settledSurfaces[nudge] ?? .nothingSeen
     }
 
     /// Charge the open question if the surfaces, settled, show it was put in front of somebody.
@@ -1407,7 +1440,7 @@ final class NudgeHost {
     /// here, which is one more instance of the treatment-one-half-received shape. `readingAtAsk`
     /// — what `QuestionLedgerPolicy` is handed — is written from the same answer, so a question
     /// the seam could not prove never claims to have been readable.
-    private func proveOpenQuestion(at seam: SurfaceTurn.Seam) {
+    private func proveOpenQuestion(at seam: borrowing SurfaceTurn.Seam) {
         guard let question = openQuestion,
               let surface = question.surface,
               question.perceived == nil,
@@ -1445,7 +1478,7 @@ final class NudgeHost {
     ///
     /// Idempotent, on the receipt: a rung that has been charged holds one, and a second offer
     /// finds it and refuses.
-    private func proveOpenRung(at seam: SurfaceTurn.Seam) {
+    private func proveOpenRung(at seam: borrowing SurfaceTurn.Seam) {
         guard let open = openRung, open.perceived == nil else { return }
         guard let change = PerceptibleChange.proven(
             on: open.landedOn,
@@ -1481,26 +1514,36 @@ final class NudgeHost {
         case .accusation: actions = panelActions ?? openRung?.panelActions ?? []
         }
         let panelKind = Self.panelKind(of: nudge)
-        // Short-circuited deliberately: `decisionSurfaceReading(offering:)` lays the panel's
-        // action frames out, and this function is called on every write to the status item.
-        let panelIsShowingTheNudge = panel.isVisible
-            && panel.showing == panelKind
-            && panel.decisionSurfaceReading(offering: actions).everyActionIsReachable
-        // **And the popover takes a reading too** (focus-5yu). This line was
-        // `menuBar.isPopoverShown && menuBar.isShowing(nudge)` — two booleans and no geometry, on
-        // the one surface in the app that had committed to no size. A popover measured at 3127
-        // points on a 1080-point display satisfies both of them with every correction it offers
-        // above the top of the screen, and the badge rung was charged an accusation, an
-        // interruption and a 600-second cooldown for it. It is now the same conjunction the panel
-        // above makes, in the same order and for the same reason.
-        let popoverIsShowingTheNudge = menuBar.isDrawing(nudge)
-            && menuBar.decisionSurfaceReading(of: nudge).everyActionIsReachable
+        // **The reading travels, not its conclusion** (focus-2bj). These two lines used to hand
+        // `SurfaceObservation` a `Bool` each, and this programme has twice watched a predicate be
+        // substituted for a reading behind such a field — the popover's was
+        // `menuBar.isPopoverShown && menuBar.isShowing(nudge)`, two booleans and no geometry, on
+        // the one surface in the app that had committed to no size, and a popover measured at
+        // 3127 points on a 1080-point display satisfied both of them with every correction above
+        // the top of the screen. Repairing the field left the shape; carrying the
+        // `DecisionSurfaceReading` removes it.
+        //
+        // The panel's `isCarryingTheNudge` is short-circuited deliberately:
+        // `decisionSurfaceReading(offering:)` lays the panel's action frames out, and this
+        // function is called on every write to the status item.
+        let panelCarries = panel.isVisible && panel.showing == panelKind
+        let popoverCarries = menuBar.isDrawing(nudge)
         return SurfaceObservation(
             menuBarWrites: menuBar.glyphWriteCount,
             menuBarAnnouncements: menuBar.announcementCount,
             markOnTheItem: menuBar.markOnTheItem,
-            panelIsShowingTheNudge: panelIsShowingTheNudge,
-            popoverIsShowingTheNudge: popoverIsShowingTheNudge
+            panel: WindowSurfaceReading(
+                isCarryingTheNudge: panelCarries,
+                reading: panelCarries
+                    ? panel.decisionSurfaceReading(offering: actions)
+                    : WindowSurfaceReading.nothingUp.reading
+            ),
+            popover: WindowSurfaceReading(
+                isCarryingTheNudge: popoverCarries,
+                reading: popoverCarries
+                    ? menuBar.decisionSurfaceReading(of: nudge)
+                    : WindowSurfaceReading.nothingUp.reading
+            )
         )
     }
 
@@ -1543,10 +1586,16 @@ final class NudgeHost {
     private func recordUnopenedInvitation(_ nudge: MenuBarNudge) {
         switch nudge {
         case .query:
+            // **The receipt, exactly as its accusation twin** (focus-6vz). This arm was keyed on
+            // `!surface.reachesThePersonOnLanding` — the predicate the whole charging round
+            // exists to retire, which answers `true` for `.menuBar` and cannot fail — conjoined
+            // with `readingAtAsk`, a field written from the proof rather than the proof itself.
+            // `OpenQuestion` has carried `perceived` since focus-my0 and this did not read it,
+            // which is the shape of every bead in this sequence: one half of a doctrine applied
+            // to the accusation and not to the question standing beside it.
             guard let question = openQuestion,
                   let surface = question.surface,
-                  !surface.reachesThePersonOnLanding,
-                  question.readingAtAsk != .readable
+                  question.perceived == nil
             else { return }
             write(
                 InterventionEvent(
@@ -2211,11 +2260,12 @@ final class NudgeHost {
         // glyph took a question off the panel with no row, no receipt and the interruption still
         // charged. The exit says whether a record is owed; nobody has to remember one.
         if exit.recordsAnExpiry { expireOpenQuestion() }
-        // **And the other record: an invitation that was never opened** (focus-sq7). Written
-        // whatever the exit, because "nobody ever clicked" is a fact about the attempt and not
-        // about how it ended, and only for a surface where landing is not reaching — so a question
-        // on the panel produces nothing here.
-        recordUnopenedInvitation(.query)
+        // **And the other record: an invitation that was never opened** (focus-sq7, focus-6vz).
+        // Keyed on the receipt inside — a question that was never perceived is unopened, whichever
+        // surface it was standing on — and refused for the one ending where the app has already
+        // written a row of its own: `ask(…)`'s refusal to deliver into an unreadable panel writes
+        // the deferral itself, and a second row here would count one attempt twice.
+        if exit.owesAnUnopenedRow { recordUnopenedInvitation(.query) }
         // **And the row this question's delivery wrote gets its one remaining field** (focus-gmr,
         // R-79). An `InterventionRecord` gains exactly one thing after it is written: what the
         // person did. Nothing filled it in for a question that ended any way but an answer, so a
@@ -2224,8 +2274,8 @@ final class NudgeHost {
         // Which endings owe it is `QuestionExit`'s answer, beside `recordsAnExpiry`, for the
         // reason that one is there: a line a caller can omit is a line four callers remember and
         // a fifth does not.
-        if exit.leavesTheInterruptionUnanswered {
-            complete(.ignored, recordID: question.recordID)
+        if let outcome = exit.aftermath.outcome {
+            complete(outcome, recordID: question.recordID)
         }
         // **And the run that bounds how often the app may ask** (focus-fwy). The accusation's twin,
         // one function over: `FatigueController` heard about a question from `answer(_:)` alone, so

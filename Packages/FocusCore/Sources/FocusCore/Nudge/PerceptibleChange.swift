@@ -47,6 +47,61 @@ public enum PerceptionChannel: String, Sendable, CaseIterable, Codable, Hashable
 /// actions out. **Not one field is a predicate about a surface**,
 /// which is the distinction three rounds of this defect turned on: `reachesThePersonOnLanding`
 /// answers `true` for `.menuBar` and cannot fail, and it was read as though it were evidence.
+/// **What one window surface was doing, carried as the evidence rather than as its conclusion**
+/// (focus-2bj, focus-5yu).
+///
+/// ## Why a value and not a `Bool`
+///
+/// `SurfaceObservation` held `panelIsShowingTheNudge` and `popoverIsShowingTheNudge` as two
+/// `Bool`s, and this programme has now twice watched a predicate be substituted for a reading
+/// behind exactly such a field. focus-1b5 made the *charge* unrepresentable without a receipt and
+/// pinned the receipt's one producer; focus-5yu then found that one of the **inputs** to that
+/// producer was a predicate — `popover.isShown && presentation.isCarrying(nudge)`, two booleans
+/// and no geometry, beside a panel field that was a real `DecisionSurfaceReading`. The door was
+/// locked and one of the keys was a promise.
+///
+/// Repairing the second field left the *shape* intact: nothing at the type level said either
+/// `Bool` had come from a reading, so the next surface could be added as a third predicate and
+/// the next reader had to check two call sites in `NudgeHost.observation(of:)` to know. Carrying
+/// the reading makes *"a charge taken on two booleans"* unrepresentable in the same way *"a
+/// charge without a receipt"* already is.
+///
+/// ## The two halves, and why neither is enough
+///
+/// * `isCarryingTheNudge` — *"a panel is up"* is not *"my panel is up"*. The panel and the
+///   popover each draw one kind of nudge at a time, and a question's receipt must not be
+///   provable off an accusation's window.
+/// * `reading` — where that content actually laid its actions out. A popover measured at 3127
+///   points on a 1080-point display is carrying the nudge with every correction it offers above
+///   the top of the screen.
+public struct WindowSurfaceReading: Sendable, Equatable, Hashable {
+    /// Whether this surface was drawing the kind of nudge being measured.
+    public let isCarryingTheNudge: Bool
+    /// Where that content put the actions it offered.
+    public let reading: DecisionSurfaceReading
+
+    public init(isCarryingTheNudge: Bool, reading: DecisionSurfaceReading) {
+        self.isCarryingTheNudge = isCarryingTheNudge
+        self.reading = reading
+    }
+
+    /// **The conjunction, computed once here rather than spelled at each call site.**
+    public var isShowingTheNudge: Bool {
+        isCarryingTheNudge && reading.everyActionIsReachable
+    }
+
+    /// Nothing is up: no window, nothing carried, nothing laid out.
+    public static let nothingUp = WindowSurfaceReading(
+        isCarryingTheNudge: false,
+        reading: DecisionSurfaceReading(
+            isVisible: false,
+            isWhollyOnAScreen: false,
+            unreportedActions: [],
+            unreachableActions: []
+        )
+    )
+}
+
 public struct SurfaceObservation: Sendable, Equatable, Hashable {
     /// How many times the status item's image has been assigned, ever.
     public let menuBarWrites: Int
@@ -59,26 +114,30 @@ public struct SurfaceObservation: Sendable, Equatable, Hashable {
     /// draws `waiting` — the item says nothing about the rung, and focus-nrl is the six charges
     /// that were taken for it anyway.
     public let markOnTheItem: MenuBarAttention
-    /// Whether the panel is on screen, showing this kind of nudge, with every action it offers
-    /// somewhere the person could click.
-    public let panelIsShowingTheNudge: Bool
-    /// Whether the popover is open, drawing this kind of nudge, with every action it offers
-    /// somewhere the person could click — the same three-part reading `panelIsShowingTheNudge`
-    /// above is, taken on the surface that had none (focus-5yu).
-    public let popoverIsShowingTheNudge: Bool
+    /// **What the panel was doing, and the reading that says so** (focus-2bj).
+    public let panel: WindowSurfaceReading
+    /// **What the popover was doing** — the same value, on the surface that for two rounds
+    /// carried two booleans and no geometry (focus-5yu, focus-2bj).
+    public let popover: WindowSurfaceReading
+
+    /// The conjunction this field used to *be*. Derived now, so that the evidence travels and the
+    /// conclusion is computed from it rather than the other way round.
+    public var panelIsShowingTheNudge: Bool { panel.isShowingTheNudge }
+    /// Its twin, and the one whose history is the reason for the change.
+    public var popoverIsShowingTheNudge: Bool { popover.isShowingTheNudge }
 
     public init(
         menuBarWrites: Int,
         menuBarAnnouncements: Int,
         markOnTheItem: MenuBarAttention,
-        panelIsShowingTheNudge: Bool,
-        popoverIsShowingTheNudge: Bool
+        panel: WindowSurfaceReading,
+        popover: WindowSurfaceReading
     ) {
         self.menuBarWrites = menuBarWrites
         self.menuBarAnnouncements = menuBarAnnouncements
         self.markOnTheItem = markOnTheItem
-        self.panelIsShowingTheNudge = panelIsShowingTheNudge
-        self.popoverIsShowingTheNudge = popoverIsShowingTheNudge
+        self.panel = panel
+        self.popover = popover
     }
 
     /// Nothing has been drawn, nothing is up, and the item is bare. The reading a surface that
@@ -87,8 +146,8 @@ public struct SurfaceObservation: Sendable, Equatable, Hashable {
         menuBarWrites: 0,
         menuBarAnnouncements: 0,
         markOnTheItem: .unmarked,
-        panelIsShowingTheNudge: false,
-        popoverIsShowingTheNudge: false
+        panel: .nothingUp,
+        popover: .nothingUp
     )
 
     /// **Whether this reading shows `surface` saying what the nudge needs it to say** — the
@@ -195,7 +254,10 @@ public final class SurfaceTurn {
     public init() {}
 
     /// What to do at the seam. Set once, by the object whose turns these are.
-    public var atSeam: (@MainActor (Seam) -> Void)?
+    ///
+    /// The seam is **borrowed**, never given: see `Seam`. A handler that wanted to keep one would
+    /// have to copy it, and there is no copy.
+    public var atSeam: (@MainActor (borrowing Seam) -> Void)?
 
     /// How deep the current turn is. A turn entered from inside another turn is the same turn:
     /// `menuBarItemRedrawn()` reached through a redraw that `setOpenRung(_:)` asked for is not a
@@ -234,11 +296,21 @@ public final class SurfaceTurn {
     /// Handed to the seam handler and to nobody else. It carries no state because it is not a
     /// value about the surfaces; it is a value about *when*, and the only thing that can make one
     /// is the end of a turn.
-    public struct Seam {
+    ///
+    /// **`~Copyable`, and the handler only ever borrows one** (focus-r28.3). It was an ordinary
+    /// struct with a `fileprivate` initialiser: R-96s pins the one construction site of
+    /// `SettledObservation`, so stashing a seam and blessing a mid-turn reading with it an hour
+    /// later would have been a visible diff — but it was not *type*-impossible, and "visible in a
+    /// diff" is the guarantee this epic has now watched fail four times. A non-copyable value
+    /// passed `borrowing` cannot be stored, escaped into a closure, or returned: there is no copy
+    /// to keep and a borrow cannot be consumed. The handler may bless as many readings as it has
+    /// kinds of nudge — the panel and the popover each carry one at a time, so a seam settles two
+    /// readings and not one — and it may keep none of them.
+    public struct Seam: ~Copyable {
         fileprivate init() {}
 
         /// Bless a reading taken now, at the seam, as evidence.
-        public func settled(_ reading: SurfaceObservation) -> SettledObservation {
+        public borrowing func settled(_ reading: SurfaceObservation) -> SettledObservation {
             SettledObservation(reading: reading)
         }
     }

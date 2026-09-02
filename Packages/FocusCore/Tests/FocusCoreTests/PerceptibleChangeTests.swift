@@ -30,6 +30,25 @@ struct PerceptibleChangeTests {
         return blessed
     }
 
+    /// A window surface either carrying the nudge with every action reachable, or not up at all.
+    ///
+    /// **The two ends of `WindowSurfaceReading`, spelled here rather than on the type** (focus-2bj).
+    /// The product builds these from a live `NSWindow` and a live layout; a convenience on the
+    /// value itself would be a `Bool` constructor by another name, and a `Bool` constructor is
+    /// what this round exists to remove.
+    static func window(showing: Bool) -> WindowSurfaceReading {
+        guard showing else { return .nothingUp }
+        return WindowSurfaceReading(
+            isCarryingTheNudge: true,
+            reading: DecisionSurfaceReading(
+                isVisible: true,
+                isWhollyOnAScreen: true,
+                unreportedActions: [],
+                unreachableActions: []
+            )
+        )
+    }
+
     /// Every reading a surface can be in, as a small closed set the folds below cross.
     static func readings() -> [SurfaceObservation] {
         var all: [SurfaceObservation] = []
@@ -43,8 +62,8 @@ struct PerceptibleChangeTests {
                                     menuBarWrites: writes,
                                     menuBarAnnouncements: announcements,
                                     markOnTheItem: mark,
-                                    panelIsShowingTheNudge: panel,
-                                    popoverIsShowingTheNudge: popover
+                                    panel: Self.window(showing: panel),
+                                    popover: Self.window(showing: popover)
                                 )
                             )
                         }
@@ -115,16 +134,16 @@ struct PerceptibleChangeTests {
             menuBarWrites: 0,
             menuBarAnnouncements: 0,
             markOnTheItem: .unmarked,
-            panelIsShowingTheNudge: false,
-            popoverIsShowingTheNudge: false
+            panel: .nothingUp,
+            popover: .nothingUp
         )
         // The badge outranks the rung: the item is written, and what it says is `waiting`.
         let whileTheBadgeIsUp = SurfaceObservation(
             menuBarWrites: 1,
             menuBarAnnouncements: 1,
             markOnTheItem: .waiting,
-            panelIsShowingTheNudge: false,
-            popoverIsShowingTheNudge: false
+            panel: .nothingUp,
+            popover: .nothingUp
         )
         #expect(
             PerceptibleChange.proven(
@@ -137,8 +156,8 @@ struct PerceptibleChangeTests {
             menuBarWrites: 1,
             menuBarAnnouncements: 1,
             markOnTheItem: .noticing,
-            panelIsShowingTheNudge: false,
-            popoverIsShowingTheNudge: false
+            panel: .nothingUp,
+            popover: .nothingUp
         )
         #expect(
             PerceptibleChange.proven(
@@ -156,15 +175,15 @@ struct PerceptibleChangeTests {
             menuBarWrites: 1,
             menuBarAnnouncements: 1,
             markOnTheItem: .noticing,
-            panelIsShowingTheNudge: false,
-            popoverIsShowingTheNudge: false
+            panel: .nothingUp,
+            popover: .nothingUp
         )
         let laterStillNoticing = SurfaceObservation(
             menuBarWrites: 1 + 1,
             menuBarAnnouncements: 1 + 1,
             markOnTheItem: .noticing,
-            panelIsShowingTheNudge: false,
-            popoverIsShowingTheNudge: false
+            panel: .nothingUp,
+            popover: .nothingUp
         )
         #expect(
             PerceptibleChange.proven(
@@ -275,8 +294,8 @@ struct PerceptibleChangeTests {
             menuBarWrites: 0,
             menuBarAnnouncements: 0,
             markOnTheItem: .unmarked,
-            panelIsShowingTheNudge: true,
-            popoverIsShowingTheNudge: true
+            panel: Self.window(showing: true),
+            popover: Self.window(showing: true)
         )
         let change = PerceptibleChange.proven(
             on: .panel, from: .nothingSeen, to: Self.settled(shown)
