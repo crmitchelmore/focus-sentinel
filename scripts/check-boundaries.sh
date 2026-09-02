@@ -379,15 +379,32 @@ print "== FocusClassify probes no privacy boundary"
 
 PRIVACY_SYMBOL_PATTERN='CGWindowList|kCGWindow|AXUIElement|AXIsProcess|SCStream|SCShareableContent|CGDisplayStream|CGRequestScreenCapture|CGPreflightScreenCapture'
 
+# **This block carries its own control** (focus-bkf). It did not: an absence over an empty symbol
+# table is green, and the only thing standing between this reading and that was the NaturalLanguage
+# control asserted about the same object *earlier in the run*, in a different block, under a
+# different flag. A control that belongs to another assertion is a control this one does not have —
+# delete the block above and this one goes on printing "0 window-list/AX/capture symbols" for an
+# object that failed to emit. So the same seven symbols are asserted present here, per
+# configuration, in the same breath as the absence they qualify.
 for config in Debug Release; do
     classify_object="$DERIVED_DATA/Build/Products/$config/FocusClassify.o"
     if [[ -f "$classify_object" ]]; then
-        probing=$(nm -u "$classify_object" 2>/dev/null | grep -E "$PRIVACY_SYMBOL_PATTERN")
+        classify_symbols=$(nm -u "$classify_object" 2>/dev/null)
+        probing=$(print -r -- "$classify_symbols" | grep -E "$PRIVACY_SYMBOL_PATTERN")
         if [[ -n "$probing" ]]; then
             fail "$config FocusClassify.o names a window-list, Accessibility or capture symbol:"
             print -u2 "$probing"
         else
             print "binary: nm -u $classify_object — 0 window-list/AX/capture symbols"
+        fi
+        privacy_control=$(print -r -- "$classify_symbols" | grep -cE "$CLASSIFY_CONTROL_PATTERN")
+        if (( privacy_control > 0 )); then
+            print "binary: control — $config FocusClassify.o still names $privacy_control NaturalLanguage symbol(s)"
+        else
+            fail "$config FocusClassify.o names no NaturalLanguage symbol at all"
+            print -u2 "    The engine compiles into this object. An object that names none of its"
+            print -u2 "    symbols cannot certify that it probes no privacy boundary — the absence"
+            print -u2 "    above would be true of an object with nothing in it (P-120)."
         fi
     elif [[ "${FOCUS_REQUIRE_BINARY_CHECK:-0}" == "1" ]]; then
         fail "FOCUS_REQUIRE_BINARY_CHECK=1 but there is no build product at $classify_object"
