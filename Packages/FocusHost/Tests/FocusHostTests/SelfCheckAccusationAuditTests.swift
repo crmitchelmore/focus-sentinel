@@ -41,6 +41,49 @@ struct SelfCheckAccusationAuditTests {
         #expect(SelfCheck.accusationRouteAudit().cells == Self.wholeSpace)
     }
 
+    /// **And a count of cells VISITED is satisfied by a fold in which every cell deferred**
+    /// (focus-2uy.4).
+    ///
+    /// That is what the count above is, and the gate asserted it under a heading about the fold
+    /// not shrinking. Measured at the Release binary of gate run `vocabgate-1`: 56 of the 80
+    /// cells defer — a presentation, a hidden menu bar, a running microphone — so the verdict
+    /// `everyAccusationRouteCanBeAnswered` was a claim about **24** cells published under a count
+    /// of 80. A cell that reached no surface cannot be a cell whose answerability was tested.
+    ///
+    /// The conservation identity is what makes the two numbers check each other, and the floor
+    /// under `delivered` is what makes the verdict non-vacuous. Both are asserted here and in
+    /// `self-check.sh`, on the same function, so the unit lane and the Release binary cannot
+    /// disagree about them.
+    @Test("the audit says how many cells reached a surface, and the two halves conserve")
+    func theAuditCountsWhatItReached() {
+        let audit = SelfCheck.accusationRouteAudit()
+        #expect(
+            audit.cells == audit.delivered + audit.deferred,
+            """
+            \(audit.cells) cells visited against \(audit.delivered) delivered and \
+            \(audit.deferred) deferred: the fold lost a cell somewhere
+            """
+        )
+        #expect(
+            audit.delivered > 0,
+            "every cell deferred, so the answerability verdict is a claim about nothing"
+        )
+        #expect(
+            audit.deferred > 0,
+            """
+            no cell deferred, so the space no longer contains a presentation, a hidden menu bar \
+            or a running microphone — the fold has stopped covering the world
+            """
+        )
+        // The measured figure, pinned as a floor rather than an equality for `test-floors.txt`'s
+        // reason: a route that starts delivering where it used to defer must not redden the gate,
+        // and one that stops delivering must.
+        #expect(
+            audit.delivered >= 24,
+            "\(audit.delivered) of \(audit.cells) cells reached a surface, against 24 measured"
+        )
+    }
+
     /// **And every one of those cells is answerable.**
     ///
     /// Named cells rather than a bare `false`, exactly as the gate reports them, so this suite

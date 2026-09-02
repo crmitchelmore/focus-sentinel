@@ -44,17 +44,27 @@ struct NudgeSurfaceTests {
     /// one predicate — in either direction — is a red run. Collapsing towards the slot brings
     /// back focus-uru's unanswerable badge; collapsing towards the answer brings back focus-k42's
     /// badge that withholds every accusation for the rest of the session.
-    @Test("answerability and slot ownership are different questions, and differ only on the badge")
+    ///
+    /// **They differ on two surfaces now, and the second one is a ruling** (focus-3vb). A
+    /// notification offers no answer because nothing can post one — no rung routes there since
+    /// U-2, and P-134 measured `add(_:)` failing at zero grants — and the fold that ships in the
+    /// **Release** binary collects the routes whose surface offers no answer, so this cell
+    /// answering `true` made the one whole-space fold blind to the one outcome U-2 forbids. It
+    /// still holds the slot, and the asymmetry is deliberate: the conservative direction for
+    /// *"could the person answer this?"* is `false` and for *"is the screen taken?"* is `true`.
+    @Test("answerability and slot ownership are different questions, and differ on two surfaces")
     func answerabilityIsNotSlotOwnership() {
-        #expect(Set(NudgeSurface.allCases.filter(\.offersAnAnswer))
-            == [.panel, .popoverBadge, .notification])
+        #expect(Set(NudgeSurface.allCases.filter(\.offersAnAnswer)) == [.panel, .popoverBadge])
         #expect(Set(NudgeSurface.allCases.filter(\.holdsTheInterruptionSlot))
             == [.panel, .notification])
 
         let disagree = NudgeSurface.allCases.filter {
             $0.offersAnAnswer != $0.holdsTheInterruptionSlot
         }
-        #expect(disagree == [.popoverBadge], "the two predicates parted company somewhere new")
+        #expect(
+            Set(disagree) == [.popoverBadge, .notification],
+            "the two predicates parted company somewhere new"
+        )
 
         // The glyph is the one surface that is neither, and that is R-87: it is a state rather
         // than a sentence, it stays on through a snooze, and there is nothing on it to press.

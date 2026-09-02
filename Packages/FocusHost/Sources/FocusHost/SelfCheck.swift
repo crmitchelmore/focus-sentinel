@@ -606,11 +606,12 @@ enum SelfCheck {
     /// produced was true of a space chosen so that it could not be false.
     ///
     /// Returns the offending cells named, so a red gate says which rung under which conditions,
-    /// and the number of cells visited, so a fold that quietly shrinks is visible as a number
-    /// rather than as an unchanged `true`.
-    nonisolated static func accusationRouteAudit() -> (cells: Int, unanswerable: [String]) {
+    /// and three counts, so a fold that quietly shrinks is visible as a number rather than as an
+    /// unchanged `true` — see `routeAudit(over:)` for why one count was not enough.
+    nonisolated static func accusationRouteAudit()
+        -> (cells: Int, delivered: Int, deferred: Int, unanswerable: [String]) {
         let audit = routeAudit(over: LadderRung.Kind.allCases.filter(\.makesAnAccusation))
-        return (audit.cells, audit.unanswerable)
+        return (audit.cells, audit.delivered, audit.deferred, audit.unanswerable)
     }
 
     /// **Every route the requested rungs can take, over the whole input space** (focus-3vb).
@@ -630,14 +631,29 @@ enum SelfCheck {
     ///
     /// Returns the offending cells named, so a red gate says which rung under which conditions;
     /// the surfaces actually reached, sorted, so the set can be pinned rather than searched; and
-    /// the number of cells visited, so a fold that quietly shrinks is visible as a number rather
-    /// than as an unchanged `true`.
+    /// **three** counts rather than one.
+    ///
+    /// **`cells` counts loop iterations, and that was the defect** (focus-2uy.4). The gate
+    /// asserted `accusationRouteCellsChecked == 80` under a heading about the fold not shrinking,
+    /// and 80 is the size of the *space*: a fold in which every single cell deferred would report
+    /// exactly the same number, so the anti-vacuity control could not tell a fold that visited
+    /// eighty cells from one that answered eighty times. Measured at the Release binary of gate
+    /// run `vocabgate-1`: **56 of the 80 deferred**, so the verdict `everyAccusationRouteCanBeAnswered`
+    /// was a claim about 24 cells published under a count of 80.
+    ///
+    /// So the two halves are counted separately and the identity between them is published:
+    /// `cells == delivered + deferred`, asserted by `self-check.sh` with a floor under
+    /// `delivered`. A conservation law is what makes the two numbers check each other — a fold
+    /// that stopped visiting cells and a fold that stopped reaching surfaces are different
+    /// failures, and one number could report neither.
     nonisolated static func routeAudit(
         over rungs: [LadderRung.Kind]
-    ) -> (cells: Int, surfaces: [String], unanswerable: [String]) {
+    ) -> (cells: Int, delivered: Int, deferred: Int, surfaces: [String], unanswerable: [String]) {
         var unanswerable: [String] = []
         var reached: Set<String> = []
         var cells = 0
+        var delivered = 0
+        var deferred = 0
 
         for rung in rungs {
             for cell in routeSpace {
@@ -651,13 +667,16 @@ enum SelfCheck {
                     voice: cell.voice
                 )
                 if let surface = route.surface {
+                    delivered += 1
                     reached.insert(surface.rawValue)
+                } else {
+                    deferred += 1
                 }
                 guard let surface = route.surface, !surface.offersAnAnswer else { continue }
                 unanswerable.append("\(rung.rawValue)/\(cell.name) -> \(surface.rawValue)")
             }
         }
-        return (cells, reached.sorted(), Set(unanswerable).sorted())
+        return (cells, delivered, deferred, reached.sorted(), Set(unanswerable).sorted())
     }
 
     /// **The same fold, aimed at the question** (focus-3vb's sibling).
@@ -938,8 +957,33 @@ enum SelfCheck {
             .sorted()
         // Gate 10's detail, which classifies for it. Exactly one of the six may take the glyph:
         // a correction, which means there is nothing left to be off task about.
+        //
+        // **Three readings, because the suppression vocabulary nine lines above gets three**
+        // (focus-2uy.5). This was one: the set that silences. A partition published as one of its
+        // three parts is a partition nothing can check — a seventh refusal ruled
+        // `.theAppSpeaking` would join no published set and leave every Release reading exactly
+        // as it was, which is the same shape as a fold whose space quietly shrinks. The three are
+        // asserted by `self-check.sh` together with the identity that they cover the vocabulary
+        // and share no member.
+        report["fatigueRefusalsDeclared"] = FatigueRefusal.Kind.allCases.map(\.rawValue).sorted()
         report["fatigueRefusalsSilencingTheGlyph"] = FatigueRefusal.Kind.allCases
             .filter { $0.subject.silences(.ambient) }
+            .map(\.rawValue)
+            .sorted()
+        report["fatigueRefusalsPassingTheGlyph"] = FatigueRefusal.Kind.allCases
+            .filter { $0.subject.ruling(for: .ambient) == .passes }
+            .map(\.rawValue)
+            .sorted()
+        // R-81's cell, and it is empty **by ruling**: `FatigueDecision` has two cases and no
+        // third, so `FatigueRefusal.Kind.subject` is never `.theSurfaceBeingOnScreen` and a
+        // deferral is the suppression stack's answer to give. Published rather than assumed,
+        // because "empty because nobody may write it" and "empty because nobody has yet" are
+        // different facts and only one of them is a ruling.
+        report["fatigueRefusalsDeferringTheGlyph"] = FatigueRefusal.Kind.allCases
+            .filter { kind in
+                if case .defers = kind.subject.ruling(for: .ambient) { return true }
+                return false
+            }
             .map(\.rawValue)
             .sorted()
         // **A whole shared budget's worth of landings, priced by the shipping arithmetic — for
@@ -1114,11 +1158,17 @@ enum SelfCheck {
         // that gates the artefact this programme ships.
         //
         // It is now the same fold `accusationRouteAudit()` runs, over every rung instead of the
-        // accusing ones — 160 cells — and the count is published beside it so a fold that quietly
+        // accusing ones — 160 cells, two rungs over an 80-cell space, where the accusation fold's
+        // is 80 (focus-484) — and the counts are published beside it so a fold that quietly
         // shrinks is a number rather than an unchanged list.
         let rungAudit = routeAudit(over: LadderRung.Kind.allCases)
         report["surfacesARungCanReach"] = rungAudit.surfaces
         report["surfacesARungCanReachCellsChecked"] = rungAudit.cells
+        // **And what became of them** (focus-2uy.4). A count of cells visited is satisfied by a
+        // fold in which every cell deferred; the two halves and the conservation identity between
+        // them are what make the number mean something.
+        report["surfacesARungCanReachCellsDelivered"] = rungAudit.delivered
+        report["surfacesARungCanReachCellsDeferred"] = rungAudit.deferred
         // **Every accusation this app can raise lands somewhere it can be answered** (focus-uru).
         //
         // The table above is computed at `reducedInterruption: false` alone, which is precisely
@@ -1140,8 +1190,12 @@ enum SelfCheck {
         // put a delivered accusation on the menu-bar glyph.
         //
         // So: the requested rung, every deck, both settings of the flag, both media states, both
-        // menu-bar states, presenting and not. Same 160 cells `SurfaceRouterTests` folds over,
-        // and the count is reported beside the verdict — a fold that quietly shrinks is the
+        // menu-bar states, presenting and not. **Eighty cells** — `routeSpace` is 2 × 2 × 2 × 2 ×
+        // 5 and the accusing rungs are `.panel` alone since U-2, which is what `self-check.sh`
+        // has always asserted; this paragraph said 160, the size of the fold over *both* rungs,
+        // inside the very passage that exists to explain the anti-vacuity control, so a reader
+        // checking the control against its own explanation concluded the fold had halved
+        // (focus-484). The count is reported beside the verdict — a fold that quietly shrinks is the
         // shape both exemptions had, and a number is the only way a gate reading shows it.
         //
         // The fold itself is `accusationRouteAudit()` rather than a loop written out here, so the
@@ -1152,6 +1206,13 @@ enum SelfCheck {
         report["accusationRoutesWithNoWayToAnswer"] = audit.unanswerable
         report["everyAccusationRouteCanBeAnswered"] = audit.unanswerable.isEmpty
         report["accusationRouteCellsChecked"] = audit.cells
+        // **The verdict above is a claim about the cells that REACHED a surface** (focus-2uy.4).
+        // 56 of these 80 defer — a presentation, a hidden menu bar, a running microphone — and a
+        // cell that reached nobody cannot be a cell whose answerability was tested. Published as
+        // two numbers with `visited == delivered + deferred` asserted by the gate, so the control
+        // that exists to see a shrinking fold can see a fold that stopped reaching surfaces too.
+        report["accusationRouteCellsDelivered"] = audit.delivered
+        report["accusationRouteCellsDeferred"] = audit.deferred
         // **The shape of a row the settings pane draws** (focus-wy0), read off the compiled type
         // with `Mirror` rather than written down here.
         //

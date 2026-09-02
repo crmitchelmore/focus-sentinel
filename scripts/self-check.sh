@@ -2457,6 +2457,38 @@ check(
     "the only fatigue refusal that stops the glyph is the person saying it is real work",
     nudge.get("fatigueRefusalsSilencingTheGlyph"),
 )
+# **And the other two thirds of the partition** (focus-2uy.5).
+#
+# The suppression vocabulary a few lines above publishes all three of its parts — silencing,
+# passing and deferring — and the fatigue vocabulary published one. A partition published as one of
+# its parts is a partition nothing can check: a seventh refusal ruled `.theAppSpeaking` joins no
+# published set, leaves the line above exactly as it is, and is invisible to every reading the
+# Release lane takes. The identity is what makes the three mean something together.
+check(
+    nudge.get("fatigueRefusalsPassingTheGlyph")
+    == ["backedOff", "cap", "cooldown", "heldAtAmbient", "snoozed"],
+    "the five refusals about the app SPEAKING all pass the rung that says nothing",
+    nudge.get("fatigueRefusalsPassingTheGlyph"),
+)
+# Empty **by ruling**, not by accident: `FatigueDecision` has two cases and no third, so a
+# deferral is the suppression stack's answer to give and `FatigueRefusal.Kind.subject` is never
+# `.theSurfaceBeingOnScreen`.
+check(
+    nudge.get("fatigueRefusalsDeferringTheGlyph") == [],
+    "no fatigue refusal defers a rung: a deferral is the stack's answer, not this vocabulary's",
+    nudge.get("fatigueRefusalsDeferringTheGlyph"),
+)
+FATIGUE_PARTS = (
+    (nudge.get("fatigueRefusalsSilencingTheGlyph") or [])
+    + (nudge.get("fatigueRefusalsPassingTheGlyph") or [])
+    + (nudge.get("fatigueRefusalsDeferringTheGlyph") or [])
+)
+check(
+    sorted(FATIGUE_PARTS) == (nudge.get("fatigueRefusalsDeclared") or [])
+    and len(FATIGUE_PARTS) == len(set(FATIGUE_PARTS)),
+    "the three fatigue readings partition the declared refusals: each one in exactly one part",
+    (nudge.get("fatigueRefusalsDeclared"), FATIGUE_PARTS),
+)
 
 # --- the day itself, and the four readings that were true of an empty one (focus-hqf) ----------
 #
@@ -2767,6 +2799,34 @@ check(
     f"the surfaces-a-rung-reaches fold covers all {EVERY_RUNG_ROUTE_CELLS} cells rather than two",
     nudge.get("surfacesARungCanReachCellsChecked"),
 )
+# **And a count of cells VISITED is satisfied by a fold in which every cell deferred**
+# (focus-2uy.4). Conservation, so the two halves check each other: a fold that stopped visiting
+# cells and a fold that stopped reaching surfaces are different failures and one number reported
+# neither.
+check(
+    nudge.get("surfacesARungCanReachCellsChecked")
+    == (nudge.get("surfacesARungCanReachCellsDelivered") or 0)
+    + (nudge.get("surfacesARungCanReachCellsDeferred") or 0),
+    "every cell of the every-rung fold either reached a surface or deferred",
+    (
+        nudge.get("surfacesARungCanReachCellsChecked"),
+        nudge.get("surfacesARungCanReachCellsDelivered"),
+        nudge.get("surfacesARungCanReachCellsDeferred"),
+    ),
+)
+# **And which surfaces offer the person a way to answer at all** (focus-3vb).
+#
+# The predicate `accusationRouteAudit()` turns on, pinned in both directions rather than published
+# and read by nothing. `.notification` was `true` here — "the presentation's actions, as
+# notification buttons" — describing a banner nothing can post: no rung routes there since U-2 and
+# P-134 measured `add(_:)` failing at zero grants. With that cell true, the one whole-space fold
+# the RELEASE binary runs could not see the one outcome U-2 forbids:
+# `everyAccusationRouteCanBeAnswered` would have stayed green with every accusation on a banner.
+check(
+    nudge.get("surfacesOfferingAnAnswer") == ["panel", "popoverBadge"],
+    "exactly the two in-app decision surfaces offer the person a way to answer back",
+    nudge.get("surfacesOfferingAnAnswer"),
+)
 check(
     nudge.get("surfacesARungCanReach") == ["menuBar", "panel", "popoverBadge"],
     "over the whole input space a rung reaches the glyph, the panel and the badge — and nothing "
@@ -2808,6 +2868,36 @@ check(
     nudge.get("accusationRouteCellsChecked") == ACCUSATION_ROUTE_CELLS,
     f"the accusation-route fold covers all {ACCUSATION_ROUTE_CELLS} cells rather than a subset",
     nudge.get("accusationRouteCellsChecked"),
+)
+# **The verdict below is a claim about the cells that REACHED a surface** (focus-2uy.4).
+#
+# `accusationRouteCellsChecked` counts loop iterations, and it was the whole of the anti-vacuity
+# control: a fold in which every single cell deferred reports exactly the same 80. Measured at the
+# Release binary of gate run `vocabgate-1`, 56 of the 80 defer — a presentation, a hidden menu bar,
+# a running microphone — so `everyAccusationRouteCanBeAnswered` was a claim about **24** cells
+# published under a count of 80.
+#
+# Two assertions, and they fail for different edits: the conservation identity catches a fold that
+# lost a cell, and the floor catches a fold that stopped reaching surfaces. The floor is a floor
+# and not an equality for `Config/test-floors.txt`'s reason — a route that starts delivering where
+# it used to defer must not redden the gate, and one that stops delivering must.
+ACCUSATION_ROUTE_DELIVERED_FLOOR = 24  # measured; 24 of 80, the other 56 deferring
+check(
+    nudge.get("accusationRouteCellsChecked")
+    == (nudge.get("accusationRouteCellsDelivered") or 0)
+    + (nudge.get("accusationRouteCellsDeferred") or 0),
+    "every cell of the accusation-route fold either reached a surface or deferred",
+    (
+        nudge.get("accusationRouteCellsChecked"),
+        nudge.get("accusationRouteCellsDelivered"),
+        nudge.get("accusationRouteCellsDeferred"),
+    ),
+)
+check(
+    (nudge.get("accusationRouteCellsDelivered") or 0) >= ACCUSATION_ROUTE_DELIVERED_FLOOR,
+    f"at least {ACCUSATION_ROUTE_DELIVERED_FLOOR} of the fold's cells reach a surface, so the "
+    "answerability verdict is a claim about something",
+    nudge.get("accusationRouteCellsDelivered"),
 )
 check(
     nudge.get("everyAccusationRouteCanBeAnswered") is True,

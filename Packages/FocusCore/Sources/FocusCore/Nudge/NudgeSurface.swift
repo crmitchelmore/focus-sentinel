@@ -36,7 +36,7 @@ public enum NudgeSurface: String, Sendable, CaseIterable, Codable, Hashable {
     /// |---|---|---|
     /// | `panel` | **yes** | `AccusationPanelView` / `QueryPanelView`, with the full action set |
     /// | `popoverBadge` | **yes** | the *same two views*, inside `MenuBarPopoverView` |
-    /// | `notification` | **yes** | the presentation's actions, as notification buttons |
+    /// | `notification` | **no** | nothing can be posted to it, so nobody is offered anything |
     /// | `menuBar` | no | a glyph, and it is not a thing to be answered — see below |
     ///
     /// **The badge answered `false` here, and that was the defect.** Under macOS Reduce Motion —
@@ -54,10 +54,27 @@ public enum NudgeSurface: String, Sendable, CaseIterable, Codable, Hashable {
     /// is no sentence on it to answer and nothing about it that may be taken down.
     /// `LadderRung.Kind.makesAnAccusation` is the other half of that, and
     /// `SurfaceRouterTests.everyRouteCanBeAnsweredBack` joins the two over the routing table.
+    /// **The notification's `true` was a claim about a surface that cannot exist** (focus-3vb,
+    /// U-2). It read *"the presentation's actions, as notification buttons"*, which describes a
+    /// banner nothing can post: no rung routes here since U-2 deferred the recommitment rung, and
+    /// P-134 measured that at zero grants every setting reads `.notSupported` and `add(_:)` fails
+    /// with `UNErrorDomain` code 1. The cell was not merely unused, it was **load-bearing in the
+    /// wrong direction**: `SelfCheck.accusationRouteAudit()` is the 80-cell whole-space fold the
+    /// **Release** binary runs, it collects the routes whose surface does not offer an answer, and
+    /// with this cell `true` the one fold that covers the space could not see the one outcome U-2
+    /// forbids. `everyAccusationRouteCanBeAnswered` would have stayed green with every accusation
+    /// on a banner. It is `false` now, so the row is dead in the fold as well as in the router.
+    ///
+    /// It is deliberately **not** matched by a flip of `holdsTheInterruptionSlot` below, and the
+    /// two predicates therefore now differ on two surfaces rather than one. The conservative
+    /// direction is opposite for the two questions: a banner that somehow reached a screen really
+    /// would take the person's attention, so the slot answer errs towards `true`; and a banner
+    /// nobody can post offers nobody anything, so the answerability answer errs towards `false`.
+    /// Erring the other way in either case is a fold that cannot fail.
     public var offersAnAnswer: Bool {
         switch self {
-        case .panel, .popoverBadge, .notification: true
-        case .menuBar: false
+        case .panel, .popoverBadge: true
+        case .menuBar, .notification: false
         }
     }
 
