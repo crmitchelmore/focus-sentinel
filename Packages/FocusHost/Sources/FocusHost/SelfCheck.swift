@@ -509,8 +509,12 @@ enum SelfCheck {
         // committed literal in both directions, and the value is checked against the *rule* that
         // produced it rather than against the set of things it could be.
         root["capabilityStatesDeclared"] = CapabilityState.allCases.map(\.rawValue)
-        root["authorisationSurfaces"] = surfaces.suspects
-        root["onScreenWindowOwners"] = surfaces.owners
+        // The whole scan, including the two facts that say whether it was taken at all and
+        // whether it could see this very process's own window. The two flat keys below are kept
+        // because the evidence set and the epic's validation section name them.
+        root["authorisationSurfaceScan"] = surfaces
+        root["authorisationSurfaces"] = surfaces["suspects"] ?? []
+        root["onScreenWindowOwners"] = surfaces["owners"] ?? []
         // Read **after** the key-equivalent probes, and asserted equal to the value the sensing
         // block read before them.
         //
@@ -1830,20 +1834,63 @@ enum SelfCheck {
     ///
     /// Probe P-95's technique (c), run on the shipped build: enumerate the owners of every
     /// on-screen window — which needs no grant, and which is measured to need none — and look
-    /// for the processes macOS puts an authorisation dialog on the screen through. The list is
-    /// asserted **empty** while the app runs.
+    /// for the processes macOS puts an authorisation dialog on the screen through. The list of
+    /// suspects is asserted **empty** while the app runs.
     ///
     /// It goes through `SystemWindowList` and `WindowMetadataReader.decode`, which are the only
     /// route in this programme to `CGWindowListCopyWindowInfo` and which decode seven keys, none
     /// of them a window name. There is no way to reach a title from here even by accident.
+    ///
+    /// ## Why it publishes a takenness fact and a control, and did not
+    ///
+    /// The whole reading used to be two arrays, and the gate asserted `suspects == []`. **An
+    /// empty scan satisfies that.** `SystemWindowList.copyWindowInfo()` answers `[]` when the
+    /// cast fails or the window server declines, `owners` is then empty, `suspects` is empty, and
+    /// the strongest form of R-33 prints a green line for a reading nobody took. That is not
+    /// hypothetical here: `sensing.windowMetadata` grew `countWasTaken` in focus-2vi for exactly
+    /// this call coming back with nothing, and gate run `lens6-1` recorded the Debug launch
+    /// unable to read the window list while the Release launch of the same tree could. One
+    /// consumer of `CGWindowListCopyWindowInfo` was given the takenness treatment and the other
+    /// was not.
+    ///
+    /// So two facts travel with the verdict:
+    ///
+    /// * `wasTaken` — the scan enumerated somebody. Empty is NOT TAKEN, routed through the one
+    ///   door with every other reading the machine may refuse (focus-2uy.3), never a pass.
+    /// * `windowsOwnedByThisProcess` — **the control, and it is by PID rather than by name.**
+    ///   This process has a window on the screen at the moment of the reading by construction:
+    ///   the shell self-check has brought the cockpit forward. An instrument that cannot see the
+    ///   window it is standing next to cannot be trusted to see an authorisation dialog either,
+    ///   and a name comparison would be the wrong instrument — `kCGWindowOwnerName` is the
+    ///   *display* name (measured: `Focus Sentinel`, with a space), which is a localisable string
+    ///   and would make the control drift with the copy.
+    ///
+    /// The two seams exist so the **witness suite** can drive every outcome of this reading
+    /// without a window server: an empty scan, a scan that cannot see this process, and a scan
+    /// that names a dialog owner. A repair whose failing state cannot be produced is the shape
+    /// this whole round is about.
     @MainActor
-    static func authorisationSurfaceReport() -> (suspects: [String], owners: [String]) {
-        let rows = WindowMetadataReader.decode(SystemWindowList().copyWindowInfo())
+    static func authorisationSurfaceReport(
+        rows: [WindowMetadataValue]? = nil,
+        ownProcessIdentifier: pid_t = ProcessInfo.processInfo.processIdentifier
+    ) -> [String: Any] {
+        let rows = rows ?? WindowMetadataReader.decode(SystemWindowList().copyWindowInfo())
         let owners = Array(Set(rows.map(\.ownerName))).sorted()
         let suspects = owners.filter { owner in
             authorisationSurfaceOwners.contains { owner.localizedCaseInsensitiveContains($0) }
         }
-        return (suspects, owners)
+        let ownWindows = rows.count { $0.ownerPID == ownProcessIdentifier }
+        return [
+            "wasTaken": !owners.isEmpty,
+            "notTakenBecause": owners.isEmpty
+                ? "the on-screen window list named no owner at all"
+                : "",
+            "ownerCount": owners.count,
+            "owners": owners,
+            "ownProcessIdentifier": Int(ownProcessIdentifier),
+            "windowsOwnedByThisProcess": ownWindows,
+            "suspects": suspects
+        ]
     }
 
     /// The processes an authorisation dialog belongs to, named one by one.

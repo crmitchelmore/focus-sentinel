@@ -1937,12 +1937,55 @@ check(
 # grant-free — and assert that not one of them is a process macOS puts an authorisation dialog
 # on the screen through, while the app is running.
 
-check(
-    report.get("authorisationSurfaces") == [],
-    "no authorisation surface is on screen while the app runs",
-    report.get("authorisationSurfaces"),
-)
-print(f"note {len(report.get('onScreenWindowOwners') or [])} on-screen window owner(s) scanned")
+# **The scan is a reading, and an empty scan is NOT TAKEN** (focus-2vi's treatment, applied to
+# the other consumer of the same call).
+#
+# THIS BLOCK REPLACES A CHECK THAT COULD NOT GO RED. It was one line —
+# `authorisationSurfaces == []` — with the owner count printed beside it as a NOTE that nothing
+# asserted. `SystemWindowList.copyWindowInfo()` answers `[]` when the window server declines or
+# the cast fails; the suspect list is then empty for the same reason a clean Mac's is, and the
+# strongest form of R-33 prints green for a reading nobody took. Not hypothetical: gate run
+# `lens6-1` recorded this call answering the Release launch and refusing the Debug one of the same
+# tree, which is why `sensing.windowMetadata` grew `countWasTaken` in focus-2vi — and this
+# consumer of the identical call never got the same treatment.
+#
+# Three readings replace it, and each has a state it goes red in:
+#
+#   1. the scan HAPPENED    — an empty owner list is routed through the one NOT-TAKEN door
+#   2. the instrument could SEE — it listed a window belonging to this very process, which is on
+#      the screen by construction because the shell self-check brought the cockpit forward. Gut
+#      `SystemWindowList` to return `[]` and reading 1 goes NOT TAKEN; make it blind to our own
+#      windows and this goes red rather than quiet.
+#   3. and only then, the verdict: not one owner is a process macOS puts a dialog up through.
+scan = report.get("authorisationSurfaceScan") or {}
+if taken(
+    "the on-screen authorisation-surface scan",
+    "authorisationSurfaceScan.wasTaken",
+    "owners={!r}".format(scan.get("owners")),
+):
+    check(
+        (scan.get("windowsOwnedByThisProcess") or 0) > 0,
+        "the scan listed a window belonging to this very process, so the instrument can see",
+        {
+            "windowsOwnedByThisProcess": scan.get("windowsOwnedByThisProcess"),
+            "ownProcessIdentifier": scan.get("ownProcessIdentifier"),
+            "ownerCount": scan.get("ownerCount"),
+        },
+    )
+    check(
+        scan.get("suspects") == [],
+        "no authorisation surface is on screen while the app runs",
+        scan.get("suspects"),
+    )
+    # The two flat keys the evidence set names are the same two facts, and they are asserted to
+    # be — a report whose root drifted away from the scan it summarises would be two answers.
+    check(
+        report.get("authorisationSurfaces") == scan.get("suspects")
+        and report.get("onScreenWindowOwners") == scan.get("owners"),
+        "the root's summary of the scan is the scan",
+        (report.get("authorisationSurfaces"), report.get("onScreenWindowOwners")),
+    )
+    print(f"note {scan.get('ownerCount')} on-screen window owner(s) scanned")
 
 # --- e03 · the relaunch-mid-session proof, across two processes (F-97, R-46) ------------------
 
@@ -2951,13 +2994,17 @@ check(
 )
 # **The non-vacuity floor.** The check above is satisfied by a report with no takenness facts at
 # all, which is exactly what deleting the pair from a probe produces — the reading goes back to
-# being a `check` that fails for the machine, and the sweep says nothing. Four probes publish
-# one today; the floor is those four, named, so losing one is a red run rather than a quieter one.
+# being a `check` that fails for the machine, and the sweep says nothing. Five probes publish
+# one today; the floor is those five, named, so losing one is a red run rather than a quieter one.
 EXPECTED_TAKENNESS_FACTS = {
     "undo.menuReadingWasTaken",
     "sensing.windowMetadata.countWasTaken",
     "sensing.presentation.wasTaken",
     "nudge.panel.deltaReadingWasTaken",
+    # The fifth, and it is the one this floor was built to catch: the authorisation-surface scan
+    # reads the SAME `CGWindowListCopyWindowInfo` as `sensing.windowMetadata` and had no takenness
+    # fact at all, so an empty scan passed as "no dialog on screen".
+    "authorisationSurfaceScan.wasTaken",
 }
 check(
     EXPECTED_TAKENNESS_FACTS <= takenness_facts,
@@ -2969,7 +3016,7 @@ check(
 # facts had gone with it.
 check(
     routed_readings >= EXPECTED_TAKENNESS_FACTS,
-    "every one of those four readings was actually routed on this run",
+    "every one of those five readings was actually routed on this run",
     sorted(EXPECTED_TAKENNESS_FACTS - routed_readings),
 )
 
