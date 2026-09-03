@@ -766,7 +766,14 @@ public final class NudgePanelController {
     ///     which is not the same as a surface that says nothing (F-144).
     /// - Returns: the four grant-free focus readings, taken after the show.
     @discardableResult
-    public func show(presentationIsClear: Bool, announcement: String? = nil) -> FocusReadings {
+    /// - Parameter announcement: what VoiceOver says as the panel appears. **Required, and it
+    ///   had a `nil` default** (focus-tzj.7): a nudge is a window that arrives unbidden, and one
+    ///   that arrives silently for somebody who cannot see it is a nudge that reached nobody.
+    ///   The default meant a call site could omit it and still compile, which is how the
+    ///   self-check's own panel drive came to show a real panel and say nothing. Every caller
+    ///   states it now, and a caller with genuinely nothing to say passes `""` — which announces
+    ///   nothing, and says so at the call site rather than by omission.
+    public func show(presentationIsClear: Bool, announcement: String) -> FocusReadings {
         lastPresentationWasClear = presentationIsClear
         panel.collectionBehavior = NudgePanel.collectionBehavior(
             presentationIsClear: presentationIsClear
@@ -787,7 +794,9 @@ public final class NudgePanelController {
         // it, which is what `.nonactivatingPanel` exists to make safe.
         panel.orderFrontRegardless()
 
-        if let announcement, !announcement.isEmpty {
+        // An empty sentence announces nothing: a caller with nothing to say says so, and
+        // VoiceOver is not handed a blank utterance.
+        if !announcement.isEmpty {
             announce(announcement)
         }
 

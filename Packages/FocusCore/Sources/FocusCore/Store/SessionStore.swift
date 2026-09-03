@@ -73,12 +73,19 @@ public final class SessionStore {
     ///   - uptimeClock: seconds since boot, from `FocusSensing`'s `mach_continuous_time`
     ///     implementation. **Not** `MonotonicClock`, whose origin is per-process and could
     ///     never span two launches.
+    ///
+    ///     **No default, and it had one** (focus-tzj.7). It defaulted to `TestUptimeClock()` —
+    ///     a fixture whose uptime is whatever a test set, zero unless it did — so a caller that
+    ///     forgot the argument compiled, ran, and reconciled every relaunch against a machine
+    ///     that had been up for no time at all. All four call sites already passed one; what the
+    ///     default provided was the chance for a fifth not to. A production type must never be
+    ///     the thing you get by saying nothing.
     ///   - bootIdentity: `"<kern.boottime.sec>.<usec>"`, likewise from `FocusSensing`. Passed
     ///     in as a `String` so that `FocusCore`'s import row stays three words long.
     public init(
         context: ModelContext,
         dateProvider: some DateProvider = SystemDateProvider(),
-        uptimeClock: some UptimeClock = TestUptimeClock(),
+        uptimeClock: some UptimeClock,
         bootIdentity: String = ""
     ) {
         self.context = context

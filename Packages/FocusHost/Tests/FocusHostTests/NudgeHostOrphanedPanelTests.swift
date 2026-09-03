@@ -125,7 +125,7 @@ struct NudgeHostOrphanedPanelTests {
         // a rung on the glyph, so a click here is a correction about the wrong application, and
         // that is precisely what this reading is for.
         fixture.panel.update(AccusationPanelView(presentation: stranded) { _, _ in })
-        fixture.panel.show(presentationIsClear: true, announcement: nil)
+        fixture.panel.show(presentationIsClear: true, announcement: "")
         NudgeHostFixture.settle()
         try #require(
             fixture.panel.isVisible && fixture.panel.showing == .accusation,

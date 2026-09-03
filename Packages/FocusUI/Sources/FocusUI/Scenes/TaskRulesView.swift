@@ -228,16 +228,26 @@ public struct TaskRulesView: View {
 
     /// The verdict a decisive disposition is stored as.
     ///
-    /// Total on `decisiveDispositions` by construction — `isDecisive` is exactly
-    /// *"`ruleVerdict` is not `nil`"* — and `RelevanceSeedTests` already asserts the round trip
-    /// is the identity on `allCases`. The `preconditionFailure` is unreachable and says so:
-    /// a crash here would mean the two definitions had come apart, which is a programming error
-    /// rather than a runtime condition.
+    /// **An exhaustive `switch` with no `default`, and that is the repair** (focus-tzj.7). This
+    /// was a `guard let … else { preconditionFailure(…) }` on `ruleVerdict`, justified by the
+    /// two definitions agreeing today. What such a guard buys is a **runtime crash** on the day
+    /// somebody adds a fifth disposition: the compiler says nothing, every test that does not
+    /// happen to reach the new case stays green, and the app traps in front of a person who
+    /// opened the Rules pane. Written as a fold over the cases, the same day's work is a build
+    /// error in this file, which is where the decision belongs.
+    ///
+    /// `.interpretByContext` is the one case that stores no verdict, and it answers `.uncertain`
+    /// — the verdict whose whole meaning is *"ask"*, which is what interpreting by context is.
+    /// It is unreachable from the pane (`decisiveDispositions` excludes it) and it is a real
+    /// answer rather than a trap, so a future caller that forgets the filter gets a question
+    /// rather than a crash.
     nonisolated static func verdict(of disposition: AppRuleDisposition) -> PriorityRuleVerdict {
-        guard let verdict = disposition.ruleVerdict else {
-            preconditionFailure("\(disposition.rawValue) is not a stored rule verdict")
+        switch disposition {
+        case .alwaysRelevant: .relevant
+        case .alwaysDistracting: .unrelated
+        case .askEachTime: .uncertain
+        case .interpretByContext: .uncertain
         }
-        return verdict
     }
 
     static func scopeKey(_ scope: PriorityRuleScope) -> ShellStringKey {

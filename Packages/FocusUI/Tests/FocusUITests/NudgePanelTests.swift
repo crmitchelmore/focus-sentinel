@@ -65,19 +65,19 @@ struct NudgePanelTests {
     func fullScreenAuxiliaryFollowsThePresentationGate() {
         let controller = Self.controller()
 
-        controller.show(presentationIsClear: false)
+        controller.show(presentationIsClear: false, announcement: "")
         #expect(!controller.properties.isFullScreenAuxiliary)
         #expect(!controller.lastPresentationWasClear)
         controller.hide()
 
-        controller.show(presentationIsClear: true)
+        controller.show(presentationIsClear: true, announcement: "")
         #expect(controller.properties.isFullScreenAuxiliary)
         #expect(controller.lastPresentationWasClear)
         controller.hide()
 
         // Back again: a panel that acquired the flag once and kept it would stomp the next
         // presentation, which is the failure P-130 photographed.
-        controller.show(presentationIsClear: false)
+        controller.show(presentationIsClear: false, announcement: "")
         #expect(!controller.properties.isFullScreenAuxiliary)
         controller.hide()
     }
@@ -97,7 +97,7 @@ struct NudgePanelTests {
 
         // The state the hazard needs: shown while the gate was clear, so it carries the flag,
         // and still on screen because nobody has answered it.
-        controller.show(presentationIsClear: true)
+        controller.show(presentationIsClear: true, announcement: "")
         #expect(controller.properties.isFullScreenAuxiliary)
         #expect(controller.isVisible)
         #expect(controller.lastPresentationWasClear)
@@ -153,7 +153,7 @@ struct NudgePanelTests {
     func showingTakesNothing() throws {
         let controller = Self.controller()
 
-        let after = controller.show(presentationIsClear: true)
+        let after = controller.show(presentationIsClear: true, announcement: "")
         defer { controller.hide() }
 
         let before = try #require(controller.readingsBeforeShow)
@@ -373,7 +373,7 @@ struct NudgePanelTests {
         let controller = Self.controller()
         #expect(!controller.isVisible)
 
-        let after = controller.show(presentationIsClear: true)
+        let after = controller.show(presentationIsClear: true, announcement: "")
         #expect(controller.isVisible)
         #expect(after.panelIsVisible)
 
@@ -598,7 +598,7 @@ struct NudgePanelTests {
         for panelCase in Self.cases() {
             let controller = Self.controller()
             controller.update(showing: panelCase.showing, layout: panelCase.content)
-            controller.show(presentationIsClear: true)
+            controller.show(presentationIsClear: true, announcement: "")
             defer { controller.hide() }
             Self.settle()
 
@@ -662,7 +662,7 @@ struct NudgePanelTests {
         for panelCase in Self.cases() {
             let controller = Self.controller()
             controller.update(showing: panelCase.showing, layout: panelCase.content)
-            controller.show(presentationIsClear: true)
+            controller.show(presentationIsClear: true, announcement: "")
             defer { controller.hide() }
             Self.settle()
             heights[panelCase.name] = controller.frame.height
@@ -688,7 +688,7 @@ struct NudgePanelTests {
     func theSizeSurvivesTheTurn() {
         let controller = Self.controller()
         controller.update(showing: .question, content: QueryPanelView(presentation: Self.queryPresentation))
-        controller.show(presentationIsClear: true)
+        controller.show(presentationIsClear: true, announcement: "")
         defer { controller.hide() }
 
         let atShow = controller.frame
@@ -714,7 +714,7 @@ struct NudgePanelTests {
     func aPanelOffScreenIsNotADecisionSurface() {
         let controller = Self.controller()
         controller.update(showing: .question, content: QueryPanelView(presentation: Self.queryPresentation))
-        controller.show(presentationIsClear: true)
+        controller.show(presentationIsClear: true, announcement: "")
         defer { controller.hide() }
         Self.settle()
 
@@ -741,7 +741,7 @@ struct NudgePanelTests {
     func aHiddenPanelIsNotADecisionSurface() {
         let controller = Self.controller()
         controller.update(showing: .question, content: QueryPanelView(presentation: Self.queryPresentation))
-        controller.show(presentationIsClear: true)
+        controller.show(presentationIsClear: true, announcement: "")
         Self.settle()
         controller.hide()
 
@@ -766,7 +766,7 @@ struct NudgePanelTests {
         )
         let controller = Self.controller()
         controller.update(showing: .accusation, content: AccusationPanelView(presentation: noAnchor))
-        controller.show(presentationIsClear: true)
+        controller.show(presentationIsClear: true, announcement: "")
         defer { controller.hide() }
         Self.settle()
 
@@ -825,7 +825,7 @@ struct NudgePanelTests {
                 .surfaceLayout
                 .modified { $0.shellTextScale(.accessibilityLarge) }
         )
-        controller.show(presentationIsClear: true)
+        controller.show(presentationIsClear: true, announcement: "")
         defer { controller.hide() }
         Self.settle()
 
@@ -921,7 +921,7 @@ struct NudgePanelTests {
         let offered = presentation.offeredActionIdentifiers
         let controller = Self.controller()
         controller.update(showing: .accusation, content: AccusationPanelView(presentation: presentation))
-        controller.show(presentationIsClear: true)
+        controller.show(presentationIsClear: true, announcement: "")
         defer { controller.hide() }
         Self.settle()
 
@@ -965,7 +965,7 @@ struct NudgePanelTests {
     func framesStampedWithAnotherLayoutAreRefused() {
         let controller = Self.controller()
         controller.update(showing: .accusation, undivided: StaleFrameReporter())
-        controller.show(presentationIsClear: true)
+        controller.show(presentationIsClear: true, announcement: "")
         defer { controller.hide() }
         Self.settle()
 
@@ -1013,7 +1013,7 @@ struct NudgePanelTests {
         var dismissals = 0
         controller.onDismiss = { dismissals += 1 }
 
-        controller.show(presentationIsClear: true)
+        controller.show(presentationIsClear: true, announcement: "")
         // The same route AppKit takes for the Escape key on a panel whose content holds first
         // responder — which is why it is `cancelOperation(_:)` and not a key handler in a view.
         controller.panel.cancelOperation(nil)

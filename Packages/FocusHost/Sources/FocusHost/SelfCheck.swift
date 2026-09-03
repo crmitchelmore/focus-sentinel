@@ -1949,7 +1949,10 @@ enum SelfCheck {
         report["panelIsDark"] = panel.appliedTraits.colorScheme == .dark
 
         let before = panel.readings()
-        panel.show(presentationIsClear: true)
+        // The sentence the shipping path announces for this very presentation, because that is
+        // what a real show does — a probe that showed the panel silently would be driving a
+        // different call from the one the app makes (focus-tzj.7).
+        panel.show(presentationIsClear: true, announcement: presentation.announcement())
 
         // **The turn of the run loop, and it is the whole assertion.**
         //

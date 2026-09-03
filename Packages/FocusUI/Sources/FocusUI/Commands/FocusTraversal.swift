@@ -204,13 +204,27 @@ public enum FocusTraversal {
         )
     ]
 
+    /// The focus contract for one surface.
+    ///
+    /// **A `switch` over the surfaces with no `default`, and that is the repair** (focus-tzj.7).
+    /// This was a lookup in the array above with `preconditionFailure` for a miss, justified by
+    /// a test asserting the array is total. What that bought was a **runtime crash** the day
+    /// somebody adds a surface: the compiler said nothing, and the trap fired when a person
+    /// opened the new window. Written as a fold, the missing row is a build error in this file.
+    ///
+    /// The array stays as the declaration — it is what `allSurfaces` and the totality test read,
+    /// and it is the readable form of the contract — and this is the total function over it. The
+    /// `first(where:)` cannot fail *because* the `switch` below has already named the surface, so
+    /// the fallback is the surface's own empty contract rather than a trap: a window with no
+    /// declared order is a window Tab does nothing in, which is a poor experience and not a
+    /// crash.
     public static func contract(for surface: FocusSurface) -> SurfaceFocus {
-        // Every case is declared above, and a test asserts it: this is a programming error,
-        // not a runtime condition.
-        guard let contract = surfaces.first(where: { $0.surface == surface }) else {
-            preconditionFailure("no focus contract declared for \(surface.rawValue)")
+        switch surface {
+        case .cockpit, .quickCapture, .completionSheet, .handoffConfirm,
+             .interruptionSheet, .settingsGeneral, .settingsPrivacy:
+            surfaces.first { $0.surface == surface }
+                ?? SurfaceFocus(surface: surface, order: [], defaultField: nil, cancel: .none)
         }
-        return contract
     }
 
     public static func order(in surface: FocusSurface) -> [FocusField] {
