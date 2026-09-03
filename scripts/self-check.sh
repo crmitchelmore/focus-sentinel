@@ -1088,6 +1088,57 @@ print(
     f"system={shell.get('appearanceSystemColorScheme')!r}"
 )
 
+# --- a Dock click with the cockpit shut brings it back (focus-odz.1, D5) ----------------------
+#
+# D5's default is a Dock icon rather than an accessory app, and
+# `applicationShouldTerminateAfterLastWindowClosed` answers `false` — so before this the app was
+# reachable only from its status item after a person's first ⌘W, and the Dock icon they clicked
+# did nothing at all. AppKit's own reopen could not help: a SwiftUI `Window` scene whose window has
+# been closed has no `NSWindow` for AppKit to order front, which is the same measurement
+# `registerCockpitOpener` exists for.
+#
+# The probe runs LAST in the report, because it shuts the window every reading above describes. It
+# closes the cockpit, calls the delegate the way AppKit calls it — through `NSApp.delegate`, which
+# with an `@NSApplicationDelegateAdaptor` in play is SwiftUI's own forwarding object, so a method
+# the adaptor does not forward answers nothing here — and reads the window list back.
+
+reopen = report.get("reopen") or {}
+check(
+    reopen.get("answered") is True,
+    "the application answers applicationShouldHandleReopen, so a Dock click has somewhere to land",
+    reopen.get("answered"),
+)
+# The precondition, asserted rather than assumed: a probe that never closed the window would
+# report "the cockpit is visible" for a cockpit that had never gone away.
+check(
+    reopen.get("cockpitVisibleBeforeReopen") is False,
+    "the cockpit really was shut before the Dock click was simulated",
+    reopen.get("cockpitVisibleBeforeReopen"),
+)
+check(
+    reopen.get("requestsAfter") == (reopen.get("requestsBefore") or -1) + 1,
+    "the reopen asked the command centre for the cockpit exactly once",
+    (reopen.get("requestsBefore"), reopen.get("requestsAfter")),
+)
+# `false` on purpose: the window has just been asked for, and `true` would ask AppKit to perform
+# its own untitled-window behaviour on top of it.
+check(
+    reopen.get("returned") is False,
+    "the reopen handler answered false, having opened the window itself",
+    reopen.get("returned"),
+)
+# **The pin.** Everything above is about a request; this is the window.
+check(
+    reopen.get("cockpitVisibleAfterReopen") is True,
+    "reopenOpensTheCockpit: a Dock click with no window open put the cockpit back on the screen",
+    (reopen.get("cockpitVisibleAfterReopen"), reopen.get("visibleWindowIdentifiers")),
+)
+check(
+    reopen.get("cockpitWindowTitleAfterReopen") == "Focus Sentinel",
+    "the window that came back is the cockpit, by its title",
+    reopen.get("cockpitWindowTitleAfterReopen"),
+)
+
 # --- e02 · the quick-capture panel (F-06) -----------------------------------------------------
 
 panel = report.get("capturePanel") or {}

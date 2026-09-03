@@ -573,7 +573,59 @@ enum SelfCheck {
             nudge["notificationAuthorisationDecodeCells"] ?? -1
         root["requestAuthorizationCallCount"] = nudge["requestAuthorizationCallCount"] ?? -1
         root["ladderRungsDeclared"] = nudge["ladderRungsDeclared"] ?? -1
+        // **Last of everything, because it shuts the cockpit and asks for it back**
+        // (focus-odz.1). Every reading above describes a window this probe then closes, so it
+        // cannot run anywhere else in this function without describing a different app.
+        root["reopen"] = reopenReport()
         return root
+    }
+
+    /// **A Dock click with no window open, driven in the shipping process** (focus-odz.1).
+    ///
+    /// The delegate method is a `FocusHost` function with a unit test over it, and the test proves
+    /// what it *asks for*: `FocusCommandCenter.cockpitRequests` goes up. What no unit process can
+    /// prove is that the request produces a **window**, because only a launch with a scene graph
+    /// has an `openWindow` to install — `canRaiseCockpit` is `false` in the unit lane by
+    /// construction. So this closes the cockpit, calls the delegate the way AppKit calls it, and
+    /// reads the window list back.
+    ///
+    /// It goes through `NSApp.delegate` rather than through a `FocusAppDelegate` this function
+    /// constructs, and that is the load-bearing half: with an `@NSApplicationDelegateAdaptor` in
+    /// play `NSApp.delegate` is SwiftUI's own forwarding object, so a method the adaptor does not
+    /// forward would answer nothing here while a directly-constructed delegate answered
+    /// perfectly. `answered` is that fact, reported rather than assumed.
+    @MainActor
+    static func reopenReport() -> [String: Any] {
+        var report: [String: Any] = [:]
+
+        liveCockpitWindow()?.close()
+        settle(forSeconds: sceneSettleSeconds)
+        let closed = liveCockpitWindow()
+        report["cockpitVisibleBeforeReopen"] = closed?.isVisible ?? false
+        report["requestsBefore"] = FocusCommandCenter.shared.cockpitRequests
+        report["canRaiseCockpit"] = FocusCommandCenter.shared.canRaiseCockpit
+
+        let delegate = NSApp.delegate
+        let selector = #selector(NSApplicationDelegate.applicationShouldHandleReopen(_:hasVisibleWindows:))
+        let answered = delegate?.responds(to: selector) ?? false
+        report["answered"] = answered
+        if answered {
+            report["returned"] = delegate?.applicationShouldHandleReopen?(
+                NSApp,
+                hasVisibleWindows: false
+            ) ?? true
+        }
+
+        settle(forSeconds: sceneSettleSeconds)
+        report["requestsAfter"] = FocusCommandCenter.shared.cockpitRequests
+        let reopened = liveCockpitWindow()
+        report["cockpitVisibleAfterReopen"] = reopened?.isVisible ?? false
+        report["cockpitWindowTitleAfterReopen"] = reopened?.title ?? ""
+        report["visibleWindowIdentifiers"] = NSApp.windows
+            .filter(\.isVisible)
+            .map { $0.identifier?.rawValue ?? "" }
+            .sorted()
+        return report
     }
 
     // MARK: - e05 · the nudge loop, at zero grants (§4.5, §4.7)
@@ -3854,6 +3906,36 @@ public final class FocusAppDelegate: NSObject, NSApplicationDelegate {
     /// A single-window cockpit has nothing to keep running once its window is gone.
     public func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         false
+    }
+
+    /// **Clicking the Dock icon with every window shut opens the cockpit** (focus-odz.1, D5).
+    ///
+    /// The pair of decisions above left a hole a person falls into on their first ⌘W: the app
+    /// keeps a Dock icon (D5 — the cockpit has menus and Undo, so an accessory app would be the
+    /// wrong shape), and `applicationShouldTerminateAfterLastWindowClosed` answers `false`, so
+    /// after ⌘W the application is running with no window and nothing on the Dock icon brings one
+    /// back. AppKit's own reopen behaviour cannot help: a SwiftUI `Window` scene whose window has
+    /// been closed has **no `NSWindow` at all** for AppKit to unminiaturise or order front — the
+    /// same measurement `FocusCommandCenter.registerCockpitOpener` is written against — so the
+    /// only thing that can make one is `openWindow(id:)`.
+    ///
+    /// So the reopen goes down the **same route the popover's "Open Focus Sentinel" takes**:
+    /// `requestCockpit()`, which is the one place in the application that holds SwiftUI's opener.
+    /// Not `NSApp.activate` and not `makeKeyAndOrderFront` — R-96e and R-96m ban both outside two
+    /// pinned files, and neither would help anyway when there is no window to order.
+    ///
+    /// **`false` in both arms, and both are decisions.** With windows already visible there is
+    /// nothing to do and AppKit's default (unminiaturise the front window) is the right one to
+    /// decline, because this app's windows are never miniaturised into a document proxy somebody
+    /// is waiting on. With none visible, this has just asked for the window itself, and answering
+    /// `true` would ask AppKit to perform its own untitled-window behaviour on top of it.
+    public func applicationShouldHandleReopen(
+        _ sender: NSApplication,
+        hasVisibleWindows: Bool
+    ) -> Bool {
+        guard !hasVisibleWindows else { return false }
+        FocusCommandCenter.shared.requestCockpit()
+        return false
     }
 
     /// **Quit is an exit of the nudge loop, and it was the only one with no door** (focus-gmr).

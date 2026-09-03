@@ -193,6 +193,18 @@ public final class FocusCommandCenter {
         cockpitOpener = open
     }
 
+    /// Take the route away again.
+    ///
+    /// The symmetric half of `register`/`unregister`, and it exists for the same reason: a test
+    /// that installs an opener on the shared centre — which is the object the app delegate's
+    /// reopen handler reaches, so a test of that handler has no choice — must be able to put the
+    /// process back the way it found it. Without it, `canRaiseCockpit` would be `true` for every
+    /// suite that ran afterwards, and `send(_:)` would start buffering commands nothing was ever
+    /// going to answer.
+    public func unregisterCockpitOpener() {
+        cockpitOpener = nil
+    }
+
     /// **Bring the cockpit forward**, and say whether anything could.
     ///
     /// A verb of its own because one surface asks for exactly this and nothing else: the
