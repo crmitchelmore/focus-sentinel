@@ -1835,6 +1835,14 @@ check(
         seeded_cockpit.get("firstRunExplanationStillShown"),
     ),
 )
+# …and nothing is still attached at the AppKit level, which is the reading that says the process
+# can leave. Measured the hard way: the first gate run that showed this sheet hung for
+# twenty-eight minutes at `NSApp.terminate` with the sheet still on the window.
+check(
+    seeded_cockpit.get("attachedSheetsAfterDismissal") == 0,
+    "no sheet is attached to any window by the time the process terminates",
+    seeded_cockpit.get("attachedSheetsAfterDismissal"),
+)
 
 # **The relaunch**, against the same store. This is the claim.
 check(

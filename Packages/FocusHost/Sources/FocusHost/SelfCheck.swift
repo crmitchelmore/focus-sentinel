@@ -205,12 +205,22 @@ enum SelfCheck {
         // **Put the first-run sheet away before this process leaves** (focus-odz.7).
         //
         // Read first, reported above, then dismissed — a sheet still attached when
-        // `NSApp.terminate` runs is how a self-check turns into a hung gate stage, measured twice
-        // at twenty minutes apiece for the handoff's sheet. It also drives the sink: the closure
-        // the connection carries is only ever reached by a click, so this is the one lane that can
-        // prove it reaches the root at all.
+        // `NSApp.terminate` runs is how a self-check turns into a hung gate stage. That is not a
+        // hypothetical: this lane hung for twenty-eight minutes on the first run that showed this
+        // sheet, in exactly the way the handoff's sheet hung twice before it. It also drives the
+        // sink: the closure the connection carries is only ever reached by a click, so this is the
+        // one lane that can prove it reaches the root at all.
+        //
+        // **Three steps, and all three are needed.** The state is changed; the run loop is given a
+        // turn, because SwiftUI takes a sheet down on the next one and not on this one; and then
+        // `dismissEverySheet()` ends anything still attached at the AppKit level, which is the
+        // instrument the ordinary report already carries for the same reason. A state change alone
+        // leaves the sheet on the window at `terminate`.
         let dismissedFirstRun = composition.showsFirstRunExplanation
         composition.dismissFirstRunScreen()
+        settle(forSeconds: renderSettleSeconds)
+        dismissEverySheet()
+        settle(forSeconds: renderSettleSeconds)
 
         return [
             "mode": "cockpit",
@@ -272,13 +282,19 @@ enum SelfCheck {
             // **The first-run explanation** (focus-odz.7): whether this launch owed it, and
             // whether the window put it on the screen. Two readings, because a host that decided
             // to show it and a window that drew nothing are two different broken promises.
-            "firstRunExplanationShown": composition.showsFirstRunExplanation,
+            // **Read before the dismissal below**, which is what `dismissedFirstRun` holds: this
+            // is whether the launch was owed the explanation, not whether the sheet is still up
+            // three lines later.
+            "firstRunExplanationShown": dismissedFirstRun,
             "firstRunExplanationDrawn": drawn[.firstRunExplanation] ?? "",
             "firstRunExplanationOwedNow": FocusStore
                 .shellState(in: composition.modelContainer.mainContext)
                 .owesFirstRunExplanation,
             "firstRunExplanationDismissed": dismissedFirstRun,
             "firstRunExplanationStillShown": composition.showsFirstRunExplanation,
+            // **And nothing is still attached to a window.** The reading that says this process
+            // can leave: a sheet on a window at `NSApp.terminate` is a hung gate stage.
+            "attachedSheetsAfterDismissal": NSApp.windows.filter { $0.attachedSheet != nil }.count,
             "restorationRecord": composition.restorationRecord ?? [],
             "restoredWindows": composition.restoredWindows,
             "hasRestoredWindows": composition.hasRestoredWindows,
@@ -657,6 +673,10 @@ enum SelfCheck {
         // `present()`: it is a closure in a `Commands` result builder, which is the same
         // unreachable shape `App/` is, and it has no receipt. Stated here rather than implied.
         root["aboutCredits"] = (AboutPanel.options()[.credits] as? NSAttributedString)?.string ?? ""
+        // Lifted to the root beside the bundle's own answer, for `engineStamp`'s reason: a gate
+        // assertion comparing two values should not have to walk a path into a sub-object to find
+        // one of them.
+        root["settingsDrewnVersion"] = rendering["settingsDrewnVersion"] ?? ""
         root["reopen"] = reopenReport()
         return root
     }

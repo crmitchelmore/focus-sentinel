@@ -63,6 +63,22 @@ final class PriorityHost: PriorityActing {
         /// everything else here is: `FocusUI` renders values and never learns which
         /// implementation produced them.
         var verdict: VerdictSnapshot?
+        /// **Whether the footer is making the one-time launch-at-login offer** (D-12,
+        /// focus-odz.4), and **whether the first-run explanation is on screen** (focus-odz.7).
+        ///
+        /// Carried through the environment rather than composed on to `CockpitState` afterwards,
+        /// and the reason is a measured one. `AppComposition` is a plain `final class`: writing a
+        /// property on it invalidates no SwiftUI body, so a state the root patched on to the
+        /// projection after `refresh()` had built it reached the window on whatever redraw
+        /// happened next — and when the decision was *"take the sheet down"*, the next redraw is
+        /// the one the dismissal was supposed to cause. Measured: the self-check's cockpit lane
+        /// hung for twenty-eight minutes at `NSApp.terminate` with the first-run sheet still
+        /// attached, because nothing had told the window to stop drawing it.
+        ///
+        /// Through the environment, both are inside the value `refresh()` compares and assigns,
+        /// so a change to either is a change to `state` and the window redraws for it.
+        var showsLaunchAtLoginOffer: Bool = false
+        var showsFirstRunExplanation: Bool = false
     }
 
     /// Everything a rule snapshot is built from, as one comparable value (R-65).
@@ -499,7 +515,9 @@ final class PriorityHost: PriorityActing {
             session: environment.session,
             sensing: environment.sensing,
             verdict: environment.verdict,
-            capabilities: environment.capabilities
+            capabilities: environment.capabilities,
+            showsLaunchAtLoginOffer: environment.showsLaunchAtLoginOffer,
+            showsFirstRunExplanation: environment.showsFirstRunExplanation
         )
 
         activeCommitment = nextCommitment

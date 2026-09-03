@@ -579,6 +579,14 @@ public final class AppComposition {
         // (focus-zrs), rather than opening `PriorityStore` and deciding for itself which task is
         // active — which was a fourth independent read of the fact gate 1 is decided by.
         relevanceHost.activeCommitment = { [weak priorityHost] in priorityHost?.activeCommitment }
+
+        // **One projection at the end**, so the two facts read at the top of this function reach
+        // the value the cockpit draws (focus-odz.4, focus-odz.7). They travel through
+        // `PriorityHost.Environment` rather than being patched on to the projection afterwards —
+        // see that type for the measurement — which means the projection has to be rebuilt once
+        // after they are read. Last, so every wire above is in place before anything is pushed
+        // through them.
+        refreshCockpit()
     }
 
     /// Join the nudge loop to the three things that already happen.
@@ -1085,6 +1093,8 @@ public final class AppComposition {
     /// here too.
     public func dismissFirstRunScreen() {
         showsFirstRunExplanation = false
+        // The projection has to be rebuilt for the window to stop drawing the sheet: the flag
+        // travels through `PriorityHost.Environment`, and this is what pushes it.
         refreshCockpit()
     }
 
@@ -1307,19 +1317,17 @@ public final class AppComposition {
     /// value `FocusUI` consumes. That translation happening *here* is what lets `FocusUI`
     /// stay free of any dependency on `FocusSensing` — the UI never learns which observer it
     /// was handed, only what that observer currently reports.
-    public var cockpitState: CockpitState {
-        var state = priorityHost.state
-        // **The one fact the priority host cannot know** (D-12, focus-odz.4). Whether the offer
-        // is on screen turns on the login-item service and on the whole store's session history,
-        // neither of which is the priority host's business — so it is composed here, where the
-        // root can see all three facts, in the same shape the menu bar's presentation is.
-        //
-        // A **stored** answer, not a computation: this projection runs on every corroboration
-        // tick, and the decision reads the store twice. See `refreshLaunchAtLoginOffer()`.
-        state.showsLaunchAtLoginOffer = showsLaunchAtLoginOffer
-        state.showsFirstRunExplanation = showsFirstRunExplanation
-        return state
-    }
+    /// The cockpit's whole projection, as the priority host holds it.
+    ///
+    /// **The two facts the priority host cannot decide for itself reach it through the
+    /// environment** (focus-odz.4, focus-odz.7) rather than being patched on here. Whether the
+    /// launch-at-login offer is on screen turns on the login-item service and the store's whole
+    /// session history, and whether the first-run explanation is owed turns on a row the shell
+    /// writes — neither is the priority host's business, and both are the root's. But a value
+    /// patched on *after* `refresh()` built the projection is a value SwiftUI never hears about:
+    /// this object is a plain `final class`, so writing a property on it invalidates no body. See
+    /// `PriorityHost.Environment`, which carries the measurement.
+    public var cockpitState: CockpitState { priorityHost.state }
 
     /// **How many sessions this store has ever finished** (D-12, focus-odz.4).
     ///
@@ -2201,7 +2209,12 @@ public final class AppComposition {
                 session: snapshot,
                 sensing: sensingHost.summary,
                 capabilities: sensingHost.capabilities,
-                verdict: relevanceHost.verdict
+                verdict: relevanceHost.verdict,
+                // **Through the environment, so a change to either redraws the window**
+                // (focus-odz.4, focus-odz.7). See `PriorityHost.Environment` for the measurement
+                // that put them here rather than on the projection afterwards.
+                showsLaunchAtLoginOffer: showsLaunchAtLoginOffer,
+                showsFirstRunExplanation: showsFirstRunExplanation
             )
         )
     }
