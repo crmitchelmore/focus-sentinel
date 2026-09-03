@@ -67,47 +67,16 @@ final class NudgeHost {
         category: "NudgeHost"
     )
 
-    /// **One turn of this loop, and the seam at the end of it** (focus-my0).
+    /// **One turn of this loop, the seam at the end of it, and the baselines it leaves**
+    /// (focus-my0, focus-r28.1, focus-tzj.6).
     ///
     /// Every door into this object from outside — a judgement, a click, a redraw, a phase change,
-    /// the display changing — runs inside `turn.run { … }`, and nothing is charged until the
-    /// outermost one ends. That is the whole of focus-my0:
-    /// `closeSurfaces(endingAnyQuestionAs:andAnyRungAs:)`
-    /// clears the question, hides the panel and ends the rung in one synchronous call stack,
-    /// and the first of those three statements makes the item say the rung's own mark for as long
-    /// as it takes to reach the third. AppKit composites nothing in between, so the charge that
-    /// was taken from a reading in the middle was taken for a frame that never existed.
-    ///
-    /// The reading taken at the seam is the one thing `PerceptibleChange.proven(on:from:to:)` will
-    /// accept, so this is not a rule this object is trusted to follow — a charge proven from a
-    /// mid-turn reading does not compile.
-    private let turn = SurfaceTurn()
-
-    /// **What has asked to be proven when the surfaces stop moving.**
-    ///
-    /// The three doors that used to charge — a landing, a click that opens the popover, and a
-    /// write to the status item — now *offer*, and this is the offer. It is a set of kinds rather
-    /// than a flag so that the seam settles the question and the rung through the same loop over
-    /// `MenuBarNudge.allCases` that `popoverPresented()` uses: a third thing the badge learns to
-    /// carry cannot be settled for one kind and forgotten for the other.
-    ///
-    /// It is emptied by the seam and never by anything else. A rung that offered itself and was
-    /// not provable is not lost — it stays open and unpaid, and the next write to the item offers
-    /// it again, which is what makes focus-nrl's rung recoverable.
-    private var armedProofs: Set<MenuBarNudge> = []
-
-    /// **What each kind of nudge's surfaces were saying when they last stopped moving**
-    /// (focus-r28.1).
-    ///
-    /// Written at every seam and read as the *before* half of every proof. It exists because a
-    /// proof was a comparison between one composited state and one arbitrary instant: the *after*
-    /// half has been a `SettledObservation` since focus-my0, and the *before* half was an ordinary
-    /// reading taken mid-turn at the landing. A mark written and reverted earlier in the same turn
-    /// went into that baseline, and the rung it belonged to could never be proven afterwards.
-    ///
-    /// Keyed by `MenuBarNudge` because `observation(of:)` is: the panel and the popover each carry
-    /// one kind at a time, and *"a panel is up"* is not *"my panel is up"*.
-    private var settledSurfaces: [MenuBarNudge: SurfaceObservation] = [:]
+    /// the display changing — runs inside `proofs.run { … }`, and nothing is charged until the
+    /// outermost one ends. `SurfaceProofAccountant` holds that turn, what has asked to be proven
+    /// at the end of it, and what the surfaces were saying the last time they stopped moving; the
+    /// two things it cannot hold are the question and the rung themselves, which is why the proof
+    /// of each is a closure back into this object, wired once in `init`.
+    private let proofs = SurfaceProofAccountant()
 
     // MARK: - What the composition root wires in
 
@@ -555,27 +524,9 @@ final class NudgeHost {
     private(set) var staleNotificationActions = 0
 
     /// **A proof offered while no turn was open** (focus-my0) — always zero, and it is the one
-    /// number that says the seam is actually reached.
-    ///
-    /// `SettledObservation` makes charging from a mid-turn reading unrepresentable, and that is
-    /// the half of focus-my0 the type system holds. The other half is plumbing: every door into
-    /// this object from outside has to run inside `turn.run { … }`, and a door added without one
-    /// is a rule somebody has to remember — which is precisely the shape this epic keeps finding.
-    ///
-    /// The failure it would cause is late rather than dishonest: an offer made outside a turn is
-    /// settled at the *next* seam, against a reading of surfaces that really had stopped moving,
-    /// so nothing imperceptible is charged either way. What is lost is the tie between the write
-    /// and the charge — a rung would be paid for by an event that had nothing to do with it. So it
-    /// is a reading rather than a fault to the person: stated as a count, beside the other two, so
-    /// the unit lane and `--focus-self-check` can read it and a regression is a number.
-    ///
-    /// It is zero by construction today, and it is **falsifiable by mutation**, which is this
-    /// programme's bar for a reading nothing can currently drive: deleting `turn.run` from any
-    /// entry point turns it non-zero on the next drive that reaches it. Measured with the wrapper
-    /// removed from `menuBarItemRedrawn()`: two drives in `NudgeChargingInvariantTests` report 1
-    /// each — the two that write to the status item from outside the loop, which is exactly the
-    /// path a composition root takes on its five-second refresh.
-    private(set) var proofsOfferedOutsideATurn = 0
+    /// number that says the seam is actually reached. The accountant's count; read here because
+    /// this is the object the unit lane and `--focus-self-check` hold.
+    var proofsOfferedOutsideATurn: Int { proofs.offeredOutsideATurn }
 
     init(
         context: ModelContext,
@@ -604,10 +555,23 @@ final class NudgeHost {
         self.monotonicClock = monotonicClock
         self.dateProvider = dateProvider
 
-        // **The seam** (focus-my0). Set once, here, so that there is one place in the programme
-        // where a reading of the surfaces becomes evidence, and it is a place that can only be
-        // reached with the call stack unwound.
-        turn.atSeam = { [weak self] seam in self?.settleCharges(at: seam) }
+        // **The seam** (focus-my0). Wired once, here, so that there is one place in the
+        // programme where a reading of the surfaces becomes evidence, and it is a place that can
+        // only be reached with the call stack unwound. The accountant decides *when*; these two
+        // closures are the *what*, and they are this object's because only it holds the question
+        // and the rung.
+        proofs.observe = { [weak self] nudge in
+            self?.observation(of: nudge) ?? .nothingSeen
+        }
+        proofs.prove = { [weak self] nudge, seam in
+            guard let self else { return }
+            // Exhaustive, so a third thing the badge learns to carry stops the build here rather
+            // than being settled for one kind and forgotten for the other.
+            switch nudge {
+            case .query: self.proveOpenQuestion(at: seam)
+            case .accusation: self.proveOpenRung(at: seam)
+            }
+        }
         panel.onDismiss = { [weak self] in self?.dismissWhateverIsOpen() }
         // **The display can be replaced under a panel that is already up** (focus-56y). The panel
         // re-measures and re-places itself for whatever is there now; this is the loop being told
@@ -635,7 +599,7 @@ final class NudgeHost {
     /// e03's five-second corroboration tick — so the loop advances without this host owning a
     /// timer of its own.
     func consider(_ judgement: NudgeJudgement) {
-        turn.run {
+        proofs.run {
             guard let surroundings = surroundings?() else { return }
 
             // **The presentation gate can close while a nudge is already on screen** (R-84, F-35).
@@ -884,7 +848,7 @@ final class NudgeHost {
         // glyph's delivery against it.
         ladder.offer(rung)
 
-        let presentation = accusationPresentation(for: rung, commitment: commitment)
+        let presentation = presentations.accusation(for: rung, commitment: commitment)
 
         // **What every surface was doing before this rung was allowed to touch one — as the
         // person last saw them** (focus-1b5, focus-nrl, focus-r28.1).
@@ -898,12 +862,13 @@ final class NudgeHost {
         // rather than charged. The direction is safe, which is why it survived a round; it is
         // still a comparison against an arbitrary instant.
         //
-        // `settledSurfaces` is the last reading taken at a **seam**, so a perceptible change is
+        // The accountant's baseline is the last reading taken at a **seam**, so a perceptible
+        // change is
         // now the difference between two composited states. It also retires the ordering rule the
         // comment here used to carry — *"above the line that ends the rung this loop is
         // holding"* — because a baseline from the previous seam cannot be disturbed by anything
         // this turn does, in either order.
-        let observedBeforeLanding = settledObservation(of: .accusation)
+        let observedBeforeLanding = proofs.settledObservation(of: .accusation)
 
         // **The rung this loop is holding ends here, before the next one lands** (focus-s4m,
         // focus-fwy).
@@ -1175,7 +1140,7 @@ final class NudgeHost {
         // (focus-1b5, focus-r28.1). The question path's twin of `accuse(…)`'s baseline, and the
         // same repair: the last reading taken at a seam, so both halves of the proof are states
         // that reached a frame.
-        let observedBeforeAsking = settledObservation(of: .query)
+        let observedBeforeAsking = proofs.settledObservation(of: .query)
         openQuestion?.observedAtAsk = observedBeforeAsking
 
         switch surface {
@@ -1332,7 +1297,7 @@ final class NudgeHost {
     /// so a third thing the badge learns to carry cannot be added to one half and forgotten by
     /// the other. The switch is exhaustive; adding a case stops the build here.
     func popoverPresented() {
-        turn.run {
+        proofs.run {
             for nudge in MenuBarNudge.allCases {
                 switch nudge {
                 case .query: offerQuestionForProof()
@@ -1358,7 +1323,7 @@ final class NudgeHost {
     /// open; when the question is answered the badge's `waiting` goes, the item is written with
     /// the rung's own `noticing`, and this door opens on the first moment anybody could see it.
     func menuBarItemRedrawn() {
-        turn.run { offerRungForProof() }
+        proofs.run { offerRungForProof() }
     }
 
     /// **Offer the open question to the seam of this turn** (focus-my0).
@@ -1370,8 +1335,7 @@ final class NudgeHost {
     /// It was `deliverPendingBadgeQuestion()`, and it proved the change on the spot from a reading
     /// taken mid-turn. That is what a settled reading now makes impossible.
     private func offerQuestionForProof() {
-        noteTheTurn()
-        armedProofs.insert(.query)
+        proofs.offer(.query)
     }
 
     /// **Offer the open rung to the seam of this turn** (focus-1b5, focus-nrl, focus-my0).
@@ -1385,52 +1349,7 @@ final class NudgeHost {
     /// forgot to wire `MenuBarController.onGlyphWritten` still charges nothing for a glyph rung,
     /// exactly as before. The seam settles what was offered, never everything it can find.
     private func offerRungForProof() {
-        noteTheTurn()
-        armedProofs.insert(.accusation)
-    }
-
-    /// Whether this offer was made inside a turn — see `proofsOfferedOutsideATurn`.
-    private func noteTheTurn() {
-        guard !turn.isOpen else { return }
-        proofsOfferedOutsideATurn += 1
-        logger.fault("a proof was offered outside a turn, so its seam is somebody else's event")
-    }
-
-    /// **The surfaces have stopped moving; now ask what the person could have seen** (focus-my0).
-    ///
-    /// The one place in this object that spends a unit of the person's day, and the only place a
-    /// reading of the surfaces becomes evidence — `SurfaceTurn.Seam` is handed to nothing else,
-    /// and `PerceptibleChange.proven(on:from:to:)` takes nothing else.
-    ///
-    /// Over `MenuBarNudge.allCases` rather than as two statements, for `popoverPresented()`'s
-    /// reason: the question and the rung have been given the same treatment by hand four times in
-    /// this epic and the hand has been wrong three of them. The switch is exhaustive, so a third
-    /// kind stops the build here.
-    private func settleCharges(at seam: borrowing SurfaceTurn.Seam) {
-        let offered = armedProofs
-        armedProofs = []
-        for nudge in MenuBarNudge.allCases where offered.contains(nudge) {
-            switch nudge {
-            case .query: proveOpenQuestion(at: seam)
-            case .accusation: proveOpenRung(at: seam)
-            }
-        }
-        // **And every seam leaves the baseline the next landing will be measured against**
-        // (focus-r28.1). Taken for both kinds, whether or not either was proven here: a rung that
-        // lands three turns from now is measured against what the surfaces were saying when they
-        // last stopped moving, and the kind it lands as is not known yet.
-        for nudge in MenuBarNudge.allCases {
-            settledSurfaces[nudge] = observation(of: nudge)
-        }
-    }
-
-    /// **What the surfaces were saying when they last stopped moving** (focus-r28.1).
-    ///
-    /// The *before* half of every proof. `.nothingSeen` until the first seam, which is the
-    /// honest reading for a process whose surfaces have never settled: nothing has been drawn,
-    /// nothing is up, and the item is bare.
-    private func settledObservation(of nudge: MenuBarNudge) -> SurfaceObservation {
-        settledSurfaces[nudge] ?? .nothingSeen
+        proofs.offer(.accusation)
     }
 
     /// Charge the open question if the surfaces, settled, show it was put in front of somebody.
@@ -1715,7 +1634,7 @@ final class NudgeHost {
     /// row, whichever surface the click came from — and everything below is the bookkeeping that
     /// makes the ladder, the fatigue controller and the log agree about what just happened.
     func resolve(_ action: CorrectionAction, snoozeDuration: Duration?) {
-        turn.run {
+        proofs.run {
             // **An action that cannot write what it promises is refused whole** (focus-rdw).
             //
             // Every surface withdraws these two when there is no session — `offeredActions` asks
@@ -1850,7 +1769,7 @@ final class NudgeHost {
     /// receipt commit together or neither does, so the app is never in the state where it has
     /// learned the answer but forgotten the asking.
     func answer(_ answer: QueryAnswer) {
-        turn.run {
+        proofs.run {
             // **Answering a question ends the question, and nothing else** (focus-ti4, focus-nrl).
             //
             // This was `closeSurfaces(endingAnyQuestionAs: .answered)`, which is *take everything
@@ -2162,7 +2081,7 @@ final class NudgeHost {
     ///   interruption on a surface that had gone — the slot is given back, and the subject stays
     ///   askable.
     private func displaysChanged() {
-        turn.run {
+        proofs.run {
             guard panel.isVisible else { return }
 
             if let question = openQuestion, question.surface == .panel {
@@ -2498,7 +2417,7 @@ final class NudgeHost {
     /// asserts it and in the self-check that publishes it.
     ///
     /// Over `MenuBarNudge.allCases` rather than as two hand-written pairs, for the reason
-    /// `popoverPresented()` and `settleCharges(at:)` are: the question and the accusation have
+    /// `popoverPresented()` and the accountant's seam are: the question and the accusation have
     /// been given this treatment by hand before, and the hand has been wrong.
     var orphanedNudgeSurfaces: [NudgeSurface] {
         var orphans: Set<NudgeSurface> = []
@@ -2533,7 +2452,7 @@ final class NudgeHost {
     /// The session ended. Both fatigue runs die with it, the ladder resets, and every snooze and
     /// correction goes with them — because all three are statements about a session that is over.
     func sessionEnded() {
-        turn.run {
+        proofs.run {
             let now = monotonicClock.elapsed
             fatigue.reduce(.sessionEnded, now: now)
             ladder.reduce(.deEscalated(.sessionEnded), now: now)
@@ -2543,7 +2462,7 @@ final class NudgeHost {
 
     /// The session left `.focus` — a break, a detour, an interruption, completion.
     func phaseLeftFocus() {
-        turn.run {
+        proofs.run {
             ladder.reduce(.deEscalated(.phaseLeftFocus), now: monotonicClock.elapsed)
             closeSurfaces(endingAnyQuestionAs: .worldMovedOn, andAnyRungAs: .worldMovedOn)
         }
@@ -2567,7 +2486,7 @@ final class NudgeHost {
     /// It writes and it decides nothing else. No ladder reset, no snooze cleared, no session
     /// touched: quitting is not a correction and must not read as one.
     func applicationWillTerminate() {
-        turn.run {
+        proofs.run {
             closeSurfaces(endingAnyQuestionAs: .worldMovedOn, andAnyRungAs: .worldMovedOn)
         }
     }
@@ -2575,7 +2494,7 @@ final class NudgeHost {
     /// A different commitment. Every earlier observation is evidence about a different question,
     /// and — because the ledger is keyed on the priority — every question legitimately re-opens.
     func priorityChanged() {
-        turn.run {
+        proofs.run {
             ladder.reduce(.deEscalated(.priorityChanged), now: monotonicClock.elapsed)
             clearSessionState()
         }
@@ -2749,17 +2668,7 @@ final class NudgeHost {
         // as though it had been routed there — and would have been read as a badge question by
         // anything that asked.
         guard let question = openQuestion, question.surface == .popoverBadge else { return nil }
-        return QueryPresentation(
-            voice: preferences.voice,
-            // **The commitment this question was asked under, carried on it** (focus-lmo,
-            // focus-xix). It was `activeCommitment()?.intent ?? ""` — a live reading taken at
-            // redraw time, so the popover could draw the question under a task the receipt will
-            // not be keyed to, or under no task at all.
-            task: question.commitment.intent,
-            subject: naming.subject(of: question.warrant.subject),
-            reason: question.warrant.reason,
-            dwelled: question.warrant.dwelled
-        )
+        return presentations.query(question.warrant, under: question.commitment)
     }
 
     /// **The accusation waiting in the menu-bar popover** (focus-uru), when reduced interruption,
@@ -2772,7 +2681,7 @@ final class NudgeHost {
     ///
     /// It did not exist, and that was the defect: the composition root handed the popover
     /// `currentRung` alone, so the surface drew *"Nudge: Panel"* and offered nothing to press.
-    /// The presentation is built by the same `accusationPresentation(for:commitment:)` the panel
+    /// The presentation is built by the same `NudgePresentationBuilder` the panel
     /// is drawn from, so the two surfaces cannot disagree about what the rung says, which actions
     /// it offers, or which commitment the click will be written against.
     var pendingPopoverAccusation: AccusationPresentation? {
@@ -2797,7 +2706,7 @@ final class NudgeHost {
     /// nothing was offering.
     var openRungPresentation: AccusationPresentation? {
         guard let open = openRung else { return nil }
-        return accusationPresentation(for: open.rung, commitment: open.commitment)
+        return presentations.accusation(for: open.rung, commitment: open.commitment)
     }
 
     /// What is snoozed right now, for the popover's list and its countdowns.
@@ -2819,7 +2728,7 @@ final class NudgeHost {
 
     /// Cancel one subject's snooze from the popover.
     func cancelSnooze(subject: String) {
-        turn.run {
+        proofs.run {
             snoozes = snoozes.cancelling(subject: subject)
         }
     }
@@ -2833,7 +2742,7 @@ final class NudgeHost {
     /// `resolve(_:snoozeDuration:)` — the same function the buttons call — so a key equivalent
     /// and a click are one code path rather than two implementations of one idea.
     func perform(_ command: PriorityCommand) {
-        turn.run {
+        proofs.run {
             // **The same predicate the menu item disables on** (focus-6uf). `guard openRung != nil`
             // was written here twice and nowhere on the item that sends the command, so *Mark as
             // Relevant* and *Snooze Nudge* were permanently enabled and silently did nothing with
@@ -2866,7 +2775,7 @@ final class NudgeHost {
     /// app anything. A question hidden this way is still unanswered and will be offered again;
     /// that is the honest reading of "hide", and it is why this is not `.dismiss`.
     func hideOverlays() {
-        turn.run {
+        proofs.run {
             panel.hide()
             menuBar.closePopover()
             // **The open question goes with the screen it was on** (focus-kby, F-81).
@@ -2979,32 +2888,22 @@ final class NudgeHost {
         surroundings?().commitment
     }
 
-    private func accusationPresentation(
-        for rung: LadderRung,
-        commitment: ActiveCommitment
-    ) -> AccusationPresentation {
-        let target = ReturnToTask.target(anchor: returnAnchor, workspace: workspace)
-        // **The rung's key, and the name that key is known by** (focus-ebv). Both come off the
-        // one value: the snooze below is looked up by `subject.identifier`, exactly as it was,
-        // and only the panel's body line reads the other half. `rung.subject` is already `nil`
-        // for mixed drift, so an accusation that names nobody goes on naming nobody.
-        let subject = naming.subject(rung.subject)
-        return AccusationPresentation(
-            rung: rung.kind,
+    /// **What a surface is told to draw, built from what this object is holding right now**
+    /// (focus-tzj.6).
+    ///
+    /// A value per read, so nothing in it can take a second reading of anything: the commitment a
+    /// nudge was raised with is carried in by the caller that holds it, and the two facts that are
+    /// genuinely live — the snooze countdown and whether there is a session to scope a rule to —
+    /// are read inside the one presentation that draws them.
+    private var presentations: NudgePresentationBuilder {
+        NudgePresentationBuilder(
             voice: preferences.voice,
-            // The commitment the rung was raised under, carried in — so the sentence on the panel
-            // names the task the click will be written against (focus-zrs, focus-lmo).
-            task: commitment.intent,
-            subject: subject,
-            dwelled: rung.mandate.sustainedFor,
-            returnTarget: target?.displayName,
-            snoozeRemaining: subject.flatMap { snoozes.snooze(for: $0.identifier) }?
-                .remaining(at: monotonicClock.elapsed),
-            // **Whether the two session-scoped actions have anything to act on** (focus-rdw).
-            // The same wire `apply(_:…)` reads before writing a session rule, asked *before* the
-            // buttons are drawn rather than after one is pressed: an action that would be dropped
-            // in a `guard` is an action this panel must not offer.
-            hasOpenSession: currentSessionID?() != nil
+            naming: naming,
+            returnAnchor: returnAnchor,
+            workspace: workspace,
+            snoozes: snoozes,
+            monotonicClock: monotonicClock,
+            hasOpenSession: { [weak self] in self?.currentSessionID?() != nil }
         )
     }
 }
