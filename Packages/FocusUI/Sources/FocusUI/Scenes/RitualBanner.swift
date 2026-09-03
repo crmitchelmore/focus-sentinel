@@ -57,7 +57,7 @@ public struct RitualBanner: View {
         .padding(spacing)
         .frame(maxWidth: .infinity, alignment: .leading)
         .shellSurface(
-            DesignTokens.material(for: traits),
+            DesignTokens.material(for: traits, provenance: .summoned),
             in: RoundedRectangle(cornerRadius: spacing / 2, style: .continuous),
             traits: traits
         )

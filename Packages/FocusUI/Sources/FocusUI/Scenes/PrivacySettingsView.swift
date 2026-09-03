@@ -120,7 +120,7 @@ public struct PrivacySettingsView: View {
             // where Reduce Transparency and Increase Contrast become visible in this pane:
             // the fill goes opaque, and the border thickens.
             .shellSurface(
-                DesignTokens.material(for: traits),
+                DesignTokens.material(for: traits, provenance: .summoned),
                 in: RoundedRectangle(cornerRadius: spacing / 2, style: .continuous),
                 traits: traits
             )

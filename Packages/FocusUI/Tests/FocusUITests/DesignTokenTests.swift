@@ -14,10 +14,13 @@ struct DesignTokenTests {
 
     @Test("materials collapse to an opaque fill under Reduce Transparency")
     func materialCollapsesUnderReduceTransparency() {
-        #expect(DesignTokens.material(for: .light) == .material)
-        #expect(DesignTokens.material(for: .dark) == .material)
-        #expect(DesignTokens.material(for: .reduceTransparency) == .opaque)
-        #expect(DesignTokens.material(for: .light) != DesignTokens.material(for: .reduceTransparency))
+        #expect(DesignTokens.material(for: .light, provenance: .summoned) == .material)
+        #expect(DesignTokens.material(for: .dark, provenance: .summoned) == .material)
+        #expect(DesignTokens.material(for: .reduceTransparency, provenance: .summoned) == .opaque)
+        #expect(
+            DesignTokens.material(for: .light, provenance: .summoned)
+                != DesignTokens.material(for: .reduceTransparency, provenance: .summoned)
+        )
     }
 
     // MARK: - Reduce Motion
@@ -50,6 +53,35 @@ struct DesignTokenTests {
             DesignTokens.supportingTextColor(for: .increasedContrast)
                 == DesignTokens.Palette.primaryText
         )
+    }
+
+    // MARK: - Provenance: who put the surface on the screen (focus-0nm, U-1)
+
+    /// **All four cells of {provenance} × {reduceTransparency}, and both directions.**
+    ///
+    /// A membership test would not do here. The claim is not "an uninvited surface can be
+    /// opaque" — it is that it is opaque in every cell, and that the summoned half still answers
+    /// the way it always has, so the axis is a real second reason rather than a switch that
+    /// turned transparency off everywhere.
+    @Test("an uninvited surface is opaque in all four cells, and a summoned one is not")
+    func provenanceDecidesTheFillIndependentlyOfTheTraits() {
+        for traits in [AppearanceTraits.light, .dark, .reduceTransparency] {
+            #expect(
+                DesignTokens.material(for: traits, provenance: .uninvited) == .opaque,
+                "an uninvited surface stayed translucent under \(traits.colorScheme)"
+            )
+        }
+        // The other half, in both directions: the summoned answer still follows the trait, so
+        // this is an axis rather than a global opacity switch.
+        #expect(DesignTokens.material(for: .light, provenance: .summoned) == .material)
+        #expect(DesignTokens.material(for: .dark, provenance: .summoned) == .material)
+        #expect(DesignTokens.material(for: .reduceTransparency, provenance: .summoned) == .opaque)
+        #expect(
+            DesignTokens.material(for: .light, provenance: .uninvited)
+                != DesignTokens.material(for: .light, provenance: .summoned),
+            "the two provenances agree in the cell where they must differ"
+        )
+        #expect(SurfaceProvenance.allCases.count == 2, "a third provenance decides nothing yet")
     }
 
     // MARK: - The colour-scheme mapping (P-32: the only place the two vocabularies meet)

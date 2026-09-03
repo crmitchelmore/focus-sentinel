@@ -200,7 +200,7 @@ struct SnapshotTests {
         let opaque = try render(.statusPaused, variant: "reduceTransparency")
         let differs = PNGCompare.areDistinct(plain.pixels, opaque.pixels)
         #expect(differs)
-        #expect(DesignTokens.material(for: .reduceTransparency) == .opaque)
+        #expect(DesignTokens.material(for: .reduceTransparency, provenance: .summoned) == .opaque)
     }
 
     @Test("every status badge is distinguishable without colour", arguments: FocusStatus.allCases)

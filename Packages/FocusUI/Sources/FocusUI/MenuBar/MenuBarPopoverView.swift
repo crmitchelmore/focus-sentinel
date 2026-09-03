@@ -243,7 +243,13 @@ public struct MenuBarPopoverView: DecisionSurfaceContent {
     /// over: it overrides a setting the person chose, and the microphone case forbids it outright
     /// — a panel over a call is a panel everybody on the call can see.
     private func pendingAccusation(_ accusation: AccusationPresentation) -> some View {
-        AccusationPanelView(presentation: accusation) { action, span in
+        // **`.summoned`, and it is the only caller that says so** (focus-0nm). The popover is
+        // shown by `MenuBarController.togglePopover()` and by nothing else — the person clicked
+        // the status item — so it sits inside the menu bar's own idiom and keeps the material
+        // an ordinary Mac popover has. The nudge panel is the uninvited surface and takes the
+        // opaque branch; a popover that went opaque would be a second, unasked-for departure
+        // from the platform in a design whose floor is the HIG.
+        AccusationPanelView(presentation: accusation, provenance: .summoned) { action, span in
             onAction(.correct(action, snoozeDuration: span))
         }
     }
@@ -257,7 +263,7 @@ public struct MenuBarPopoverView: DecisionSurfaceContent {
             // The **same view** the panel draws, so a question routed to the popover is the same
             // question with the same three answers and the same stated scope. A second rendering
             // of the question would be a second place its tone could drift.
-            QueryPanelView(presentation: query) { answer in
+            QueryPanelView(presentation: query, provenance: .summoned) { answer in
                 onAction(.answerQuery(answer))
             }
         }

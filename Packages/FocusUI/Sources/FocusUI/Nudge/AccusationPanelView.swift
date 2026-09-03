@@ -175,6 +175,18 @@ public struct AccusationPanelView: DecisionSurfaceContent {
     /// closure is asserting the contract; asserting it by clicking a rendered button would be
     /// asserting SwiftUI.
     let onAction: (CorrectionAction, Duration?) -> Void
+    /// **Who put this on the screen** (focus-0nm, U-1).
+    ///
+    /// `.uninvited` by default, and the default is the point: this view exists to be raised by
+    /// the app over whatever the person was looking at, which under U-1 is by definition the
+    /// thing the app is interrupting them about. An uninvited surface is opaque whatever the
+    /// traits say, so a full-screen video or a bright document cannot read through the sentence
+    /// explaining itself. The one caller that is genuinely summoned — the popover under the
+    /// status item the person clicked — says so.
+    ///
+    /// The default is deliberately the strict answer rather than the permissive one: forgetting
+    /// to state it produces a legible surface, never a translucent one.
+    let provenance: SurfaceProvenance
 
     @Environment(\.appearanceTraits) private var traits
     @Environment(\.shellTextScale) private var textScale
@@ -182,14 +194,21 @@ public struct AccusationPanelView: DecisionSurfaceContent {
 
     public init(
         presentation: AccusationPresentation,
+        provenance: SurfaceProvenance = .uninvited,
         onAction: @escaping (CorrectionAction, Duration?) -> Void = { _, _ in }
     ) {
         self.presentation = presentation
+        self.provenance = provenance
         self.onAction = onAction
     }
 
     public var body: some View {
         column { context; actions }
+            .shellSurface(
+                DesignTokens.material(for: traits, provenance: provenance),
+                in: Rectangle(),
+                traits: traits
+            )
     }
 
     public static let decisionSurface: DecisionSurface = .accusationPanel

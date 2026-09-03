@@ -59,7 +59,7 @@ public struct SessionPhaseBadge: View {
         }
         .padding(.horizontal, spacing)
         .padding(.vertical, spacing / 2)
-        .shellSurface(DesignTokens.material(for: traits), in: Capsule(), traits: traits)
+        .shellSurface(DesignTokens.material(for: traits, provenance: .summoned), in: Capsule(), traits: traits)
         .overlay {
             Capsule()
                 .strokeBorder(

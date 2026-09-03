@@ -217,6 +217,45 @@ struct AccusationPanelTests {
         #expect(NudgeCopy.countdown(.seconds(-30)) == "00:00")
     }
 
+    // MARK: - The panel is opaque because nobody asked for it (focus-0nm, U-1)
+
+    /// **The wiring, measured rather than asserted about the token.**
+    ///
+    /// `DesignTokenTests` proves what `material(for:provenance:)` answers. This proves that the
+    /// panel *asks* — the half that would be missing if the token grew an axis nothing consumed,
+    /// which is exactly what the panel did before this: nothing under `Sources/FocusUI/Nudge/`
+    /// set a background, an `isOpaque` or a visual-effect view at all.
+    ///
+    /// Two renders of one presentation, differing in nothing but who is said to have raised the
+    /// surface. If the `shellSurface` call goes, both cells draw the same picture and this fails.
+    @Test(
+        "the panel draws a different surface when it was not asked for",
+        .enabled(if: LocalizationLane.catalogsAreCompiled)
+    )
+    @MainActor
+    func anUninvitedPanelIsNotDrawnLikeASummonedOne() throws {
+        let presentation = AccusationFixture.rungTwo()
+        let uninvited = try SnapshotHarness.render(
+            AccusationPanelView(presentation: presentation, provenance: .uninvited),
+            traits: .light,
+            width: AccusationPanelSnapshotTests.panelWidth,
+            name: "accusationPanel.provenance.uninvited"
+        )
+        let summoned = try SnapshotHarness.render(
+            AccusationPanelView(presentation: presentation, provenance: .summoned),
+            traits: .light,
+            width: AccusationPanelSnapshotTests.panelWidth,
+            name: "accusationPanel.provenance.summoned"
+        )
+        #expect(
+            PNGCompare.areDistinct(uninvited.pixels, summoned.pixels),
+            """
+            the panel draws the same surface whoever raised it, so the provenance axis reaches \
+            the token and stops there
+            """
+        )
+    }
+
     // MARK: - What VoiceOver hears (F-144)
 
     @Test(

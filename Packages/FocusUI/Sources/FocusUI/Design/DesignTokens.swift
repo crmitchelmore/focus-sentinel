@@ -14,6 +14,27 @@ public enum SurfaceFill: String, Sendable, Equatable, Hashable, CaseIterable {
     case opaque
 }
 
+/// **Who asked for this surface to be on the screen.**
+///
+/// The axis exists because Reduce Transparency is not the only reason a fill must be opaque
+/// (focus-0nm, U-1). A window the person opened sits over whatever they left behind and a
+/// material reading through it is the system's own idiom. A window the *app* raised sits over
+/// whatever happened to be in front — a video at full screen, a bright document, another app's
+/// dark chrome — and the same material makes the app's own words compete with the very thing it
+/// is interrupting the person about. This app interrupts more than most software; a nudge that
+/// is hard to read over a decoy is a nudge that costs the person twice.
+///
+/// It is a fact about the surface, not about the person's settings, which is why it is a
+/// separate parameter rather than another trait: no accessibility switch should be able to turn
+/// it off, and no future trait should be able to make an uninvited surface translucent again.
+public enum SurfaceProvenance: String, Sendable, Equatable, Hashable, CaseIterable {
+    /// The person asked for it: a settings pane, a popover under the status item they clicked,
+    /// a badge inside a window they opened.
+    case summoned
+    /// The app raised it. Today that is the nudge panel and nothing else.
+    case uninvited
+}
+
 /// How strongly the shell draws its own structure.
 ///
 /// Under Increase Contrast, borders thicken and text that would otherwise be secondary is
@@ -50,12 +71,26 @@ public struct Emphasis: Sendable, Equatable, Hashable {
 public enum DesignTokens {
     // MARK: - Surfaces
 
-    /// The fill a raised surface should use under these traits.
+    /// The fill a raised surface should use, given who raised it and under these traits.
     ///
-    /// Reduce Transparency is not a suggestion: a material that stays translucent when the
-    /// user has asked for opacity is a defect, not a style choice.
-    public static func material(for traits: AppearanceTraits) -> SurfaceFill {
-        traits.reduceTransparency ? .opaque : .material
+    /// Two independent reasons to be opaque, and the axes are `or`-ed rather than ranked.
+    ///
+    /// Reduce Transparency is not a suggestion: a material that stays translucent when the user
+    /// has asked for opacity is a defect, not a style choice. And an **uninvited** surface is
+    /// opaque whatever the traits say (focus-0nm): it appears over whatever was in front, which
+    /// under U-1 is by definition the thing the app is interrupting the person about, and a
+    /// material lets that thing read through the sentence explaining it.
+    ///
+    /// So `uninvited` resolves `.opaque` in all four cells of {provenance} × {reduceTransparency}
+    /// and `summoned` keeps the answer this token has always given. There is **no default** for
+    /// the provenance: a surface that did not say who raised it is a surface nobody decided
+    /// about, and the next uninvited one would inherit the summoned answer in silence.
+    public static func material(
+        for traits: AppearanceTraits,
+        provenance: SurfaceProvenance
+    ) -> SurfaceFill {
+        if provenance == .uninvited { return .opaque }
+        return traits.reduceTransparency ? .opaque : .material
     }
 
     // MARK: - Emphasis
