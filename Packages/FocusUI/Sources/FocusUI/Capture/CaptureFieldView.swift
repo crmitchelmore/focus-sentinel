@@ -43,7 +43,6 @@ public struct CaptureFieldView: View {
     @FocusState.Binding var focus: FocusField?
 
     @Environment(\.locale) private var locale
-    @Environment(\.appearanceTraits) private var traits
     @Environment(\.shellTextScale) private var textScale
     @ScaledMetric(relativeTo: .body) private var spacing: CGFloat = 12
 

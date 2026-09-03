@@ -713,16 +713,31 @@ print "== reachable, not merely mentioned"
 # the producer's own output, the way `InterventionSettingsTests.everyDrawnRowHasASentence` now
 # does against `SurfaceRouter.table(…)`.
 #
-# **Rule 1 does not ask whether the naming site is itself reachable.** A key spelled inside a
-# private helper that nothing calls is blessed — `boundaryButtons(_:)` is the shape, though on
-# this tree that function is called from `quietHoursSection` and its four keys really are drawn.
-# Closing it means transitive name-reachability from a root set (a `body`, a public member, an
-# `init`), which is a real lint and a much larger one; it is filed as focus-ado rather than
-# half-built here.
+# **Rule 1a closes the reachability half, as far as text can decide it** (focus-ado). Rule 1 used
+# to bless a key whose case name appeared anywhere in the module's code, without asking whether
+# that line could run — so a private helper nothing calls blessed every key it spelled. Rule 1a is
+# the transitive fixpoint: the root set is every line of a file that no private member owns (a
+# `body`, a public or internal member, an `init`, a stored-property initialiser), the closure runs
+# over "member A names member B", and a line owned only by unreachable private members contributes
+# nothing to `spoken`. The self-test plants the bead's own mutation — the last reader deleted and a
+# private helper spelling the key planted with nothing calling it — and requires RED; it plants the
+# same helper reached only through a SECOND dead helper and requires RED; and it plants the helper
+# WITH a call from the root set and requires GREEN, which is the control that stops the rule being
+# "ignore private code".
+#
+# **What is still out of reach, and why it is left alone rather than guessed at.** The fixpoint
+# stops at the file, because `private` and `fileprivate` are file scope in Swift and an `internal`
+# member is callable from anywhere in the module: calling one dead would be this lint inventing a
+# fact. And the reachability pass reads the comment-stripped, STRING-KEEPING view, the opposite of
+# what `spoken` reads, because a call inside a string interpolation is a real call — measured:
+# reading the string-stripped view called `AppVersion.present(_:)` and `LocalDay.paddedYear` dead
+# when both are used inside interpolations. Erring that way keeps a live helper alive at the cost
+# of missing a dead one, which is the only safe direction for a rule whose remedy is deletion.
 #
 # So this section makes the *mechanical* claim it can make, and states the residual. What changes
 # is that a key can no longer be blessed by the line that spells it, by a second line that spells
-# it, by a comment, by a test, or by a row that points at a file rather than at a drawing.
+# it, by a comment, by a test, by a row that points at a file rather than at a drawing, or by a
+# line no route can reach.
 
 python3 - "$REPO_ROOT" <<'PYTHON'
 import json
@@ -865,6 +880,114 @@ def sources(directory):
     return found
 
 
+# --- Rule 1a: the naming site must itself be reachable (focus-ado, focus-dsc) -----------------
+#
+# Rule 1 blesses a key when its case name is named anywhere else in the module's code. It never
+# asked whether the LINE that names it can run. So a private helper nothing calls still blessed
+# every key it spells — measured by mutation: deleting the sole call to a private helper left the
+# lint green while every key it spelled became undrawable.
+#
+# Closing it is transitive name-reachability from a declared root set, and this is that fixpoint,
+# scoped to where it is decidable from text. `private` and `fileprivate` are FILE scope in Swift,
+# so a private member's callers are all in its own file and the question is answerable without a
+# whole-module dataflow analysis. Anything wider than a file is left alone rather than guessed at:
+# an `internal` member is callable from anywhere in the module, and calling it dead would be this
+# lint inventing a fact.
+#
+# THE ROOT SET, declared: every line of a file that is not inside a private member. That is a
+# `body`, a public or package or internal member, an `init`, a stored-property initialiser, a
+# protocol conformance's witness — each of them a place the module or the framework can reach
+# from outside the file. From those roots the closure runs over "member A names member B", and a
+# private member outside the closure cannot run.
+#
+# What it then costs a key: a case name spelled ONLY inside dead private members no longer
+# blesses it. Dead members are also printed, because a helper nothing calls is worth knowing
+# about whether or not it spells a catalog key.
+
+# `private(set)` is NOT file scope: the setter is private and the getter is not, so such a member
+# is readable from anywhere in the module and calling it dead would be this lint inventing a fact.
+# The negative lookahead is what keeps `NotificationDelivery.requestAuthorizationCallCount` — read
+# by the self-check from another module entirely — out of the dead set.
+PRIVATE_MEMBER = re.compile(
+    r"(?:^|\s)(?:private|fileprivate)(?!\s*\()\s+"
+    r"(?:(?:static|final|lazy|weak|unowned|mutating|nonmutating|override|class|convenience)\s+)*"
+    r"(?:func|var|let|subscript)\s+([A-Za-z_]\w*)"
+)
+
+
+def private_member_spans(lines):
+    """`{name: [(first, last), …]}` over 0-based line indices, for one file's private members.
+
+    A member's span runs from its declaration to the line on which the brace depth returns to
+    what it was when the declaration opened. A one-line `private let x = y` opens no brace and is
+    its own span.
+    """
+    spans = {}
+    depth = 0
+    open_members = []  # (name, start_line, depth_at_declaration)
+    for index, line in enumerate(lines):
+        found = PRIVATE_MEMBER.search(line)
+        start_depth = depth
+        opens = line.count("{")
+        closes = line.count("}")
+        if found:
+            if opens > closes:
+                open_members.append((found.group(1), index, start_depth))
+            else:
+                spans.setdefault(found.group(1), []).append((index, index))
+        depth += opens - closes
+        while open_members and depth <= open_members[-1][2]:
+            name, start, _ = open_members.pop()
+            spans.setdefault(name, []).append((start, index))
+    for name, start, _ in open_members:
+        spans.setdefault(name, []).append((start, len(lines) - 1))
+    return spans
+
+
+def unreachable_private_members(lines):
+    """The private members of one file that nothing outside a dead member names.
+
+    `lines` are COMMENT-stripped and STRING-KEEPING on purpose, which is the opposite of what
+    Rule 1's own `spoken` set reads. A use inside a string interpolation — `"\\(present(short))"`
+    in `AppVersion`, `"\\(paddedYear)-…"` in `LocalDay` — is a real call, and reading the
+    string-stripped view here called both of them dead. Erring the other way is the only safe
+    direction for this analysis: a name that appears in a plain string literal is a weak signal
+    of reachability, and treating it as one keeps a live member alive at the cost of leaving one
+    dead member undetected. A lint that calls a live helper dead deletes working code.
+    """
+    spans = private_member_spans(lines)
+    if not spans:
+        return set(), {}
+    inside = {}
+    for name, ranges in spans.items():
+        for first, last in ranges:
+            for index in range(first, last + 1):
+                inside.setdefault(index, set()).add(name)
+
+    # The root set: every line owned by no private member. Its own declaration line is excluded
+    # from a member's names, so `private func foo()` does not name `foo`.
+    roots = set()
+    named_by = {name: set() for name in spans}
+    for index, line in enumerate(lines):
+        stripped = PRIVATE_MEMBER.sub(" ", line)
+        identifiers = set(IDENTIFIER.findall(CASE_DECLARED_NAME.sub(" ", stripped)))
+        owners = inside.get(index)
+        if not owners:
+            roots |= identifiers
+            continue
+        for owner in owners:
+            named_by[owner] |= identifiers - {owner}
+
+    reachable = {name for name in spans if name in roots}
+    frontier = list(reachable)
+    while frontier:
+        current = frontier.pop()
+        for candidate in named_by.get(current, ()):
+            if candidate in spans and candidate not in reachable:
+                reachable.add(candidate)
+                frontier.append(candidate)
+    return set(spans) - reachable, inside
+
 # --- Rule 1: a named key is blessed by its case name -----------------------------------------
 
 named = {}          # key -> (module, relative path, line number, case name)
@@ -908,9 +1031,25 @@ for module, (catalog_path, source_dir) in sorted(MODULES.items()):
     # line before the line is read. Measured on this tree the day the rule changed: zero keys were
     # relying on one.
     spoken = set()
+    dead_members = []
     for path in paths:
-        for line in code[path]:
+        dead, inside = unreachable_private_members(prose_free[path])
+        if dead:
+            dead_members.append((os.path.relpath(path, root), sorted(dead)))
+        for index, line in enumerate(code[path]):
+            # Rule 1a: a line owned only by dead private members cannot run, so nothing it spells
+            # is a use of anything.
+            owners = inside.get(index)
+            if owners and owners <= dead:
+                continue
             spoken.update(IDENTIFIER.findall(CASE_DECLARED_NAME.sub(" ", line)))
+    if dead_members:
+        print(
+            f"note {module}: {sum(len(names) for _, names in dead_members)} private member(s) "
+            "nothing in their file reaches; nothing they spell blesses a key"
+        )
+        for relative, names in dead_members:
+            print(f"       {relative}: {', '.join(names)}")
 
     orphans = []
     for key, (owner, relative, number, case) in sorted(named.items()):
@@ -1317,6 +1456,61 @@ expect(
             directory,
             CASE_FILE,
             f"\n\nenum StringGuardSelfTest {{ case {CASE_NAME} }}\n",
+        ),
+    ),
+    "blessed only by the line that spells it",
+)
+
+# --- Rule 1a: the naming site must itself be reachable (focus-ado, focus-dsc) -----------------
+#
+# The bead's own mutation: the last reader of a key goes, and a PRIVATE HELPER that spells it is
+# planted with nothing calling it. Before Rule 1a that helper blessed the key and the lint stayed
+# green while every route to the sentence had gone.
+#
+# The second half is the control that stops Rule 1a being "ignore private members": the same
+# helper, called once from a line the root set owns, must go GREEN again. Without it the fixpoint
+# would be indistinguishable from a rule that simply refused to read private code, and a real
+# helper's real keys would be un-blessable.
+
+def plant_orphan_helper(directory, called):
+    orphan_the_named_key(directory)
+    call = f"\nfunc stringGuardSelfTestRoot() {{ stringGuardSelfTestHelper() }}\n" if called else ""
+    append(
+        directory,
+        CASE_FILE,
+        f"\n\nprivate func stringGuardSelfTestHelper() {{\n"
+        f"    _ = ShellStringKey.{CASE_NAME}\n"
+        f"}}\n{call}",
+    )
+
+
+expect(
+    "…and the case name spelled in a private helper nothing calls (focus-ado)",
+    True,
+    lambda directory: plant_orphan_helper(directory, called=False),
+    "blessed only by the line that spells it",
+)
+
+expect(
+    "…and the same helper, called from the root set: GREEN, so the fixpoint is not "
+    "'ignore private code'",
+    False,
+    lambda directory: plant_orphan_helper(directory, called=True),
+)
+
+expect(
+    "…and a private helper reached only through a SECOND private helper nothing calls "
+    "(the transitive half)",
+    True,
+    lambda directory: (
+        orphan_the_named_key(directory),
+        append(
+            directory,
+            CASE_FILE,
+            f"\n\nprivate func stringGuardSelfTestHelper() {{\n"
+            f"    _ = ShellStringKey.{CASE_NAME}\n"
+            f"}}\n"
+            f"private func stringGuardSelfTestCaller() {{ stringGuardSelfTestHelper() }}\n",
         ),
     ),
     "blessed only by the line that spells it",
