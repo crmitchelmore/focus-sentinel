@@ -2557,6 +2557,78 @@
         }
       }
     },
+    "settings.intervention.notch.explanation" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. The second sentence of the notch row, the same in every case: the ambient state is on the menu-bar glyph whatever the display can do.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The menu-bar glyph carries the ambient state either way."
+          }
+        }
+      }
+    },
+    "settings.intervention.notch.heading" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Section heading for the notch companion's row.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notch companion"
+          }
+        }
+      }
+    },
+    "settings.intervention.notch.landed" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. What the companion does when the built-in display has a notch.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus draws a thin line under the notch of the built-in display."
+          }
+        }
+      }
+    },
+    "settings.intervention.notch.noBuiltInDisplay" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Why the companion is unavailable on a Mac with no built-in display at all — deliberately NOT the same sentence as the notchless one.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not available: this Mac has no built-in display."
+          }
+        }
+      }
+    },
+    "settings.intervention.notch.noNotch" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Why the companion is unavailable on a built-in display that has no notch.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not available: this Mac's built-in display has no notch."
+          }
+        }
+      }
+    },
+    "settings.intervention.notch.unreadable" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Why the companion is unavailable when the built-in display reported a notch shape the app could not place a line under.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not available: this Mac's built-in display did not report a notch Focus could draw under."
+          }
+        }
+      }
+    },
     "settings.intervention.quietHours.endEarlier" : {
       "comment" : "Action: move the end of the quiet window back.",
       "extractionState" : "manual",

@@ -40,6 +40,10 @@ enum InterventionSettingsFixture {
         reducedInterruption: true,
         reducedInterruptionIsForced: true
     )
+
+    /// **A Mac whose built-in display has a notch** (e08a). Synthetic until P-e08-B, and the one
+    /// fixture in this file that describes hardware nobody in the programme owns.
+    static let notched = InterventionSettings(notchRefusal: nil)
 }
 
 /// **The pane that answers "where does a nudge appear, and when will it leave me alone"**
@@ -145,8 +149,11 @@ struct InterventionSettingsTests {
         #expect(!fields.contains("authorisation"), "the pane got its authorisation back: \(fields)")
         // **And no presentation-exclusion list**, which went with the section that instructed
         // the person to add an app the application offered no way to add (focus-1qm).
+        // e08a adds `notchRefusal`, and the census grows with it rather than being weakened: the
+        // point of this list is that a sixth field cannot appear without a reviewer seeing it.
         #expect(fields == [
-            "quietHours", "reducedInterruption", "reducedInterruptionIsForced", "usage", "voice"
+            "notchRefusal", "quietHours", "reducedInterruption", "reducedInterruptionIsForced",
+            "usage", "voice"
         ])
         // …and the only requests it can make are the three that change a setting.
         #expect(!InterventionSettingsView(settings: .init()).drawnRows.isEmpty)
@@ -448,6 +455,88 @@ struct InterventionSettingsTests {
         ])
     }
 
+    // MARK: - The notch companion's row (e08a)
+
+    /// **The row follows the geometry, and there is no preference for it to follow instead.**
+    ///
+    /// The defect this guards against is the one the e08 plan proposed: a Settings row rendered
+    /// from a toggle. On this Mac that row would have said the notch companion was *on* while the
+    /// display it would draw on does not exist. `notchKey(_:)` takes the landing and nothing else,
+    /// so there is no value a caller could pass that would make it say otherwise.
+    @Test("every refusal has a sentence, and the landed state has a different one")
+    func everyRefusalHasASentence() {
+        var drawn: [NotchLanding.Refusal: ShellStringKey] = [:]
+        for refusal in NotchLanding.Refusal.allCases {
+            drawn[refusal] = InterventionSettingsView.notchKey(refusal)
+        }
+
+        // None missing: the switch is total, so this is the fold saying so at run time as well.
+        #expect(drawn.count == NotchLanding.Refusal.allCases.count)
+
+        // The grouping is the claim, stated as the partition rather than as a count. Three
+        // sentences over six refusals, and the reason each group is one sentence is in
+        // `notchKey`'s own doc.
+        #expect(drawn[.noBuiltInDisplay] == .interventionNotchNoBuiltInDisplay)
+        #expect(drawn[.noSafeAreaInset] == .interventionNotchNoNotch)
+        #expect(drawn[.auxiliaryAreasAbsent] == .interventionNotchNoNotch)
+        #expect(drawn[.auxiliaryAreasIncoherent] == .interventionNotchUnreadable)
+        #expect(drawn[.housingTooNarrow] == .interventionNotchUnreadable)
+        #expect(drawn[.housingOffDisplay] == .interventionNotchUnreadable)
+
+        // **"This Mac has no notch" is false for a Mac with no built-in display** (review §6).
+        // The two sentences are different keys, and that is the whole of the fix.
+        #expect(
+            drawn[.noBuiltInDisplay] != drawn[.noSafeAreaInset],
+            "a Mac with no built-in panel was told its built-in panel has no notch"
+        )
+        // The landed sentence is none of the refusals'.
+        let landed = InterventionSettingsView.notchKey(nil)
+        #expect(!Set(drawn.values).contains(landed))
+        #expect(landed == .interventionNotchLanded)
+    }
+
+    /// The disagreement fixture the review asked for, in the only form that can exist now: a pane
+    /// handed a landing is handed **nothing else** about the notch, so the row cannot follow
+    /// anything but the display. If a preference is ever added, this is where a renderer that read
+    /// it would fail.
+    @Test("the pane holds no notch preference for the row to follow")
+    func thePaneHoldsNoNotchPreference() {
+        let mirror = Mirror(reflecting: InterventionSettingsFixture.fresh)
+        let names = mirror.children.compactMap(\.label)
+
+        #expect(names.contains("notchRefusal"))
+        #expect(
+            !names.contains { $0.lowercased().contains("companionenabled") },
+            "the pane was handed a notch preference; the row must be a reading — \(names)"
+        )
+        // And the action set offers no way to set one, for the same reason focus-wy0's
+        // `notificationAuthorisationChanged` is not here: a case in this enum is a promise the
+        // composition root keeps, and there is no column behind this one yet. Written as a
+        // **total switch**, so adding `setNotchCompanion` fails to compile here rather than
+        // failing at run time — which is the review moment a new stored preference deserves.
+        func name(_ action: InterventionSettingsAction) -> String {
+            switch action {
+            case .setVoice: "setVoice"
+            case .setReducedInterruption: "setReducedInterruption"
+            case .setQuietHours: "setQuietHours"
+            }
+        }
+        let actions: [InterventionSettingsAction] = [
+            .setVoice(.neutral), .setReducedInterruption(true), .setQuietHours(nil)
+        ]
+        #expect(actions.map(name).allSatisfy { !$0.lowercased().contains("notch") })
+    }
+
+    /// The receipt the pane reports, which the shell connection compares against the composition
+    /// root's own reading of the same landing.
+    @Test("the row reports the refusal by the name the self-check publishes")
+    func theReceiptUsesThePublishedVocabulary() {
+        for refusal in NotchLanding.Refusal.allCases {
+            #expect(InterventionSettingsView.notchReceipt(refusal) == refusal.rawValue)
+        }
+        #expect(InterventionSettingsView.notchReceipt(nil) == "landed")
+    }
+
     // MARK: - The tab
 
     @Test("the Settings window has three full tabs and the new one is named")
@@ -467,15 +556,15 @@ struct InterventionSettingsSnapshotTests {
     /// from the live display, and a baseline whose dimensions follow the monitor is not one.
     static let paneWidth: CGFloat = ShellSurfaceBounds.settingsWidth + 32
 
-    /// The four states, as four **independent** cases rather than one loop.
+    /// The five states, as five **independent** cases rather than one loop.
     ///
     /// A loop stops at its first `throw`, so a run that had lost more than one baseline — or a
     /// change that moved more than one state — reported the first and hid the rest, and a
     /// reviewer re-ran the gate once per picture to see them all. One case per state says
     /// everything that moved in one run.
     @Test(
-        "the pane in its four states",
-        arguments: ["fresh", "midDay", "quiet", "reduced"]
+        "the pane in its five states",
+        arguments: ["fresh", "midDay", "quiet", "reduced", "notched"]
     )
     func states(_ state: String) throws {
         let settings: InterventionSettings
@@ -484,6 +573,12 @@ struct InterventionSettingsSnapshotTests {
         case "midDay": settings = InterventionSettingsFixture.midDay
         case "quiet": settings = InterventionSettingsFixture.quiet
         case "reduced": settings = InterventionSettingsFixture.reduced
+        // **The picture nobody in the programme can take of their own Mac** (e08a). Every other
+        // baseline here is the notch row saying "not available", which is the truth on this rig
+        // and on every rig this app has been built on; this one is the sentence a person with a
+        // notched MacBook reads, recorded from a synthetic landing so that the copy is committed
+        // before the hardware exists rather than after.
+        case "notched": settings = InterventionSettingsFixture.notched
         default:
             Issue.record("no fixture named \(state)")
             return

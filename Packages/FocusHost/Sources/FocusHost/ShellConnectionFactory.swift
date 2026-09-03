@@ -227,6 +227,14 @@ enum ShellConnectionFactory {
         )
         root.expect(.quietHours, ShellValueDigest.describe(intervention.quietHours), for: .settings)
         root.expect(.interruptionUsage, ShellValueDigest.describe(intervention.usage), for: .settings)
+        // e08a. The refusal's own name, or `landed` — the same vocabulary the self-check
+        // publishes, so the pane's receipt and the report cannot say two different words about
+        // one display.
+        root.expect(
+            .notchCompanion,
+            InterventionSettingsView.notchReceipt(intervention.notchRefusal),
+            for: .settings
+        )
         // Which pane is in front. The window reports it, and it is what makes the other readings
         // legible: a value missing because its pane was never selected is a different thing from
         // a value missing because the pane drew nothing.

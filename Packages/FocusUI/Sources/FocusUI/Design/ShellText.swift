@@ -496,6 +496,24 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     /// separator this entry authors (focus-43k). `%1$@ – %2$@`: the dash was an authored
     /// literal in a format string for three epics, which no catalog could reach.
     case interventionQuietHoursRange = "settings.intervention.quietHours.range"
+    // The notch companion's row (e08a). **Five sentences and no control**: the row is a reading
+    // of `NotchLanding`, so a person is told what the geometry said rather than what a preference
+    // is set to — which is the difference between an honest "not available" and a switch
+    // asserting a surface is real on a Mac with no built-in panel.
+    case interventionNotchHeading = "settings.intervention.notch.heading"
+    /// The geometry landed: there is a housing, and a strip under it.
+    case interventionNotchLanded = "settings.intervention.notch.landed"
+    /// **This rig's answer.** Its own sentence, because "this Mac has no notch" is false for a
+    /// Mac with no built-in display at all (e08 review §6).
+    case interventionNotchNoBuiltInDisplay = "settings.intervention.notch.noBuiltInDisplay"
+    /// A built-in panel with no notch — every notchless MacBook.
+    case interventionNotchNoNotch = "settings.intervention.notch.noNotch"
+    /// A built-in panel whose auxiliary areas the app could not make sense of. One sentence for
+    /// three refusals, because a person cannot act on the difference between them.
+    case interventionNotchUnreadable = "settings.intervention.notch.unreadable"
+    /// The same second sentence in every case: whatever the geometry answered, the ambient state
+    /// is on the menu-bar glyph.
+    case interventionNotchExplanation = "settings.intervention.notch.explanation"
     case interventionRoutingHeading = "settings.intervention.routing.heading"
     case interventionRoutingExplanation = "settings.intervention.routing.explanation"
     /// **Three surfaces, and there were five** (focus-pzl). `…surface.notification` read *"A

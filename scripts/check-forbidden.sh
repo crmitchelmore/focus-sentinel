@@ -1054,8 +1054,23 @@ NUDGE_DRAWING_FILES=(
     Packages/FocusUI/Sources/FocusUI/MenuBar/MenuBarPopoverView.swift
 )
 
-# The one file permitted to show the panel (R-96m). It arrives in T133.
-PANEL_SHOW_FILE="Packages/FocusUI/Sources/FocusUI/Nudge/NudgePanelController.swift"
+# The files permitted to order a nudge window in without activating the application (R-96m).
+#
+# `NudgePanelController` arrived in T133 and was the only one until e08a. The notch companion is
+# the second, and it is here for the reason the rule exists rather than in spite of it: a strip
+# under the housing has to appear while the person is in the application it is about, which is
+# exactly when this app is *not* frontmost — and `orderFront(_:)` is a no-op for an inactive
+# application, so the alternative to this call is a surface that never draws. The banned calls,
+# `makeKeyAndOrderFront(` and `makeKey(`, stay banned in both files and everywhere else.
+#
+# The companion is a strictly safer window than the panel: `NudgePanel.canBecomeKey` is `true`
+# because a nudge with unclickable buttons is not a nudge, while `NotchCompanionPanel` returns
+# `false` from both `canBecomeKey` and `canBecomeMain` and sets `ignoresMouseEvents`. There is no
+# state in which it can take anything from anybody.
+PANEL_SHOW_FILES=(
+    Packages/FocusUI/Sources/FocusUI/Nudge/NudgePanelController.swift
+    Packages/FocusUI/Sources/FocusUI/MenuBar/NotchCompanionController.swift
+)
 
 # The one file permitted to construct a `PerceptibleChange` — the receipt without which nothing
 # may be charged (R-96p, focus-1b5, focus-nrl).
@@ -1667,7 +1682,11 @@ check "R-96g" "requestAuthorization is called nowhere in the repository" \
 # instant in which a still-visible panel is eligible to join the space it is being removed from.
 check_full_screen_auxiliary() {
     local behaviour_file="$PANEL_BEHAVIOUR_FILE"
-    local show_file="$PANEL_SHOW_FILE"
+    # R-96n is about the *nudge panel* alone: it is the one window that may ever carry the flag,
+    # and `withdrawForPresentation()` is its own function. The companion carries no flag in any
+    # state (`NotchCompanionPanel.collectionBehavior` is a `let`), so it has no withdrawal to
+    # check and this half stays pinned to the first entry.
+    local show_file="${PANEL_SHOW_FILES[1]}"
 
     if [[ ! -f "$behaviour_file" ]]; then
         print -u2 "FAIL [R-96n] the panel's behaviour table is missing at $behaviour_file"
@@ -1773,9 +1792,13 @@ else
         'makeKeyAndOrderFront\(|makeKey\(|becomesKeyOnlyIfNeeded[[:space:]]*=[[:space:]]*false' \
         $nudge_paths
 
-    check_outside "R-96m" "orderFrontRegardless appears only in the panel's show function" \
+    # One `--allow` per file, built from the list rather than written out twice, so a third
+    # entry can never be added to the array and forgotten here.
+    local -a show_allowances file
+    for file in $PANEL_SHOW_FILES; do show_allowances+=(--allow "$file"); done
+    check_outside "R-96m" "orderFrontRegardless appears only in a nudge window's show function" \
         'orderFrontRegardless' $nudge_paths \
-        --allow "$PANEL_SHOW_FILE"
+        "${show_allowances[@]}"
 
     # R-96n — the conditional flag, and the condition.
     #

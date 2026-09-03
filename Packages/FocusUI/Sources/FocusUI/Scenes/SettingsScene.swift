@@ -229,6 +229,9 @@ extension ShellSettingsConnection: ShellDrawnConnection {
             "intervention.reducedInterruptionIsForced": .drawn([.reducedInterruptionForced]),
             "intervention.quietHours": .drawn([.quietHours]),
             "intervention.usage": .drawn([.interruptionUsage]),
+            // e08a. A reading of the display, drawn as a sentence chosen by `NotchLanding` — so a
+            // mutation that rendered the row from a preference instead moves this receipt.
+            "intervention.notchRefusal": .drawn([.notchCompanion]),
 
             // --- one level down, and then to the leaves (focus-cxs) ------------------------
             //

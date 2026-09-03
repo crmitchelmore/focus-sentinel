@@ -19,19 +19,33 @@ public struct InterventionSettings: Sendable, Equatable {
     /// Today's spend, from `InterventionLog.budget(on:priorityID:)`. Shown as usage over the
     /// cap — **information, never a score** (D-01).
     public var usage: InterruptionBudget
+    /// **Why the notch companion is not drawing, or `nil` because it is** (e08a).
+    ///
+    /// The landing's own answer, minus the two rectangles — which the row has no business
+    /// drawing. `nil` is not an absent reading here: it is *the geometry landed*, the one state
+    /// in which there is a strip under the housing to describe.
+    ///
+    /// It is `NotchLanding.Refusal?` rather than `NotchLanding` for a reason the shell's own
+    /// totality lane enforces: the connection walk is `Mirror` to the leaves, and an enum with an
+    /// associated value publishes different paths in different cases — so a pane field whose shape
+    /// changed with its value would make `strandedPaths` a function of the display this Mac
+    /// happens to have. `Refusal` has no payload, so this is one path on every Mac.
+    public var notchRefusal: NotchLanding.Refusal?
 
     public init(
         voice: NudgeVoice = .standard,
         reducedInterruption: Bool = false,
         reducedInterruptionIsForced: Bool = false,
         quietHours: QuietHoursWindow? = InterventionPolicy.quietHoursDefault,
-        usage: InterruptionBudget = .empty
+        usage: InterruptionBudget = .empty,
+        notchRefusal: NotchLanding.Refusal? = .noBuiltInDisplay
     ) {
         self.voice = voice
         self.reducedInterruption = reducedInterruption
         self.reducedInterruptionIsForced = reducedInterruptionIsForced
         self.quietHours = quietHours
         self.usage = usage
+        self.notchRefusal = notchRefusal
     }
 }
 
@@ -166,6 +180,9 @@ public struct InterventionSettingsView: View {
             Divider()
             quietHoursSection
                 .shellRendered(.quietHours, ShellValueDigest.describe(settings.quietHours))
+            Divider()
+            notchSection
+                .shellRendered(.notchCompanion, Self.notchReceipt(settings.notchRefusal))
             Divider()
             routingMatrix
             Divider()
@@ -411,6 +428,68 @@ public struct InterventionSettingsView: View {
         formatter.dateStyle = .none
         formatter.timeStyle = .short
         return formatter.string(from: instant)
+    }
+
+    // MARK: - The notch companion, as a reading of the display (e08a)
+
+    /// **A reading, never a control that does nothing** (e08a, review §6).
+    ///
+    /// The sentence is chosen by `NotchLanding`, so what a person is told about the notch is what
+    /// the geometry said — not what a preference is set to. That distinction is the whole of why
+    /// this row is worth shipping on a Mac with no built-in display: the honest answer here is
+    /// *"not available"*, and a row rendered from a switch would have said the surface was real.
+    ///
+    /// **There is no toggle in e08a, and its absence is a decision rather than an omission.** A
+    /// switch here would have to be remembered across launches to be worth anything, and there is
+    /// no column for it: focus-40i is the bead where a preference held only in memory silently
+    /// restored the panel for somebody who had asked for quiet, and focus-wy0 and focus-1qm are
+    /// the two rounds that deleted controls buying nothing. The stored column is a schema stage,
+    /// the hardware to operate it on does not exist here, and the README's e08 section names both
+    /// as e08b receipts. Until then this row says what is true and offers nothing.
+    private var notchSection: some View {
+        VStack(alignment: .leading, spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
+            ShellText(.interventionNotchHeading, role: .headline)
+            ShellText(Self.notchKey(settings.notchRefusal), role: .callout)
+                .lineLimit(nil)
+                .fixedSize(horizontal: false, vertical: true)
+            // **The same second sentence in every case.** Whatever the geometry answered, the
+            // ambient state is on the menu-bar glyph — so a person reading "not available" learns
+            // that they are losing a second rendering and not a rung.
+            ShellText(.interventionNotchExplanation, role: .footnote)
+                .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+                .lineLimit(nil)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    /// The sentence for a landing. **Total over `NotchLanding.Refusal`**, so a seventh refusal is
+    /// a compile error here rather than a blank row in a settings pane.
+    ///
+    /// Four sentences over seven states, and the grouping is the claim:
+    ///
+    /// * `nil` — the geometry landed, and there is a strip under the housing to describe;
+    /// * `.noBuiltInDisplay` — **its own sentence**, because *"this Mac has no notch"* is false
+    ///   for a Mac with no built-in panel at all (review §6). This is the answer on this rig;
+    /// * `.noSafeAreaInset` / `.auxiliaryAreasAbsent` — a built-in panel with no notch, which is
+    ///   every notchless MacBook and is a different fact from the one above;
+    /// * the remaining three — a built-in panel whose auxiliary areas the app could not make
+    ///   sense of. One sentence, because a person cannot act on the difference between an
+    ///   incoherent pair, too narrow a gap and a housing off the display, and three sentences
+    ///   claiming they can would be three sentences pretending to a diagnosis.
+    nonisolated public static func notchKey(_ refusal: NotchLanding.Refusal?) -> ShellStringKey {
+        guard let refusal else { return .interventionNotchLanded }
+        switch refusal {
+        case .noBuiltInDisplay: return .interventionNotchNoBuiltInDisplay
+        case .noSafeAreaInset, .auxiliaryAreasAbsent: return .interventionNotchNoNotch
+        case .auxiliaryAreasIncoherent, .housingTooNarrow, .housingOffDisplay:
+            return .interventionNotchUnreadable
+        }
+    }
+
+    /// What the row reports it drew. The refusal's own name, or `landed` — the vocabulary the
+    /// self-check publishes, so the receipt and the report say the same word.
+    nonisolated public static func notchReceipt(_ refusal: NotchLanding.Refusal?) -> String {
+        refusal?.rawValue ?? "landed"
     }
 
     // MARK: - The routing matrix — where a nudge actually appears

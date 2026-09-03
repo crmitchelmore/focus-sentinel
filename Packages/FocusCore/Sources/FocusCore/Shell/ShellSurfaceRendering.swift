@@ -110,6 +110,10 @@ public enum ShellRenderedField: String, Sendable, CaseIterable, Codable, Hashabl
     case quietHours
     /// Today's spend over the cap, as the pane drew it (D-01: information, never a score).
     case interruptionUsage
+    /// **The notch companion's row, as the geometry decided it** (e08a). The named refusal, or
+    /// `landed` — never the preference, because the row is a reading of the display and a row
+    /// rendered from a switch would say a surface is real on a Mac that has no built-in panel.
+    case notchCompanion
     /// The appearance the General pane's picker drew as selected.
     case appearancePreference
     /// **What the General pane's launch-at-login switch drew**, as the whole reading rather than

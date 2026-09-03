@@ -2064,7 +2064,11 @@ public final class AppComposition {
             // `expect(.quietHours, …)` audit compared the drawn row against the very same
             // hardcoded constant that filled it. The proof agreed with itself.
             quietHours: nudgeHost.quietHours.window,
-            usage: nudgeHost.todaysUsage()
+            usage: nudgeHost.todaysUsage(),
+            // **The geometry's own answer, taken from the renderer** (e08a). Not a preference and
+            // not a constant: the row a person reads is the reason the companion is or is not
+            // drawing, computed from the same `NotchLanding` the strip is placed from.
+            notchRefusal: notchCompanion.landing().refusal
         )
     }
 
