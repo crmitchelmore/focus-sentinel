@@ -33,6 +33,21 @@ public enum SettingsTab: String, Sendable, CaseIterable, Hashable, Identifiable 
     }
 }
 
+/// **What the General pane's two capture controls perform** (focus-d3g, focus-tee.6).
+///
+/// Two facts the launch read at every start and nothing in the application could write: whether
+/// the daily ritual banner is offered at all, and which combination quick capture is bound to.
+/// A sink in the shape `LaunchAtLoginAction` already established, for the same reason — a click
+/// is the only thing that produces one, and no lane in this programme holds the Accessibility
+/// grant it would take to press a control headlessly, so the composition root drives the closure
+/// itself and watches its own graph move.
+public enum CaptureSettingsAction: Sendable, Equatable, Hashable {
+    /// Turn the daily ritual banner on or off.
+    case setRitualEnabled(Bool)
+    /// Bind quick capture to a different combination, and store it in the same breath.
+    case setQuickCaptureShortcut(HotKeySpec)
+}
+
 /// **Everything the Settings scene hands the Settings window, as one value** (focus-2er).
 ///
 /// The scene passed seven separate arguments and built a `Binding` by hand, all inside a view
@@ -68,6 +83,14 @@ public struct ShellSettingsConnection {
     /// from a stored `Bool`: somebody who removes the app from Login Items in System Settings has
     /// changed the truth, and a switch answering from its own memory would go on saying "on".
     public let launchAtLogin: LaunchAtLogin
+    /// **Whether the daily ritual banner is offered at all** (focus-d3g). Read from the store
+    /// every time this value is built, exactly as `launchAtLogin` is read from the service: a
+    /// switch answering from its own memory is a switch that lies after a delete-everything.
+    public let ritualEnabled: Bool
+    /// **The combination quick capture is bound to** (focus-d3g). The stored one, or the default
+    /// where nothing has been stored — `AppComposition.storedHotKeySpec()`'s own answer, so the
+    /// control draws what the platform was actually told.
+    public let quickCaptureShortcut: HotKeySpec
     public let summary: SensingSummary
     public let capabilities: CapabilityMatrix
     public let verdict: VerdictSnapshot?
@@ -79,6 +102,9 @@ public struct ShellSettingsConnection {
     /// `onInterventionAction`'s reason and driven the same way: no lane in this programme holds
     /// the Accessibility grant it would take to click a switch.
     public let onLaunchAtLogin: @MainActor (LaunchAtLoginAction) -> Void
+    /// What the General pane's ritual switch and shortcut picker reach (focus-d3g). A sink for
+    /// `onLaunchAtLogin`'s reason and driven the same way.
+    public let onCaptureAction: @MainActor (CaptureSettingsAction) -> Void
     /// What the Privacy pane's one destructive control reaches (e07a, focus-6pr.3). A sink like
     /// the two above, and unlike them **never driven by a lane**: it deletes the person's store.
     public let onPrivacyAction: @MainActor (PrivacySettingsAction) -> Void
@@ -122,12 +148,15 @@ public struct ShellSettingsConnection {
         storeURL: URL,
         appVersion: String = AppVersion.rendered(bundle: .main),
         launchAtLogin: LaunchAtLogin = .unregistered,
+        ritualEnabled: Bool = true,
+        quickCaptureShortcut: HotKeySpec = .quickCaptureDefault,
         summary: SensingSummary,
         capabilities: CapabilityMatrix,
         verdict: VerdictSnapshot?,
         intervention: InterventionSettings,
         onInterventionAction: @escaping @MainActor (InterventionSettingsAction) -> Void,
         onLaunchAtLogin: @escaping @MainActor (LaunchAtLoginAction) -> Void = { _ in },
+        onCaptureAction: @escaping @MainActor (CaptureSettingsAction) -> Void = { _ in },
         onPrivacyAction: @escaping @MainActor (PrivacySettingsAction) -> Void = { _ in },
         selectedTab: SettingsTab = .general,
         selectTab: @escaping @MainActor (SettingsTab) -> Void = { _ in },
@@ -140,12 +169,15 @@ public struct ShellSettingsConnection {
         self.storeURL = storeURL
         self.appVersion = appVersion
         self.launchAtLogin = launchAtLogin
+        self.ritualEnabled = ritualEnabled
+        self.quickCaptureShortcut = quickCaptureShortcut
         self.summary = summary
         self.capabilities = capabilities
         self.verdict = verdict
         self.intervention = intervention
         self.onInterventionAction = onInterventionAction
         self.onLaunchAtLogin = onLaunchAtLogin
+        self.onCaptureAction = onCaptureAction
         self.onPrivacyAction = onPrivacyAction
         self.selectedTab = selectedTab
         self.selectTab = selectTab
@@ -172,6 +204,14 @@ extension ShellSettingsConnection: ShellDrawnConnection {
             "launchAtLogin": .drawn([.launchAtLoginStatus]),
             "launchAtLogin.status": .drawn([.launchAtLoginStatus]),
             "onLaunchAtLogin": .undrawn(.sink),
+            "ritualEnabled": .drawn([.ritualEnabled]),
+            "quickCaptureShortcut": .drawn([.quickCaptureShortcut]),
+            // The two integers descend to the same receipt, because the receipt carries the
+            // **glyphs** — which is what the person reads, and the only rendering in which a
+            // wrong key code and a wrong modifier mask look different from each other.
+            "quickCaptureShortcut.keyCode": .drawn([.quickCaptureShortcut]),
+            "quickCaptureShortcut.modifierFlags": .drawn([.quickCaptureShortcut]),
+            "onCaptureAction": .undrawn(.sink),
             "onPrivacyAction": .undrawn(.sink),
             "summary": .drawn([.privacySummary, .sensingDetail]),
             "capabilities": .drawn([.privacyCapabilities]),
@@ -333,6 +373,12 @@ public struct ShellSettingsView: View {
     private let launchAtLogin: LaunchAtLogin
     /// What the launch-at-login controls reach.
     private let onLaunchAtLogin: (LaunchAtLoginAction) -> Void
+    /// Whether the daily ritual banner is offered at all, as the store holds it (focus-d3g).
+    private let ritualEnabled: Bool
+    /// The combination quick capture is bound to (focus-d3g).
+    private let quickCaptureShortcut: HotKeySpec
+    /// What the General pane's two capture controls reach.
+    private let onCaptureAction: (CaptureSettingsAction) -> Void
     private let intervention: InterventionSettings
     private let onInterventionAction: (InterventionSettingsAction) -> Void
     private let onPrivacyAction: (PrivacySettingsAction) -> Void
@@ -354,6 +400,9 @@ public struct ShellSettingsView: View {
         appVersion: String = AppVersion.rendered(bundle: .main),
         launchAtLogin: LaunchAtLogin = .unregistered,
         onLaunchAtLogin: @escaping (LaunchAtLoginAction) -> Void = { _ in },
+        ritualEnabled: Bool = true,
+        quickCaptureShortcut: HotKeySpec = .quickCaptureDefault,
+        onCaptureAction: @escaping (CaptureSettingsAction) -> Void = { _ in },
         summary: SensingSummary = .inactive,
         capabilities: CapabilityMatrix = CapabilityMatrix(),
         verdict: VerdictSnapshot? = nil,
@@ -367,6 +416,9 @@ public struct ShellSettingsView: View {
         self.appVersion = appVersion
         self.launchAtLogin = launchAtLogin
         self.onLaunchAtLogin = onLaunchAtLogin
+        self.ritualEnabled = ritualEnabled
+        self.quickCaptureShortcut = quickCaptureShortcut
+        self.onCaptureAction = onCaptureAction
         self.summary = summary
         self.capabilities = capabilities
         self.verdict = verdict
@@ -394,6 +446,9 @@ public struct ShellSettingsView: View {
         self.appVersion = connection.appVersion
         self.launchAtLogin = connection.launchAtLogin
         self.onLaunchAtLogin = connection.onLaunchAtLogin
+        self.ritualEnabled = connection.ritualEnabled
+        self.quickCaptureShortcut = connection.quickCaptureShortcut
+        self.onCaptureAction = connection.onCaptureAction
         self.summary = connection.summary
         self.capabilities = connection.capabilities
         self.verdict = connection.verdict
@@ -419,7 +474,10 @@ public struct ShellSettingsView: View {
                 preference: $preference,
                 appVersion: appVersion,
                 launchAtLogin: launchAtLogin,
-                onLaunchAtLogin: onLaunchAtLogin
+                onLaunchAtLogin: onLaunchAtLogin,
+                ritualEnabled: ritualEnabled,
+                quickCaptureShortcut: quickCaptureShortcut,
+                onCaptureAction: onCaptureAction
             )
                 .tabItem { tabLabel(.general) }
                 .tag(SettingsTab.general)

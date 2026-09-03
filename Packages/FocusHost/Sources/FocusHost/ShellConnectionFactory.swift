@@ -195,6 +195,15 @@ enum ShellConnectionFactory {
         // changed the truth, and a switch answering from its own memory would go on saying "on".
         let launchAtLogin = LaunchAtLogin(status: root.loginItem.status)
         root.expect(.launchAtLoginStatus, launchAtLogin.status.rawValue, for: .settings)
+        // **The two facts that had a launch reader and no writer** (focus-d3g). Read from the
+        // store every time this value is built, for `launchAtLogin`'s reason: a control answering
+        // from its own memory would go on saying "on" after a delete-everything. The shortcut is
+        // `storedHotKeySpec()`'s own answer rather than the raw columns, so the picker draws the
+        // combination the platform was actually told rather than one an unregistrable row claims.
+        let ritualEnabled = root.ritualEnabled
+        let shortcut = root.storedHotKeySpec()
+        root.expect(.ritualEnabled, ritualEnabled ? "on" : "off", for: .settings)
+        root.expect(.quickCaptureShortcut, shortcut.glyphs, for: .settings)
         root.expect(.privacyCapabilities, matrix.renderedDescription, for: .settings)
         // Where the Privacy pane tells the person their data lives, and what its Reveal in Finder
         // button opens. A mutation printed `/` and nothing anywhere noticed (focus-7ow).
@@ -242,12 +251,15 @@ enum ShellConnectionFactory {
             storeURL: storeURL,
             appVersion: version,
             launchAtLogin: launchAtLogin,
+            ritualEnabled: ritualEnabled,
+            quickCaptureShortcut: shortcut,
             summary: summary,
             capabilities: matrix,
             verdict: currentVerdict,
             intervention: intervention,
             onInterventionAction: { [weak root] action in root?.perform(action) },
             onLaunchAtLogin: { [weak root] action in root?.perform(action) },
+            onCaptureAction: { [weak root] action in root?.perform(action) },
             onPrivacyAction: { [weak root] action in root?.perform(action) },
             selectedTab: root.settingsTab,
             selectTab: { [weak root] tab in root?.selectSettingsTab(tab) },

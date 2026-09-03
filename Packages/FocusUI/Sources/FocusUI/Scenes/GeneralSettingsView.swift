@@ -33,6 +33,13 @@ public struct GeneralSettingsView: View {
     /// a person who removes the app from Login Items in System Settings has changed the truth.
     private let launchAtLogin: LaunchAtLogin
     private let onLaunchAtLogin: (LaunchAtLoginAction) -> Void
+    /// **Whether the daily ritual banner is offered at all** (focus-d3g). Handed in, never a
+    /// stored `Bool` this pane keeps: the value is a column, and a pane that remembered its own
+    /// answer would go on saying "on" after the store was deleted.
+    private let ritualEnabled: Bool
+    /// **The combination quick capture is bound to** (focus-d3g).
+    private let quickCaptureShortcut: HotKeySpec
+    private let onCaptureAction: (CaptureSettingsAction) -> Void
 
     @Environment(\.appearanceTraits) private var traits
     @Environment(\.shellTextScale) private var textScale
@@ -43,12 +50,18 @@ public struct GeneralSettingsView: View {
         preference: Binding<AppearancePreference>,
         appVersion: String = AppVersion.rendered(bundle: .main),
         launchAtLogin: LaunchAtLogin = .unregistered,
-        onLaunchAtLogin: @escaping (LaunchAtLoginAction) -> Void = { _ in }
+        onLaunchAtLogin: @escaping (LaunchAtLoginAction) -> Void = { _ in },
+        ritualEnabled: Bool = true,
+        quickCaptureShortcut: HotKeySpec = .quickCaptureDefault,
+        onCaptureAction: @escaping (CaptureSettingsAction) -> Void = { _ in }
     ) {
         self._preference = preference
         self.appVersion = appVersion
         self.launchAtLogin = launchAtLogin
         self.onLaunchAtLogin = onLaunchAtLogin
+        self.ritualEnabled = ritualEnabled
+        self.quickCaptureShortcut = quickCaptureShortcut
+        self.onCaptureAction = onCaptureAction
     }
 
     /// Every option the picker offers, in the order it offers them.
@@ -76,6 +89,10 @@ public struct GeneralSettingsView: View {
                 .fixedSize(horizontal: false, vertical: true)
 
             launchAtLoginRow
+
+            // **The two facts the launch read and nothing could write** (focus-d3g).
+            ritualRow
+            quickCaptureRow
 
             // **The build a person can quote in a defect report** (focus-odz.3).
             //
@@ -108,6 +125,66 @@ public struct GeneralSettingsView: View {
         // The **status**, not the switch position: two of the four states draw the same position,
         // and only one of them is true yet (focus-odz.4).
         .shellRendered(.launchAtLoginStatus, launchAtLogin.status.rawValue)
+        // The two columns that had a launch reader and no writer, reported by the pane that now
+        // writes them: a receipt taken anywhere else would be blind to a control handed a
+        // constant (focus-7ow, focus-d3g).
+        .shellRendered(.ritualEnabled, ritualEnabled ? "on" : "off")
+        .shellRendered(.quickCaptureShortcut, quickCaptureShortcut.glyphs)
+    }
+
+    /// **The daily ritual banner's switch** (focus-d3g).
+    ///
+    /// The column's own comment says *"whether the daily ritual banner is offered at all"*, and
+    /// until now nothing in the application could set it — so the banner could not be turned off
+    /// by anybody who did not want it. A different fact from `lastRitualLocalDay`, which records
+    /// that today's ritual has been answered: one is a preference, the other is a diary entry.
+    @ViewBuilder
+    private var ritualRow: some View {
+        Toggle(isOn: Binding(
+            get: { ritualEnabled },
+            set: { onCaptureAction(.setRitualEnabled($0)) }
+        )) {
+            ShellText(.settingsRitualEnabled)
+        }
+        .focused($focus, equals: .generalRitualEnabled)
+
+        ShellText(.settingsRitualEnabledNote, role: .footnote)
+            .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+            .lineLimit(nil)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    /// **The quick-capture shortcut** (focus-d3g, P-55/P-56).
+    ///
+    /// A picker over a committed list rather than a key-capture recorder. The defect was that
+    /// somebody whose Mac already binds ⌃⌥⌘Space had **no route to a different combination** —
+    /// `RegisterEventHotKey` takes the clash without complaint — and four options close that.
+    /// A recorder is a different piece of work and nobody stuck needs it in order to be unstuck.
+    ///
+    /// Every option is `HotKeySpec.isRegistrable`, asserted over the whole list in `FocusCore`,
+    /// so the picker cannot offer a combination the platform would take and not bind.
+    @ViewBuilder
+    private var quickCaptureRow: some View {
+        Picker(selection: Binding(
+            get: { quickCaptureShortcut },
+            set: { onCaptureAction(.setQuickCaptureShortcut($0)) }
+        )) {
+            ForEach(HotKeySpec.quickCaptureChoices, id: \.self) { option in
+                // The glyphs are the shortcut itself, not prose: `verbatim` because a catalog
+                // must never see them, and monospaced so ⌃⌥⌘ line up down the menu.
+                Text(verbatim: option.glyphs)
+                    .monospaced()
+                    .tag(option)
+            }
+        } label: {
+            ShellText(.settingsQuickCaptureShortcut)
+        }
+        .focused($focus, equals: .generalQuickCaptureShortcut)
+
+        ShellText(.settingsQuickCaptureShortcutNote, role: .footnote)
+            .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+            .lineLimit(nil)
+            .fixedSize(horizontal: false, vertical: true)
     }
 
     /// **Opening at login, opt-in and read from the service** (D-12, focus-odz.4).

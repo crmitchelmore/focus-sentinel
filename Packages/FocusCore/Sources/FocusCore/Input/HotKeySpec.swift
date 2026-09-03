@@ -113,6 +113,27 @@ public struct HotKeySpec: Sendable, Equatable, Hashable, Codable {
         modifierFlags: FocusSchemaV3.defaultHotKeyModifierFlags
     )
 
+    /// **The quick-capture combinations this app offers**, the default first (focus-d3g).
+    ///
+    /// A committed list rather than a key-capture recorder, and the reason is what the defect
+    /// actually was: P-55 measured that `RegisterEventHotKey` hands over a combination another
+    /// application already owns without complaint, so somebody whose Mac binds the default had
+    /// **no route to a different one**. A list of four closes that. A recorder would close it
+    /// more elegantly and is a different piece of work — a key-capture control, its escape
+    /// behaviour, its own accessibility story — none of which the person with a clashing default
+    /// needs in order to be unstuck.
+    ///
+    /// Every entry is `isRegistrable` and `HotKeySpecTests` asserts it over the whole list, so a
+    /// fifth added by hand cannot ship as an option the platform will take and not bind.
+    /// ⌃⌥⌘ throughout, because that is the family the default is in and a person changing the
+    /// key should not also have to relearn the modifiers.
+    public static let quickCaptureChoices: [HotKeySpec] = [
+        .quickCaptureDefault,
+        HotKeySpec(keyCode: VirtualKey.f, modifiers: [.control, .option, .command]),
+        HotKeySpec(keyCode: VirtualKey.j, modifiers: [.control, .option, .command]),
+        HotKeySpec(keyCode: VirtualKey.k, modifiers: [.control, .option, .command])
+    ]
+
     // MARK: - The refusal list
 
     /// Combinations the recorder turns down outright, with the system function each one
@@ -199,7 +220,10 @@ public struct HotKeySpec: Sendable, Equatable, Hashable, Codable {
 /// same values `NSEvent.keyCode` reports — written out here because `FocusCore` may not import
 /// Carbon (SC-2 permits it in exactly one file, and that file is a `FocusSensing` adapter).
 public enum VirtualKey {
+    public static let f = 3
     public static let h = 4
+    public static let j = 38
+    public static let k = 40
     public static let q = 12
     public static let w = 13
     public static let comma = 43

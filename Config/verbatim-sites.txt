@@ -77,3 +77,6 @@ Packages/FocusUI/Sources/FocusUI/Scenes/FirstRunSheet.swift | storeLocation) | O
 Packages/FocusUI/Sources/FocusUI/Scenes/HistoryView.swift | Self.time.string(from: entry.at)) | NUMBER the time of day a row happened, through a locale-aware DateFormatter
 Packages/FocusUI/Sources/FocusUI/Scenes/HistoryView.swift | intent) | OWN the priority a row happened under, in the words the person typed
 Packages/FocusUI/Sources/FocusUI/Scenes/HistoryView.swift | subject) | NAME the app or site a row is about, resolved by SubjectDisplay and never the bundle key (R-96o)
+
+# --- e09a / focus-d3g: the quick-capture shortcut picker -------------------------------------
+Packages/FocusUI/Sources/FocusUI/Scenes/GeneralSettingsView.swift | option.glyphs) | RESOLVED a shortcut's own glyphs — ⌃⌥⌘Space — composed by HotKeySpec from a key code and a modifier mask, never prose the app authored

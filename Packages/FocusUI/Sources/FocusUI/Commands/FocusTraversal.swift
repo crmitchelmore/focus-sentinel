@@ -64,6 +64,11 @@ public enum FocusField: String, Sendable, CaseIterable, Hashable, Identifiable {
     /// The launch-at-login switch in General settings (D-12, focus-odz.4). A switch a person
     /// cannot reach from the keyboard is a switch somebody cannot turn on.
     case generalLaunchAtLogin
+    /// The daily-ritual switch in General settings (focus-d3g). A switch a person cannot reach
+    /// from the keyboard is a switch somebody cannot turn off.
+    case generalRitualEnabled
+    /// The quick-capture shortcut picker in General settings (focus-d3g).
+    case generalQuickCaptureShortcut
     /// The "Reveal Data Store in Finder" button in Privacy settings.
     case privacyRevealStore
     /// The quick-capture panel's field and its Set Priority button. Separate cases from the
@@ -195,7 +200,10 @@ public enum FocusTraversal {
         ),
         SurfaceFocus(
             surface: .settingsGeneral,
-            order: [.generalAppearancePicker, .generalLaunchAtLogin],
+            order: [
+                .generalAppearancePicker, .generalLaunchAtLogin,
+                .generalRitualEnabled, .generalQuickCaptureShortcut
+            ],
             defaultField: nil,
             cancel: .dismissWindow
         ),

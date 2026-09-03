@@ -130,8 +130,13 @@ struct StoredSettingRestorationTests {
     ///
     /// Not the default, because the defect's answer is the default: a launch that reads nothing
     /// agrees with a fixture that seeded the default, and the test would pass on the broken
-    /// program. Where the repository has no writer at all the column is set on the row directly,
-    /// and the comment says so rather than leaving a reader to wonder — see focus-d3g.
+    /// program.
+    ///
+    /// **Every column now goes through a writer the application has** (focus-d3g). Three of them
+    /// used to be set on the row here by hand, with a comment saying why: nothing in the app
+    /// could write them, so a read-back proof had to supply the write itself — which is precisely
+    /// the shape a read-back proof cannot see through. Deleting that hand-seeding is what makes
+    /// this suite red without the General pane's two controls.
     static func write(_ setting: StoredSetting, into root: AppComposition) {
         let context = root.modelContainer.mainContext
         let now = root.dateProvider.now
@@ -155,21 +160,18 @@ struct StoredSettingRestorationTests {
             // dismissed, which is the only thing that ever sets this column.
             root.priorityHost.dismissRitual()
 
-        case .ritualEnabled, .hotKeyKeyCode, .hotKeyModifierFlags:
-            // **No surface in this application can write these three** (focus-d3g). They are
-            // read at launch — `shouldPromptRitual()` and `storedHotKeySpec()` — and no control,
-            // menu item or verb anywhere sets them, so the only value they can hold is the
-            // schema's default. Written on the row here so the read-back is still proved: the
-            // launch read is the half this suite is about, and it is real.
-            let row = try? FocusStore.setAppearancePreference(
-                FocusStore.appearancePreference(in: context),
-                in: context,
-                now: now
-            )
-            row?.ritualEnabled = false
-            row?.hotKeyKeyCode = Self.probeHotKey.keyCode
-            row?.hotKeyModifierFlags = Self.probeHotKey.modifierFlags
-            try? context.save()
+        case .ritualEnabled:
+            // **The app's own writer** (focus-d3g). This case used to set the column on the row
+            // by hand, and said so: nothing in the application could write it, so the only value
+            // it could ever hold was the schema's default. The General pane's switch is that
+            // writer now, reached through the same sink the pane holds.
+            root.perform(CaptureSettingsAction.setRitualEnabled(false))
+
+        case .hotKeyKeyCode, .hotKeyModifierFlags:
+            // The other half of the same defect, and the user-reachable one: P-55 measured that
+            // `RegisterEventHotKey` hands over a combination another application already owns
+            // without complaint, so somebody whose Mac binds the default had no route out.
+            root.perform(CaptureSettingsAction.setQuickCaptureShortcut(Self.probeHotKey))
 
         case .voiceRaw, .reducedInterruption,
              .quietHoursStartMinuteOfDay, .quietHoursEndMinuteOfDay:

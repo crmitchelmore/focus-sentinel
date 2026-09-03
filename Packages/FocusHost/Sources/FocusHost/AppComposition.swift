@@ -1177,6 +1177,22 @@ public final class AppComposition {
     /// the rebuilt store and no relaunch — which is also what the witness measures.
     public var relaunch: () -> Void = {}
 
+    /// **The General pane's two capture controls** (focus-d3g, focus-tee.6).
+    ///
+    /// One `perform` in the shape every other settings sink has, so the closure the pane holds is
+    /// the closure the self-check drives — and a `{ _ in }` in its place reaches nothing that
+    /// moves this object's graph.
+    public func perform(_ action: CaptureSettingsAction) {
+        switch action {
+        case .setRitualEnabled(let isEnabled):
+            // The state they asked **for**, not a toggle: a pane built a moment ago cannot invert
+            // it, which is the rule `setSensingPaused` and the launch-at-login switch both state.
+            setRitualEnabled(isEnabled)
+        case .setQuickCaptureShortcut(let spec):
+            setQuickCaptureShortcut(spec)
+        }
+    }
+
     public func perform(_ action: LaunchAtLoginAction) {
         switch action {
         case .setEnabled(let enabled):
@@ -1351,6 +1367,70 @@ public final class AppComposition {
             modifierFlags: row.hotKeyModifierFlags
         )
         return stored.isRegistrable ? stored : .quickCaptureDefault
+    }
+
+    // MARK: - The two facts the launch read and nothing could write (focus-d3g, focus-tee.6)
+
+    /// Whether the daily ritual banner may be offered at all, as the store holds it.
+    public var ritualEnabled: Bool {
+        FocusStore.ritualEnabled(in: modelContainer.mainContext)
+    }
+
+    /// Turn the daily ritual banner on or off.
+    ///
+    /// The cockpit's projection is refreshed afterwards, because `shouldPromptRitual()` is read
+    /// when `PriorityHost` builds its state and nothing else would ask it again: a switch that
+    /// took effect on the next launch is a switch that looks broken.
+    public func setRitualEnabled(_ isEnabled: Bool) {
+        do {
+            try FocusStore.setRitualEnabled(
+                isEnabled,
+                in: modelContainer.mainContext,
+                now: dateProvider.now
+            )
+            refreshCockpit()
+        } catch {
+            logger.error(
+                """
+                the store refused the ritual switch: \
+                \(error.localizedDescription, privacy: .public)
+                """
+            )
+        }
+    }
+
+    /// **Store a quick-capture shortcut and bind it in the same breath.**
+    ///
+    /// The two halves are one verb because they were never separable: a stored row the platform
+    /// has not been told about is a setting that takes effect next launch, and a registration
+    /// nothing stored is one that is lost at quit. P-55 measured the reason it matters —
+    /// `RegisterEventHotKey` hands over a combination another application already owns without
+    /// complaint — so somebody whose Mac binds the default needs a route to a different one, and
+    /// the route has to work now rather than tomorrow.
+    ///
+    /// - Returns: what the platform said, or `nil` when the store refused the combination before
+    ///   the platform was asked. Returned rather than swallowed because the surface has to tell
+    ///   the person which of the two happened.
+    @discardableResult
+    public func setQuickCaptureShortcut(_ spec: HotKeySpec) -> HotKeyRegistration? {
+        do {
+            try FocusStore.setHotKeySpec(
+                spec,
+                in: modelContainer.mainContext,
+                now: dateProvider.now
+            )
+        } catch {
+            logger.error(
+                """
+                the store refused a quick-capture shortcut: \
+                \(error.localizedDescription, privacy: .public)
+                """
+            )
+            return nil
+        }
+        // Through the same route the launch takes, so a shortcut set in Settings and one restored
+        // at launch are bound by one function rather than by two that have to agree.
+        return registerHotKey(spec)
     }
 
     /// The status the cockpit displays.

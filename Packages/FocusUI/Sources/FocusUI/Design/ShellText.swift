@@ -257,6 +257,11 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     // two of them need a sentence: an approval only the person can give, and a copy of the app
     // the system cannot find.
     case settingsLaunchAtLogin = "settings.general.launchAtLogin"
+    // e09a (focus-d3g): the two facts the launch read at every start and nothing could write.
+    case settingsRitualEnabled = "settings.general.ritualEnabled"
+    case settingsRitualEnabledNote = "settings.general.ritualEnabledNote"
+    case settingsQuickCaptureShortcut = "settings.general.quickCaptureShortcut"
+    case settingsQuickCaptureShortcutNote = "settings.general.quickCaptureShortcutNote"
     case settingsLaunchAtLoginApproval = "settings.general.launchAtLoginApproval"
     case settingsLaunchAtLoginOpenSettings = "settings.general.launchAtLoginOpenSettings"
     case settingsLaunchAtLoginUnavailable = "settings.general.launchAtLoginUnavailable"

@@ -120,6 +120,14 @@ public enum ShellRenderedField: String, Sendable, CaseIterable, Codable, Hashabl
     /// and only one of them is true yet. A receipt carrying the position alone could not tell a
     /// pane that drew the footnote from one that did not.
     case launchAtLoginStatus
+    /// **Whether the daily ritual banner is offered at all**, as the General pane's switch drew
+    /// it (focus-d3g). Reported by the pane, for `appVersion`'s reason: a control handed a
+    /// constant is invisible to a receipt taken anywhere else.
+    case ritualEnabled
+    /// **The combination quick capture is bound to**, as the General pane's picker drew it
+    /// (focus-d3g). The glyphs rather than the two integers, because the glyphs are what the
+    /// person reads and a receipt should carry what was on the screen.
+    case quickCaptureShortcut
     /// **The build a person is looking at**, as the General pane drew it (focus-odz.3).
     ///
     /// Nothing in the programme read `CFBundleShortVersionString` before this, so a defect report

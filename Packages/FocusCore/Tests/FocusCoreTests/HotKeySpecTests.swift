@@ -207,4 +207,33 @@ struct HotKeySpecTests {
         #expect(!HotKeyAvailability.unavailable(reason: .notImplemented).isAvailable)
         #expect(!HotKeyAvailability.unavailable(reason: .unsupportedOnThisMac).isAvailable)
     }
+
+    // MARK: - The offered combinations (focus-d3g)
+
+    /// **Every combination the settings picker offers is one the platform will bind.**
+    ///
+    /// The whole point of the list is that somebody whose Mac already owns ⌃⌥⌘Space has a route
+    /// out, and P-55 measured that `RegisterEventHotKey` accepts a clash without complaint — so
+    /// an option this build would refuse is an option that would look set and do nothing.
+    /// Folded over the list rather than checked case by case, so a fifth added by hand is
+    /// checked the day it arrives.
+    @Test("every offered quick-capture combination is one this build would register")
+    func everyOfferedCombinationIsRegistrable() {
+        for option in HotKeySpec.quickCaptureChoices {
+            #expect(
+                option.isRegistrable,
+                "\(option.glyphs) is offered and would be refused: \(String(describing: option.refusal))"
+            )
+            // And drawable: a combination the app cannot put on screen cannot be explained to
+            // the person trying to change it (R-21).
+            #expect(VirtualKey.label(for: option.keyCode) != nil)
+        }
+        // The default is the first option, so the picker opens on what the app actually ships.
+        #expect(HotKeySpec.quickCaptureChoices.first == .quickCaptureDefault)
+        // Distinct, or the picker would draw two identical rows.
+        #expect(Set(HotKeySpec.quickCaptureChoices).count == HotKeySpec.quickCaptureChoices.count)
+        // Non-vacuity: a list of one would satisfy every reading above and leave the person
+        // exactly as stuck as the defect left them.
+        #expect(HotKeySpec.quickCaptureChoices.count >= 4)
+    }
 }

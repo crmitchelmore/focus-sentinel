@@ -2365,6 +2365,54 @@
         }
       }
     },
+    "settings.general.quickCaptureShortcut" : {
+      "comment" : "Picker label for the global quick-capture shortcut.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quick capture shortcut"
+          }
+        }
+      }
+    },
+    "settings.general.quickCaptureShortcutNote" : {
+      "comment" : "Footnote under the quick-capture shortcut picker.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pick a different combination if something else on your Mac already uses this one. macOS will not warn you about a clash, so Focus offers only combinations it can bind."
+          }
+        }
+      }
+    },
+    "settings.general.ritualEnabled" : {
+      "comment" : "Switch that turns the daily ritual banner on or off.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ask what today’s priority is"
+          }
+        }
+      }
+    },
+    "settings.general.ritualEnabledNote" : {
+      "comment" : "Footnote under the daily-ritual switch.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Once a day, when you first open Focus. Turning this off never hides anything else."
+          }
+        }
+      }
+    },
     "settings.general.version" : {
       "comment" : "General settings: the label beside the version this copy of the app was built from.",
       "extractionState" : "manual",
