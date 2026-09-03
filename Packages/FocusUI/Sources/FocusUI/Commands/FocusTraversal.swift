@@ -61,6 +61,9 @@ public enum FocusField: String, Sendable, CaseIterable, Hashable, Identifiable {
     case cockpitOpenSettings
     /// The appearance preference picker in General settings.
     case generalAppearancePicker
+    /// The launch-at-login switch in General settings (D-12, focus-odz.4). A switch a person
+    /// cannot reach from the keyboard is a switch somebody cannot turn on.
+    case generalLaunchAtLogin
     /// The "Reveal Data Store in Finder" button in Privacy settings.
     case privacyRevealStore
     /// The quick-capture panel's field and its Set Priority button. Separate cases from the
@@ -192,7 +195,7 @@ public enum FocusTraversal {
         ),
         SurfaceFocus(
             surface: .settingsGeneral,
-            order: [.generalAppearancePicker],
+            order: [.generalAppearancePicker, .generalLaunchAtLogin],
             defaultField: nil,
             cancel: .dismissWindow
         ),

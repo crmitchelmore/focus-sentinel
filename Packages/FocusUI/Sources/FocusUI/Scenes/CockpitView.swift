@@ -100,12 +100,16 @@ public struct CockpitView: View {
     private let generation: Int
     private let didDraw: (@MainActor (ShellRenderedValues) -> Void)?
 
+    /// What the footer's one-time launch-at-login offer performs (D-12, focus-odz.4).
+    private let onLaunchAtLoginOffer: (LaunchAtLoginOfferAction) -> Void
+
     public init(
         state: CockpitState,
         actions: (any PriorityActing)? = nil,
         sessionActions: (any SessionActing)? = nil,
         sessionElapsedSeconds: Double? = nil,
         lastActiveBundleID: String? = nil,
+        onLaunchAtLoginOffer: @escaping (LaunchAtLoginOfferAction) -> Void = { _ in },
         commandCenter: FocusCommandCenter = .shared
     ) {
         self.state = state
@@ -113,6 +117,7 @@ public struct CockpitView: View {
         self.sessionActions = sessionActions
         self.sessionElapsedSeconds = sessionElapsedSeconds
         self.lastActiveBundleID = lastActiveBundleID
+        self.onLaunchAtLoginOffer = onLaunchAtLoginOffer
         self.commandCenter = commandCenter
         self.didRender = nil
         self.generation = 0
@@ -133,6 +138,7 @@ public struct CockpitView: View {
         self.sessionActions = connection.sessionActions
         self.sessionElapsedSeconds = connection.sessionElapsedSeconds
         self.lastActiveBundleID = connection.lastActiveBundleID
+        self.onLaunchAtLoginOffer = connection.onLaunchAtLoginOffer
         self.commandCenter = commandCenter
         self.didRender = connection.didRender
         self.generation = connection.generation
@@ -836,6 +842,11 @@ public struct CockpitView: View {
                 }
             detail(systemImage: storeLine.image, key: storeLine.key)
                 .shellRendered(.storeStatus, storeLine.key.rawValue)
+                // The offer's conjunction, reported from the footer that draws it (focus-odz.4).
+                .shellRendered(
+                    .launchAtLoginOffer,
+                    state.showsLaunchAtLoginOffer ? "shown" : "hidden"
+                )
 
             SensingStatusView(
                 summary: state.sensing,
@@ -865,6 +876,8 @@ public struct CockpitView: View {
                 )
             }
 
+            launchAtLoginOffer
+
             Button {
                 openSettings()
             } label: {
@@ -875,6 +888,44 @@ public struct CockpitView: View {
             // SwiftUI's yellow "unrenderable view" placeholder — so a link here would mean
             // committing a picture of a broken render and calling it a baseline.
             .focused($focus, equals: .cockpitOpenSettings)
+        }
+    }
+
+    /// **The one-time offer to open at login** (D-12, focus-odz.4).
+    ///
+    /// It appears in the footer after a first completed session and never again, in either
+    /// direction: accepting and declining both record the asking. Whether it appears at all is
+    /// `state.showsLaunchAtLoginOffer`, which the host decides through
+    /// `LaunchAtLoginOffer.shouldOffer` — the view asks no question and remembers nothing.
+    ///
+    /// **Never a first-launch prompt**, which is the half D-12 is most about: an app that asks to
+    /// be added to Login Items before it has been any use is asking for a commitment it has not
+    /// earned. And never a modal: it is a line in a footer somebody can ignore, beside the line
+    /// that tells them where their data lives.
+    ///
+    /// The receipt is on the whole row and reports the **conjunction** the footer drew, in
+    /// `ritualBanner`'s shape and for its reason: an offer that appears when it should not is a
+    /// row asking for something already declined, and one that never appears is a feature nobody
+    /// can find.
+    @ViewBuilder
+    private var launchAtLoginOffer: some View {
+        if state.showsLaunchAtLoginOffer {
+            HStack(spacing: rowSpacing / 2) {
+                ShellText(.cockpitLaunchAtLoginOffer, role: .footnote)
+                    .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+
+                Button {
+                    onLaunchAtLoginOffer(.accept)
+                } label: {
+                    ShellText(.cockpitLaunchAtLoginAccept, role: .footnote)
+                }
+
+                Button {
+                    onLaunchAtLoginOffer(.dismiss)
+                } label: {
+                    ShellText(.cockpitLaunchAtLoginDismiss, role: .footnote)
+                }
+            }
         }
     }
 

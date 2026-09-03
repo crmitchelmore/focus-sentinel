@@ -1768,6 +1768,66 @@ check(
     (seeded_cockpit.get("reading") or {}).get("summary"),
 )
 
+# --- opening at login, offered once and never on a first launch (D-12, focus-odz.4) ----------
+#
+# The fourth launch again, against a store this script seeded with a **finished** session as well
+# as a running one — because the offer waits for a completed session, which is the first moment the
+# app has done the thing it exists to do. An app that asks to be added to Login Items before it has
+# been any use is asking for a commitment it has not earned.
+#
+# **The status is a reading, never a verdict.** Whether this Mac has the app in its Login Items is
+# a fact about the machine, and a gate that required one answer would fail a developer for their
+# own settings. What is pinned is the FOLD: the three inputs beside the decision, which is
+# machine-independent and cannot be satisfied by a predicate that answers the same thing for every
+# state.
+#
+# Nothing in any lane registers anything. `SMAppService.status` is a read; `register()` and
+# `unregister()` write into the person's Login Items and are called by no test and no gate stage.
+
+login_status = seeded_cockpit.get("loginItemStatus")
+check(
+    login_status in (seeded_cockpit.get("loginItemStatusesDeclared") or []),
+    "the login-item status is one of the declared four",
+    (login_status, seeded_cockpit.get("loginItemStatusesDeclared")),
+)
+check(
+    seeded_cockpit.get("loginItemStatusesDeclared")
+    == ["notRegistered", "enabled", "requiresApproval", "notFound"],
+    "the login-item vocabulary is the committed four, in order and with nothing else in it",
+    seeded_cockpit.get("loginItemStatusesDeclared"),
+)
+# The precondition the offer waits for, asserted rather than assumed: with no finished session the
+# reading below would be "hidden" for a reason that has nothing to do with the rule.
+check(
+    isinstance(seeded_cockpit.get("loginItemCompletedSessions"), int)
+    and seeded_cockpit["loginItemCompletedSessions"] >= 1,
+    "the seeded store really holds a finished session for the offer to follow",
+    seeded_cockpit.get("loginItemCompletedSessions"),
+)
+check(
+    seeded_cockpit.get("loginItemAlreadyOffered") is False,
+    "the seeded store has never been offered launch-at-login, so the offer is owed",
+    seeded_cockpit.get("loginItemAlreadyOffered"),
+)
+# **The fold.** With a finished session and nothing offered, the offer is on exactly when the app
+# is not registered — which is the one state in which there is anything to offer.
+expected_offer = (
+    login_status == "notRegistered"
+    and seeded_cockpit.get("loginItemCompletedSessions", 0) >= 1
+    and seeded_cockpit.get("loginItemAlreadyOffered") is False
+)
+check(
+    seeded_cockpit.get("loginItemOfferShown") is expected_offer,
+    "loginItemOfferShown: the offer follows the service's status, the history and the record",
+    (seeded_cockpit.get("loginItemOfferShown"), login_status, expected_offer),
+)
+# …and the footer drew what the host decided. The line above is about a decision; this is the row.
+check(
+    seeded_cockpit.get("loginItemOfferDrawn") == ("shown" if expected_offer else "hidden"),
+    "the cockpit footer drew the offer exactly when the host said to",
+    (seeded_cockpit.get("loginItemOfferDrawn"), expected_offer),
+)
+
 # --- the windows a person left open, on the launch after the one that closed them (focus-odz.6)
 #
 # The same fourth launch, and the same reason it exists: the only reading that can tell "restored"

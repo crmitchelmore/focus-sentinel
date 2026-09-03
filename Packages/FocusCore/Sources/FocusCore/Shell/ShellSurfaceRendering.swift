@@ -68,6 +68,13 @@ public enum ShellRenderedField: String, Sendable, CaseIterable, Codable, Hashabl
     /// disabled and no capture field at all — a window that looks finished and does nothing,
     /// which is a defect no receipt can see.
     case mutationHostsAttached
+    /// **Whether the footer is making the one-time launch-at-login offer**: `"shown"` or
+    /// `"hidden"` (D-12, focus-odz.4).
+    ///
+    /// The conjunction the window actually drew, in `ritualBanner`'s shape and for its reason: an
+    /// offer that appears when it should not is a row asking somebody for a commitment they have
+    /// already declined, and one that never appears is a feature nobody can find.
+    case launchAtLoginOffer
 
     // --- the Settings window --------------------------------------------------------------
     /// The sensing sentence the **Privacy** pane drew. Separate from the cockpit's, because a
@@ -98,6 +105,14 @@ public enum ShellRenderedField: String, Sendable, CaseIterable, Codable, Hashabl
     case interruptionUsage
     /// The appearance the General pane's picker drew as selected.
     case appearancePreference
+    /// **What the General pane's launch-at-login switch drew**, as the whole reading rather than
+    /// as a `Bool` (D-12, focus-odz.4).
+    ///
+    /// The status and not the switch position, because the position is a projection of it and two
+    /// of the four states draw the same position: `enabled` and `requiresApproval` both read on,
+    /// and only one of them is true yet. A receipt carrying the position alone could not tell a
+    /// pane that drew the footnote from one that did not.
+    case launchAtLoginStatus
     /// **The build a person is looking at**, as the General pane drew it (focus-odz.3).
     ///
     /// Nothing in the programme read `CFBundleShortVersionString` before this, so a defect report

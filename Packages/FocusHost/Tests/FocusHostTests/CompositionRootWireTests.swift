@@ -65,7 +65,14 @@ struct CompositionRootWireTests {
 
     /// A root whose monotonic clock the test can advance, so the ladder can be climbed at a
     /// cadence the test chooses rather than however long the machine took.
-    static func root(clock: FixedMonotonicClock) -> AppComposition {
+    /// - Parameter loginItem: a double by default, and **never** the shipping adapter. D-12's
+    ///   rule is that no lane in this programme registers anything: `SMAppService.register()`
+    ///   writes into the person's Login Items, so a suite holding the real service would be
+    ///   changing the machine it is measuring (focus-odz.4).
+    static func root(
+        clock: FixedMonotonicClock,
+        loginItem: any LoginItemControlling = LaunchAtLoginDouble()
+    ) -> AppComposition {
         AppComposition(
             dateProvider: FixedDateProvider(now: NudgeHostFixture.reference),
             monotonicClock: clock,
@@ -73,7 +80,8 @@ struct CompositionRootWireTests {
             locale: Locale(identifier: "en_GB"),
             hotKeyRegistrar: InertHotKeyRegistrar(),
             storeKind: .inMemory,
-            notificationCentre: SilentNotificationCentre()
+            notificationCentre: SilentNotificationCentre(),
+            loginItem: loginItem
         )
     }
 

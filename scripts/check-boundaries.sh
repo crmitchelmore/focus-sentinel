@@ -12,7 +12,7 @@
 #   FocusClassify  Foundation, NaturalLanguage, Core, Rules     ANY networking, AppKit, SwiftUI, Sensing, UI
 #   FocusSensing   Foundation, AppKit, CoreGraphics, IOKit,     SwiftUI, networking, Classify, Rules, UI
 #                  Carbon.HIToolbox, CoreAudio, CoreMediaIO,
-#                  FocusCore
+#                  ServiceManagement, FocusCore
 #   FocusUI        SwiftUI, AppKit, Observation, QuickLook,     SwiftData, networking, Sensing, Classify, Rules
 #                  UniformTypeIdentifiers, FocusCore
 #   FocusHost      Foundation, AppKit, SwiftData, Observation,   SwiftUI, networking
@@ -56,6 +56,18 @@
 #     that *was* measured prompt-free (P-97). The deeper camera path is compiled but held off
 #     behind a flag set nowhere, because the rig has no camera and an unanswered question is not
 #     a pass (P-104, R-40).
+#
+# The one addition Section 3 makes is a ruling of the same kind (D-12, focus-odz.4):
+#
+#   * **`ServiceManagement` for `FocusSensing`**, in exactly one file. Opening at login is a
+#     platform registration, and this package is where platform facts are read and platform
+#     adapters live — `SMAppService.mainApp` sits beside the Carbon hot key for the same reason.
+#     It costs the matrix nothing it was protecting: the framework carries no networking, no
+#     window list and no Accessibility surface, and `SMAppService.status` raises no TCC prompt of
+#     any kind. What it *can* do is write into the person's Login Items, so the ban that matters
+#     is not an import ban: nothing in any lane calls `register()` or `unregister()`. The
+#     self-check reads the status and calls neither verb, and every test drives the offer through
+#     `LoginItemControlling`, which is why that protocol exists.
 #
 # The one e05 addition is a ruling of the same kind (plan R-82, T137):
 #
@@ -167,7 +179,7 @@ typeset -A ALLOWED_FRAMEWORKS
 ALLOWED_FRAMEWORKS[FocusCore]="Foundation SwiftData os"
 ALLOWED_FRAMEWORKS[FocusRules]="Foundation SwiftData os"
 ALLOWED_FRAMEWORKS[FocusClassify]="Foundation NaturalLanguage os"
-ALLOWED_FRAMEWORKS[FocusSensing]="Foundation AppKit CoreGraphics IOKit Carbon.HIToolbox CoreAudio CoreMediaIO os"
+ALLOWED_FRAMEWORKS[FocusSensing]="Foundation AppKit CoreGraphics IOKit Carbon.HIToolbox CoreAudio CoreMediaIO ServiceManagement os"
 ALLOWED_FRAMEWORKS[FocusUI]="Foundation SwiftUI AppKit Observation QuickLook UniformTypeIdentifiers UserNotifications os"
 ALLOWED_FRAMEWORKS[FocusHost]="Foundation AppKit SwiftData Observation ApplicationServices os"
 

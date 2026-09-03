@@ -314,6 +314,15 @@ public struct CockpitState: Sendable, Equatable, Hashable {
     /// is noise on the surface a person came to for one sentence.
     public var capabilities: CapabilityMatrix
 
+    /// **Whether the cockpit's footer is making the one-time launch-at-login offer** (D-12,
+    /// focus-odz.4).
+    ///
+    /// A fact the host decides, not a question the view asks: `LaunchAtLoginOffer.shouldOffer`
+    /// folds the service's status, whether a session has ever been completed and whether the offer
+    /// has already been made, and this is its answer. Drawn once and never again, in either
+    /// direction — accepting and declining both record the asking.
+    public var showsLaunchAtLoginOffer: Bool
+
     public init(
         status: FocusStatus,
         storeOpened: Bool,
@@ -328,7 +337,8 @@ public struct CockpitState: Sendable, Equatable, Hashable {
         session: SessionSnapshot? = nil,
         sensing: SensingSummary = .inactive,
         verdict: VerdictSnapshot? = nil,
-        capabilities: CapabilityMatrix = CapabilityMatrix()
+        capabilities: CapabilityMatrix = CapabilityMatrix(),
+        showsLaunchAtLoginOffer: Bool = false
     ) {
         self.status = status
         self.storeOpened = storeOpened
@@ -344,6 +354,7 @@ public struct CockpitState: Sendable, Equatable, Hashable {
         self.sensing = sensing
         self.verdict = verdict
         self.capabilities = capabilities
+        self.showsLaunchAtLoginOffer = showsLaunchAtLoginOffer
     }
 
     /// The capabilities the surface has something to say about, in `Capability.allCases`

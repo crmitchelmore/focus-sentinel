@@ -2365,6 +2365,54 @@
         }
       }
     },
+    "settings.general.launchAtLoginUnavailable" : {
+      "comment" : "General settings: the footnote under the switch when the system cannot find this copy of the app to register.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The system cannot find this copy of Focus Sentinel to open at login."
+          }
+        }
+      }
+    },
+    "settings.general.launchAtLoginOpenSettings" : {
+      "comment" : "General settings: the button beside that footnote, which opens Login Items in System Settings.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Login Items Settings"
+          }
+        }
+      }
+    },
+    "settings.general.launchAtLoginApproval" : {
+      "comment" : "General settings: the footnote under the launch-at-login switch when the registration is waiting for the person's approval in System Settings.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus Sentinel is waiting for your approval in Login Items. Only you can give it, in System Settings."
+          }
+        }
+      }
+    },
+    "settings.general.launchAtLogin" : {
+      "comment" : "General settings: the switch that opens Focus Sentinel when the person logs in.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open at login"
+          }
+        }
+      }
+    },
     "settings.general.title" : {
       "comment" : "Title of the General settings tab.",
       "extractionState" : "manual",
@@ -3093,6 +3141,42 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "The last change could not be saved. Your earlier work is still on disk."
+          }
+        }
+      }
+    },
+    "shell.cockpit.launchAtLogin.dismiss" : {
+      "comment" : "Cockpit footer: decline the one-time launch-at-login offer. It is not asked again.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not Now"
+          }
+        }
+      }
+    },
+    "shell.cockpit.launchAtLogin.accept" : {
+      "comment" : "Cockpit footer: accept the one-time launch-at-login offer.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open at Login"
+          }
+        }
+      }
+    },
+    "shell.cockpit.launchAtLogin.offer" : {
+      "comment" : "Cockpit footer: the one-time offer, made after a first completed session.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Focus Sentinel at login?"
           }
         }
       }

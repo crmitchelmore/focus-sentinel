@@ -117,6 +117,13 @@ final class SessionHost: SessionActing {
     /// the reconciler names: a different boot identity, and more than fifteen minutes since the
     /// last phase change.
     @discardableResult
+    /// How many sessions this store has ever finished — the signal the launch-at-login offer
+    /// waits for (D-12, focus-odz.4). Straight through to the store, because the host holds the
+    /// open session and this is a question about the history behind it.
+    func finishedSessionCount() throws -> Int {
+        try store.finishedSessionCount()
+    }
+
     func restore() -> RestoredSession? {
         var restored: RestoredSession?
         do {

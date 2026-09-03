@@ -240,6 +240,25 @@ enum SelfCheck {
             // ids are what is really on the screen. A restoration that read the record and asked
             // for nothing passes the first; one that asked and was refused — no scene graph, no
             // opener — passes the first two and not the third.
+            // **What the system says about opening this app at login, and what the footer did
+            // with it** (D-12, focus-odz.4).
+            //
+            // The status is a **reading** and never a verdict: whether this Mac has the app in its
+            // Login Items is a fact about the machine, and a gate that required one answer would
+            // be failing a developer for their own settings. What *is* pinned is the fold — the
+            // three inputs beside the decision — which is machine-independent and cannot be
+            // satisfied by a predicate that answers the same thing for every state.
+            //
+            // Nothing here registers anything. `status` is a read; `setEnabled` is never called by
+            // any lane in this programme, because it writes into the person's Login Items.
+            "loginItemStatus": composition.loginItem.status.rawValue,
+            "loginItemStatusesDeclared": LoginItemStatus.allCases.map(\.rawValue),
+            "loginItemCompletedSessions": composition.finishedSessionCount,
+            "loginItemAlreadyOffered": FocusStore
+                .shellState(in: composition.modelContainer.mainContext)
+                .hasOfferedLaunchAtLogin,
+            "loginItemOfferShown": composition.cockpitState.showsLaunchAtLoginOffer,
+            "loginItemOfferDrawn": drawn[.launchAtLoginOffer] ?? "",
             "restorationRecord": composition.restorationRecord ?? [],
             "restoredWindows": composition.restoredWindows,
             "hasRestoredWindows": composition.hasRestoredWindows,
@@ -3767,12 +3786,26 @@ enum SelfCheck {
             uptimeClock: TestUptimeClock(uptimeSeconds: uptimeNow - seedBackdateSeconds),
             bootIdentity: bootIdentity
         )
+
+        // **A session that was finished, before the one that is still running** (D-12,
+        // focus-odz.4).
+        //
+        // The launch-at-login offer waits for a *completed* session, which is the first moment the
+        // app has done the thing it exists to do — and a store with only an open session is a
+        // person who has not finished one yet. So the fixture carries one of each, started and
+        // finished in that order, which leaves `openSession()` answering the second exactly as it
+        // did before this line existed.
+        try store.start(kind: .openEnded)
+        try store.complete()
+        let finishedBeforehand = try store.finishedSessionCount()
+
         let sessionID = try store.start(kind: .openEnded)
 
         return [
             "mode": "seed",
             "store": storePath,
             "openWindows": seededOpenWindows,
+            "finishedSessions": finishedBeforehand,
             "sessionID": sessionID.uuidString,
             "priorityIntent": seededPriorityIntent,
             "appearancePreference": seededAppearancePreference.rawValue,

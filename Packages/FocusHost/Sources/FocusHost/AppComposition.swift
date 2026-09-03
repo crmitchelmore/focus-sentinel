@@ -224,6 +224,11 @@ public final class AppComposition {
     /// the other, and it is a value so that a test can drive it.
     private var lifecycle = NudgeLifecycleWatch()
 
+    /// **This app's login-item registration, as something that can be doubled** (D-12,
+    /// focus-odz.4). The shipping value is `SMAppServiceLoginItem`; no test and no gate stage
+    /// ever holds the real one, because registering writes into the person's Login Items.
+    let loginItem: any LoginItemControlling
+
     /// - Parameter storeKind: where the data lives. `applicationSupport` is the application's
     ///   own store and is the default; the unit lane passes `inMemory`, because a test that
     ///   opened the real store would be a test that could change what the person sees. It is a
@@ -238,8 +243,16 @@ public final class AppComposition {
         hotKeyRegistrar: any HotKeyRegistering = CarbonHotKeyRegistrar(),
         storeKind: FocusStore.Kind = .applicationSupport,
         notificationCentre: (any NotificationCentring)? = nil,
-        ruleStoreOverride: (any RuleStore)? = nil
+        ruleStoreOverride: (any RuleStore)? = nil,
+        loginItem: (any LoginItemControlling)? = nil
     ) {
+        // **Injectable, and every lane in this programme injects** (D-12, focus-odz.4).
+        //
+        // `SMAppService.register()` writes into the person's Login Items, so a test suite or a
+        // gate stage that called it would be changing the machine it is measuring. The shipping
+        // adapter is the default; a double is what every test uses, which is the whole reason
+        // `LoginItemControlling` is a protocol.
+        self.loginItem = loginItem ?? SMAppServiceLoginItem()
         self.dateProvider = dateProvider
         self.monotonicClock = monotonicClock
         self.calendar = calendar
@@ -526,6 +539,9 @@ public final class AppComposition {
     /// host re-projects it, and the projection is pushed into the value the cockpit draws —
     /// which is assigned only when it actually differs, so nothing here can oscillate.
     func joinHosts() {
+        // **The offer's first reading, at launch** (D-12, focus-odz.4). One of the three moments
+        // it can move; the other two are a session's state changing and the offer being answered.
+        refreshLaunchAtLoginOffer()
         sensingHost.onSessionChanged = { [weak self] in
             self?.sessionHost.refresh()
         }
@@ -536,6 +552,11 @@ public final class AppComposition {
         // that carries a session ending and a phase leaving focus into the nudge loop
         // (focus-d0a).
         sessionHost.onChange = { [weak self] in
+            // **One of the three moments the launch-at-login offer can move** (focus-odz.4). A
+            // session finishing is the signal D-12 says the offer waits for, and this is where the
+            // root learns a session's state changed. Recomputed here rather than in
+            // `cockpitState`, which is projected on every five-second tick.
+            self?.refreshLaunchAtLoginOffer()
             self?.refreshCockpit()
         }
 
@@ -1025,6 +1046,91 @@ public final class AppComposition {
         sensingHost.stop()
     }
 
+    // MARK: - Opening at login (D-12, focus-odz.4)
+
+    /// **What the launch-at-login controls perform.**
+    ///
+    /// Two verbs, and the important half is what is *not* here: nothing reads back a stored flag.
+    /// The switch's position comes from `loginItem.status` every time a connection is built, so a
+    /// person who removed the app from Login Items in System Settings sees the switch move on
+    /// their next visit to the pane rather than a remembered answer.
+    public func perform(_ action: LaunchAtLoginAction) {
+        switch action {
+        case .setEnabled(let enabled):
+            // The state they asked **for**, not a toggle: a pane built a moment ago cannot invert
+            // it, which is the same rule `setSensingPaused` states.
+            loginItem.setEnabled(enabled)
+            // Asking at all settles the offer. Somebody who found the switch and turned it on
+            // must not then be asked in the footer whether they would like to.
+            noteLaunchAtLoginOffered()
+        case .openSystemSettings:
+            loginItem.openSystemSettings()
+        }
+        refreshLaunchAtLoginOffer()
+        refreshCockpit()
+    }
+
+    /// **The footer's one-time offer, answered.**
+    ///
+    /// Both arms record the asking, which is the whole of D-12's *"offered once"*: the app asks,
+    /// it does not nag, and *"not now"* is an answer rather than a postponement.
+    public func perform(_ action: LaunchAtLoginOfferAction) {
+        switch action {
+        case .accept: loginItem.setEnabled(true)
+        case .dismiss: break
+        }
+        noteLaunchAtLoginOffered()
+        refreshLaunchAtLoginOffer()
+        refreshCockpit()
+    }
+
+    /// Write down that the offer has been made, and stop making it in this process.
+    ///
+    /// Both halves, because they answer different readers: the store is what the *next* launch
+    /// reads, and the in-memory flag is what stops the row being redrawn on the very next tick of
+    /// this one — a person who pressed *Not Now* must see it go, not see it go at the next store
+    /// read.
+    func noteLaunchAtLoginOffered() {
+        hasOfferedLaunchAtLogin = true
+        try? FocusStore.recordLaunchAtLoginOffered(
+            in: modelContainer.mainContext,
+            now: dateProvider.now
+        )
+    }
+
+    /// **Whether the cockpit's footer is making the offer right now** (D-12, focus-odz.4).
+    ///
+    /// **A stored answer, recomputed at the moments that can change it, and that is a measured
+    /// decision rather than a cache for tidiness.** The decision reads two things out of the
+    /// store — how many sessions have been finished, and whether the offer has been made — and
+    /// `cockpitState` is projected on **every corroboration tick**. Computing it there would put
+    /// two SwiftData fetches into the five-second tick for a number that changes about twice in
+    /// the life of a store, which is precisely the shape focus-tzj.2 took out of the tick path and
+    /// which `TickFetchBudgetTests` pins.
+    ///
+    /// So it is recomputed exactly where it can move: at launch, when a session's state changes,
+    /// and when the offer is answered from either surface. Anything that could change it and does
+    /// not call `refreshLaunchAtLoginOffer()` is a bug in this list rather than in the rule, which
+    /// is why the list is short and written down.
+    private(set) var showsLaunchAtLoginOffer = false
+
+    /// Recompute the offer from the three facts it turns on.
+    ///
+    /// The two store reads happen here and nowhere else. `loginItem.status` is not a store read at
+    /// all — it asks the system service, which is what D-12 requires and what makes a person who
+    /// removed the app from Login Items in System Settings see the row come back.
+    func refreshLaunchAtLoginOffer() {
+        showsLaunchAtLoginOffer = LaunchAtLoginOffer.shouldOffer(
+            status: loginItem.status,
+            completedSessions: finishedSessionCount,
+            alreadyOffered: hasOfferedLaunchAtLogin
+                || FocusStore.shellState(in: modelContainer.mainContext).hasOfferedLaunchAtLogin
+        )
+    }
+
+    /// Whether this process has already made the offer. See `noteLaunchAtLoginOffered()`.
+    private var hasOfferedLaunchAtLogin = false
+
     // MARK: - Which windows were open, across a relaunch (focus-odz.6)
 
     /// **Write down which of the app's declared scenes are on screen.**
@@ -1160,7 +1266,25 @@ public final class AppComposition {
     /// stay free of any dependency on `FocusSensing` — the UI never learns which observer it
     /// was handed, only what that observer currently reports.
     public var cockpitState: CockpitState {
-        priorityHost.state
+        var state = priorityHost.state
+        // **The one fact the priority host cannot know** (D-12, focus-odz.4). Whether the offer
+        // is on screen turns on the login-item service and on the whole store's session history,
+        // neither of which is the priority host's business — so it is composed here, where the
+        // root can see all three facts, in the same shape the menu bar's presentation is.
+        //
+        // A **stored** answer, not a computation: this projection runs on every corroboration
+        // tick, and the decision reads the store twice. See `refreshLaunchAtLoginOffer()`.
+        state.showsLaunchAtLoginOffer = showsLaunchAtLoginOffer
+        return state
+    }
+
+    /// **How many sessions this store has ever finished** (D-12, focus-odz.4).
+    ///
+    /// The signal the offer waits for. A finished session is `endedAt != nil`, which is
+    /// `SessionStore`'s own definition of "not open", so this asks the same question the session
+    /// runtime answers rather than inventing a second one.
+    var finishedSessionCount: Int {
+        (try? sessionHost.finishedSessionCount()) ?? 0
     }
 
     // MARK: - The surface the app target reaches this package through
@@ -1522,6 +1646,11 @@ public final class AppComposition {
                 : ShellRenderedValues.noCommitment,
             for: .cockpit
         )
+        expect(
+            .launchAtLoginOffer,
+            state.showsLaunchAtLoginOffer ? "shown" : "hidden",
+            for: .cockpit
+        )
         expect(.capabilityStates, state.capabilities.renderedDescription, for: .cockpit)
         expect(.sensingDetail, ShellValueDigest.describe(state.sensing), for: .cockpit)
         expect(
@@ -1543,6 +1672,7 @@ public final class AppComposition {
             sessionActions: sessions,
             sessionElapsedSeconds: elapsed,
             lastActiveBundleID: lastActiveBundleID,
+            onLaunchAtLoginOffer: { [weak self] action in self?.perform(action) },
             generation: generation,
             didRender: { [weak self] in self?.shellWires.insert(.cockpitRendered) },
             didDraw: { [weak self] values in self?.record(values, for: .cockpit) }
@@ -1582,6 +1712,11 @@ public final class AppComposition {
 
         expect(.appearancePreference, preference.rawValue, for: .settings)
         expect(.appVersion, version, for: .settings)
+        // **Read from the service, every time this pane is built** (D-12, focus-odz.4). Never a
+        // stored `Bool`: somebody who removes the app from Login Items in System Settings has
+        // changed the truth, and a switch answering from its own memory would go on saying "on".
+        let launchAtLogin = LaunchAtLogin(status: loginItem.status)
+        expect(.launchAtLoginStatus, launchAtLogin.status.rawValue, for: .settings)
         expect(.privacyCapabilities, matrix.renderedDescription, for: .settings)
         // Where the Privacy pane tells the person their data lives, and what its Reveal in Finder
         // button opens. A mutation printed `/` and nothing anywhere noticed (focus-7ow).
@@ -1628,11 +1763,13 @@ public final class AppComposition {
             },
             storeURL: storeURL,
             appVersion: version,
+            launchAtLogin: launchAtLogin,
             summary: summary,
             capabilities: matrix,
             verdict: currentVerdict,
             intervention: intervention,
             onInterventionAction: { [weak self] action in self?.perform(action) },
+            onLaunchAtLogin: { [weak self] action in self?.perform(action) },
             selectedTab: settingsTab,
             selectTab: { [weak self] tab in self?.selectSettingsTab(tab) },
             generation: generation,

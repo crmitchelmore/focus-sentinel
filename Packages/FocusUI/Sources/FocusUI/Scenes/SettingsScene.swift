@@ -62,6 +62,12 @@ public struct ShellSettingsConnection {
     /// different answer in every lane that looks at it. The composition root reads the one bundle
     /// that matters and hands the sentence over, exactly as it does the store path beside it.
     public let appVersion: String
+    /// **What the system says about opening this app at login** (D-12, focus-odz.4).
+    ///
+    /// Read from `SMAppService` by the composition root every time this value is built, never
+    /// from a stored `Bool`: somebody who removes the app from Login Items in System Settings has
+    /// changed the truth, and a switch answering from its own memory would go on saying "on".
+    public let launchAtLogin: LaunchAtLogin
     public let summary: SensingSummary
     public let capabilities: CapabilityMatrix
     public let verdict: VerdictSnapshot?
@@ -69,6 +75,10 @@ public struct ShellSettingsConnection {
     /// What the Intervention pane's controls reach. Under U-1 this is what decides whether the
     /// app may speak, and it was `{ _ in }`-able in a file no lane could read.
     public let onInterventionAction: @MainActor (InterventionSettingsAction) -> Void
+    /// What the launch-at-login switch and its footnote's button reach. A sink, exempt for
+    /// `onInterventionAction`'s reason and driven the same way: no lane in this programme holds
+    /// the Accessibility grant it would take to click a switch.
+    public let onLaunchAtLogin: @MainActor (LaunchAtLoginAction) -> Void
     /// **Which pane is on screen, decided by the composition root** (focus-7ow).
     ///
     /// A macOS `TabView` builds only the selected pane. Measured on the first run of the render
@@ -108,11 +118,13 @@ public struct ShellSettingsConnection {
         setPreference: @escaping @MainActor (AppearancePreference) -> Void,
         storeURL: URL,
         appVersion: String = AppVersion.rendered(bundle: .main),
+        launchAtLogin: LaunchAtLogin = .unregistered,
         summary: SensingSummary,
         capabilities: CapabilityMatrix,
         verdict: VerdictSnapshot?,
         intervention: InterventionSettings,
         onInterventionAction: @escaping @MainActor (InterventionSettingsAction) -> Void,
+        onLaunchAtLogin: @escaping @MainActor (LaunchAtLoginAction) -> Void = { _ in },
         selectedTab: SettingsTab = .general,
         selectTab: @escaping @MainActor (SettingsTab) -> Void = { _ in },
         generation: Int = 0,
@@ -123,11 +135,13 @@ public struct ShellSettingsConnection {
         self.setPreference = setPreference
         self.storeURL = storeURL
         self.appVersion = appVersion
+        self.launchAtLogin = launchAtLogin
         self.summary = summary
         self.capabilities = capabilities
         self.verdict = verdict
         self.intervention = intervention
         self.onInterventionAction = onInterventionAction
+        self.onLaunchAtLogin = onLaunchAtLogin
         self.selectedTab = selectedTab
         self.selectTab = selectTab
         self.generation = generation
@@ -150,6 +164,9 @@ extension ShellSettingsConnection: ShellDrawnConnection {
             "setPreference": .undrawn(.sink),
             "storeURL": .drawn([.privacyStorePath]),
             "appVersion": .drawn([.appVersion]),
+            "launchAtLogin": .drawn([.launchAtLoginStatus]),
+            "launchAtLogin.status": .drawn([.launchAtLoginStatus]),
+            "onLaunchAtLogin": .undrawn(.sink),
             "summary": .drawn([.privacySummary, .sensingDetail]),
             "capabilities": .drawn([.privacyCapabilities]),
             "verdict": .drawn([.verdictBand, .verdictDetail]),
@@ -300,6 +317,10 @@ public struct ShellSettingsView: View {
     private let verdict: VerdictSnapshot?
     /// Which build this is, already rendered by whoever read the one bundle that matters.
     private let appVersion: String
+    /// What the system says about opening this app at login, read by the composition root.
+    private let launchAtLogin: LaunchAtLogin
+    /// What the launch-at-login controls reach.
+    private let onLaunchAtLogin: (LaunchAtLoginAction) -> Void
     private let intervention: InterventionSettings
     private let onInterventionAction: (InterventionSettingsAction) -> Void
     /// Which pane is on screen. A `Binding` over the composition root's own value, never a
@@ -318,6 +339,8 @@ public struct ShellSettingsView: View {
         preference: Binding<AppearancePreference>,
         storeURL: URL,
         appVersion: String = AppVersion.rendered(bundle: .main),
+        launchAtLogin: LaunchAtLogin = .unregistered,
+        onLaunchAtLogin: @escaping (LaunchAtLoginAction) -> Void = { _ in },
         summary: SensingSummary = .inactive,
         capabilities: CapabilityMatrix = CapabilityMatrix(),
         verdict: VerdictSnapshot? = nil,
@@ -328,6 +351,8 @@ public struct ShellSettingsView: View {
         self._preference = preference
         self.storeURL = storeURL
         self.appVersion = appVersion
+        self.launchAtLogin = launchAtLogin
+        self.onLaunchAtLogin = onLaunchAtLogin
         self.summary = summary
         self.capabilities = capabilities
         self.verdict = verdict
@@ -352,6 +377,8 @@ public struct ShellSettingsView: View {
         )
         self.storeURL = connection.storeURL
         self.appVersion = connection.appVersion
+        self.launchAtLogin = connection.launchAtLogin
+        self.onLaunchAtLogin = connection.onLaunchAtLogin
         self.summary = connection.summary
         self.capabilities = connection.capabilities
         self.verdict = connection.verdict
@@ -372,7 +399,12 @@ public struct ShellSettingsView: View {
         // fail the same assertion as one that never asked.
         let _ = didRender?()
         TabView(selection: $selectedTab) {
-            GeneralSettingsView(preference: $preference, appVersion: appVersion)
+            GeneralSettingsView(
+                preference: $preference,
+                appVersion: appVersion,
+                launchAtLogin: launchAtLogin,
+                onLaunchAtLogin: onLaunchAtLogin
+            )
                 .tabItem { tabLabel(.general) }
                 .tag(SettingsTab.general)
 

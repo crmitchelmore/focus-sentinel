@@ -74,6 +74,16 @@ public struct CockpitConnection {
     /// The last application in front that was not this one (F-101).
     public let lastActiveBundleID: String?
 
+    /// **What the footer's one-time launch-at-login offer performs** (D-12, focus-odz.4).
+    ///
+    /// A closure rather than a verb on `PriorityActing`, and the division is the one that type's
+    /// name states: `PriorityActing` is what a person does to their *commitment*, and adding a
+    /// login-item verb to it would put a platform registration in the protocol every priority
+    /// double in the programme has to implement. This is one sink, on the value the composition
+    /// root already assembles, reached only by a click — which is why it is exempted as a sink in
+    /// the totality table and driven by the self-check rather than drawn.
+    public let onLaunchAtLoginOffer: @MainActor (LaunchAtLoginOfferAction) -> Void
+
     /// Called from the view's body: the far end of the one wire this type leaves in `App/`.
     ///
     /// Idempotent by construction — the composition root records it in a `Set` — so a body
@@ -95,6 +105,7 @@ public struct CockpitConnection {
         sessionActions: (any SessionActing)?,
         sessionElapsedSeconds: Double?,
         lastActiveBundleID: String?,
+        onLaunchAtLoginOffer: @escaping @MainActor (LaunchAtLoginOfferAction) -> Void = { _ in },
         generation: Int = 0,
         didRender: @escaping @MainActor () -> Void = {},
         didDraw: @escaping @MainActor (ShellRenderedValues) -> Void = { _ in }
@@ -104,6 +115,7 @@ public struct CockpitConnection {
         self.sessionActions = sessionActions
         self.sessionElapsedSeconds = sessionElapsedSeconds
         self.lastActiveBundleID = lastActiveBundleID
+        self.onLaunchAtLoginOffer = onLaunchAtLoginOffer
         self.generation = generation
         self.didRender = didRender
         self.didDraw = didDraw
@@ -135,6 +147,7 @@ extension CockpitConnection: ShellDrawnConnection {
             "sessionActions": .drawn([.mutationHostsAttached]),
             "sessionElapsedSeconds": .drawn([.sessionElapsedSeconds]),
             "lastActiveBundleID": .drawn([.lastActiveApp]),
+            "onLaunchAtLoginOffer": .undrawn(.sink),
             "didRender": .undrawn(.receipt),
             "didDraw": .undrawn(.receipt),
 
@@ -166,6 +179,7 @@ extension CockpitConnection: ShellDrawnConnection {
             // nothing *inside* a value this window does not draw is drawn either.
             "state.verdict": .undrawn(.notDrawnOnThisSurface),
             "state.capabilities": .drawn([.capabilityStates]),
+            "state.showsLaunchAtLoginOffer": .drawn([.launchAtLoginOffer]),
 
             // --- one level down (focus-cxs) -----------------------------------------------
             //

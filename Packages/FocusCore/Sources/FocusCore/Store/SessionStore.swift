@@ -110,6 +110,24 @@ public final class SessionStore {
         return try context.countedFetch(descriptor).first
     }
 
+    /// **How many sessions this store has ever finished** (D-12, focus-odz.4).
+    ///
+    /// "Finished" is `endedAt != nil`, which is the negation of `openSession()`'s own predicate —
+    /// so this asks the question the session runtime already answers rather than inventing a
+    /// second definition of what a completed session is.
+    ///
+    /// Counted in the store rather than fetched and counted in Swift, for `recentTasks(limit:)`'s
+    /// reason (focus-tzj.2): the launch-at-login offer reads this on every projection of the
+    /// cockpit state, and pulling a day's session rows across to count them would be a fetch per
+    /// tick for a number.
+    public func finishedSessionCount() throws -> Int {
+        try context.countedFetchCount(
+            FetchDescriptor<FocusSchemaV3.FocusSessionRecord>(
+                predicate: #Predicate { $0.endedAt != nil }
+            )
+        )
+    }
+
     public func session(id: UUID) throws -> FocusSchemaV3.FocusSessionRecord? {
         let descriptor = FetchDescriptor<FocusSchemaV3.FocusSessionRecord>(
             predicate: #Predicate { $0.id == id }

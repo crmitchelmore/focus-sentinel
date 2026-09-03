@@ -28,6 +28,11 @@ public struct GeneralSettingsView: View {
     /// pane that read its own would draw the test runner's version in the unit lane and Xcode's
     /// in a preview, so the one bundle that matters is read by the composition root.
     private let appVersion: String
+    /// **What the system says about opening this app at login** (D-12, focus-odz.4). Read from
+    /// the service by the composition root every time this pane is built, never a stored `Bool`:
+    /// a person who removes the app from Login Items in System Settings has changed the truth.
+    private let launchAtLogin: LaunchAtLogin
+    private let onLaunchAtLogin: (LaunchAtLoginAction) -> Void
 
     @Environment(\.appearanceTraits) private var traits
     @Environment(\.shellTextScale) private var textScale
@@ -36,10 +41,14 @@ public struct GeneralSettingsView: View {
 
     public init(
         preference: Binding<AppearancePreference>,
-        appVersion: String = AppVersion.rendered(bundle: .main)
+        appVersion: String = AppVersion.rendered(bundle: .main),
+        launchAtLogin: LaunchAtLogin = .unregistered,
+        onLaunchAtLogin: @escaping (LaunchAtLoginAction) -> Void = { _ in }
     ) {
         self._preference = preference
         self.appVersion = appVersion
+        self.launchAtLogin = launchAtLogin
+        self.onLaunchAtLogin = onLaunchAtLogin
     }
 
     /// Every option the picker offers, in the order it offers them.
@@ -65,6 +74,8 @@ public struct GeneralSettingsView: View {
                 .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
                 .lineLimit(nil)
                 .fixedSize(horizontal: false, vertical: true)
+
+            launchAtLoginRow
 
             // **The build a person can quote in a defect report** (focus-odz.3).
             //
@@ -94,5 +105,51 @@ public struct GeneralSettingsView: View {
         // Reported by the pane that drew it, not by the window that built it: a mutation that
         // hands this pane a constant is invisible to a receipt taken anywhere else (focus-7ow).
         .shellRendered(.appVersion, appVersion)
+        // The **status**, not the switch position: two of the four states draw the same position,
+        // and only one of them is true yet (focus-odz.4).
+        .shellRendered(.launchAtLoginStatus, launchAtLogin.status.rawValue)
+    }
+
+    /// **Opening at login, opt-in and read from the service** (D-12, focus-odz.4).
+    ///
+    /// Three things about this row are decisions rather than layout.
+    ///
+    /// * The switch's position comes from `LaunchAtLogin`, which is derived from
+    ///   `SMAppService.status` on every build of this pane. A stored `Bool` would go on saying
+    ///   "on" after somebody removed the app from Login Items in System Settings.
+    /// * It is **disabled** while approval is outstanding, and the footnote says why. Nothing
+    ///   this app does moves that state, so a switch that could be flicked there would be a
+    ///   control that does nothing — *"a shortcut that silently does nothing is a shortcut people
+    ///   stop trusting"*, which `CockpitView` states about the menu and is the same rule.
+    /// * The button beside the footnote is the honest response to a permission this app cannot
+    ///   grant itself: it opens the one place the person can.
+    @ViewBuilder
+    private var launchAtLoginRow: some View {
+        Toggle(isOn: Binding(
+            get: { launchAtLogin.isOn },
+            set: { onLaunchAtLogin(.setEnabled($0)) }
+        )) {
+            ShellText(.settingsLaunchAtLogin)
+        }
+        .disabled(!launchAtLogin.isAdjustable)
+        .focused($focus, equals: .generalLaunchAtLogin)
+
+        if launchAtLogin.needsApproval {
+            ShellText(.settingsLaunchAtLoginApproval, role: .footnote)
+                .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+                .lineLimit(nil)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Button {
+                onLaunchAtLogin(.openSystemSettings)
+            } label: {
+                ShellText(.settingsLaunchAtLoginOpenSettings)
+            }
+        } else if launchAtLogin.status == .notFound {
+            ShellText(.settingsLaunchAtLoginUnavailable, role: .footnote)
+                .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+                .lineLimit(nil)
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 }

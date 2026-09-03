@@ -83,6 +83,10 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case cockpitStoreWriteFailed = "shell.cockpit.store.writeFailed"
     /// The About panel's credits paragraph (focus-odz.3).
     case aboutCredits = "shell.about.credits"
+    // The cockpit's one-time launch-at-login offer (D-12, focus-odz.4).
+    case cockpitLaunchAtLoginOffer = "shell.cockpit.launchAtLogin.offer"
+    case cockpitLaunchAtLoginAccept = "shell.cockpit.launchAtLogin.accept"
+    case cockpitLaunchAtLoginDismiss = "shell.cockpit.launchAtLogin.dismiss"
     case cockpitStoreSheetTitle = "shell.cockpit.store.sheet.title"
     case cockpitStoreSheetWhatHappened = "shell.cockpit.store.sheet.whatHappened"
     case cockpitStoreSheetLocation = "shell.cockpit.store.sheet.location"
@@ -205,6 +209,13 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case settingsAppearanceNote = "settings.appearance.note"
     /// The label beside the build a person is looking at (focus-odz.3).
     case settingsGeneralVersion = "settings.general.version"
+    // Opening at login (D-12, focus-odz.4). Four keys, because the switch has four states and
+    // two of them need a sentence: an approval only the person can give, and a copy of the app
+    // the system cannot find.
+    case settingsLaunchAtLogin = "settings.general.launchAtLogin"
+    case settingsLaunchAtLoginApproval = "settings.general.launchAtLoginApproval"
+    case settingsLaunchAtLoginOpenSettings = "settings.general.launchAtLoginOpenSettings"
+    case settingsLaunchAtLoginUnavailable = "settings.general.launchAtLoginUnavailable"
     case settingsPrivacyStatement = "settings.privacy.statement"
     case settingsPrivacyStoreLabel = "settings.privacy.storeLabel"
     case settingsPrivacyReveal = "settings.privacy.reveal"
