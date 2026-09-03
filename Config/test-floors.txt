@@ -22,5 +22,5 @@ FocusCoreTests 950
 FocusRulesTests 28
 FocusClassifyTests 260
 FocusSensingTests 137
-FocusUITests 381
+FocusUITests 367
 FocusHostTests 228

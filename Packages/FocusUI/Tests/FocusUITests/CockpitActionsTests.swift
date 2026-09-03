@@ -206,6 +206,10 @@ struct CockpitActionsTests {
         wiring.acceptHandoff?(handoff)
         wiring.cancelHandoff?()
         wiring.dismissRitual?()
+        // The one button on the sheet the cockpit raises when the store did not open
+        // (focus-tzj.4). It is the thing that lifts the capture refusal, so a wiring member that
+        // stopped reaching the host would leave a person unable to type anything at all.
+        wiring.acknowledgeStoreFailure?()
     }
 
     // MARK: - Every verb is reachable

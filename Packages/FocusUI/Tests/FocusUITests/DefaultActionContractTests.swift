@@ -49,7 +49,9 @@ struct DefaultActionContractTests {
         "PrivacySettingsView.swift":
             "a settings pane whose one action reveals a folder in Finder and changes nothing",
         "InterruptionSheet.swift":
-            "a modal sheet the user opened by pressing Stop; Escape keeps the session going, and Stop is enabled with every field empty because reflection is offered rather than extracted"
+            "a modal sheet the user opened by pressing Stop; Escape keeps the session going, and Stop is enabled with every field empty because reflection is offered rather than extracted",
+        "StoreUnavailableSheet.swift":
+            "a modal sheet the app raised because the store did not open, with one action and no Escape: Return means \"I have read this\", and there is nothing to lose by pressing it because there is nothing being saved (focus-tzj.4)"
     ]
 
     /// The surface the whole defect ran through. Named separately from the allowlist so the
