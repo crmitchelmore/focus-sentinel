@@ -838,6 +838,16 @@ public final class AppComposition {
     ///   the work it was actually shown. That is the rule half of the same ruling whose receipt
     ///   half `openQuestionPriorityID` fixed, and it is the half that survived.
     func perform(_ outcome: CorrectionOutcome, priorityID: UUID?) {
+        // **R-105's third invalidation, at the one place a rule is written about a subject.**
+        //
+        // The rule outranks rank 6 anyway — rungs 0–2 answer long before the heuristic is
+        // reached — so nothing the engine decides changes here. What changes is the verdict
+        // inspector: without this it could show a stale model rationale beside a rule that
+        // already settled the question, which is the app disagreeing with itself in public.
+        if let subject = outcome.correctedSubject {
+            relevanceHost.engine.forgetModelAnswers(about: subject)
+        }
+
         switch outcome {
         case .rule, .ruleAndReceipt:
             // **Who writes the row is decided by the outcome, not by this switch** (R-78).

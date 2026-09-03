@@ -1,5 +1,6 @@
 import FocusClassify
 import FocusCore
+import FocusModel
 import FocusRules
 import Foundation
 import Observation
@@ -85,6 +86,15 @@ final class RelevanceHost {
     /// the inspector draws and the answer the seam gives can never be two different opinions.
     let engine: DeterministicRelevanceEngine
 
+    /// What this Mac said about the on-device model at launch, in `FocusCore`'s vocabulary.
+    ///
+    /// Published so the capability matrix, the Privacy pane and the self-check read **one**
+    /// answer rather than each taking their own — and so that `.notRequested` stops being a lie
+    /// about a build that asks. Nothing is ever asked of the person about it: a Mac with Apple
+    /// Intelligence on gets a better app, and a Mac without it is never told it is missing out
+    /// (R-108).
+    let modelAvailability: ModelTierAvailability
+
     private let builder: RuleSnapshotBuilder
     private let priorities: PriorityStore
     private let ruleStore: any RuleStore
@@ -167,14 +177,37 @@ final class RelevanceHost {
     /// snapshot computes once per revision has to come out of the same instance the heuristic
     /// rung later measures against, or the identity the whole signal rests on is being computed
     /// by two different objects.
+    ///
+    /// ## The model tier is composed here or nowhere (e06, R-100/R-101)
+    ///
+    /// `FocusClassify` declares the port and imports no implementation of it, so the one module
+    /// permitted every sibling is the one that plugs the two together. The rung is built, asked
+    /// what this Mac can do, and **only then** composed: on any answer but `.available` the
+    /// ladder is `.deterministic` and the app is, by construction, the app e05 shipped — the
+    /// same code path the shipping gate already proves, which is why suppression needs no
+    /// separate safety argument.
+    ///
+    /// The availability is read **once, here**, rather than watched. R-117e forbids this tier a
+    /// timer, and a tier that could appear mid-session would mean a person watching the app
+    /// change its mind about what their work is. A Mac that gains Apple Intelligence gains the
+    /// rung at the next launch.
     init(
         context: ModelContext,
         ruleStore: any RuleStore,
         monotonicClock: any MonotonicClock,
         normalizer: TokenNormalizer = TokenNormalizer(),
-        scorer: SimilarityScorer = SimilarityScorer()
+        scorer: SimilarityScorer = SimilarityScorer(),
+        modelRung: FocusModelRung? = FocusModelRung()
     ) {
-        let engine = DeterministicRelevanceEngine(normalizer: normalizer, scorer: scorer)
+        let availability = modelRung?.availability ?? .unknown
+        let composed = availability.isExecutable ? modelRung : nil
+        self.modelAvailability = availability
+        let engine = DeterministicRelevanceEngine(
+            normalizer: normalizer,
+            scorer: scorer,
+            model: composed,
+            ladder: CascadeLadder(modelAvailable: composed != nil)
+        )
         self.engine = engine
         self.ruleStore = ruleStore
         self.monotonicClock = monotonicClock

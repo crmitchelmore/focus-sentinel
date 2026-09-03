@@ -316,6 +316,22 @@ public enum CorrectionOutcome: Sendable, Equatable, Hashable {
         }
     }
 
+    /// The subject this outcome settled, however it settled it (e06, R-105).
+    ///
+    /// A third question about the same value, and it is narrower than both of the two above:
+    /// *"is there now an answer about this subject that outranks a guess?"* A persisted rule, a
+    /// session rule and a snooze all say yes, and each of them out-ranks rank 6 — the first two
+    /// at rungs 0–2, the snooze at the nudge loop. So the model's opinion about that subject is
+    /// dropped, not because it would change a verdict but because the verdict inspector must
+    /// never draw a stale model rationale beside the rule that already settled the question.
+    public var correctedSubject: String? {
+        switch self {
+        case .rule(let rule), .ruleAndReceipt(let rule, _), .sessionRule(let rule): rule.subject
+        case .snooze(let subject, _): subject
+        case .receiptOnly, .pause, .priorityChangeRequested, .returnToTask, .nothing: nil
+        }
+    }
+
     /// **The rule the caller must still write**, which is not the same question as
     /// `persistedRule` and must never be confused with it (R-78).
     ///
