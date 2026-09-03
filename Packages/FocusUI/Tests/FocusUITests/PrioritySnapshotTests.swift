@@ -117,6 +117,21 @@ enum PriorityFixture {
         )
     ]
 
+    /// The same three, plus a stored rule of a **retired** scope (e07a): a title-token row a
+    /// person authored before the affordance was withdrawn. It is what the rules pane's own
+    /// picture is about — kept, deletable, captioned *no longer read*, its verdict controls
+    /// withdrawn — and it lives beside `rules` rather than in it so the cockpit's baselines,
+    /// which draw `rules` whole, stay pictures of a cockpit with nothing retired in it.
+    static let rulesWithARetiredRow: [PriorityRuleValue] = rules + [
+        PriorityRuleValue(
+            id: UUID(uuidString: "E0200000-0000-4000-A000-000000000024")!,
+            scope: .titleToken,
+            subject: "invoice",
+            verdict: .relevant,
+            createdAt: now
+        )
+    ]
+
     /// The committed definition of done. Named rather than inline, because focus-0ai's second
     /// baseline is the same fixture with this **absent**, and two literals would let the two
     /// pictures drift into being about two different priorities.
@@ -320,7 +335,7 @@ enum PriorityComponent: String, CaseIterable, Sendable {
         case .taskRules:
             AnyView(
                 FocusHost { focus in
-                    TaskRulesView(rules: PriorityFixture.rules, focus: focus)
+                    TaskRulesView(rules: PriorityFixture.rulesWithARetiredRow, focus: focus)
                 }
             )
         case .timeboxRunning:

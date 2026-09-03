@@ -9,7 +9,7 @@ import Foundation
 ///
 /// | authority | derived from |
 /// |---|---|
-/// | `.global` | a stored row with `scopeRaw ∈ {app, domain, titleToken}` and `task == nil` |
+/// | `.global` | a stored row with `scopeRaw ∈ {app, domain}` and `task == nil` |
 /// | `.task` | the same row with `task != nil` |
 /// | `.session` | `SessionRuleBox`, in memory, never persisted |
 ///
@@ -28,6 +28,15 @@ import Foundation
 /// bundle identifier" from the shape of a string is exactly the magic this epic's third binding
 /// condition forbids. So the builder drops such rows into `skippedRuleCount` and the count is
 /// surfaced rather than swallowed.
+///
+/// ## Stored `.titleToken` rows are skipped and counted too, since e07a
+///
+/// The cascade's title-token arm is real and the golden corpus exercises it through its own
+/// producer; the **store** never had a producer — the one shipping path passes application
+/// identity only, and under PD-1 the AX-title depth dial is parked with a named blocker. A stored
+/// title-token row was therefore a rule the engine read and could never match, and the pane drew
+/// it as live. `PriorityRuleScope.isRetired` names the scope; this builder honours it the way it
+/// honours a legacy `.session` row, so "no longer read" on the pane is a fact about the engine.
 public struct RuleSnapshotBuilder: Sendable {
     public let normalizer: TokenNormalizer
     /// Optional so that a corpus case, a unit test or a build with no embedding can construct
@@ -68,8 +77,8 @@ public struct RuleSnapshotBuilder: Sendable {
 
         for row in storedRules {
             guard let subjectKind = Self.subjectKind(for: row.rule.scope) else {
-                // A legacy `.session` row. It reaches no rung, is counted, and is never
-                // assigned an inferred subject kind (R-72.3).
+                // A legacy `.session` row, or a retired `.titleToken` one (e07a). It reaches no
+                // rung, is counted, and is never assigned an inferred subject kind (R-72.3).
                 skipped += 1
                 continue
             }
@@ -99,15 +108,19 @@ public struct RuleSnapshotBuilder: Sendable {
         )
     }
 
-    /// `RuleScope` minus `.session`, written out rather than reached for through
-    /// `init(rawValue:)`, for the same reason `SessionPhase.decode` is (R-45's doctrine): the
-    /// totality is held by a test over `allCases`, and a fifth scope added without touching
-    /// this function fails that test rather than silently becoming a rung.
+    /// `RuleScope` minus `.session` and minus the retired `.titleToken`, written out rather than
+    /// reached for through `init(rawValue:)`, for the same reason `SessionPhase.decode` is
+    /// (R-45's doctrine): the totality is held by a test over `allCases`, and a fifth scope added
+    /// without touching this function fails that test rather than silently becoming a rung.
+    ///
+    /// `.titleToken` answers `nil` **for stored rows only**: `RuleSubjectKind.titleToken` and the
+    /// cascade arm that matches it stay, because the corpus builds its rules through its own
+    /// producer and measures what the road not taken would have cost (PD-1, e07 S0).
     static func subjectKind(for scope: RuleScope) -> RuleSubjectKind? {
         switch scope {
         case .app: .app
         case .domain: .domain
-        case .titleToken: .titleToken
+        case .titleToken: nil
         case .session: nil
         }
     }

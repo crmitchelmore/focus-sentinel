@@ -149,14 +149,22 @@ struct RuleSnapshotTests {
 
     /// The mapping is total over `RuleScope.allCases`, so a fifth scope cannot become a rung by
     /// accident — it fails here first.
-    @Test("the subject-kind mapping is total over RuleScope and excludes exactly .session")
+    @Test("the subject-kind mapping is total over RuleScope and excludes exactly .session and the retired .titleToken")
     func subjectKindMappingIsTotal() {
         var mapped: [RuleSubjectKind] = []
+        var unmapped: [RuleScope] = []
         for scope in RuleScope.allCases {
-            if let kind = RuleSnapshotBuilder.subjectKind(for: scope) { mapped.append(kind) }
+            if let kind = RuleSnapshotBuilder.subjectKind(for: scope) {
+                mapped.append(kind)
+            } else {
+                unmapped.append(scope)
+            }
         }
-        #expect(Set(mapped) == Set(RuleSubjectKind.allCases))
-        #expect(mapped.count == RuleScope.allCases.count - 1)
+        // Every subject kind a stored row can still reach, and exactly the two scopes a stored
+        // row is not promoted from: the lifetime one, and the retired one (e07a).
+        #expect(Set(mapped) == Set(RuleSubjectKind.allCases).subtracting([.titleToken]))
+        #expect(Set(unmapped) == [.session, .titleToken])
+        #expect(mapped.count + unmapped.count == RuleScope.allCases.count)
     }
 
     @Test("the verdict mapping is total over RuleVerdict and preserves the raw value")
@@ -173,8 +181,10 @@ struct RuleSnapshotTests {
     @Test("the sort is total, so two builds of the same inputs are equal")
     func theSortIsTotal() {
         let identifiers = (0..<4).map { _ in UUID() }
+        // No stored `.titleToken` row here since e07a: the builder skips one (see the retirement
+        // test below), so a sort that included it would be sorting three rows and claiming four.
         let rows = [
-            Self.stored(.titleToken, "proposal", .relevant, task: true, id: identifiers[0]),
+            Self.stored(.domain, "https://mail.google.com", .unrelated, task: true, id: identifiers[0]),
             Self.stored(.app, "com.apple.Safari", .relevant, task: true, id: identifiers[1]),
             Self.stored(.domain, "https://docs.google.com", .relevant, id: identifiers[2]),
             Self.stored(.app, "com.apple.Notes", .unrelated, id: identifiers[3])
@@ -188,8 +198,37 @@ struct RuleSnapshotTests {
         #expect(first == second, "the sort is not total — replay would not be exact")
         #expect(
             first.rules.map { "\($0.authority.rawValue)/\($0.subjectKind.rawValue)" }
-                == ["task/titleToken", "task/app", "global/domain", "global/app"]
+                == ["task/domain", "task/app", "global/domain", "global/app"]
         )
+    }
+
+    // MARK: - e07a: a stored title-token row is retired — skipped and counted, never a rung
+
+    /// **The engine half of "no longer read"** (e07a, PD-1). Nothing in the shipping app produces
+    /// a title token — the one shipping producer passes application identity only, and the
+    /// AX-title depth dial is parked — so a stored `.titleToken` row was a rule the engine read and
+    /// could never match, drawn on the pane as live. Red before this round: the builder promoted
+    /// the row to a `task/titleToken` rung with `skippedRuleCount == 0`.
+    ///
+    /// The cascade's title-token **arm** is deliberately untouched — the golden corpus builds its
+    /// rules through its own producer and measures what the road not taken would cost — so this
+    /// is a fact about stored rows, held beside the legacy-session rule it mirrors.
+    @Test("a stored title-token row reaches no rung and is counted, like a legacy session row")
+    func aStoredTitleTokenRowIsRetired() {
+        let snapshot = RuleSnapshotBuilder().build(
+            priority: Self.priority(),
+            storedRules: [
+                Self.stored(.titleToken, "proposal", .relevant, task: true),
+                Self.stored(.app, "com.apple.Notes", .relevant)
+            ]
+        )
+        #expect(snapshot.skippedRuleCount == 1)
+        #expect(snapshot.rules.count == 1)
+        #expect(snapshot.rules.first?.subject == "com.apple.Notes")
+        #expect(!snapshot.rules.contains { $0.subjectKind == .titleToken })
+        // …while the corpus's own producer can still build one, so the measured cost of the road
+        // not taken is still measurable (PD-1, e07 S0).
+        #expect(RuleSubjectKind.allCases.contains(.titleToken))
     }
 
     /// Ties on authority and narrowness are broken by age and then by identity, so a snapshot

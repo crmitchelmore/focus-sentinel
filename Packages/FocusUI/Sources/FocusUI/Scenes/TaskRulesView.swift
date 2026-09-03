@@ -86,6 +86,17 @@ public struct TaskRulesView: View {
                 .font(DesignTokens.font(.callout, scale: textScale))
                 .lineLimit(1)
 
+            // **A retired scope says so, in words** (e07a). A title-token rule is a promise the
+            // product does not keep — nothing in the shipping app produces a title token — so a
+            // stored one is drawn as what it is: kept, deletable, and no longer read. Its verdict
+            // controls are withdrawn below; a picker over a rule nothing reads would be a knob
+            // wired to nothing.
+            if rule.scope.isRetired {
+                ShellText(.priorityRulesScopeRetired, role: .caption)
+                    .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+                    .lineLimit(1)
+            }
+
             Spacer(minLength: spacing)
 
             // **The picker is F-130's disposition vocabulary, not a private list of three.**
@@ -114,7 +125,11 @@ public struct TaskRulesView: View {
                         ? DesignTokens.Palette.primaryText
                         : DesignTokens.supportingTextColor(for: traits)
                 )
-                .disabled(change == nil)
+                .disabled(change == nil || rule.scope.isRetired)
+                // A `.plain` button draws no disabled state of its own, and a control that looks
+                // live and does nothing is the silent nothing this pane exists to avoid — so a
+                // retired row's controls are dimmed as well as withdrawn.
+                .opacity(rule.scope.isRetired ? 0.35 : 1)
                 .accessibilityLabel(Text(ShellStrings.resource(Self.verdictKey(verdict))))
                 // The disposition's own name, from `FocusCore`'s catalog. The glyph and the
                 // short verdict word are what the row has room for; this is where the four
@@ -213,8 +228,14 @@ public struct TaskRulesView: View {
     }
 
     /// The scopes a person can author by hand. `.session` is not one of them: it describes how
-    /// long a rule lives, and it is set by the code paths that make a rule temporary.
-    static let authorableScopes: [PriorityRuleScope] = [.app, .domain, .titleToken]
+    /// long a rule lives, and it is set by the code paths that make a rule temporary. And since
+    /// e07a `.titleToken` is not one of them either: it was offered for the whole of e04–e06 and
+    /// could never match, because nothing in the shipping app produces a title token (PD-1) — an
+    /// authoring affordance for a rule nothing reads is a lie in a button. Derived from the
+    /// vocabulary rather than written out, so a scope that retires leaves this list the same day.
+    static let authorableScopes: [PriorityRuleScope] = PriorityRuleScope.allCases.filter {
+        $0 != .session && !$0.isRetired
+    }
 
     /// The dispositions that are a stored row, in `AppRuleDisposition.allCases` order.
     ///

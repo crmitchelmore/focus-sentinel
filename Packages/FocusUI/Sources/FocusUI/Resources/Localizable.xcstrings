@@ -1321,6 +1321,18 @@
         }
       }
     },
+    "priority.rules.scope.retired" : {
+      "comment" : "Caption on a stored rule whose scope the app no longer reads (a title-token rule). The row is kept and can be removed; its verdict cannot be changed.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No longer read"
+          }
+        }
+      }
+    },
     "priority.rules.scope.session" : {
       "comment" : "Rule scope: the rule lasts until this priority is completed.",
       "extractionState" : "manual",

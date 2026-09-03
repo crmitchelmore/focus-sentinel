@@ -254,8 +254,9 @@ final class RelevanceHost {
     var policyDigest: String { RelevancePolicy.digestHex }
 
     /// Stored rows this build declined to promote to a rung — legacy `scopeRaw == "session"`
-    /// rows, which have no subject kind at all and are **skipped and counted, never guessed at**
-    /// (R-72.3). Surfaced rather than swallowed.
+    /// rows, which have no subject kind at all, and retired `scopeRaw == "titleToken"` rows, which
+    /// nothing in the shipping app could ever match (e07a) — **skipped and counted, never guessed
+    /// at** (R-72.3). Surfaced rather than swallowed.
     var skippedRuleCount: Int { snapshot.skippedRuleCount }
 
     // MARK: - The snapshot

@@ -15,12 +15,31 @@ public enum PriorityRuleScope: String, Sendable, CaseIterable, Hashable, Identif
     case app
     /// A web origin, normalised to `scheme://host[:port]` — never a full URL (SC-3).
     case domain
-    /// A single token drawn from a window or tab title.
+    /// A single token drawn from a window or tab title. **Retired** (e07a, PD-1): nothing in
+    /// the shipping app produces a title token — the one shipping producer passes application
+    /// identity only, and under PD-1 the AX-title depth dial is parked with a named blocker — so a
+    /// rule of this scope is a promise the product does not keep. The case stays so a stored row
+    /// still decodes; `isRetired` is what the rules pane and the snapshot builder read.
     case titleToken
     /// A rule that lasts only until this priority is completed.
     case session
 
     public var id: String { rawValue }
+
+    /// **Whether this scope is one the app no longer reads** (e07a).
+    ///
+    /// A retired scope is decodable, drawable and deletable, and nothing else: the rules pane
+    /// withdraws it from the authoring vocabulary and draws a stored row read-only with the
+    /// words *no longer read*, and `RuleSnapshotBuilder` skips and counts the row rather than
+    /// promoting it to a rung it could never match. Deleting the case instead would make a
+    /// stored row undecodable, which is a row silently dropped — the thing `ContextItemKind
+    /// .unknown` exists to prevent on the other side of the same pane.
+    public var isRetired: Bool {
+        switch self {
+        case .titleToken: true
+        case .app, .domain, .session: false
+        }
+    }
 
     /// The SF Symbol the rules pane draws beside a rule of this scope. Distinct silhouettes,
     /// for the same reason the context chips have them: under "Differentiate without colour"
