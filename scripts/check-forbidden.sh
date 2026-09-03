@@ -2110,6 +2110,50 @@ if (( r96s_binaries_seen == 0 )) && [[ "${FOCUS_REQUIRE_BINARY_CHECK:-0}" != "1"
 fi
 
 # ---------------------------------------------------------------------------
+# R-169 — a stage that may not have been able to take its reading is never ignored (focus-39x).
+#
+# `MenuBarStage.open` used to end in `try #require(isAnchored(controller), …)`. `isAnchored` reads
+# the live `NSScreen.screens` and answers `false` when the list is EMPTY, which is a property of
+# the machine — a headless rig, or a Mac between display configurations — and not of the popover.
+# It now returns `ProbeOutcome`, and the honest handling is two lines: bind it, and ask
+# `MenuBarStage.taken(_:)`, which prints one greppable NOT TAKEN line and stops the suite before
+# its first assertion.
+#
+# Swift will not make dropping the result an error — an unused non-`Void` result is a warning —
+# so the rule is here instead. Two halves, because either alone is defeated by the other's
+# absence: every call must BIND the outcome, and every file that opens the stage must ASK about
+# what it bound. A call site that binds and never asks is a suite whose assertions run on a
+# popover that may never have opened, which is the bare green this bead exists to refuse.
+print
+print "R-169 every MenuBarStage.open call binds its outcome and asks whether the reading was taken"
+r169_unbound=0
+r169_files=0
+for file in Packages/FocusHost/Tests/FocusHostTests/**/*.swift(N); do
+    [[ "${file:t}" == "MenuBarStage.swift" ]] && continue
+    grep -q "MenuBarStage\.open(" "$file" || continue
+    (( r169_files++ ))
+    # Every occurrence must be bound: `let <name> = try MenuBarStage.open(`.
+    unbound=$(grep -n "MenuBarStage\.open(" "$file" | grep -vc "= try MenuBarStage\.open(")
+    if (( unbound > 0 )); then
+        print -u2 "     [R-169] FAIL $file — $unbound call(s) to MenuBarStage.open whose outcome is not bound"
+        grep -n "MenuBarStage\.open(" "$file" | grep -v "= try MenuBarStage\.open(" | sed 's/^/       /'
+        r169_unbound=1
+    fi
+    if ! grep -q "MenuBarStage\.taken(" "$file"; then
+        print -u2 "     [R-169] FAIL $file — opens the stage and never asks MenuBarStage.taken(...)"
+        r169_unbound=1
+    fi
+done
+if (( r169_files == 0 )); then
+    print -u2 "     [R-169] FAIL no suite opens the menu-bar stage at all, so this rule is vacuous"
+    rc=1
+elif (( r169_unbound == 0 )); then
+    print "     [R-169] OK — $r169_files suite(s), every call bound and asked about"
+else
+    rc=1
+fi
+
+# ---------------------------------------------------------------------------
 # R-118 — every stored column is classified (e09 plan §7, focus-tee.3).
 #
 # Delegated to `scripts/check-export-fields.sh`, which is a standalone script anybody can run,

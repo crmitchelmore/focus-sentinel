@@ -1,4 +1,5 @@
 import AppKit
+import FocusCore
 import FocusUI
 import Testing
 
@@ -94,12 +95,34 @@ enum MenuBarStage {
         _ = NSApplication.shared.setActivationPolicy(policy)
     }
 
+    /// **The outcome of opening the popover, because a display is a property of the machine**
+    /// (focus-39x, and the class `focus-rxc` closed elsewhere).
+    ///
+    /// This used to end in `try #require(isAnchored(controller), "the popover opened at …, which
+    /// is not on any display")`. `isAnchored` reads the live `NSScreen.screens` and answers
+    /// `false` when the list is **empty** — a headless rig, or a Mac between display
+    /// configurations — so every suite that opens a popover through this stage went red on such a
+    /// machine, reporting a placement defect nobody observed.
+    ///
+    /// It is not converted to a bare green, which would leave every assertion below it passing on
+    /// nothing and is a worse defect than the one it fixes. It returns `ProbeOutcome`, and
+    /// `taken(_:)` below is what a caller writes: the reading is either taken and the suite goes
+    /// on, or it is NOT TAKEN, loudly and by name, and the suite stops before its first assertion.
+    ///
+    /// **The `notTaken` door is one obstacle wide.** It is returned only when
+    /// `NudgePanelController.currentScreens()` is empty, which is a closed machine property in
+    /// `ReadingObstacle`. A popover that opened somewhere absurd *on* a display still fails, as
+    /// it always did — that is a defect about the tree, and `notTaken` is never a way to make an
+    /// inconvenient assertion go quiet.
     static func open(
         _ controller: MenuBarController,
         showing presentation: MenuBarPresentation,
         install: Bool = true,
         onDidShow: (() -> Void)? = nil
-    ) throws {
+    ) throws -> ProbeOutcome {
+        // Asked before anything is opened, so a headless run costs no activation and no settle.
+        if NudgePanelController.currentScreens().isEmpty { return .notTaken(.noDisplayAttached) }
+
         let application = NSApplication.shared
         _ = application.setActivationPolicy(.accessory)
         NSApplication.shared.activate(ignoringOtherApps: true)
@@ -115,11 +138,30 @@ enum MenuBarStage {
             controller.togglePopover()
             NudgeHostFixture.settle(0.2)
         }
+        // Asked again: a display can go away between the two, and the run that loses one mid-stage
+        // is the same machine property as the run that never had one.
+        if NudgePanelController.currentScreens().isEmpty { return .notTaken(.noDisplayAttached) }
         try #require(controller.isPopoverShown, "the popover never opened, so nothing below is a reading")
         try #require(
             isAnchored(controller),
             "the popover opened at \(controller.popoverFrame), which is not on any display"
         )
+        return .holds
+    }
+
+    /// **What every caller of `open(_:showing:)` writes**, and the reason the outcome cannot be
+    /// dropped: `check-forbidden.sh` R-169 requires the call to be bound and this to be asked.
+    ///
+    /// Returns `true` when the reading was taken and the suite may go on. On a NOT TAKEN it
+    /// prints one fixed, greppable line — the same shape `self-check.sh` prints — so a run that
+    /// could not measure says so in the log rather than in an absence a reader has to notice.
+    @discardableResult
+    static func taken(_ outcome: ProbeOutcome, _ subject: String = "the menu-bar popover") -> Bool {
+        if let obstacle = outcome.obstacle {
+            print("NOT TAKEN: \(subject) — \(obstacle.sentence)")
+            return false
+        }
+        return true
     }
 
     /// **Whether the popover AppKit placed is on a display at all** (focus-5yu).

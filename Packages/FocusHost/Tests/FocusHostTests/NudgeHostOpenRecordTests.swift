@@ -106,10 +106,11 @@ struct NudgeHostOpenRecordTests {
     }
 
     static func openThePopover(_ fixture: NudgeHostFixture) throws {
-        try MenuBarStage.open(
+        let opened = try MenuBarStage.open(
             fixture.menuBar,
             showing: NudgeHostFixture.menuBarPresentation(of: fixture.host)
         )
+        guard MenuBarStage.taken(opened) else { return }
         NudgeHostFixture.settle()
     }
 

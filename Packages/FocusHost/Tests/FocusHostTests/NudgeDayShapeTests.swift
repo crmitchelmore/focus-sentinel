@@ -283,11 +283,15 @@ struct NudgeDayShapeTests {
                 NudgeHostFixture.settle()
 
             case .openThePopover:
-                try MenuBarStage.open(
+                let opened = try MenuBarStage.open(
                     root.menuBar,
                     showing: root.menuBarPresentation(),
                     install: false
                 )
+                // Inside the day's own loop, so a NOT TAKEN reading stops the whole replay rather
+                // than skipping one moment and leaving the rest of the day to be judged against a
+                // popover that never opened.
+                try #require(MenuBarStage.taken(opened), "the day's popover moment was not taken")
                 NudgeHostFixture.settle()
             }
         }

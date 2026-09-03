@@ -180,11 +180,12 @@ struct CompositionRootWireTests {
 
         // The click. Nothing here wires `onPopoverDidShow` — the root already did, and that is
         // the closure under test.
-        try MenuBarStage.open(
+        let opened = try MenuBarStage.open(
             root.menuBar,
             showing: root.menuBarPresentation(),
             install: false
         )
+        guard MenuBarStage.taken(opened) else { return }
 
         #expect(root.menuBar.isDrawing(.query))
         #expect(

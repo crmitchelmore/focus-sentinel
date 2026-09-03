@@ -51,11 +51,12 @@ it to be green: a red line means nothing if the clean run was red too.
 | `forbidden-binary` | 6 | 6 | — |
 | `boundaries-binary` | 9 | 9 | 1 (the row literal, superseded by B-14/B-15) |
 | `published-keys` | 7 | 7 | — |
+| `forbidden` (R-169) | 3 | 3 | — |
 | `packaging` | 6 | 6 | — |
 | `unit-counts` | 5 | 5 | — |
 | `evaluation` (B1–B5) | 9 | 9 | — |
 | `entitlements-debug` / `entitlements-release` | 6 | 6 | 2 (seven restatement lines; one unreachable branch) |
-| **total** | **226** | **226** | **3 findings** |
+| **total** | **229** | **229** | **3 findings** |
 
 The seven rows the gate audit named as unable to go red are all fallible now, and each was run:
 `self-check.sh`'s popover overflow (SC-37, SC-38) and its committed width (SC-39, SC-40),
@@ -415,6 +416,17 @@ H-JSON on a copy of the Release stage's report. The observer's two readings are 
 | FS-12 | `check-focus-steal.sh:380` | `report["panel"]["offeredActions"] = []` | FS-10, FS-11 — reachability and a real hit test | **PROVEN** — `FAIL the panel is offering something, so the reading is about actual buttons ([])` |
 | FS-13 | `check-focus-steal.sh:479` | `report["requestAuthorizationCallCount"] = 1` | the harness runs the unmutated copy first: `CONTROL … GREEN (EXIT=0)` | **PROVEN** — `FAIL the launch asked for no notification authorisation` |
 
+
+### R-169 — the menu-bar stage's NOT TAKEN outcome (focus-39x) — `forbidden`
+
+H-SRC on the working tree, restored immediately. The rule is a text scan over the twelve suites
+that open the stage, so its harness is the edit a careless caller would make.
+
+| # | rule | mutation | control | status — the line it printed |
+|---|---|---|---|---|
+| FB-01 | R-169 (bind) | drop the `let opened =` from `NudgeFloorTests.swift:361`, leaving `try MenuBarStage.open(` | the other eleven suites stay green, so this is one call site and not the scan | **PROVEN** — `[R-169] FAIL Packages/FocusHost/Tests/FocusHostTests/NudgeFloorTests.swift — 1 call(s) to MenuBarStage.open whose outcome is not bound` |
+| FB-02 | R-169 (ask) | delete that site's `guard MenuBarStage.taken(opened) else { return }` | FB-01 — a suite that binds and never asks is the bare green the bead refuses, and it is a separate line | **PROVEN** — `[R-169] FAIL … — opens the stage and never asks MenuBarStage.taken(...)` |
+| FB-03 | R-169 (vacuity) | no suite opens the stage at all | is the floor under FB-01 and FB-02, both of which are satisfied by an empty file set | **PROVEN by construction** — the rule counts the suites and fails at zero: `[R-169] FAIL no suite opens the menu-bar stage at all, so this rule is vacuous` |
 
 ### `forbidden-binary` — `scripts/check-forbidden.sh`
 

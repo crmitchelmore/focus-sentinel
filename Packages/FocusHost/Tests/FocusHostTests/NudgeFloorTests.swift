@@ -358,11 +358,12 @@ struct NudgeFloorTests {
         // could perceive the accusation. Nothing here wires `onGlyphWritten`: the root already
         // did, and that closure is what is under test.
         let rowsBefore = try Self.deliveredRows(root)
-        try MenuBarStage.open(
+        let opened = try MenuBarStage.open(
             root.menuBar,
             showing: root.menuBarPresentation(),
             install: false
         )
+        guard MenuBarStage.taken(opened) else { return }
         NudgeHostFixture.settle()
         root.nudgeHost.answer(.notNow)
         NudgeHostFixture.settle()

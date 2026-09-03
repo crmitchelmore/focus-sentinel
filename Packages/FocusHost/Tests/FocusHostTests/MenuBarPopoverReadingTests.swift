@@ -106,7 +106,8 @@ struct MenuBarPopoverReadingTests {
             controller.remove()
             MenuBarStage.restoreActivationPolicy()
         }
-        try MenuBarStage.open(controller, showing: PopoverRig.carryingBoth(priority: priority))
+        let opened = try MenuBarStage.open(controller, showing: PopoverRig.carryingBoth(priority: priority))
+        guard MenuBarStage.taken(opened) else { return }
         NudgeHostFixture.settle()
 
         #expect(
@@ -149,10 +150,11 @@ struct MenuBarPopoverReadingTests {
             controller.remove()
             MenuBarStage.restoreActivationPolicy()
         }
-        try MenuBarStage.open(
+        let opened = try MenuBarStage.open(
             controller,
             showing: PopoverRig.carryingBoth(priority: PopoverRig.shortPriority)
         )
+        guard MenuBarStage.taken(opened) else { return }
         NudgeHostFixture.settle()
 
         for nudge in MenuBarNudge.allCases {
@@ -185,10 +187,11 @@ struct MenuBarPopoverReadingTests {
             controller.remove()
             MenuBarStage.restoreActivationPolicy()
         }
-        try MenuBarStage.open(
+        let opened = try MenuBarStage.open(
             controller,
             showing: PopoverRig.carryingBoth(priority: PopoverRig.longPriority)
         )
+        guard MenuBarStage.taken(opened) else { return }
         NudgeHostFixture.settle()
 
         let reading = controller.decisionSurfaceReading(of: .accusation)
@@ -232,10 +235,11 @@ struct MenuBarPopoverReadingTests {
         let deliveredBeforeTheClick = fixture.host.deliveredCount
         try #require(fixture.host.todaysUsage().accusationsToday == 0)
 
-        try MenuBarStage.open(
+        let opened = try MenuBarStage.open(
             fixture.menuBar,
             showing: NudgeHostFixture.menuBarPresentation(of: fixture.host)
         )
+        guard MenuBarStage.taken(opened) else { return }
         NudgeHostFixture.settle()
 
         // The popover is open and it is carrying the rung — the whole of the old reading.

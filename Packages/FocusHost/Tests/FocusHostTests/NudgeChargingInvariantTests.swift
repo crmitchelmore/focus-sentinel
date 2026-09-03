@@ -813,10 +813,11 @@ struct NudgeChargingInvariantTests {
         // channel at all*, while six of them spent the whole day's accusation cap. It is not lost
         // now; it is unpaid, and it waits.
         let chargesBefore = fixture.host.chargesPaidFor.count
-        try MenuBarStage.open(
+        let opened = try MenuBarStage.open(
             fixture.menuBar,
             showing: NudgeHostFixture.menuBarPresentation(of: fixture.host)
         )
+        guard MenuBarStage.taken(opened) else { return }
         NudgeHostFixture.settle()
         fixture.host.answer(.notNow)
         NudgeHostFixture.settle()
@@ -889,10 +890,11 @@ struct NudgeChargingInvariantTests {
         )
         try #require(fixture.host.pendingPopoverQuery != nil, "the rung ate the pending question")
 
-        try MenuBarStage.open(
+        let opened = try MenuBarStage.open(
             fixture.menuBar,
             showing: NudgeHostFixture.menuBarPresentation(of: fixture.host)
         )
+        guard MenuBarStage.taken(opened) else { return }
         NudgeHostFixture.settle()
         fixture.host.answer(.notNow)
         NudgeHostFixture.settle()

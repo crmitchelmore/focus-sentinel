@@ -163,11 +163,12 @@ struct NudgeHostUnopenedInvitationTests {
         try fixture.wireMenuBarToTheLoop()
 
         try Self.waitingOnTheBadge(fixture, .accusation)
-        try MenuBarStage.open(
+        let opened = try MenuBarStage.open(
             fixture.menuBar,
             showing: NudgeHostFixture.menuBarPresentation(of: fixture.host),
             onDidShow: nil
         )
+        guard MenuBarStage.taken(opened) else { return }
         NudgeHostFixture.settle()
 
         #expect(

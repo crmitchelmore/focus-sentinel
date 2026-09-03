@@ -652,8 +652,7 @@ struct NudgePanelTests {
                 let reserved = NudgePanelController.edgeMargin * 2
                 #expect(
                     ceiling <= display.visibleFrame.height - reserved + Self.sizeTolerance,
-                    "the panel's ceiling is taller than the display can hold: "
-                        + "\(ceiling) > \(display.visibleFrame.height) - \(reserved)"
+                    "the panel's ceiling is taller than the display can hold: \(ceiling) > \(display.visibleFrame.height) - \(reserved)"
                 )
             }
             // …and the window really is the size of the view inside it, rather than a right-sized

@@ -171,11 +171,12 @@ struct NudgeHostQuestionTests {
 
         // The click. This is the whole of the badge route: the menu bar is the only object that
         // knows it happened, and `onPopoverDidShow` is the only wire that tells the loop.
-        try MenuBarStage.open(
+        let opened = try MenuBarStage.open(
             fixture.menuBar,
             showing: MenuBarPresentation(status: .uncertain, pendingQuery: fixture.host.pendingPopoverQuery),
             onDidShow: { fixture.host.popoverPresented() }
         )
+        guard MenuBarStage.taken(opened) else { return }
 
         #expect(fixture.menuBar.isDrawing(.query))
         #expect(fixture.host.deliveredCount == 1, "the popover opened on the question and nothing counted it")
@@ -234,13 +235,14 @@ struct NudgeHostQuestionTests {
         NudgeHostFixture.settle()
         try #require(fixture.host.pendingPopoverQuery != nil)
 
-        try MenuBarStage.open(
+        let opened = try MenuBarStage.open(
             fixture.menuBar,
             showing: MenuBarPresentation(
                 status: .uncertain, pendingQuery: fixture.host.pendingPopoverQuery
             ),
             onDidShow: { fixture.host.popoverPresented() }
         )
+        guard MenuBarStage.taken(opened) else { return }
         try #require(fixture.host.deliveredCount == 1)
 
         // The person closes the popover and opens it again — the ordinary thing to do with a

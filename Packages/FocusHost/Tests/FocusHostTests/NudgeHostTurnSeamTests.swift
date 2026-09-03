@@ -208,10 +208,11 @@ struct NudgeHostTurnSeamTests {
         try fixture.wireMenuBarToTheLoop()
         try Self.aRungNobodyHasSeen(under: fixture)
 
-        try MenuBarStage.open(
+        let opened = try MenuBarStage.open(
             fixture.menuBar,
             showing: NudgeHostFixture.menuBarPresentation(of: fixture.host)
         )
+        guard MenuBarStage.taken(opened) else { return }
         NudgeHostFixture.settle()
         fixture.host.answer(.notNow)
 

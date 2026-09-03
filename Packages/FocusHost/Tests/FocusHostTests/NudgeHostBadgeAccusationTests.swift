@@ -271,10 +271,11 @@ struct NudgeHostBadgeAccusationTests {
         try #require(fixture.host.todaysUsage().accusationsToday == 0)
 
         // The click. `onDidShow` is `nil` so the stage leaves the shipping wire alone.
-        try MenuBarStage.open(
+        let opened = try MenuBarStage.open(
             fixture.menuBar,
             showing: NudgeHostFixture.menuBarPresentation(of: fixture.host)
         )
+        guard MenuBarStage.taken(opened) else { return }
         NudgeHostFixture.settle()
 
         #expect(fixture.menuBar.isDrawing(.accusation), "the popover is not showing the rung")
@@ -307,21 +308,23 @@ struct NudgeHostBadgeAccusationTests {
         try fixture.wireMenuBarToTheLoop()
 
         Self.climbToTheBadge(fixture, via: .reducedInterruption)
-        try MenuBarStage.open(
+        let opened = try MenuBarStage.open(
             fixture.menuBar,
             showing: NudgeHostFixture.menuBarPresentation(of: fixture.host)
         )
+        guard MenuBarStage.taken(opened) else { return }
         NudgeHostFixture.settle()
         try #require(fixture.host.todaysUsage().accusationsToday == 1)
         try #require(fixture.host.todaysUsage().interruptionsToday == 1)
 
         fixture.menuBar.closePopover()
         NudgeHostFixture.settle()
-        try MenuBarStage.open(
+        let opened2 = try MenuBarStage.open(
             fixture.menuBar,
             showing: NudgeHostFixture.menuBarPresentation(of: fixture.host),
             install: false
         )
+        guard MenuBarStage.taken(opened2) else { return }
         NudgeHostFixture.settle()
         // And the loop is asked directly, twice more, which is what a redraw does.
         fixture.host.popoverPresented()
@@ -474,10 +477,11 @@ struct NudgeHostBadgeAccusationTests {
 
         Self.climbToTheBadge(fixture, via: .reducedInterruption)
         let stranded = try #require(fixture.host.pendingPopoverAccusation)
-        try MenuBarStage.open(
+        let opened = try MenuBarStage.open(
             fixture.menuBar,
             showing: MenuBarPresentation(status: .unrelated, pendingAccusation: stranded)
         )
+        guard MenuBarStage.taken(opened) else { return }
         NudgeHostFixture.settle()
         try #require(fixture.menuBar.isDrawing(.accusation))
 
@@ -501,10 +505,11 @@ struct NudgeHostBadgeAccusationTests {
     }
 
     static func openThePopoverOnTheBadge(_ fixture: NudgeHostFixture) throws {
-        try MenuBarStage.open(
+        let opened2 = try MenuBarStage.open(
             fixture.menuBar,
             showing: NudgeHostFixture.menuBarPresentation(of: fixture.host)
         )
+        guard MenuBarStage.taken(opened2) else { return }
         NudgeHostFixture.settle()
     }
 

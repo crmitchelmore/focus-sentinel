@@ -49,11 +49,12 @@ struct MenuBarPopoverTests {
         var announcements = 0
 
         // The click, on a popover carrying no question.
-        try MenuBarStage.open(
+        let opened = try MenuBarStage.open(
             controller,
             showing: MenuBarPresentation(status: .uncertain),
             onDidShow: { announcements += 1 }
         )
+        guard MenuBarStage.taken(opened) else { return }
 
         #expect(controller.isPopoverShown)
         // **Both halves of the reading.** The popover is open, and it is showing snoozes and a
@@ -90,11 +91,12 @@ struct MenuBarPopoverTests {
         fixture.host.choose(reducedInterruption: true)
 
         // The popover is opened first, on nothing in particular.
-        try MenuBarStage.open(
+        let opened = try MenuBarStage.open(
             fixture.menuBar,
             showing: MenuBarPresentation(status: .uncertain),
             onDidShow: { fixture.host.popoverPresented() }
         )
+        guard MenuBarStage.taken(opened) else { return }
         #expect(fixture.host.deliveredCount == 0)
 
         // Then the question is routed to the badge…
@@ -142,11 +144,12 @@ struct MenuBarPopoverTests {
         defer { fixture.tearDown() }
         fixture.host.choose(reducedInterruption: true)
 
-        try MenuBarStage.open(
+        let opened = try MenuBarStage.open(
             fixture.menuBar,
             showing: NudgeHostFixture.menuBarPresentation(of: fixture.host),
             onDidShow: { fixture.host.popoverPresented() }
         )
+        guard MenuBarStage.taken(opened) else { return }
         try #require(fixture.menuBar.isPopoverShown)
         // One tick to settle on the projection: the stage's own retries may have opened the
         // popover on an earlier value, and what is being measured is the ticks after that.

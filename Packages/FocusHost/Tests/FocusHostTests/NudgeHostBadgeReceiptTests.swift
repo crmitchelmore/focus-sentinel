@@ -42,10 +42,11 @@ struct NudgeHostBadgeReceiptTests {
             fixture.host.pendingPopoverQuery != nil,
             "the question did not reach the badge, so this drives nothing"
         )
-        try MenuBarStage.open(
+        let opened = try MenuBarStage.open(
             fixture.menuBar,
             showing: NudgeHostFixture.menuBarPresentation(of: fixture.host)
         )
+        guard MenuBarStage.taken(opened) else { return }
         NudgeHostFixture.settle()
         try #require(
             fixture.menuBar.isDrawing(.query),
