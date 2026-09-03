@@ -579,6 +579,24 @@ enum SelfCheck {
         // **Last of everything, because it shuts the cockpit and asks for it back**
         // (focus-odz.1). Every reading above describes a window this probe then closes, so it
         // cannot run anywhere else in this function without describing a different app.
+        // **What this build calls itself** (focus-odz.3), read straight from the bundle rather
+        // than through the Settings connection, so the pin below compares two readings of one
+        // artefact rather than one reading of itself.
+        root["bundleVersion"] = AppVersion.rendered(bundle: .main)
+        root["bundleShortVersionString"] =
+            Bundle.main.object(forInfoDictionaryKey: AppVersion.shortVersionKey) as? String ?? ""
+        root["bundleBuild"] =
+            Bundle.main.object(forInfoDictionaryKey: AppVersion.buildKey) as? String ?? ""
+        // **What the About panel is really handed** (focus-odz.3), taken from the option
+        // dictionary `AboutPanel.present()` passes rather than from the catalog a second time.
+        // The unit lane cannot read this: under `swift test` SwiftPM copies String Catalogs
+        // instead of compiling them, so `ShellStrings.string(_:)` answers the key back there and
+        // "the credits resolved" is unassertable.
+        //
+        // What no lane can observe is the SwiftUI `Button` body in `ShellCommands` that calls
+        // `present()`: it is a closure in a `Commands` result builder, which is the same
+        // unreachable shape `App/` is, and it has no receipt. Stated here rather than implied.
+        root["aboutCredits"] = (AboutPanel.options()[.credits] as? NSAttributedString)?.string ?? ""
         root["reopen"] = reopenReport()
         return root
     }
@@ -2812,6 +2830,14 @@ enum SelfCheck {
         // so this walks all three and each pane reports what it drew. They accumulate against one
         // issue of the connection, which is what `generation` establishes.
         report["settingsPanesWalked"] = walkSettingsPanes()
+        // **The version the General pane really drew** (focus-odz.3).
+        //
+        // `drewWhatTheAppKnows` already says the pane agreed with the composition root, and that
+        // is not the whole claim: the root and the pane could agree on a constant. This is the
+        // string on the screen, and the gate pins it against `Bundle.main`'s own answer read
+        // outside the connection — two independent readings of one artefact.
+        report["settingsDrewnVersion"] =
+            composition.shellRenderings[.settings]?[.appVersion] ?? ""
 
         report["driveSetPreference"] = driveAppearanceSink()
         report["driveInterventionSink"] = driveInterventionSink()

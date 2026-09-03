@@ -1088,6 +1088,67 @@ print(
     f"system={shell.get('appearanceSystemColorScheme')!r}"
 )
 
+# --- About, and the build a person can quote (focus-odz.3) ------------------------------------
+#
+# Nothing in the programme read `CFBundleShortVersionString` before this, so a defect report
+# against "Focus Sentinel" named no artefact at all. The version now has one home in the app — the
+# General pane, beside the appearance preference — and the About panel, which SwiftUI already put
+# in the app menu, now opens with the credits paragraph rather than an icon and two numbers.
+#
+# **The pin is two independent readings of one artefact.** `drewWhatTheAppKnows` above already
+# says the pane agreed with the composition root, and that is satisfied by a root and a pane
+# agreeing on a constant; `bundleVersion` is read straight from `Bundle.main` outside the
+# connection, and the string below is what the pane put on the screen.
+
+check(
+    report.get("bundleShortVersionString") == "0.1.0",
+    "the built product carries the committed marketing version",
+    report.get("bundleShortVersionString"),
+)
+check(
+    bool(report.get("bundleBuild")),
+    "the built product carries a build number",
+    report.get("bundleBuild"),
+)
+check(
+    report.get("bundleVersion")
+    == f"{report.get('bundleShortVersionString')} ({report.get('bundleBuild')})",
+    "the version sentence is the marketing version with the build in brackets",
+    report.get("bundleVersion"),
+)
+check(
+    report.get("settingsDrewnVersion") == report.get("bundleVersion"),
+    "the version the General pane drew is the version this build calls itself",
+    (report.get("settingsDrewnVersion"), report.get("bundleVersion")),
+)
+# Non-vacuity for the line above: two empty strings are equal, and would be.
+check(
+    bool(report.get("settingsDrewnVersion")),
+    "the General pane drew a version at all",
+    report.get("settingsDrewnVersion"),
+)
+# **The credits the About panel is really handed**, read out of the option dictionary
+# `AboutPanel.present()` passes — not out of the catalog a second time. No unit lane can take this
+# reading: under `swift test` SwiftPM copies String Catalogs rather than compiling them, so
+# `ShellStrings.string(_:)` answers the key back there and "the credits resolved" is unassertable.
+#
+# The app menu already holds an item titled *About Focus Sentinel* — asserted above, and true of
+# AppKit's own item as well as of this one, so the title cannot tell them apart. What this says is
+# that the panel the item opens has a paragraph in it.
+credits = report.get("aboutCredits") or ""
+check(
+    credits != "shell.about.credits" and len(credits) > 120,
+    "the About panel's credits resolve to a paragraph rather than to their own key",
+    credits[:80],
+)
+# It says the thing the product is about. A credits paragraph that stopped naming the boundary
+# would be a panel drawn for its own sake.
+check(
+    "no permissions" in credits and "stays on this Mac" in credits,
+    "the About panel says what the app does not look at and where what it records stays",
+    credits,
+)
+
 # --- the status item's secondary menu (focus-odz.2) -------------------------------------------
 #
 # The item had one gesture. A left click toggles the popover, and the popover has no Quit, no
@@ -1427,7 +1488,8 @@ check(
 # instructed a person to add an app the application offered no way to add (focus-1qm). A floor
 # lowered because a value was deleted is a different act from one lowered because a value stopped
 # arriving, and this is the first kind.
-for surface, floor in [("cockpit", 18), ("settings", 14), ("help", 2)]:
+# The settings floor is 15 and was 14: focus-odz.3 added the version the General pane draws.
+for surface, floor in [("cockpit", 18), ("settings", 15), ("help", 2)]:
     reading = readings.get(surface) or {}
     check(
         isinstance(reading.get("expectedFieldCount"), int)

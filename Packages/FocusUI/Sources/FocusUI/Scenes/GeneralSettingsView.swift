@@ -24,13 +24,22 @@ extension AppearancePreference {
 /// lane render this pane with no store at all.
 public struct GeneralSettingsView: View {
     @Binding private var preference: AppearancePreference
+    /// **Which build this is** (focus-odz.3). Handed in, never read from `Bundle.main` here: a
+    /// pane that read its own would draw the test runner's version in the unit lane and Xcode's
+    /// in a preview, so the one bundle that matters is read by the composition root.
+    private let appVersion: String
 
     @Environment(\.appearanceTraits) private var traits
+    @Environment(\.shellTextScale) private var textScale
     @FocusState private var focus: FocusField?
     @ScaledMetric(relativeTo: .body) private var spacing: CGFloat = 12
 
-    public init(preference: Binding<AppearancePreference>) {
+    public init(
+        preference: Binding<AppearancePreference>,
+        appVersion: String = AppVersion.rendered(bundle: .main)
+    ) {
         self._preference = preference
+        self.appVersion = appVersion
     }
 
     /// Every option the picker offers, in the order it offers them.
@@ -56,6 +65,21 @@ public struct GeneralSettingsView: View {
                 .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
                 .lineLimit(nil)
                 .fixedSize(horizontal: false, vertical: true)
+
+            // **The build a person can quote in a defect report** (focus-odz.3).
+            //
+            // `LabeledContent` rather than two `Text`s in an `HStack`: it is the Settings idiom,
+            // it aligns with the picker above it, and it gives VoiceOver a label for the number.
+            // The number itself is `verbatim` because it is data, not prose — the same reason the
+            // Privacy pane's store path is (registered in `Config/verbatim-sites.txt`).
+            LabeledContent {
+                Text(verbatim: appVersion)
+                    .font(DesignTokens.font(.footnote, scale: textScale))
+                    .textSelection(.enabled)
+            } label: {
+                ShellText(.settingsGeneralVersion, role: .footnote)
+                    .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+            }
         }
         // The *columns* form style — SwiftUI's default on macOS — rather than `.grouped`.
         // Measured: a grouped form is List-backed and rasterises to a solid rectangle under
@@ -67,5 +91,8 @@ public struct GeneralSettingsView: View {
         // What this pane drew, reported by this pane rather than by the window that built it
         // (focus-7ow). The picker's selection *is* the binding, so this is the value on screen.
         .shellRendered(.appearancePreference, preference.rawValue)
+        // Reported by the pane that drew it, not by the window that built it: a mutation that
+        // hands this pane a constant is invisible to a receipt taken anywhere else (focus-7ow).
+        .shellRendered(.appVersion, appVersion)
     }
 }

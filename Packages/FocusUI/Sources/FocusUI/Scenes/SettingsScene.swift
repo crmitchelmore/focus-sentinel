@@ -55,6 +55,13 @@ public struct ShellSettingsConnection {
     /// store. One verb, in `FocusHost`, so there is nothing left in the scene to forget.
     public let setPreference: @MainActor (AppearancePreference) -> Void
     public let storeURL: URL
+    /// **Which build this is**, already rendered (focus-odz.3).
+    ///
+    /// A string rather than a `Bundle`, because `Bundle.main` in a test process is the test
+    /// runner's and in a preview is Xcode's — so a pane that read it directly would draw a
+    /// different answer in every lane that looks at it. The composition root reads the one bundle
+    /// that matters and hands the sentence over, exactly as it does the store path beside it.
+    public let appVersion: String
     public let summary: SensingSummary
     public let capabilities: CapabilityMatrix
     public let verdict: VerdictSnapshot?
@@ -100,6 +107,7 @@ public struct ShellSettingsConnection {
         preference: AppearancePreference,
         setPreference: @escaping @MainActor (AppearancePreference) -> Void,
         storeURL: URL,
+        appVersion: String = AppVersion.rendered(bundle: .main),
         summary: SensingSummary,
         capabilities: CapabilityMatrix,
         verdict: VerdictSnapshot?,
@@ -114,6 +122,7 @@ public struct ShellSettingsConnection {
         self.preference = preference
         self.setPreference = setPreference
         self.storeURL = storeURL
+        self.appVersion = appVersion
         self.summary = summary
         self.capabilities = capabilities
         self.verdict = verdict
@@ -140,6 +149,7 @@ extension ShellSettingsConnection: ShellDrawnConnection {
             "preference": .drawn([.appearancePreference]),
             "setPreference": .undrawn(.sink),
             "storeURL": .drawn([.privacyStorePath]),
+            "appVersion": .drawn([.appVersion]),
             "summary": .drawn([.privacySummary, .sensingDetail]),
             "capabilities": .drawn([.privacyCapabilities]),
             "verdict": .drawn([.verdictBand, .verdictDetail]),
@@ -288,6 +298,8 @@ public struct ShellSettingsView: View {
     private let summary: SensingSummary
     private let capabilities: CapabilityMatrix
     private let verdict: VerdictSnapshot?
+    /// Which build this is, already rendered by whoever read the one bundle that matters.
+    private let appVersion: String
     private let intervention: InterventionSettings
     private let onInterventionAction: (InterventionSettingsAction) -> Void
     /// Which pane is on screen. A `Binding` over the composition root's own value, never a
@@ -305,6 +317,7 @@ public struct ShellSettingsView: View {
     public init(
         preference: Binding<AppearancePreference>,
         storeURL: URL,
+        appVersion: String = AppVersion.rendered(bundle: .main),
         summary: SensingSummary = .inactive,
         capabilities: CapabilityMatrix = CapabilityMatrix(),
         verdict: VerdictSnapshot? = nil,
@@ -314,6 +327,7 @@ public struct ShellSettingsView: View {
     ) {
         self._preference = preference
         self.storeURL = storeURL
+        self.appVersion = appVersion
         self.summary = summary
         self.capabilities = capabilities
         self.verdict = verdict
@@ -337,6 +351,7 @@ public struct ShellSettingsView: View {
             set: { connection.setPreference($0) }
         )
         self.storeURL = connection.storeURL
+        self.appVersion = connection.appVersion
         self.summary = connection.summary
         self.capabilities = connection.capabilities
         self.verdict = connection.verdict
@@ -357,7 +372,7 @@ public struct ShellSettingsView: View {
         // fail the same assertion as one that never asked.
         let _ = didRender?()
         TabView(selection: $selectedTab) {
-            GeneralSettingsView(preference: $preference)
+            GeneralSettingsView(preference: $preference, appVersion: appVersion)
                 .tabItem { tabLabel(.general) }
                 .tag(SettingsTab.general)
 

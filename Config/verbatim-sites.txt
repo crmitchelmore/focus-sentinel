@@ -71,3 +71,4 @@ Packages/FocusUI/Sources/FocusUI/Scenes/InterventionSettingsView.swift | Self.re
 Packages/FocusUI/Sources/FocusUI/Scenes/RecentPrioritiesView.swift | row.contextItemCount.formatted()) | NUMBER how many context items a past priority had
 Packages/FocusUI/Sources/FocusUI/Sensing/SensingStatusView.swift | value.formatted()) | NUMBER one sensing reading
 Packages/FocusUI/Sources/FocusUI/Scenes/TimeboxControl.swift | Self.formatPreset(.seconds(seconds))) | NUMBER a timebox preset's length
+Packages/FocusUI/Sources/FocusUI/Scenes/GeneralSettingsView.swift | appVersion) | NUMBER the version and build this copy was made from, selectable so it can be quoted in a defect report (focus-odz.3)

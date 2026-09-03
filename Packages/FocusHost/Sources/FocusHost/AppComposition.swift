@@ -1506,8 +1506,14 @@ public final class AppComposition {
         let generation = nextGeneration(for: .settings)
 
         let storeURL = FocusStore.applicationSupportURL
+        // **The one bundle whose version means anything** (focus-odz.3). Read here rather than in
+        // the pane, because `Bundle.main` in the unit lane is the test runner's and in a preview
+        // is Xcode's — a pane that read its own would draw a different answer in every lane that
+        // looks at it, and the gate would be pinning the harness rather than the product.
+        let version = AppVersion.rendered(bundle: .main)
 
         expect(.appearancePreference, preference.rawValue, for: .settings)
+        expect(.appVersion, version, for: .settings)
         expect(.privacyCapabilities, matrix.renderedDescription, for: .settings)
         // Where the Privacy pane tells the person their data lives, and what its Reveal in Finder
         // button opens. A mutation printed `/` and nothing anywhere noticed (focus-7ow).
@@ -1553,6 +1559,7 @@ public final class AppComposition {
                 self?.applyAppearancePreference(preference)
             },
             storeURL: storeURL,
+            appVersion: version,
             summary: summary,
             capabilities: matrix,
             verdict: currentVerdict,

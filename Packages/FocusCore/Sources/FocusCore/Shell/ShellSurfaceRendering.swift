@@ -98,6 +98,13 @@ public enum ShellRenderedField: String, Sendable, CaseIterable, Codable, Hashabl
     case interruptionUsage
     /// The appearance the General pane's picker drew as selected.
     case appearancePreference
+    /// **The build a person is looking at**, as the General pane drew it (focus-odz.3).
+    ///
+    /// Nothing in the programme read `CFBundleShortVersionString` before this, so a defect report
+    /// against "Focus Sentinel" named no artefact. It is reported by the pane rather than by the
+    /// window for `privacyStorePath`'s reason: a mutation that hands the pane a constant is
+    /// invisible to a receipt taken anywhere but where the string is drawn.
+    case appVersion
     /// **Which pane is on screen** (focus-7ow).
     ///
     /// A macOS `TabView` builds only the selected pane, so before this existed every stamp inside

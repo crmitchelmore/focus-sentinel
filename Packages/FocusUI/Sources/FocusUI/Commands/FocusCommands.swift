@@ -3,7 +3,7 @@ import SwiftUI
 
 /// The menu bar, built from the command registry.
 ///
-/// Two groups, and both exist because a measurement said so:
+/// Three groups, and each exists because a measurement or a product claim said so:
 ///
 /// * `.newItem` is replaced by the registry's `file` actions. With that group left empty —
 ///   or holding only a `Divider()`, or left at SwiftUI's defaults — a `Window`-scene app has
@@ -12,6 +12,11 @@ import SwiftUI
 /// * `.help` is replaced by the registry's `help` actions, because SwiftUI's default Help
 ///   item opens a help book this app does not ship. A menu item that leads nowhere is a
 ///   defect, and this is the fix.
+///
+/// * `.appInfo` is replaced so the standard About panel is opened with credits from the
+///   catalog. SwiftUI's own item already opens that panel; what it opened was an icon, a name
+///   and two numbers, for an app whose whole product claim is what it does not look at
+///   (focus-odz.3).
 ///
 /// Nothing else is customised. Edit, View and Window are the system's, and an app that
 /// rewrites them for no reason is less Mac-native, not more.
@@ -30,6 +35,28 @@ public struct ShellCommands: Commands {
     }
 
     public var body: some Commands {
+        // **The About item, replaced rather than left to SwiftUI** (focus-odz.3).
+        //
+        // SwiftUI's own already opens `orderFrontStandardAboutPanel`, so the defect is not that
+        // the item does nothing — it is that the panel it opens says nothing. For an app whose
+        // whole product claim is what it does *not* look at, the one screen every Mac user knows
+        // how to find carried an icon, a name and two numbers. This is the same standard panel
+        // with the credits paragraph from the catalog, and a title that is a catalog key like
+        // every other menu item's.
+        //
+        // It is deliberately **not** a `CommandRegistry` action. The registry is the table the
+        // Keyboard Shortcuts window is built from and the table `KeyboardReachabilityTests` folds
+        // over key equivalents; About has no shortcut, belongs to no menu the reference groups by,
+        // and opens an AppKit panel rather than a declared scene. Adding a `.app` placement for it
+        // would give the shortcut reference a heading with one unbound row under it.
+        CommandGroup(replacing: .appInfo) {
+            Button {
+                AboutPanel.present()
+            } label: {
+                Text(ShellStrings.resource(.commandAbout))
+            }
+        }
+
         CommandGroup(replacing: .newItem) {
             // **The application's one route to the cockpit window, handed to the one object that
             // needs it** (focus-mwm).

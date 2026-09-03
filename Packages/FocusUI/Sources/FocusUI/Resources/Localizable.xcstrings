@@ -2353,6 +2353,18 @@
         }
       }
     },
+    "settings.general.version" : {
+      "comment" : "General settings: the label beside the version this copy of the app was built from.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Version"
+          }
+        }
+      }
+    },
     "settings.general.title" : {
       "comment" : "Title of the General settings tab.",
       "extractionState" : "manual",
@@ -3085,6 +3097,18 @@
         }
       }
     },
+    "shell.about.credits" : {
+      "comment" : "The About panel's credits paragraph: what the app is, and the privacy posture that is the whole shape of the product.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus Sentinel keeps one commitment in front of you and speaks up when the screen stops matching it. It reads which application is frontmost and nothing else \u2014 no window titles, no addresses, no file names, nothing typed \u2014 it asks for no permissions, and everything it records stays on this Mac."
+          }
+        }
+      }
+    },
     "shell.command.addFilesToContext" : {
       "comment" : "File menu item that opens the file importer for the current priority's context pack.",
       "extractionState" : "manual",
@@ -3093,6 +3117,18 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Add Files to Context…"
+          }
+        }
+      }
+    },
+    "shell.command.about" : {
+      "comment" : "App menu item that opens the standard About panel.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "About Focus Sentinel"
           }
         }
       }

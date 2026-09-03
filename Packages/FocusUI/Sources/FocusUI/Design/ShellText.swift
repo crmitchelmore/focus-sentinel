@@ -59,6 +59,9 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case commandHelp = "shell.command.help"
     case commandNewPriority = "shell.command.newPriority"
     case commandAddFilesToContext = "shell.command.addFilesToContext"
+    /// The app menu's About item, replacing SwiftUI's — which draws a title this app's catalog
+    /// does not own and opens a panel with nothing in it (focus-odz.3).
+    case commandAbout = "shell.command.about"
     /// F-119's switch, as a menu verb. The cockpit's control reads positively ("Watch what I
     /// am working on"); a menu item has to name the *act*, so this one does.
     case commandPauseSensing = "shell.command.pauseSensing"
@@ -78,6 +81,8 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case cockpitStoreUnavailable = "shell.cockpit.store.unavailable"
     /// The store opened and refused the last write. Transient, and what is on disk is intact.
     case cockpitStoreWriteFailed = "shell.cockpit.store.writeFailed"
+    /// The About panel's credits paragraph (focus-odz.3).
+    case aboutCredits = "shell.about.credits"
     case cockpitStoreSheetTitle = "shell.cockpit.store.sheet.title"
     case cockpitStoreSheetWhatHappened = "shell.cockpit.store.sheet.whatHappened"
     case cockpitStoreSheetLocation = "shell.cockpit.store.sheet.location"
@@ -198,6 +203,8 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case settingsAppearanceLight = "settings.appearance.light"
     case settingsAppearanceDark = "settings.appearance.dark"
     case settingsAppearanceNote = "settings.appearance.note"
+    /// The label beside the build a person is looking at (focus-odz.3).
+    case settingsGeneralVersion = "settings.general.version"
     case settingsPrivacyStatement = "settings.privacy.statement"
     case settingsPrivacyStoreLabel = "settings.privacy.storeLabel"
     case settingsPrivacyReveal = "settings.privacy.reveal"
