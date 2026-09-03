@@ -1,0 +1,55 @@
+{
+  "_comment" : "NOT A SHIPPING CATALOG. This is the red-proof for R-96t and R-96v in scripts/check-forbidden.sh: one violation of each kind the pair can name, in the shape of a String Catalog, so that a gate run watches both checks fail as well as pass. A lint whose failure nobody has ever seen is a lint nobody has evidence for. Nothing loads this file at runtime and no bundle carries it; the keys use real deck names on purpose, because the fold's scope is read from NudgeVoice.swift and a fixture with invented deck names would be skipped rather than rejected. Do not fix these lines.",
+  "sourceLanguage" : "en",
+  "strings" : {
+    "nudge.attention.waiting" : {
+      "comment" : "VIOLATION (R-96t): a second-person possessive outside the deck matrix, so the fold is proved to reach nudge.attention.* as well.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waiting for your answer."
+          }
+        }
+      }
+    },
+    "nudge.neutral.accusation.panel.body" : {
+      "comment" : "VIOLATION (R-96t): the person as grammatical subject, with the typographic apostrophe the catalog really ships, so the check is proved to normalise it.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You’ve been in %@ for %@."
+          }
+        }
+      }
+    },
+    "nudge.neutral.accusation.panel.title" : {
+      "comment" : "VIOLATION (R-96v): an accusation wearing a question mark.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Still working on %@?"
+          }
+        }
+      }
+    },
+    "nudge.neutral.query.panel.title" : {
+      "comment" : "VIOLATION (R-96v): a question that does not ask.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ is part of %@."
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

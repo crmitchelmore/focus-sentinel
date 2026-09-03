@@ -97,18 +97,88 @@ struct NudgeVoiceTests {
         }
     }
 
-    /// The Court's adopted default, asserted **by its exact words**, because F-66 chose them
-    /// and D-11 makes the copy static precisely so a choice like this can be checked.
-    @Test("the default voice says what the Court adopted")
+    /// The default deck, asserted **by its exact words**, because D-11 makes the copy static
+    /// precisely so a choice like this can be checked.
+    ///
+    /// **F-66's accusation title is gone, and that is a ruling rather than a drift**
+    /// (focus-0nm). "Still working on %@?" was an accusation wearing a question mark: the app
+    /// protects one question mark, the real question, and a person who has learned that it
+    /// means "Focus needs a rule" must never be shown one that means "you have drifted". R-96v
+    /// now fails the gate on it. The **question's** title is untouched — it was already right,
+    /// and a voice that rewrites a correct line to sound distinctive has the wrong priorities.
+    @Test("the default voice says what the ruling adopted")
     func theDefaultVoiceIsTheCourts() throws {
         let values = try Self.catalogValues()
+        let title = values[NudgeVoice.neutral.key(.accusationPanelTitle)]
+        #expect(title == "\u{201C}%@\u{201D} is waiting.")
         #expect(
-            values[NudgeVoice.neutral.key(.accusationPanelTitle)] == "Still working on %@?"
+            title?.hasSuffix("?") == false,
+            "the accusation is a statement; only the question asks (R-96v)"
         )
         #expect(values[NudgeVoice.neutral.key(.queryPanelTitle)] == "Is %@ part of %@?")
         #expect(values[NudgeVoice.neutral.key(.queryActionYes)] == "Yes, add it")
-        #expect(values[NudgeVoice.neutral.key(.queryActionNo)] == "No")
-        #expect(values[NudgeVoice.neutral.key(.queryActionNotNow)] == "Not now")
+        #expect(values[NudgeVoice.neutral.key(.queryActionNo)] == "No, it isn\u{2019}t")
+        #expect(values[NudgeVoice.neutral.key(.queryActionNotNow)] == "Ask later")
+    }
+
+    /// **The person is never the grammatical subject** (R-96t, focus-0nm).
+    ///
+    /// The single most load-bearing rule in e11's direction, and the one the shipped default
+    /// deck broke: `nudge.neutral.accusation.panel.body` read "You've been in %@ for %@." — a
+    /// report on the person rather than on the screen. An instrument names what is in front of
+    /// it and holds no opinion about whoever is reading it. `check-forbidden.sh` runs the same
+    /// fold over the committed catalog as a gate stage; this runs it here so a deck author sees
+    /// it before the gate does.
+    ///
+    /// Both apostrophes, because the catalog ships the typographic one and a check that only
+    /// knew the ASCII form would have been green on the very line it was written for.
+    @Test("the person is never the grammatical subject of a line the app says")
+    func noDeckLineMakesThePersonTheSubject() throws {
+        let values = try Self.catalogValues()
+        let secondPerson = [
+            "you", "you'", "your", "yours", "yourself",
+        ]
+
+        var checked = 0
+        for voice in NudgeVoice.allCases {
+            for line in NudgeCopyKey.allCases {
+                let key = voice.key(line)
+                let value = try #require(values[key])
+                    .replacingOccurrences(of: "\u{2019}", with: "'")
+                    .lowercased()
+                checked += 1
+                let words = value.split(whereSeparator: { !$0.isLetter && $0 != "'" })
+                for word in words {
+                    #expect(
+                        !secondPerson.contains(String(word)),
+                        "\(key) makes the person the subject: \(value)"
+                    )
+                }
+            }
+        }
+        #expect(checked == NudgeVoice.matrix.count, "the fold stopped covering the matrix")
+    }
+
+    /// **Grammar is the channel** (R-96v, focus-0nm).
+    ///
+    /// The accusation is a statement; the question is a question. This is the sharpest available
+    /// operationalisation of "a question is never an accusation", a rule this repository has held
+    /// in prose since F-65 and could not check. It was red on three of the four decks.
+    @Test("an accusation never wears a question mark, and a question always asks")
+    func grammarIsTheChannel() throws {
+        let values = try Self.catalogValues()
+        for voice in NudgeVoice.allCases {
+            let accusation = try #require(values[voice.key(.accusationPanelTitle)])
+            let question = try #require(values[voice.key(.queryPanelTitle)])
+            #expect(
+                !accusation.hasSuffix("?"),
+                "\(voice.rawValue)'s accusation wears a question mark: \(accusation)"
+            )
+            #expect(
+                question.hasSuffix("?"),
+                "\(voice.rawValue)'s question does not ask: \(question)"
+            )
+        }
     }
 
     /// **The question never accuses.** A small, blunt word list, deliberately blunt, because

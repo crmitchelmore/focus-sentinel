@@ -909,6 +909,25 @@ check_outside "R-70n" "no rule is constructed with the session scope" \
 # R-96f  No string under `nudge.*.query.*` matches the accusatory word list. D-11 made the
 #        copy static precisely so it could be checked; tone is the product.
 #
+# R-96t  **The person is never the grammatical subject** (focus-0nm, e11's rule 1). No line the
+#        app can say to somebody carries a second-person token — `you`, `your`, `yourself` and
+#        their contractions — over every `nudge.<deck>.*` key, `nudge.attention.*` and
+#        `nudge.query.reason.*`. An instrument reports what is in front of it; it holds no
+#        opinion about the person reading it, and the shipped default deck said "You've been in
+#        %@ for %@." R-96f could not grow into this: it is query-only by construction and its
+#        word list has no second-person entry, so this is a sibling and R-96f stays as it was.
+#        No allow-list — an exception is how a word list dies.
+#
+# R-96v  **Grammar is the channel** (focus-0nm, e11's rule 2). An accusation's panel title never
+#        ends in `?`; a question's panel title always does. "A question is never an accusation"
+#        is a rule the repository has held in prose since F-65 and could not check. A person who
+#        has learned that a question mark means "Focus needs a rule" must never be shown one
+#        that means "you have drifted" — and the shipped default accusation title was "Still
+#        working on %@?".
+#
+#        Both fold over the WHOLE deck space rather than the default deck, and both are proved
+#        against a committed violation fixture, so neither can pass by having stopped looking.
+#
 # R-96g  `requestAuthorization(` appears in NO file (focus-wy0). It was pinned to one — the
 #        Intervention pane's enable button — until that button was found to be asking for a
 #        permission no rung can spend. P-134 proved the router needs only
@@ -1050,8 +1069,14 @@ PANEL_BEHAVIOUR_FILE="Packages/FocusUI/Sources/FocusUI/Nudge/NudgePanel.swift"
 # no `AUTHORISATION_ALLOWED_FILE` to name. It was the Intervention settings pane; the button it
 # held asked for a permission no rung could spend, and went with the section that drew it.
 
-# The String Catalog the decks live in (R-96f).
+# The String Catalog the decks live in (R-96f, R-96t, R-96v).
 NUDGE_CATALOG="Packages/FocusCore/Sources/FocusCore/Resources/Localizable.xcstrings"
+# The enum whose cases name the deck segment of a key (R-96t, R-96v read it rather than holding
+# a fifth copy of the vocabulary).
+NUDGE_VOICE_SOURCE="Packages/FocusCore/Sources/FocusCore/Nudge/NudgeVoice.swift"
+# One violation of each kind both checks can make, committed so the checks are red-proofed for
+# ever rather than only on the day they were written.
+NUDGE_VIOLATION_FIXTURE="Config/fixtures/nudge-catalog-violations.json"
 
 # Echo the arguments that name something that exists. A check whose whole search set has
 # vanished prints so rather than passing in silence.
@@ -1324,6 +1349,195 @@ print(f"ok   [R-96f] {checked} nudge query line(s) checked, none accusatory")
 PYTHON
 tone_rc=$?
 (( tone_rc != 0 )) && rc=1
+
+# R-96t and R-96v — the two rules the deck copy is generated from, checked (focus-0nm).
+#
+# Beside R-96f rather than in a script of its own, so that every word list this repository
+# holds about the nudge's tone exists in one file. R-96f itself is untouched: it is query-only
+# by construction — its fold filters `".query." not in key` away — and its word list has no
+# second-person entry, so "You've been in %@ for %@." passed it every day it shipped. Growing
+# it to cover the accusation would have changed what R-96f means, which is the wrong repair to
+# a rule that is doing its own job correctly.
+#
+# The vocabulary is read from `NudgeVoice.swift` rather than written here, for the reason
+# `check-strings.sh` reads it: a list here would be the fifth place the decks are written down,
+# and it would go stale in exactly the direction that makes a fold quietly stop covering a deck.
+#
+# **Both are proved against a committed fixture.** A lint over a catalog that has been made
+# clean is a lint whose failure nobody has ever seen. `Config/fixtures/nudge-catalog-violations.json`
+# holds one violation of each kind these two can name, and the check below must go red on it.
+print
+print "== R-96t/R-96v: the person is never the subject, and grammar is the channel"
+voice_lint_script="$(mktemp -t focus-voice-lint)"
+cat > "$voice_lint_script" <<'PYTHON'
+import json
+import re
+import sys
+
+# Second person, in every shape English spells it. Word-boundary and case-insensitive, over a
+# text whose typographic apostrophes have been normalised first — the catalog ships "You’ve",
+# not "You've", and a check that only knew the ASCII form would have been green on the very
+# line it was written for. NO ALLOW-LIST: an exception is how a word list dies.
+SECOND_PERSON = (
+    "you", "you're", "you've", "you'd", "you'll",
+    "your", "yours", "yourself",
+)
+SECOND_PERSON_PATTERN = re.compile(
+    r"\b(?:%s)\b" % "|".join(re.escape(word) for word in SECOND_PERSON),
+    re.IGNORECASE,
+)
+
+CASE_DECLARATION = re.compile(r"^\s*case\s+([A-Za-z_][A-Za-z0-9_]*)(?:\s*=\s*\"([^\"]*)\")?")
+COMMENT = re.compile(r"^\s*(//|/\*|\*)")
+
+
+def deck_names(path):
+    """The raw values of `enum NudgeVoice`, in declaration order."""
+    values = []
+    inside = False
+    depth = 0
+    with open(path) as handle:
+        for line in handle:
+            if not inside:
+                if re.search(r"\benum\s+NudgeVoice\b", line) and not COMMENT.match(line):
+                    inside = True
+                    depth = line.count("{") - line.count("}")
+                continue
+            if COMMENT.match(line):
+                continue
+            found = CASE_DECLARATION.match(line)
+            if found:
+                values.append(found.group(2) or found.group(1))
+            depth += line.count("{") - line.count("}")
+            if depth <= 0:
+                break
+    return values
+
+
+catalog_path, voice_source, label = sys.argv[1], sys.argv[2], sys.argv[3]
+decks = set(deck_names(voice_source))
+if not decks:
+    print(f"FAIL [{label}] no NudgeVoice cases found — has the enum been renamed?", file=sys.stderr)
+    sys.exit(1)
+
+with open(catalog_path) as handle:
+    catalog = json.load(handle)
+
+
+def english(entry):
+    return entry.get("localizations", {}).get("en", {}).get("stringUnit", {}).get("value", "")
+
+
+def in_scope(key):
+    """Every line the app can say in a nudge.
+
+    The deck matrix, plus the two single-vocabulary namespaces that are also nudge copy: the
+    menu-bar attention sentences and the reason a question gives for existing. `nudge.rung.*`
+    is settings-pane prose describing the ladder to the person, not a line said to them
+    mid-nudge, and is left to the pane's own review.
+    """
+    if not key.startswith("nudge."):
+        return False
+    segments = key.split(".")
+    if len(segments) > 2 and segments[1] in decks:
+        return True
+    return key.startswith("nudge.attention.") or key.startswith("nudge.query.reason.")
+
+
+subject_failures = []
+grammar_failures = []
+subject_checked = 0
+grammar_checked = 0
+
+for key, entry in sorted(catalog.get("strings", {}).items()):
+    if not in_scope(key):
+        continue
+    value = english(entry)
+    subject_checked += 1
+    normalised = value.replace("’", "'")
+    found = SECOND_PERSON_PATTERN.search(normalised)
+    if found:
+        subject_failures.append(f"{key}: {value!r} makes the person the subject ({found.group(0)!r})")
+
+    # Grammar is the channel. Only the two panel titles carry it: an action label is not a
+    # sentence and a scope line is not a channel, so widening this to every key would be a rule
+    # about punctuation rather than about which surface a person is looking at.
+    if key.endswith(".accusation.panel.title"):
+        grammar_checked += 1
+        if value.rstrip().endswith("?"):
+            grammar_failures.append(
+                f"{key}: {value!r} is an accusation wearing a question mark"
+            )
+    elif key.endswith(".query.panel.title"):
+        grammar_checked += 1
+        if not value.rstrip().endswith("?"):
+            grammar_failures.append(f"{key}: {value!r} is a question that does not ask")
+
+if subject_checked == 0 or grammar_checked == 0:
+    print(
+        f"FAIL [{label}] the fold covered {subject_checked} nudge line(s) and "
+        f"{grammar_checked} panel title(s) — it has stopped looking",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+for failure in subject_failures:
+    print(f"    [R-96t] {failure}", file=sys.stderr)
+for failure in grammar_failures:
+    print(f"    [R-96v] {failure}", file=sys.stderr)
+
+if subject_failures:
+    print(
+        "FAIL [R-96t] the person is the grammatical subject of a line this app says to them. "
+        "The application or the task is the subject; the person never is (D-11, focus-0nm).",
+        file=sys.stderr,
+    )
+if grammar_failures:
+    print(
+        "FAIL [R-96v] grammar is the channel. An accusation is a statement and a question is a "
+        "question; a person who has learned that a question mark means \"Focus needs a rule\" "
+        "must never be shown one that means \"you have drifted\" (F-65, focus-0nm).",
+        file=sys.stderr,
+    )
+if subject_failures or grammar_failures:
+    sys.exit(1)
+
+print(
+    f"ok   [R-96t] {subject_checked} nudge line(s) checked, the person is the subject of none"
+)
+print(f"ok   [R-96v] {grammar_checked} panel title(s) checked, each in its own grammar")
+PYTHON
+
+python3 "$voice_lint_script" "$NUDGE_CATALOG" "$NUDGE_VOICE_SOURCE" "R-96t/R-96v"
+voice_rc=$?
+(( voice_rc != 0 )) && rc=1
+
+# **And the same fold over the committed violation fixture, which it must reject.** Four
+# violations, one of each kind the pair can name. A lint nobody has watched fail is a lint
+# nobody has evidence for; this one is watched on every gate run.
+if [[ ! -f "$NUDGE_VIOLATION_FIXTURE" ]]; then
+    print -u2 "FAIL [R-96t/R-96v] the violation fixture $NUDGE_VIOLATION_FIXTURE is missing — the checks are unproved"
+    rc=1
+else
+    fixture_output="$(python3 "$voice_lint_script" "$NUDGE_VIOLATION_FIXTURE" "$NUDGE_VOICE_SOURCE" "fixture" 2>&1)"
+    fixture_rc=$?
+    if (( fixture_rc == 0 )); then
+        print -u2 "FAIL [R-96t/R-96v] the violation fixture passed both checks, so neither can go red"
+        rc=1
+    else
+        for expected in \
+            "makes the person the subject" \
+            "is an accusation wearing a question mark" \
+            "is a question that does not ask"; do
+            if [[ "$fixture_output" != *"$expected"* ]]; then
+                print -u2 "FAIL [R-96t/R-96v] the fixture did not produce \"$expected\" — one kind of violation is unwatched"
+                rc=1
+            fi
+        done
+        print "ok   [R-96t/R-96v] the violation fixture is rejected, one failure of each kind named"
+    fi
+fi
+rm -f "$voice_lint_script"
 
 # R-96o — the subject slot's content, which nothing guarded (focus-ebv).
 #
