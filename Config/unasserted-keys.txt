@@ -1,0 +1,30 @@
+# Self-check report keys the gate PUBLISHES and no reader ASSERTS (R-168).
+#
+# `scripts/check-published-keys.sh` fails the gate on a published key that no reader fetched and
+# that is not listed here. The list is linted in both directions, so it cannot become the gate's
+# off-switch: a row whose key is no longer published fails, and so does a row whose key IS now
+# read. Adding a key here is therefore a statement with a shelf life, not a suppression.
+#
+# Row shape, mirroring Config/test-floors.txt:
+#
+#     <dotted.path> · <one-line reason> · <bead id | NONE-BY-DESIGN>
+#
+# The dotted path is the one the publish walk emits: a list's elements share their list's path,
+# so `windows[].titled` is `windows.titled`. The bead column names the round that should turn the
+# row into an assertion, or NONE-BY-DESIGN where asserting it would be asserting something about
+# the machine the gate happens to be running on.
+
+nudge.tickFetches.commitmentPopoverClosed.firstTickCockpitFetches · how many store reads the first tick made, which depends on where in the loop the probe caught it; the steady-state rate is asserted · NONE-BY-DESIGN
+nudge.tickFetches.commitmentPopoverClosed.firstTickNudgeFetches · same first-tick timing, for the nudge path · NONE-BY-DESIGN
+nudge.tickFetches.commitmentPopoverOpen.firstTickCockpitFetches · same first-tick timing, with the commitment popover open · NONE-BY-DESIGN
+nudge.tickFetches.commitmentPopoverOpen.firstTickNudgeFetches · same first-tick timing, for the nudge path · NONE-BY-DESIGN
+nudge.tickFetches.noCommitment.firstTickCockpitFetches · same first-tick timing, with no commitment · NONE-BY-DESIGN
+nudge.tickFetches.noCommitment.firstTickNudgeFetches · same first-tick timing, for the nudge path · NONE-BY-DESIGN
+relevance.verdict.band · the confidence band of a verdict reached over the person's own store, which carries whatever they were doing · focus-psh
+retention.activityEventsRemoved · rows the retention sweep removed from the person's real store, which is their history and not this run's · NONE-BY-DESIGN
+retention.interventionRowsRemoved · the same sweep's intervention rows; the seeded twins (seededInterventionRowsRemoved) are asserted instead · NONE-BY-DESIGN
+retention.queryReceiptsRemoved · the same sweep's query receipts; the seeded twin is asserted instead · NONE-BY-DESIGN
+sensing.media.audioListenerCount · how many audio devices this Mac has a listener on · NONE-BY-DESIGN
+sensing.media.microphoneRunning · whether somebody on this Mac was on a call while the gate ran · NONE-BY-DESIGN
+sensing.presentation.agreementCount · how many of the presentation signals agreed, which is a property of what was on the screen · NONE-BY-DESIGN
+sensing.wasRunningBeforeProbe · whether watching was on before the pause probe, which the probe itself then moves; asserting it would pin the probe's own ordering rather than the app · focus-psh

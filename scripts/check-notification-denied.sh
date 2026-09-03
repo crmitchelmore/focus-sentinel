@@ -45,6 +45,9 @@
 set -u
 
 REPO_ROOT="${0:A:h}/.."
+# R-168. The published-keys stage needs to know which report keys this reader really
+# looked at, so the reader's python imports scripts/keyreads.py from here.
+export FOCUS_SCRIPTS_DIR="${0:A:h}"
 cd "$REPO_ROOT" || exit 1
 
 APP="${1:-}"
@@ -112,13 +115,22 @@ print "== assertions"
 python3 - "$OUT" "$COMMITTED_INTERVENTION_DIGEST" \
     "$COMMITTED_DECODE_TABLE" "$COMMITTED_DECODE_CELLS" <<'PYTHON'
 import json
+import os
 import sys
+
+# R-168. Every dictionary the readers below fetch from is a recording one, so the
+# `published-keys` stage can fail on a fact this reader never looked at. See scripts/keyreads.py.
+sys.path.insert(0, os.environ["FOCUS_SCRIPTS_DIR"])
+import keyreads
 
 report_path, committed_digest = sys.argv[1], sys.argv[2]
 committed_decode_table, committed_decode_cells = sys.argv[3], sys.argv[4]
 
 with open(report_path) as handle:
-    report = json.load(handle)
+    # The nudge-only launch writes the full report's `nudge` block at the top level and
+    # nothing else, so its reads are recorded under that prefix — which is where the
+    # published-keys stage looks for them. It pins the equivalence rather than assuming it.
+    report = keyreads.record(json.load(handle), "nudge")
 
 failures = []
 

@@ -40,6 +40,9 @@
 set -u
 
 REPO_ROOT="${0:A:h}/.."
+# R-168. The published-keys stage needs to know which report keys this reader really
+# looked at, so the reader's python imports scripts/keyreads.py from here.
+export FOCUS_SCRIPTS_DIR="${0:A:h}"
 
 # The value of `static let <name>` in a committed source file, with Swift's digit separators
 # and quotes stripped. A missing literal is an empty string, and the assertion below fails on
@@ -253,24 +256,31 @@ python3 - "$OUT" "$SEED_JSON" "$RESTORE_JSON" "$COMMITTED_STAMP" "$COMMITTED_DIG
     "$COMMITTED_DECODE_TABLE" "$COMMITTED_DECODE_CELLS" "$FIRSTRUN_JSON" \
     "$COMMITTED_EXECUTABLE_RUNGS" "$COMMITTED_DECLARED_RUNGS" "$KEYBOARD_JSON" <<'PYTHON'
 import json
+import os
 import sys
+from urllib.parse import unquote
+
+# R-168. Every dictionary the readers below fetch from is a recording one, so the
+# `published-keys` stage can fail on a fact this reader never looked at. See scripts/keyreads.py.
+sys.path.insert(0, os.environ["FOCUS_SCRIPTS_DIR"])
+import keyreads
 
 path = sys.argv[1]
 with open(path) as handle:
-    report = json.load(handle)
+    report = keyreads.record(json.load(handle))
 with open(sys.argv[2]) as handle:
-    seed = json.load(handle)
+    seed = keyreads.record(json.load(handle))
 with open(sys.argv[3]) as handle:
-    restore = json.load(handle)
+    restore = keyreads.record(json.load(handle))
 with open(sys.argv[7]) as handle:
-    seeded_cockpit = json.load(handle)
+    seeded_cockpit = keyreads.record(json.load(handle))
 committed_stamp = sys.argv[4]
 committed_digest = sys.argv[5]
 committed_intervention_digest = sys.argv[6]
 committed_decode_table = sys.argv[8]
 committed_decode_cells = sys.argv[9]
 with open(sys.argv[10]) as handle:
-    relaunched_cockpit = json.load(handle)
+    relaunched_cockpit = keyreads.record(json.load(handle))
 # e06. Read from `EvaluationPolicy`, so the number this pin holds the running application to is
 # the same number the shipping gate holds the evaluation report to — one literal, three readers.
 committed_executable_rungs = int(sys.argv[11]) if sys.argv[11] else 0
@@ -278,7 +288,7 @@ committed_declared_rungs = int(sys.argv[12]) if sys.argv[12] else 0
 # e07a. The sixth launch's report: the nudge block alone, against a store this script owns, so
 # the keyboard-answer reading could be taken (it writes a receipt and a rule).
 with open(sys.argv[13]) as handle:
-    keyboard_launch = json.load(handle)
+    keyboard_launch = keyreads.record(json.load(handle))
 
 failures = []
 not_taken_readings = []
@@ -4439,6 +4449,543 @@ check(
     nudge.get("menuBarInstalled"),
 )
 
+
+# ==========================================================================================
+# **R-168 — the facts this report publishes that nothing used to read.**
+#
+# `SelfCheck` writes several hundred facts about the running application. Until this round a
+# quarter of them were read by nobody: numbers in a file, not evidence. The `published-keys`
+# stage (`scripts/check-published-keys.sh`) now fails the gate on a published key that no
+# reader fetched and that `Config/unasserted-keys.txt` does not list with a reason, and this
+# block is the half of that answer which is an assertion rather than a listing.
+#
+# Everything below is pinned either to a committed number, to another fact in the same report
+# that a defect would have to move twice to keep, or to a property of the code. Nothing here
+# is pinned to a property of the machine — those keys are listed instead.
+# ==========================================================================================
+
+# --- the charging invariant, read at last (focus-9o8) --------------------------------------
+#
+# `chargesPaidFor` counts the `PerceptibleChange` receipts the perception path issued;
+# `deliveredRowsToday` sums persisted `InterventionRecord` rows the completely separate way the
+# day's caps are. A delivered row with no receipt behind it is a charge that never went through
+# the door — three rounds of the same defect. The join is asserted here.
+#
+# On an ordinary launch both are zero, so the join alone would be vacuous. The non-vacuous half
+# is the seeded day below, where the same accounting is folded over eight landings.
+charges_paid_for = nudge.get("chargesPaidFor")
+delivered_rows_today = nudge.get("deliveredRowsToday")
+check(
+    isinstance(charges_paid_for, int) and charges_paid_for == delivered_rows_today,
+    "every delivered intervention row was paid for by a perception receipt",
+    (charges_paid_for, delivered_rows_today),
+)
+declared_channels = {
+    row.get("channel") for row in (nudge.get("surfacePerceptionChannels") or [])
+}
+check(
+    set(nudge.get("chargeChannels") or []) <= declared_channels,
+    "every charge was perceived on a channel some surface really has",
+    (nudge.get("chargeChannels"), sorted(declared_channels)),
+)
+
+# The same accounting over a seeded day, which is where the numbers are not zero. A glyph
+# landing is ambient and pays no interruption charge; a panel landing pays one of each, and the
+# eighth is what makes the day's accusation cap the binding limit.
+glyph_day = nudge.get("budgetAfterADayOfGlyphLandings") or {}
+day = nudge.get("budgetAfterADayOfLandings") or {}
+ambient_day = day.get("ambient") or {}
+panel_day = day.get("panel") or {}
+check(
+    glyph_day.get("landings") == 8
+    and glyph_day.get("chargesFolded") == 0
+    and glyph_day.get("interruptionsToday") == 0
+    and glyph_day.get("bindingLimit") == "",
+    "a day of eight glyph landings folds no charge, spends no interruption and binds on nothing",
+    glyph_day,
+)
+check(
+    ambient_day.get("accusationsToday") == 0
+    and ambient_day.get("bindingLimit") == ""
+    and ambient_day.get("permitsAccusation") is True
+    and ambient_day.get("permitsQuery") is True,
+    "the ambient rung is still permitted after a day of its own landings",
+    ambient_day,
+)
+check(
+    panel_day.get("accusationsToday") == 8
+    and panel_day.get("bindingLimit") == "dailyAccusationCap"
+    and panel_day.get("permitsQuery") is False,
+    "a day of eight panel landings spends eight accusations and binds on the daily cap",
+    panel_day,
+)
+
+# --- the two surface lists really differ (focus-8kw) ---------------------------------------
+#
+# `SelfCheck` reports them separately so that a future conflation is visible in the evidence.
+# Until now that visibility was to a human reading a JSON file, which is the standing the doc
+# comment already had. The badge offers an answer and does not hold the interruption slot; the
+# notification holds the slot and offers no answer here. Both differences are named, so a merge
+# of the two predicates fails on the surface that moved rather than on a set comparison.
+holding = nudge.get("surfacesHoldingTheInterruptionSlot") or []
+offering = nudge.get("surfacesOfferingAnAnswer") or []
+check(
+    holding != offering,
+    "holding the interruption slot and offering an answer are still two different questions",
+    (holding, offering),
+)
+check(
+    "popoverBadge" in offering and "popoverBadge" not in holding,
+    "the popover badge offers an answer and does not hold the interruption slot",
+    (holding, offering),
+)
+check(
+    "notification" in holding and "notification" not in offering,
+    "the notification holds the interruption slot and offers no answer",
+    (holding, offering),
+)
+# And the row-wise table the two lists are folded from, so a surface whose attention and slot
+# disagree with the lists is a failure rather than a diff nobody runs.
+attention_rows = nudge.get("surfaceAttention") or []
+check(
+    sorted(row.get("surface") for row in attention_rows)
+    == sorted(row.get("surface") for row in (nudge.get("surfacePerceptionChannels") or [])),
+    "every surface has both an attention row and a perception channel",
+    attention_rows,
+)
+check(
+    sorted(row.get("surface") for row in attention_rows if row.get("holdsTheInterruptionSlot"))
+    == sorted(holding),
+    "the surfaces whose rows hold the interruption slot are exactly the list that says so",
+    attention_rows,
+)
+check(
+    all(
+        row.get("marksTheItem") is True
+        for row in attention_rows
+        if row.get("attention") in ("noticing", "waiting")
+    )
+    and all(
+        row.get("invitesAClick") is True
+        for row in attention_rows
+        if row.get("surface") == "popoverBadge"
+    ),
+    "a surface that draws a mark says so, and the badge is the one that invites a click",
+    attention_rows,
+)
+
+# --- the silently dropped rule is visible to the gate (focus-d2d) --------------------------
+#
+# `skippedRuleCount` exists so that a legacy `.session` row with no subject kind — which reaches
+# no rung and is counted rather than guessed at — is visible. It was visible to nobody. The
+# assertion is `== 0` over the snapshot this run built, together with the count of rules that
+# snapshot really holds, so "zero skipped" cannot be satisfied by a snapshot with nothing in it.
+relevance = report.get("relevance") or {}
+check(
+    relevance.get("skippedRuleCount") == 0,
+    "the snapshot builder dropped no rule it could not read",
+    relevance.get("skippedRuleCount"),
+)
+
+# --- the verdict says which engine spoke ---------------------------------------------------
+check(
+    relevance.get("engineStamp") == report.get("engineStamp")
+    and relevance.get("policyDigest") == report.get("policyDigest"),
+    "the relevance block's stamp and digest are the ones the report identifies itself by",
+    (relevance.get("engineStamp"), relevance.get("policyDigest")),
+)
+verdict = relevance.get("verdict") or {}
+check(
+    verdict.get("stampKey") == report.get("engineStamp"),
+    "the verdict carries the stamp of the engine that produced it",
+    (verdict.get("stampKey"), report.get("engineStamp")),
+)
+check(
+    verdict.get("stage") in ("heuristic", "model"),
+    "the verdict was reached at a stage that exists",
+    verdict.get("stage"),
+)
+check(
+    verdict.get("status") in ("relevant", "uncertain", "unrelated"),
+    "the verdict's status is one of the three the vocabulary declares",
+    verdict.get("status"),
+)
+check(
+    isinstance(verdict.get("clauses"), list) and len(verdict.get("clauses")) >= 1,
+    "the verdict names at least one clause it rests on",
+    verdict.get("clauses"),
+)
+
+# --- the window list, and the cockpit's own entry in it -------------------------------------
+#
+# The report publishes every `NSWindow` the application holds, and until now the only one read
+# was the separate `cockpitWindow` summary. So the summary could drift from the list it is
+# supposed to summarise. The cockpit's row is asserted field by field against it.
+WINDOW_FIELDS = (
+    "closable",
+    "fullSizeContentView",
+    "hasToolbar",
+    "identifier",
+    "isVisible",
+    "miniaturizable",
+    "resizable",
+    "styleMask",
+    "title",
+    "titlebarAppearsTransparent",
+    "titled",
+)
+all_windows = report.get("windows") or []
+check(len(all_windows) >= 1, "the report lists the windows the application holds", len(all_windows))
+cockpit_rows = [w for w in all_windows if w.get("identifier") == "cockpit"]
+check(len(cockpit_rows) == 1, "exactly one of those windows is the cockpit", len(all_windows))
+if cockpit_rows:
+    cockpit_row = cockpit_rows[0]
+    differing = [
+        field
+        for field in WINDOW_FIELDS
+        if cockpit_row.get(field) != window.get(field)
+    ]
+    check(
+        not differing,
+        "the cockpit's row in the window list agrees with the cockpitWindow summary field by field",
+        differing,
+    )
+    row_buttons = cockpit_row.get("standardButtons") or {}
+    check(
+        all(row_buttons.get(name) == buttons.get(name) for name in ("close", "miniaturize", "zoom")),
+        "and on all three of its standard buttons",
+        (row_buttons, buttons),
+    )
+
+# The cockpit window's identity, and its style mask decomposed — so a mask that gained or lost a
+# bit fails here rather than being carried silently by the four flag checks above.
+check(window.get("identifier") == "cockpit", "the cockpit window identifies itself as the cockpit",
+      window.get("identifier"))
+check(
+    window.get("title") == report.get("displayName") == "Focus Sentinel",
+    "the cockpit window's title is the application's display name",
+    (window.get("title"), report.get("displayName")),
+)
+check(window.get("isVisible") is True, "the cockpit window is on the screen", window.get("isVisible"))
+check(window.get("hasToolbar") is False, "the cockpit window has no toolbar", window.get("hasToolbar"))
+check(
+    window.get("fullSizeContentView") is True,
+    "the cockpit window uses SwiftUI's own full-size content view",
+    window.get("fullSizeContentView"),
+)
+# titled 1 | closable 2 | miniaturizable 4 | resizable 8 | fullSizeContentView 32768
+check(
+    window.get("styleMask") == 1 | 2 | 4 | 8 | 32768,
+    "the cockpit window's style mask is exactly titled, closable, miniaturizable, resizable and full-size content",
+    window.get("styleMask"),
+)
+
+# --- the panel's own properties, one by one -------------------------------------------------
+#
+# `propertiesAreCorrect` is the application's own fold of these, and asserting only the fold is
+# asking the app to mark its own homework. All nine are read here.
+panel_properties = panel.get("properties") or {}
+for name, expected in (
+    ("becomesKeyOnlyIfNeeded", True),
+    ("canBecomeKey", True),
+    ("hidesOnDeactivate", False),
+    ("ignoresCycle", True),
+    ("isFullScreenAuxiliary", True),
+    ("isStationary", True),
+    ("joinsAllSpaces", True),
+):
+    check(
+        panel_properties.get(name) is expected,
+        f"the nudge panel's {name} is {expected}",
+        panel_properties.get(name),
+    )
+
+# --- what the panel calls the application it is about ---------------------------------------
+naming = panel.get("subjectNaming") or {}
+check(
+    (naming.get("nothing") or {}).get("namedNobody") is True,
+    "asked about nothing, the panel names nobody",
+    naming.get("nothing"),
+)
+running_named = naming.get("running") or {}
+check(
+    running_named.get("identifier") == report.get("bundleIdentifier")
+    and running_named.get("displayName") == report.get("displayName"),
+    "asked about a running application, the panel gives its display name and its bundle id",
+    running_named,
+)
+not_installed = naming.get("notInstalled") or {}
+check(
+    not_installed.get("identifier") == not_installed.get("displayName"),
+    "asked about an application that is not installed, the panel falls back to the key itself",
+    not_installed,
+)
+installed_not_running = naming.get("installedNotRunning") or {}
+check(
+    installed_not_running.get("anchor") == installed_not_running.get("identifier"),
+    "an installed-but-not-running subject is named from the anchor it was asked about",
+    installed_not_running,
+)
+check(
+    (naming.get("origin") or {}).get("isANameNotTheKey") is True,
+    "a web origin is named rather than spelled as its URL",
+    naming.get("origin"),
+)
+
+# --- the panel's geometry and its four focus readings ---------------------------------------
+frame = panel.get("frame") or {}
+content_size = panel.get("contentSize") or {}
+check(
+    content_size.get("width") == panel.get("contentWidth") == frame.get("width"),
+    "the panel's content width, its reported width and its frame agree",
+    (content_size.get("width"), panel.get("contentWidth"), frame.get("width")),
+)
+check(
+    isinstance(frame.get("x"), (int, float)) and isinstance(frame.get("y"), (int, float)),
+    "the panel reports where on the screen it was",
+    frame,
+)
+check(
+    isinstance(panel.get("windowNumber"), int) and panel.get("windowNumber") > 0,
+    "the panel was a real window with a window number",
+    panel.get("windowNumber"),
+)
+check(
+    panel.get("frontmostWasReadBothTimes") is True
+    and panel.get("frontMovedDuringTheShow") is False
+    and panel.get("frontmostBeforeShow") == panel.get("frontmostAfterShow"),
+    "reading 4: the frontmost application was read both times and did not move",
+    (panel.get("frontmostBeforeShow"), panel.get("frontmostAfterShow")),
+)
+check(
+    (panel.get("readingsBeforeShow") or {}).get("panelIsKey") is False,
+    "the panel was not the key window before it was shown",
+    panel.get("readingsBeforeShow"),
+)
+check(
+    (panel.get("readingsAfterShow") or {}).get("panelIsVisible") is True,
+    "the panel was visible after it was shown",
+    panel.get("readingsAfterShow"),
+)
+decision_surface = panel.get("decisionSurface") or {}
+check(
+    decision_surface.get("isVisible") is True
+    and decision_surface.get("everyActionIsReachable") is True
+    and bool(decision_surface.get("summary")),
+    "the panel's decision surface was visible and every action on it reachable",
+    decision_surface,
+)
+check(
+    (nudge.get("popover") or {}).get("isShown") is False,
+    "the popover measured for geometry was never actually shown to anybody",
+    (nudge.get("popover") or {}).get("isShown"),
+)
+
+# --- the routing table's own two columns ----------------------------------------------------
+routes = nudge.get("routes") or []
+check(
+    bool(routes) and all(row.get("isInApp") is True for row in routes),
+    "every route in the table stays inside the application",
+    [row for row in routes if row.get("isInApp") is not True],
+)
+check(
+    all(isinstance(row.get("deferralReason"), str) for row in routes),
+    "every route says why it deferred, even when the answer is that it did not",
+    routes,
+)
+
+# --- the small facts a reader would assume ---------------------------------------------------
+check(
+    (report.get("statusItemMenu") or {}).get("installed") is True,
+    "the status item's menu is installed",
+    (report.get("statusItemMenu") or {}).get("installed"),
+)
+check(
+    (report.get("priorityHero") or {}).get("roleCount") >= 2,
+    "the type scale the priority hero is measured against has more than one role in it",
+    (report.get("priorityHero") or {}).get("roleCount"),
+)
+check(
+    (report.get("reopen") or {}).get("canRaiseCockpit") is True,
+    "the cockpit could be raised again after it was closed",
+    (report.get("reopen") or {}).get("canRaiseCockpit"),
+)
+check(
+    report.get("settingsDrewnVersion")
+    == (report.get("shellRendering") or {}).get("settingsDrewnVersion")
+    == f"{report.get('bundleShortVersionString')} ({report.get('bundleBuild')})",
+    "the version Settings drew is the version the bundle carries",
+    (report.get("settingsDrewnVersion"), report.get("bundleShortVersionString")),
+)
+check(
+    (report.get("undo") or {}).get("groupsByEvent") is True,
+    "the undo manager groups by event, so one edit is one undo",
+    (report.get("undo") or {}).get("groupsByEvent"),
+)
+check(
+    bool((report.get("undo") or {}).get("actionName")),
+    "the undo manager names the action it would undo",
+    (report.get("undo") or {}).get("actionName"),
+)
+check(
+    isinstance(nudge.get("decisionCount"), int) and nudge.get("decisionCount") >= 1,
+    "the nudge loop reached at least one decision on this run",
+    nudge.get("decisionCount"),
+)
+check(
+    isinstance(nudge.get("interventionVersion"), int) and nudge.get("interventionVersion") >= 1,
+    "the intervention policy carries a revision number",
+    nudge.get("interventionVersion"),
+)
+check(
+    nudge.get("markOnTheMenuBarItem")
+    in {row.get("attention") for row in attention_rows} | {"unmarked"},
+    "the mark the menu-bar item is really drawing is one the attention vocabulary declares",
+    nudge.get("markOnTheMenuBarItem"),
+)
+
+# --- what the three windows drew, and the receipts that say it was everything ----------------
+#
+# `shellRendering` publishes, per surface, a reading (what the app expected to draw), the values
+# really drawn, and a totality proof over the connection. Only the summaries were read. Here every
+# surface's generation, staleness and field list is folded, and every drawn value is fetched — so
+# a field that silently stopped being drawn is a failure rather than a shorter dictionary.
+shell_rendering = report.get("shellRendering") or {}
+rendering_readings = shell_rendering.get("readings") or {}
+rendered = shell_rendering.get("rendered") or {}
+themed_surfaces = (report.get("shellAfterProbes") or {}).get("themedSurfacesDeclared") or []
+check(
+    sorted(themed_surfaces) == sorted(rendered.keys()) == sorted(rendering_readings.keys()),
+    "the surfaces declared themable are exactly the surfaces that reported what they drew",
+    (sorted(themed_surfaces), sorted(rendered.keys())),
+)
+for surface_name in sorted(rendering_readings.keys()):
+    reading = rendering_readings.get(surface_name) or {}
+    drawn = rendered.get(surface_name) or {}
+    values = drawn.get("values") or {}
+    check(
+        reading.get("surface") == surface_name,
+        f"the {surface_name} rendering reading names its own surface",
+        reading.get("surface"),
+    )
+    check(
+        reading.get("generation") == reading.get("expectedGeneration")
+        == drawn.get("generation"),
+        f"the {surface_name} drew the generation the app expected of it",
+        (reading.get("generation"), reading.get("expectedGeneration"), drawn.get("generation")),
+    )
+    check(
+        reading.get("staleFields") == [] and reading.get("unreportedFields") == [],
+        f"the {surface_name} left no field stale and none unreported",
+        (reading.get("staleFields"), reading.get("unreportedFields")),
+    )
+    check(
+        len(values) >= (reading.get("expectedFieldCount") or 0) >= 1,
+        f"the {surface_name} drew at least the fields the app expected of it",
+        (len(values), reading.get("expectedFieldCount")),
+    )
+    # Every field carries a receipt, and a receipt is a string — including the empty one, which
+    # is how a surface says "the app knows nothing here yet" (the cockpit's `handoffTask` before
+    # a handoff arrives). A `null` is the absence of a receipt, and that is the failure.
+    missing_values = [field for field in sorted(values) if not isinstance(values.get(field), str)]
+    check(
+        not missing_values,
+        f"every field the {surface_name} drew carries a receipt",
+        missing_values,
+    )
+for surface_name, totality in sorted((shell_rendering.get("totalities") or {}).items()):
+    check(
+        bool(totality.get("connection"))
+        and totality.get("strandedPaths") == []
+        and totality.get("unmappedPaths") == []
+        and totality.get("unreportedPaths") == [],
+        f"the {surface_name} connection is total: nothing stranded, unmapped or unreported",
+        totality,
+    )
+check(
+    shell_rendering.get("drivenAppearancePreference") == "dark",
+    "the appearance the rendering probe drove is the one it says it drove",
+    shell_rendering.get("drivenAppearancePreference"),
+)
+
+# The handoff rendering is the same shape and was read only through its summary.
+handoff_rendering = (report.get("shell") or {}).get("cockpitRenderingWithHandoff") or {}
+check(
+    handoff_rendering.get("surface") == "cockpit"
+    and handoff_rendering.get("drewWhatTheAppKnows") is True
+    and handoff_rendering.get("generation") == handoff_rendering.get("expectedGeneration")
+    and handoff_rendering.get("staleFields") == []
+    and handoff_rendering.get("unreportedFields") == []
+    and (handoff_rendering.get("expectedFieldCount") or 0) >= 1,
+    "the cockpit drew every value the app knew after the handoff arrived",
+    handoff_rendering,
+)
+handoff_url = (report.get("shell") or {}).get("handoffURL") or ""
+check(
+    handoff_url.startswith("focus://start?task=")
+    and unquote(handoff_url.split("task=", 1)[1]) == (report.get("shell") or {}).get("handoffTask"),
+    "the handoff URL carries exactly the task the app says it received",
+    (handoff_url, (report.get("shell") or {}).get("handoffTask")),
+)
+
+# --- what the sensing cascade is, as opposed to what this Mac was doing -----------------------
+#
+# The cascade and the lifecycle are properties of the code; the counts below them are properties
+# of the machine and are listed in Config/unasserted-keys.txt rather than asserted here.
+sensing = report.get("sensing") or {}
+check(
+    sensing.get("cascade") == ["frontmostApplication", "windowMetadata"],
+    "the sensing cascade is exactly the two sources, in order",
+    sensing.get("cascade"),
+)
+check(
+    sensing.get("lifecycle") == "active",
+    "the sensing lifecycle is active on a launch nobody paused",
+    sensing.get("lifecycle"),
+)
+check(
+    sensing.get("isRunning") is (sensing.get("settingSensingPaused") is not True),
+    "the app is watching exactly when the stored setting says it should be",
+    (sensing.get("isRunning"), sensing.get("settingSensingPaused")),
+)
+
+# --- the cockpit's steady-state fetch rate ----------------------------------------------------
+#
+# The first tick's fetch counts vary with when the probe caught the loop and are listed; the
+# steady-state rate does not. The cockpit reads the store twice per tick in all three lanes, and
+# a fetch added to the tick path shows up here as a third.
+for lane_name, lane in sorted((nudge.get("tickFetches") or {}).items()):
+    if not isinstance(lane, dict) or "steadyTicks" not in lane:
+        continue
+    steady_ticks = lane.get("steadyTicks") or 0
+    check(
+        steady_ticks >= 1
+        and lane.get("cockpitFetchesOverSteadyTicks") == 2 * steady_ticks,
+        f"the cockpit fetched the store exactly twice a tick over the {lane_name} lane",
+        (lane_name, steady_ticks, lane.get("cockpitFetchesOverSteadyTicks")),
+    )
+
+# --- the replayed day (e09a) ------------------------------------------------------------------
+history_replay = report.get("historyReplay") or {}
+check(
+    history_replay.get("prioritiesSeeded") == 2
+    and history_replay.get("originMomentsSeeded") == 4
+    and history_replay.get("replaySubjectsMandated") == 1,
+    "the replay fixture seeded two priorities, four moments carrying an origin and one mandate",
+    history_replay,
+)
+check(
+    history_replay.get("momentsBeforeIntentEdit") == 16,
+    "sixteen of the replayed moments predate the intent edit that makes them unreplayable",
+    history_replay.get("momentsBeforeIntentEdit"),
+)
+check(
+    (report.get("historyLedger") or {}).get("prioritiesNamed") >= 1,
+    "the history ledger names at least one priority",
+    (report.get("historyLedger") or {}).get("prioritiesNamed"),
+)
+
+
 # ------------------------------------------------------------------------------------------
 # **The sweep: every reading the machine may refuse to give goes through the one door**
 # (focus-2uy.3, repair doctrine clause 2).
@@ -4499,11 +5046,66 @@ check(
 # And that the routing is not a set nobody put anything in: a `taken(...)` that stopped being
 # called would leave `routed_readings` short while the sweep above still passed on a report whose
 # facts had gone with it.
+# --- a reading that was taken gives no reason (focus-jax's third outcome, read both ways) -----
+#
+# Every probe that may be refused publishes a `wasTaken` and a `notTakenBecause`. The sweep below
+# proves each is routed; this proves the pair is consistent — a taken reading with a reason, or a
+# refused one without, is a probe whose report cannot be believed either way.
+def reason_key_for(taken_path):
+    """The path of the reason that goes with a takenness fact, as the report really spells it.
+
+    Two spellings exist. Five probes name the reason after the reading (`countWasTaken` ->
+    `countNotTakenBecause`), and `nudge.panel` drops the word `Reading` from it
+    (`deltaReadingWasTaken` -> `deltaNotTakenBecause`). Both are tried, and the check below
+    fails when neither is present — so a probe that publishes a takenness fact with no reason
+    beside it is a failure rather than a pair this fold quietly skips.
+    """
+    if taken_path.endswith("WasTaken"):
+        stem = taken_path[: -len("WasTaken")]
+        candidates = [stem + "NotTakenBecause"]
+        if stem.endswith("Reading"):
+            candidates.append(stem[: -len("Reading")] + "NotTakenBecause")
+        return candidates
+    return [taken_path.rsplit(".", 1)[0] + ".notTakenBecause"]
+
+
+def fact_at(dotted):
+    node = report
+    for part in dotted.split("."):
+        if not isinstance(node, dict):
+            return None
+        node = node.get(part)
+    return node
+
+
+inconsistent_reasons = []
+for fact in sorted(EXPECTED_TAKENNESS_FACTS):
+    was_taken = fact_at(fact)
+    spellings = [key for key in reason_key_for(fact) if fact_at(key) is not None]
+    if not spellings:
+        inconsistent_reasons.append((fact, "publishes no reason beside its takenness", None))
+        continue
+    reason = fact_at(spellings[0])
+    if was_taken is True and reason != "":
+        inconsistent_reasons.append((fact, "taken, but gave a reason", reason))
+    if was_taken is False and not reason:
+        inconsistent_reasons.append((fact, "refused, and gave no reason", reason))
+check(
+    not inconsistent_reasons,
+    "every reading that was taken gives no reason, and every one refused says why",
+    inconsistent_reasons,
+)
+
 check(
     routed_readings >= EXPECTED_TAKENNESS_FACTS,
     "every one of those six readings was actually routed on this run",
     sorted(EXPECTED_TAKENNESS_FACTS - routed_readings),
 )
+
+# R-168. A reading routed through `taken(...)` was consumed by this run even when the walk above
+# reached its `wasTaken` through a plain dictionary; say so, so the published-keys stage does not
+# accuse a probe of publishing a fact nobody read.
+keyreads.also_read(routed_readings)
 
 print()
 # **Listed, never counted as coverage** (focus-jax). A NOT TAKEN reading is not a pass, and a run

@@ -99,6 +99,11 @@ DESTINATION='platform=macOS,arch=arm64'
 # because it is evidence in its own right and the manifest below has to be able to find it.
 SELFCHECK_JSON="$LOG_DIR/focus-selfcheck.json"
 SELFCHECK_JSON_RELEASE="$LOG_DIR/focus-selfcheck-release.json"
+# R-168. One file, appended to by all six report readers, holding every dotted path any of them
+# really fetched. `scripts/keyreads.py` writes it; the `published-keys` stage reads it against the
+# reports the same run produced. Exported, so every reader below inherits it without being told.
+KEYS_READ="$LOG_DIR/focus-keys-read.txt"
+export FOCUS_KEYS_READ="$KEYS_READ"
 
 # The snapshot lane writes every render — matching or not — to a plain directory, which is
 # what makes evidence collection a `cp -R` rather than a dependence on `xcresulttool`'s
@@ -800,6 +805,9 @@ gate() {
     print "result bundle:  $RB"
     print "started:        $(date -u +%Y-%m-%dT%H:%M:%SZ)"
     print
+    # R-168. The read set is this run's, never the last one's.
+    rm -f -- "$KEYS_READ"
+
 
     # 1 — project integrity, before anything can rewrite it
     run_stage "project" "$LOG_DIR/focus-project.log" scripts/verify-project.sh
@@ -964,6 +972,18 @@ gate() {
         run_stage "notification-denied-release" "$LOG_DIR/focus-notification-denied-release.log" \
         scripts/check-notification-denied.sh "$DD/Build/Products/Release/FocusSentinel.app"
 
+    # 9e — published-keys (R-168). **Every fact the self-check publishes is read by somebody.**
+    #
+    # It runs here because it reads what the six stages above recorded: the file
+    # `$FOCUS_KEYS_READ` holds every dotted path any of them really fetched, written at runtime by
+    # `scripts/keyreads.py` rather than grepped out of a script's text. The publish set is the two
+    # full reports — Release and its Debug twin — walked for every key they carry.
+    #
+    # Both artefacts come from THIS run (R-75). The stage reads two JSON files and one committed
+    # list, launches nothing and signs nothing.
+    run_stage "published-keys" "$LOG_DIR/focus-published-keys.log" \
+        scripts/check-published-keys.sh "$SELFCHECK_JSON_RELEASE" "$SELFCHECK_JSON"
+
     # 10 — project integrity again. Stages 5–7 are the ones that could provoke a rewrite.
     run_stage "project-post" "$LOG_DIR/focus-project-post.log" scripts/verify-project.sh
 
@@ -983,6 +1003,7 @@ gate() {
     print "derived data:   $DD"
     print "result bundle:  $RB"
     print "self-check:     $SELFCHECK_JSON"
+    print "keys read:      $KEYS_READ"
     print "snapshots:      $SNAPSHOT_OUT (staged in $SNAPSHOT_STAGING)"
     print "evaluation:     $EVAL_REPORT (staged in $EVAL_STAGING, run token $GATE_RUN_ID)"
     if [[ -f "$MODEL_REPORT" ]]; then
