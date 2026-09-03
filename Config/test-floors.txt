@@ -20,7 +20,7 @@
 # tests went and why.
 FocusCoreTests 970
 FocusRulesTests 28
-FocusClassifyTests 165
+FocusClassifyTests 170
 FocusEvaluateTests 95
 FocusModelTests 13
 FocusSensingTests 137
