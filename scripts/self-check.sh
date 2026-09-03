@@ -2907,6 +2907,55 @@ print(
     )
 )
 
+# --- e09a: replay fidelity, PRINTED AND NEVER ASSERTED (focus-tee.4) -----------------------
+#
+# The measurement that decides whether a future epic may draw a replayed timeline. It is
+# deliberately not a check: no `check(...)` call reads any number in here, no floor is committed
+# for it, and a change in the figures cannot redden anybody's build. A measurement with a
+# threshold is a measurement people learn to make go green, and this one exists to be believed.
+#
+# The one thing that IS asserted is that the measurement ran at all — a block that quietly
+# stopped producing figures would otherwise read exactly like a day with nothing to report.
+history_replay = report.get("historyReplay") or {}
+check(
+    history_replay.get("available") is True,
+    "the replay-fidelity measurement ran",
+    history_replay.get("error", history_replay.get("available")),
+)
+if history_replay.get("available"):
+    print(
+        "note historyReplay: {} moment(s) seeded, {} replayed, {} agreed, {} diverged "
+        "(verdicts seen live: {})".format(
+            history_replay.get("seededMoments"),
+            history_replay.get("replayedMoments"),
+            history_replay.get("momentsAgreed"),
+            history_replay.get("momentsDiverged"),
+            history_replay.get("liveVerdictsSeen"),
+        )
+    )
+    print(
+        "note historyReplay: causes — no origin column {}, intent edited since {}, "
+        "no commitment history {}, correction post-dating {}, unexplained {}".format(
+            history_replay.get("divergedNoOriginColumn"),
+            history_replay.get("divergedIntentEditedSince"),
+            history_replay.get("divergedNoCommitmentHistory"),
+            history_replay.get("divergedCorrectionPostDating"),
+            history_replay.get("divergedUnexplained"),
+        )
+    )
+    print(
+        "note historyReplay: {} intervention row(s) written, {} of them replay would "
+        "have written too".format(
+            history_replay.get("seededRows"),
+            history_replay.get("rowsAgreed"),
+        )
+    )
+    print(
+        "note historyReplay: the shipping ClassificationInput carries an origin: {}".format(
+            history_replay.get("shippingInputCarriesOrigin")
+        )
+    )
+
 # --- e05: the nudge loop, as the running application reports it ----------------------------
 #
 # Three claims, and each is what one of this epic's gates rests on. Every one of them is made

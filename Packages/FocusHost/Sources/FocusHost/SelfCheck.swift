@@ -1,7 +1,9 @@
 import AppKit
 import ApplicationServices
+import FocusClassify
 import FocusCore
 import FocusModel
+import FocusRules
 import FocusSensing
 import FocusUI
 import Foundation
@@ -634,6 +636,14 @@ enum SelfCheck {
         root["policyDigest"] = relevance["policyDigest"] ?? ""
 
         root["retention"] = retentionReport()
+
+        // --- e09a: the replay-fidelity measurement (focus-tee.4) --------------------------
+        //
+        // **Evidence, never a gate.** No stage asserts a number in here and no floor is
+        // committed for it: it is the measurement that decides whether a future epic may draw a
+        // replayed timeline at all, and a measurement that can redden somebody's build is a
+        // measurement people learn to make go green.
+        root["historyReplay"] = replayFidelityReport()
 
         // --- e05 -------------------------------------------------------------------------
         let nudge = nudgeReport()
@@ -1950,6 +1960,357 @@ enum SelfCheck {
         } catch {
             report["seedAvailable"] = false
             report["seedError"] = "\(error)"
+        }
+        return report
+    }
+
+    /// **How much of a stored day the engine can replay, and what stops it** (focus-tee.4).
+    ///
+    /// ## Why this exists
+    ///
+    /// The e09 plan asked for a day drawn by replaying the stored activity stream through the
+    /// relevance engine and colouring each interval `focused` / `unsure` / `off`. Its own §4.3
+    /// set a tripwire: if replay needs facts the store does not hold, the plan is wrong. This is
+    /// the measurement that fires the tripwire or clears it, and it is **evidence, never a
+    /// gate** — no stage asserts a number here and no floor is committed for it. A measurement
+    /// that can redden somebody's build is a measurement people learn to make go green.
+    ///
+    /// ## What it does
+    ///
+    /// It seeds one day through the **public store API** — `PriorityStore`, `SessionStore.start`,
+    /// `ActivityEventStore.append`, `InterventionLog.record` — judging each moment live with a
+    /// real `DeterministicRelevanceEngine`, exactly as `RelevanceHost` does, and keeping the
+    /// verdict the app acted on. Then it throws the live engine away, builds a **fresh** one and
+    /// a snapshot from *today's* stored state, walks the stored `ActivityEvent` rows in order,
+    /// and asks whether replay reaches the same verdict.
+    ///
+    /// **Per moment, not per intervention row.** A row exists only where the app spoke, so a
+    /// comparison over rows alone would score a day of correct silence as perfect fidelity. The
+    /// verdict is the thing a timeline would colour an interval by, so the verdict is what is
+    /// compared; the rows are counted beside it because they are what History actually draws.
+    ///
+    /// The day contains, deliberately, each of the four causes §4.3 named:
+    ///
+    ///  * **an origin moment.** The live judgement carries `origin`, as e07b's would; the stored
+    ///    `ActivityEvent` has no column for one, so replay sees a bare browser bundle. This is
+    ///    the cost of the user's ruling that origin is not stored, priced rather than assumed.
+    ///  * **a priority edited mid-day.** `revision` counts edits and keeps no prior text, so
+    ///    every moment before the edit was judged against wording the store no longer holds.
+    ///  * **a second priority activated.** Moments under the first now sit under a commitment
+    ///    that is not the active one, and the store keeps only `ActivePriority` and
+    ///    `lastActivatedAt` — no history of when it changed.
+    ///  * **a correction written after the moment.** The legitimate case: replay *should*
+    ///    disagree there, because the person has since said so, and §4.2 exists to draw it.
+    ///
+    /// ## What the numbers mean
+    ///
+    /// `momentsAgreed` is fidelity. Every other counter is a moment replay could not reproduce,
+    /// with the cause named; the causes are tried in the order above and the first match wins,
+    /// so a moment with two reasons is filed under the one that makes replay impossible rather
+    /// than the one that merely changes the answer. `divergedUnexplained` is the one to watch:
+    /// a divergence with none of the four known causes is a divergence nobody has an account of.
+    @MainActor
+    static func replayFidelityReport() -> [String: Any] {
+        var report: [String: Any] = [:]
+        do {
+            let container = try FocusStore.makeContainer(kind: .inMemory)
+            let context = ModelContext(container)
+            let clock = SystemDateProvider()
+            let calendar = Calendar.autoupdatingCurrent
+            let priorities = PriorityStore(context: context, dateProvider: clock)
+            let events = ActivityEventStore(context: context, dateProvider: clock)
+            let log = InterventionLog(context: context, dateProvider: clock, calendar: calendar)
+            let sessions = SessionStore(
+                context: context,
+                dateProvider: clock,
+                uptimeClock: SystemUptimeClock(),
+                bootIdentity: AppComposition.shared.bootIdentity
+            )
+
+            // The day's subjects. `ProposalBuilder` overlaps the FIRST priority's words and
+            // nothing else's, which is what makes the mid-day edit visible as a changed verdict
+            // rather than as nothing at all; the decoy is what the corpus seeds unrelated.
+            let workBundle = "com.acme.ProposalBuilder"
+            let driftBundle = "com.chrismitchelmore.FocusDecoy"
+            let browserBundle = "com.apple.Safari"
+            // An origin the FIRST priority's own words recognise. A neutral one would replay to
+            // the same verdict as the bare browser bundle and price the loss at nothing, which
+            // would be a measurement that flattered the ruling instead of testing it.
+            let origin = "https://proposal.example"
+
+            let firstPriorityID = try priorities.setPriority(
+                intent: "Write the quarterly proposal for Dana",
+                doneWhen: "The proposal is sent"
+            )
+            let sessionID = try sessions.start(taskID: firstPriorityID)
+            // A global rule, so the drift subject is decided at a rung rather than guessed at.
+            // Without one the engine answers `uncertain` — which under U-1 is a QUESTION and not
+            // an accusation — and the ladder would have nothing to mandate on all day.
+            _ = try priorities.addRule(
+                taskID: nil,
+                scopeRaw: PriorityRuleScope.app.rawValue,
+                subject: driftBundle,
+                verdictRaw: PriorityRuleVerdict.unrelated.rawValue
+            )
+
+            let builder = RuleSnapshotBuilder()
+            let engine = DeterministicRelevanceEngine()
+            engine.warmUp()
+
+            /// The stored rules, as the snapshot builder takes them.
+            ///
+            /// Read straight off the context rather than through `SwiftDataRuleStore`, which is
+            /// `async` and would make this whole survey a task; `isTaskScoped` comes from which
+            /// row the association is on, exactly as `RelevanceHost.storedRuleRows(priorityID:)`
+            /// derives it — never inferred from the shape of a subject string (R-72.3).
+            func storedRules(under priorityID: UUID) throws -> [StoredRuleRow] {
+                try context.fetch(FetchDescriptor<FocusSchemaV3.RelevanceRule>())
+                    .filter { $0.task == nil || $0.task?.id == priorityID }
+                    .compactMap { row in
+                        // A row this build cannot read is dropped rather than guessed, which is
+                        // `SwiftDataRuleStore`'s own rule for the same two columns.
+                        guard let scope = RuleScope(rawValue: row.scopeRaw),
+                              let verdict = RuleVerdict(rawValue: row.verdictRaw)
+                        else { return nil }
+                        return StoredRuleRow(
+                            rule: RelevanceRuleValue(
+                                id: row.id,
+                                scope: scope,
+                                subject: row.subject,
+                                verdict: verdict,
+                                createdAt: row.createdAt
+                            ),
+                            isTaskScoped: row.task != nil
+                        )
+                    }
+            }
+
+            func snapshot(for id: UUID) throws -> RuleSnapshot {
+                let task = try priorities.task(id: id)
+                return builder.build(
+                    priority: task.map {
+                        PriorityInput(
+                            id: $0.id,
+                            revision: $0.revision,
+                            intent: $0.intent,
+                            doneWhen: $0.doneWhen
+                        )
+                    },
+                    storedRules: try storedRules(under: id),
+                    stamp: engine.stamp
+                )
+            }
+
+            /// What the app decided about one moment, kept beside the row the store will hold.
+            struct Moment {
+                let eventID: UUID
+                let bundleID: String
+                let hadOrigin: Bool
+                let priorityID: UUID
+                let revision: Int
+                let verdict: Verdict
+                let at: Date
+            }
+
+            var live = try snapshot(for: firstPriorityID)
+            var moments: [Moment] = []
+            var elapsed = Duration.zero
+            var seededRows = 0
+
+            func moment(
+                bundleID: String,
+                origin: String? = nil,
+                dwell: Duration,
+                priorityID: UUID
+            ) throws {
+                elapsed += dwell
+                let at = clock.now
+                let eventID = try events.append(
+                    kind: .frontmostApplicationChanged,
+                    bundleID: bundleID,
+                    sessionID: sessionID,
+                    dwellSeconds: Double(dwell.components.seconds),
+                    at: at
+                )
+                let judgement = engine.judge(
+                    input: ClassificationInput(bundleIdentifier: bundleID, origin: origin),
+                    snapshot: live,
+                    now: elapsed,
+                    dwell: dwell,
+                    phase: .focus
+                )
+                moments.append(
+                    Moment(
+                        eventID: eventID,
+                        bundleID: bundleID,
+                        hadOrigin: origin != nil,
+                        priorityID: priorityID,
+                        revision: live.priorityRevision,
+                        verdict: judgement.outcome.verdict,
+                        at: at
+                    )
+                )
+                guard let mandate = judgement.eligibility.mandate else { return }
+                _ = try log.record(
+                    InterventionEvent(
+                        kind: .accusation,
+                        rung: .ambient,
+                        subject: mandate.subject,
+                        surface: .menuBar,
+                        disposition: .delivered,
+                        explanationKinds: mandate.explanation.clauses.map(\.kind)
+                    ),
+                    priorityID: priorityID,
+                    at: at
+                )
+                seededRows += 1
+            }
+
+            // Morning: work the first priority's words recognise, then sustained drift.
+            for _ in 0..<4 {
+                try moment(bundleID: workBundle, dwell: .seconds(60), priorityID: firstPriorityID)
+            }
+            for _ in 0..<8 {
+                try moment(bundleID: driftBundle, dwell: .seconds(60), priorityID: firstPriorityID)
+            }
+            // A browser interval decided by its origin — the judgement e07b would make, and the
+            // one the store has nowhere to keep.
+            for _ in 0..<4 {
+                try moment(
+                    bundleID: browserBundle,
+                    origin: origin,
+                    dwell: .seconds(60),
+                    priorityID: firstPriorityID
+                )
+            }
+            let momentsBeforeEdit = moments.count
+
+            // Midday: the person edits what they are doing. `revision` moves; the old wording is
+            // gone from the store for ever, so every moment above was judged against words no
+            // reader can recover.
+            try priorities.editIntent(taskID: firstPriorityID, to: "Fix the migration stage")
+            live = try snapshot(for: firstPriorityID)
+            engine.reset()
+            for _ in 0..<6 {
+                try moment(bundleID: workBundle, dwell: .seconds(60), priorityID: firstPriorityID)
+            }
+
+            // Afternoon: a different commitment. Every moment above now sits under a priority
+            // that is not the active one, and nothing in the store says when it stopped being.
+            let secondPriorityID = try priorities.setPriority(intent: "Read the review notes")
+            live = try snapshot(for: secondPriorityID)
+            engine.reset()
+            for _ in 0..<6 {
+                try moment(bundleID: workBundle, dwell: .seconds(60), priorityID: secondPriorityID)
+            }
+
+            // A correction written last: the legitimate §4.2 case, where replay is *supposed* to
+            // disagree because the person has since said so.
+            let correctionAt = clock.now
+            _ = try priorities.addRule(
+                taskID: secondPriorityID,
+                scopeRaw: PriorityRuleScope.app.rawValue,
+                subject: workBundle,
+                verdictRaw: PriorityRuleVerdict.unrelated.rawValue
+            )
+
+            // ---------------------------------------------------------------- the replay
+            //
+            // A fresh engine and a snapshot built from TODAY's stored state: today's wording,
+            // today's rules, today's active commitment. That is all the store can offer, and the
+            // gap between it and what the app was going on at the time is the whole measurement.
+            let replayEngine = DeterministicRelevanceEngine()
+            replayEngine.warmUp()
+            let replaySnapshot = try snapshot(for: secondPriorityID)
+            let activePriorityID = try priorities.activeTask()?.id
+            let todaysRevision = try priorities.task(id: firstPriorityID)?.revision ?? 0
+
+            var replayVerdicts: [UUID: Verdict] = [:]
+            var replayElapsed = Duration.zero
+            var replayedMoments = 0
+            var replayMandated: Set<String> = []
+            for row in try events.all() {
+                guard let bundleID = row.bundleID else { continue }
+                replayedMoments += 1
+                let dwell = Duration.seconds(Int(row.dwellSeconds ?? 0))
+                replayElapsed += dwell
+                // **No origin, because there is no column for one.** This single argument is the
+                // whole of the user's ruling, expressed as code a reader can check.
+                let judgement = replayEngine.judge(
+                    input: ClassificationInput(bundleIdentifier: bundleID),
+                    snapshot: replaySnapshot,
+                    now: replayElapsed,
+                    dwell: dwell,
+                    phase: .focus
+                )
+                replayVerdicts[row.id] = judgement.outcome.verdict
+                if let mandate = judgement.eligibility.mandate {
+                    replayMandated.insert(mandate.subject)
+                }
+            }
+
+            var agreed = 0
+            var noOriginColumn = 0
+            var intentEditedSince = 0
+            var noCommitmentHistory = 0
+            var correctionPostDating = 0
+            var unexplained = 0
+
+            for entry in moments {
+                if replayVerdicts[entry.eventID] == entry.verdict {
+                    agreed += 1
+                    continue
+                }
+                if entry.hadOrigin {
+                    noOriginColumn += 1
+                } else if entry.revision != todaysRevision
+                    && entry.priorityID == firstPriorityID {
+                    intentEditedSince += 1
+                } else if entry.priorityID != activePriorityID {
+                    noCommitmentHistory += 1
+                } else if entry.at <= correctionAt {
+                    correctionPostDating += 1
+                } else {
+                    unexplained += 1
+                }
+            }
+
+            // The rows half: what History actually draws, and whether replay would have written
+            // the same ones. Reported beside the verdicts rather than instead of them.
+            var rowsAgreed = 0
+            for row in try log.all() where replayMandated.contains(row.subject) {
+                rowsAgreed += 1
+            }
+
+            report["seededMoments"] = moments.count
+            report["replayedMoments"] = replayedMoments
+            report["momentsAgreed"] = agreed
+            report["momentsDiverged"] = moments.count - agreed
+            report["divergedNoOriginColumn"] = noOriginColumn
+            report["divergedIntentEditedSince"] = intentEditedSince
+            report["divergedNoCommitmentHistory"] = noCommitmentHistory
+            report["divergedCorrectionPostDating"] = correctionPostDating
+            report["divergedUnexplained"] = unexplained
+            report["seededRows"] = seededRows
+            report["rowsAgreed"] = rowsAgreed
+            report["replaySubjectsMandated"] = replayMandated.count
+            // The non-vacuity controls. A seed that judged nothing, mandated nothing, or never
+            // reached the second priority would satisfy every reading above by having no
+            // disagreement to find.
+            report["momentsBeforeIntentEdit"] = momentsBeforeEdit
+            report["originMomentsSeeded"] = moments.count { $0.hadOrigin }
+            report["prioritiesSeeded"] = 2
+            report["liveVerdictsSeen"] = Set(moments.map(\.verdict.rawValue)).sorted()
+                .joined(separator: ",")
+            // What the shipping loop can produce at all, stated rather than implied:
+            // `RelevanceHost.observe(_:phase:isUserIdle:)` passes a bundle identifier and no
+            // more, so no live judgement in this build has ever had an origin to lose. The
+            // origin moments above are what e07b would cost, not what e09a is losing today.
+            report["shippingInputCarriesOrigin"] = false
+            report["available"] = true
+        } catch {
+            report["available"] = false
+            report["error"] = "\(error)"
         }
         return report
     }
