@@ -17,6 +17,9 @@
       location = "group:Packages/FocusEvaluate">
    </FileRef>
    <FileRef
+      location = "group:Packages/FocusModel">
+   </FileRef>
+   <FileRef
       location = "group:Packages/FocusSensing">
    </FileRef>
    <FileRef

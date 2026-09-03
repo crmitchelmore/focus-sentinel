@@ -43,6 +43,10 @@ let package = Package(
         .package(path: "../FocusCore"),
         .package(path: "../FocusRules"),
         .package(path: "../FocusClassify"),
+        // e06. The composition layer is the only place that knows whether a model tier exists:
+        // `FocusClassify` declares the port and imports no implementation of it, so the one
+        // module permitted every sibling is the one that plugs the two together.
+        .package(path: "../FocusModel"),
         .package(path: "../FocusSensing"),
         .package(path: "../FocusUI")
     ],
@@ -53,6 +57,7 @@ let package = Package(
                 .product(name: "FocusCore", package: "FocusCore"),
                 .product(name: "FocusRules", package: "FocusRules"),
                 .product(name: "FocusClassify", package: "FocusClassify"),
+                .product(name: "FocusModel", package: "FocusModel"),
                 .product(name: "FocusSensing", package: "FocusSensing"),
                 .product(name: "FocusUI", package: "FocusUI")
             ],

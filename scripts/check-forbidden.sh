@@ -633,13 +633,122 @@ check_outside "R-70g" "NormalisedToken and Explanation are built only in their o
     --allow Packages/FocusCore/Sources/FocusCore/Relevance/NormalisedToken.swift \
     --allow Packages/FocusCore/Sources/FocusCore/Relevance/Explanation.swift
 
-# R-70h  No model, anywhere, in any form — not even behind an availability check. e04 is the
-#        DETERMINISTIC-FIRST epic: the heuristic layer is proven before a model exists, which
-#        is what makes the charter's always-present-fallback clause temporally true rather
-#        than a promise about a later epic. FoundationModels arrives in e06 and not before.
-check_set "R-70h" "no FoundationModels in this epic" \
+# R-70h  **AMENDED BY e06, NOT DELETED.** e04 read *"no model, anywhere, in any form — not
+#        even behind an availability check"*, because e04 was the DETERMINISTIC-FIRST epic: the
+#        heuristic layer had to be proven complete before a model existed, which is what makes
+#        the charter's always-present-fallback clause temporally true rather than a promise
+#        about a later epic. That purpose is discharged — the heuristic layer shipped, was
+#        measured over 202 corpus cases, and remains the whole engine when no model is
+#        composed. What replaces the absolute ban is a **count**, in exactly the shape R-70b
+#        already gives `InterventionMandate(`: moving the producer is then a reviewed act
+#        rather than a quiet one. The ban itself survives everywhere except one package, and
+#        R-117a below is where it is written down.
+
+# R-117a  `import FoundationModels`, `SystemLanguageModel` and `LanguageModelSession` appear in
+#         exactly ONE file in this repository, and that file is `SystemModelPort.swift` inside
+#         `Packages/FocusModel`. Three calls rather than one, because `count_files` matches a
+#         FIXED string and these are three different strings — and three separate counts is the
+#         stronger reading anyway: a build that kept the import but moved the session would fail
+#         one of them by name.
+count_files "R-117a" "FoundationModels is imported in exactly one file" \
+    'import FoundationModels' 1 Packages/FocusModel
+count_files "R-117a" "SystemLanguageModel is named in exactly one file" \
+    'SystemLanguageModel' 1 Packages/FocusModel
+count_files "R-117a" "LanguageModelSession is named in exactly one file" \
+    'LanguageModelSession' 1 Packages/FocusModel
+
+#         …and the count above says nothing about the rest of the tree, so the ban is restated
+#         over it. This is the half that is e04's rule, unchanged, everywhere except the one
+#         package the counts pin.
+check_outside "R-117a" "no FoundationModels outside FocusModel's single producer" \
     'import FoundationModels|SystemLanguageModel|LanguageModelSession' \
+    App Packages \
+    --allow Packages/FocusModel/Sources/FocusModel/SystemModelPort.swift
+
+# R-117b  No file names BOTH `ModelAnswer` and `InterventionMandate`. A model verdict may never
+#         reach the type that authorises an accusation without passing through the cascade —
+#         the same technique R-96d uses on the two e05 authorisations, aimed at the new tier.
+#         The adapter that would widen a model answer into an accusation has to be written
+#         somewhere, and this is the somewhere.
+model_mandate_hits=$(
+    grep -rlF --include='*.swift' --exclude-dir='.build' -- 'ModelAnswer' App Packages 2>/dev/null \
+    | while read -r file; do
+        grep -qF -- 'InterventionMandate' "$file" && print -r -- "$file"
+    done
+)
+if [[ -n "$model_mandate_hits" ]]; then
+    print -u2 "FAIL [R-117b] a file names both ModelAnswer and InterventionMandate"
+    print -u2 "$model_mandate_hits" | sed 's/^/    /'
+    rc=1
+else
+    print "ok   [R-117b] no file names both ModelAnswer and InterventionMandate"
+fi
+
+# R-117c  `Verdict.unrelated` is not constructible in FocusModel. The mapping from the schema's
+#         `unrelated` label to `.decline(.modelSaidUnrelated)` is the only place that label is
+#         read, and `ModelAnswerTests` asserts it produces a decline. U-1 is held by the shape
+#         of `ModelAnswer` — there is no case to widen into — and this is the second lock.
+check_set "R-117c" "the model package cannot construct an unrelated verdict" \
+    'Verdict\.unrelated|verdict:[[:space:]]*\.unrelated' \
+    Packages/FocusModel
+
+# R-117d  The asset-pulling surface, and the network-capable one. Without this, R-108's *"we
+#         never trigger a download"* is a promise rather than a lint: `prewarm()`,
+#         `SystemLanguageModel.Adapter` and `SystemLanguageModel(useCase:)` are the three APIs
+#         P-156 enumerated that can fetch. `Tool` conformance and any transcript carried between
+#         subjects would make a one-shot session something else. And the networking types are
+#         the same list `check-boundaries.sh` scans for repo-wide, restated here so the new
+#         package is covered by name rather than by inheritance.
+check_set "R-117d" "no asset-pulling or tool-bearing model API, anywhere" \
+    'prewarm\(|SystemLanguageModel\.Adapter|useCase:|WebSearchTool' \
     App Packages
+
+#         The networking half is scoped to the new package rather than restated over the whole
+#         tree: `check-boundaries.sh` already scans every package's sources for exactly this
+#         list, and `NoNetworkingTests` names the same strings as its own fixture data — a
+#         repo-wide restatement here would fail on the suite that proves the rule.
+check_set "R-117d" "the model package names no network-capable type" \
+    'URLSession|URLRequest|URLConnection|NWConnection|NWListener|NWBrowser|CFStream|CFSocket' \
+    Packages/FocusModel
+
+#         And the two shapes that would turn a one-shot ask into a conversation: a tool list,
+#         and a transcript carried from one subject to the next. Each judgement sees one
+#         priority and one subject, and the session that saw the last one is gone.
+check_set "R-117d" "the model package keeps no tools and no transcript" \
+    'Transcript|\.tools|Tool\.self|any Tool' \
+    Packages/FocusModel
+
+# R-117e  `FocusModel` names no `Timer`, `DispatchSourceTimer`, `Task.sleep` poll or `.timer`
+#         publisher. F-54 is event-driven and this is what makes it structural: availability,
+#         thermal state and Low Power Mode are read on demand at the moment a request would be
+#         made, never watched on a clock. It is also why a model ask has no deadline race —
+#         there is nothing to race it against, and a late answer lands in a cache keyed on a
+#         priority revision nobody will ask about again.
+check_set "R-117e" "no timer or poll in the model package" \
+    'Timer\(|DispatchSourceTimer|Task\.sleep|asyncAfter|RunLoop\.' \
+    Packages/FocusModel
+
+# R-117f  No `await` appears in `DeterministicRelevanceEngine.judge` or `RuleCascade.evaluate`,
+#         and neither is `async`. R-103 as a lint rather than as a promise: the model's whole
+#         contribution to a classification is a dictionary read behind a lock, and anyone who
+#         puts an `await` on the decision path blows the model lane's p95 by two orders of
+#         magnitude. The gate would catch that on a number; this catches it on a line.
+# `sync_path`, never `path`: in zsh `path` is tied to `$PATH`, so a loop variable of that name
+# empties the search path for every command after it and turns the rest of this script green by
+# making its greps find nothing. Measured here, once.
+for sync_path in \
+    Packages/FocusClassify/Sources/FocusClassify/DeterministicRelevanceEngine.swift \
+    Packages/FocusClassify/Sources/FocusClassify/Cascade/RuleCascade.swift
+do
+    await_hits=$(grep -nE 'await|async' "$sync_path" 2>/dev/null | strip_comments)
+    if [[ -n "$await_hits" ]]; then
+        print -u2 "FAIL [R-117f] the classification path is not allowed to await: ${sync_path:t}"
+        print -u2 "$await_hits" | sed 's/^/    /'
+        rc=1
+    else
+        print "ok   [R-117f] ${sync_path:t} is synchronous, with no await and no async"
+    fi
+done
 
 # R-70n  A persisted rule with scopeRaw == "session" has NO subject kind: the shipped RuleScope
 #        makes `.session` mutually exclusive with app/domain/titleToken, so nothing in the row

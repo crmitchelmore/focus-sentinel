@@ -156,7 +156,8 @@ ALLOWED_PRODUCTS[FocusClassify]="FocusCore FocusRules"
 ALLOWED_PRODUCTS[FocusEvaluate]="FocusCore FocusRules FocusClassify"
 ALLOWED_PRODUCTS[FocusSensing]="FocusCore"
 ALLOWED_PRODUCTS[FocusUI]="FocusCore"
-ALLOWED_PRODUCTS[FocusHost]="FocusClassify FocusCore FocusRules FocusSensing FocusUI"
+ALLOWED_PRODUCTS[FocusModel]="FocusClassify FocusCore"
+ALLOWED_PRODUCTS[FocusHost]="FocusClassify FocusCore FocusModel FocusRules FocusSensing FocusUI"
 
 typeset -A FORBIDDEN_IMPORTS
 FORBIDDEN_IMPORTS[FocusCore]="AppKit SwiftUI Cocoa Network CFNetwork NetworkExtension FocusRules FocusClassify FocusSensing FocusUI"
@@ -167,6 +168,11 @@ FORBIDDEN_IMPORTS[FocusClassify]="AppKit SwiftUI Cocoa Network CFNetwork Network
 # framework, no sensing, no networking. The three test-lane reads further down add the positive
 # half over the same trees.
 FORBIDDEN_IMPORTS[FocusEvaluate]="AppKit SwiftUI Cocoa Network CFNetwork NetworkExtension FocusSensing FocusUI"
+# The model tier. It may reach the engine it plugs into and the domain beneath it, and
+# nothing else — no surface framework, no sensing, no rule store, and no networking. P-150
+# measured the framework opening no socket across eighty samples; this row is what keeps that
+# a property of the package rather than of one probe run.
+FORBIDDEN_IMPORTS[FocusModel]="AppKit SwiftUI Cocoa Network CFNetwork NetworkExtension FocusSensing FocusUI FocusRules"
 FORBIDDEN_IMPORTS[FocusSensing]="SwiftUI Network CFNetwork NetworkExtension FocusClassify FocusRules FocusUI"
 # SwiftData is on FocusUI's forbidden list from e02, and it is the enforcement point for R-24:
 # the cockpit renders a `CockpitState` value and calls a `PriorityActing` protocol, both
@@ -186,11 +192,12 @@ ALLOWED_FRAMEWORKS[FocusCore]="Foundation SwiftData os"
 ALLOWED_FRAMEWORKS[FocusRules]="Foundation SwiftData os"
 ALLOWED_FRAMEWORKS[FocusClassify]="Foundation NaturalLanguage os"
 ALLOWED_FRAMEWORKS[FocusEvaluate]="Foundation os"
+ALLOWED_FRAMEWORKS[FocusModel]="Foundation FoundationModels os"
 ALLOWED_FRAMEWORKS[FocusSensing]="Foundation AppKit CoreGraphics IOKit Carbon.HIToolbox CoreAudio CoreMediaIO ServiceManagement os"
 ALLOWED_FRAMEWORKS[FocusUI]="Foundation SwiftUI AppKit Observation QuickLook UniformTypeIdentifiers UserNotifications os"
 ALLOWED_FRAMEWORKS[FocusHost]="Foundation AppKit SwiftData Observation ApplicationServices os"
 
-PACKAGES=(FocusCore FocusRules FocusClassify FocusEvaluate FocusSensing FocusUI FocusHost)
+PACKAGES=(FocusCore FocusRules FocusClassify FocusEvaluate FocusModel FocusSensing FocusUI FocusHost)
 
 # Foundation networking types that are the usual accidental route onto the network.
 NETWORK_SYMBOL_PATTERN='URLSession|URLRequest|URLConnection|NWConnection|NWListener|NWBrowser|CFStream|CFSocket'
@@ -539,6 +546,43 @@ else
     print -u2 "    e04 adds an engine to this package and needs no new framework (R-70j, P-120)."
 fi
 
+# --- e06 R-100: the FocusModel framework row is pinned to a literal too --------------------
+#
+# The same argument as the row above, aimed at the row that matters most in this epic. The
+# positive half of the matrix fails the gate on any framework a row does not name; what it
+# cannot catch is the row itself being widened, which is the edit somebody would make in order
+# to add the import. `FocusModel` exists so that `FoundationModels` has exactly one home and
+# `ALLOWED_FRAMEWORKS[FocusClassify]` never has to move — and a row that could quietly grow a
+# fourth framework would give that argument back.
+#
+# Three frameworks and no fourth. Nothing here is a networking framework, and the repo-wide
+# symbol scan at the foot of this script covers the package for free.
+print
+print "== the FocusModel framework row is exactly what e06 declared"
+EXPECTED_MODEL_FRAMEWORKS="Foundation FoundationModels os"
+if [[ "${ALLOWED_FRAMEWORKS[FocusModel]}" == "$EXPECTED_MODEL_FRAMEWORKS" ]]; then
+    print "ok   FocusModel may import exactly: $EXPECTED_MODEL_FRAMEWORKS"
+else
+    fail "the FocusModel framework row has changed"
+    print -u2 "    expected: $EXPECTED_MODEL_FRAMEWORKS"
+    print -u2 "    found:    ${ALLOWED_FRAMEWORKS[FocusModel]}"
+    print -u2 "    e06 gives the model one home so FocusClassify's row never moves (R-100)."
+fi
+
+# And the other direction: FocusClassify must not import the package that imports it. The
+# dependency runs one way by construction — the port is declared in FocusClassify — and this is
+# what stops somebody inverting it to reach the model from the engine.
+print
+print "== FocusClassify does not import FocusModel"
+classify_model_hits=$(grep -rnE "^[[:space:]]*import[[:space:]]+FocusModel" \
+    Packages/FocusClassify/Sources 2>/dev/null)
+if [[ -n "$classify_model_hits" ]]; then
+    fail "FocusClassify imports FocusModel — the port is declared here, so this is a cycle:"
+    print -u2 "$classify_model_hits"
+else
+    print "graph:   FocusClassify declares the port and imports no implementation of it"
+fi
+
 # --- and the row is a fact about the BUILT OBJECT, not about this file (focus-bkf) ---------
 #
 # The comparison above reads one constant in this script against another constant in this script.
@@ -647,7 +691,7 @@ fi
 # added without review. They may reach the engine and the two packages beneath it, and nothing
 # else: no AppKit, no SwiftUI, no networking, and no sideways reach into Sensing or UI (which
 # the forbidden-import half above already enforces across all of Sources/).
-EVALUATE_ALLOWED_MODULES=(Foundation FocusCore FocusRules FocusClassify FocusEvaluateCore)
+EVALUATE_ALLOWED_MODULES=(Foundation FocusCore FocusRules FocusClassify FocusModel FocusEvaluateCore)
 evaluate_imported=$(grep -rhE '^[[:space:]]*import[[:space:]]+[A-Za-z_]' \
     Packages/FocusEvaluate/Sources/FocusEvaluateCore \
     Packages/FocusEvaluate/Sources/FocusEvaluate --include='*.swift' 2>/dev/null \
