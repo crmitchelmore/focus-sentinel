@@ -45,7 +45,7 @@ it to be green: a red line means nothing if the clean run was red too.
 
 | stage | assertions witnessed | PROVEN | CANNOT-GO-RED |
 |---|---|---|---|
-| `selfcheck-debug` / `selfcheck-release` | 151 | 151 | — |
+| `selfcheck-debug` / `selfcheck-release` | 156 | 156 | — |
 | `notification-denied` (+ Release twin) | 17 | 17 | — |
 | `focus-steal` (+ Release twin) | 14 | 14 | — |
 | `forbidden-binary` | 6 | 6 | — |
@@ -55,7 +55,7 @@ it to be green: a red line means nothing if the clean run was red too.
 | `unit-counts` | 5 | 5 | — |
 | `evaluation` (B1–B5) | 9 | 9 | — |
 | `entitlements-debug` / `entitlements-release` | 6 | 6 | 2 (seven restatement lines; one unreachable branch) |
-| **total** | **221** | **221** | **3 findings** |
+| **total** | **226** | **226** | **3 findings** |
 
 The seven rows the gate audit named as unable to go red are all fallible now, and each was run:
 `self-check.sh`'s popover overflow (SC-37, SC-38) and its committed width (SC-39, SC-40),
@@ -328,6 +328,27 @@ was published by the Release binary and fetched by no reader at all.
 | SC-143 | `self-check.sh:4786` | `r["nudge"]["routes"][0]["isInApp"] = False` | the folded `everyRungIsInApp` holds, which is why the rows are read too | **PROVEN** — `FAIL: every route in the table stays inside the application` |
 | SC-144 | `self-check.sh:4798` | `r["statusItemMenu"]["installed"] = False` | the menu's four drawn items hold | **PROVEN** — `FAIL: the status item's menu is installed` |
 | SC-145 | `self-check.sh:4813` | `r["settingsDrewnVersion"] = "9.9.9 (9)"` | the bundle's own version fields hold | **PROVEN** — `FAIL: the version Settings drew is the version the bundle carries` |
+
+### The ceiling itself, not the panel against it (focus-ocs) — `selfcheck-*` and `focus-steal-*`
+
+H-JSON on the same harness as the R-168 rows. `check-focus-steal.sh` carries the identical
+`check_ceiling` block over the same two surfaces, so a row proven here is proven there; the third
+instance, in the unit lane, is `NudgePanelTests` and is asserted in Swift.
+
+The old row — *the panel is within the N-point ceiling* — read N out of the report the panel's own
+controller wrote. SC-146 is the mutant the bead measured: it used to leave the stage GREEN with the
+text re-rendered as *within the 4000-point ceiling (measured 149)*. SC-148 is the other half, and it
+is why the committed number is written in the gate as well as read from the source: a round that
+wanted a taller panel could raise the constant and, with the source pin alone, the gate would
+raise its bound to match.
+
+| # | script:line | mutation | control | status — the line it printed |
+|---|---|---|---|---|
+| SC-146 | `self-check.sh:4839` | `r["nudge"]["panel"]["maximumContentHeight"] = 4000.0 — the bead's own mutant, `maximumContentHeight` returning 4000, as the report carries it` | SC-147 — the constant holds while the function that reads it stops | **PROVEN** — `FAIL: the panel's ceiling is within what the display can hold with its margins out (4000.0 <= 972 - 48)`, and `FAIL: the panel's ceiling is within its own proportionality limit (4000.0 <= 800)` |
+| SC-147 | `self-check.sh:4853` | `r["nudge"]["panel"]["absoluteMaximumHeight"] = 4000.0` | SC-146 — the display bound holds while the limit the binary reports moves | **PROVEN** — `FAIL: the panel's proportionality limit is the committed 800 points` |
+| SC-148 | `self-check.sh:4871` | `the SOURCE constant raised — `static let absoluteMaximumHeight: Double = 4000` in NudgePanelController.swift, with the binary unchanged. **This is the mutant the old row could not catch**: raising the constant raised the bound, and the gate followed it up` | SC-146 — the report is untouched, so this is the script's own committed number doing the work | **PROVEN** — `FAIL: NudgePanelController.absoluteMaximumHeight is still the committed 800 in the source it is declared in` |
+| SC-149 | `self-check.sh:4839` | `r["nudge"]["popover"]["maximumContentHeight"] = 4000.0` | SC-150 — the popover declares no limit of its own, so the display is all that bounds it | **PROVEN** — `FAIL: the popover's ceiling is within what the display can hold with its margins out (4000.0 <= 972 - 50)` |
+| SC-150 | `self-check.sh:4833` | `r["nudge"]["panel"]["heightReservedForMargins"] = 0` | SC-146 — the ceiling holds while the margin it reserves goes to nothing | **PROVEN** — `FAIL: the panel reserves margin rather than offering to fill the display (0)` |
 
 ### `published-keys` — `scripts/check-published-keys.sh`
 

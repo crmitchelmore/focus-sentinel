@@ -636,12 +636,26 @@ struct NudgePanelTests {
             #expect(abs(frame.width - NudgePanelController.contentWidth) <= Self.sizeTolerance)
             // The height is measured, never constant: the six cells must not all be one number.
             #expect(frame.height > 0)
-            #expect(
-                frame.height
-                    <= NudgePanelController.maximumContentHeight(
-                        screens: NudgePanelController.currentScreens()
-                    ) + Self.sizeTolerance
+            let ceiling = NudgePanelController.maximumContentHeight(
+                screens: NudgePanelController.currentScreens()
             )
+            #expect(frame.height <= ceiling + Self.sizeTolerance)
+            // **And the ceiling itself, not only the panel against it** (focus-ocs). Comparing a
+            // panel to a number the panel's own controller computed is green for a controller
+            // that returned four thousand: the third instance of the shape the gate found in
+            // `check-focus-steal.sh`. The limit is bounded here by the committed constant and by
+            // what the display can hold with the panel's margins out.
+            #expect(ceiling <= NudgePanelController.absoluteMaximumHeight + Self.sizeTolerance)
+            if let display = DisplayMapper.primaryScreen(
+                in: NudgePanelController.currentScreens()
+            ) {
+                let reserved = NudgePanelController.edgeMargin * 2
+                #expect(
+                    ceiling <= display.visibleFrame.height - reserved + Self.sizeTolerance,
+                    "the panel's ceiling is taller than the display can hold: "
+                        + "\(ceiling) > \(display.visibleFrame.height) - \(reserved)"
+                )
+            }
             // …and the window really is the size of the view inside it, rather than a right-sized
             // window with an overflowing hosting view clipped one rectangle further down.
             let content = try #require(controller.panel.contentView)

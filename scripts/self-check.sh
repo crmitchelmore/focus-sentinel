@@ -79,6 +79,11 @@ COMMITTED_DECODE_CELLS=$(committed_literal \
 # pin uses. The running application's composed ladder is the first; a build that composed a
 # ninth rung would disagree with the number the gate holds `evaluation.json` to, and it would
 # disagree here first.
+# focus-ocs. The panel's proportionality limit as the source declares it, so the gate can pin the
+# ceiling against a committed number instead of against the number the ceiling itself reported.
+COMMITTED_PANEL_ABSOLUTE_MAX=$(committed_literal \
+    "Packages/FocusUI/Sources/FocusUI/Nudge/NudgePanelController.swift" \
+    "absoluteMaximumHeight")
 COMMITTED_EXECUTABLE_RUNGS=$(committed_literal \
     "Packages/FocusEvaluate/Sources/FocusEvaluateCore/EvaluationPolicy.swift" \
     "executableRungCeiling")
@@ -254,7 +259,8 @@ print "== assertions"
 python3 - "$OUT" "$SEED_JSON" "$RESTORE_JSON" "$COMMITTED_STAMP" "$COMMITTED_DIGEST" \
     "$COMMITTED_INTERVENTION_DIGEST" "$COCKPIT_JSON" \
     "$COMMITTED_DECODE_TABLE" "$COMMITTED_DECODE_CELLS" "$FIRSTRUN_JSON" \
-    "$COMMITTED_EXECUTABLE_RUNGS" "$COMMITTED_DECLARED_RUNGS" "$KEYBOARD_JSON" <<'PYTHON'
+    "$COMMITTED_EXECUTABLE_RUNGS" "$COMMITTED_DECLARED_RUNGS" "$KEYBOARD_JSON" \
+    "$COMMITTED_PANEL_ABSOLUTE_MAX" <<'PYTHON'
 import json
 import os
 import sys
@@ -289,6 +295,8 @@ committed_declared_rungs = int(sys.argv[12]) if sys.argv[12] else 0
 # the keyboard-answer reading could be taken (it writes a receipt and a rule).
 with open(sys.argv[13]) as handle:
     keyboard_launch = keyreads.record(json.load(handle))
+# focus-ocs. The panel's proportionality limit as the source declares it.
+committed_panel_absolute_max = sys.argv[14]
 
 failures = []
 not_taken_readings = []
@@ -4780,6 +4788,94 @@ check(
     "the popover measured for geometry was never actually shown to anybody",
     (nudge.get("popover") or {}).get("isShown"),
 )
+
+
+# ============================================================================================
+# **The ceiling itself, rather than the panel against the ceiling** (focus-ocs).
+#
+# The row above asserts "the panel is within the N-point ceiling", where N is read out of the
+# report the panel's own controller wrote. A mutant that removed the ceiling entirely —
+# `maximumContentHeight` returning 4000 — left this stage GREEN at EXIT=0, and the assertion text
+# obligingly re-rendered as "the panel is within the 4000-point ceiling (measured 149)". Nothing
+# was pushing against the ceiling, so nothing noticed it had moved. The row defends the panel
+# against its declared limit; it does not defend the limit.
+#
+# So the limit is now checked from BOTH ends, and the two ends catch different mutants:
+#
+#   * against the DISPLAY — the ceiling may not exceed what the primary display's `visibleFrame`
+#     can hold once the surface's own reserved margins are taken out. A ceiling that stopped
+#     being computed at all fails here, because 4000 points is not on anybody's screen.
+#   * against a COMMITTED NUMBER, twice — the constant the running binary reports, against the
+#     `static let` in the source it is declared in (so a binary that ignores its own constant is
+#     red), and against 800 written here (so RAISING the constant is a deliberate edit to the
+#     gate rather than a number the gate follows upwards). The first alone is self-referential in
+#     the same way the old row was; the second alone would not catch a binary that had stopped
+#     reading its constant.
+#
+# The panel has a proportionality limit and the popover deliberately has none — a person clicked
+# the popover, and shortening what they asked to see would answer a question they did not ask —
+# so the popover publishes `absoluteMaximumHeight` as `-1` and is bounded by the display alone.
+# That difference is asserted rather than assumed.
+PANEL_ABSOLUTE_MAXIMUM_HEIGHT = 800
+
+
+def check_ceiling(name, node, committed_absolute):
+    """`committed_absolute` is None for a surface that declares no proportionality limit."""
+    ceiling = node.get("maximumContentHeight")
+    absolute = node.get("absoluteMaximumHeight")
+    reserved = node.get("heightReservedForMargins")
+    visible = node.get("screenVisibleHeight")
+    check(
+        isinstance(visible, (int, float)) and visible > 0,
+        f"the {name}'s ceiling was computed against a display that exists ({visible})",
+        {"screenVisibleHeight": visible},
+    )
+    check(
+        isinstance(reserved, (int, float)) and reserved > 0,
+        f"the {name} reserves margin rather than offering to fill the display ({reserved})",
+        {"heightReservedForMargins": reserved},
+    )
+    if isinstance(visible, (int, float)) and isinstance(reserved, (int, float)) and visible > 0:
+        check(
+            isinstance(ceiling, (int, float)) and ceiling <= visible - reserved + tolerance,
+            f"the {name}'s ceiling is within what the display can hold with its margins out "
+            f"({ceiling} <= {visible} - {reserved})",
+            {"maximumContentHeight": ceiling, "screenVisibleHeight": visible,
+             "heightReservedForMargins": reserved},
+        )
+    if committed_absolute is None:
+        check(
+            absolute == -1,
+            f"the {name} declares no proportionality limit of its own, and says so",
+            {"absoluteMaximumHeight": absolute},
+        )
+        return
+    check(
+        isinstance(absolute, (int, float)) and absolute == committed_absolute,
+        f"the {name}'s proportionality limit is the committed "
+        f"{PANEL_ABSOLUTE_MAXIMUM_HEIGHT} points",
+        {"absoluteMaximumHeight": absolute, "committed": committed_absolute},
+    )
+    check(
+        isinstance(ceiling, (int, float))
+        and isinstance(absolute, (int, float))
+        and ceiling <= absolute + tolerance,
+        f"the {name}'s ceiling is within its own proportionality limit "
+        f"({ceiling} <= {absolute})",
+        {"maximumContentHeight": ceiling, "absoluteMaximumHeight": absolute},
+    )
+
+
+tolerance = 1.0
+source_absolute = float(committed_panel_absolute_max) if committed_panel_absolute_max else None
+check(
+    source_absolute == PANEL_ABSOLUTE_MAXIMUM_HEIGHT,
+    f"NudgePanelController.absoluteMaximumHeight is still the committed "
+    f"{PANEL_ABSOLUTE_MAXIMUM_HEIGHT} in the source it is declared in",
+    committed_panel_absolute_max,
+)
+check_ceiling("panel", panel, source_absolute)
+check_ceiling("popover", nudge.get("popover") or {}, None)
 
 # --- the routing table's own two columns ----------------------------------------------------
 routes = nudge.get("routes") or []

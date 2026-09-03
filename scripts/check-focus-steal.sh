@@ -66,6 +66,20 @@ if [[ ! -d "$APP" ]]; then
     exit 2
 fi
 
+
+# --- the ceiling's own inputs, so the check is on the ceiling and not against it (focus-ocs) ----
+#
+# The value of `static let <name>` in a committed source file. Same helper `self-check.sh` uses.
+committed_literal() {
+    local file="$1" name="$2" line
+    line=$(grep -E "static let ${name}\b" "$REPO_ROOT/$file" 2>/dev/null | head -1)
+    [[ -n "$line" ]] || return 0
+    print -r -- "${${line#*= }//[\"_ ]/}"
+}
+COMMITTED_PANEL_ABSOLUTE_MAX=$(committed_literal \
+    "Packages/FocusUI/Sources/FocusUI/Nudge/NudgePanelController.swift" \
+    "absoluteMaximumHeight")
+
 BUNDLE_ID='com.chrismitchelmore.FocusSentinel'
 PROCESS_NAME='FocusSentinel'
 LSAPPINFO='/usr/bin/lsappinfo'
@@ -199,7 +213,8 @@ fi
 
 print
 print "== assertions"
-python3 - "$OUT" "$FRONT_BEFORE" "$FRONT_AFTER" "$BUNDLE_ID" "${0:A}" <<'PYTHON'
+python3 - "$OUT" "$FRONT_BEFORE" "$FRONT_AFTER" "$BUNDLE_ID" "${0:A}" \
+    "$COMMITTED_PANEL_ABSOLUTE_MAX" <<'PYTHON'
 import json
 import os
 import sys
@@ -210,6 +225,7 @@ sys.path.insert(0, os.environ["FOCUS_SCRIPTS_DIR"])
 import keyreads
 
 report_path, front_before, front_after, bundle_id, own_path = sys.argv[1:6]
+committed_panel_absolute_max = sys.argv[6]
 
 with open(report_path) as handle:
     # The nudge-only launch writes the full report's `nudge` block at the top level and
@@ -378,6 +394,91 @@ check(
     "the window and the content it was sized for are the same height",
     {"frame": frame, "contentSize": measured},
 )
+# ============================================================================================
+# **The ceiling itself, rather than the panel against the ceiling** (focus-ocs).
+#
+# The row above asserts "the panel is within the N-point ceiling", where N is read out of the
+# report the panel's own controller wrote. A mutant that removed the ceiling entirely —
+# `maximumContentHeight` returning 4000 — left this stage GREEN at EXIT=0, and the assertion text
+# obligingly re-rendered as "the panel is within the 4000-point ceiling (measured 149)". Nothing
+# was pushing against the ceiling, so nothing noticed it had moved. The row defends the panel
+# against its declared limit; it does not defend the limit.
+#
+# So the limit is now checked from BOTH ends, and the two ends catch different mutants:
+#
+#   * against the DISPLAY — the ceiling may not exceed what the primary display's `visibleFrame`
+#     can hold once the surface's own reserved margins are taken out. A ceiling that stopped
+#     being computed at all fails here, because 4000 points is not on anybody's screen.
+#   * against a COMMITTED NUMBER, twice — the constant the running binary reports, against the
+#     `static let` in the source it is declared in (so a binary that ignores its own constant is
+#     red), and against 800 written here (so RAISING the constant is a deliberate edit to the
+#     gate rather than a number the gate follows upwards). The first alone is self-referential in
+#     the same way the old row was; the second alone would not catch a binary that had stopped
+#     reading its constant.
+#
+# The panel has a proportionality limit and the popover deliberately has none — a person clicked
+# the popover, and shortening what they asked to see would answer a question they did not ask —
+# so the popover publishes `absoluteMaximumHeight` as `-1` and is bounded by the display alone.
+# That difference is asserted rather than assumed.
+PANEL_ABSOLUTE_MAXIMUM_HEIGHT = 800
+
+
+def check_ceiling(name, node, committed_absolute):
+    """`committed_absolute` is None for a surface that declares no proportionality limit."""
+    ceiling = node.get("maximumContentHeight")
+    absolute = node.get("absoluteMaximumHeight")
+    reserved = node.get("heightReservedForMargins")
+    visible = node.get("screenVisibleHeight")
+    check(
+        isinstance(visible, (int, float)) and visible > 0,
+        f"the {name}'s ceiling was computed against a display that exists ({visible})",
+        {"screenVisibleHeight": visible},
+    )
+    check(
+        isinstance(reserved, (int, float)) and reserved > 0,
+        f"the {name} reserves margin rather than offering to fill the display ({reserved})",
+        {"heightReservedForMargins": reserved},
+    )
+    if isinstance(visible, (int, float)) and isinstance(reserved, (int, float)) and visible > 0:
+        check(
+            isinstance(ceiling, (int, float)) and ceiling <= visible - reserved + tolerance,
+            f"the {name}'s ceiling is within what the display can hold with its margins out "
+            f"({ceiling} <= {visible} - {reserved})",
+            {"maximumContentHeight": ceiling, "screenVisibleHeight": visible,
+             "heightReservedForMargins": reserved},
+        )
+    if committed_absolute is None:
+        check(
+            absolute == -1,
+            f"the {name} declares no proportionality limit of its own, and says so",
+            {"absoluteMaximumHeight": absolute},
+        )
+        return
+    check(
+        isinstance(absolute, (int, float)) and absolute == committed_absolute,
+        f"the {name}'s proportionality limit is the committed "
+        f"{PANEL_ABSOLUTE_MAXIMUM_HEIGHT} points",
+        {"absoluteMaximumHeight": absolute, "committed": committed_absolute},
+    )
+    check(
+        isinstance(ceiling, (int, float))
+        and isinstance(absolute, (int, float))
+        and ceiling <= absolute + tolerance,
+        f"the {name}'s ceiling is within its own proportionality limit "
+        f"({ceiling} <= {absolute})",
+        {"maximumContentHeight": ceiling, "absoluteMaximumHeight": absolute},
+    )
+
+
+# The source's `static let` and this script's own number must agree with what the binary reported.
+source_absolute = float(committed_panel_absolute_max) if committed_panel_absolute_max else None
+check(
+    source_absolute == PANEL_ABSOLUTE_MAXIMUM_HEIGHT,
+    f"NudgePanelController.absoluteMaximumHeight is still the committed "
+    f"{PANEL_ABSOLUTE_MAXIMUM_HEIGHT} in the source it is declared in",
+    committed_panel_absolute_max,
+)
+check_ceiling("panel", panel, source_absolute)
 
 # --- and the assertion that replaced "the frame equals a constant" -----------------------------
 #
@@ -474,6 +575,8 @@ for state in ("empty", "fullest"):
         f"(measured {popover_height})",
         {"popover": measured_popover, "maximumContentHeight": popover_ceiling},
     )
+
+check_ceiling("popover", popover, None)
 
 # The two contents are not the same picture: a height that ignored its content would satisfy
 # every bound above and would be the constant 380 x 190 the panel was clipped into.

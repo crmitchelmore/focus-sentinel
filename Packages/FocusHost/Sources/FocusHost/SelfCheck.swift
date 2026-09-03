@@ -2659,6 +2659,15 @@ enum SelfCheck {
         report["committedWidth"] = MenuBarController.popoverContentWidth
         report["maximumContentHeight"] =
             MenuBarController.popoverMaximumContentHeight(screens: screens) ?? -1
+        // The same three inputs (focus-ocs). The popover has no proportionality limit of its own —
+        // a person clicked it, and shortening what they asked to see would answer a question they
+        // did not ask — so its `absoluteMaximumHeight` is published as `-1` meaning "none", and
+        // what bounds it is the display alone.
+        report["absoluteMaximumHeight"] = -1.0
+        report["heightReservedForMargins"] =
+            MenuBarController.popoverChromeAllowance + MenuBarController.popoverEdgeMargin
+        report["screenVisibleHeight"] =
+            DisplayMapper.primaryScreen(in: screens)?.visibleFrame.height ?? -1
         report["isShown"] = AppComposition.shared.menuBar.isPopoverShown
         // **The vocabulary, so the reading below is a claim and not a restatement of a type**
         // (focus-bkf). `overflow` was asserted by the gate as membership in a three-element set
@@ -3018,9 +3027,26 @@ enum SelfCheck {
             "height": Double(panel.contentSize.height)
         ]
         report["contentWidth"] = NudgePanelController.contentWidth
+        let panelScreens = NudgePanelController.currentScreens()
         report["maximumContentHeight"] = NudgePanelController.maximumContentHeight(
-            screens: NudgePanelController.currentScreens()
+            screens: panelScreens
         )
+        // **The ceiling's own inputs, so a gate can check the ceiling rather than check it
+        // against itself** (focus-ocs).
+        //
+        // The gate asserted "the panel is within the N-point ceiling" where N was read out of this
+        // very report, so a mutant that removed the ceiling entirely — `maximumContentHeight`
+        // returning 4000 — left the stage green and the assertion text obligingly re-rendered as
+        // "within the 4000-point ceiling". Nothing was pushing against it, so nothing noticed it
+        // had moved. These three are what the ceiling is COMPUTED FROM: the surface's own
+        // proportionality limit, the margin it reserves, and what the display can hold. With them
+        // published, the gate pins the constant against the source it is declared in and bounds
+        // the ceiling by the display, and neither mutant survives: raising the function past the
+        // constant fails the first, raising the constant fails the second.
+        report["absoluteMaximumHeight"] = NudgePanelController.absoluteMaximumHeight
+        report["heightReservedForMargins"] = NudgePanelController.edgeMargin * 2
+        report["screenVisibleHeight"] =
+            DisplayMapper.primaryScreen(in: panelScreens)?.visibleFrame.height ?? -1
 
         // **The invariant that replaced "the frame equals a constant"** (focus-vpu, focus-kby).
         //
