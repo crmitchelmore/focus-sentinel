@@ -106,6 +106,12 @@ struct NudgeHostFixture {
     let host: NudgeHost
     let panel: NudgePanelController
     let menuBar: MenuBarController
+    /// **The second renderer of the ambient rung** (e08a). Pointed at a *synthetic* notched
+    /// display, so that "the companion drew nothing" is a measurement of a companion that could
+    /// have drawn rather than a fact about a rig with no built-in panel. Without this the
+    /// visibility conjunct in `NudgeUnseenAttemptTests` would hold vacuously on every Mac in the
+    /// programme, which is exactly the shape of proof this repository keeps deleting.
+    let notchCompanion = NotchCompanionController()
     let centre: SilentNotificationCentre
     let workspace: InertReturnWorkspace
     let clock: FixedMonotonicClock
@@ -162,6 +168,22 @@ struct NudgeHostFixture {
         intent: "Write the Q3 proposal for Acme"
     )
     static let reference = Date(timeIntervalSince1970: 1_767_225_600)   // 2026-01-01T00:00:00Z
+
+    /// A 14″ MacBook Pro's built-in panel — **synthetic** until P-e08-B, and labelled so
+    /// everywhere it appears. `NotchLanding.of(_:)` lands on it, which is the whole reason it is
+    /// here: the companion has somewhere to draw, so its silence is evidence.
+    static let notchedDisplay = DisplayGeometry(
+        displayID: 1,
+        screenIndex: 0,
+        isPrimary: true,
+        frame: ScreenRect(x: 0, y: 0, width: 1_512, height: 982),
+        visibleFrame: ScreenRect(x: 0, y: 0, width: 1_512, height: 944),
+        backingScaleFactor: 2.0,
+        safeAreaTopInset: 32,
+        auxiliaryTopLeft: ScreenRect(x: 0, y: 950, width: 663.5, height: 32),
+        auxiliaryTopRight: ScreenRect(x: 848.5, y: 950, width: 663.5, height: 32),
+        isBuiltIn: true
+    )
 
     static var londonCalendar: Calendar {
         var calendar = Calendar(identifier: .gregorian)
@@ -235,7 +257,18 @@ struct NudgeHostFixture {
     /// Wired here rather than in each test, because a test that hand-rolled one of the four
     /// would be proving that its own closure ran — the defect `thePopoverWireReachesTheLoop`
     /// used to have.
-    func wireMenuBarToTheLoop() throws {
+    ///
+    /// **A fifth connection since e08a**: the notch companion, handed the *same* presentation in
+    /// the same breath, exactly as `AppComposition.refreshMenuBar(session:)` hands it. A fixture
+    /// that drew only the item would be driving an app the shipping one is not, and the visibility
+    /// conjunct `NudgeUnseenAttemptTests` holds would be a claim about a companion nothing had
+    /// wired.
+    ///
+    /// - Parameter menuBarVisible: the router's own reading, which the drive crosses. It is passed
+    ///   in rather than read off the item because that is the axis focus-zeq added: the fixture
+    ///   always *installs* the item, and "the menu bar is not there" is a fact the surroundings
+    ///   state, not a status item somebody removed.
+    func wireMenuBarToTheLoop(menuBarVisible: Bool = true) throws {
         // **The item goes into the menu bar first, exactly as `startNudgeLoop()` does it**
         // (focus-1b5). It was not, and the omission became load-bearing the moment the charge
         // became a consequence of the write: `MenuBarController.redraw(force:)` refuses to write
@@ -244,15 +277,32 @@ struct NudgeHostFixture {
         // correctly reaches nobody. Every suite that wires the loop is asking for the shipping
         // arrangement, and the shipping arrangement has an item in it.
         try MenuBarStage.install(menuBar)
-        menuBar.update(Self.menuBarPresentation(of: host))
+        // The companion is pointed at a synthetic notched display before the first draw, so every
+        // cell of every fold built on this fixture has somewhere the strip *could* go.
+        notchCompanion.displays = { [Self.notchedDisplay] }
+        redrawTheMenuBarAndItsCompanion(menuBarVisible: menuBarVisible)
         menuBar.onPopoverDidShow = { [host] in host.popoverPresented() }
         // **The wire that makes a charge a consequence of a write** (focus-1b5, focus-nrl). A
         // fixture missing it would drive a menu bar the shipping app does not have: the glyph
         // rung would land, the item would be written, and nothing would ever charge for it.
         menuBar.onGlyphWritten = { [host] in host.menuBarItemRedrawn() }
-        host.onQuestionSurfacesChanged = { [host, menuBar] in
-            menuBar.update(Self.menuBarPresentation(of: host))
+        host.onQuestionSurfacesChanged = { [self] in
+            redrawTheMenuBarAndItsCompanion(menuBarVisible: menuBarVisible)
         }
+    }
+
+    /// **One projection, drawn twice** — the shape that makes the notch a renderer rather than a
+    /// surface. `AppComposition.refreshMenuBar(session:)` is this function in the shipping app.
+    func redrawTheMenuBarAndItsCompanion(menuBarVisible: Bool) {
+        let presentation = Self.menuBarPresentation(of: host)
+        menuBar.update(presentation)
+        notchCompanion.update(
+            presentation: presentation,
+            menuBarVisible: menuBarVisible,
+            // The overflow reading, taken off the real status item this fixture installed — the
+            // question `menuBarVisible` above is deliberately not asking.
+            itemVisible: menuBar.isItemVisible
+        )
     }
 
     /// What `AppComposition.menuBarPresentation()` builds, of the parts a nudge test is about.
@@ -276,6 +326,9 @@ struct NudgeHostFixture {
     func tearDown() {
         host.hideOverlays()
         panel.hide()
+        // A borderless strip left on the display would outlive the fixture that drew it, on the
+        // machine running the gate.
+        notchCompanion.remove()
         menuBar.closePopover()
         menuBar.remove()
         // The activation the stage needed to open a real popover is process-wide state, and it

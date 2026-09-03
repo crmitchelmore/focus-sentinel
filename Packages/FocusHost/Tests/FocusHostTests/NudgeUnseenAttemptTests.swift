@@ -84,6 +84,16 @@ struct NudgeUnseenAttemptTests {
         let rows: [Row]
         let landedOn: NudgeSurface?
         let decision: NudgeDecision?
+        /// **How many times the notch companion actually drew during this attempt** (e08a). Read
+        /// off `NotchCompanionController.writeCount`, which counts assignments and not requests,
+        /// for `glyphWriteCount`'s reason: a predicate saying the companion behaved cannot fail.
+        let companionWrites: Int
+        /// Whether the strip was on the screen when the attempt ended.
+        let companionVisible: Bool
+        /// Whether the geometry the companion was pointed at could carry a strip at all. The
+        /// vacuity guard: a fold in which no cell had a landed geometry would satisfy "the
+        /// companion drew nothing" on every Mac in the programme and prove nothing.
+        let companionCouldHaveDrawn: Bool
 
         var dispositions: [InterventionDisposition] { rows.compactMap(\.disposition) }
 
@@ -113,7 +123,10 @@ struct NudgeUnseenAttemptTests {
     static func drive(surface: NudgeSurface, item: Item) throws -> Attempt {
         let fixture = try NudgeHostFixture()
         defer { fixture.tearDown() }
-        try fixture.wireMenuBarToTheLoop()
+        // **The companion is wired with the same reading the loop is driven by** (e08a). The
+        // fixture points it at a synthetic notched display, so in every cell it has somewhere it
+        // could draw — which is what makes its silence in the deferred cells a measurement.
+        try fixture.wireMenuBarToTheLoop(menuBarVisible: item.menuBarVisible)
         Self.named(fixture)
 
         let commitment = fixture.commitment
@@ -169,7 +182,10 @@ struct NudgeUnseenAttemptTests {
                 )
             },
             landedOn: landedOn,
-            decision: decision
+            decision: decision,
+            companionWrites: fixture.notchCompanion.writeCount,
+            companionVisible: fixture.notchCompanion.isVisible,
+            companionCouldHaveDrawn: fixture.notchCompanion.landing().collapsed != nil
         )
     }
 
@@ -179,6 +195,9 @@ struct NudgeUnseenAttemptTests {
         var deferrals = 0
         var deliveries = 0
         var unopened = 0
+        // e08a's two counters, folded rather than asserted in a suite of their own.
+        var cellsWhereTheCompanionCouldHaveDrawn = 0
+        var cellsWhereTheCompanionDidDraw = 0
 
         for surface in NudgeSurface.allCases {
             for item in Item.allCases {
@@ -209,6 +228,8 @@ struct NudgeUnseenAttemptTests {
                     \(cell)one attempt wrote \(attempt.rows.count) row(s) — \(attempt.summary)
                     """
                 )
+                if attempt.companionCouldHaveDrawn { cellsWhereTheCompanionCouldHaveDrawn += 1 }
+                if attempt.companionWrites > 0 { cellsWhereTheCompanionDidDraw += 1 }
 
                 switch item {
                 case .notInstalled:
@@ -228,6 +249,24 @@ struct NudgeUnseenAttemptTests {
                         """
                     )
                     #expect(attempt.landedOn == nil, "\(cell)a rung landed with no item to land on")
+                    // **The e08a conjunct** (review §3, e08a T3). The notch companion is a second
+                    // renderer of this same rung, and a renderer that drew where the item could not
+                    // would make the notch the only surface a rung reaches — focus-mkk inverted,
+                    // and a fifth surface needing its own `PerceptionChannel`, its own difference
+                    // arithmetic and its own `surfacesARungCanReach` row. The geometry it is
+                    // pointed at *lands*, so this is a companion that could have drawn and did not.
+                    #expect(
+                        attempt.companionCouldHaveDrawn,
+                        "\(cell)the companion had nowhere to draw, so its silence proves nothing"
+                    )
+                    #expect(
+                        attempt.companionWrites == 0 && !attempt.companionVisible,
+                        """
+                        \(cell)the companion drew where the glyph could not — \
+                        \(attempt.companionWrites) write(s), visible \(attempt.companionVisible). \
+                        The notch has stopped being a renderer of the ambient rung.
+                        """
+                    )
                     deferrals += 1
 
                 case .installed:
@@ -277,6 +316,21 @@ struct NudgeUnseenAttemptTests {
         #expect(deferrals > 0, "nothing was ever deferred, so focus-zeq's column proves nothing")
         #expect(deliveries > 0, "nothing was ever delivered, so a silent app would pass this")
         #expect(unopened > 0, "no invitation was ever left unopened, so focus-sq7's row is unproven")
+        // — e08a's own vacuity guards —
+        #expect(
+            cellsWhereTheCompanionCouldHaveDrawn > 0,
+            """
+            no cell had a landed geometry, so the companion conjunct holds because no companion \
+            ever existed
+            """
+        )
+        #expect(
+            cellsWhereTheCompanionDidDraw > 0,
+            """
+            the companion never drew in any cell, so a renderer that draws nothing at all would \
+            satisfy the conjunct
+            """
+        )
     }
 
     /// Drive one question at one surface and read back the row it wrote.
@@ -324,7 +378,10 @@ struct NudgeUnseenAttemptTests {
                 )
             },
             landedOn: asked,
-            decision: decision
+            decision: decision,
+            companionWrites: fixture.notchCompanion.writeCount,
+            companionVisible: fixture.notchCompanion.isVisible,
+            companionCouldHaveDrawn: fixture.notchCompanion.landing().collapsed != nil
         )
     }
 
