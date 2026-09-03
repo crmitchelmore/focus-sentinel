@@ -37,6 +37,14 @@ public final class NotchCompanionController {
     /// taken down. Reported so a refusal and an ink frame cannot disagree.
     public private(set) var ink: ScreenRect?
 
+    /// **The presentation this renderer was last handed**, so "one projection, drawn twice" is a
+    /// comparison rather than a claim.
+    ///
+    /// The self-check reads it against `MenuBarController.presentation` and fails the gate when
+    /// they differ: the moment the companion is driven from a value of its own it has stopped
+    /// being a second renderer of the ambient rung and become a second state.
+    public private(set) var lastPresentation: MenuBarPresentation?
+
     /// The displays this controller reads, injectable exactly as `NudgePanelController.displays`
     /// is and for the same reason: this rig has one display with no built-in panel and cannot be
     /// made to grow one.
@@ -69,6 +77,7 @@ public final class NotchCompanionController {
         landing: NotchLanding? = nil
     ) {
         let resolved = landing ?? self.landing()
+        lastPresentation = presentation
         guard
             let companion = NotchCompanionPresentation.derive(
                 landing: resolved,

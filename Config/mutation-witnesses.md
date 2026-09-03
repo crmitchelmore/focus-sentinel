@@ -35,6 +35,8 @@ side artefacts, which the script deletes on exit, so it is pointed at a run of a
 repository so a literal that moves moves for the harness too),
 `/private/tmp/mw/run-sc-idle.zsh` (SC-91..SC-97, focus-7az's idle rows — pointed at the same kind
 of pinned-`SESSION_DIR`, `trap`-free copy for the same reason),
+`/private/tmp/mw/run-sc-e08a.zsh` (SC-154..SC-166, e08a's notch rows, pointed at a
+`FOCUS_EVIDENCE_DIR` produced by running `scripts/self-check.sh` against a built Debug app),
 `/private/tmp/mw/run-json-witnesses.zsh`,
 `run-binary-witnesses.zsh` and `run-log-witnesses.zsh`, each of which prints, per row, either
 the red line it produced or `MISS`. Every harness runs its **unmutated** copy first and requires
@@ -45,7 +47,7 @@ it to be green: a red line means nothing if the clean run was red too.
 
 | stage | assertions witnessed | PROVEN | CANNOT-GO-RED |
 |---|---|---|---|
-| `selfcheck-debug` / `selfcheck-release` | 159 | 159 | — |
+| `selfcheck-debug` / `selfcheck-release` | 172 | 172 | — |
 | `notification-denied` (+ Release twin) | 17 | 17 | — |
 | `focus-steal` (+ Release twin) | 14 | 14 | — |
 | `forbidden-binary` | 6 | 6 | — |
@@ -373,6 +375,42 @@ REPLACES the priority; the mutant then publishes three named disagreements.
 | SC-153 | `self-check.sh:4143` | freeze `PriorityHost.activeCommitment` after its first assignment | SC-152 — a representation that lags by exactly one tick passes SC-152 and fails here | **PROVEN** — `FAIL: and still agrees a turn of the loop later, so nothing lags by one tick` |
 
 The mutant's own report, quoted because it is what the invariant exists to say: `disagreementsAfterReplacement` came back as `['snapshotKey.priorityID … ≠ activeCommitment …', 'state.priority.id … ≠ activeCommitment …', 'state.priority.intent ≠ activeCommitment.intent']`.
+
+### The notch companion, on a Mac that has no notch (e08a, `focus-26b`) — `selfcheck-*`
+
+**H-JSON**, driven by `/private/tmp/mw/run-sc-e08a.zsh <evidence dir>` — the same pattern as
+`run-sc-e09a.zsh`: the reader's own python heredoc is extracted from `scripts/self-check.sh` and
+run against a doctored **copy** of the report, with the argv the stage passes. The evidence
+directory comes from `FOCUS_EVIDENCE_DIR=<dir> scripts/self-check.sh <Debug app>`. Control:
+`CONTROL (unmutated copy) EXIT=0`.
+
+**Why every row here is a number.** This rig is a Mac mini with no built-in panel: the hairline
+cannot be drawn, and a predicate saying so cannot fail. So the block publishes the count of
+built-in displays, the count of writes the renderer made, whether its window is on screen, and the
+named reason all three are what they are — and each of those can be moved.
+
+| # | script:line | mutation (H-JSON) | control | status — the line it printed |
+|---|---|---|---|---|
+| SC-154 | `self-check.sh:2453` | `r["sensing"]["notch"]["geometryWasRead"] = False` | SC-156 — the count of built-in displays holds while the seam is said never to have run, which is the pair that keeps a refusal apart from a reading nobody took | **PROVEN** — `FAIL: the notch geometry was read at all, so a refusal below is a refusal and not a seam that never ran` |
+| SC-155 | `self-check.sh:2463` | `r["sensing"]["notch"]["displaysRead"] = 3` | `sensing.displayCount` is untouched, so this is the two projections parting rather than a display appearing | **PROVEN** — `FAIL: the companion and the sensing graph enumerated the same displays` |
+| SC-156 | `self-check.sh:2471` | `r["sensing"]["notch"]["builtInDisplayCount"] = 1` | SC-158 — the named refusal holds while the count that explains it moves | **PROVEN** — `FAIL: this Mac has no built-in display, which is what makes every landing here a named refusal` |
+| SC-157 | `self-check.sh:2487` | `r["sensing"]["notch"]["refusalVocabulary"] += ["somethingNew"]` | SC-159 — the membership test stays green on a widened vocabulary, which is exactly why the set is pinned as a set (focus-3vb) | **PROVEN** — `FAIL: the six named reasons a display cannot carry the companion, in the order the enum declares them` |
+| SC-158 | `self-check.sh:2493` | `r["sensing"]["notch"]["landingRefusedBecause"] = "noSafeAreaInset"` | SC-157 — the vocabulary holds while the answer moves to another word in it; this is the rig receipt itself | **PROVEN** — `FAIL: the companion refuses this Mac for the reason it actually has: there is no built-in display at all` |
+| SC-159 | `self-check.sh:2499` | `r["sensing"]["notch"]["landingRefusedBecause"] = "itFeltLikeIt"` | SC-157 — the vocabulary holds while the answer leaves it | **PROVEN** — `FAIL: the reason is one of the reasons the binary declares, so the report cannot invent a word` |
+| SC-160 | `self-check.sh:2507` | `r["sensing"]["notch"]["inkFrame"] = {"x": 0.0, "y": 0.0, "width": 185.0, "height": 2.0}` | SC-158 — the refusal holds while a strip appears under a housing that does not exist | **PROVEN** — `FAIL: there is an ink frame exactly when the geometry landed, and none exactly when it refused` |
+| SC-161 | `self-check.sh:2514` | `r["sensing"]["notch"]["companionWrites"] = 1` | SC-162 — the window is still reported absent, so this is focus-mkk's counter moving on its own | **PROVEN** — `FAIL: the hairline was never drawn on a Mac with no built-in display` |
+| SC-162 | `self-check.sh:2519` | `r["sensing"]["notch"]["companionVisible"] = True` | SC-161 — the write count holds at zero, which is the other half of the same picture | **PROVEN** — `FAIL: no strip is on the screen` |
+| SC-163 | `self-check.sh:2527` | `r["sensing"]["notch"]["companionVisible"] = True; r["sensing"]["notch"]["itemVisible"] = False` | SC-162 — the review §3 conjunct, and the one row that is about the notch becoming a fifth surface | **PROVEN** — `FAIL: the companion is on screen only where the status item is` |
+| SC-164 | `self-check.sh:2534` | `r["sensing"]["notch"]["companionSharesTheItemsProjection"] = False` | the rest of the block holds; this is 'one projection, drawn twice' on its own | **PROVEN** — `FAIL: the companion was handed the same presentation the status item was handed` |
+| SC-165 | `self-check.sh:2539` | `r["sensing"]["notch"]["renderersOfTheAmbientRung"] = ["menuBarItem"]` | SC-166 — the charge-site count holds while the renderer list loses a name | **PROVEN** — `FAIL: the ambient rung has exactly two renderers, and the notch is the second of them` |
+| SC-166 | `self-check.sh:2551` | `r["sensing"]["notch"]["chargeSites"] = 1` | SC-165 — the renderer list holds while a charge site appears, which is the notch stopping being a renderer | **PROVEN** — `FAIL: no surface and no perception channel is the notch's own, so the companion charges nothing` |
+
+The residual this block does **not** close, stated rather than left implied: on a Mac with no
+built-in display, a projection that read the *wrong* AppKit values would publish the same four
+readings as one that read the right ones. `DisplayGeometry.NotchReadings` makes the *omission* a
+compile error and `NotchGeometrySeamTests` fails on any divergence between the two projections,
+but "both readers wrong in the same way" is **P-e08-B's** to close and is listed as such in the
+README's e08 section.
 
 ### `published-keys` — `scripts/check-published-keys.sh`
 

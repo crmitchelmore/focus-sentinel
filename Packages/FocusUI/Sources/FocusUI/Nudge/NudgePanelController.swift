@@ -1000,9 +1000,43 @@ public final class NudgePanelController {
                     width: screen.visibleFrame.width,
                     height: screen.visibleFrame.height
                 ),
-                backingScaleFactor: Double(screen.backingScaleFactor)
+                backingScaleFactor: Double(screen.backingScaleFactor),
+                // **The four e08a readings, taken here too** (focus-26b). This projection is
+                // `SystemScreenList.geometry(of:)`'s twin — FocusUI may not import FocusSensing,
+                // so the boundary forces two readers of one API — and a twin that stopped short
+                // of these four would hand the notch companion a display list in which no Mac has
+                // a built-in panel. The companion would then refuse `.noBuiltInDisplay` on a
+                // MacBook, which is a lie the Settings row would repeat. `NotchReadings` has no
+                // defaults, so stopping short is a compile error rather than a silent lie.
+                notch: DisplayGeometry.NotchReadings(
+                    safeAreaTopInset: Double(screen.safeAreaInsets.top),
+                    auxiliaryTopLeft: screen.auxiliaryTopLeftArea.map(Self.rect),
+                    auxiliaryTopRight: screen.auxiliaryTopRightArea.map(Self.rect),
+                    isBuiltIn: Self.isBuiltIn(screen)
+                )
             )
         }
+    }
+
+    static func rect(_ rect: NSRect) -> ScreenRect {
+        ScreenRect(
+            x: Double(rect.origin.x),
+            y: Double(rect.origin.y),
+            width: Double(rect.size.width),
+            height: Double(rect.size.height)
+        )
+    }
+
+    /// Whether this is the Mac's own panel. `false` for a screen whose `NSScreenNumber` could not
+    /// be read between the enumeration and this line, which is the honest answer about a display
+    /// that has just been unplugged.
+    static func isBuiltIn(_ screen: NSScreen) -> Bool {
+        guard
+            let id = (screen.deviceDescription[
+                NSDeviceDescriptionKey("NSScreenNumber")
+            ] as? NSNumber)?.uint32Value
+        else { return false }
+        return CGDisplayIsBuiltin(id) != 0
     }
 
     // MARK: - VoiceOver

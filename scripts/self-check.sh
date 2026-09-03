@@ -2438,6 +2438,121 @@ check(
 model_tier_reading = ((report.get("relevance") or {}).get("modelTier")) or {}
 
 display_count = sensing.get("displayCount")
+
+# --- e08a: the notch companion, on a Mac that has no notch (focus-26b) ---------------------
+#
+# Every line here is a NUMBER about a machine with no built-in panel, and that is the point. The
+# hairline is never drawn on this rig, and "never drawn" asserted as a predicate cannot fail — so
+# the block reads the count of built-in displays, the count of writes the renderer made, whether
+# its window is on screen, and the named reason all three are what they are. A build that landed
+# unconditionally moves `landingRefusedBecause` to `""` and fails here rather than putting a strip
+# under a housing that does not exist.
+notch = sensing.get("notch") or {}
+
+check(
+    notch.get("geometryWasRead") is True,
+    "the notch geometry was read at all, so a refusal below is a refusal and not a seam that "
+    "never ran",
+    notch.get("geometryWasRead"),
+)
+# Two readers of one API. `NSScreen.screens` is read through AppKit in `sensingReport()`;
+# `NudgePanelController.currentScreens()` is FocusUI's own projection, and the package boundary
+# forbids it importing FocusSensing's. A twin that stopped short would hand the companion a list
+# in which no Mac has a built-in panel — and the Settings row would repeat the lie.
+check(
+    notch.get("displaysRead") == display_count,
+    "the companion and the sensing graph enumerated the same displays",
+    (notch.get("displaysRead"), display_count),
+)
+# **The rig receipt, as the gate reads it.** Mac16,10, no built-in panel: `safeAreaInsets.top` is
+# 0 and both `auxiliaryTop*Area` are nil, so this count is 0 and the refusal below is the FIRST
+# thing wrong with the display rather than the only word the app knows.
+check(
+    notch.get("builtInDisplayCount") == 0,
+    "this Mac has no built-in display, which is what makes every landing here a named refusal",
+    notch.get("builtInDisplayCount"),
+)
+# The vocabulary, pinned as a set rather than searched for one name — `surfacesARungCanReach`'s
+# lesson (focus-3vb): a membership test cannot see a case APPEARING. `Refusal` is a closed enum
+# and a seventh case is a review moment.
+NOTCH_REFUSALS = [
+    "noBuiltInDisplay",
+    "noSafeAreaInset",
+    "auxiliaryAreasAbsent",
+    "auxiliaryAreasIncoherent",
+    "housingTooNarrow",
+    "housingOffDisplay",
+]
+check(
+    notch.get("refusalVocabulary") == NOTCH_REFUSALS,
+    "the six named reasons a display cannot carry the companion, in the order the enum declares "
+    "them",
+    notch.get("refusalVocabulary"),
+)
+check(
+    notch.get("landingRefusedBecause") == "noBuiltInDisplay",
+    "the companion refuses this Mac for the reason it actually has: there is no built-in display "
+    "at all, which is a different sentence from 'this Mac has no notch'",
+    notch.get("landingRefusedBecause"),
+)
+check(
+    notch.get("landingRefusedBecause") in notch.get("refusalVocabulary", []),
+    "the reason is one of the reasons the binary declares, so the report cannot invent a word",
+    (notch.get("landingRefusedBecause"), notch.get("refusalVocabulary")),
+)
+# The biconditional, in both directions. A refusal with an ink frame would be a strip drawn where
+# the geometry said nothing may be; a landing with no ink frame would be a companion that had
+# somewhere to draw and no frame to draw in.
+check(
+    (notch.get("inkFrame") is None) == bool(notch.get("landingRefusedBecause")),
+    "there is an ink frame exactly when the geometry landed, and none exactly when it refused",
+    (notch.get("inkFrame"), notch.get("landingRefusedBecause")),
+)
+# **focus-mkk's counter, for the second renderer.** Zero on this rig, and zero because the
+# geometry refused rather than because nothing ever asked.
+check(
+    notch.get("companionWrites") == 0,
+    "the hairline was never drawn on a Mac with no built-in display",
+    notch.get("companionWrites"),
+)
+check(
+    notch.get("companionVisible") is False,
+    "no strip is on the screen",
+    notch.get("companionVisible"),
+)
+# **The review's §3 conjunct, asserted of the running application.** The companion may be visible
+# only where the status item is — otherwise the notch is the only surface a rung reaches, which is
+# focus-mkk inverted: a mark in plain view beside a ledger row reading "deferred, menuBarHidden".
+check(
+    (not notch.get("companionVisible")) or notch.get("itemVisible") is True,
+    "the companion is on screen only where the status item is",
+    (notch.get("companionVisible"), notch.get("itemVisible")),
+)
+# **One projection, drawn twice** — compared, not claimed. The moment the companion is driven from
+# a value of its own it has stopped being a second renderer of the ambient rung.
+check(
+    notch.get("companionSharesTheItemsProjection") is True,
+    "the companion was handed the same presentation the status item was handed",
+    notch.get("companionSharesTheItemsProjection"),
+)
+check(
+    notch.get("renderersOfTheAmbientRung") == ["menuBarItem", "notchCompanion"],
+    "the ambient rung has exactly two renderers, and the notch is the second of them",
+    notch.get("renderersOfTheAmbientRung"),
+)
+# **The proof the notch is a renderer and not a fifth surface.** A fold over the two closed
+# vocabularies rather than a constant: the day somebody adds `NudgeSurface.notch` or a notch
+# `PerceptionChannel` this is 1 and the gate fails on the number. Its companions are the literals
+# immediately below, which this epic did NOT move: `ROUTE_SPACE_CELLS` is still 2*2*2*2*4,
+# `surfacesARungCanReach` is still the same three names, `ladderRungsDeclared` is still 2 and
+# `ACCUSATION_ROUTE_DELIVERED_FLOOR` is still 19. A sixth `routeSpace` axis would be the proof the
+# notch had stopped being a renderer, and there is not one.
+check(
+    notch.get("chargeSites") == 0,
+    "no surface and no perception channel is the notch's own, so the companion charges nothing",
+    notch.get("chargeSites"),
+)
+
 input_devices = (sensing.get("media") or {}).get("inputDeviceCount")
 hardware_seconds = (sensing.get("idle") or {}).get("hardwareSeconds")
 window_rows = windows_read.get("count")

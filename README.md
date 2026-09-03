@@ -582,6 +582,84 @@ field for frame 17). Frame numbers are stable identifiers rather than an executi
 precondition that cannot be reached **aborts the scenario** with the observed state dumped — a live
 lane that photographs whatever it happens to find is a live lane that proves nothing.
 
+## The notch companion (e08a)
+
+The notch companion is a **second renderer of the ambient rung**, not a fifth surface. It draws a
+two-point line, the width of the housing, flush under the notch of the **built-in** display — no
+glyph, no capsule, no text, no timer, no mark of any kind. It adds no `NudgeSurface` case, no
+`PerceptionChannel` case, no `SurfaceObservation` field and no charge site, and the self-check
+publishes `sensing.notch.chargeSites` as a fold over both closed vocabularies so that the day one
+appears the gate fails on a number.
+
+Two conjuncts hold it there, and `NotchCompanionPresentation.derive(…)` is the only place either
+can be broken:
+
+1. **marks** — the companion's mark is in `{.unmarked, presentation.attention}`, and in e08a it is
+   `.unmarked` in every state;
+2. **visibility** — a companion exists only where `menuBarVisible && itemVisible`.
+
+The second is new law. `SurfaceRouter` defers the ambient rung on `menuBarVisible == false` alone,
+and `MenuBarController.redraw(force:)` early-returns on `guard isItemVisible || force`, so
+`glyphWriteCount` and `markOnTheItem` never move when the item is off screen — and
+`PerceptibleChange.proven` needs exactly that increment plus that transition. **Status-item
+overflow is not a suppression**, is invisible to `suppressesOverlays`, and is *more likely* on a
+notched Mac because the housing eats the centre of the bar. Without conjunct 2 the companion would
+be the only surface a rung reaches: a `noticing` line in plain view beside a ledger row reading
+*"deferred, menuBarHidden"*. `NudgeUnseenAttemptTests` is where that tripwire is pulled, with the
+companion pointed at a **synthetic** notched display so its silence is a measurement.
+
+The window is `.floating`, never `.statusBar` — nothing in `Packages/*/Sources` uses `.statusBar`,
+so the plan's "verified in this repo already" was false — and its collection behaviour never
+carries `.fullScreenAuxiliary` (P-130, R-96n). On a full-screen space the companion is simply
+absent, which conjunct 2 requires anyway.
+
+### On the machine this was built on, nothing is ever drawn
+
+This is a Mac mini (Mac16,10) with no built-in display. `NSScreen.safeAreaInsets` is zero,
+`auxiliaryTopLeftArea` and `auxiliaryTopRightArea` are **`nil` rather than degenerate rectangles**,
+and `CGDisplayIsBuiltin` is false — so `NotchLanding.of(_:)` answers
+`.refused(.noBuiltInDisplay)` and the strip is never placed. That is proven by numbers rather than
+by inspection: `sensing.notch.companionWrites` is `0`, `companionVisible` is `false`, `inkFrame` is
+`null`, `builtInDisplayCount` is `0`, and `landingRefusedBecause` is `"noBuiltInDisplay"` — the
+first thing wrong with the display rather than the only word the app knows. There is **no
+`hasNotch` boolean** anywhere (F-74): `NotchLanding.Refusal` is a closed `CaseIterable` of six
+named reasons, published beside the answer so the gate's membership test cannot be satisfied by an
+invented word.
+
+Every fixture in the programme with an interesting housing is therefore labelled **`synthetic`**,
+and stays so until P-e08-B.
+
+### The Settings row is a reading, and there is no toggle
+
+*Notch companion* in the Intervention pane renders from `NotchLanding` and from nothing else, so
+what a person is told is what the display said. `.noBuiltInDisplay` gets its own sentence, because
+*"this Mac has no notch"* is false for a Mac with no built-in panel at all.
+
+There is deliberately **no switch**. A preference is only worth anything if it survives a relaunch,
+and there is no column for this one — that is a schema stage. focus-40i is the round where a
+setting held only in memory silently restored the panel for somebody who had asked for quiet, and
+focus-wy0 and focus-1qm are the two rounds that deleted controls buying nothing. The row says what
+is true and offers nothing until the receipt below arrives.
+
+### What e08b is, and the exact receipt each part needs
+
+e08a is the honest floor: the geometry spine, the collapsed hairline and the truthful row. Marks,
+pulse and expansion are **e08b**, and none of them may be built before its receipt exists. The
+receipts are hardware measurements the driver must produce on another machine — this rig cannot
+take any of them.
+
+| e08b item | the receipt that unblocks it |
+|---|---|
+| **Marks** — capsule, `StatusBadge` shapes, the timer under the housing | **P-e08-B**: measured `NSScreen.safeAreaInsets.top` and both `auxiliaryTop*Area` rectangles on a 14″ and a 16″ MacBook, at each backing scale, pasted into `focus-26b`. It replaces the `synthetic` labels on `NotchLandingTests.shapes`, `NotchCompanionPanelTests.notched` and `NudgeHostFixture.notchedDisplay`. |
+| **Pulse** (F-78) | **P-e08-A**, level half: `screencapture -l` of the strip at each candidate window level on notch hardware, showing the companion *under* the housing and never over a menu-bar item — `.statusBar` is unmeasured here and the plan's claim that it was verified is false. **Plus** an extension to `scripts/frame-ink.py`: it computes luminance between *horizontally adjacent pixels within one frame* (`:86-87`) and prints one `ink=/verdict=` line per file (`:119-125`). There is no before/after diff, and a 2 pt hairline on a uniform strip is the low-`ink` case the tool calls `blank`, so the plan's S2 criterion is unimplementable as written. |
+| **Expansion** (F-76) | **P-e08-A**, hover half: a real `NSTrackingArea` event count over the housing. **Plus** the ceiling fix — `SurfaceSizeCommitment.ceiling` reads `DisplayMapper.primaryScreen(in: screens)`, the *primary* display and not the surface's, and a docked MacBook's notched built-in is routinely not primary. It must be passed a one-element list holding the notched display through call-site arguments (the `MenuBarController.popoverContainers` pattern), so that the core diff stays zero and R-96w stays green. |
+| **A stored "show the companion" preference, and the toggle that sets it** | A schema stage: `NudgePreferencesRecord` is declared by `FocusSchemaV5`, so a fourth column means `FocusSchemaV8` re-declaring that one class, a `v7ToV8` stage, and `MigrationV8Tests` asserting the delta is exactly one class and one property. Worth doing **with** the marks, when there is something to turn off that a person can see. |
+| **Any capture or sharing copy** | **P-e08-D**: `sharingType = .none` measured against ScreenCaptureKit. Runnable here now — nothing sets `sharingType` in `Packages/*/Sources`. Until it exists: no code and no copy. |
+| **Both display projections agreeing about a notched Mac** | **P-e08-B** again. `DisplayGeometry.NotchReadings` makes an *omitted* reading a compile error and `NotchGeometrySeamTests` fails on any *divergence* between `SystemScreenList.geometry(of:)` and `NudgePanelController.currentScreens()`, but on a Mac with no built-in display "both readers wrong in the same way" publishes the same four values as "both readers right". That residual is stated in the test's own doc and in `Config/mutation-witnesses.md`. |
+
+**The refusal strings are unapproved copy.** All five `settings.intervention.notch.*` entries ship
+marked `PENDING HUMAN APPROVAL (D-11)` in the catalog comment.
+
 ## History
 
 History is a **fact ledger**, not a timeline. It lists what the app did today and why it said so,

@@ -145,7 +145,12 @@ public final class MenuBarController {
     private var popoverLayoutGeneration = 0
     /// Where the popover's actions actually landed, as the layout itself reported them.
     private var reportedPopoverFrames = NudgeActionFrameSet.empty
-    private var presentation = MenuBarPresentation(status: .uncertain)
+    /// **What the item was last asked to draw.** `private(set)` since e08a: the notch companion is
+    /// a second renderer of this same value, and the self-check compares the two so that "one
+    /// projection, drawn twice" is a comparison rather than a claim. It is deliberately not the
+    /// reading a charge rests on — that is `markOnTheItem`, off `drawnGlyph`, which is what was
+    /// *assigned* rather than what was *asked for*.
+    public private(set) var presentation = MenuBarPresentation(status: .uncertain)
     private var traits: AppearanceTraits = .systemDefault
     /// **Everything the popover's content was last built out of** (focus-tzj.1).
     ///

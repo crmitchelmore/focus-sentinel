@@ -67,6 +67,70 @@ public struct DisplayGeometry: Sendable, Equatable, Hashable {
         self.isBuiltIn = isBuiltIn
     }
 
+    /// **The four e08a readings as one value, with no defaults anywhere** (e08a, `focus-26b`).
+    ///
+    /// This exists because there are **two** AppKit projections of `NSScreen` in this programme
+    /// and the package boundary requires it: `SystemScreenList.geometry(of:)` is FocusSensing's
+    /// and `NudgePanelController.currentScreens()` is FocusUI's, and FocusUI may not import
+    /// FocusSensing. Two readers of one API is two chances to stop short — and stopping short is
+    /// *silent and shippable*, because a projection that never read `CGDisplayIsBuiltin` hands the
+    /// companion a display list in which no Mac has a built-in panel, and no rig in this programme
+    /// has one to notice with.
+    ///
+    /// So the omission is made a compile error. Every field is a `let` with no default and the
+    /// memberwise initialiser is the only one, so a projection that forgot a reading does not
+    /// build. What it cannot make an error is a projection that reads the *wrong* value, and on a
+    /// Mac with no built-in display that residual is not falsifiable at all — the two honest
+    /// answers and the two dishonest ones are the same four values. `NotchGeometrySeamTests` says
+    /// so in as many words, and P-e08-B is the receipt that closes it.
+    public struct NotchReadings: Sendable, Equatable, Hashable {
+        public let safeAreaTopInset: Double
+        public let auxiliaryTopLeft: ScreenRect?
+        public let auxiliaryTopRight: ScreenRect?
+        public let isBuiltIn: Bool
+
+        public init(
+            safeAreaTopInset: Double,
+            auxiliaryTopLeft: ScreenRect?,
+            auxiliaryTopRight: ScreenRect?,
+            isBuiltIn: Bool
+        ) {
+            self.safeAreaTopInset = safeAreaTopInset
+            self.auxiliaryTopLeft = auxiliaryTopLeft
+            self.auxiliaryTopRight = auxiliaryTopRight
+            self.isBuiltIn = isBuiltIn
+        }
+    }
+
+    /// **The initialiser the two AppKit projections use, and the one a fixture does not.**
+    ///
+    /// `notch` has no default, which is the whole of its job: the initialiser above defaults the
+    /// four readings to this rig's own so that every construction site written before e08a goes on
+    /// describing the Mac it was written on, and that convenience is exactly what would let a real
+    /// projection forget them.
+    public init(
+        displayID: Int,
+        screenIndex: Int,
+        isPrimary: Bool,
+        frame: ScreenRect,
+        visibleFrame: ScreenRect,
+        backingScaleFactor: Double,
+        notch: NotchReadings
+    ) {
+        self.init(
+            displayID: displayID,
+            screenIndex: screenIndex,
+            isPrimary: isPrimary,
+            frame: frame,
+            visibleFrame: visibleFrame,
+            backingScaleFactor: backingScaleFactor,
+            safeAreaTopInset: notch.safeAreaTopInset,
+            auxiliaryTopLeft: notch.auxiliaryTopLeft,
+            auxiliaryTopRight: notch.auxiliaryTopRight,
+            isBuiltIn: notch.isBuiltIn
+        )
+    }
+
     /// Where the companion may draw on this display, or the named reason it may not.
     ///
     /// Derived rather than stored, for `MenuBarPresentation.attention`'s reason: the facts it is

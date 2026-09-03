@@ -192,6 +192,16 @@ public final class AppComposition {
     /// The menu-bar command centre. Installed in `start()`, because it touches `NSStatusBar`.
     let menuBar: MenuBarController
 
+    /// **Every renderer of the ambient rung, named** (e08a).
+    ///
+    /// Two, and the list is the claim rather than the count: the status item, whose write is the
+    /// receipt every ambient charge rests on, and the notch companion, which draws a strip under
+    /// the housing of a built-in notched display and nothing else. A third name here without a
+    /// third `PerceptionChannel` beside it would be a surface pretending to be a renderer, which
+    /// is the thing this whole epic is arranged not to be — so the self-check publishes the list
+    /// and the gate pins it, exactly as it pins `surfacesARungCanReach`.
+    static let ambientRungRenderers = ["menuBarItem", "notchCompanion"]
+
     /// **The second renderer of the ambient rung** (e08a). It draws a hairline under the housing
     /// of a built-in notched display and nothing else, from the same presentation the item above
     /// is handed — which is what makes it a renderer rather than a surface. On this Mac it never

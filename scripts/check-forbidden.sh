@@ -984,6 +984,18 @@ check_outside "R-70n" "no rule is constructed with the session scope" \
 #        asks for the window by name (`requestCockpit()`), and a seventh control that reaches
 #        for the buffer instead is a diff in this line.
 #
+# R-96w  **The notch is a renderer, and the reducers have never heard of it** (e08a, focus-26b).
+#        No file under `FocusCore/Nudge/` — which is where `DecisionSurfaceReachability.swift`
+#        lives — and not `FocusCore/Shell/SurfaceSizeCommitment.swift` either, may name the notch
+#        or the companion. This is the
+#        permanent form of the epic's zero-line diff pin: e08a changed none of those six files,
+#        and the reason that mattered is that a notch vocabulary inside the difference arithmetic
+#        would be a fifth surface arriving without its `PerceptionChannel`, its own charge site
+#        and its own `surfacesARungCanReach` row. e08b pressures the last two (the expansion's
+#        ceiling reads `DisplayMapper.primaryScreen(in:)`, which is wrong for a docked MacBook)
+#        and must route through call-site arguments — the `popoverContainers` pattern — rather
+#        than through an edit here.
+#
 # R-96n  `.fullScreenAuxiliary` is CONDITIONAL, and the condition is the presentation gate.
 #        The flag may be ADDED to a collection behaviour in exactly one file and on exactly
 #        one expression — the true branch of `collectionBehavior(presentationIsClear:)` — it
@@ -1048,10 +1060,15 @@ NUDGE_SURFACES=(
 # `MenuBarSnooze`, which is identified and cancelled by `subject.identifier` while it draws
 # `subject.displayName`, so it names a key by construction and cannot be in this list
 # (focus-tzj.6 moved it out of `MenuBarController`, which draws nothing either).
+# The e08a addition: the notch companion's window and its one view. It draws a two-point line and
+# no subject at all, which is exactly what qualifies it — the ban this list carries is *name no
+# storage key*, and a renderer with nothing to say cannot name one. It joins the list rather than
+# being excused from it, because a file that quietly dropped out would take its ban with it.
 NUDGE_DRAWING_FILES=(
     Packages/FocusUI/Sources/FocusUI/Nudge/QueryPanelView.swift
     Packages/FocusUI/Sources/FocusUI/Nudge/AccusationPanelView.swift
     Packages/FocusUI/Sources/FocusUI/MenuBar/MenuBarPopoverView.swift
+    Packages/FocusUI/Sources/FocusUI/MenuBar/NotchCompanionPanel.swift
 )
 
 # The files permitted to order a nudge window in without activating the application (R-96m).
@@ -1799,6 +1816,22 @@ else
     check_outside "R-96m" "orderFrontRegardless appears only in a nudge window's show function" \
         'orderFrontRegardless' $nudge_paths \
         "${show_allowances[@]}"
+
+    # R-96w — the notch is not in the reducers, nor in the two files e08b pressures.
+    local -a notch_free_paths
+    notch_free_paths=(
+        $NUDGE_REDUCERS
+        Packages/FocusCore/Sources/FocusCore/Shell/SurfaceSizeCommitment.swift
+    )
+    # Non-vacuity: a renamed file dropping silently out of this list would take its ban with it,
+    # which is the failure mode `NUDGE_DRAWING_FILES` names in as many words.
+    if (( ${#notch_free_paths} != ${#${(f)"$(existing_paths "${notch_free_paths[@]}")"}} )); then
+        print -u2 "FAIL [R-96w] one of the notch-free paths is missing: ${notch_free_paths[*]}"
+        rc=1
+    fi
+    check_set "R-96w" "no nudge reducer names the notch or its companion" \
+        'notch|Notch|companion|Companion' \
+        ${(f)"$(existing_paths "${notch_free_paths[@]}")"}
 
     # R-96n — the conditional flag, and the condition.
     #

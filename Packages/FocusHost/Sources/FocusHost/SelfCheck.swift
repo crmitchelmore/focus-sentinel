@@ -3224,6 +3224,71 @@ enum SelfCheck {
     /// `resumed(cause: .globalPause)` nets to nothing, which is precisely the property the
     /// cause mechanism exists to give. Two rows land in the local timeline saying it happened,
     /// which is the honest record of a thing that did happen.
+    /// **What the notch companion did, and the named reason it did nothing** (e08a, `focus-26b`).
+    ///
+    /// ## Why this block exists on a Mac that has no notch
+    ///
+    /// Because *"the hairline is never drawn here"* is otherwise an inspection. This rig is a Mac
+    /// mini with no built-in panel, so the companion cannot draw — and a predicate saying so
+    /// cannot fail. These are numbers instead: the built-in display count, the write count, the
+    /// visibility, and the refusal that explains all three. A build that landed unconditionally
+    /// moves `landingRefusedBecause` to `""` and the gate says so.
+    ///
+    /// ## The bidirectional pin, and why the vocabulary is published beside the answer
+    ///
+    /// `refusalVocabulary` is `NotchLanding.Refusal.allCases`, published as its own key so the
+    /// membership check the gate makes cannot be satisfied by a report that invented a word. The
+    /// gate pins the vocabulary itself as well: `Refusal` is a closed enum and a seventh case is a
+    /// review moment, not a silent widening.
+    ///
+    /// ## What is deliberately NOT here
+    ///
+    /// A `NudgeSurface` case, a `PerceptionChannel` case, a `SurfaceObservation` field, a
+    /// `SettledObservation` sibling, or a sixth `routeSpace` axis. `chargeSites` is the reading
+    /// that says so, and it is a count over the two closed vocabularies rather than a constant:
+    /// the day somebody adds `NudgeSurface.notch` it is `1`, and the gate fails on the number
+    /// rather than on somebody noticing.
+    @MainActor
+    static func notchReport() -> [String: Any] {
+        let composition = AppComposition.shared
+        let companion = composition.notchCompanion
+        let screens = NudgePanelController.currentScreens()
+        let landing = companion.landing()
+
+        var report: [String: Any] = [:]
+        // The reading was taken at all. `false` would mean the seam never ran — a different fact
+        // from a refusal, and one that must not be reported as one (focus-2vi's rule: a reading
+        // that could not be taken is NOT TAKEN, and says so under its own name).
+        report["geometryWasRead"] = !screens.isEmpty
+        report["displaysRead"] = screens.count
+        report["builtInDisplayCount"] = screens.filter(\.isBuiltIn).count
+        // `""` for a landing, never `null`: a key that appears only on the failing branch is a key
+        // the published-keys stage cannot fold over (focus-2uy.3).
+        report["landingRefusedBecause"] = landing.refusal?.rawValue ?? ""
+        report["refusalVocabulary"] = NotchLanding.Refusal.allCases.map(\.rawValue)
+        report["inkFrame"] = landing.collapsed.map { rect in
+            ["x": rect.x, "y": rect.y, "width": rect.width, "height": rect.height] as [String: Any]
+        } ?? NSNull()
+        report["companionVisible"] = companion.isVisible
+        report["companionWrites"] = companion.writeCount
+        report["itemVisible"] = composition.menuBar.isItemVisible
+        // **One projection, drawn twice.** Compared rather than claimed: the moment the companion
+        // is driven from a value of its own it has stopped being a second renderer of the ambient
+        // rung and become a second state.
+        report["companionSharesTheItemsProjection"] =
+            companion.lastPresentation == composition.menuBar.presentation
+        report["renderersOfTheAmbientRung"] = AppComposition.ambientRungRenderers
+        // Every case of the two closed vocabularies whose name is about the notch. Zero, and it is
+        // a fold rather than a literal so that adding one is what moves it.
+        let notchNames = NudgeSurface.allCases.map(\.rawValue)
+            + PerceptionChannel.allCases.map(\.rawValue)
+        report["chargeSites"] = notchNames.filter {
+            let name = $0.lowercased()
+            return name.contains("notch") || name.contains("companion")
+        }.count
+        return report
+    }
+
     @MainActor
     static func sensingReport() -> [String: Any] {
         let host = AppComposition.shared.sensingHost
@@ -3239,6 +3304,8 @@ enum SelfCheck {
         // in this report. This is the fourth, read through AppKit rather than through the probe's
         // own `SystemScreenList`, so the comparison is between two readings and not a mirror.
         report["displayCount"] = NSScreen.screens.count
+        // **e08a's whole answer about this machine, in one sub-dictionary.**
+        report["notch"] = notchReport()
         report["settingSensingPaused"] = host.settings.sensingPaused
         report["redundantActivations"] = host.redundantActivations
         report["cascade"] = host.cascade.map(\.rawValue)

@@ -42,13 +42,18 @@ public final class SystemScreenList: ScreenListReading {
                 frame: rect(screen.frame),
                 visibleFrame: rect(screen.visibleFrame),
                 backingScaleFactor: Double(screen.backingScaleFactor),
-                safeAreaTopInset: Double(screen.safeAreaInsets.top),
-                auxiliaryTopLeft: screen.auxiliaryTopLeftArea.map(rect),
-                auxiliaryTopRight: screen.auxiliaryTopRightArea.map(rect),
-                // A screen whose `NSScreenNumber` could not be read between the enumeration and
-                // this line is not claimed to be built in: the honest answer about a display that
-                // has just been unplugged is that the app knows nothing about it.
-                isBuiltIn: id.map { CGDisplayIsBuiltin(CGDirectDisplayID($0)) != 0 } ?? false
+                // `NotchReadings` has no defaults, so a projection that stopped short of one of
+                // the four does not compile — which is the only half of "two readers of one API"
+                // that can be held on a rig with no built-in panel.
+                notch: DisplayGeometry.NotchReadings(
+                    safeAreaTopInset: Double(screen.safeAreaInsets.top),
+                    auxiliaryTopLeft: screen.auxiliaryTopLeftArea.map(rect),
+                    auxiliaryTopRight: screen.auxiliaryTopRightArea.map(rect),
+                    // A screen whose `NSScreenNumber` could not be read between the enumeration
+                    // and this line is not claimed to be built in: the honest answer about a
+                    // display that has just been unplugged is that the app knows nothing about it.
+                    isBuiltIn: id.map { CGDisplayIsBuiltin(CGDirectDisplayID($0)) != 0 } ?? false
+                )
             )
         }
     }
