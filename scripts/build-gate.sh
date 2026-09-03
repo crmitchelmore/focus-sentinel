@@ -948,7 +948,7 @@ gate() {
     # reader of a Release artefact. So every geometry assertion in `check-focus-steal.sh` — the
     # panel's committed width, its ceiling, the hit test at the centre of every action, the
     # popover's two states — and every routing assertion in `check-notification-denied.sh` — the
-    # 160-cell rung fold, the 80-cell question fold, `requestAuthorizationCallCount == 0` — held
+    # 128-cell rung fold, the 64-cell question fold, `requestAuthorizationCallCount == 0` — held
     # of a build nobody installs, and `self-check.sh`'s Release twins of them are thinner. A
     # whole-module-optimised binary is not the same binary: that is the reason the boundary and
     # forbidden stages read both configurations one object at a time, and it applies here.

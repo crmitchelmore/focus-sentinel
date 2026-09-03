@@ -31,7 +31,7 @@ public enum NudgeCopySlot: String, Sendable, CaseIterable, Codable, Hashable {
 ///
 /// The raw value is the key's tail; the full String Catalog key is
 /// `nudge.<deck>.<situation>`, composed by `NudgeVoice.key(_:)`. Composing rather than writing
-/// sixty-five literals is deliberate: the pair is checked as a **bijection** by
+/// fifty-two literals is deliberate: the pair is checked as a **bijection** by
 /// `check-strings.sh` (R-96l) — every deck × every key exists in the catalog, and every
 /// `nudge.*` catalog key names a real pair — which is a stronger property than "this literal
 /// appears in some source file".
@@ -80,12 +80,21 @@ public enum NudgeCopyKey: String, Sendable, CaseIterable, Codable, Hashable {
     public var isQueryLine: Bool { rawValue.hasPrefix("query.") }
 }
 
-/// **Five static decks, and no way to generate a sixth** (R-90, F-65, D-11, SC-4).
+/// **Four static decks, and no way to generate a fifth** (R-90, F-65, D-11, SC-4).
 ///
-/// Four of them are registers of the same thirteen lines. The fifth is different in kind:
+/// Three of them are registers of the same thirteen lines. The fourth is different in kind:
 /// `silentVisual` is a **routing** deck rather than a copy deck — it takes the panel rung and the
 /// question alike into the menu-bar popover — and it is the accessibility-critical one, so it
 /// carries the full line set as well and is snapshot-tested like the rest.
+///
+/// **There were five, and `playful` is retired** — a user ruling on `focus-0nm` (2026-08-29),
+/// which outranks the Court's five-deck range. Its shipped lines were "Still on the trail of
+/// %@?", "It counts, honest", "Hop back to %@", "Coffee break": charming at the first
+/// interruption and smug at the fortieth, which is the defect this app can least afford under
+/// U-1. "Lighter" as a register has only cuteness to trade in, so it could not be rewritten
+/// into something both distinct from `warm` and survivable. A row still holding the raw value
+/// is read as `warm` by `NudgeVoice.decode(_:)` and **is not** an unreadable row: the person
+/// picked the gentler register and keeps it.
 ///
 /// The Court's adopted default is F-66's: **"Still working on {task}?"** for the accusation and
 /// its question-shaped sibling **"Is {subject} part of {task}?"** for the query.
@@ -96,8 +105,6 @@ public enum NudgeVoice: String, Sendable, CaseIterable, Codable, Hashable {
     case warm
     /// Terse. Fewer words, never harder words.
     case direct
-    /// Lighter. Still never accusatory.
-    case playful
     /// Quiet by construction: no panel, no motion, no sound. A routing deck.
     case silentVisual
 
@@ -130,7 +137,7 @@ public enum NudgeVoice: String, Sendable, CaseIterable, Codable, Hashable {
     /// why R-92 is one flag inside the existing router rather than a parallel surface stack.
     public var querySurface: NudgeSurface {
         switch self {
-        case .neutral, .warm, .direct, .playful: .panel
+        case .neutral, .warm, .direct: .panel
         case .silentVisual: .popoverBadge
         }
     }
@@ -153,7 +160,7 @@ public enum NudgeVoice: String, Sendable, CaseIterable, Codable, Hashable {
     /// place the vocabulary is written down.
     public static let keyPrefix = "nudge"
 
-    /// Every key in the matrix — five decks × thirteen lines — in a stable order.
+    /// Every key in the matrix — four decks × thirteen lines — in a stable order.
     ///
     /// This is what the completeness lint compares the catalog against, and what the settings
     /// pane's preview iterates.

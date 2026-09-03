@@ -205,12 +205,69 @@ struct MigrationV5Tests {
     /// makes the app speak in its default voice rather than crash or reinterpret a deck.
     @Test("the voice decodes exhaustively", arguments: NudgeVoice.allCases)
     func voiceDecodes(_ voice: NudgeVoice) {
-        #expect(NudgeVoice.decode(voice.rawValue) == voice)
+        let decoded = NudgeVoice.decode(voice.rawValue)
+        #expect(decoded.voice == voice)
+        #expect(decoded.wasRecognised, "a deck this build declares must read as recognised")
     }
 
-    @Test("an unreadable voice decodes to the shipped deck")
+    /// **The five raw values this application has ever written**, folded at once.
+    ///
+    /// Four survive and round-trip; `playful` was retired by the ruling on `focus-0nm` and its
+    /// rows read as `warm`. The assertion is `.warm` rather than "does not crash" on purpose:
+    /// without the arm the row falls to `default` and becomes `neutral`, which is exactly the
+    /// silent reinterpretation the decoder's doc forbids, and a test that only asked for
+    /// survival would have been green over it.
+    @Test("every raw value this app has ever stored still decodes, and playful reads as warm")
+    func everyShippedRawStillDecodes() {
+        let shipped = ["neutral", "warm", "direct", "playful", "silentVisual"]
+        for raw in shipped {
+            #expect(
+                NudgeVoice.decode(raw).wasRecognised,
+                "\(raw) was written by a shipped build and this one cannot read it"
+            )
+        }
+        #expect(NudgeVoice.decode("playful").voice == .warm)
+        for voice in NudgeVoice.allCases {
+            #expect(NudgeVoice.decode(voice.rawValue).voice == voice)
+        }
+    }
+
+    /// An unreadable row is a **named fact**, not a crash and not a silence.
+    ///
+    /// `standard` is the voice, because refusing to open would brick the app on a downgrade
+    /// after a newer build wrote a raw value this one has never heard of; `wasRecognised` is
+    /// false, because that is the half a fault and a self-check reading are drawn from. A
+    /// decoder that answered `standard` without saying so is the defect this pair exists to
+    /// catch (D4).
+    @Test("an unreadable voice decodes to the shipped deck, and says it could not be read")
     func unreadableVoiceDecodes() {
-        #expect(NudgeVoice.decode("") == .standard)
-        #expect(NudgeVoice.decode("shouty") == .standard)
+        #expect(NudgeVoice.decode("").voice == .standard)
+        #expect(NudgeVoice.decode("shouty").voice == .standard)
+        #expect(NudgeVoice.decode("").wasRecognised == false)
+        #expect(NudgeVoice.decode("shouty").wasRecognised == false)
+    }
+
+    /// The fact reaches the value the app is handed, not only the decoder.
+    @Test("an unreadable stored deck is reported through the preferences the app reads")
+    @MainActor
+    func unreadableStoredDeckIsReported() throws {
+        let container = try FocusStore.makeContainer(kind: .inMemory)
+        let context = container.mainContext
+
+        let row = FocusSchemaV5.NudgePreferencesRecord(touchedAt: Self.timestamp)
+        row.voiceRaw = "a-deck-from-a-newer-build"
+        context.insert(row)
+        try context.save()
+
+        let read = FocusStore.interventionPreferences(in: context)
+        #expect(read.voice == .standard)
+        #expect(read.storedVoiceWasRecognised == false)
+
+        // …and a row the build CAN read is not reported, so the reading is not vacuously false.
+        row.voice = .direct
+        try context.save()
+        let reread = FocusStore.interventionPreferences(in: context)
+        #expect(reread.voice == .direct)
+        #expect(reread.storedVoiceWasRecognised)
     }
 }

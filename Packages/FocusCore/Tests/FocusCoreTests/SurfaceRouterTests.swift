@@ -52,6 +52,15 @@ struct SurfaceRouterTests {
         )
     }
 
+    /// How many cells `everyCell` visits, derived from the axes themselves.
+    ///
+    /// Four booleans, the rung kinds and the decks. Written as a product rather than as a
+    /// number so that retiring a deck moves the expectation with the space, and a router
+    /// that had quietly stopped folding still fails.
+    static var cellCount: Int {
+        LadderRung.Kind.allCases.count * 2 * 2 * 2 * 2 * NudgeVoice.allCases.count
+    }
+
     /// Every cell of the matrix, as a sequence a test can fold over.
     static func everyCell(
         _ body: (
@@ -128,7 +137,10 @@ struct SurfaceRouterTests {
                 "\(rung)/\(voice) routed an accusation to a notification"
             )
         }
-        #expect(cells == 160)
+        // Derived, not written down: the deck count is a ruling that has moved once
+        // already (`playful`, focus-0nm), and a literal here would have made a retired
+        // deck look like a router that had stopped visiting cells.
+        #expect(cells == Self.cellCount)
     }
 
     /// **Every accusation this router can deliver lands somewhere the person can answer it**

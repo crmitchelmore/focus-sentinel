@@ -16,7 +16,7 @@ public enum NudgeCopy {
     /// One line of one deck, with the arguments its template declares.
     ///
     /// - Parameters:
-    ///   - voice: which of the five static decks. `silentVisual` carries the full line set as
+    ///   - voice: which of the four static decks. `silentVisual` carries the full line set as
     ///     well as its routing behaviour, so this is total over `NudgeVoice`.
     ///   - line: which of the thirteen situations.
     ///   - arguments: the slot values, **in the order `NudgeCopyKey.slots` declares them**.

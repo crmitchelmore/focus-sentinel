@@ -30,6 +30,11 @@ struct SelfCheckAccusationAuditTests {
         LadderRung.Kind.allCases.count(where: \.makesAnAccusation)
         * 2 * 2 * 2 * 2 * NudgeVoice.allCases.count
 
+    /// Delivering cells per deck, measured. See `theAuditCountsWhatItReached` for the arithmetic
+    /// these two came out of.
+    static let deliveringCellsPerCopyDeck = 5
+    static let deliveringCellsPerRoutingDeck = 4
+
     /// **The size of the fold, asserted before the verdict it qualifies.**
     ///
     /// This is the assertion the round was missing. Both exemptions were *shrinkages* — one took
@@ -78,9 +83,19 @@ struct SelfCheckAccusationAuditTests {
         // The measured figure, pinned as a floor rather than an equality for `test-floors.txt`'s
         // reason: a route that starts delivering where it used to defer must not redden the gate,
         // and one that stops delivering must.
+        //
+        // **Derived from the deck vocabulary rather than written down** (focus-0nm). It was the
+        // literal 24, measured over five decks; retiring `playful` took the space from 80 cells
+        // to 64 and the delivering cells from 24 to 19, and a literal would have reported a deck
+        // the user retired as a router that had stopped reaching surfaces. Two measurements fix
+        // the two coefficients: 4d + s = 24 over five decks and 3d + s = 19 over four give five
+        // delivering cells per copy deck and four for the routing one.
+        let floor = Self.deliveringCellsPerCopyDeck
+            * NudgeVoice.allCases.count(where: { !$0.isRoutingDeck })
+            + Self.deliveringCellsPerRoutingDeck
         #expect(
-            audit.delivered >= 24,
-            "\(audit.delivered) of \(audit.cells) cells reached a surface, against 24 measured"
+            audit.delivered >= floor,
+            "\(audit.delivered) of \(audit.cells) cells reached a surface, against \(floor)"
         )
     }
 

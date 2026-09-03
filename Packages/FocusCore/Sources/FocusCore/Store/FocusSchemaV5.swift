@@ -93,20 +93,37 @@ public enum FocusSchemaV5: VersionedSchema {
 }
 
 extension NudgeVoice {
-    /// The stored deck, decoded through an exhaustive `switch`.
+    /// The stored deck, decoded through an exhaustive `switch`, **and whether this build could
+    /// read it**.
     ///
     /// Unreadable ⇒ `standard`, which is what the app ships with: a row this build cannot
     /// interpret makes it speak in its default voice, never crash and never silently
     /// reinterpret one deck as another — which is exactly what `init(rawValue:)` over a
     /// reordered enum would do, and why R-45 bans that spelling for the phases.
-    public static func decode(_ raw: String) -> NudgeVoice {
+    ///
+    /// **The second half of the pair is what "fails loudly" means here** (D4). A `throw` was
+    /// considered and rejected on three grounds. The shipped remedy for the same shape — a
+    /// store the app cannot use — splits one boolean into a *named fact* and blocks only the
+    /// action that would lose data (`PriorityHost`, `StoreUnavailableSheet`); it does not
+    /// refuse to launch, and an uninterpretable preference row loses nothing. Every sibling
+    /// decoder in this schema is total, so a throwing `NudgeVoice` would be the sole exception
+    /// to R-45's doctrine. And refusing to open would brick the app on a downgrade, after a
+    /// newer build had written a raw value this one has never heard of. So the loudness is a
+    /// fact the caller can read, log as a fault, and put in the self-check — not a refusal.
+    ///
+    /// `playful` is **recognised**: it is a retired deck (`focus-0nm`, 2026-08-29) whose rows
+    /// read as `warm`, the nearest surviving register, and the person who chose it keeps a
+    /// gentler voice rather than being quietly returned to the default. Without this arm the
+    /// row would fall to `default` and become `neutral` with nobody the wiser, which is the
+    /// silent reinterpretation the doc above forbids.
+    public static func decode(_ raw: String) -> (voice: NudgeVoice, wasRecognised: Bool) {
         switch raw {
-        case "neutral": .neutral
-        case "warm": .warm
-        case "direct": .direct
-        case "playful": .playful
-        case "silentVisual": .silentVisual
-        default: .standard
+        case "neutral": (.neutral, true)
+        case "warm": (.warm, true)
+        case "direct": (.direct, true)
+        case "playful": (.warm, true)
+        case "silentVisual": (.silentVisual, true)
+        default: (.standard, false)
         }
     }
 }
@@ -118,9 +135,17 @@ extension NudgeVoice {
 
 extension FocusSchemaV5.NudgePreferencesRecord {
     public var voice: NudgeVoice {
-        get { NudgeVoice.decode(voiceRaw) }
+        get { NudgeVoice.decode(voiceRaw).voice }
         set { voiceRaw = newValue.rawValue }
     }
+
+    /// Whether this build could read the deck the row holds.
+    ///
+    /// The other half of `decode(_:)`'s pair, kept as its own accessor so a caller reading the
+    /// voice cannot read it without being able to ask. `false` is not a corruption and not a
+    /// reason to refuse the row: it is a raw value this build has never heard of — a downgrade
+    /// after a newer build wrote one — and the app speaks in `standard` and **says so**.
+    public var voiceWasRecognised: Bool { NudgeVoice.decode(voiceRaw).wasRecognised }
 
     /// The window, as the value the suppression stack evaluates.
     ///

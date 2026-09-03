@@ -1736,6 +1736,26 @@ check(
     "the Intervention pane's Voice control reaches the store, so the deck survives a quit",
     (intervention_drive.get("voiceProbe"), intervention_drive.get("voiceStored")),
 )
+# **An uninterpretable deck is a named fact, not a silence** (D4, focus-0nm). Deleting `playful`
+# from the enum did not throw and could not: the decoder is a total switch whose `default` is the
+# shipped deck, so the person's chosen voice would have become `neutral` with nothing said. The
+# pair below is what "fails loudly" was ruled to mean — a reading, a logged fault, and the app
+# still opens. Two readings because either alone can be green over a dead decoder: the first is
+# this Mac's own row, which is normally readable, and the second drives a raw value no build will
+# ever declare.
+check(
+    intervention_drive.get("storedVoiceWasRecognised") is True,
+    "this build can read the deck the store holds, so nobody's voice was quietly reinterpreted",
+    (
+        intervention_drive.get("storedVoiceRaw"),
+        intervention_drive.get("storedVoiceWasRecognised"),
+    ),
+)
+check(
+    intervention_drive.get("anUnreadableDeckIsReported") is True,
+    "a deck this build cannot read is reported as unread and answered with the shipped deck",
+    intervention_drive.get("anUnreadableDeckIsReported"),
+)
 check(
     intervention_drive.get("reducedReachedTheStore") is True,
     "Interrupt me less reaches the store, so a person who asked for quiet keeps it",
@@ -3633,7 +3653,7 @@ check(
 # against the DEBUG product, this was the only "no notification" reading taken at the artefact this
 # programme ships.
 #
-# It is now the same 160-cell fold `accusationRouteCellsChecked` counts, over every rung instead of
+# It is now the same 128-cell fold `accusationRouteCellsChecked` counts, over every rung instead of
 # the accusing ones. The honest answer is THREE surfaces: `popoverBadge` is genuinely reachable
 # under exactly the conditions the two-cell table pinned away. A reading that said two was not a
 # stronger claim; it was a narrower one.
@@ -3641,7 +3661,9 @@ check(
 # presenting × mic × flag × menuBar × deck — and the rung fold multiplies it by the rungs. Spelling
 # it this way is what makes the two numbers below unable to drift apart, which is the arithmetic
 # form of the defect this pair of readings is a repair for.
-ROUTE_SPACE_CELLS = 2 * 2 * 2 * 2 * 5  # presenting × mic × flag × menuBar × deck
+# The deck factor was 5 and is 4 (focus-0nm retired `playful`): this is the space the binary
+# folds, so it moves with the vocabulary or a retired deck reads as a fold that shrank.
+ROUTE_SPACE_CELLS = 2 * 2 * 2 * 2 * 4  # presenting × mic × flag × menuBar × deck
 EVERY_RUNG_ROUTE_CELLS = 2 * ROUTE_SPACE_CELLS  # × the two rungs D-06-as-amended declares
 check(
     nudge.get("surfacesARungCanReachCellsChecked") == EVERY_RUNG_ROUTE_CELLS,
@@ -3712,7 +3734,7 @@ check(
 # microphone and no presentation — so True was true of a space chosen so it could not be false.
 # A verdict over a space the gate does not measure is not evidence, so the cell count is asserted
 # before the verdict it qualifies.
-ACCUSATION_ROUTE_CELLS = 1 * 2 * 2 * 2 * 2 * 5  # rung × presenting × mic × flag × menuBar × deck
+ACCUSATION_ROUTE_CELLS = 1 * 2 * 2 * 2 * 2 * 4  # rung × presenting × mic × flag × menuBar × deck
 check(
     nudge.get("accusationRouteCellsChecked") == ACCUSATION_ROUTE_CELLS,
     f"the accusation-route fold covers all {ACCUSATION_ROUTE_CELLS} cells rather than a subset",
@@ -3730,7 +3752,12 @@ check(
 # lost a cell, and the floor catches a fold that stopped reaching surfaces. The floor is a floor
 # and not an equality for `Config/test-floors.txt`'s reason — a route that starts delivering where
 # it used to defer must not redden the gate, and one that stops delivering must.
-ACCUSATION_ROUTE_DELIVERED_FLOOR = 24  # measured; 24 of 80, the other 56 deferring
+# **Re-measured after `playful` was retired** (focus-0nm). The space went from 80 cells to 64 and
+# the delivering cells from 24 to 19; the floor moves with the vocabulary rather than standing
+# still, because a floor that outlived its space would report a user ruling as a broken route. The
+# coefficients are the two measurements solved together: five delivering cells per copy deck, four
+# for the routing one.
+ACCUSATION_ROUTE_DELIVERED_FLOOR = 19  # measured; 19 of 64, the other 45 deferring
 check(
     nudge.get("accusationRouteCellsChecked")
     == (nudge.get("accusationRouteCellsDelivered") or 0)

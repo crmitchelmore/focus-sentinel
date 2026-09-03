@@ -8,7 +8,7 @@ import SwiftUI
 /// could not draw an accusation from a question even by mistake (R-76.2). It is the same
 /// structural fact as the type-level one, one layer out.
 public struct QueryPresentation: Sendable, Equatable {
-    /// One of the five static decks.
+    /// One of the four static decks.
     public let voice: NudgeVoice
     /// The priority's own sentence. `{task}`.
     public let task: String

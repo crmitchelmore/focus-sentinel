@@ -55,13 +55,12 @@ suppression.reason. | Packages/FocusUI/Sources/FocusUI/Relevance/VerdictInspecto
 
 # --- e05's nudge vocabularies ----------------------------------------------------------------
 #
-# The five deck rows point at the same two panels on purpose: a deck is a *parameter* of the
-# draw, not a surface of its own, so `NudgeText(_:voice:)` draws all sixty-five keys and the
-# `voice` decides which. `check-strings.sh` asserts the 5 x 13 bijection separately; these rows
+# The four deck rows point at the same two panels on purpose: a deck is a *parameter* of the
+# draw, not a surface of its own, so `NudgeText(_:voice:)` draws all fifty-two keys and the
+# `voice` decides which. `check-strings.sh` asserts the 4 x 13 bijection separately; these rows
 # are the other half of the claim — that something reads the composed key at all.
 nudge.direct.       | Packages/FocusUI/Sources/FocusUI/Nudge/QueryPanelView.swift | NudgeText(answer.copyKey, voice: presentation.voice, role: .callout)
 nudge.neutral.      | Packages/FocusUI/Sources/FocusUI/Nudge/QueryPanelView.swift | NudgeText(answer.copyKey, voice: presentation.voice, role: .callout)
-nudge.playful.      | Packages/FocusUI/Sources/FocusUI/Nudge/QueryPanelView.swift | NudgeText(answer.copyKey, voice: presentation.voice, role: .callout)
 nudge.silentVisual. | Packages/FocusUI/Sources/FocusUI/Nudge/QueryPanelView.swift | NudgeText(answer.copyKey, voice: presentation.voice, role: .callout)
 nudge.warm.         | Packages/FocusUI/Sources/FocusUI/Nudge/QueryPanelView.swift | NudgeText(answer.copyKey, voice: presentation.voice, role: .callout)
 nudge.query.        | Packages/FocusUI/Sources/FocusUI/Nudge/QueryPanelView.swift | ShellText(resource: presentation.reason.copyResource, role: .footnote)

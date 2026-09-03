@@ -11,7 +11,7 @@ public struct AccusationPresentation: Sendable, Equatable {
     /// Which rung. The panel draws rung 2 and rung 3; rung 1 is the menu-bar glyph and has no
     /// panel at all.
     public let rung: LadderRung.Kind
-    /// One of the five static decks.
+    /// One of the four static decks.
     public let voice: NudgeVoice
     /// The priority's own sentence, in the person's own words. `{task}`.
     public let task: String

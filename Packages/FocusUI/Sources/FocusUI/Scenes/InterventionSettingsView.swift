@@ -7,7 +7,7 @@ import SwiftUI
 /// what lets the routing matrix be snapshot-tested against `SurfaceRouter`'s own table rather
 /// than against a description of it.
 public struct InterventionSettings: Sendable, Equatable {
-    /// One of the five static decks.
+    /// One of the four static decks.
     public var voice: NudgeVoice
     /// F-148's flag. Forced on by `accessibilityDisplayShouldReduceMotion`, and the pane says so.
     public var reducedInterruption: Bool
@@ -51,7 +51,7 @@ public enum InterventionSettingsAction: Sendable, Equatable {
 ///
 /// Four sections, and one of them is the honest answer to a question a person is entitled to ask:
 ///
-/// * the **voice**, five static decks and no sixth;
+/// * the **voice**, four static decks and no fifth;
 /// * **reduced interruption**, which is a routing flag inside the existing router rather than a
 ///   second surface stack (R-92) — and which Reduce Motion forces on, as the pane says;
 /// * **quiet hours**, off by default and explicitly *not* the system Focus (R-85, P-137);
@@ -203,14 +203,13 @@ public struct InterventionSettingsView: View {
         }
     }
 
-    /// Each deck's name. Declared as a total switch, so a sixth voice is a compile error here
+    /// Each deck's name. Declared as a total switch, so a fifth voice is a compile error here
     /// rather than a blank row in a settings pane.
     nonisolated public static func voiceKey(_ voice: NudgeVoice) -> ShellStringKey {
         switch voice {
         case .neutral: .interventionVoiceNeutral
         case .warm: .interventionVoiceWarm
         case .direct: .interventionVoiceDirect
-        case .playful: .interventionVoicePlayful
         case .silentVisual: .interventionVoiceSilentVisual
         }
     }

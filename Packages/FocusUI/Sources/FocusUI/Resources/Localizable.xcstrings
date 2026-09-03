@@ -2786,19 +2786,19 @@
       }
     },
     "settings.intervention.voice.direct" : {
-      "comment" : "A terse deck. Fewer words, never harder words.",
+      "comment" : "A terse deck. Fewer words, never harder words. The key tail is the stored raw value and does not move with the display name (D4).",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Direct"
+            "value" : "Terse"
           }
         }
       }
     },
     "settings.intervention.voice.label" : {
-      "comment" : "Heading above the five static voice decks.",
+      "comment" : "Heading above the four static voice decks.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -2810,37 +2810,25 @@
       }
     },
     "settings.intervention.voice.neutral" : {
-      "comment" : "The Court's adopted default deck.",
+      "comment" : "The Court's adopted default deck. The key tail is the stored raw value and does not move with the display name (D4).",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Neutral"
-          }
-        }
-      }
-    },
-    "settings.intervention.voice.playful" : {
-      "comment" : "A lighter deck. Still never accusatory.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Playful"
+            "value" : "Standard"
           }
         }
       }
     },
     "settings.intervention.voice.silentVisual" : {
-      "comment" : "A routing deck: no panel, no motion, no sound.",
+      "comment" : "A routing deck: no panel, no motion, no sound. The key tail is the stored raw value and does not move with the display name (D4).",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Silent and visual"
+            "value" : "Silent"
           }
         }
       }

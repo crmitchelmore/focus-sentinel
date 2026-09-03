@@ -177,7 +177,10 @@ struct CapabilityContractTotalityTests {
                 "\(rung)/\(voice) routes to a notification, so the contract cell above is a lie"
             )
         }
-        #expect(cells == 160, "the router's input space changed under this claim")
+        #expect(
+            cells == SurfaceRouterTests.cellCount,
+            "the router's input space changed under this claim"
+        )
     }
 
     /// Lock detection's primary signal *is* an ordinary activation — `com.apple.loginwindow`

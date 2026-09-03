@@ -3245,6 +3245,20 @@ enum SelfCheck {
         report["voiceReachedTheStore"] = FocusStore
             .interventionPreferences(in: composition.modelContainer.mainContext).voice == voiceProbe
 
+        // **Whether this build could read the deck the row holds** (D4, focus-0nm). Two readings
+        // that must agree, for the reason the model tier has three: a `storedVoiceWasRecognised`
+        // hard-wired to `true` would satisfy the first on its own, and the second is a raw value
+        // no build will ever declare, so a decoder that had stopped answering could not be green
+        // on both at once.
+        report["storedVoiceRaw"] = FocusStore
+            .interventionPreferences(in: composition.modelContainer.mainContext).voice.rawValue
+        report["storedVoiceWasRecognised"] = FocusStore
+            .interventionPreferences(in: composition.modelContainer.mainContext)
+            .storedVoiceWasRecognised
+        report["anUnreadableDeckIsReported"] =
+            NudgeVoice.decode("focus-0nm-not-a-deck").wasRecognised == false
+            && NudgeVoice.decode("focus-0nm-not-a-deck").voice == .standard
+
         sinks.onInterventionAction(.setReducedInterruption(reducedProbe))
         report["reducedProbe"] = reducedProbe
         report["reducedAfter"] = composition.nudgeHost.preferences.reducedInterruption

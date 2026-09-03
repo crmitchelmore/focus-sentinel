@@ -179,6 +179,8 @@ fifth launch's report out beside the other four. The cases file is `/private/tmp
 | SC-87 | `self-check.sh` first run | `firstRunExplanationShown = True` (relaunch) | SC-89 — the relaunch still opened the same store | **PROVEN** — `FAIL: the launch after the one that explained is not owed the explanation again` |
 | SC-88 | `self-check.sh` first run | `firstRunExplanationDrawn = "shown"` (relaunch) | SC-87 | **PROVEN** — `FAIL: the relaunched cockpit drew no first-run sheet at all` |
 | SC-89 | `self-check.sh` first run | `livePriorityIntent` replaced (relaunch) | is itself the control for SC-87/SC-88 | **PROVEN** — `FAIL: the relaunch opened the same seeded store the explaining launch did` |
+| SC-91 | `self-check.sh` intervention | `intervention_drive["storedVoiceWasRecognised"] = False` | SC-92 — the decoder still answers on a raw value no build declares, so this is a disagreement about THIS Mac's row rather than a decoder that has stopped reading | **PENDING** — the red line it must produce is `FAIL: this build can read the deck the store holds, so nobody's voice was quietly reinterpreted` |
+| SC-92 | `self-check.sh` intervention | `intervention_drive["anUnreadableDeckIsReported"] = False` | SC-91 — this Mac's own row still reads, so the pair cannot be green on a decoder that answers `True` to everything | **PENDING** — the red line it must produce is `FAIL: a deck this build cannot read is reported as unread and answered with the shipped deck` |
 
 ### The idle sources (focus-7az) — `selfcheck-debug` / `selfcheck-release`
 

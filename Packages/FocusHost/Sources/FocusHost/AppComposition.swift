@@ -1781,7 +1781,23 @@ public final class AppComposition {
     /// cockpit's first paint must be decided against the person's real settings rather than
     /// against the defaults this object was constructed with.
     func applyStoredInterventionPreferences() {
-        nudgeHost.adopt(FocusStore.interventionPreferences(in: modelContainer.mainContext))
+        let stored = FocusStore.interventionPreferences(in: modelContainer.mainContext)
+        // **An uninterpretable deck is said out loud, and the app still opens** (D4, focus-0nm).
+        // The row is not corrupt and nothing is lost by reading it as the shipped deck — the
+        // likely cause is a downgrade after a newer build wrote a raw value this one has never
+        // heard of. What would be a defect is doing it silently, which is what the decoder did
+        // before it carried `wasRecognised`: the person's chosen voice would have become
+        // `neutral` with no line in any log and no reading in the self-check.
+        if !stored.storedVoiceWasRecognised {
+            logger.fault(
+                """
+                the stored intervention deck is not one this build can read; \
+                speaking in \(NudgeVoice.standard.rawValue, privacy: .public) \
+                and leaving the row alone
+                """
+            )
+        }
+        nudgeHost.adopt(stored)
     }
 
     /// Re-theme the pre-built quick-capture panel when the appearance preference changes.

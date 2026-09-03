@@ -539,13 +539,13 @@ for condition, enum_name, file_name, namespace in BIJECTIONS:
 #
 # Three assertions, and the first is different in kind from the rest.
 #
-#   the matrix   NudgeVoice x NudgeCopyKey  <-> nudge.<deck>.<situation>   (65 keys)
+#   the matrix   NudgeVoice x NudgeCopyKey  <-> nudge.<deck>.<situation>   (52 keys)
 #   R-96l        LadderRung.Kind            <-> nudge.rung.*
 #   R-96l        QueryableUncertainty       <-> nudge.query.reason.*
 #
 # The matrix is a **product** of two vocabularies rather than one, because a voice with a
 # missing line is not a missing sentence — it is a nudge that renders its own key to somebody
-# at their most sensitive moment. Five decks times thirteen lines, both directions, no
+# at their most sensitive moment. Four decks times thirteen lines, both directions, no
 # exceptions: a key with no pair is a sentence the app can never say, and a pair with no key is
 # a line it would say wrongly.
 #

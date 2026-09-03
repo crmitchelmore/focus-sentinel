@@ -234,7 +234,10 @@ check(
 # and there is no longer a second answer for them to land differently in.
 # **One space, named once**, before either fold's verdict: the rung fold multiplies it by the
 # rungs and the query fold takes it as it is, so the two counts cannot drift apart.
-route_space_cells = 2 * 2 * 2 * 2 * 5  # presenting × mic × flag × menuBar × deck
+# The deck factor was 5 and is 4: `playful` is retired by the ruling on focus-0nm, and this
+# literal is the space the running binary folds, so it moves with the vocabulary or the fold
+# reports a retired deck as a fold that shrank.
+route_space_cells = 2 * 2 * 2 * 2 * 4  # presenting × mic × flag × menuBar × deck
 
 table = report.get("routes")
 check(bool(table), "the router's table was reported", table)
@@ -263,7 +266,7 @@ if table:
     # a set built from the two-cell `routes` table above — every rung asked once at
     # `.notPresenting`, `.idle`, `reducedInterruption: false`, `menuBarVisible: true`,
     # `voice: .standard` — so a notification route reachable under Reduce Motion, a running
-    # microphone, `silentVisual` or a hidden menu bar was invisible to it. The fold is now 160
+    # microphone, `silentVisual` or a hidden menu bar was invisible to it. The fold is now 128
     # cells, its size is asserted before the set it qualifies, and the honest set is three: the
     # badge really is reachable, under exactly the conditions the two-cell table pinned away.
     #

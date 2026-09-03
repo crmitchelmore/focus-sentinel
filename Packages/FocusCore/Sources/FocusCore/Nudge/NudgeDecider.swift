@@ -284,7 +284,7 @@ extension NudgeMemory {
 /// consulted is the shape a stale copy hides in — which is exactly what focus-zrs found the last
 /// time this field existed as a copy.
 public struct NudgePreferences: Sendable, Equatable {
-    /// One of the five static decks. `silentVisual` is a routing deck, not a copy deck.
+    /// One of the four static decks. `silentVisual` is a routing deck, not a copy deck.
     public let voice: NudgeVoice
     /// F-148's flag, forced on by `accessibilityDisplayShouldReduceMotion`.
     public let reducedInterruption: Bool

@@ -1757,7 +1757,7 @@ fi
 # --- R-96s: SC-5's binary half — the shipped app cannot post a notification -------------------
 #
 # **What this exists to stop, and why the source lint is not enough.** U-2 ruled that no rung
-# routes to a notification. Three proofs already cover the ROUTER — the 160-cell fold the binary
+# routes to a notification. Three proofs already cover the ROUTER — the 128-cell fold the binary
 # runs, `SurfaceRouterTests.noCellReachesANotification`, and the pinned `surfacesARungCanReach`
 # — and not one of them says anything about a path that reaches `UNUserNotificationCenter`
 # *without* asking the router. `check-boundaries.sh` still permits `UserNotifications` for

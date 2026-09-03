@@ -14,22 +14,33 @@ import SwiftData
 /// is the "two writers, one field" defect focus-zrs removed from the notification
 /// authorisation.
 public struct InterventionPreferences: Sendable, Equatable, Hashable {
-    /// One of the five static decks. `standard` until the person picks another.
+    /// One of the four static decks. `standard` until the person picks another.
     public var voice: NudgeVoice
     /// F-148's flag as the person set it, never as the Mac forces it.
     public var reducedInterruption: Bool
     /// The local-time window nudges are held inside, or `nil` for no window — which is the
     /// shipped default (R-85) and a real answer rather than an absent one.
     public var quietHours: QuietHoursWindow?
+    /// **Whether the stored deck was one this build could read.**
+    ///
+    /// A named fact beside the value, rather than a `voice` that is secretly two things — the
+    /// same split `PriorityHost` made for a store it cannot open. `false` means the row held a
+    /// raw value this build has never heard of, `voice` is therefore `standard`, and the app
+    /// owes the person a fault in the log and a reading in the self-check rather than a silent
+    /// reinterpretation. It is deliberately **not** part of what a writer sets: nothing writes
+    /// an unreadable deck, so the setter path always leaves this `true`.
+    public var storedVoiceWasRecognised: Bool
 
     public init(
         voice: NudgeVoice = .standard,
         reducedInterruption: Bool = false,
-        quietHours: QuietHoursWindow? = InterventionPolicy.quietHoursDefault
+        quietHours: QuietHoursWindow? = InterventionPolicy.quietHoursDefault,
+        storedVoiceWasRecognised: Bool = true
     ) {
         self.voice = voice
         self.reducedInterruption = reducedInterruption
         self.quietHours = quietHours
+        self.storedVoiceWasRecognised = storedVoiceWasRecognised
     }
 
     /// What the app believes before it has read anything: the neutral deck, full panels, and
@@ -50,7 +61,8 @@ extension FocusStore {
         return InterventionPreferences(
             voice: row.voice,
             reducedInterruption: row.reducedInterruption,
-            quietHours: row.quietHours
+            quietHours: row.quietHours,
+            storedVoiceWasRecognised: row.voiceWasRecognised
         )
     }
 

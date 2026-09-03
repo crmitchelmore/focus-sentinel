@@ -388,7 +388,7 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     // The nudge surfaces' own chrome (e05).
     //
     // **The nudge's *words* are not here.** Every sentence a nudge says comes from one of the
-    // five static decks in `FocusCore`'s catalog, through `NudgeVoice → NudgeCopyKey`, because
+    // four static decks in `FocusCore`'s catalog, through `NudgeVoice → NudgeCopyKey`, because
     // D-11 requires the intervention copy to be human-authored and checkable and R-96l asserts
     // the deck matrix as a bijection. What is here is the chrome around those sentences: the
     // close affordance's label, the countdown's spoken form and the one line that tells somebody
@@ -429,7 +429,6 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case interventionVoiceNeutral = "settings.intervention.voice.neutral"
     case interventionVoiceWarm = "settings.intervention.voice.warm"
     case interventionVoiceDirect = "settings.intervention.voice.direct"
-    case interventionVoicePlayful = "settings.intervention.voice.playful"
     case interventionVoiceSilentVisual = "settings.intervention.voice.silentVisual"
     case interventionReducedLabel = "settings.intervention.reduced.label"
     case interventionReducedExplanation = "settings.intervention.reduced.explanation"

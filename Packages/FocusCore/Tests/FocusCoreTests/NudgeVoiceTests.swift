@@ -32,15 +32,16 @@ struct NudgeVoiceTests {
         return values
     }
 
-    @Test("there are five decks and thirteen lines, and the matrix is sixty-five keys")
+    @Test("there are four decks and thirteen lines, and the matrix is fifty-two keys")
     func theMatrixIsFiveByThirteen() {
-        #expect(NudgeVoice.allCases.count == 5)
+        #expect(NudgeVoice.allCases.count == 4)
         #expect(
-            Set(NudgeVoice.allCases) == [.neutral, .warm, .direct, .playful, .silentVisual]
+            Set(NudgeVoice.allCases) == [.neutral, .warm, .direct, .silentVisual],
+            "`playful` is retired by the ruling on focus-0nm; a fifth deck is a new ruling"
         )
         #expect(NudgeCopyKey.allCases.count == 13)
-        #expect(NudgeVoice.matrix.count == 65)
-        #expect(Set(NudgeVoice.matrix).count == 65, "two decks composed the same key")
+        #expect(NudgeVoice.matrix.count == 52)
+        #expect(Set(NudgeVoice.matrix).count == 52, "two decks composed the same key")
         #expect(NudgeVoice.standard == .neutral, "the Court's adopted default deck moved")
     }
 
