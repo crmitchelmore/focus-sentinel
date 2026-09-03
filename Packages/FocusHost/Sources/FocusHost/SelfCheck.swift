@@ -1232,6 +1232,41 @@ enum SelfCheck {
         report["commandsObservedOnSecondPress"] = observed.commands
         report["receiptsAfterSecondPress"] = (try? ledger.receipts(priorityID: commitment.id).count) ?? -1
         report["rulesAfterSecondPress"] = (try? priorities.task(id: commitment.id)?.rules.count ?? -1) ?? -1
+
+        // 8 — **the disagreement reading, DRIVEN rather than waited for** (focus-0gq).
+        //
+        // `commitmentDisagreements` is `PriorityHost` checking its own three statements of the
+        // active priority against each other, and `mandatesWithoutACommitment` is the loop being
+        // told to speak with no key to write under. Both were asserted — empty, zero — and
+        // neither could fail, because **nothing in an automated run ever changed the active
+        // priority after it was seeded**, so the three readings never got a chance to part.
+        // Measured: freezing `PriorityHost.activeCommitment` after its first assignment left the
+        // whole stage at EXIT=0 with an empty ok-assertion diff.
+        //
+        // So the priority is REPLACED here, through the shipping host, on a launch that owns its
+        // store and has just opened and answered a real question. `snapshotKey` and
+        // `state.priority` move with it; a lagging `activeCommitment` does not, and that is the
+        // divergence the invariant exists for. `priorityMovedDuringTheProbe` is published beside
+        // the readings so the gate can refuse a green taken from a probe that moved nothing.
+        let commitmentBeforeReplacement = composition.priorityHost.activeCommitment?.id
+        composition.priorityHost.setPriority(intent: "Self-check replacement priority", doneWhen: nil)
+        settle(forSeconds: 0.3)
+        let commitmentAfterReplacement = composition.priorityHost.activeCommitment?.id
+        report["priorityBeforeReplacement"] = commitmentBeforeReplacement?.uuidString ?? ""
+        report["priorityAfterReplacement"] = commitmentAfterReplacement?.uuidString ?? ""
+        report["priorityMovedDuringTheProbe"] =
+            commitmentBeforeReplacement != nil
+            && commitmentAfterReplacement != nil
+            && commitmentBeforeReplacement != commitmentAfterReplacement
+        report["disagreementsAfterReplacement"] = composition.priorityHost.commitmentDisagreements
+        report["mandatesWithoutACommitmentAfterReplacement"] = host.mandatesWithoutACommitment
+        // And once more after a turn of the loop, because a representation that lags by one tick
+        // is exactly what a reading taken on the same turn as the write would miss.
+        host.consider(questionJudgement(subject: subject))
+        settle(forSeconds: 0.3)
+        report["disagreementsAfterTheNextTurn"] = composition.priorityHost.commitmentDisagreements
+        report["mandatesWithoutACommitmentAfterTheNextTurn"] = host.mandatesWithoutACommitment
+
         report["wasTaken"] = true
         return report
     }

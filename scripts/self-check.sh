@@ -4118,6 +4118,42 @@ check(
     "the keyboard-answer reading was taken against the owned store",
     (kb.get("wasTaken"), kb.get("notTakenBecause")),
 )
+# **And the same two readings after the priority has really MOVED** (focus-0gq).
+#
+# The two above only report a divergence that HAPPENED, and nothing in an automated run ever
+# changed the active priority after it was seeded — so the three statements of it never got a
+# chance to part. Measured: freezing `PriorityHost.activeCommitment` after its first assignment
+# left this stage at EXIT=0 with 311 ok against the clean run's 311 and an EMPTY ok-assertion
+# diff, which is the programme's own invisibility signature.
+#
+# The keyboard launch now drives the divergence instead of waiting for it: it seeds a priority,
+# opens and answers a real question, and then REPLACES the priority through the shipping host.
+# The first assertion is the one that makes the other two mean something — a probe that replaced
+# nothing is a probe that proved nothing.
+check(
+    kb.get("priorityMovedDuringTheProbe") is True,
+    "the probe really replaced the active priority, so the readings below had a chance to part",
+    (kb.get("priorityBeforeReplacement"), kb.get("priorityAfterReplacement")),
+)
+check(
+    kb.get("disagreementsAfterReplacement") == [],
+    "every statement of the commitment still agrees after the priority is replaced",
+    kb.get("disagreementsAfterReplacement"),
+)
+check(
+    kb.get("disagreementsAfterTheNextTurn") == [],
+    "and still agrees a turn of the loop later, so nothing lags by one tick",
+    kb.get("disagreementsAfterTheNextTurn"),
+)
+check(
+    kb.get("mandatesWithoutACommitmentAfterReplacement") == 0
+    and kb.get("mandatesWithoutACommitmentAfterTheNextTurn") == 0,
+    "no interruption was mandated without a commitment across the replacement",
+    (
+        kb.get("mandatesWithoutACommitmentAfterReplacement"),
+        kb.get("mandatesWithoutACommitmentAfterTheNextTurn"),
+    ),
+)
 check(kb.get("mainMenuExists") is True, "the headless launch had a main menu to hand a key to")
 check(
     kb.get("questionOpened") is True and kb.get("worldReportsAQuestion") is True,

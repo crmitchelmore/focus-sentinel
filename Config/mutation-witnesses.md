@@ -45,7 +45,7 @@ it to be green: a red line means nothing if the clean run was red too.
 
 | stage | assertions witnessed | PROVEN | CANNOT-GO-RED |
 |---|---|---|---|
-| `selfcheck-debug` / `selfcheck-release` | 156 | 156 | — |
+| `selfcheck-debug` / `selfcheck-release` | 159 | 159 | — |
 | `notification-denied` (+ Release twin) | 17 | 17 | — |
 | `focus-steal` (+ Release twin) | 14 | 14 | — |
 | `forbidden-binary` | 6 | 6 | — |
@@ -56,7 +56,7 @@ it to be green: a red line means nothing if the clean run was red too.
 | `unit-counts` | 5 | 5 | — |
 | `evaluation` (B1–B5) | 9 | 9 | — |
 | `entitlements-debug` / `entitlements-release` | 6 | 6 | 2 (seven restatement lines; one unreachable branch) |
-| **total** | **229** | **229** | **3 findings** |
+| **total** | **232** | **232** | **3 findings** |
 
 The seven rows the gate audit named as unable to go red are all fallible now, and each was run:
 `self-check.sh`'s popover overflow (SC-37, SC-38) and its committed width (SC-39, SC-40),
@@ -350,6 +350,28 @@ raise its bound to match.
 | SC-148 | `self-check.sh:4871` | `the SOURCE constant raised — `static let absoluteMaximumHeight: Double = 4000` in NudgePanelController.swift, with the binary unchanged. **This is the mutant the old row could not catch**: raising the constant raised the bound, and the gate followed it up` | SC-146 — the report is untouched, so this is the script's own committed number doing the work | **PROVEN** — `FAIL: NudgePanelController.absoluteMaximumHeight is still the committed 800 in the source it is declared in` |
 | SC-149 | `self-check.sh:4839` | `r["nudge"]["popover"]["maximumContentHeight"] = 4000.0` | SC-150 — the popover declares no limit of its own, so the display is all that bounds it | **PROVEN** — `FAIL: the popover's ceiling is within what the display can hold with its margins out (4000.0 <= 972 - 50)` |
 | SC-150 | `self-check.sh:4833` | `r["nudge"]["panel"]["heightReservedForMargins"] = 0` | SC-146 — the ceiling holds while the margin it reserves goes to nothing | **PROVEN** — `FAIL: the panel reserves margin rather than offering to fill the display (0)` |
+
+### The disagreement reading, driven rather than waited for (focus-0gq) — `selfcheck-*`
+
+**H-SRC, and it is the bead's own mutation**: `PriorityHost.swift`'s `activeCommitment =
+nextCommitment` becomes `if activeCommitment == nil { activeCommitment = nextCommitment }`, so the
+field freezes after its first assignment while `snapshotKey` and `state.priority` move on. Built
+into `/private/tmp/focus-s9-mut-dd`, run, and the source restored. Control: the unmutated build
+is green at EXIT=0.
+
+**What this replaced.** The two standing assertions — `commitmentDisagreements == []` and
+`mandatesWithoutACommitment == 0` — survived that exact mutation at EXIT=0 with an empty
+ok-assertion diff, because nothing in an automated run ever changed the active priority after it
+was seeded. The keyboard launch now seeds a priority, opens and answers a real question, and
+REPLACES the priority; the mutant then publishes three named disagreements.
+
+| # | script:line | mutation (H-SRC) | control | status — the line it printed |
+|---|---|---|---|---|
+| SC-151 | `self-check.sh:4133` | freeze `PriorityHost.activeCommitment` after its first assignment | SC-152 — the non-vacuity half: a probe that replaced nothing proves nothing | **PROVEN** — `FAIL: the probe really replaced the active priority, so the readings below had a chance to part` |
+| SC-152 | `self-check.sh:4138` | freeze `PriorityHost.activeCommitment` after its first assignment | SC-151 | **PROVEN** — `FAIL: every statement of the commitment still agrees after the priority is replaced` |
+| SC-153 | `self-check.sh:4143` | freeze `PriorityHost.activeCommitment` after its first assignment | SC-152 — a representation that lags by exactly one tick passes SC-152 and fails here | **PROVEN** — `FAIL: and still agrees a turn of the loop later, so nothing lags by one tick` |
+
+The mutant's own report, quoted because it is what the invariant exists to say: `disagreementsAfterReplacement` came back as `['snapshotKey.priorityID … ≠ activeCommitment …', 'state.priority.id … ≠ activeCommitment …', 'state.priority.intent ≠ activeCommitment.intent']`.
 
 ### `published-keys` — `scripts/check-published-keys.sh`
 
