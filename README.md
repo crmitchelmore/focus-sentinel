@@ -107,7 +107,7 @@ the stage logs are the evidence, and they are kilobytes. A pinned `FOCUS_DERIVED
 |---|---|---|
 | 1 | `verify-project.sh` | the project file parses, and git has not been rewritten behind you |
 | 2 | `check-boundaries.sh` | the package import matrix holds; zero third-party dependencies |
-| 3 | `check-forbidden.sh` | no `kCGWindowName`, no Apple Events, no private APIs, no plan-less `ModelContainer` |
+| 3 | `check-forbidden.sh` | no `kCGWindowName`, no Apple Events, no private APIs, no plan-less `ModelContainer`, and (R-97) no SwiftData fetch outside the counting wrappers — see "What the tick costs" |
 | 4 | `check-strings.sh` | no hardcoded user-visible string; the catalogs and the code agree both ways |
 | 5 | Debug build | `EXIT=0` |
 | 6 | Release build | `EXIT=0` |
@@ -204,6 +204,49 @@ session-rule box is empty because nothing in this epic writes to it — and **no
 mandated**, because there is nothing in this build to consume a mandate.
 
 ---
+
+## What the tick costs
+
+The five-second corroboration tick is the app's heartbeat, and until focus-tzj it fetched things
+that could not have changed: the **whole** `PriorityTask` table, sorted in Swift, to draw a list
+of eight; today's **whole** intervention log and a query receipt, both before gate 1 was
+consulted, so somebody with no commitment at all paid for them twelve times a minute; and a
+CoreAudio device enumeration, while a property listener sat on every one of those devices for
+exactly that purpose. None of it shows in a stopwatch on a store with four rows in it, which is
+why the reading is a **count** rather than a duration.
+
+`StoreFetchCounter` takes that count inside `ModelContext.countedFetch(_:)` and
+`countedFetchCount(_:)`, and `check-forbidden.sh`'s R-97 bans the bare calls everywhere in the
+shipping sources but the file that defines them — so a fetch that is not counted does not compile
+past the gate, and the reading can never become a number about *some* of the fetches.
+
+`SelfCheck.tickFetchSurvey()` drives the tick's two store-touching halves on a store of its own,
+in three states, ten ticks each, and publishes the first tick beside the nine after it; the first
+is the non-vacuity control, because every other row is a ceiling on ticks that fetch almost
+nothing. `self-check.sh` pins all of it in both lanes, and `TickFetchBudgetTests` asserts on the
+same survey so the gate's number and the suite's cannot drift apart.
+
+The popover has its own version of the same reading: an open popover was rebuilt — one hosting
+controller for the content and two more to measure it — on every tick, whatever it was drawing.
+`popover.rebuild` in the self-check report is the count of builds and of hosting controllers, over
+twenty ticks in which the presentation moved exactly twice.
+
+## Retention
+
+Three tables grew without bound, and the code that would have trimmed them —
+`InterventionLog.purge(before:)`, `QueryLedger.purge(priorityID:)`, `purgeAll()` — had **zero
+callers**. `RetentionSweep` is the caller, `RetentionPolicy.committedDefault` is ninety days, and
+it runs once at launch and once per local day from the tick that already computes the day
+boundary. e07 §5 owns the picker and the delete-everything button; what ships now is the
+mechanism and the default, because a row that was never written is a row no later feature has to
+explain.
+
+**Query receipts are the exception.** A receipt is what gate 11 reads, so deleting one puts a
+question the person has already answered back on the ladder. A receipt goes only when it is old
+*and* the priority it was written under is old. The self-check publishes the launch sweep's day
+and row counts, and — because on a fresh machine those are three zeroes and a date — runs the
+same sweep again over a store it seeds at 89 and 91 days, which is what makes the section able to
+go red.
 
 ## The relevance engine
 
