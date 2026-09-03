@@ -50,12 +50,28 @@ public struct MenuBarPopoverView: DecisionSurfaceContent {
         case sensing
         case openCockpit
 
-        /// Whether this row is part of the **decision** the popover is carrying.
+        /// Whether this row is part of the **decision** the popover is carrying, for a given
+        /// presentation.
         ///
         /// The pending accusation and the pending question are the only two rows that offer an
         /// action a nudge is charged for. Everything else is a command centre a person clicked
         /// into, and nothing in it is a nudge anybody is being asked to answer.
-        var isDecision: Bool { self == .accusation || self == .question }
+        ///
+        /// **When both are drawn, the question is the decision** (e07a, focus-cxb). U-1 licenses
+        /// the interruption *because* the question is cheaply answerable, and U-2 makes an
+        /// accusation wait behind an open question rather than displace it — so the question is
+        /// the live decision and the accusation the residual. Pinning both together needed over
+        /// 815 points against a 911-point ceiling at the largest text size, so neither could be
+        /// pinned and neither nudge was chargeable in that state. The accusation now scrolls with
+        /// the context, and its charge in a both-state is the ledger's half of this ruling
+        /// (`focus-6pr.4`): `NudgeHost` still reads the two nudges independently.
+        func isDecision(in presentation: MenuBarPresentation) -> Bool {
+            switch self {
+            case .question: presentation.pendingQuery != nil
+            case .accusation: presentation.pendingAccusation != nil && presentation.pendingQuery == nil
+            default: false
+            }
+        }
     }
 
     public var body: some View {
@@ -82,9 +98,54 @@ public struct MenuBarPopoverView: DecisionSurfaceContent {
     public var surfaceLayout: DecisionSurfaceLayout {
         DecisionSurfaceLayout(
             whole: AnyView(column(Section.allCases)),
-            context: AnyView(column(Section.allCases.filter { !$0.isDecision })),
-            decision: AnyView(column(Section.allCases.filter(\.isDecision)))
+            context: AnyView(column(Section.allCases.filter { !$0.isDecision(in: presentation) })),
+            decision: AnyView(column(Section.allCases.filter { $0.isDecision(in: presentation) }))
         )
+    }
+
+    /// **The sections that are the decision, for this presentation** — the same rule
+    /// `surfaceLayout` splits on, published so a test can hold the split against the ruling
+    /// rather than against a picture.
+    var decisionSections: [Section] {
+        Section.allCases.filter { $0.isDecision(in: presentation) }
+    }
+
+    /// **Every catalog string this popover draws in a row of its own**, with the role it is drawn
+    /// in, for a presentation (e07a, focus-0q4).
+    ///
+    /// Not the person's sentence, not the timer, and not the two nudges' own views — those have
+    /// folds of their own. These are the labels the rows this file owns put in a column, and the
+    /// fold `MenuBarPopoverLayoutTests` runs over them is the rule the rows are laid out by: **a
+    /// column is never narrower than its longest word**, so every stacking row below grants a
+    /// label the full content width the moment its siblings would squeeze it, and no label breaks
+    /// mid-word at any size. A label added here and not to a stacking row is the next
+    /// `Unr / elat / ed`.
+    static func drawnLabels(
+        for presentation: MenuBarPresentation
+    ) -> [(text: String, role: DesignTokens.FontRole)] {
+        var labels: [(text: String, role: DesignTokens.FontRole)] = [
+            (String(localized: presentation.status.shortLabelResource), .body)
+        ]
+        if let rung = presentation.rung {
+            labels.append((String(localized: ShellStrings.resource(.menuBarNudgeRung)), .footnote))
+            labels.append((String(localized: rung.copyResource), .footnote))
+        }
+        if let band = presentation.band {
+            labels.append((String(localized: ShellStrings.resource(.verdictBandLabel)), .footnote))
+            labels.append((String(localized: band.labelResource), .footnote))
+        }
+        if presentation.pendingQuery != nil {
+            labels.append((String(localized: ShellStrings.resource(.menuBarPendingQuestion)), .footnote))
+        }
+        if !presentation.snoozes.isEmpty {
+            labels.append((String(localized: ShellStrings.resource(.menuBarSnoozedHeading)), .footnote))
+            labels.append((String(localized: ShellStrings.resource(.menuBarCancelSnooze)), .footnote))
+        }
+        for key in [ShellStringKey.sessionActionStart, .sessionActionPause, .sessionActionComplete,
+                    .sensingPauseLabel, .menuBarOpenCockpit] {
+            labels.append((String(localized: ShellStrings.resource(key)), .callout))
+        }
+        return labels
     }
 
     /// The popover's column, over whichever sections it is being asked to draw.
@@ -164,18 +225,34 @@ public struct MenuBarPopoverView: DecisionSurfaceContent {
 
     // MARK: - The glyph and the timer
 
+    /// The badge beside the timer where they fit, and the timer under the badge where they do
+    /// not (e07a, focus-0q4). In one `HStack` the badge was handed a fraction of 300 points at
+    /// the largest text size and its label broke mid-word — `Unr / elat / ed` — which is the
+    /// column being narrower than its longest word. `ViewThatFits` measures the row at its ideal
+    /// width and stacks it the moment it would not fit, so the label is never squeezed.
     private var statusRow: some View {
-        HStack(spacing: DesignTokens.spacing(spacing, scale: textScale)) {
-            StatusBadge(status: presentation.status)
-            Spacer(minLength: 0)
-            if !presentation.timerText.isEmpty {
-                // The same monospaced-digit treatment as the menu-bar item itself (P-133), so a
-                // person watching both does not see two different numbers of the same fact
-                // drawn two different widths.
-                Text(verbatim: presentation.timerText)
-                    .font(DesignTokens.font(.body, scale: textScale).monospacedDigit())
-                    .foregroundStyle(DesignTokens.Palette.primaryText)
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: DesignTokens.spacing(spacing, scale: textScale)) {
+                StatusBadge(status: presentation.status)
+                Spacer(minLength: 0)
+                timer
             }
+            VStack(alignment: .leading, spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
+                StatusBadge(status: presentation.status)
+                timer
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var timer: some View {
+        if !presentation.timerText.isEmpty {
+            // The same monospaced-digit treatment as the menu-bar item itself (P-133), so a
+            // person watching both does not see two different numbers of the same fact
+            // drawn two different widths.
+            Text(verbatim: presentation.timerText)
+                .font(DesignTokens.font(.body, scale: textScale).monospacedDigit())
+                .foregroundStyle(DesignTokens.Palette.primaryText)
         }
     }
 
@@ -193,17 +270,32 @@ public struct MenuBarPopoverView: DecisionSurfaceContent {
     /// elapsed since that delivery, and budget. Copy whose tense the mechanism cannot honour is
     /// the same defect as the notification copy that was removed and the Reduce Motion string
     /// that described a setting nothing read.
+    /// Two labelled pairs side by side where they fit and stacked where they do not — and each
+    /// pair the same again (e07a, focus-0q4). Four texts in one `HStack` each took a quarter of
+    /// 300 points at the largest text size and broke mid-word — `Curr / ent / nudg / e`,
+    /// `Eviden / ce`. A column is never narrower than its longest word: the row stacks, then the
+    /// pair stacks, and a label always has the full content width to wrap at a word boundary.
     @ViewBuilder
     private var belief: some View {
         if presentation.rung != nil || presentation.band != nil {
-            HStack(spacing: DesignTokens.spacing(spacing, scale: textScale)) {
-                if let rung = presentation.rung {
-                    labelled(.menuBarNudgeRung, value: rung.copyResource)
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .top, spacing: DesignTokens.spacing(spacing, scale: textScale)) {
+                    beliefPairs
                 }
-                if let band = presentation.band {
-                    labelled(.verdictBandLabel, value: band.labelResource)
+                VStack(alignment: .leading, spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
+                    beliefPairs
                 }
             }
+        }
+    }
+
+    @ViewBuilder
+    private var beliefPairs: some View {
+        if let rung = presentation.rung {
+            labelled(.menuBarNudgeRung, value: rung.copyResource)
+        }
+        if let band = presentation.band {
+            labelled(.verdictBandLabel, value: band.labelResource)
         }
     }
 
@@ -211,12 +303,26 @@ public struct MenuBarPopoverView: DecisionSurfaceContent {
         _ key: ShellStringKey,
         value: LocalizedStringResource
     ) -> some View {
-        HStack(spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
-            ShellText(key, role: .footnote)
-                .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
-            ShellText(resource: value, role: .footnote)
-                .foregroundStyle(DesignTokens.Palette.primaryText)
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .top, spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
+                labelledTexts(key, value: value)
+            }
+            VStack(alignment: .leading, spacing: 0) {
+                labelledTexts(key, value: value)
+            }
         }
+    }
+
+    @ViewBuilder
+    private func labelledTexts(_ key: ShellStringKey, value: LocalizedStringResource) -> some View {
+        ShellText(key, role: .footnote)
+            .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+            .lineLimit(nil)
+            .fixedSize(horizontal: false, vertical: true)
+        ShellText(resource: value, role: .footnote)
+            .foregroundStyle(DesignTokens.Palette.primaryText)
+            .lineLimit(nil)
+            .fixedSize(horizontal: false, vertical: true)
     }
 
     // MARK: - The accusation, when reduced interruption sent it here (R-92, focus-uru)
@@ -357,6 +463,12 @@ public struct MenuBarPopoverView: DecisionSurfaceContent {
                     .symbolRenderingMode(.hierarchical)
                     .accessibilityHidden(true)
                 ShellText(.sensingPauseLabel, role: .callout)
+                    // **Both**, and the first is the repair (e07a, focus-0q4). The bordered
+                    // button style limits its label to one line, and `fixedSize` alone cannot
+                    // lift that: the label read "Watch what I a…" at the largest text size in
+                    // every committed picture, which for the channel a person is relying on is
+                    // the same defect as not offering the switch. The inner limit wins.
+                    .lineLimit(nil)
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 0)
             }

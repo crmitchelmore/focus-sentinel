@@ -209,8 +209,17 @@ struct DecisionSurfaceScrollTests {
 
     static func offered(_ nudge: MenuBarNudge, in presentation: MenuBarPresentation) -> [String] {
         switch nudge {
-        case .query: presentation.pendingQuery?.offeredAnswerIdentifiers ?? []
-        case .accusation: presentation.pendingAccusation?.offeredActionIdentifiers ?? []
+        case .query:
+            presentation.pendingQuery?.offeredAnswerIdentifiers ?? []
+        case .accusation:
+            // **In a both-state the accusation is not the decision** (e07a, focus-cxb): the
+            // question is pinned and the accusation scrolls with the context, so its actions are
+            // not in the shelf and this reading declares that rather than measuring them out of
+            // reach. The charge for an accusation drawn beside a question is the ledger's half of
+            // the ruling (`focus-6pr.4`).
+            presentation.pendingQuery == nil
+                ? presentation.pendingAccusation?.offeredActionIdentifiers ?? []
+                : []
         }
     }
 
@@ -697,28 +706,38 @@ struct DecisionSurfaceScrollTests {
 
     /// **The one state this repair does not reach, measured rather than assumed** (focus-cxb).
     ///
-    /// A popover carrying an accusation **and** a question at the largest text size has a decision
-    /// of both nudges' actions together — over 815 points against a 911-point ceiling — so there
-    /// is no room to pin it and the surface scrolls whole. Neither nudge is chargeable in that
-    /// state, exactly as before this repair.
+    /// **A popover carrying an accusation and a question pins the question** (e07a, focus-cxb).
     ///
-    /// It is not the bead's park: the two-nudge state is transient — the question is answered or
-    /// expires and the popover returns to a single nudge, which the fold above proves chargeable
-    /// — where the bead's park was every state, permanently, for every large-text user. It is
-    /// asserted here rather than left as an unmeasured corner, so the day somebody changes what
-    /// gets pinned this test says whether it improved.
-    @Test("a popover carrying two nudges at the largest text size can pin neither")
-    func theTwoNudgePopoverIsTheResidual() {
+    /// Before this round the pinned decision for a both-state was the accusation's six corrections
+    /// *and* the question's three answers together — over 815 points against a 911-point ceiling
+    /// at the largest text size — so there was no room to pin it, the surface scrolled whole, and
+    /// neither nudge was chargeable. Red before: this test asserted `.everythingScrolls` for these
+    /// cells, and said so — *"out of date, in the good direction"* — the day the pin moved.
+    ///
+    /// The question is the decision because U-1 licenses the interruption for the question's
+    /// cheap answer and U-2 makes an accusation wait behind it; the accusation scrolls with the
+    /// context, and `offered(_:in:)` declares it unpinned rather than measuring it out of reach.
+    @Test("a popover carrying two nudges at the largest text size pins the question")
+    func theTwoNudgePopoverPinsTheQuestion() {
         let both = Self.popoverCells().filter {
             $0.name.hasPrefix("both") && $0.name.contains("accessibilityLarge")
-                && !$0.offering.isEmpty
         }
         #expect(!both.isEmpty)
-        for cell in both {
+        for cell in both where cell.name.hasSuffix(".query") {
+            let (reading, overflow) = Self.reading(cell, on: [Self.display])
             #expect(
-                Self.laidOut(cell, on: [Self.display]).overflow == .everythingScrolls,
-                "\(cell.testDescription) now pins its decision — this test is out of date, in the good direction"
+                overflow == .theContextScrolls,
+                "\(cell.testDescription) gave way as \(overflow.rawValue) rather than pinning the question"
             )
+            #expect(
+                reading.everyActionIsReachable,
+                "\(cell.testDescription) left an answer out of reach: \(reading.summary)"
+            )
+        }
+        // …and the accusation half of the same cells declares itself unpinned: nothing to reach,
+        // rather than actions measured out of reach.
+        for cell in both where cell.name.hasSuffix(".accusation") {
+            #expect(cell.offering.isEmpty, "\(cell.testDescription) still claims a pinned decision")
         }
     }
 }

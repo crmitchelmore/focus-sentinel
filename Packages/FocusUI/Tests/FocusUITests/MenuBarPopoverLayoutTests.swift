@@ -423,3 +423,76 @@ struct MenuBarPopoverLayoutTests {
         }
     }
 }
+
+// MARK: - e07a: no column is narrower than its longest word (focus-0q4)
+
+/// **The rule the popover's rows are laid out by, folded over state × size** (focus-0q4).
+///
+/// The committed `accessibilityLarge` pictures all showed the same two defects: the badge and
+/// the belief row broke mid-word — `Unr / elat / ed`, `Curr / ent / nudg / e` — because both were
+/// `HStack`s whose columns took a fraction of 300 points, and the global switch read *"Watch
+/// what I a…"* because the bordered button limits its label to one line. The rows stack now, so
+/// every label has the full content width to wrap at a word boundary, and the switch's label may
+/// wrap. What a fold can hold is the precondition that makes stacking sufficient: **no label the
+/// popover draws has a word wider than the content width at any text size** — a string that
+/// grew one would be the next mid-word break, and it would arrive under a green gate.
+///
+/// What this cannot see is a truncation the button style imposes; that half is the re-recorded
+/// pictures, read by eye, which is where the defect was found.
+@Suite("The popover's columns are never narrower than their longest word")
+@MainActor
+struct MenuBarPopoverWordWidthTests {
+    /// The width a stacked label is granted: the committed content width less the column's own
+    /// padding on each side, at the cell's text scale.
+    static func grantedWidth(at scale: ShellTextScale) -> CGFloat {
+        CGFloat(MenuBarController.popoverContentWidth) - 2 * DesignTokens.spacing(10, scale: scale)
+    }
+
+    @Test(
+        "every label the popover draws fits its longest word in the content width, in every state at every size",
+        .enabled(if: LocalizationLane.catalogsAreCompiled)
+    )
+    func noLabelIsWiderThanItsColumn() {
+        var measured = 0
+        for cell in PopoverSpace.space {
+            let granted = Self.grantedWidth(at: cell.scale)
+            for label in MenuBarPopoverView.drawnLabels(for: cell.presentation) {
+                let font = NSFont.systemFont(ofSize: DesignTokens.pointSize(label.role, scale: cell.scale))
+                let widest = label.text
+                    .split(whereSeparator: \.isWhitespace)
+                    .map { NSAttributedString(string: String($0), attributes: [.font: font]).size().width }
+                    .max() ?? 0
+                measured += 1
+                #expect(
+                    widest <= granted,
+                    """
+                    \(cell.testDescription): a word of "\(label.text)" is \(widest) points at \
+                    \(cell.scale), wider than the \(granted)-point column — it will break mid-word
+                    """
+                )
+            }
+        }
+        // The fold is over something: every cell draws at least the status label and the five
+        // command-centre labels, and the space has both text sizes in it.
+        #expect(measured >= PopoverSpace.space.count * 6)
+        #expect(PopoverSpace.space.contains { $0.scale == .accessibilityLarge })
+    }
+
+    /// **The pin, held against the ruling rather than a picture** (focus-cxb). With one nudge the
+    /// decision is that nudge; with both it is the question, and only the question.
+    @Test("the decision is the question whenever a question is drawn, and the accusation only when it is alone")
+    func theDecisionSectionsFollowTheRuling() {
+        for cell in PopoverSpace.space {
+            let sections = MenuBarPopoverView(presentation: cell.presentation).decisionSections
+            let hasQuestion = cell.presentation.pendingQuery != nil
+            let hasAccusation = cell.presentation.pendingAccusation != nil
+            if hasQuestion {
+                #expect(sections == [.question], "\(cell.testDescription) pins \(sections)")
+            } else if hasAccusation {
+                #expect(sections == [.accusation], "\(cell.testDescription) pins \(sections)")
+            } else {
+                #expect(sections.isEmpty, "\(cell.testDescription) pins \(sections) with no nudge")
+            }
+        }
+    }
+}
