@@ -375,4 +375,50 @@ struct PriorityStoreTests {
         #expect(ordered == [first, second, never])
         #expect(try harness.store.recentTasks(limit: 2).map(\.id) == [first, second])
     }
+
+    /// **The order and the limit are the store's, and the `nil` placement is checked** (focus-tzj.2).
+    ///
+    /// `recentTasks(limit:)` used to fetch every row in the table and sort them in Swift, with a
+    /// doc comment saying that was deliberate: the placement of a never-activated task should be
+    /// a decision rather than whatever SQLite felt like. The descriptor carries the sort and the
+    /// limit now — the tick reads eight rows instead of all of them — and that trade is only safe
+    /// if the store really does order `nil` last under a reverse sort. So this asks it, with more
+    /// never-activated rows than the limit and the limit cutting **through** them: a store that
+    /// put `nil` first would answer with a page of never-activated tasks and this goes red.
+    ///
+    /// The counter is read across the call because "it no longer fetches the whole table" and "it
+    /// makes one round trip" are different claims, and the second one is the one a tick pays.
+    @Test("the history's order and its limit are the store's, with never-activated rows last")
+    @MainActor
+    func historyOrderingAndLimitComeFromTheStore() throws {
+        let harness = try PriorityStoreHarness()
+        // Three never-activated rows, created first, so a store that ordered `nil` before the
+        // activated rows would have them at the head of every page below.
+        let neverA = try harness.store.createTask(intent: "Never A")
+        let neverB = try harness.store.createTask(intent: "Never B")
+        let neverC = try harness.store.createTask(intent: "Never C")
+        let older = try harness.store.setPriority(intent: "Older")
+        let newer = try harness.store.setPriority(intent: "Newer")
+        let newest = PriorityStore(
+            context: harness.context,
+            dateProvider: FixedDateProvider(now: harness.clock.now.addingTimeInterval(900))
+        )
+        try newest.activate(taskID: older)
+
+        #expect(try harness.store.recentTasks(limit: 2).map(\.id) == [older, newer])
+        // The limit cuts through the never-activated block: three of them exist, one is in the
+        // page. Which one is settled by the total order, so the page is stable rather than
+        // whatever the store returned.
+        let page = try harness.store.recentTasks(limit: 3).map(\.id)
+        #expect(page.count == 3)
+        #expect(Array(page.prefix(2)) == [older, newer])
+        #expect([neverA, neverB, neverC].contains(page[2]))
+
+        StoreFetchCounter.reset()
+        _ = try harness.store.recentTasks(limit: 8)
+        #expect(
+            StoreFetchCounter.count == 1,
+            "the history cost \(StoreFetchCounter.count) fetches, and it is one round trip"
+        )
+    }
 }

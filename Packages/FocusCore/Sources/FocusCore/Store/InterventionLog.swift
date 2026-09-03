@@ -47,6 +47,32 @@ public final class InterventionLog {
         self.calendar = calendar
     }
 
+    /// **How many times anything in this process has written an intervention row** (focus-tzj.2).
+    ///
+    /// Every insert, every outcome, every withdrawal and every purge below bumps it, and nothing
+    /// outside this file writes an `InterventionRecord` at all — the lint that keeps
+    /// `InterventionEvent` the only way to describe one is what makes that true rather than
+    /// hoped for. So a budget computed at one value of this number is still the budget at the
+    /// same value.
+    ///
+    /// Process-wide for `PriorityStore.mutationCount`'s reason: the question is about the rows,
+    /// not about the object holding them, and a nudge test routinely writes through one log and
+    /// reads through another over the same context.
+    public private(set) static var writeCount = 0
+
+    /// The last budget computed, with everything it was computed from.
+    ///
+    /// `budget(on:priorityID:)` folds **today's whole log** — every row the app has written since
+    /// midnight — and the nudge loop asked for it on every five-second tick, whether or not the
+    /// app had said anything since the last one. A day in which nothing happens is the common
+    /// case and it now costs nothing: the day, the priority and the write count are all the
+    /// budget is a function of, so an unchanged triple is an unchanged answer.
+    private var cachedBudget: (day: LocalDay, priorityID: UUID?, writes: Int, value: InterruptionBudget)?
+
+    /// How many budget reads this log answered without going to the store. Read by the
+    /// self-check's per-tick survey, so "the day is cached" is a number rather than a comment.
+    public private(set) var budgetCacheHits = 0
+
     // MARK: - Writing
 
     /// Record one thing the app did.
@@ -80,6 +106,7 @@ public final class InterventionLog {
         )
         context.insert(row)
         try context.save()
+        Self.writeCount += 1
         return row.id
     }
 
@@ -94,7 +121,7 @@ public final class InterventionLog {
         let descriptor = FetchDescriptor<FocusSchemaV4.InterventionRecord>(
             predicate: #Predicate { $0.id == id }
         )
-        guard let row = try context.fetch(descriptor).first else { return }
+        guard let row = try context.countedFetch(descriptor).first else { return }
         guard row.outcomeRaw == nil else { return }
         // **An outcome belongs to a delivery** (focus-gmr, R-81). What the person did about an
         // interruption is only a fact about an interruption that reached them: a deferred row
@@ -107,6 +134,7 @@ public final class InterventionLog {
         guard row.spendsBudget else { return }
         row.outcome = outcome
         try context.save()
+        Self.writeCount += 1
     }
 
     /// **Take back a delivery nobody ever saw** (R-81, U-1, focus-mfc).
@@ -137,11 +165,12 @@ public final class InterventionLog {
         let descriptor = FetchDescriptor<FocusSchemaV4.InterventionRecord>(
             predicate: #Predicate { $0.id == id }
         )
-        guard let row = try context.fetch(descriptor).first else { return false }
+        guard let row = try context.countedFetch(descriptor).first else { return false }
         guard row.disposition == .delivered, row.outcomeRaw == nil else { return false }
         row.disposition = .deferred
         row.surface = nil
         try context.save()
+        Self.writeCount += 1
         return true
     }
 
@@ -163,17 +192,17 @@ public final class InterventionLog {
 
     /// Every row on one local day, oldest first.
     public func records(on day: LocalDay) throws -> [FocusSchemaV4.InterventionRecord] {
-        try context.fetch(Self.descriptor(forDay: day)).sorted(by: Self.chronological)
+        try context.countedFetch(Self.descriptor(forDay: day)).sorted(by: Self.chronological)
     }
 
     /// Every row in the log, oldest first.
     public func all() throws -> [FocusSchemaV4.InterventionRecord] {
-        try context.fetch(FetchDescriptor<FocusSchemaV4.InterventionRecord>())
+        try context.countedFetch(FetchDescriptor<FocusSchemaV4.InterventionRecord>())
             .sorted(by: Self.chronological)
     }
 
     public func count() throws -> Int {
-        try context.fetchCount(FetchDescriptor<FocusSchemaV4.InterventionRecord>())
+        try context.countedFetchCount(FetchDescriptor<FocusSchemaV4.InterventionRecord>())
     }
 
     /// The local day an instant falls in, in this log's calendar.
@@ -211,10 +240,27 @@ public final class InterventionLog {
         // `priorityID` is the active priority, for the per-priority query cap. `nil` leaves
         // `queriesForPriorityToday` at zero, which is the honest answer when there is no
         // priority — and gate 1 will have suppressed the interruption anyway.
+        //
+        // **Asked once per day per priority per write, and not once per tick** (focus-tzj.2).
+        // This is a fold over today's whole log — every row since midnight — and the nudge loop
+        // asked for it on every five-second corroboration tick. The three things it is a function
+        // of are all here: which day, which priority, and whether anything has been written since
+        // the last answer. An unchanged triple is the same arithmetic over the same rows, so the
+        // store is not asked again.
+        let writes = Self.writeCount
+        if let cached = cachedBudget,
+           cached.day == day,
+           cached.priorityID == priorityID,
+           cached.writes == writes {
+            budgetCacheHits += 1
+            return cached.value
+        }
         let charges = try records(on: day).compactMap { row in
             InterruptionCharge(row.budgetEvent, priorityID: row.priorityID)
         }
-        return .spent(charges, underPriority: priorityID)
+        let budget = InterruptionBudget.spent(charges, underPriority: priorityID)
+        cachedBudget = (day: day, priorityID: priorityID, writes: writes, value: budget)
+        return budget
     }
 
     /// Deliveries of one kind on one local day.
@@ -258,7 +304,10 @@ public final class InterventionLog {
     public func purge(priorityID: UUID) throws -> Int {
         let doomed = try all().filter { $0.priorityID == priorityID }
         for row in doomed { context.delete(row) }
-        if !doomed.isEmpty { try context.save() }
+        if !doomed.isEmpty {
+            try context.save()
+            Self.writeCount += 1
+        }
         return doomed.count
     }
 
@@ -268,7 +317,10 @@ public final class InterventionLog {
     public func purge(before day: LocalDay) throws -> Int {
         let doomed = try all().filter { self.day(of: $0.at) < day }
         for row in doomed { context.delete(row) }
-        if !doomed.isEmpty { try context.save() }
+        if !doomed.isEmpty {
+            try context.save()
+            Self.writeCount += 1
+        }
         return doomed.count
     }
 
@@ -277,7 +329,10 @@ public final class InterventionLog {
     public func purgeAll() throws -> Int {
         let doomed = try all()
         for row in doomed { context.delete(row) }
-        if !doomed.isEmpty { try context.save() }
+        if !doomed.isEmpty {
+            try context.save()
+            Self.writeCount += 1
+        }
         return doomed.count
     }
 

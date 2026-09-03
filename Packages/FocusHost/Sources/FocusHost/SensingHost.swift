@@ -653,7 +653,22 @@ final class SensingHost {
         defer { onSensingChanged?() }
 
         sampleIdle()
-        _ = media.refresh()
+        // **The listeners are the reading; the poll is the fallback** (focus-tzj.2).
+        //
+        // This was an unconditional `media.refresh()`, which re-enumerates every CoreAudio device
+        // on the machine and asks each input device whether it is running — twelve times a
+        // minute, for the life of the process, while `attachListeners()` had a property listener
+        // on every one of those devices and one on the device list precisely so that a change
+        // *tells* us. Probes P-94/P-104 measured all five installs returning `0` at zero grants,
+        // which is why the observation is trustworthy enough to be the reading rather than a
+        // corroboration of a poll.
+        //
+        // The poll survives for the state where the observation does not exist: a rig on which
+        // every install was refused has `listenerCount == 0`, and there a tick is the only thing
+        // that would ever notice a microphone. `mediaActivity` is kept up to date by
+        // `media.onChange` either way, so nothing downstream can tell which of the two produced
+        // it — which is the point.
+        if media.listenerCount == 0 { _ = media.refresh() }
 
         guard let current = seededCurrent(), let cleared = gate.evaluate(current).clearedActivation
         else { return }

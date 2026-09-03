@@ -89,6 +89,25 @@ public final class PriorityStore {
         self.dateProvider = dateProvider
     }
 
+    /// **How many times anything in this process has changed a priority row** (focus-tzj.2).
+    ///
+    /// Every mutation this type makes goes through `journal(_:undo:mutate:inverse:)` — including
+    /// an **undo**, whose inverse calls a verb on this same store and so is journalled again —
+    /// and that function is the only place a save happens. So a reader that remembers this number
+    /// beside a projection knows, without asking the store anything, whether the projection can
+    /// still be true. `PriorityHost` uses it to stop re-fetching the history twelve times a
+    /// minute for a list nobody has touched.
+    ///
+    /// **Process-wide rather than per-instance**, because the question is about the rows and not
+    /// about the object: the self-check, the composition root and a test fixture may all hold a
+    /// store over one context, and a cache keyed on one instance's own count would go stale
+    /// silently when another wrote. There is exactly one store file per process, so one counter
+    /// describes it.
+    ///
+    /// It is deliberately not persisted and never compared across launches: a fresh process has
+    /// fetched nothing yet, so its first read is a real read.
+    public private(set) static var mutationCount = 0
+
     // MARK: - Reads
 
     /// The active priority, or `nil` if there is none.
@@ -100,30 +119,49 @@ public final class PriorityStore {
 
     /// The single `ActivePriority` row, if one exists.
     public func activePointer() throws -> FocusSchemaV3.ActivePriority? {
-        try context.fetch(FetchDescriptor<FocusSchemaV3.ActivePriority>()).first
+        try context.countedFetch(FetchDescriptor<FocusSchemaV3.ActivePriority>()).first
     }
 
     /// How many pointer rows the store currently holds. Should only ever be `0` or `1`; a
     /// test asserts exactly that, rather than trusting it.
     public func activePointerCount() throws -> Int {
-        try context.fetchCount(FetchDescriptor<FocusSchemaV3.ActivePriority>())
+        try context.countedFetchCount(FetchDescriptor<FocusSchemaV3.ActivePriority>())
     }
 
     public func task(id: UUID) throws -> FocusSchemaV3.PriorityTask? {
         let descriptor = FetchDescriptor<FocusSchemaV3.PriorityTask>(
             predicate: #Predicate { $0.id == id }
         )
-        return try context.fetch(descriptor).first
+        return try context.countedFetch(descriptor).first
     }
 
     /// The history, newest first (F-15).
     ///
     /// Ordered by `lastActivatedAt` descending, with never-activated tasks after the
-    /// activated ones and `createdAt` breaking every tie. Sorted in Swift rather than by the
-    /// store so that the ordering of `nil` is a decision rather than whatever SQLite felt
-    /// like.
+    /// activated ones and `createdAt` breaking every tie.
+    ///
+    /// **The order and the limit are the store's** (focus-tzj.2). This fetched *every*
+    /// `PriorityTask` in the table, sorted the whole lot in Swift and then threw all but the
+    /// first eight away — on every five-second corroboration tick, for the life of the process,
+    /// against a table that grows by one row for every commitment the person has ever made. The
+    /// descriptor carries the ordering and the limit now, so a hundredth day costs what the
+    /// first one did.
+    ///
+    /// The Swift comparison stays as the **total** order over what comes back, and it is not a
+    /// second opinion: the store orders on the two dated columns, and this settles the one thing
+    /// SQL leaves open — two rows stamped at the same instant, which a fixed `DateProvider` makes
+    /// routine in the test lane — by identifier, so a page reads back the same way twice.
+    /// `recentTasksOrdersNeverActivatedLast` pins the `nil` placement the descriptor relies on,
+    /// because that is a fact about the store rather than an assumption this file may make.
     public func recentTasks(limit: Int? = nil) throws -> [FocusSchemaV3.PriorityTask] {
-        let all = try context.fetch(FetchDescriptor<FocusSchemaV3.PriorityTask>())
+        var descriptor = FetchDescriptor<FocusSchemaV3.PriorityTask>(
+            sortBy: [
+                SortDescriptor(\.lastActivatedAt, order: .reverse),
+                SortDescriptor(\.createdAt, order: .reverse)
+            ]
+        )
+        if let limit { descriptor.fetchLimit = limit }
+        let all = try context.countedFetch(descriptor)
         let sorted = all.sorted { lhs, rhs in
             switch (lhs.lastActivatedAt, rhs.lastActivatedAt) {
             case let (left?, right?) where left != right:
@@ -137,22 +175,21 @@ public final class PriorityStore {
                 return lhs.id.uuidString < rhs.id.uuidString
             }
         }
-        guard let limit else { return sorted }
-        return Array(sorted.prefix(limit))
+        return sorted
     }
 
     public func contextItem(id: UUID) throws -> FocusSchemaV3.ContextItem? {
         let descriptor = FetchDescriptor<FocusSchemaV3.ContextItem>(
             predicate: #Predicate { $0.id == id }
         )
-        return try context.fetch(descriptor).first
+        return try context.countedFetch(descriptor).first
     }
 
     public func rule(id: UUID) throws -> FocusSchemaV3.RelevanceRule? {
         let descriptor = FetchDescriptor<FocusSchemaV3.RelevanceRule>(
             predicate: #Predicate { $0.id == id }
         )
-        return try context.fetch(descriptor).first
+        return try context.countedFetch(descriptor).first
     }
 
     // MARK: - The journal
@@ -173,6 +210,12 @@ public final class PriorityStore {
 
         let result = try mutate()
         try context.save()
+        // **After the save, never before it** (focus-tzj.2). The number is a promise that the
+        // rows really moved, and a mutation that threw on the way to disk moved nothing: bumping
+        // it first would invalidate every reader's cache for a write that did not happen — which
+        // is only a wasted fetch, and bumping it for a write that *did* happen and then throwing
+        // would be the dangerous direction.
+        Self.mutationCount += 1
 
         undo?.registerUndo(withTarget: self) { store in
             // `UndoManager` runs a registered handler synchronously on the thread that called
@@ -857,7 +900,7 @@ public final class PriorityStore {
     /// than left for the unique constraint to merge: the app survives collision resolution, it
     /// never depends on it.
     private func rePoint(to task: FocusSchemaV3.PriorityTask?, at date: Date) throws {
-        let pointers = try context.fetch(FetchDescriptor<FocusSchemaV3.ActivePriority>())
+        let pointers = try context.countedFetch(FetchDescriptor<FocusSchemaV3.ActivePriority>())
 
         guard let task else {
             for pointer in pointers { context.delete(pointer) }
@@ -1038,7 +1081,7 @@ public final class PriorityStore {
         let descriptor = FetchDescriptor<FocusSchemaV3.RelevanceRule>(
             predicate: #Predicate { $0.scopeRaw == scope }
         )
-        return try context.fetch(descriptor)
+        return try context.countedFetch(descriptor)
     }
 
     private func normalised(_ text: String?) -> String? {

@@ -99,6 +99,33 @@ public final class QueryLedger {
         self.dateProvider = dateProvider
     }
 
+    /// **How many times anything in this process has written a receipt** (focus-tzj.2).
+    ///
+    /// Every insert and every purge below bumps it, and this file is the only writer of an
+    /// `AskedQuestion` row in the programme. Process-wide rather than per-instance, for
+    /// `PriorityStore.mutationCount`'s reason: the question is about the rows.
+    public private(set) static var writeCount = 0
+
+    /// Gate 11's last answers, and the write count they were true at.
+    ///
+    /// **A receipt is immutable and settling is monotone**: a question that has been answered
+    /// stays answered until the row is purged, and the only thing that can change an answer here
+    /// is a write. So an unchanged `writeCount` is an unchanged verdict, and gate 11 stops being
+    /// a store round trip on every five-second corroboration tick — which is what it was, for a
+    /// question the app had already decided it would not ask.
+    private var settledCache: [SettledKey: Bool] = [:]
+    private var settledCacheWrites = 0
+
+    /// The three things gate 11 is a question about.
+    private struct SettledKey: Hashable {
+        let priorityID: UUID
+        let subjectKindRaw: String
+        let subject: String
+    }
+
+    /// How many gate-11 reads this ledger answered without going to the store.
+    public private(set) var settledCacheHits = 0
+
     /// How long a receipt lives: with its priority, and with nothing else (F-115/F-116).
     public static var retention: NudgeRetentionRule { InterventionPolicy.queryLedgerRetention }
 
@@ -129,9 +156,27 @@ public final class QueryLedger {
         subjectKind: RuleSubjectKind,
         subject: String
     ) throws -> Bool {
-        try settledReceipt(
+        // **Cached against the write count, never against the clock** (focus-tzj.2). See
+        // `settledCache`: the rows this reads are immutable, so the only thing that can move the
+        // answer is a write, and a tick is not one.
+        if settledCacheWrites != Self.writeCount {
+            settledCache.removeAll(keepingCapacity: true)
+            settledCacheWrites = Self.writeCount
+        }
+        let key = SettledKey(
+            priorityID: priorityID,
+            subjectKindRaw: subjectKind.rawValue,
+            subject: subject
+        )
+        if let cached = settledCache[key] {
+            settledCacheHits += 1
+            return cached
+        }
+        let settled = try settledReceipt(
             priorityID: priorityID, subjectKind: subjectKind, subject: subject
         ) != nil
+        settledCache[key] = settled
+        return settled
     }
 
     /// Every receipt on file for one question, oldest first.
@@ -152,7 +197,7 @@ public final class QueryLedger {
                     && $0.subject == subject
             }
         )
-        return try context.fetch(descriptor).sorted(by: Self.chronological)
+        return try context.countedFetch(descriptor).sorted(by: Self.chronological)
     }
 
     /// The receipt that **ended** this question, if one has.
@@ -187,17 +232,17 @@ public final class QueryLedger {
         let descriptor = FetchDescriptor<FocusSchemaV4.AskedQuestion>(
             predicate: #Predicate { $0.priorityID == priorityID }
         )
-        return try context.fetch(descriptor).sorted(by: Self.chronological)
+        return try context.countedFetch(descriptor).sorted(by: Self.chronological)
     }
 
     /// Every receipt in the store, oldest first.
     public func all() throws -> [FocusSchemaV4.AskedQuestion] {
-        try context.fetch(FetchDescriptor<FocusSchemaV4.AskedQuestion>())
+        try context.countedFetch(FetchDescriptor<FocusSchemaV4.AskedQuestion>())
             .sorted(by: Self.chronological)
     }
 
     public func count() throws -> Int {
-        try context.fetchCount(FetchDescriptor<FocusSchemaV4.AskedQuestion>())
+        try context.countedFetchCount(FetchDescriptor<FocusSchemaV4.AskedQuestion>())
     }
 
     /// How many questions have been asked for one priority today, in the user's own calendar.
@@ -247,6 +292,7 @@ public final class QueryLedger {
         )
         context.insert(receipt)
         try context.save()
+        Self.writeCount += 1
         return receipt.id
     }
 
@@ -390,6 +436,7 @@ public final class QueryLedger {
             context.insert(receipt)
             inserted.append(receipt)
             try context.save()
+            Self.writeCount += 1
         } catch {
             for row in inserted { context.delete(row) }
             // Best effort: the rows were never saved, so the store already agrees. This makes
@@ -413,7 +460,10 @@ public final class QueryLedger {
     public func purge(priorityID: UUID) throws -> Int {
         let doomed = try receipts(priorityID: priorityID)
         for receipt in doomed { context.delete(receipt) }
-        if !doomed.isEmpty { try context.save() }
+        if !doomed.isEmpty {
+            try context.save()
+            Self.writeCount += 1
+        }
         return doomed.count
     }
 
@@ -422,7 +472,10 @@ public final class QueryLedger {
     public func purgeAll() throws -> Int {
         let doomed = try all()
         for receipt in doomed { context.delete(receipt) }
-        if !doomed.isEmpty { try context.save() }
+        if !doomed.isEmpty {
+            try context.save()
+            Self.writeCount += 1
+        }
         return doomed.count
     }
 
@@ -435,7 +488,10 @@ public final class QueryLedger {
     public func purgeOrphans(livingPriorityIDs: Set<UUID>) throws -> Int {
         let doomed = try all().filter { !livingPriorityIDs.contains($0.priorityID) }
         for receipt in doomed { context.delete(receipt) }
-        if !doomed.isEmpty { try context.save() }
+        if !doomed.isEmpty {
+            try context.save()
+            Self.writeCount += 1
+        }
         return doomed.count
     }
 

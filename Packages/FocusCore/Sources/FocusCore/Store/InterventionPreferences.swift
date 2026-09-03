@@ -135,6 +135,6 @@ extension FocusStore {
             sortBy: [SortDescriptor(\.touchedAt, order: .forward)]
         )
         descriptor.fetchLimit = 1
-        return try? context.fetch(descriptor).first
+        return try? context.countedFetch(descriptor).first
     }
 }

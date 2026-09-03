@@ -100,14 +100,14 @@ public final class SessionStore {
             sortBy: [SortDescriptor(\.startedAt, order: .reverse)]
         )
         descriptor.fetchLimit = 1
-        return try context.fetch(descriptor).first
+        return try context.countedFetch(descriptor).first
     }
 
     public func session(id: UUID) throws -> FocusSchemaV3.FocusSessionRecord? {
         let descriptor = FetchDescriptor<FocusSchemaV3.FocusSessionRecord>(
             predicate: #Predicate { $0.id == id }
         )
-        return try context.fetch(descriptor).first
+        return try context.countedFetch(descriptor).first
     }
 
     /// Every transition of one session, oldest first.

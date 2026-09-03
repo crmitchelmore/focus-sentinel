@@ -70,7 +70,7 @@ public final class SwiftDataRuleStore: RuleStore {
         let descriptor = FetchDescriptor<FocusSchemaV3.RelevanceRule>(
             predicate: #Predicate { $0.scopeRaw == scope }
         )
-        for stored in try context.fetch(descriptor) {
+        for stored in try context.countedFetch(descriptor) {
             context.delete(stored)
         }
         try context.save()
@@ -144,7 +144,7 @@ public final class SwiftDataRuleStore: RuleStore {
     // MARK: - Storage
 
     private func storedRules() throws -> [FocusSchemaV3.RelevanceRule] {
-        let rules = try context.fetch(FetchDescriptor<FocusSchemaV3.RelevanceRule>())
+        let rules = try context.countedFetch(FetchDescriptor<FocusSchemaV3.RelevanceRule>())
         // Sorted in Swift so that the tie-break is a decision rather than whatever order the
         // store felt like returning — the same ordering `InMemoryRuleStore` promises.
         return rules.sorted { lhs, rhs in
@@ -157,14 +157,14 @@ public final class SwiftDataRuleStore: RuleStore {
         let descriptor = FetchDescriptor<FocusSchemaV3.RelevanceRule>(
             predicate: #Predicate { $0.id == id }
         )
-        return try context.fetch(descriptor).first
+        return try context.countedFetch(descriptor).first
     }
 
     private func storedTask(id: UUID) throws -> FocusSchemaV3.PriorityTask? {
         let descriptor = FetchDescriptor<FocusSchemaV3.PriorityTask>(
             predicate: #Predicate { $0.id == id }
         )
-        return try context.fetch(descriptor).first
+        return try context.countedFetch(descriptor).first
     }
 
     /// Decode a stored row. `nil` means this build does not know one of its vocabularies —

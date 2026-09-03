@@ -2441,6 +2441,67 @@ print(
     )
 )
 
+# **A tick that changes nothing costs the store almost nothing** (focus-tzj.2).
+#
+# The five-second corroboration tick fetched what could not have moved:
+# `PriorityStore.recentTasks(limit:)` read EVERY `PriorityTask` in the table and sorted them in
+# Swift to draw a list of eight, and `NudgeMemory.reading` folded today's whole intervention log
+# and looked for a query receipt BEFORE gate 1 was consulted — so somebody with no commitment at
+# all paid for both, twelve times a minute, for ever. Measured on the survey's own store before
+# the repair: 4 fetches per tick with no commitment and 5 with one. None of that shows up in a
+# stopwatch on a store with four rows in it, which is why the reading is a count.
+#
+# The survey drives the tick's two store-touching halves — `PriorityHost`'s projection and
+# `NudgeMemory.reading` — on a store of its own, in three states, ten ticks each.
+tick_fetches = nudge.get("tickFetches") or {}
+check(
+    tick_fetches.get("available") is True,
+    "the per-tick fetch survey ran",
+    tick_fetches.get("error", tick_fetches.get("available")),
+)
+TICK_STATES = ("noCommitment", "commitmentPopoverClosed", "commitmentPopoverOpen")
+for tick_state in TICK_STATES:
+    row = tick_fetches.get(tick_state) or {}
+    steady_ticks = row.get("steadyTicks")
+    first_fetches = row.get("firstTickFetches")
+    steady_fetches = row.get("fetchesOverSteadyTicks")
+    steady_nudge = row.get("nudgeFetchesOverSteadyTicks")
+    steady_popover = row.get("popoverFetchesOverSteadyTicks")
+    # **Non-vacuity, per state and first.** Every row under this one is a ceiling on ticks that
+    # fetch little or nothing, and a survey whose store answered nothing at all — or which never
+    # ticked — would satisfy every one of them.
+    check(
+        isinstance(steady_ticks, int) and steady_ticks >= 2
+        and isinstance(first_fetches, int) and first_fetches > 0,
+        f"the {tick_state} tick survey really ticked, and its first tick really fetched",
+        (steady_ticks, first_fetches),
+    )
+    check(
+        isinstance(steady_fetches, int)
+        and isinstance(steady_ticks, int)
+        and steady_fetches <= 2 * steady_ticks,
+        f"a quiet {tick_state} tick costs at most two fetches",
+        (steady_fetches, steady_ticks),
+    )
+    # The half this bead moved the guard in front of. With no commitment neither read is even
+    # asked for; with one, both are answered from a cache keyed on their store's own write count,
+    # and a tick writes nothing.
+    check(
+        steady_nudge == 0,
+        f"the nudge half of a quiet {tick_state} tick goes to the store not at all",
+        (steady_nudge, steady_ticks),
+    )
+    check(
+        steady_popover == 0,
+        f"building the popover's content on a {tick_state} tick touches no store",
+        steady_popover,
+    )
+    print(
+        "note tick fetches {}: first {}, {} over {} quiet ticks".format(
+            tick_state, first_fetches, steady_fetches, steady_ticks
+        )
+    )
+
 check(
     nudge.get("surfacesWithNoWindowAndNoMark") == [],
     "every nudge surface that raises no window marks the status item",

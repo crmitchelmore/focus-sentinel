@@ -1030,6 +1030,82 @@ struct NudgeDeciderTests {
         #expect(asks > 0, "the table never reached a question at all")
     }
 
+    /// **With no commitment, nothing the stores could have said changes the answer** (focus-tzj.2).
+    ///
+    /// `NudgeMemory.reading(…)` fetched today's whole intervention log before gate 1 was
+    /// consulted — a fold over every row the app had written since midnight, on every
+    /// five-second corroboration tick, for a decision that cannot reach the number. The repair
+    /// is to return early with `budget: .empty` and `hasAsked: false` when there is no
+    /// commitment, and *that* is only sound if those two fields are unreachable in that state.
+    ///
+    /// This is the fold that says so, over the whole space rather than at one point: every
+    /// verdict, every uncertainty, both slot states, an exhausted budget against an empty one and
+    /// both answers to "has this been asked", with no commitment. Every cell must decide exactly
+    /// what the cheap memory decides.
+    ///
+    /// Non-vacuity is asserted twice over: the fold has to reach every cell it claims, and the
+    /// **same** comparison run *with* a commitment has to find a disagreement — otherwise this
+    /// would pass just as well against a decider that ignored the budget entirely, which is a
+    /// far worse product than the one it is meant to protect.
+    @Test("with no commitment, the budget and the receipt cannot change the decision")
+    func everyMemoryDecidesTheSameThingWithNoCommitment() {
+        let budgets: [InterruptionBudget] = [.empty, Self.exhausted]
+        var cells = 0
+        var disagreementsWithACommitment = 0
+
+        for verdict in Verdict.allCases {
+            for uncertainty in [nil] + UncertaintyReason.allCases.map({ Optional($0) }) {
+                for hasAsked in [false, true] {
+                    for budget in budgets {
+                        cells += 1
+                        let rich = NudgeMemory(budget: budget, hasAsked: hasAsked)
+                        let cheap = NudgeMemory(budget: .empty, hasAsked: false)
+
+                        let without = Self.surroundings(hasActivePriority: false)
+                        let uncommitted = Self.judgement(
+                            verdict: verdict,
+                            uncertainty: uncertainty,
+                            subject: Self.neutral,
+                            hasActivePriority: false
+                        )
+                        #expect(
+                            Self.decide(uncommitted, surroundings: without, memory: rich)
+                                == Self.decide(uncommitted, surroundings: without, memory: cheap),
+                            """
+                            with no commitment, \(verdict)/\(String(describing: uncertainty)) \
+                            decided differently for a budget nothing should have read
+                            """
+                        )
+
+                        // The control: the same two memories, with a commitment. If these never
+                        // part company the comparison above is measuring nothing.
+                        let withOne = Self.surroundings(hasActivePriority: true)
+                        let committed = Self.judgement(
+                            verdict: verdict,
+                            uncertainty: uncertainty,
+                            subject: Self.neutral,
+                            hasActivePriority: true
+                        )
+                        if Self.decide(committed, surroundings: withOne, memory: rich)
+                            != Self.decide(committed, surroundings: withOne, memory: cheap) {
+                            disagreementsWithACommitment += 1
+                        }
+                    }
+                }
+            }
+        }
+
+        #expect(cells == Verdict.allCases.count * (UncertaintyReason.allCases.count + 1) * 2 * 2)
+        #expect(cells > 0)
+        #expect(
+            disagreementsWithACommitment > 0,
+            """
+            the budget and the receipt changed nothing even WITH a commitment, so this fold \
+            proves nothing about skipping them without one
+            """
+        )
+    }
+
     @Test("the decision is a function of its inputs: two runs give the same answer")
     func theDeciderIsPure() {
         let judgement = Self.judgement(verdict: .uncertain, uncertainty: .mixedUseApplication)

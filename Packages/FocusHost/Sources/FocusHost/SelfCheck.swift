@@ -1326,8 +1326,172 @@ enum SelfCheck {
 
         report["panel"] = panelReport()
         report["popover"] = popoverReport()
+        report["tickFetches"] = tickFetchSurvey()
         report["menuBarInstalled"] = composition.menuBar.isInstalled
         report["decisionCount"] = host.decisionCount
+        return report
+    }
+
+    /// **What one corroboration tick costs the store, in three states** (focus-tzj.2).
+    ///
+    /// ## The defect
+    ///
+    /// The five-second tick fetched things that could not have moved. `PriorityStore.recentTasks`
+    /// read **every** `PriorityTask` in the table and sorted them in Swift to draw a list of
+    /// eight; `NudgeMemory.reading` folded **today's whole intervention log** and looked for a
+    /// query receipt *before* gate 1 was consulted, so a person with no commitment at all paid
+    /// for both on every tick. Measured on this survey's own store before the repair: 3 fetches
+    /// per tick with no commitment and 5 with one, every tick, for ever.
+    ///
+    /// ## What is driven
+    ///
+    /// The tick's two store-touching halves, on a store of this survey's own: `PriorityHost`'s
+    /// projection — which `AppComposition.refreshCockpit()` calls — and `NudgeMemory.reading`,
+    /// which is the first thing `NudgeHost.consider` does with a judgement. Nothing else on the
+    /// path opens the store on a tick: the sensing host writes only on a transition, and the
+    /// relevance host pre-fetches only when the snapshot key moves.
+    ///
+    /// A store of its own rather than the launch's, for two reasons. The three states are
+    /// *"there is no commitment"*, *"there is one"* and *"there is one and the popover is open"*,
+    /// and the first two are facts about somebody's real store that a survey may not arrange; and
+    /// a reading taken against whatever the person happened to have captured would be a different
+    /// number on every machine.
+    ///
+    /// ## What is published
+    ///
+    /// Per state: the fetches the **first** tick made — which is the non-vacuity control, because
+    /// every claim below is about ticks that fetch nothing and a survey that never fetched at all
+    /// would satisfy all of them — and the fetches each of the **nine after it** made, with
+    /// nothing changed in between.
+    @MainActor
+    static func tickFetchSurvey() -> [String: Any] {
+        var report: [String: Any] = [:]
+        do {
+            let container = try FocusStore.makeContainer(kind: .inMemory)
+            let context = ModelContext(container)
+            let dateProvider = SystemDateProvider()
+            let calendar = Calendar.autoupdatingCurrent
+            let priorities = PriorityStore(context: context, dateProvider: dateProvider)
+            let ledger = QueryLedger(context: context, dateProvider: dateProvider)
+            let log = InterventionLog(
+                context: context,
+                dateProvider: dateProvider,
+                calendar: calendar
+            )
+            // A history to fetch, so "the history is not re-read" is a statement about a list
+            // that exists. Ten rows against a limit of eight, so the limit is doing something.
+            for index in 0..<10 {
+                _ = try priorities.createTask(intent: "Self-check history row \(index)")
+            }
+            // A day with something in it, so the budget fold has rows to fold.
+            _ = try log.record(
+                InterventionEvent(kind: .query, subject: FocusStore.bundleIdentifier, disposition: .deferred)
+            )
+
+            // A menu bar of the survey's own, for the open-popover state. Deliberately not the
+            // launch's: this is a measurement of what building the popover's content costs, and
+            // it must not depend on a status item having been installed or on what the live
+            // presentation happens to be.
+            let menuBar = MenuBarController()
+
+            let host = PriorityHost(
+                context: context,
+                dateProvider: dateProvider,
+                calendar: calendar,
+                locale: .autoupdatingCurrent,
+                environment: PriorityHost.Environment(
+                    status: .uncertain,
+                    storeIsReady: true,
+                    isObservingActivity: false
+                )
+            )
+            // The subject a question would be about, derived the way the loop derives it —
+            // `QuerySubject`'s initialiser is fileprivate precisely so that no other route
+            // exists. With one in hand the survey pays for gate 11's receipt lookup as well as
+            // the budget, which is the more expensive of the two states a tick can be in.
+            let subject = QuerySubject.derive(
+                judgedSubject: FocusStore.bundleIdentifier,
+                explanation: Explanation.make(
+                    stage: .heuristic,
+                    band: .high,
+                    clauses: [.insufficientEvidence(reason: .noNegativeBasis)],
+                    stamp: EngineStamp.current
+                )
+            )
+
+            /// One tick, in three counted parts.
+            func tick(commitment: UUID?, popoverIsOpen: Bool) -> (cockpit: Int, nudge: Int, popover: Int) {
+                StoreFetchCounter.reset()
+                host.update(
+                    environment: PriorityHost.Environment(
+                        status: .uncertain,
+                        storeIsReady: true,
+                        isObservingActivity: false
+                    )
+                )
+                let cockpit = StoreFetchCounter.count
+
+                StoreFetchCounter.reset()
+                _ = try? NudgeMemory.reading(
+                    ledger: ledger,
+                    log: log,
+                    priorityID: commitment,
+                    subject: subject
+                )
+                let nudge = StoreFetchCounter.count
+
+                // The work an open popover adds to a tick. It must touch no store at all — and
+                // that is a claim this survey can falsify rather than a remark, because the
+                // counter is running while it happens.
+                StoreFetchCounter.reset()
+                if popoverIsOpen {
+                    menuBar.update(popoverSurveyContents[1].1, traits: .systemDefault)
+                    menuBar.refreshPopoverContent()
+                }
+                return (cockpit, nudge, StoreFetchCounter.count)
+            }
+
+            let states: [(String, Bool, Bool)] = [
+                ("noCommitment", false, false),
+                ("commitmentPopoverClosed", true, false),
+                ("commitmentPopoverOpen", true, true)
+            ]
+            var commitment: UUID?
+            for (name, needsCommitment, popoverIsOpen) in states {
+                if needsCommitment, commitment == nil {
+                    commitment = try priorities.setPriority(intent: "Self-check tick survey")
+                }
+                let key = needsCommitment ? commitment : nil
+                let first = tick(commitment: key, popoverIsOpen: popoverIsOpen)
+                let steadyTicks = 9
+                var cockpit = 0
+                var nudge = 0
+                var popover = 0
+                for _ in 0..<steadyTicks {
+                    let next = tick(commitment: key, popoverIsOpen: popoverIsOpen)
+                    cockpit += next.cockpit
+                    nudge += next.nudge
+                    popover += next.popover
+                }
+                report[name] = [
+                    // The non-vacuity control: every row under it is about ticks that fetch
+                    // little or nothing, and a survey whose store answered nothing at all would
+                    // satisfy all of them.
+                    "firstTickFetches": first.cockpit + first.nudge + first.popover,
+                    "firstTickCockpitFetches": first.cockpit,
+                    "firstTickNudgeFetches": first.nudge,
+                    "steadyTicks": steadyTicks,
+                    "cockpitFetchesOverSteadyTicks": cockpit,
+                    "nudgeFetchesOverSteadyTicks": nudge,
+                    "popoverFetchesOverSteadyTicks": popover,
+                    "fetchesOverSteadyTicks": cockpit + nudge + popover
+                ]
+            }
+            report["available"] = true
+        } catch {
+            report["available"] = false
+            report["error"] = "\(error)"
+        }
         return report
     }
 

@@ -90,7 +90,7 @@ public final class ActivityEventStore {
     /// than in whatever order the store felt like. Sorted in Swift for the same reason the
     /// history is: the tie-break is a decision, not a side effect.
     public func all() throws -> [FocusSchemaV3.ActivityEvent] {
-        try context.fetch(FetchDescriptor<FocusSchemaV3.ActivityEvent>()).sorted(by: Self.chronological)
+        try context.countedFetch(FetchDescriptor<FocusSchemaV3.ActivityEvent>()).sorted(by: Self.chronological)
     }
 
     /// The rows in a half-open interval `[from, to)`.
@@ -101,7 +101,7 @@ public final class ActivityEventStore {
         let descriptor = FetchDescriptor<FocusSchemaV3.ActivityEvent>(
             predicate: #Predicate { $0.at >= start && $0.at < end }
         )
-        return try context.fetch(descriptor).sorted(by: Self.chronological)
+        return try context.countedFetch(descriptor).sorted(by: Self.chronological)
     }
 
     /// The rows for one session, oldest first.
@@ -109,11 +109,11 @@ public final class ActivityEventStore {
         let descriptor = FetchDescriptor<FocusSchemaV3.ActivityEvent>(
             predicate: #Predicate { $0.sessionID == sessionID }
         )
-        return try context.fetch(descriptor).sorted(by: Self.chronological)
+        return try context.countedFetch(descriptor).sorted(by: Self.chronological)
     }
 
     public func count() throws -> Int {
-        try context.fetchCount(FetchDescriptor<FocusSchemaV3.ActivityEvent>())
+        try context.countedFetchCount(FetchDescriptor<FocusSchemaV3.ActivityEvent>())
     }
 
     private static func chronological(

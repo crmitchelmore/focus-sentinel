@@ -93,6 +93,14 @@ BOOKMARK_ALLOWED_FILE="Packages/FocusCore/Sources/FocusCore/Context/SecurityScop
 # The one sanctioned wall clock (R-26).
 DATE_ALLOWED_FILE="Packages/FocusCore/Sources/FocusCore/Time/DateProvider.swift"
 
+# The one file permitted to call `ModelContext.fetch` / `fetchCount` directly (R-97,
+# focus-tzj.2): it is where the counting wrappers live.
+FETCH_ALLOWED_FILE="Packages/FocusCore/Sources/FocusCore/Store/StoreFetchCounter.swift"
+# Where R-97 applies. Shipping sources only: a test bundle that fetches directly is not a tick,
+# and counting its reads would put the suite's own housekeeping into a number that is supposed
+# to describe the product.
+FETCH_SEARCH_PATHS=(App Packages/*/Sources)
+
 # The one directory permitted to read the current calendar or timezone (R-26).
 CALENDAR_ALLOWED_DIR="Packages/FocusCore/Sources/FocusCore/Time/"
 
@@ -503,6 +511,38 @@ if [[ -n "$container_hits" ]]; then
     rc=1
 else
     print "ok   [R-05] no plan-less ModelContainer initialiser"
+fi
+
+# --- R-97: every fetch the shipping code makes is counted (focus-tzj.2) ----------------------
+#
+# `StoreFetchCounter` is what makes "the tick fetches nothing when nothing has changed" a number
+# the self-check publishes and the gate pins, rather than a claim. A counter that a new fetch
+# could quietly not join would be worth nothing at all — the reading would stay at its pinned
+# value while the tick got slower — so the count is taken inside `countedFetch`/`countedFetchCount`
+# and the bare calls are banned outside the file that defines them.
+#
+# Both directions, like every other allow-list here: the exemption must not outlive its reason,
+# so the permitted file is required to still contain the calls it is permitted to make.
+print
+print "== every SwiftData fetch in the shipping code is counted"
+fetch_hits=$(grep -rnE '\.fetch(Count)?\(' "${FETCH_SEARCH_PATHS[@]}" --include='*.swift' 2>/dev/null \
+    | strip_comments \
+    | grep -vE '\.countedFetch(Count)?\(' \
+    | grep -v "^${FETCH_ALLOWED_FILE}:")
+if [[ -n "$fetch_hits" ]]; then
+    print -u2 "FAIL [R-97] a bare ModelContext.fetch/fetchCount outside $FETCH_ALLOWED_FILE:"
+    print -u2 "$fetch_hits" | sed 's/^/    /'
+    print -u2 "    Use countedFetch(_:) / countedFetchCount(_:). An uncounted fetch makes the"
+    print -u2 "    self-check's per-tick fetch reading a number about some of the fetches,"
+    print -u2 "    which is a reading that cannot go red when the tick gets heavier."
+    rc=1
+elif ! grep -qE '\.fetch(Count)?\(' "$FETCH_ALLOWED_FILE" 2>/dev/null; then
+    print -u2 "FAIL [R-97] $FETCH_ALLOWED_FILE no longer calls fetch at all."
+    print -u2 "    The allow-list must not outlive the reason for it — remove the exemption,"
+    print -u2 "    or put the counting wrappers back."
+    rc=1
+else
+    print "ok   [R-97] every SwiftData fetch goes through the counting wrappers"
 fi
 
 # The entitlements file is small enough to assert on positively rather than by absence.

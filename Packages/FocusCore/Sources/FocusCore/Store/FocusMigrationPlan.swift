@@ -128,7 +128,7 @@ public enum FocusMigrationPlan: SchemaMigrationPlan {
                 // Fetched and filtered in Swift rather than through a predicate: the set is
                 // tiny, and a migration is the worst possible place to discover that a
                 // predicate compiled against a schema that is halfway through changing.
-                let tasks = try context.fetch(FetchDescriptor<FocusSchemaV1.PriorityTask>())
+                let tasks = try context.countedFetch(FetchDescriptor<FocusSchemaV1.PriorityTask>())
                 carry.activeTaskIDs = tasks
                     .filter(\.isActive)
                     .sorted { $0.createdAt > $1.createdAt }
@@ -141,7 +141,7 @@ public enum FocusMigrationPlan: SchemaMigrationPlan {
                 let descriptor = FetchDescriptor<FocusSchemaV2.PriorityTask>(
                     predicate: #Predicate { $0.id == identifier }
                 )
-                guard let task = try context.fetch(descriptor).first else { return }
+                guard let task = try context.countedFetch(descriptor).first else { return }
 
                 // The pointer is inserted, once, against a task that owns none. That is the
                 // only safe way to create it: inserting a second row whose target already has

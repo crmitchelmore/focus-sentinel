@@ -85,6 +85,10 @@ final class PriorityHost: PriorityActing {
     /// The four facts as they last stood.
     private(set) var snapshotKey = SnapshotKey()
 
+    /// **`PriorityStore.mutationCount` as of the last history fetch**, or `nil` before there has
+    /// been one (focus-tzj.2). See `refresh()`.
+    private var historyRevision: Int?
+
     /// **The one thing the person has committed to — this object's single statement of it**
     /// (focus-zrs).
     ///
@@ -423,7 +427,26 @@ final class PriorityHost: PriorityActing {
                 contextItems: items,
                 rules: rules
             )
-            recent = try store.recentTasks(limit: Self.historyLimit).map(RecentPriority.init)
+            // **The history is re-read when a priority row moved, and not once a tick**
+            // (focus-tzj.2). `refresh()` runs on every accepted activation *and* on the
+            // five-second corroboration tick, and this line fetched the store's whole
+            // `PriorityTask` table each time to draw a list of eight that changes when somebody
+            // captures, edits, activates or completes a commitment — a few times a day.
+            //
+            // Two conditions, because they catch different things and neither implies the other:
+            // `PriorityStore.mutationCount` moves for any write in this process, **including an
+            // undo**, which reaches no verb on this host and is exactly the case a
+            // "set a flag in `perform`" version would miss; and the snapshot key moves when the
+            // active commitment or its contents changed, which is when the *first* row of the
+            // list is drawn differently. The seed is `historyRevision == nil`, so the first
+            // refresh of a launch always reads.
+            let revision = PriorityStore.mutationCount
+            if historyRevision != revision || nextKey != snapshotKey {
+                recent = try store.recentTasks(limit: Self.historyLimit).map(RecentPriority.init)
+                // Assigned only after the fetch returned. A throw leaves it where it was, so the
+                // next tick tries again rather than caching the absence of an answer.
+                historyRevision = revision
+            }
         } catch {
             record(error)
         }

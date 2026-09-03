@@ -137,7 +137,7 @@ public enum SensitiveAppSeed {
 
     /// Every row, however this build reads it.
     public static func rows(in context: ModelContext) throws -> [FocusSchemaV3.SensitiveAppEntry] {
-        try context.fetch(FetchDescriptor<FocusSchemaV3.SensitiveAppEntry>())
+        try context.countedFetch(FetchDescriptor<FocusSchemaV3.SensitiveAppEntry>())
             .sorted { $0.bundleID < $1.bundleID }
     }
 

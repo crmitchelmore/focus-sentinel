@@ -224,8 +224,33 @@ extension NudgeMemory {
         correctedSubjects: Set<String> = [],
         ladder: LadderMachine = LadderMachine()
     ) throws -> NudgeMemory {
+        // **Gate 1 first, and the stores only after it** (focus-tzj.2).
+        //
+        // Both reads below are *about* a commitment: the receipt is keyed on one, and the budget
+        // is the day's spend under one. With none, the receipt lookup was already skipped and the
+        // budget was fetched anyway — a fold over today's whole intervention log, on every
+        // five-second tick, for a decision that cannot reach it. `hasActivePriority` is the first
+        // gate of the suppression stack in both eligibility functions, so no field of this value
+        // is read on the way to the answer; `everyMemoryDecidesTheSameThingWithNoCommitment`
+        // proves that over the whole space rather than restating it here.
+        //
+        // The other fields are in-process values the caller already holds, so the honest thing is
+        // to hand them over unchanged: this is the same memory, minus two answers nothing will
+        // ask for.
+        guard let priorityID else {
+            return NudgeMemory(
+                slot: slot,
+                budget: .empty,
+                fatigue: fatigue,
+                snoozes: snoozes,
+                correctedSubjects: correctedSubjects,
+                hasAsked: false,
+                ladder: ladder
+            )
+        }
+
         var hasAsked = false
-        if let priorityID, let subject {
+        if let subject {
             // **Settled, not merely written down** (focus-qds, U-1). The receipt left behind by
             // a question the world interrupted records that the asking happened; it is not an
             // answer, and gate 11 is the promise about answers.

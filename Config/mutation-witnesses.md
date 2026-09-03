@@ -111,6 +111,11 @@ H-JSON on a copy of the RELEASE report. Both stages run the same reader; the Rel
 | SC-47 | `self-check.sh:2484` | `report["nudge"]["popover"]["rebuild"]["buildsOnUnchangedTicks"] = 1` | SC-46 — the survey really ticked | **PENDING** — expected red line: `FAIL: a tick that changes nothing rebuilds nothing` |
 | SC-48 | `self-check.sh:2491` | `r = report["nudge"]["popover"]["rebuild"]; r["contentBuilds"] = r["presentationChanges"] + 1` | SC-49 — the hosting identity moves with it | **PENDING** — expected red line: `FAIL: the popover's content is built at most once per presentation change` |
 | SC-49 | `self-check.sh:2502` | `report["nudge"]["popover"]["rebuild"]["hostingConstructions"] += 1` | SC-48 — the build count itself | **PENDING** — expected red line: `FAIL: each popover build costs three hosting controllers, and nothing else builds one` |
+| SC-50 | `self-check.sh:2526` | `report["nudge"]["tickFetches"]["available"] = False` | SC-51 — the per-state rows are read from the same object | **PENDING** — expected red line: `FAIL: the per-tick fetch survey ran` |
+| SC-51 | `self-check.sh:2543` | `report["nudge"]["tickFetches"]["noCommitment"]["firstTickFetches"] = 0` | SC-52/SC-53 — the ceilings it makes readable | **PENDING** — expected red line: `FAIL: the noCommitment tick survey really ticked, and its first tick really fetched` |
+| SC-52 | `self-check.sh:2550` | `r = report["nudge"]["tickFetches"]["noCommitment"]; r["fetchesOverSteadyTicks"] = 2 * r["steadyTicks"] + 1` | SC-51 — the survey really ticked | **PENDING** — expected red line: `FAIL: a quiet noCommitment tick costs at most two fetches` |
+| SC-53 | `self-check.sh:2558` | `report["nudge"]["tickFetches"]["noCommitment"]["nudgeFetchesOverSteadyTicks"] = 1` | SC-51 | **PENDING** — expected red line: `FAIL: the nudge half of a quiet noCommitment tick goes to the store not at all` |
+| SC-54 | `self-check.sh:2563` | `report["nudge"]["tickFetches"]["commitmentPopoverOpen"]["popoverFetchesOverSteadyTicks"] = 1` | SC-51 | **PENDING** — expected red line: `FAIL: building the popover's content on a commitmentPopoverOpen tick touches no store` |
 
 ### `notification-denied` / `notification-denied-release` — `scripts/check-notification-denied.sh`
 
