@@ -689,6 +689,11 @@ enum SelfCheck {
             Bundle.main.object(forInfoDictionaryKey: AppVersion.shortVersionKey) as? String ?? ""
         root["bundleBuild"] =
             Bundle.main.object(forInfoDictionaryKey: AppVersion.buildKey) as? String ?? ""
+        // **The commit this build came from** (e10a). Read from the bundle, so the gate compares
+        // the artefact against `git rev-parse --short HEAD` rather than comparing a build setting
+        // against itself. Empty on an Xcode.app build, which is what an empty `FOCUS_GIT_HASH`
+        // default means and is a true thing to say about such a build.
+        root["bundleGitHash"] = AppVersion.hash(bundle: .main) ?? ""
         // **What the About panel is really handed** (focus-odz.3), taken from the option
         // dictionary `AboutPanel.present()` passes rather than from the catalog a second time.
         // The unit lane cannot read this: under `swift test` SwiftPM copies String Catalogs

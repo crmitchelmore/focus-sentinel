@@ -51,12 +51,13 @@ it to be green: a red line means nothing if the clean run was red too.
 | `forbidden-binary` | 6 | 6 | — |
 | `boundaries-binary` | 9 | 9 | 1 (the row literal, superseded by B-14/B-15) |
 | `published-keys` | 7 | 7 | — |
+| `release-artefact` | 6 | 4 | 2 (a machine policy this harness may not change; one by construction) |
 | `forbidden` (R-169) | 3 | 3 | — |
-| `packaging` | 6 | 6 | — |
+| `packaging` | 7 | 7 | — |
 | `unit-counts` | 5 | 5 | — |
 | `evaluation` (B1–B5) | 9 | 9 | — |
 | `entitlements-debug` / `entitlements-release` | 6 | 6 | 2 (seven restatement lines; one unreachable branch) |
-| **total** | **232** | **232** | **3 findings** |
+| **total** | **239** | **237** | **5 findings** |
 
 The seven rows the gate audit named as unable to go red are all fallible now, and each was run:
 `self-check.sh`'s popover overflow (SC-37, SC-38) and its committed width (SC-39, SC-40),
@@ -482,6 +483,23 @@ over an equal-length printable run in a loaded section.
 | B-14 | `check-boundaries.sh:552` | H-BIN: rename `__swift_FORCE_LOAD_$_swiftNaturalLanguage` to `…_swiftCoreGraphics` | B-08's NL control | **PROVEN** — `FAIL: the Release FocusClassify.o framework closure has changed` |
 | B-15 | `check-boundaries.sh:564` | H-SRC: widen `ALLOWED_FRAMEWORKS[FocusClassify]` in a worktree copy | B-14 | **PROVEN** — `FAIL: the row permits CoreGraphics, which Debug FocusClassify.o does not link` |
 
+### `release-artefact` — `scripts/build-gate.sh` (`release_artefact_stage`) and `scripts/package-release.sh`
+
+The stage mounts the disk image read-only and asks six things of what is inside. Its harness is a
+copy of the stage function sourced out of `build-gate.sh` with `package-release.sh` stubbed, so a
+doctored image can be put where the honest one would be. The control is the honest image, which is
+green: `STAGE EXIT=0`, `every file in both trees hashes the same:
+18a20c8bd6eae8a3c24c07ff7c50f17dbec61a4190e3363a3eaf2a122fce5b21`.
+
+| # | what it defends | mutation | control | status — the line it printed |
+|---|---|---|---|---|
+| RA-01 | the image holds exactly two things | add `EXTRA.txt` to the staging folder and rebuild the image | the honest image is green | **PROVEN** — `FAIL the image holds 'EXTRA.txt FocusSentinel.app README.txt ', not the application and the README alone` |
+| RA-02 | the packaged application IS the built one | append one byte to `Contents/Info.plist` in the staged copy | RA-01 — the contents check and the digest are separate lines, and this moves the digest | **PROVEN** — `FAIL the packaged application is not the built one`, and `FAIL the packaged application's signature does not verify` beside it, which is the seal noticing the same byte |
+| RA-03 | the artefact came from THIS tree | run the stage with the tree's commit set to `deadbee` while the product carries `741449c` | the honest run prints `ok the packaged product carries this tree's commit, 741449c` | **PROVEN** — `FAIL the packaged product carries '741449c', not this tree's 'deadbee'` |
+| RA-04 | the README says what the commands said | rewrite `rejected` to `accepted` in the README on the image | RA-01 — the file is still there and still the only other one | **PROVEN** — `FAIL the README does not quote the rejection` |
+| RA-05 | Gatekeeper really rejects it | — | — | **CANNOT-GO-RED here, and it is a finding rather than a failure.** The branch asserts `spctl` exits non-zero and fires when it exits **zero**, which needs a Mac that has been told to accept this artefact (`spctl --add`) — a change to the machine's own security policy, which this programme's harnesses may not make. The honest reading is exercised on every run and quoted: `rejected`, `spctl EXIT=3`. What is proven is that the reading is TAKEN and asserted, not merely printed; what is not proven is the machine lying about it. |
+| RA-06 | the packager never signs | — | — | **BY CONSTRUCTION, and checked by R-96e's neighbours rather than by a mutation.** `scripts/package-release.sh` names `codesign` twice, both times with `--verify` or `-dv`; it names no identity, opens no keychain, and passes `hdiutil` no signing argument. |
+
 ### `packaging` — `scripts/build-gate.sh` (`check_packaging`)
 
 H-LOG: `source <(sed -n '/^check_packaging() {/,/^}/p' scripts/build-gate.sh)` with `LOG_DIR`
@@ -495,6 +513,12 @@ and `DD` pointed at copies of the run's logs and products.
 | PK-04 | `build-gate.sh:308` | `PlistBuddy -c "Delete :CFBundleURLTypes"` on the copied merged plist | PK-06 | **PROVEN** — `FAIL [Release] the merged Info.plist does not declare the focus scheme` |
 | PK-05 | `build-gate.sh:318` | `PlistBuddy -c "Delete :NSPrincipalClass"` on the copy | PK-06 | **PROVEN** — `FAIL [Release] the merged Info.plist lost the generated key NSPrincipalClass` |
 | PK-06 | `build-gate.sh:291` | move the copied `.app` aside | — | **PROVEN** — `FAIL [Release] no app bundle at …/Release/FocusSentinel.app` |
+
+### The baked commit (e10a) — `packaging`
+
+| # | what it defends | mutation | control | status — the line it printed |
+|---|---|---|---|---|
+| PKG-07 | the product carries THIS tree's commit | build with `FOCUS_GIT_HASH=deadbee` and run the key loop against the merged plist | the ordinary build prints `ok [Debug] the merged Info.plist carries this tree's commit, 741449c` | **PROVEN** — `FAIL [Debug] the merged Info.plist's FocusGitHash is 'deadbee', not '741449c'`. The value is asserted and not merely the key's presence, because `FOCUS_GIT_HASH` defaults to EMPTY: a build made without it renders an empty string and every other check in this stage passes. |
 
 ### `unit-counts` — `scripts/build-gate.sh` (`unit_counts_stage`)
 

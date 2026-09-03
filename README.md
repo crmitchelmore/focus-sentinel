@@ -24,7 +24,7 @@ and `tuist` is not used.
 | `Packages/FocusUI` | every SwiftUI view, scene, command and design token |
 | `Packages/FocusHost` | the composition layer — `AppComposition` and the five hosts. The only module that imports more than one sibling package, and the reason it is a package rather than the app target is that `App/` is not one: no test bundle could import it, so every claim about the wiring in it was a source scan (see "Why the composition layer is a package" below) |
 | `Config/` | build inputs that are neither app source nor scripts. Exactly one file: `FocusSentinel-Info.plist`, the partial plist carrying `CFBundleURLTypes`. It lives here and **not** in `App/` — see "The project file" below |
-| `scripts/` | the build gate and its twenty-three stages, plus the six live evidence lanes |
+| `scripts/` | the build gate and its twenty-five stages, plus the six live evidence lanes |
 | `Tools/windowid` | a test driver: window ids for `screencapture -l`, read from the public window list without ever asking for a window *name*. Not part of the shipping app's package graph |
 
 ---
@@ -129,13 +129,26 @@ the stage logs are the evidence, and they are kilobytes. A pinned `FOCUS_DERIVED
 | 10 | `verify-project.sh` again | the build did not rewrite the project |
 
 **Twenty-three stages — twenty until `focus-steal-release` and `notification-denied-release`
-were added, and twenty-three since e06 added `evaluation-model`.** Saying so plainly, because
-the epic's close condition names the count: `project`, `boundaries`, `forbidden`, `strings`,
-`build-debug`, `build-release`, `packaging`, `eval-clean`, `unit`, **`unit-counts`**,
-`evaluation`, **`evaluation-model`**, `boundaries-binary`, `forbidden-binary`,
-`entitlements-debug`, `entitlements-release`, `selfcheck-debug`, **`focus-steal`**,
-**`notification-denied`**, `selfcheck-release`, **`focus-steal-release`**,
-**`notification-denied-release`**, `project-post`.
+were added, twenty-three since e06 added `evaluation-model`, and twenty-five since e10a added
+`published-keys` and `release-artefact`.** Saying so plainly, because the epic's close condition
+names the count: `project`, `boundaries`, `forbidden`, `strings`, `build-debug`,
+`build-release`, `packaging`, `eval-clean`, `unit`, **`unit-counts`**, `evaluation`,
+**`evaluation-model`**, `boundaries-binary`, `forbidden-binary`, `entitlements-debug`,
+`entitlements-release`, `selfcheck-debug`, **`focus-steal`**, **`notification-denied`**,
+`selfcheck-release`, **`focus-steal-release`**, **`notification-denied-release`**,
+**`published-keys`**, `project-post`, **`release-artefact`**.
+
+`published-keys` (R-168) exists because a quarter of what `SelfCheck` writes was read by nobody.
+A fact nobody reads is not evidence; it is a number in a file. The read set is **instrumented**
+rather than grepped — `scripts/keyreads.py` replaces every dictionary in a loaded report with one
+that notes what is asked of it — because a grep over the readers over-counts (a name read in one
+section counts as read in every section that spells it) and under-counts (`self-check.sh` indexes
+dynamically, so the key is never a literal at the read site). Measured at the close of e10a: 772
+keys published, 758 read, 14 listed with a reason in `Config/unasserted-keys.txt`, twelve of
+which are properties of the machine the gate happens to run on.
+
+`release-artefact` is the D-09 disk image, and it is described under **Distribution posture**
+below.
 
 The two Release twins exist because a gate audit on 2026-09-02 found that `focus-steal` and
 `notification-denied` read the **Debug** product only, so `selfcheck-release` was the gate's
@@ -921,6 +934,37 @@ Because the Release product *is* the shipped artefact, it does not carry
 configurations by default; the Release configuration sets
 `CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO` to keep it out, Debug sets it to `YES` deliberately
 so a debugger can still attach, and `scripts/entitlement-check.sh` asserts both directions.
+
+### The artefact (D-09)
+
+`scripts/package-release.sh <app> <out>` makes `FocusSentinel-<version>-<commit>.dmg` from the
+Release product the gate already built. It **never builds, never signs, and never touches the
+keychain**: it `ditto`s the product (which preserves the ad-hoc signature), writes a `README.txt`
+beside it, and seals both into a read-only compressed image. `codesign` appears in it only with
+`--verify` and `-dv`, which read.
+
+The version and the commit are read out of the built product's own `Info.plist`, so an artefact
+whose name says `741449c` is one whose bundle says `741449c`. The commit gets there by build
+setting: `FOCUS_GIT_HASH` has an empty default in both configurations and
+`Config/FocusSentinel-Info.plist` carries `$(FOCUS_GIT_HASH)`, which Xcode expands at the
+process-plist step — **before** signing, so nothing edits a signed artefact. A plain Xcode.app
+build therefore renders no hash and no dash, and Settings shows `0.1.0 (1)` rather than
+`0.1.0 (1) · —`; the gate's `packaging` stage requires the key to be present and to equal
+`git rev-parse --short HEAD` in both configurations.
+
+**Gatekeeper rejects it, and the README on the image says so in Gatekeeper's own words.** An
+ad-hoc-signed application is not notarised and has no Developer ID, so `spctl --assess` reads
+`rejected`; the README quotes that verbatim, gives the right-click → Open route and the
+`xattr -d com.apple.quarantine` fallback, and states the macOS 26.0 requirement. The gate's
+`release-artefact` stage mounts the image read-only and asks six things of it: that it mounts;
+that it holds exactly the application and the README; that the application inside is
+**byte-identical** to the product every other stage read, by a digest of every file in both
+trees; that `codesign --verify --deep --strict` passes; that `codesign -dv` still reads
+`Signature=adhoc`; and that `spctl --assess` **exits non-zero**. The exit status is asserted and
+the words are not — pinning a string Apple owns is `focus-652`'s shape, and the assertion would
+be about macOS's copy rather than about this artefact. A Gatekeeper that *accepted* it would be
+a failure, because it would mean either a local rule has made the reading meaningless or the
+artefact is not the posture the README describes.
 
 ## Privacy posture
 

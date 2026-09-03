@@ -102,6 +102,10 @@ SELFCHECK_JSON_RELEASE="$LOG_DIR/focus-selfcheck-release.json"
 # R-168. One file, appended to by all six report readers, holding every dotted path any of them
 # really fetched. `scripts/keyreads.py` writes it; the `published-keys` stage reads it against the
 # reports the same run produced. Exported, so every reader below inherits it without being told.
+# e10a. The commit the products are stamped with, read once so both configurations and the
+# release artefact carry the same answer.
+GIT_HASH=$(git rev-parse --short HEAD 2>/dev/null)
+
 KEYS_READ="$LOG_DIR/focus-keys-read.txt"
 export FOCUS_KEYS_READ="$KEYS_READ"
 
@@ -324,6 +328,25 @@ check_packaging() {
                 rc=1
             fi
         done
+
+        # **The commit this build came from** (e10a). `FOCUS_GIT_HASH` is a build setting with an
+        # EMPTY default, so the failure this catches is silent by construction: a build made
+        # without it renders an empty string in the plist and every other check here passes. The
+        # value is asserted, not merely the key — a hash that is somebody else's commit is worse
+        # than none, because it names an artefact that is not this one.
+        local baked expected
+        baked=$(/usr/libexec/PlistBuddy -c 'Print :FocusGitHash' \
+            "$app/Contents/Info.plist" 2>/dev/null)
+        expected=$(git rev-parse --short HEAD 2>/dev/null)
+        if [[ -z "$expected" ]]; then
+            print -u2 "FAIL [$config] this tree has no HEAD to compare the baked hash against"
+            rc=1
+        elif [[ "$baked" == "$expected" ]]; then
+            print "ok   [$config] the merged Info.plist carries this tree's commit, $baked"
+        else
+            print -u2 "FAIL [$config] the merged Info.plist's FocusGitHash is '$baked', not '$expected'"
+            rc=1
+        fi
     done
     return $rc
 }
@@ -791,6 +814,162 @@ PYTHON
     return $produce_rc
 }
 
+# --- Stage 11 — the release artefact (D-09, e10a) -----------------------------------------------
+#
+# **It verifies an artefact; it makes nothing new and it signs nothing.**
+#
+# `scripts/package-release.sh` has already made the disk image from the Release product stage 6
+# built. This mounts it read-only and asks six questions of what is inside, and the sixth is the
+# one this posture turns on:
+#
+#   1. it mounts at all;
+#   2. it holds EXACTLY the application and the README, so a stray file cannot ride along;
+#   3. the application inside is byte-identical to the product every other stage read — a digest
+#      of every file in both trees, because "we packaged the build" is a claim and not a fact;
+#   4. `codesign --verify --deep --strict` passes on the copy inside the image, so `ditto` and
+#      `hdiutil` between them did not break the signature;
+#   5. `codesign -dv` still reads `Signature=adhoc`, so the artefact is the posture the README
+#      describes rather than something that quietly acquired an identity;
+#   6. `spctl --assess` is RECORDED and its exit is asserted **non-zero**. Gatekeeper rejects an
+#      ad-hoc-signed application, that is the honest and expected reading, and the README quotes
+#      it verbatim. The exit status is asserted; the words are not — pinning a string Apple owns
+#      is `focus-652`'s shape, and the assertion would be about macOS's copy rather than about
+#      this artefact.
+#
+# It never runs `codesign -s`, never opens a keychain, and never asks `spctl` to add a rule.
+release_artefact_stage() {
+    local app="$DD/Build/Products/Release/FocusSentinel.app"
+    local rc=0
+
+    if [[ ! -d "$app" ]]; then
+        print -u2 "FAIL there is no Release product to package"
+        return 1
+    fi
+
+    scripts/package-release.sh "$app" "$LOG_DIR" || return 1
+
+    local version commit dmg
+    version=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' \
+        "$app/Contents/Info.plist" 2>/dev/null)
+    commit=$(/usr/libexec/PlistBuddy -c 'Print :FocusGitHash' \
+        "$app/Contents/Info.plist" 2>/dev/null)
+    dmg="$LOG_DIR/FocusSentinel-$version-$commit.dmg"
+
+    print
+    print "== the artefact's own name says which tree it came from"
+    if [[ "$commit" == "$GIT_HASH" ]]; then
+        print "ok   the packaged product carries this tree's commit, $commit"
+    else
+        print -u2 "FAIL the packaged product carries '$commit', not this tree's '$GIT_HASH'"
+        rc=1
+    fi
+    if [[ -f "$dmg" ]]; then
+        print "ok   $dmg ($(du -h -- "$dmg" | cut -f1))"
+    else
+        print -u2 "FAIL no disk image at $dmg"
+        return 1
+    fi
+
+    local mount
+    mount=$(mktemp -d -t focus-release-mount) || return 1
+    print
+    print "== hdiutil attach -nobrowse -readonly"
+    if ! hdiutil attach -nobrowse -readonly -noautoopen -mountpoint "$mount" "$dmg"; then
+        print -u2 "FAIL the disk image does not mount"
+        rmdir -- "$mount" 2>/dev/null
+        return 1
+    fi
+
+    {
+        print
+        print "== what is on the image"
+        local contents
+        contents=$(ls -1A -- "$mount" | grep -v '^\.' | sort | tr '\n' ' ')
+        print "     $contents"
+        if [[ "$contents" == "FocusSentinel.app README.txt " ]]; then
+            print "ok   the image holds exactly the application and the README"
+        else
+            print -u2 "FAIL the image holds '$contents', not the application and the README alone"
+            rc=1
+        fi
+
+        print
+        print "== the application on the image is the product this run built"
+        local built shipped
+        built=$(cd "$app" && find . -type f -print0 | sort -z | xargs -0 shasum -a 256 | shasum -a 256)
+        shipped=$(cd "$mount/FocusSentinel.app" && find . -type f -print0 | sort -z | xargs -0 shasum -a 256 | shasum -a 256)
+        if [[ "$built" == "$shipped" && -n "$built" ]]; then
+            print "ok   every file in both trees hashes the same: ${built%% *}"
+        else
+            print -u2 "FAIL the packaged application is not the built one"
+            print -u2 "     built:   $built"
+            print -u2 "     shipped: $shipped"
+            rc=1
+        fi
+
+        print
+        print "== codesign --verify --deep --strict, on the image"
+        if codesign --verify --deep --strict --verbose=2 "$mount/FocusSentinel.app" 2>&1; then
+            print "ok   the signature survived ditto and hdiutil"
+        else
+            print -u2 "FAIL the packaged application's signature does not verify"
+            rc=1
+        fi
+
+        print
+        print "== codesign -dv, on the image"
+        local signature
+        signature=$(codesign -dv "$mount/FocusSentinel.app" 2>&1)
+        print -r -- "$signature"
+        if print -r -- "$signature" | grep -q 'Signature=adhoc'; then
+            print "ok   the artefact is ad-hoc signed, which is the posture the README describes"
+        else
+            print -u2 "FAIL the artefact is not ad-hoc signed"
+            rc=1
+        fi
+
+        print
+        print "== spctl --assess --type execute — A READING, and the expected one is 'rejected'"
+        local assessment assess_rc
+        assessment=$(spctl --assess --type execute --verbose=4 "$mount/FocusSentinel.app" 2>&1)
+        assess_rc=$?
+        print -r -- "$assessment"
+        print "spctl EXIT=$assess_rc"
+        if (( assess_rc != 0 )); then
+            print "ok   Gatekeeper rejects it, which is what an ad-hoc signature earns and what"
+            print "     the README on the image says it will, quoted verbatim"
+        else
+            print -u2 "FAIL Gatekeeper ACCEPTED an ad-hoc-signed build. Either this Mac has a"
+            print -u2 "     local rule that makes the reading meaningless, or the artefact is"
+            print -u2 "     not the posture the README describes. Both are findings."
+            rc=1
+        fi
+
+        print
+        print "== the README says the same thing the commands did"
+        local readme="$mount/README.txt"
+        if [[ ! -f "$readme" ]]; then
+            print -u2 "FAIL the image carries no README"
+            rc=1
+        else
+            local missing=0
+            grep -q "$commit" "$readme" || { print -u2 "FAIL the README does not name the commit"; missing=1 }
+            grep -q "$version" "$readme" || { print -u2 "FAIL the README does not name the version"; missing=1 }
+            grep -qi 'ad hoc\|adhoc' "$readme" || { print -u2 "FAIL the README does not say the build is ad-hoc signed"; missing=1 }
+            grep -q 'rejected' "$readme" || { print -u2 "FAIL the README does not quote the rejection"; missing=1 }
+            grep -q 'right-click\|RIGHT-CLICK' "$readme" || { print -u2 "FAIL the README gives no way in"; missing=1 }
+            grep -q 'macOS 26.0' "$readme" || { print -u2 "FAIL the README does not state the system it needs"; missing=1 }
+            (( missing )) && rc=1 || print "ok   the README names the version, the commit, the posture, the rejection and the way in"
+        fi
+    } always {
+        print
+        hdiutil detach "$mount" -quiet || hdiutil detach "$mount" -force
+        rmdir -- "$mount" 2>/dev/null
+    }
+
+    return $rc
+}
+
 # The whole gate is a function rather than a `{ … }` block. A `{ … } > log` group is not a
 # subshell, so an `exit` inside it terminates the script outright — which is what used to
 # happen here, and it meant the summary table was written to the log and then never echoed:
@@ -825,12 +1004,14 @@ gate() {
     # 5 — Debug build
     run_stage "build-debug" "$LOG_DIR/focus-build.log" \
         xcodebuild -workspace Focus.xcworkspace -scheme FocusSentinel \
-        -configuration Debug -destination "$DESTINATION" -derivedDataPath "$DD" build
+        -configuration Debug -destination "$DESTINATION" -derivedDataPath "$DD" \
+        FOCUS_GIT_HASH="$GIT_HASH" build
 
     # 6 — Release build
     run_stage "build-release" "$LOG_DIR/focus-build-release.log" \
         xcodebuild -workspace Focus.xcworkspace -scheme FocusSentinel \
-        -configuration Release -destination "$DESTINATION" -derivedDataPath "$DD" build
+        -configuration Release -destination "$DESTINATION" -derivedDataPath "$DD" \
+        FOCUS_GIT_HASH="$GIT_HASH" build
 
     # 6a — packaging, read from the two logs and the two products stages 5 and 6 just made.
     # Zero grants, and it catches the one failure a green build cannot (see check_packaging).
@@ -986,6 +1167,11 @@ gate() {
 
     # 10 — project integrity again. Stages 5–7 are the ones that could provoke a rewrite.
     run_stage "project-post" "$LOG_DIR/focus-project-post.log" scripts/verify-project.sh
+
+    # 11 — the release artefact (D-09). Last, because it is the only stage whose subject is the
+    # thing a person would install rather than the tree it was built from, and because it reads
+    # the Release product every stage above has already had its say about.
+    run_stage "release-artefact" "$LOG_DIR/focus-release-artefact.log" release_artefact_stage
 
     # --- summary --------------------------------------------------------------------------
 

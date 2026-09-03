@@ -1208,10 +1208,16 @@ check(
     "the built product carries a build number",
     report.get("bundleBuild"),
 )
+# e10a. The sentence gained a third part — `0.1.0 (1) · a1b2c3d` — so the equality is written
+# against the same three facts the renderer is handed rather than against two of them. The suffix
+# is absent, not dashed, when the build carries no hash: see the pair of assertions on
+# `bundleGitHash` further down, which is where that case is decided.
+_expected_version = f"{report.get('bundleShortVersionString')} ({report.get('bundleBuild')})"
+if report.get("bundleGitHash"):
+    _expected_version += " \u00b7 " + report["bundleGitHash"]
 check(
-    report.get("bundleVersion")
-    == f"{report.get('bundleShortVersionString')} ({report.get('bundleBuild')})",
-    "the version sentence is the marketing version with the build in brackets",
+    report.get("bundleVersion") == _expected_version,
+    "the version sentence is the marketing version, the build in brackets, and the commit",
     report.get("bundleVersion"),
 )
 check(
@@ -4945,10 +4951,31 @@ check(
 check(
     report.get("settingsDrewnVersion")
     == (report.get("shellRendering") or {}).get("settingsDrewnVersion")
-    == f"{report.get('bundleShortVersionString')} ({report.get('bundleBuild')})",
+    == report.get("bundleVersion"),
     "the version Settings drew is the version the bundle carries",
-    (report.get("settingsDrewnVersion"), report.get("bundleShortVersionString")),
+    (report.get("settingsDrewnVersion"), report.get("bundleVersion")),
 )
+# **And that the commit reaches the person, not only the plist** (e10a).
+#
+# The gate's `packaging` stage pins the baked value against `git rev-parse --short HEAD`; this is
+# the other end of the same wire — the hash the bundle carries is the hash the Settings pane
+# draws. Empty is the Xcode.app build's honest answer and renders no suffix at all, which is why
+# the two cases are asserted separately rather than through one string comparison.
+bundle_hash = report.get("bundleGitHash")
+if bundle_hash:
+    check(
+        report.get("bundleVersion", "").endswith(" \u00b7 " + bundle_hash)
+        and report.get("settingsDrewnVersion", "").endswith(" \u00b7 " + bundle_hash),
+        "the commit the build came from is drawn beside the version",
+        (report.get("bundleVersion"), bundle_hash),
+    )
+else:
+    check(
+        report.get("bundleVersion", "")
+        == f"{report.get('bundleShortVersionString')} ({report.get('bundleBuild')})",
+        "a build with no baked commit draws the version alone, never a dash for the hash",
+        report.get("bundleVersion"),
+    )
 check(
     (report.get("undo") or {}).get("groupsByEvent") is True,
     "the undo manager groups by event, so one edit is one undo",

@@ -54,4 +54,34 @@ struct AppVersionTests {
 
     /// Something whose bundle is this test bundle, which has no `CFBundleShortVersionString`.
     private final class Marker {}
+
+    // MARK: - The commit the build came from (e10a)
+
+    /// **The hash is a suffix, and an absent one is no suffix at all.**
+    ///
+    /// A build with no `FOCUS_GIT_HASH` is an ordinary Xcode.app build, which is a true and
+    /// unalarming thing about it — so it renders `0.1.0 (1)` and never `0.1.0 (1) · —`. The em
+    /// dash is reserved for a version number the build failed to stamp, which is damage.
+    @Test("the commit is rendered as a suffix, and absent means absent")
+    func theCommitIsASuffix() {
+        #expect(AppVersion.rendered(short: "0.1.0", build: "1", hash: "a1b2c3d") == "0.1.0 (1) · a1b2c3d")
+        #expect(AppVersion.rendered(short: "0.1.0", build: "1", hash: nil) == "0.1.0 (1)")
+        #expect(AppVersion.rendered(short: "0.1.0", build: "1", hash: "") == "0.1.0 (1)")
+        #expect(AppVersion.rendered(short: "0.1.0", build: "1", hash: "   ") == "0.1.0 (1)")
+        #expect(AppVersion.rendered(short: "0.1.0", build: "1", hash: " a1b2c3d ") == "0.1.0 (1) · a1b2c3d")
+        // The two-argument form is the three-argument one with no hash, so a caller that has not
+        // been given one cannot render a different sentence from a caller that has.
+        #expect(
+            AppVersion.rendered(short: "0.1.0", build: "1")
+                == AppVersion.rendered(short: "0.1.0", build: "1", hash: nil)
+        )
+        // And a missing version still dashes, which is the case the suffix must not have changed.
+        #expect(AppVersion.rendered(short: nil, build: nil, hash: "a1b2c3d") == "— (—) · a1b2c3d")
+    }
+
+    /// A bundle that says nothing under the key reports no hash rather than an empty string.
+    @Test("a bundle with no baked commit answers nil")
+    func aBundleWithNoCommitAnswersNil() {
+        #expect(AppVersion.hash(bundle: Bundle(for: Marker.self)) == nil)
+    }
 }
