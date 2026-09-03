@@ -2983,24 +2983,45 @@ check(
     relevance.get("sessionRuleCount"),
 )
 
-# --- retention: the app forgets, and it forgets the right things (F-115, focus-tzj.3) --------
+# --- retention: the app forgets, and it forgets the right things (F-115, focus-tzj.3, focus-l7n)
 #
 # Three tables grew without bound. `ActivityEventStore` said so in its own doc comment and
 # deferred a policy to a later epic; `InterventionLog.purge(before:)`, `QueryLedger.purge(...)`
 # and `purgeAll()` were written, tested, and called by NOTHING. A privacy posture that is only a
-# plan is not a posture, so the mechanism ships now and e07 §5 puts a picker on top of it.
+# plan is not a posture, so the mechanism shipped first and the control now sits on top of it.
 #
-# TWO HALVES, and the second is why the first is worth reading. The launch half says the sweep
-# ran, on which local day, and what it removed — which on a gate machine whose store holds
-# nothing older than ninety days is three zeroes and a date, and a sweep deleted from the launch
+# THREE HALVES, and each is why the one before it is worth reading. The launch half says the
+# sweep ran, on which local day, and what it removed — which on a gate machine whose store holds
+# nothing older than the window is three zeroes and a date, and a sweep deleted from the launch
 # path entirely would publish the same three zeroes. So the binary also runs the SAME sweep over
 # a store it seeds with one row at 89 days and one at 91 in each table that dies of age, and
-# publishes both sides of that boundary.
+# publishes both sides of that boundary. And BOTH of those would read identically if the sweep
+# had gone back to a hard-coded ninety days, because ninety days is what an untouched store
+# answers — so a third seeded store sets seven days through the verb the Privacy control calls
+# and holds rows at 6 and 88 days, where the default would remove neither.
 retention = report.get("retention") or {}
 check(
-    retention.get("windowDays") == 90,
-    "the committed retention window is ninety days",
-    retention.get("windowDays"),
+    retention.get("committedDefaultDays") == 90,
+    "the retention window a store that has never been asked answers with is ninety days",
+    retention.get("committedDefaultDays"),
+)
+check(
+    retention.get("offeredWindowDays") == [7, 30, 90, 0],
+    "the control offers seven, thirty and ninety days and forever, in that order",
+    retention.get("offeredWindowDays"),
+)
+# WHICH window somebody chose is a fact about them, so this is asserted against the sweep rather
+# than against a number: the window the launch sweep kept is the window their store holds.
+check(
+    retention.get("storedWindowDays") in (0, 7, 30, 90)
+    and retention.get("storedWindowRecognised") is True,
+    "the stored retention window is one this build recognises",
+    (retention.get("storedWindowDays"), retention.get("storedWindowRecognised")),
+)
+check(
+    retention.get("lastRunWindowDays") == retention.get("storedWindowDays"),
+    "the window the launch sweep kept is the window the person's store holds",
+    (retention.get("lastRunWindowDays"), retention.get("storedWindowDays")),
 )
 check(
     retention.get("ranAtLaunch") is True
@@ -3020,6 +3041,11 @@ check(
     retention.get("seedAvailable") is True,
     "the seeded retention sweep ran",
     retention.get("seedError", retention.get("seedAvailable")),
+)
+check(
+    retention.get("seededWindowDays") == 90,
+    "the seeded sweep read ninety days out of a store nobody had asked",
+    retention.get("seededWindowDays"),
 )
 check(
     retention.get("seededActivityEventsRemoved") == 1
@@ -3042,9 +3068,31 @@ check(
     "a 91-day-old receipt under a live priority survives the window",
     (retention.get("seededQueryReceiptsRemoved"), retention.get("seededQueryReceiptsKept")),
 )
+# **The pin no constant can satisfy** (F-115, focus-l7n). Seven days written through
+# `FocusStore.setRetentionWindow`, rows at 6 and 88 days: under the committed default NEITHER
+# would go. The witness row is red the moment the sweep stops reading the person's choice.
+check(
+    retention.get("storedSeedAvailable") is True,
+    "the stored-window retention sweep ran",
+    retention.get("storedSeedError", retention.get("storedSeedAvailable")),
+)
+check(
+    retention.get("storedSeedWindowDays") == 7,
+    "a sweep over a store set to seven days reports that it kept seven days",
+    retention.get("storedSeedWindowDays"),
+)
+check(
+    retention.get("storedSeedActivityEventsRemoved") == 1
+    and retention.get("storedSeedActivityEventsKept") == 1,
+    "with seven days stored, a row at 88 days goes and one at 6 stays",
+    (
+        retention.get("storedSeedActivityEventsRemoved"),
+        retention.get("storedSeedActivityEventsKept"),
+    ),
+)
 print(
-    "note retention: window {} days, last run {}, {} row(s) removed at launch".format(
-        retention.get("windowDays"),
+    "note retention: stored window {} days, last run {}, {} row(s) removed at launch".format(
+        retention.get("storedWindowDays"),
         retention.get("lastRunDay"),
         retention.get("rowsRemoved"),
     )
@@ -4190,9 +4238,41 @@ check(
 # the test owns (`DeleteEverythingWitnessTests`): sentinels present in -wal while open, absent
 # from every byte of the directory afterwards.
 check(
-    rendering.get("privacyActionsDeclared") == ["deleteEverything"],
-    "the Privacy pane's action vocabulary is exactly deleteEverything",
+    rendering.get("privacyActionsDeclared") == ["deleteEverything", "setRetentionWindow"],
+    "the Privacy pane's action vocabulary is exactly delete-everything and the retention window",
     rendering.get("privacyActionsDeclared"),
+)
+check(
+    rendering.get("privacyVocabulary") == rendering.get("privacyActionsDeclared"),
+    "the vocabulary the pane publishes is the vocabulary its cases actually produce",
+    (rendering.get("privacyVocabulary"), rendering.get("privacyActionsDeclared")),
+)
+# **The one Privacy verb a lane may press** (F-115, focus-l7n). Setting a window costs nobody
+# their data, so unlike delete-everything this is driven: the pane's own sink, the store read
+# back, the sweep it triggered, and the person's choice put back afterwards.
+retention_sink = rendering.get("drivePrivacyRetention") or {}
+check(
+    retention_sink.get("available") is True,
+    "the Privacy pane handed back a sink for the retention window",
+    retention_sink.get("available"),
+)
+check(
+    retention_sink.get("reachedTheStore") is True
+    and retention_sink.get("windowAfter") == retention_sink.get("probe"),
+    "pressing the retention control wrote the window to the person's store",
+    (retention_sink.get("probe"), retention_sink.get("windowAfter")),
+)
+check(
+    retention_sink.get("reachedTheSweep") is True
+    and retention_sink.get("sweptWindow") == retention_sink.get("probe"),
+    "the window the control wrote is the window the sweep it triggered kept",
+    (retention_sink.get("probe"), retention_sink.get("sweptWindow")),
+)
+check(
+    retention_sink.get("restored") is True
+    and retention_sink.get("windowRestored") == retention_sink.get("windowBefore"),
+    "the probe put the person's own retention window back",
+    (retention_sink.get("windowBefore"), retention_sink.get("windowRestored")),
 )
 check(
     rendering.get("privacySinkHeld") is True,

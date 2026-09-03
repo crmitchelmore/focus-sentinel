@@ -263,18 +263,32 @@ twenty ticks in which the presentation moved exactly twice.
 
 Three tables grew without bound, and the code that would have trimmed them —
 `InterventionLog.purge(before:)`, `QueryLedger.purge(priorityID:)`, `purgeAll()` — had **zero
-callers**. `RetentionSweep` is the caller, `RetentionPolicy.committedDefault` is ninety days, and
-it runs once at launch and once per local day from the tick that already computes the day
-boundary. e07 §5 owns the picker and the delete-everything button; what ships now is the
-mechanism and the default, because a row that was never written is a row no later feature has to
-explain.
+callers**. `RetentionSweep` is the caller, and it runs once at launch and once per local day from
+the tick that already computes the day boundary.
+
+**The window is the person's** (F-115). Settings ▸ Privacy offers 7 days, 30 days, 90 days and
+forever; the choice is a column on the store's v8 `PrivacyPreferencesRecord`, and the sweep reads
+it at the top of every run rather than being built with it. That distinction is the whole of the
+feature: the number shipped as a constant baked into an object the app built once at launch, so a
+control on top of it would have written a column nothing read. `RetentionSweep.Result` carries the
+window the run kept, so *which* promise a sweep kept is a published fact. Ninety days remains the
+committed default — an upgrading store has no row, answers ninety, and nobody's history is
+shortened by the arrival of a picker. **Forever is a branch, not a distant date**: the sweep runs
+and touches nothing, rather than computing a cutoff no row happens to fall before. Choosing a
+window sweeps immediately in both directions, because a promise with a day's delay in it is not
+the promise the sentence in the pane makes.
 
 **Query receipts are the exception.** A receipt is what gate 11 reads, so deleting one puts a
 question the person has already answered back on the ladder. A receipt goes only when it is old
 *and* the priority it was written under is old. The self-check publishes the launch sweep's day
 and row counts, and — because on a fresh machine those are three zeroes and a date — runs the
 same sweep again over a store it seeds at 89 and 91 days, which is what makes the section able to
-go red.
+go red. Both of those readings would be identical if the sweep had gone back to a constant, since
+ninety days is what an untouched store answers, so a **third** seeded store sets seven days
+through the verb the pane's control calls and holds rows at 6 and 88 days — where the default
+would remove neither. The gate also presses the control itself: the pane's own sink, the window
+read back out of the store, the window the triggered sweep kept, and the person's own choice put
+back afterwards.
 
 ## The relevance engine
 
@@ -653,7 +667,7 @@ take any of them.
 | **Marks** — capsule, `StatusBadge` shapes, the timer under the housing | **P-e08-B**: measured `NSScreen.safeAreaInsets.top` and both `auxiliaryTop*Area` rectangles on a 14″ and a 16″ MacBook, at each backing scale, pasted into `focus-26b`. It replaces the `synthetic` labels on `NotchLandingTests.shapes`, `NotchCompanionPanelTests.notched` and `NudgeHostFixture.notchedDisplay`. |
 | **Pulse** (F-78) | **P-e08-A**, level half: `screencapture -l` of the strip at each candidate window level on notch hardware, showing the companion *under* the housing and never over a menu-bar item — `.statusBar` is unmeasured here and the plan's claim that it was verified is false. **Plus** an extension to `scripts/frame-ink.py`: it computes luminance between *horizontally adjacent pixels within one frame* (`:86-87`) and prints one `ink=/verdict=` line per file (`:119-125`). There is no before/after diff, and a 2 pt hairline on a uniform strip is the low-`ink` case the tool calls `blank`, so the plan's S2 criterion is unimplementable as written. |
 | **Expansion** (F-76) | **P-e08-A**, hover half: a real `NSTrackingArea` event count over the housing. **Plus** the ceiling fix — `SurfaceSizeCommitment.ceiling` reads `DisplayMapper.primaryScreen(in: screens)`, the *primary* display and not the surface's, and a docked MacBook's notched built-in is routinely not primary. It must be passed a one-element list holding the notched display through call-site arguments (the `MenuBarController.popoverContainers` pattern), so that the core diff stays zero and R-96w stays green. |
-| **A stored "show the companion" preference, and the toggle that sets it** | A schema stage: `NudgePreferencesRecord` is declared by `FocusSchemaV5`, so a fourth column means `FocusSchemaV8` re-declaring that one class, a `v7ToV8` stage, and `MigrationV8Tests` asserting the delta is exactly one class and one property. Worth doing **with** the marks, when there is something to turn off that a person can see. |
+| **A stored "show the companion" preference, and the toggle that sets it** | A schema stage: `NudgePreferencesRecord` is declared by `FocusSchemaV5`, so a fourth column means the next version re-declaring that one class, its own stage, and that version's suite asserting the delta is exactly one class and one property (v8 is taken — it added the retention window's row and re-declared nothing). Worth doing **with** the marks, when there is something to turn off that a person can see. |
 | **Any capture or sharing copy** | **P-e08-D**: `sharingType = .none` measured against ScreenCaptureKit. Runnable here now — nothing sets `sharingType` in `Packages/*/Sources`. Until it exists: no code and no copy. |
 | **Both display projections agreeing about a notched Mac** | **P-e08-B** again. `DisplayGeometry.NotchReadings` makes an *omitted* reading a compile error and `NotchGeometrySeamTests` fails on any *divergence* between `SystemScreenList.geometry(of:)` and `NudgePanelController.currentScreens()`, but on a Mac with no built-in display "both readers wrong in the same way" publishes the same four values as "both readers right". That residual is stated in the test's own doc and in `Config/mutation-witnesses.md`. |
 

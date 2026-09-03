@@ -1931,12 +1931,30 @@ enum SelfCheck {
     /// The receipts are deliberately not in the seed's expected count. They die with their
     /// priority rather than of age (see `RetentionSweep`), and the seed's priority is one the
     /// survey just created — so a receipt under it must survive, which is the third row below.
+    ///
+    /// ## The third half: that the window the *person* stored is the window the sweep keeps
+    ///
+    /// Both halves above would read exactly the same if the sweep had gone back to a hard-coded
+    /// ninety days, because ninety days is what an untouched store answers (F-115, focus-l7n).
+    /// So a third seeded store sets the window to **seven days** through the same store verb the
+    /// Privacy pane calls, and holds one row at 6 days and one at 88. Under the committed default
+    /// neither would go; under the stored window exactly the 88-day row goes. That is the pin: it
+    /// is red the moment the stored value stops reaching the sweep, and it cannot be satisfied by
+    /// any constant.
     @MainActor
     static func retentionReport() -> [String: Any] {
         var report: [String: Any] = [:]
-        report["windowDays"] = RetentionPolicy.committedDefault.days
+        report["committedDefaultDays"] = RetentionPolicy.committedDefault.days ?? 0
+        report["offeredWindowDays"] = RetentionWindow.ordered.map(\.storedDays)
+        // What the person's own store says, and what the launch sweep actually kept. These are
+        // asserted against **each other** rather than against a number: which window somebody
+        // chose is a fact about them, and the invariant is that the sweep kept the one they set.
+        let stored = FocusStore.privacyPreferences(in: AppComposition.shared.modelContainer.mainContext)
+        report["storedWindowDays"] = stored.retention.storedDays
+        report["storedWindowRecognised"] = stored.storedWindowWasRecognised
         let live = AppComposition.shared.lastRetentionSweep
         report["ranAtLaunch"] = live != nil
+        report["lastRunWindowDays"] = live?.window.storedDays ?? -1
         report["lastRunDay"] = live?.day.key ?? ""
         report["rowsRemoved"] = live?.rowsRemoved ?? -1
         report["activityEventsRemoved"] = live?.activityEvents ?? -1
@@ -1986,6 +2004,7 @@ enum SelfCheck {
             )
 
             let result = try RetentionSweep(
+                context: context,
                 events: events,
                 log: log,
                 ledger: ledger,
@@ -1994,6 +2013,7 @@ enum SelfCheck {
                 dateProvider: clock
             ).run()
 
+            report["seededWindowDays"] = result.window.storedDays
             report["seededActivityEventsRemoved"] = result.activityEvents
             report["seededInterventionRowsRemoved"] = result.interventionRows
             report["seededQueryReceiptsRemoved"] = result.queryReceipts
@@ -2005,6 +2025,53 @@ enum SelfCheck {
             report["seedAvailable"] = false
             report["seedError"] = "\(error)"
         }
+
+        // **The stored window reaches the sweep** — the reading no constant can satisfy.
+        do {
+            let container = try FocusStore.makeContainer(kind: .inMemory)
+            let context = ModelContext(container)
+            let clock = SystemDateProvider()
+            let now = clock.now
+            let calendar = Calendar.autoupdatingCurrent
+            let events = ActivityEventStore(context: context, dateProvider: clock)
+
+            // Set through the same verb the Privacy pane's control calls. If that route were
+            // cut, this is where the gate would say so.
+            try FocusStore.setRetentionWindow(.sevenDays, in: context, now: now)
+
+            func daysAgo(_ days: Int) -> Date {
+                calendar.date(byAdding: .day, value: -days, to: now) ?? now
+            }
+            // 6 days survives any window offered; 88 days survives the *default* and dies under
+            // the stored seven. Neither number is a boundary of the committed default, so a
+            // sweep that ignored the store would remove nothing at all here.
+            for days in [6, 88] {
+                _ = try events.append(
+                    kind: .frontmostApplicationChanged,
+                    bundleID: FocusStore.bundleIdentifier,
+                    at: daysAgo(days)
+                )
+            }
+
+            let result = try RetentionSweep(
+                context: context,
+                events: events,
+                log: InterventionLog(context: context, dateProvider: clock, calendar: calendar),
+                ledger: QueryLedger(context: context, dateProvider: clock),
+                priorities: PriorityStore(context: context, dateProvider: clock),
+                calendar: calendar,
+                dateProvider: clock
+            ).run()
+
+            report["storedSeedWindowDays"] = result.window.storedDays
+            report["storedSeedActivityEventsRemoved"] = result.activityEvents
+            report["storedSeedActivityEventsKept"] = try events.count()
+            report["storedSeedAvailable"] = true
+        } catch {
+            report["storedSeedAvailable"] = false
+            report["storedSeedError"] = "\(error)"
+        }
+
         return report
     }
 
@@ -3972,11 +4039,19 @@ enum SelfCheck {
 
         report["driveSetPreference"] = driveAppearanceSink()
         report["driveInterventionSink"] = driveInterventionSink()
-        // **The Privacy pane's vocabulary, declared and not driven** (e07a, focus-6pr.3). Its one
-        // case deletes the person's store, so no lane presses it; what the running app can say
-        // is that the pane holds exactly that verb and that the window handed a sink back for it.
-        report["privacyActionsDeclared"] = PrivacySettingsAction.allCases.map(\.rawValue)
+        // **The Privacy pane's vocabulary, one verb of it driven and one never** (e07a,
+        // focus-6pr.3; F-115, focus-l7n). `deleteEverything` destroys the person's store, so no
+        // lane presses it; `setRetentionWindow` costs nobody anything and is pressed below. What
+        // the running app can say about both is that the pane holds exactly these verbs and that
+        // the window handed a sink back for them.
+        report["privacyActionsDeclared"] = PrivacySettingsAction.allDeclared
+            .map(\.verb)
+            .reduce(into: [String]()) { names, verb in
+                if !names.contains(verb) { names.append(verb) }
+            }
+        report["privacyVocabulary"] = PrivacySettingsAction.vocabulary
         report["privacySinkHeld"] = composition.settingsSinks != nil
+        report["drivePrivacyRetention"] = drivePrivacyRetentionSink()
 
         // **The appearance is moved, and that is what makes the traits reading mean anything.**
         //
@@ -4180,6 +4255,49 @@ enum SelfCheck {
     /// `preferences.reducedInterruption`: that value is the choice *or* what Reduce Motion
     /// forces, so on a Mac with Reduce Motion on the two are legitimately different and a probe
     /// that conflated them would report a defect on somebody's accessibility setting.
+    @MainActor
+    /// **The one Privacy verb a lane may press** (F-115, focus-l7n).
+    ///
+    /// `deleteEverything` is never driven — it destroys the person's store. Choosing a retention
+    /// window costs nobody anything, so this presses the pane's own sink with a window the person
+    /// does not currently have, reads the store back, and puts their choice back afterwards.
+    ///
+    /// The probe is deliberately the **longest** offered window when the person is on a shorter
+    /// one: a probe that shortened somebody's window would delete their rows to take a reading,
+    /// which is the one thing a self-check may never do. Restoring is unconditional, and the
+    /// reading says whether it succeeded.
+    static func drivePrivacyRetentionSink() -> [String: Any] {
+        let composition = AppComposition.shared
+        var report: [String: Any] = [:]
+
+        guard let sinks = composition.settingsSinks else {
+            report["available"] = false
+            return report
+        }
+        report["available"] = true
+
+        let context = composition.modelContainer.mainContext
+        let before = FocusStore.privacyPreferences(in: context).retention
+        let probe: RetentionWindow = before == .forever ? .ninetyDays : .forever
+        report["windowBefore"] = before.storedDays
+        report["probe"] = probe.storedDays
+
+        sinks.onPrivacyAction(.setRetentionWindow(probe))
+        let after = FocusStore.privacyPreferences(in: context).retention
+        report["windowAfter"] = after.storedDays
+        report["reachedTheStore"] = after == probe
+        // And the sweep the write triggers used it — the second half, and the one that says the
+        // control is wired to the mechanism rather than only to a column.
+        report["sweptWindow"] = composition.lastRetentionSweep?.window.storedDays ?? -1
+        report["reachedTheSweep"] = composition.lastRetentionSweep?.window == probe
+
+        sinks.onPrivacyAction(.setRetentionWindow(before))
+        let restored = FocusStore.privacyPreferences(in: context).retention
+        report["windowRestored"] = restored.storedDays
+        report["restored"] = restored == before
+        return report
+    }
+
     @MainActor
     static func driveInterventionSink() -> [String: Any] {
         let composition = AppComposition.shared
