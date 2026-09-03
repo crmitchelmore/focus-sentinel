@@ -97,9 +97,15 @@ public struct QuerySubject: Sendable, Equatable, Hashable {
                 if let value = nameable(subject.value) { return value }
             case .seedDefault(_, let subject):
                 if let value = nameable(subject.value) { return value }
+            // `modelDirect` and `modelSupporting` join `contextItem` and `userRule` on the
+            // not-read side, and for a stronger version of their reason: a model answer that
+            // reached a surface at all was a `relevant`, and a `relevant` suppresses. There is
+            // no question left to ask about a subject the model rescued — asking one would be
+            // the app interrupting somebody about the thing it had just decided was their work.
             case .userRule, .contextItem, .tokenOverlap, .similarityCorroborated,
                  .sustainedDwell, .returnedToAnchor, .mixedSubjects, .conflictingRules,
-                 .insufficientEvidence, .languageNotSupported, .noNegativeBasis:
+                 .insufficientEvidence, .languageNotSupported, .noNegativeBasis,
+                 .modelDirect, .modelSupporting:
                 continue
             }
         }

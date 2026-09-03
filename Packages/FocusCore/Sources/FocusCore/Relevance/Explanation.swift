@@ -22,6 +22,8 @@ public enum ExplanationClauseKind: String, Sendable, CaseIterable, Codable, Hash
     case languageNotSupported
     case seedFallbackMixedUse
     case noNegativeBasis
+    case modelDirect
+    case modelSupporting
 
     /// The String Catalog key the UI renders this clause from.
     public var copyKey: String {
@@ -39,6 +41,8 @@ public enum ExplanationClauseKind: String, Sendable, CaseIterable, Codable, Hash
         case .languageNotSupported: "explanation.clause.languageNotSupported"
         case .seedFallbackMixedUse: "explanation.clause.seedFallbackMixedUse"
         case .noNegativeBasis: "explanation.clause.noNegativeBasis"
+        case .modelDirect: "explanation.clause.modelDirect"
+        case .modelSupporting: "explanation.clause.modelSupporting"
         }
     }
 
@@ -92,6 +96,19 @@ public enum ExplanationClause: Sendable, Equatable, Hashable, Codable {
     /// application or site you expect to be looking at, and the engine gains something an
     /// absence can be an absence *of*. Until then it declines, however long the dwell.
     case noNegativeBasis
+    /// **e06, R-109.** The on-device model read the priority and the subject and said the
+    /// subject is the work. Band `.low` at the rung, because it is a guess and the inspector
+    /// must not draw `.high` for one.
+    case modelDirect(subject: NormalisedToken)
+    /// The model said the subject is *in service of* the work. F-50's entire user-visible
+    /// payoff and worth a second case: *"reading documentation — supporting your task"* is a
+    /// different and more trustworthy sentence than *"this is your task"*, and a person who
+    /// disagrees with it knows exactly which claim to correct.
+    ///
+    /// **No free text from the model ever reaches a surface.** Both clauses carry a
+    /// `NormalisedToken` and are drawn from the catalog like every other clause; the schema's
+    /// answer is a label, not prose, and there is no rationale field to render.
+    case modelSupporting(subject: NormalisedToken)
 
     public var kind: ExplanationClauseKind {
         switch self {
@@ -108,6 +125,8 @@ public enum ExplanationClause: Sendable, Equatable, Hashable, Codable {
         case .languageNotSupported: .languageNotSupported
         case .seedFallbackMixedUse: .seedFallbackMixedUse
         case .noNegativeBasis: .noNegativeBasis
+        case .modelDirect: .modelDirect
+        case .modelSupporting: .modelSupporting
         }
     }
 
@@ -124,6 +143,8 @@ public enum ExplanationClause: Sendable, Equatable, Hashable, Codable {
         case .conflictingRules(let subjects): subjects
         case .languageNotSupported(let tag): tag.map { [$0] } ?? []
         case .seedFallbackMixedUse(let subject): [subject]
+        case .modelDirect(let subject): [subject]
+        case .modelSupporting(let subject): [subject]
         case .similarityCorroborated, .sustainedDwell, .mixedSubjects,
              .insufficientEvidence, .noNegativeBasis: []
         }

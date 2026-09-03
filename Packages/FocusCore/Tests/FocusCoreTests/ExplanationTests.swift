@@ -210,7 +210,9 @@ struct ExplanationTests {
             .insufficientEvidence(reason: .noNegativeBasis),
             .languageNotSupported(BCP47: NormalisedToken.normalised("fr")),
             .seedFallbackMixedUse(subject: subject),
-            .noNegativeBasis
+            .noNegativeBasis,
+            .modelDirect(subject: subject),
+            .modelSupporting(subject: subject)
         ]
     }
 }

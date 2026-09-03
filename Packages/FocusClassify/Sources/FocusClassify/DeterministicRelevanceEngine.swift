@@ -89,20 +89,41 @@ public final class DeterministicRelevanceEngine: RelevanceClassifier, @unchecked
     /// does not move.
     private let lookBackCapacity: Int
 
+    /// e06's port, or `nil`. Held so that `reset()` can clear what the model knows: a session
+    /// ending, or a priority changing, makes every earlier model answer evidence about a
+    /// different question (R-105).
+    private let model: (any ModelRung)?
+
+    /// **The composition seam e06 needed and e04 did not leave.**
+    ///
+    /// This initialiser used to build its `RuleCascade` internally, which meant there was no
+    /// way to hand the engine a ladder or a port — the adversarial review found it, and
+    /// T-e06-11 depends on it. The default arguments are exactly what e05 shipped: no model, the
+    /// deterministic ladder, and a cascade built the same way it always was. A caller who passes
+    /// nothing gets the engine that has been measured over 202 corpus cases.
     public init(
         normalizer: TokenNormalizer = TokenNormalizer(),
         scorer: SimilarityScorer = SimilarityScorer(),
-        lookBackCapacity: Int = RelevancePolicy.maximumLookBackEvents
+        lookBackCapacity: Int = RelevancePolicy.maximumLookBackEvents,
+        model: (any ModelRung)? = nil,
+        ladder: CascadeLadder = .deterministic
     ) {
         self.normalizer = normalizer
         self.scorer = scorer
         self.lookBackCapacity = lookBackCapacity
+        self.model = model
         self.window = TransitionWindow(capacity: lookBackCapacity)
         self.cascade = RuleCascade(
             heuristic: HeuristicClassifier(scorer: scorer),
+            model: model,
+            ladder: ladder,
             normalizer: normalizer
         )
     }
+
+    /// The ladder this engine composed, for the report and the self-check to read rather than
+    /// infer. Eight rungs with no port, nine with one.
+    public var ladder: CascadeLadder { cascade.composedLadder }
 
     /// Pay every cold cost at construction, off the classification path. Idempotent.
     ///
@@ -143,9 +164,22 @@ public final class DeterministicRelevanceEngine: RelevanceClassifier, @unchecked
     /// make every earlier observation evidence about a different question.
     public func reset() {
         lock.lock()
-        defer { lock.unlock() }
         drift = DriftMachine()
         window.reset()
+        lock.unlock()
+        // R-105's second invalidation, outside this engine's lock because the rung holds its
+        // own. Model silence is not consent to anything and must not outlive the session that
+        // produced it.
+        model?.reset()
+    }
+
+    /// R-105's third invalidation: a rule the person wrote about a subject.
+    ///
+    /// That rule outranks rank 6 anyway — rungs 0–2 answer before the heuristic is reached — so
+    /// dropping the entry changes no verdict. What it changes is the inspector: without this it
+    /// could show a stale model rationale beside a rule that already decided the question.
+    public func forgetModelAnswers(about subject: String) {
+        model?.invalidate(subject: subject)
     }
 
     // MARK: - The seam e01 shipped

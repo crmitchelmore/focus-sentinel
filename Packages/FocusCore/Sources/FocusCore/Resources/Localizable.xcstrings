@@ -241,6 +241,30 @@
         }
       }
     },
+    "explanation.clause.modelDirect" : {
+      "comment" : "Explanation clause: the on-device model judged this application to BE the work. A guess, banded low, and never rendered in the model's own words.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "this looks like your task"
+          }
+        }
+      }
+    },
+    "explanation.clause.modelSupporting" : {
+      "comment" : "Explanation clause: the on-device model judged this application to serve the work rather than be it — documentation, a reference, a tool the work needs.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "this looks like it supports your task"
+          }
+        }
+      }
+    },
     "explanation.clause.noNegativeBasis" : {
       "comment" : "Explanation clause: the priority names no app or site, so an absence means nothing. The only clause whose copy carries an ask.",
       "extractionState" : "manual",

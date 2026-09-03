@@ -89,19 +89,27 @@ public struct RungAnswer: Sendable, Equatable {
     public let band: EvidenceBand
     public let clauses: [ExplanationClause]
     public let uncertaintyReason: UncertaintyReason?
+    /// Whether this rung decided, or ran out of instrument and named its reviewer (e06, R-102).
+    ///
+    /// **Defaulted, so every existing construction site is unchanged.** Two answers in
+    /// `HeuristicClassifier` pass `.reviewable(by: .onDeviceModel)`; everything else in this
+    /// repository still reads exactly as it did.
+    public let finality: RungFinality
 
     public init(
         verdict: Verdict,
         source: VerdictSource,
         band: EvidenceBand,
         clauses: [ExplanationClause],
-        uncertaintyReason: UncertaintyReason? = nil
+        uncertaintyReason: UncertaintyReason? = nil,
+        finality: RungFinality = .decided
     ) {
         self.verdict = verdict
         self.source = source
         self.band = band
         self.clauses = clauses
         self.uncertaintyReason = uncertaintyReason
+        self.finality = finality
     }
 }
 
@@ -161,26 +169,62 @@ public struct CascadeResolution: Sendable, Equatable {
 /// evidence is the failure this whole epic exists to prevent.
 public struct RuleCascade: Sendable {
     private let heuristic: (any HeuristicRung)?
+    /// e06's rung, or `nil`. With `nil` the ladder is `.deterministic` and every byte of this
+    /// type's behaviour is what e05 shipped.
+    private let model: (any ModelRung)?
+    private let ladder: CascadeLadder
     private let normalizer: TokenNormalizer
 
     public init(
         heuristic: (any HeuristicRung)? = nil,
+        model: (any ModelRung)? = nil,
+        ladder: CascadeLadder = .deterministic,
         normalizer: TokenNormalizer = TokenNormalizer()
     ) {
         self.heuristic = heuristic
+        self.model = model
+        self.ladder = ladder
         self.normalizer = normalizer
     }
+
+    /// The composed ladder this cascade walks, for the report and the self-check to read.
+    public var composedLadder: CascadeLadder { ladder }
 
     public func evaluate(
         evidence: ClassificationEvidence,
         snapshot: RuleSnapshot
     ) -> CascadeResolution {
         var depth = 0
-        for rung in CascadePrecedence.executableRungs {
+        for rung in ladder.executableRungs {
             depth += 1
             guard let answer = answer(at: rung.stage, evidence: evidence, snapshot: snapshot) else {
                 continue
             }
+
+            // **The review (R-102), and it is six lines.**
+            //
+            // A rung that ran out of instrument names exactly ONE reviewer. If this
+            // composition can execute that reviewer, it is consulted and nothing else is:
+            // a provisional answer can never be overturned by a rung *below* the named one,
+            // which is what stops a naive fall-through moving thirty committed corpus
+            // expectations to `seedFallback`. If the reviewer has nothing to say, or is not in
+            // this ladder at all, the provisional answer stands — and in the deterministic
+            // composition the reviewer is never in the ladder, so this branch is inert and the
+            // transcript is byte-identical to e05's.
+            if let reviewer = answer.finality.reviewer,
+               ladder.canExecute(reviewer),
+               let reviewed = self.answer(at: reviewer, evidence: evidence, snapshot: snapshot) {
+                return CascadeResolution(
+                    stage: reviewer,
+                    verdict: reviewed.verdict,
+                    source: reviewed.source,
+                    band: reviewed.band,
+                    clauses: reviewed.clauses,
+                    uncertaintyReason: reviewed.uncertaintyReason,
+                    consultedDepth: depth + 1
+                )
+            }
+
             return CascadeResolution(
                 stage: rung.stage,
                 verdict: answer.verdict,
@@ -221,15 +265,82 @@ public struct RuleCascade: Sendable {
         case .contextPack: contextAnswer(evidence: evidence, snapshot: snapshot)
         case .seedRule: seedAnswer(evidence: evidence, snapshot: snapshot, decisive: true)
         case .heuristic: heuristic?.judge(evidence: evidence, snapshot: snapshot)
-        case .onDeviceModel:
-            // e06's rung. `isExecutable == false`, so this stage is not in the sequence
-            // `evaluate` walks and this arm is unreachable in this build — which is what the
-            // gate's `byStage.onDeviceModel == 0` assertion measures rather than assumes.
-            nil
+        case .onDeviceModel: modelAnswer(evidence: evidence, snapshot: snapshot)
         case .seedFallback: seedAnswer(evidence: evidence, snapshot: snapshot, decisive: false)
         case .unresolved: unresolvedAnswer(evidence: evidence, snapshot: snapshot)
         }
     }
+
+    // MARK: - Rung 6 · the on-device model
+
+    /// **A cache read, and nothing else.** This is on the classification path (R-103).
+    ///
+    /// A hit answers at rank 6. A miss enqueues the ask and returns `nil`, which leaves the
+    /// deterministic answer standing — exactly the behaviour of a build with no model at all —
+    /// and the next judgement of the same subject reads the cache. e03's activation stream and
+    /// dwell ticks re-judge the frontmost subject repeatedly, long before the forty-five-second
+    /// query dwell elapses, so the answer arrives before the app would have spoken and never
+    /// after it already has.
+    ///
+    /// Reached only through a `RungFinality.reviewable(by: .onDeviceModel)` answer, so the
+    /// walk never falls into it: rank 6 has exactly two doors, and `RungFinalityTests`
+    /// enumerates them by running the whole corpus rather than by reading this file.
+    func modelAnswer(
+        evidence: ClassificationEvidence,
+        snapshot: RuleSnapshot
+    ) -> RungAnswer? {
+        guard let model,
+              let subject = evidence.subject,
+              let subjectToken = NormalisedToken.normalised(subject.lowercased()),
+              let priorityID = snapshot.priorityID
+        else { return nil }
+
+        let request = ModelRequest(
+            cacheKey: snapshot.stamp.verdictCacheKey(
+                priorityID: priorityID,
+                priorityRevision: snapshot.priorityRevision,
+                evidenceKey: "\(Self.osVersionKey)|\(subject)"
+            ),
+            priorityTokens: snapshot.priorityTokens.tokens,
+            subject: subjectToken,
+            priorityRevision: snapshot.priorityRevision
+        )
+
+        guard let answer = model.cachedAnswer(for: request) else {
+            // Returns immediately. Never awaited by a classification (R-117f).
+            model.request(request)
+            return nil
+        }
+
+        switch answer {
+        case .relevant(let relevance):
+            return RungAnswer(
+                verdict: .relevant,
+                source: .heuristic,
+                // R-109. Corroboration only, the same class as the similarity signal: a
+                // `relevant` suppresses regardless of band, so this changes no behaviour — it is
+                // what the inspector draws, and drawing `.high` for a guess would be a lie a
+                // person could read.
+                band: .low,
+                clauses: [
+                    relevance == .direct
+                        ? .modelDirect(subject: subjectToken)
+                        : .modelSupporting(subject: subjectToken)
+                ]
+            )
+        case .decline:
+            // **Every decline is silence.** There is no `ModelAnswer` case that could reach
+            // `unrelated`, so the deterministic `uncertain` stands and the app asks its
+            // question — which is what it would have done with no model at all.
+            return nil
+        }
+    }
+
+    /// R-104's fallback. No model identity or revision appears on any public surface (P-152
+    /// looked; the version strings exist only in `modelmanagerd`'s logs), so the coarser fact is
+    /// used: a point release that ships a new asset moves this string and invalidates every
+    /// entry, and one that does not costs a session's worth of re-asking.
+    static let osVersionKey = ProcessInfo.processInfo.operatingSystemVersionString
 
     // MARK: - Rungs 0–2 · the user's own rules
 

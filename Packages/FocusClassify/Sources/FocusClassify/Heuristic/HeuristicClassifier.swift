@@ -101,7 +101,19 @@ public struct HeuristicClassifier: HeuristicRung {
                     .languageNotSupported(BCP47: NormalisedToken.normalised(language.tag)),
                     .insufficientEvidence(reason: .languageNotSupported)
                 ],
-                uncertaintyReason: .languageNotSupported
+                uncertaintyReason: .languageNotSupported,
+                // **Not a decision — an instrument that does not exist here.** `NLEmbedding` is
+                // `nil` for every language this OS ships but English, so the similarity signal
+                // has nothing to say about a French priority at any distance. A model trained
+                // on more than one language does. Reviewable, by exactly one rung.
+                //
+                // …unless the subject is one §2.3 forbids. This gate fires at step 2, ABOVE the
+                // two declines, because it is a fact about the *priority* rather than about the
+                // subject — so it is the one route by which a browser could still have reached
+                // rank 6, and `RungFinalityTests`' sweep found it by enumerating reviewable
+                // answers **by subject class** rather than by reason. The verdict does not
+                // move; only the reviewability narrows.
+                finality: Self.finality(for: evidence)
             )
         }
 
@@ -187,7 +199,15 @@ public struct HeuristicClassifier: HeuristicRung {
                 source: .heuristic,
                 band: .low,
                 clauses: [.noNegativeBasis, .insufficientEvidence(reason: .noNegativeBasis)],
-                uncertaintyReason: .noNegativeBasis
+                uncertaintyReason: .noNegativeBasis,
+                // **Not a decision either.** The engine has no identity to measure an absence
+                // against, and it terminated here because no lower rung could help. One now
+                // can: the two declines above have already removed the subjects §2.3 forbids,
+                // so what reaches this line is a real application, a real priority, and no
+                // instrument. `RungFinalityTests` asserts that this and the language gate are
+                // the ONLY two reviewable answers the shipping engine produces, enumerated by
+                // running the whole corpus rather than by reading this file.
+                finality: Self.finality(for: evidence)
             )
         }
 
@@ -223,6 +243,22 @@ public struct HeuristicClassifier: HeuristicRung {
             default: false
             }
         }
+    }
+
+    /// Whether an answer about this subject may be reviewed by the model, or must stand.
+    ///
+    /// §2.3 declares a mixed-use application **non-consultable**: a browser's identity is known
+    /// to be uninformative, so asking a model whether "Safari" is somebody's work is asking it
+    /// to guess. The two declines at step 5 already keep such a subject away from step 6 — but
+    /// the language gate at step 2 fires above them, because it is a fact about the priority
+    /// rather than about the subject. This is where both markings agree, so there is one place
+    /// the rule is written and no route around it.
+    static func finality(for evidence: ClassificationEvidence) -> RungFinality {
+        if let bundleIdentifier = evidence.bundleIdentifier,
+           RelevanceSeed.disposition(for: bundleIdentifier)?.seedStage == .seedFallback {
+            return .decided
+        }
+        return .reviewable(by: .onDeviceModel)
     }
 
     /// The one language this OS has an embedding for (P-111), as `NLLanguage.english`'s raw
