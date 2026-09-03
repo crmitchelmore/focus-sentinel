@@ -512,13 +512,26 @@ final class NudgeHost {
     /// those commands can ask it rather than offering them always and dropping them silently.
     var hasOpenNudge: Bool { openRung != nil }
 
+    /// **Whether there is a question for the three answering verbs to answer** (e07a T1).
+    ///
+    /// Deliberately *not* folded into `hasOpenNudge`. That property is `openRung != nil` — the
+    /// **accusation** — and the two nudges have been separate values in this object since
+    /// focus-k42 precisely because reading one for the other silenced the loop for a whole
+    /// session. *Mark as Relevant* and *Snooze Nudge* answer a rung; *Yes*, *Unrelated* and
+    /// *Later* answer a question; a world that could not tell them apart would offer all five
+    /// whenever either was on screen and drop three of them silently, which is the defect
+    /// focus-6uf repaired at the other end.
+    var hasOpenQuestion: Bool { openQuestion != nil }
+
     /// The world as the nudge loop can see it.
     ///
-    /// One field, and the other two left at their defaults, because the loop answers exactly the
-    /// two commands that turn on this one: a priority and a session are the cockpit's facts, and
-    /// the composition root is the only object that holds all three at once — which is why the
+    /// Two fields, and the other two left at their defaults, because the loop answers exactly
+    /// the commands that turn on these: a priority and a session are the cockpit's facts, and
+    /// the composition root is the only object that holds all four at once — which is why the
     /// *menu's* world comes from there rather than from here.
-    var commandWorld: ShellCommandWorld { ShellCommandWorld(hasOpenNudge: hasOpenNudge) }
+    var commandWorld: ShellCommandWorld {
+        ShellCommandWorld(hasOpenNudge: hasOpenNudge, hasOpenQuestion: hasOpenQuestion)
+    }
 
     private(set) var mandatesWithoutACommitment = 0
     private(set) var staleNotificationActions = 0
@@ -2760,6 +2773,15 @@ final class NudgeHost {
                 hideOverlays()
             case .showMenuBar:
                 menuBar.togglePopover()
+            // **The three answers, into the one door every answer goes through** (e07a, R-78).
+            // `answer(_:)` is what the panel's buttons and the popover's `.answerQuery` reach, so
+            // a keyboard answer is the same transaction as a click: the rule and the receipt
+            // commit together or neither does. The guard above has already asked
+            // `hasOpenQuestion`, and `answer(_:)` asks it again — a key that slipped past a stale
+            // menu writes nothing.
+            case .answerYes, .answerNo, .answerNotNow:
+                guard let queryAnswer = command.queryAnswer else { return }
+                answer(queryAnswer)
             case .newPriority, .completePriority, .addFilesToContext,
                  .startSession, .pauseSession, .completeSession, .pauseSensing:
                 break

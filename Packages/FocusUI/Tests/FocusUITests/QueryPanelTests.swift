@@ -57,8 +57,9 @@ struct QueryPanelTests {
         #expect(ordered.count == QueryAnswer.allCases.count)
     }
 
-    /// Escape is `notNow` — the same action as the button, not a fourth outcome. The panel's own
-    /// dismissal is wired to `QueryAnswer.notNow` by the host through
+    /// The dismissal is `notNow` — the same action as the button, not a fourth outcome. The
+    /// panel's own dismissal (its close affordance, and Escape once the panel has been clicked
+    /// into) is wired to `QueryAnswer.notNow` by the host through
     /// `NudgePanelController.onDismiss`, and what makes that safe is that `notNow` writes a
     /// receipt: the asking happened and is remembered, so the question does not come back.
     @Test("the dismissal is an answer, and it is the one that writes no rule")

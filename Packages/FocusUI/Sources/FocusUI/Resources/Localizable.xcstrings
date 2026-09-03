@@ -3301,6 +3301,42 @@
         }
       }
     },
+    "shell.command.answerNo" : {
+      "comment" : "View-menu verb: answer the open question the way the panel's 'No' button does. Writes the unrelated rule and the receipt.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Answer No, Unrelated"
+          }
+        }
+      }
+    },
+    "shell.command.answerNotNow" : {
+      "comment" : "View-menu verb: answer the open question the way the panel's 'Not now' button does. Writes the receipt and no rule.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Answer Not Now"
+          }
+        }
+      }
+    },
+    "shell.command.answerYes" : {
+      "comment" : "View-menu verb: answer the open question the way the panel's 'Yes, add it' button does. Writes the task rule and the receipt.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Answer Yes, Add It"
+          }
+        }
+      }
+    },
     "shell.command.hideOverlays" : {
       "comment" : "View-menu verb: take every nudge surface off the screen without answering anything.",
       "extractionState" : "manual",

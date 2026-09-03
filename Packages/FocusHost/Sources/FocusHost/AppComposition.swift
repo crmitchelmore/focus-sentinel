@@ -720,7 +720,10 @@ public final class AppComposition {
             return ShellCommandWorld(
                 hasPriority: priorityHost.state.priority != nil,
                 sessionPhase: sessionHost.snapshot?.phase,
-                hasOpenNudge: nudgeHost.hasOpenNudge
+                hasOpenNudge: nudgeHost.hasOpenNudge,
+                // The question's own fact, beside the accusation's (e07a). The loop keeps the
+                // two nudges apart, and so does the menu.
+                hasOpenQuestion: nudgeHost.hasOpenQuestion
             )
         }
     }

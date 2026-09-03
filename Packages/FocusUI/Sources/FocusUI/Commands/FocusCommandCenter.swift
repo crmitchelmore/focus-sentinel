@@ -1,3 +1,4 @@
+import FocusCore
 import SwiftUI
 
 /// Something the menu bar asks the cockpit to do.
@@ -48,19 +49,61 @@ public enum PriorityCommand: String, Sendable, CaseIterable, Hashable {
     /// Open the menu-bar popover from the keyboard, so the command centre is not mouse-only.
     case showMenuBar
 
+    // **The three answers to a question** (e07a, U-1, F-145).
+    //
+    // The two verbs above answer an *accusation*. Until these existed a *question* — the surface
+    // U-1's whole bargain rests on, licensed because it is cheaply answerable — could be answered
+    // only by a click. `NudgePanel` is a `.nonactivatingPanel` that is shown with
+    // `orderFrontRegardless()` and never made key, so no keystroke reaches it while the person is
+    // in the application they were asked about; and the panel's Escape travels the **key**
+    // window's responder chain, which is their editor's. The route that does exist is this one:
+    // one ⌘-Tab to Focus, then a View-menu key equivalent. Measured before these were written
+    // (`KeyboardAnswerTests`, `SelfCheck.keyboardAnswerReport`): activating Focus leaves the
+    // question standing, so the route is real.
+    //
+    // Three cases and not a payload, for the reason the whole enum is flat: a menu item is one
+    // title, one key and one act, and the Keyboard Shortcuts window lists each of them.
+
+    /// "Yes, add it" — the `RuleAuthority.task` rule that grows the context pack and buys silence.
+    case answerYes
+    /// "No" — the same pair of records with the opposite verdict.
+    case answerNo
+    /// "Not now" — no rule, one receipt; the asking is remembered and not repeated.
+    case answerNotNow
+
     /// Whether this command needs the cockpit window in front of it.
     ///
     /// The three capture-and-context verbs and the four session verbs all land **in** the
     /// cockpit, so it comes forward first — that is what makes ⌘N from a closed window put the
     /// cursor in the capture field. The e05 verbs do not: hiding an overlay by opening a window
-    /// on top of the person's work would be the opposite of what they asked for.
+    /// on top of the person's work would be the opposite of what they asked for — and neither do
+    /// the three answers, which are a sentence about the application the person is *in*.
     public var opensCockpit: Bool {
         switch self {
         case .newPriority, .completePriority, .addFilesToContext,
              .startSession, .pauseSession, .completeSession, .pauseSensing:
             true
-        case .thisIsRelevant, .snoozeNudge, .hideOverlays, .showMenuBar:
+        case .thisIsRelevant, .snoozeNudge, .hideOverlays, .showMenuBar,
+             .answerYes, .answerNo, .answerNotNow:
             false
+        }
+    }
+
+    /// **The answer this command is**, or `nil` for a command that answers no question.
+    ///
+    /// One table, read by `NudgeHost.perform(_:)` to reach `NudgeHost.answer(_:)` — the same
+    /// function the panel's buttons and the popover's `.answerQuery` reach, so `QueryLedger.answer`
+    /// stays R-78's single transaction — and by the tests, which hold it against a second
+    /// statement of the same mapping.
+    public var queryAnswer: QueryAnswer? {
+        switch self {
+        case .answerYes: .yesAddIt
+        case .answerNo: .no
+        case .answerNotNow: .notNow
+        case .newPriority, .completePriority, .addFilesToContext,
+             .startSession, .pauseSession, .completeSession, .pauseSensing,
+             .thisIsRelevant, .snoozeNudge, .hideOverlays, .showMenuBar:
+            nil
         }
     }
 }

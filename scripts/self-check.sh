@@ -210,6 +210,31 @@ if (( relaunch_rc != 0 )); then
     exit 1
 fi
 
+# --- a question answered with no mouse, against a store this script owns (e07a, U-1, F-145) ----
+#
+# A SIXTH launch, and it needs a store of its own for one reason: the reading opens a real
+# question through the loop and answers it with ⌃⌘Y, which writes a receipt and a rule. Run
+# against the person's store that would be the app inventing a fact about their day, so the
+# nudge block takes this reading only when `--focus-store` names a store, and the ordinary
+# report above carries it as NOT TAKEN with the reason. The nudge-only mode is used because it
+# launches headless — the block then activates the application itself, which is the plan's
+# blocker measured for real: does coming forward (⌘-Tab) withdraw the open question?
+
+KEYBOARD_STORE="$SESSION_DIR/keyboard.store"
+KEYBOARD_JSON="$SESSION_DIR/keyboard.json"
+
+print "== $BINARY --focus-self-check-nudge --focus-store $KEYBOARD_STORE"
+"$BINARY" --focus-self-check "$KEYBOARD_JSON" --focus-self-check-nudge --focus-store "$KEYBOARD_STORE"
+keyboard_rc=$?
+print "keyboard EXIT=$keyboard_rc"
+if (( keyboard_rc != 0 )); then
+    print -u2 "FAIL: the keyboard-answer launch exited $keyboard_rc"
+    exit 1
+fi
+if [[ -n "${FOCUS_EVIDENCE_DIR:-}" ]]; then
+    cp -- "$KEYBOARD_JSON" "$FOCUS_EVIDENCE_DIR/keyboard-answer.json"
+fi
+
 if [[ -n "${FOCUS_EVIDENCE_DIR:-}" ]]; then
     cp -- "$FIRSTRUN_JSON" "$FOCUS_EVIDENCE_DIR/cockpit-relaunch.json"
 fi
@@ -226,7 +251,7 @@ print "== assertions"
 python3 - "$OUT" "$SEED_JSON" "$RESTORE_JSON" "$COMMITTED_STAMP" "$COMMITTED_DIGEST" \
     "$COMMITTED_INTERVENTION_DIGEST" "$COCKPIT_JSON" \
     "$COMMITTED_DECODE_TABLE" "$COMMITTED_DECODE_CELLS" "$FIRSTRUN_JSON" \
-    "$COMMITTED_EXECUTABLE_RUNGS" "$COMMITTED_DECLARED_RUNGS" <<'PYTHON'
+    "$COMMITTED_EXECUTABLE_RUNGS" "$COMMITTED_DECLARED_RUNGS" "$KEYBOARD_JSON" <<'PYTHON'
 import json
 import sys
 
@@ -250,6 +275,10 @@ with open(sys.argv[10]) as handle:
 # the same number the shipping gate holds the evaluation report to — one literal, three readers.
 committed_executable_rungs = int(sys.argv[11]) if sys.argv[11] else 0
 committed_declared_rungs = int(sys.argv[12]) if sys.argv[12] else 0
+# e07a. The sixth launch's report: the nudge block alone, against a store this script owns, so
+# the keyboard-answer reading could be taken (it writes a receipt and a rule).
+with open(sys.argv[13]) as handle:
+    keyboard_launch = json.load(handle)
 
 failures = []
 not_taken_readings = []
@@ -553,20 +582,25 @@ def expected_availability(action_id, world):
         return has_session and phase not in TERMINAL_PHASES
     if action_id in ("nudge.relevant", "nudge.snooze"):
         return world.get("hasOpenNudge") is True
+    # The three answers to a QUESTION are gated on the question's own fact, never the
+    # accusation's (e07a): the loop keeps the two nudges apart, and so must this table.
+    if action_id in ("nudge.answerYes", "nudge.answerNo", "nudge.answerNotNow"):
+        return world.get("hasOpenQuestion") is True
     raise KeyError(action_id)
 
 
 # The world the reading was taken in, printed rather than assumed: a per-item comparison means
 # nothing until a reader can see which state it was a comparison about.
 print(
-    "note command world: hasPriority={} sessionPhase={} hasOpenNudge={}".format(
+    "note command world: hasPriority={} sessionPhase={} hasOpenNudge={} hasOpenQuestion={}".format(
         command_world.get("hasPriority"),
         command_world.get("sessionPhase"),
         command_world.get("hasOpenNudge"),
+        command_world.get("hasOpenQuestion"),
     )
 )
 check(
-    set(command_world) == {"hasPriority", "sessionPhase", "hasOpenNudge"},
+    set(command_world) == {"hasPriority", "sessionPhase", "hasOpenNudge", "hasOpenQuestion"},
     "the app reported the whole world its menu availability is computed from",
     sorted(command_world),
 )
@@ -578,7 +612,8 @@ reported_ids = [action.get("id") for action in command_actions]
 KNOWN_COMMAND_IDS = {
     "priority.new", "context.addFiles", "priority.complete", "session.start", "session.pause",
     "session.complete", "sensing.pause", "shell.closeWindow", "nudge.relevant", "nudge.snooze",
-    "nudge.hideOverlays", "nudge.menuBar", "shell.help",
+    "nudge.hideOverlays", "nudge.menuBar", "nudge.answerYes", "nudge.answerNo",
+    "nudge.answerNotNow", "shell.help",
 }
 check(
     set(reported_ids) == KNOWN_COMMAND_IDS,
@@ -586,8 +621,8 @@ check(
     sorted(set(reported_ids) ^ KNOWN_COMMAND_IDS),
 )
 check(
-    len(reported_ids) == len(set(reported_ids)) and len(reported_ids) == 13,
-    "all thirteen of the app's own actions were reported, once each",
+    len(reported_ids) == len(set(reported_ids)) and len(reported_ids) == 16,
+    "all sixteen of the app's own actions were reported, once each",
     reported_ids,
 )
 
@@ -631,12 +666,12 @@ offered = [a for a in command_actions if a.get("isAvailable") is True]
 withdrawn = [a for a in command_actions if a.get("isAvailable") is False]
 check(
     len(withdrawn) > 0,
-    "the measured state withdraws at least one item, so the comparison is not thirteen Trues",
+    "the measured state withdraws at least one item, so the comparison is not sixteen Trues",
     [a.get("id") for a in command_actions],
 )
 check(
     len(offered) > 0,
-    "the measured state still offers items, so the comparison is not thirteen Falses",
+    "the measured state still offers items, so the comparison is not sixteen Falses",
     [a.get("id") for a in command_actions],
 )
 print(
@@ -3864,6 +3899,147 @@ check(
     panel.get("wasVisible"),
 )
 
+# --- a question answered with no mouse (e07a, U-1, F-145) --------------------------------------
+#
+# U-1 licenses the interruption BECAUSE the question is cheaply answerable, and until e07a it was
+# answerable only by a click: the panel is a `.nonactivatingPanel` that is never made key, so no
+# keystroke reaches it from the application the person is in, and its Escape reaches their
+# editor. The route is the View menu — one ⌘-Tab to Focus, then ⌃⌘Y, ⌃⌘U or ⌃⌘L — and the
+# unit lane folds the predicate and drives `NudgeHost.perform(_:)`. What only the running
+# application can say is read here, from the SIXTH launch: that activating the application
+# leaves the question standing (the plan's blocker, measured on a real activation), that the
+# item AppKit drew is enabled with a question and withdrawn without one, and that the key handed
+# to `NSApp.mainMenu` reaches the ledger — a receipt and a rule, not a menu item.
+#
+# The ordinary report carries the same block as NOT TAKEN, because it runs against the person's
+# own store and the reading writes to the store it runs against. Both facts are asserted: the
+# ordinary launch must NOT have taken it, and the owned-store launch MUST have.
+
+keyboard = (report.get("nudge") or {}).get("keyboardAnswer") or {}
+check(
+    keyboard.get("wasTaken") is False,
+    "the ordinary launch did not answer a question in the person's own store",
+    keyboard,
+)
+taken(
+    "the keyboard answer to a question, in the ordinary launch",
+    "nudge.keyboardAnswer.wasTaken",
+    "asserted on the owned-store launch below instead",
+)
+
+kb = keyboard_launch.get("keyboardAnswer") or {}
+check(
+    keyboard_launch.get("mode") == "nudge" and bool(kb),
+    "the owned-store launch ran the nudge block and reported the keyboard-answer reading",
+    (keyboard_launch.get("mode"), sorted(kb)),
+)
+check(
+    kb.get("wasTaken") is True,
+    "the keyboard-answer reading was taken against the owned store",
+    (kb.get("wasTaken"), kb.get("notTakenBecause")),
+)
+check(kb.get("mainMenuExists") is True, "the headless launch had a main menu to hand a key to")
+check(
+    kb.get("questionOpened") is True and kb.get("worldReportsAQuestion") is True,
+    "a real question opened through the loop and the command world reported it",
+    (kb.get("questionOpened"), kb.get("worldReportsAQuestion")),
+)
+# THE BLOCKER, MEASURED. The route is one ⌘-Tab away only if coming forward leaves the question
+# standing. Two facts, and the first is the control for the second: the activation must really
+# have happened — this process was launched headless and became frontmost — or "the question
+# survived" is a fact about a process that never moved.
+check(
+    kb.get("activationWasObserved") is True,
+    "activating the application really brought this process to the front",
+    (kb.get("frontmostBeforeActivation"), kb.get("frontmostAfterActivation")),
+)
+# `NSApp.isActive` is reported and not pinned: measured on this Mac, a process launched headless
+# with only a non-activating panel on screen reads `isActive == false` for the whole fifteen-second
+# poll while `NSWorkspace.frontmostApplication` names it — and the frontmost reading is the one the
+# sensing graph hears, which is what a ⌘-Tab is to the loop.
+print(
+    "note keyboard-answer activation: isActive={} attempts={} sensing observing={}".format(
+        kb.get("applicationBecameActive"), kb.get("activationAttempts"), kb.get("sensingWasObserving")
+    )
+)
+check(
+    kb.get("questionSurvivedActivation") is True and kb.get("panelSurvivedActivation") is True,
+    "activating the application (a ⌘-Tab to Focus) leaves the open question and its panel standing",
+    (kb.get("questionSurvivedActivation"), kb.get("panelSurvivedActivation")),
+)
+# The item AppKit drew, on both sides of the question. Leg 2 of focus-6uf's reading, for the
+# three answers, in the state that offers them — which the ordinary launch never is. Taken the way
+# AppKit takes it: SwiftUI pushes a changed `.disabled(…)` into the item only when the menu's
+# delegate is asked `menuNeedsUpdate(_:)`, which AppKit does before a tracking session and before a
+# key-equivalent search (measured, e07a — `itemsAsLastDrawn*` in the report is the stale read).
+ANSWER_ITEMS = {"nudge.answerYes", "nudge.answerNo", "nudge.answerNotNow"}
+enabled_with = kb.get("itemsEnabledWithQuestion") or {}
+enabled_without = kb.get("itemsEnabledWithoutQuestion") or {}
+check(
+    set(kb.get("answerItemsDeclared") or []) == ANSWER_ITEMS,
+    "the registry declares exactly the three answering items this script names",
+    kb.get("answerItemsDeclared"),
+)
+check(
+    set(enabled_with) == ANSWER_ITEMS and all(enabled_with.get(i) is True for i in ANSWER_ITEMS),
+    "with a question open, all three answering items are enabled in the View menu",
+    enabled_with,
+)
+check(
+    set(enabled_without) == ANSWER_ITEMS and all(enabled_without.get(i) is False for i in ANSWER_ITEMS),
+    "with the question answered, all three answering items are withdrawn from the View menu",
+    enabled_without,
+)
+# THE EFFECT. Not that an item claimed the key — that the question ended and the ledger holds
+# what the title promised: a receipt reading answeredRelevant and a task rule reading relevant,
+# both on the subject the question was about (R-78's one transaction).
+check(kb.get("keySent") is True, "⌃⌘Y was sent through NSApplication.sendEvent with a question open", kb.get("keySent"))
+check(
+    kb.get("commandsObservedOnPress") == ["answerYes"],
+    "the key reached the command centre as exactly one answerYes",
+    kb.get("commandsObservedOnPress"),
+)
+check(
+    kb.get("questionOpenAfterPress") is False and kb.get("panelVisibleAfterPress") is False,
+    "⌃⌘Y ended the question and took its panel down",
+    (kb.get("questionOpenAfterPress"), kb.get("panelVisibleAfterPress")),
+)
+check(
+    kb.get("receiptsBeforePress") == 0 and kb.get("receiptsAfterPress") == 1,
+    "⌃⌘Y wrote exactly one receipt",
+    (kb.get("receiptsBeforePress"), kb.get("receiptsAfterPress")),
+)
+check(
+    kb.get("receiptOutcome") == "answeredRelevant" and kb.get("receiptSubject") == kb.get("subject"),
+    "the receipt is the answer the title promised, on the subject the question was about",
+    (kb.get("receiptOutcome"), kb.get("receiptSubject"), kb.get("subject")),
+)
+check(
+    kb.get("rulesBeforePress") == 0 and kb.get("rulesAfterPress") == 1,
+    "⌃⌘Y wrote exactly one task rule",
+    (kb.get("rulesBeforePress"), kb.get("rulesAfterPress")),
+)
+check(
+    kb.get("ruleVerdict") == "relevant" and kb.get("ruleSubject") == kb.get("subject"),
+    "the rule is the verdict the title promised, on the subject the question was about",
+    (kb.get("ruleVerdict"), kb.get("ruleSubject"), kb.get("subject")),
+)
+# And the same key with nothing to answer writes nothing — the refusal the unit lane makes on
+# `perform(_:)`, seen through the menu bar. Whether AppKit refreshed the item and never delivered
+# the key, or delivered it to a stale item for the loop to refuse, is printed and not pinned: the
+# fact a person is owed is that nothing was written.
+print("note second ⌃⌘Y with no question: commands observed {}".format(kb.get("commandsObservedOnSecondPress")))
+check(
+    kb.get("keySentWithoutQuestion") is True,
+    "⌃⌘Y was sent again with no question open",
+    kb.get("keySentWithoutQuestion"),
+)
+check(
+    kb.get("receiptsAfterSecondPress") == 1 and kb.get("rulesAfterSecondPress") == 1,
+    "a second ⌃⌘Y with no question open wrote nothing",
+    (kb.get("receiptsAfterSecondPress"), kb.get("rulesAfterSecondPress")),
+)
+
 # --- the sentence names the APP, not its bundle identifier (focus-ebv) -------------------------
 #
 # Every nudge said "Is com.figma.Desktop part of Write the Q3 proposal?" for the whole of e05,
@@ -4138,8 +4314,8 @@ check(
 )
 # **The non-vacuity floor.** The check above is satisfied by a report with no takenness facts at
 # all, which is exactly what deleting the pair from a probe produces — the reading goes back to
-# being a `check` that fails for the machine, and the sweep says nothing. Five probes publish
-# one today; the floor is those five, named, so losing one is a red run rather than a quieter one.
+# being a `check` that fails for the machine, and the sweep says nothing. Six probes publish
+# one today; the floor is those six, named, so losing one is a red run rather than a quieter one.
 EXPECTED_TAKENNESS_FACTS = {
     "undo.menuReadingWasTaken",
     "sensing.windowMetadata.countWasTaken",
@@ -4149,6 +4325,9 @@ EXPECTED_TAKENNESS_FACTS = {
     # reads the SAME `CGWindowListCopyWindowInfo` as `sensing.windowMetadata` and had no takenness
     # fact at all, so an empty scan passed as "no dialog on screen".
     "authorisationSurfaceScan.wasTaken",
+    # The sixth (e07a): the keyboard answer writes to the store it runs against, so the ordinary
+    # launch may not take it and says why; the owned-store launch is asserted separately.
+    "nudge.keyboardAnswer.wasTaken",
 }
 check(
     EXPECTED_TAKENNESS_FACTS <= takenness_facts,
@@ -4160,7 +4339,7 @@ check(
 # facts had gone with it.
 check(
     routed_readings >= EXPECTED_TAKENNESS_FACTS,
-    "every one of those five readings was actually routed on this run",
+    "every one of those six readings was actually routed on this run",
     sorted(EXPECTED_TAKENNESS_FACTS - routed_readings),
 )
 

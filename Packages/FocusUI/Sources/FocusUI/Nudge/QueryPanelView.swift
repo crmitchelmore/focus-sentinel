@@ -49,9 +49,17 @@ public struct QueryPresentation: Sendable, Equatable {
     ///
     /// In the order the panel offers them: the answer that teaches the app most, the answer that
     /// teaches it the other thing, and the one that teaches it nothing but is still remembered.
-    /// Escape is `notNow` — the same action, because a person who closes a panel has answered
-    /// it, and treating a dismissal as "nothing happened" is what makes an app ask again
-    /// tomorrow.
+    /// The panel's close affordance is `notNow` — the same action, because a person who closes
+    /// a panel has answered it, and treating a dismissal as "nothing happened" is what makes an
+    /// app ask again tomorrow.
+    ///
+    /// **Escape is that same answer only once the panel has been clicked into** (e07a). It
+    /// reaches the panel through `NudgePanel.cancelOperation(_:)`, which travels the *key*
+    /// window's responder chain — and the panel is a `.nonactivatingPanel` shown with
+    /// `orderFrontRegardless()` and never made key (R-96m), so while the person is still in the
+    /// application they were asked about, Escape reaches *that* application. The keyboard route
+    /// that works from there is the View menu: one ⌘-Tab to Focus, then ⌃⌘Y, ⌃⌘U or ⌃⌘L
+    /// (`CommandRegistry.shell`).
     public static let actionOrder: [QueryAnswer] = [.yesAddIt, .no, .notNow]
 
     /// The default. "Yes, add it" is the click that grows the context pack and buys future
@@ -74,9 +82,11 @@ public struct QueryPresentation: Sendable, Equatable {
 
 /// The copy key each answer is titled from.
 extension QueryAnswer {
-    /// The deck line that names this answer. Total: every answer is a button, because Escape is
-    /// `notNow` **as well as** a button rather than instead of one — an affordance a person can
-    /// only reach by knowing a keystroke is an affordance they may never find.
+    /// The deck line that names this answer. Total: every answer is a button, because the close
+    /// affordance is `notNow` **as well as** a button rather than instead of one — an affordance
+    /// a person can only reach by knowing a keystroke is an affordance they may never find. (And
+    /// the keystroke they might know, Escape, reaches this panel only once it has been clicked
+    /// into; see `actionOrder`.)
     public var copyKey: NudgeCopyKey {
         switch self {
         case .yesAddIt: .queryActionYes

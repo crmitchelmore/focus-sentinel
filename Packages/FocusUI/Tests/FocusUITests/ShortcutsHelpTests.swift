@@ -31,6 +31,7 @@ struct ShortcutsHelpTests {
         #expect(rows.map(\.glyphs) == [
             "⌘N", "⌘O", "⌃⌘↩", "⌃⌘S", "⌃⌘P", "⌃⌘F", "⌃⌘E", "⌘W",
             "⌃⌘R", "⌃⌘Z", "⌃⌘H", "⌃⌘M",
+            "⌃⌘Y", "⌃⌘U", "⌃⌘L",
             "⌘?"
         ])
         #expect(rows.map(\.titleKey) == [
@@ -48,6 +49,11 @@ struct ShortcutsHelpTests {
             .commandSnoozeNudge,
             .commandHideOverlays,
             .commandShowMenuBar,
+            // e07a's three answers to a question, discoverable here because the panel that
+            // draws them can never carry a keystroke (U-1).
+            .commandAnswerYes,
+            .commandAnswerNo,
+            .commandAnswerNotNow,
             .commandHelp
         ])
     }
@@ -106,6 +112,9 @@ struct ShortcutsHelpTests {
             "nudge.snooze",
             "nudge.hideOverlays",
             "nudge.menuBar",
+            "nudge.answerYes",
+            "nudge.answerNo",
+            "nudge.answerNotNow",
             "shell.help"
         ])
         #expect(rows.first { $0.id == "shell.test.unbound" }?.glyphs == nil)

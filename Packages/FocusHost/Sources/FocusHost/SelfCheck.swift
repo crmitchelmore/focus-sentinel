@@ -1024,6 +1024,313 @@ enum SelfCheck {
         )
     }
 
+    /// **A question is answered with no mouse, in the shipping process** (e07a, U-1, F-145).
+    ///
+    /// The unit lane drives `NudgeHost.perform(_:)` directly. This is the far end of the *whole*
+    /// channel: a real question opened through `consider(_:)` on the composition root's own loop,
+    /// the application activated the way ⌘-Tab activates it, the View menu's key equivalent handed
+    /// to `NSApp.mainMenu` exactly as `keyEquivalentClaims()` hands ⌘N — and then the **effect**
+    /// read back (focus-cp2's standard): the question gone, the receipt written, the rule written.
+    /// Not "the item exists".
+    ///
+    /// **Two measurements the unit lane cannot take.** First, the plan's blocker: does activating
+    /// Focus withdraw the open question? `NSApp.activate(ignoringOtherApps:)` here is a real
+    /// activation of a process that was launched headless, so the sensing graph sees this bundle
+    /// come forward exactly as it would after a ⌘-Tab. Second, the menu item's live `isEnabled`
+    /// on both sides of the question — the predicate is folded in the unit lane, the wiring only
+    /// here.
+    ///
+    /// **Taken only against a store named by `--focus-store`.** The reading answers a question,
+    /// and an answer is a receipt and a rule. The ordinary launch opens the person's own store,
+    /// and a self-check that wrote *"you said com.chrismitchelmore.FocusKeyboardProbe is part of
+    /// Self-check keyboard answer"* into their ledger would be the app inventing a fact about
+    /// their day. So `self-check.sh` runs one more launch for it, on a store the script removes,
+    /// and the ordinary report carries the reading as NOT TAKEN with the reason.
+    @MainActor
+    static func keyboardAnswerReport() -> [String: Any] {
+        var report: [String: Any] = [:]
+        guard case .temporary = requestedStoreKind else {
+            report["wasTaken"] = false
+            report["notTakenBecause"] =
+                "the reading answers a real question and writes its receipt and rule, so it runs "
+                + "only against a store named by --focus-store"
+            return report
+        }
+        let composition = AppComposition.shared
+        let host = composition.nudgeHost
+        let subject = "com.chrismitchelmore.FocusKeyboardProbe"
+        report["subject"] = subject
+
+        // The menu has to exist before a key can be handed to it. A headless launch reaches this
+        // report from `applicationDidFinishLaunching`, and SwiftUI installs the main menu on the
+        // same turn; one settle is what the ordinary mode gives it too.
+        settle(forSeconds: settleDelay)
+        report["mainMenuExists"] = NSApp.mainMenu != nil
+
+        // 1 — a commitment, through the shipping host, so gate 1 opens on the same value every
+        // receipt below is keyed to (focus-zrs).
+        composition.priorityHost.setPriority(intent: "Self-check keyboard answer", doneWhen: nil)
+        settle(forSeconds: 0.2)
+        guard let commitment = composition.priorityHost.activeCommitment else {
+            report["wasTaken"] = false
+            report["notTakenBecause"] = "the store refused the commitment the question needs"
+            return report
+        }
+        report["priorityID"] = commitment.id.uuidString
+
+        // 2 — the surroundings the loop speaks in: the plainest cell, **stated** rather than read
+        // off this machine, because a Mac running the gate may be idle, presenting or in quiet
+        // hours, and a question that never opened would be a reading of nothing. The three
+        // clocks are the composition root's own, so the receipt is stamped the way a real one is.
+        // Put back on the way out.
+        let live = composition.nudgeSurroundings()
+        let originalSurroundings = host.surroundings
+        defer { host.surroundings = originalSurroundings }
+        host.surroundings = { [commitment] in
+            NudgeSurroundings(
+                commitment: commitment,
+                sensitivity: SensitivityGate().evaluate(
+                    FrontmostActivation(
+                        bundleIdentifier: subject,
+                        localizedName: subject,
+                        pid: 4242,
+                        at: live.now,
+                        dwellSeconds: 120
+                    )
+                ),
+                idleThresholdSeconds: 120,
+                now: live.now,
+                calendar: live.calendar,
+                monotonic: live.monotonic
+            )
+        }
+
+        // Every command the centre delivers from here on, in order — so a key that claimed
+        // nothing and a key that reached the loop are two different lines in the report rather
+        // than one absent receipt.
+        let observed = ObservedCommands()
+        FocusCommandCenter.shared.observe { [observed] command in observed.append(command) }
+
+        // 3 — the question, through the one entry point.
+        host.consider(questionJudgement(subject: subject))
+        // SwiftUI rebuilds the View menu's items from the world on its own schedule; the scene
+        // settle is the same allowance the ordinary mode gives a window that has just opened.
+        settle(forSeconds: sceneSettleSeconds)
+        report["questionOpened"] = host.hasOpenQuestion
+        report["worldReportsAQuestion"] = FocusCommandCenter.shared.world.hasOpenQuestion
+        guard host.hasOpenQuestion else {
+            report["wasTaken"] = false
+            report["notTakenBecause"] = "the loop did not open a question in the stated cell"
+            report["lastDecision"] = "\(String(describing: host.lastDecision))"
+            return report
+        }
+
+        // 4 — ⌘-Tab. A real activation of a process that was launched headless: the frontmost
+        // application becomes this bundle and every observer that is running sees it. Polled
+        // the way `comeForward` polls, because activation is a request the window server
+        // grants on its own schedule, and a reading taken before it lands is a reading of the
+        // launch rather than of the activation.
+        let before = composition.nudgePanel.readings()
+        report["frontmostBeforeActivation"] = before.frontmostBundleIdentifier ?? ""
+        report["applicationWasActiveBefore"] = before.applicationIsActive
+        report["sensingWasObserving"] = composition.sensingHost.isRunning
+        let activationStarted = ProcessInfo.processInfo.systemUptime
+        var activationAttempts = 0
+        repeat {
+            activationAttempts += 1
+            NSApp.activate(ignoringOtherApps: true)
+            settle(forSeconds: activationPollInterval)
+        } while !NSApp.isActive
+            && ProcessInfo.processInfo.systemUptime - activationStarted < activationDeadline
+        // …and one more turn after it lands, so the sensing graph's own activation event has
+        // been delivered before the question is read.
+        settle(forSeconds: 0.5)
+        let after = composition.nudgePanel.readings()
+        report["activationAttempts"] = activationAttempts
+        report["frontmostAfterActivation"] = after.frontmostBundleIdentifier ?? ""
+        report["applicationBecameActive"] = after.applicationIsActive
+        report["activationWasObserved"] =
+            after.frontmostBundleIdentifier == Bundle.main.bundleIdentifier
+        report["questionSurvivedActivation"] = host.hasOpenQuestion
+        report["panelSurvivedActivation"] = after.panelIsVisible
+        report["commandsObservedDuringActivation"] = observed.commands
+        observed.reset()
+
+        // 5 — the three items, enabled, now that a question is open.
+        //
+        // **Measured, and the menu is lazier than it looks.** SwiftUI does not push a changed
+        // `.disabled(…)` into the `NSMenuItem` when the world moves; it pushes it when AppKit asks
+        // the menu's delegate to `menuNeedsUpdate(_:)`, which AppKit does at the start of a
+        // tracking session and before it searches a menu for a key equivalent. `NSMenu.update()`
+        // does not ask. So the raw read is reported for what it is — the state AppKit last drew —
+        // and the reading the gate holds is taken the way AppKit takes it, after the delegate
+        // has been asked.
+        let answers = CommandRegistry.shell.actions(in: .view).filter { action in
+            if case .priority(let command) = action.effect { return command.queryAnswer != nil }
+            return false
+        }
+        report["answerItemsDeclared"] = answers.map(\.id)
+        report["itemsAsLastDrawnWithQuestion"] = answerItemStates(answers)
+        refreshViewMenu()
+        report["itemsEnabledWithQuestion"] = answerItemStates(answers)
+        report["viewMenuWithQuestion"] = viewMenuItems()
+
+        // 6 — the key. ⌃⌘Y as a key-down **sent through `NSApplication.sendEvent(_:)`**, which is
+        // the entry AppKit's own run loop hands every keystroke to — so the event takes the
+        // shipping route through the main menu's key-equivalent search, delegate update and
+        // all. `keyEquivalentClaims()` asks `NSMenu.performKeyEquivalent(with:)` directly, which
+        // skips that delegate update and would press a stale item. Then the effect is read back.
+        let ledger = QueryLedger(
+            context: composition.modelContainer.mainContext,
+            dateProvider: SystemDateProvider()
+        )
+        let priorities = PriorityStore(context: composition.modelContainer.mainContext)
+        let receiptsBefore = (try? ledger.receipts(priorityID: commitment.id).count) ?? -1
+        let rulesBefore = (try? priorities.task(id: commitment.id)?.rules.count ?? -1) ?? -1
+        report["receiptsBeforePress"] = receiptsBefore
+        report["rulesBeforePress"] = rulesBefore
+        report["keySent"] = send(characters: "y", modifiers: [.control, .command])
+        settle(forSeconds: 0.3)
+        report["commandsObservedOnPress"] = observed.commands
+        observed.reset()
+        report["questionOpenAfterPress"] = host.hasOpenQuestion
+        report["panelVisibleAfterPress"] = composition.nudgePanel.readings().panelIsVisible
+        let receipts = (try? ledger.receipts(priorityID: commitment.id)) ?? []
+        report["receiptsAfterPress"] = receipts.count
+        report["receiptOutcome"] = receipts.last?.outcomeRaw ?? ""
+        report["receiptSubject"] = receipts.last?.subject ?? ""
+        let rules = (try? priorities.task(id: commitment.id)?.rules) ?? []
+        report["rulesAfterPress"] = rules.count
+        report["ruleVerdict"] = rules.last?.verdictRaw ?? ""
+        report["ruleSubject"] = rules.last?.subject ?? ""
+
+        // 7 — the same three items, withdrawn, now that no question is open; and the same key,
+        // which must now write nothing. Whether AppKit delivers it to a stale item and the loop
+        // refuses it, or refreshes the item and never delivers it, is reported and not pinned:
+        // the fact a person is owed is that nothing was written.
+        settle(forSeconds: sceneSettleSeconds)
+        report["itemsAsLastDrawnWithoutQuestion"] = answerItemStates(answers)
+        refreshViewMenu()
+        report["itemsEnabledWithoutQuestion"] = answerItemStates(answers)
+        report["viewMenuWithoutQuestion"] = viewMenuItems()
+        report["keySentWithoutQuestion"] = send(characters: "y", modifiers: [.control, .command])
+        settle(forSeconds: 0.2)
+        report["commandsObservedOnSecondPress"] = observed.commands
+        report["receiptsAfterSecondPress"] = (try? ledger.receipts(priorityID: commitment.id).count) ?? -1
+        report["rulesAfterSecondPress"] = (try? priorities.task(id: commitment.id)?.rules.count ?? -1) ?? -1
+        report["wasTaken"] = true
+        return report
+    }
+
+    /// Each answering item's live `isEnabled`, by registry id, after `update()`.
+    @MainActor
+    private static func answerItemStates(_ answers: [ShellAction]) -> [String: Bool] {
+        var states: [String: Bool] = [:]
+        guard let viewMenu = liveViewMenu() else { return states }
+        viewMenu.update()
+        for action in answers {
+            let title = String(localized: action.title)
+            states[action.id] = viewMenu.items.first { $0.title == title }?.isEnabled ?? false
+        }
+        return states
+    }
+
+    /// Ask the View menu's delegate what AppKit asks it before a tracking session or a
+    /// key-equivalent search: `menuNeedsUpdate(_:)`, which is where SwiftUI pushes the current
+    /// `.disabled(…)` of every item. Measured (e07a): `NSMenu.update()` alone leaves the items as
+    /// they were last drawn.
+    @MainActor
+    private static func refreshViewMenu() {
+        guard let viewMenu = liveViewMenu() else { return }
+        viewMenu.delegate?.menuNeedsUpdate?(viewMenu)
+    }
+
+    /// One key-down, through the door AppKit's own run loop uses for every keystroke.
+    @MainActor
+    private static func send(characters: String, modifiers: NSEvent.ModifierFlags) -> Bool {
+        guard
+            let event = NSEvent.keyEvent(
+                with: .keyDown,
+                location: .zero,
+                modifierFlags: modifiers,
+                timestamp: ProcessInfo.processInfo.systemUptime,
+                windowNumber: NSApp.keyWindow?.windowNumber ?? 0,
+                context: nil,
+                characters: characters,
+                charactersIgnoringModifiers: characters,
+                isARepeat: false,
+                keyCode: 0
+            )
+        else {
+            return false
+        }
+        NSApp.sendEvent(event)
+        return true
+    }
+
+    /// The whole View menu, one line per item, so a red run names what AppKit drew.
+    @MainActor
+    private static func viewMenuItems() -> [[String: Any]] {
+        guard let viewMenu = liveViewMenu() else { return [] }
+        viewMenu.update()
+        return viewMenu.items.map(describe)
+    }
+
+    @MainActor
+    private static func liveViewMenu() -> NSMenu? {
+        NSApp.mainMenu?.items.first { $0.submenu?.title == "View" }?.submenu
+    }
+
+    /// The commands the centre delivered, recorded by an observer the self-check installs. A
+    /// class so the closure and the report share one list.
+    @MainActor
+    private final class ObservedCommands {
+        private(set) var commands: [String] = []
+        func append(_ command: PriorityCommand) { commands.append(command.rawValue) }
+        func reset() { commands = [] }
+    }
+
+    /// An `uncertain` verdict with a named reason, a subject and enough dwell: U-1's central case,
+    /// and the one `NudgeDecider` answers with `.ask`. The same shape `NudgeHostFixture` builds
+    /// for the unit lane.
+    nonisolated static func questionJudgement(subject: String) -> NudgeJudgement {
+        let outcome = ClassificationOutcome(
+            verdict: .uncertain, source: .heuristic, confidence: 1, band: .low
+        )
+        let explanation = Explanation.make(
+            stage: .heuristic,
+            band: .low,
+            clauses: [.insufficientEvidence(reason: .noNegativeBasis)],
+            stamp: .current
+        )
+        let eligibility = InterventionEligibility.decide(
+            outcome: outcome,
+            drift: .aligned,
+            phase: .focus,
+            status: .uncertain,
+            isUserIdle: false,
+            hasActivePriority: true,
+            explanation: explanation,
+            stamp: .current
+        )
+        return NudgeJudgement(
+            outcome: outcome,
+            uncertainty: .noNegativeBasis,
+            subject: subject,
+            dwelled: .seconds(120),
+            snapshot: VerdictSnapshot(
+                status: .uncertain,
+                stage: .heuristic,
+                band: nil,
+                drift: .aligned,
+                eligibility: eligibility,
+                explanation: explanation,
+                stampKey: EngineStamp.current.cacheKey
+            ),
+            stamp: .current
+        )
+    }
+
     @MainActor
     static func nudgeReport() -> [String: Any] {
         let composition = AppComposition.shared
@@ -1542,6 +1849,9 @@ enum SelfCheck {
 
         report["panel"] = panelReport()
         report["popover"] = popoverReport()
+        // **After the panel probe, which draws its own content on the same panel** — this block
+        // opens a real question through the loop and answers it with a key (e07a).
+        report["keyboardAnswer"] = keyboardAnswerReport()
         report["tickFetches"] = tickFetchSurvey()
         report["menuBarInstalled"] = composition.menuBar.isInstalled
         report["decisionCount"] = host.decisionCount
@@ -3700,7 +4010,10 @@ enum SelfCheck {
                 // `"none"` rather than a null, so the field is a string in both cases and a gate
                 // reading it never has to decide what an absent phase means.
                 "sessionPhase": world.sessionPhase?.rawValue ?? "none",
-                "hasOpenNudge": world.hasOpenNudge
+                "hasOpenNudge": world.hasOpenNudge,
+                // The question's own fact (e07a): three items are gated on it and none on the
+                // accusation's, and the gate holds each item against the right one.
+                "hasOpenQuestion": world.hasOpenQuestion
             ],
             "actions": registry.actions.map { action in
                 [

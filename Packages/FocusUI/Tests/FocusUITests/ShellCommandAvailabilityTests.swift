@@ -23,15 +23,18 @@ import Testing
 struct ShellCommandAvailabilityTests {
     /// Every world `ShellCommandWorld` can express, derived from the vocabularies rather than
     /// written out: two commitments × seven session states (no session, plus every
-    /// `SessionPhase`) × two nudge states.
+    /// `SessionPhase`) × two accusation states × two question states.
     static let everyWorld: [ShellCommandWorld] = [true, false].flatMap { hasPriority in
         ([nil] + SessionPhase.allCases.map { Optional($0) }).flatMap { phase in
-            [true, false].map { hasOpenNudge in
-                ShellCommandWorld(
-                    hasPriority: hasPriority,
-                    sessionPhase: phase,
-                    hasOpenNudge: hasOpenNudge
-                )
+            [true, false].flatMap { hasOpenNudge in
+                [true, false].map { hasOpenQuestion in
+                    ShellCommandWorld(
+                        hasPriority: hasPriority,
+                        sessionPhase: phase,
+                        hasOpenNudge: hasOpenNudge,
+                        hasOpenQuestion: hasOpenQuestion
+                    )
+                }
             }
         }
     }
@@ -84,8 +87,8 @@ struct ShellCommandAvailabilityTests {
     /// `SessionPhase` or a twelfth `PriorityCommand` grows it and the fold with it.
     @Test("the fold covers every command in every world the world can be in")
     func theFoldCoversTheWholeSpace() {
-        #expect(Self.everyWorld.count == 2 * (SessionPhase.allCases.count + 1) * 2)
-        #expect(PriorityCommand.allCases.count == 11)
+        #expect(Self.everyWorld.count == 2 * (SessionPhase.allCases.count + 1) * 2 * 2)
+        #expect(PriorityCommand.allCases.count == 14)
         let cells = PriorityCommand.allCases.flatMap { command in
             Self.everyWorld.map { command.isAvailable(in: $0) }
         }
@@ -145,7 +148,7 @@ struct ShellCommandAvailabilityTests {
                 }
             }
         }
-        #expect(CommandRegistry.shell.actions.count == 13)
+        #expect(CommandRegistry.shell.actions.count == 16)
     }
 
     /// **What this proof would still be green for** (repair doctrine, clause 3).

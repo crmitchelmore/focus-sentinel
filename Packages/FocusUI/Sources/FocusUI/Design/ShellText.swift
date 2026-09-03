@@ -72,6 +72,11 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case commandSnoozeNudge = "shell.command.snoozeNudge"
     case commandHideOverlays = "shell.command.hideOverlays"
     case commandShowMenuBar = "shell.command.showMenuBar"
+    // The e07a verbs: a question's three answers, from the View menu, because the panel that
+    // draws them can never carry a keystroke (see `CommandRegistry.shell`).
+    case commandAnswerYes = "shell.command.answerYes"
+    case commandAnswerNo = "shell.command.answerNo"
+    case commandAnswerNotNow = "shell.command.answerNotNow"
 
     // Cockpit
     case cockpitHeading = "shell.cockpit.heading"

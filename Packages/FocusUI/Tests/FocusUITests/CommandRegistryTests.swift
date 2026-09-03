@@ -26,7 +26,9 @@ struct CommandRegistryTests {
         // Help item that replaces SwiftUI's link to a help book this app does not ship, and
         // e05's four nudge verbs — which exist because F-145's rule is that a click is never the
         // *only* way to reach an affordance.
-        #expect(registry.actions.count == 13)
+        // Sixteen since e07a: the three answers to a question, which exist because the panel
+        // that draws them can never carry a keystroke (U-1, F-145).
+        #expect(registry.actions.count == 16)
         #expect(registry.actions.map(\.id) == [
             "priority.new",
             "context.addFiles",
@@ -40,6 +42,9 @@ struct CommandRegistryTests {
             "nudge.snooze",
             "nudge.hideOverlays",
             "nudge.menuBar",
+            "nudge.answerYes",
+            "nudge.answerNo",
+            "nudge.answerNotNow",
             "shell.help"
         ])
     }
@@ -58,14 +63,44 @@ struct CommandRegistryTests {
             "nudge.relevant",
             "nudge.snooze",
             "nudge.hideOverlays",
-            "nudge.menuBar"
+            "nudge.menuBar",
+            "nudge.answerYes",
+            "nudge.answerNo",
+            "nudge.answerNotNow"
         ])
 
         // Pause and Change priority reach the panel's own actions through the commands that
         // already exist, so the registry names each act exactly once.
         #expect(registry.action(id: "session.pause") != nil)
         #expect(registry.action(id: "priority.new") != nil)
-        #expect(registry.actions.filter { $0.id.hasPrefix("nudge.") }.count == 4)
+        #expect(registry.actions.filter { $0.id.hasPrefix("nudge.") }.count == 7)
+    }
+
+    /// **The question's three answers are three View-menu commands** (e07a, U-1, F-145).
+    ///
+    /// Red before the registry carried them: `nudge.answerYes` had no action at all. Each one is
+    /// pinned to its answer, its key and its base character — Y, U, L, none of which any other
+    /// action uses — so the mapping is a fact and not a coincidence of order.
+    @Test("the three answers to a question are View-menu commands on their own base characters")
+    func theThreeAnswersAreCommands() throws {
+        let expected: [(id: String, key: Character, command: PriorityCommand, answer: QueryAnswer)] = [
+            ("nudge.answerYes", "y", .answerYes, .yesAddIt),
+            ("nudge.answerNo", "u", .answerNo, .no),
+            ("nudge.answerNotNow", "l", .answerNotNow, .notNow)
+        ]
+        for row in expected {
+            let action = try #require(registry.action(id: row.id), "\(row.id) is not registered")
+            #expect(action.placement == .view)
+            #expect(action.shortcut == Shortcut(row.key, modifiers: [.control, .command]))
+            #expect(action.effect == .priority(row.command))
+            #expect(row.command.queryAnswer == row.answer)
+            #expect(!row.command.opensCockpit)
+        }
+        // Every answer has a command and every answering command has an answer, in both
+        // directions: a fourth `QueryAnswer` added without a command is a hole here.
+        let answered = Set(PriorityCommand.allCases.compactMap(\.queryAnswer))
+        #expect(answered == Set(QueryAnswer.allCases))
+        #expect(PriorityCommand.allCases.filter { $0.queryAnswer != nil }.count == QueryAnswer.allCases.count)
     }
 
     /// A nudge lands while somebody is typing, so every nudge verb costs two modifiers — the
@@ -98,7 +133,10 @@ struct CommandRegistryTests {
     @Test("the nudge verbs are exactly the commands that do not raise the cockpit")
     func nudgeVerbsDoNotOpenTheCockpit() {
         let quiet = PriorityCommand.allCases.filter { !$0.opensCockpit }
-        #expect(quiet == [.thisIsRelevant, .snoozeNudge, .hideOverlays, .showMenuBar])
+        #expect(quiet == [
+            .thisIsRelevant, .snoozeNudge, .hideOverlays, .showMenuBar,
+            .answerYes, .answerNo, .answerNotNow
+        ])
         for command in PriorityCommand.allCases where quiet.contains(command) == false {
             #expect(command.opensCockpit)
         }
@@ -151,7 +189,7 @@ struct CommandRegistryTests {
             "shell.closeWindow"
         ])
         #expect(registry.actions(in: .help).map(\.id) == ["shell.help"])
-        #expect(registry.actions(in: .view).count == 4)
+        #expect(registry.actions(in: .view).count == 7)
     }
 
     @Test("every populated placement has a heading for the shortcut reference")
@@ -442,14 +480,15 @@ struct CommandRegistryTests {
     /// It had no default size at all, on the argument that a content-sized window should choose
     /// its own — and the alternative to this app choosing is not the person choosing, it is AppKit
     /// choosing, which it does badly for a content-sized SwiftUI scene. The numbers are read off
-    /// `shortcutsHelp.light.standard`, which is 520 × 623.5 points, so nothing wraps and the whole
-    /// reference is on screen at standard type.
+    /// `shortcutsHelp.light.standard`, which is 520 × 689.5 points since e07a's three View-menu
+    /// answers (it was 623.5), so nothing wraps and the whole reference is on screen at standard
+    /// type.
     @Test("the Keyboard Shortcuts window opens at the size its baseline measures")
     func theHelpWindowHasAMeasuredDefaultSize() throws {
         let size = try #require(ShellWindow.help.defaultSize)
         #expect(size.width == 520)
         #expect(
-            size.height >= 624,
+            size.height >= 690,
             "the reference opens shorter than the column its committed baseline draws"
         )
         // Every declared window opens at a size somebody wrote down. A scene added without one

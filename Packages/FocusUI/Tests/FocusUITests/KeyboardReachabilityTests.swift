@@ -77,11 +77,41 @@ struct KeyboardReachabilityTests {
         //   * `returnToTask` is offered only when there is somewhere to go, so a fixed key
         //     equivalent would be a shortcut that does nothing most of the time — and the panel
         //     draws it as the prominent action, which is where a person looks first.
-        //   * `dismiss` is **Escape**, on the panel itself, through
-        //     `NudgePanel.cancelOperation(_:)`. That is a keyboard route; it is simply not a
-        //     menu one, and binding Escape in the menu bar would take it from every text field.
+        //   * `dismiss` is Escape through `NudgePanel.cancelOperation(_:)` **once the panel has
+        //     been clicked into** — `cancelOperation(_:)` travels the key window's responder
+        //     chain, and the panel is never made key on show (R-96m), so from the application
+        //     the person is in, Escape reaches that application. Dismissing writes nothing, so
+        //     it needs no menu route; binding Escape in the menu bar would take it from every
+        //     text field.
         #expect(registry.actions.allSatisfy { $0.id != "nudge.return" })
         #expect(registry.actions.allSatisfy { $0.id != "nudge.dismiss" })
+    }
+
+    /// **Every answer on the question panel has a keyboard route** (e07a, U-1, F-145).
+    ///
+    /// The accusation's mapping above existed for a whole epic while the question's did not, and
+    /// the question is the surface U-1's bargain rests on. Red before e07a: `nudge.answerYes`
+    /// was not registered. The mapping rather than the count, for the reason the accusation's
+    /// is: every answer has a command, and each command *is* that answer.
+    @Test("every answer on the question panel has a keyboard route")
+    func everyQueryAnswerHasAKeyboardRoute() throws {
+        let routes: [QueryAnswer: String] = [
+            .yesAddIt: "nudge.answerYes",
+            .no: "nudge.answerNo",
+            .notNow: "nudge.answerNotNow"
+        ]
+        #expect(Set(routes.keys) == Set(QueryAnswer.allCases))
+        for answer in QueryPresentation.actionOrder {
+            let id = try #require(routes[answer])
+            let command = try #require(registry.action(id: id), "\(answer) has no command")
+            #expect(command.shortcut != nil)
+            #expect(command.placement == .view)
+            guard case .priority(let priority) = command.effect else {
+                Issue.record("\(id) is not a priority command")
+                continue
+            }
+            #expect(priority.queryAnswer == answer)
+        }
     }
 
     /// F-81's command clears the screen and is reachable, and it is the **only** action in the

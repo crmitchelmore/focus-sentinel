@@ -41,7 +41,7 @@ it to be green: a red line means nothing if the clean run was red too.
 
 | stage | assertions witnessed | PROVEN | CANNOT-GO-RED |
 |---|---|---|---|
-| `selfcheck-debug` / `selfcheck-release` | 103 | 103 | — |
+| `selfcheck-debug` / `selfcheck-release` | 116 | 116 | — |
 | `notification-denied` (+ Release twin) | 17 | 17 | — |
 | `focus-steal` (+ Release twin) | 14 | 14 | — |
 | `forbidden-binary` | 6 | 6 | — |
@@ -50,7 +50,7 @@ it to be green: a red line means nothing if the clean run was red too.
 | `unit-counts` | 5 | 5 | — |
 | `evaluation` (B1–B5) | 9 | 9 | — |
 | `entitlements-debug` / `entitlements-release` | 6 | 6 | 2 (seven restatement lines; one unreachable branch) |
-| **total** | **175** | **175** | **3 findings** |
+| **total** | **188** | **188** | **3 findings** |
 
 The seven rows the gate audit named as unable to go red are all fallible now, and each was run:
 `self-check.sh`'s popover overflow (SC-37, SC-38) and its committed width (SC-39, SC-40),
@@ -215,6 +215,40 @@ that witness came back `MISS`. SC-96 is the case that discriminates the two rule
 any hour, because the pair is the committed one the probe measured rather than whatever the room
 is doing.
 
+
+### A question answered with no mouse (e07a, focus-6pr.1) — `selfcheck-debug` / `selfcheck-release`
+
+H-JSON, run by `/private/tmp/mw/run-sc-e07a.zsh <FOCUS_EVIDENCE_DIR>` against a
+`scripts/self-check.sh` run of the Debug product with `FOCUS_EVIDENCE_DIR` set
+(`/private/tmp/focus-s6-logs-0/evidence-t1c`, `SELF-CHECK OK`). The reader takes a **thirteenth**
+argument since e07a — the sixth launch's report (`keyboard-answer.json`), the nudge block alone
+against a store the script owns — and the harness doctors a copy of either the primary report or
+that one. The control (unmutated copies) is green: `EXIT=0`.
+
+**What was measured on the way to these rows.** SwiftUI pushes a changed `.disabled(…)` into an
+`NSMenuItem` only when AppKit asks the menu's delegate `menuNeedsUpdate(_:)` — before a tracking
+session and before a key-equivalent search through `NSApplication.sendEvent(_:)`. `NSMenu.update()`
+and a direct `NSMenu.performKeyEquivalent(with:)` do **not** ask, and the first draft of this
+block pressed a stale item: `commandsObservedOnPress = []`, nothing written. The block now sends
+the key through `sendEvent`, and the report carries the stale read beside the refreshed one
+(`itemsAsLastDrawn*` / `itemsEnabled*`) so the laziness is a fact in the evidence rather than a
+surprise in the next repair.
+
+| # | script:line | mutation (H-JSON) | control | status — the line it printed |
+|---|---|---|---|---|
+| SC-98 | `self-check.sh` keyboard | primary: `report["nudge"]["keyboardAnswer"]["wasTaken"] = True` | SC-99 — the owned-store launch still took it | **PROVEN** — `FAIL: the ordinary launch did not answer a question in the person's own store` / `got: {'notTakenBecause': …, 'wasTaken': True}` |
+| SC-99 | `self-check.sh` keyboard | keyboard: `wasTaken = False; notTakenBecause = "doctored"` | SC-98 — the ordinary launch's NOT TAKEN still holds | **PROVEN** — `FAIL: the keyboard-answer reading was taken against the owned store` / `got: (False, 'doctored')` |
+| SC-100 | `self-check.sh` keyboard | keyboard: `activationWasObserved = False` | SC-101 — the question's survival is read separately | **PROVEN** — `FAIL: activating the application really brought this process to the front` / `got: ('com.google.Chrome', 'com.chrismitchelmore.FocusSentinel')` |
+| SC-101 | `self-check.sh` keyboard | keyboard: `questionSurvivedActivation = False` | SC-100 — the activation really happened | **PROVEN** — `FAIL: activating the application (a ⌘-Tab to Focus) leaves the open question and its panel standing` / `got: (False, True)` |
+| SC-102 | `self-check.sh` keyboard | keyboard: `itemsEnabledWithQuestion["nudge.answerNo"] = False` | SC-103 — the withdrawn side still holds | **PROVEN** — `FAIL: with a question open, all three answering items are enabled in the View menu` / `got: {'nudge.answerNo': False, 'nudge.answerNotNow': True, 'nudge.answerYes': True}` |
+| SC-103 | `self-check.sh` keyboard | keyboard: `itemsEnabledWithoutQuestion["nudge.answerYes"] = True` | SC-102 — the offered side still holds | **PROVEN** — `FAIL: with the question answered, all three answering items are withdrawn from the View menu` / `got: {'nudge.answerNo': False, 'nudge.answerNotNow': False, 'nudge.answerYes': True}` |
+| SC-104 | `self-check.sh` keyboard | keyboard: `questionOpenAfterPress = True` | SC-105 — the receipt still reads as written | **PROVEN** — `FAIL: ⌃⌘Y ended the question and took its panel down` / `got: (True, False)` |
+| SC-105 | `self-check.sh` keyboard | keyboard: `receiptOutcome = "declined"` | SC-106 — the rule half is read separately | **PROVEN** — `FAIL: the receipt is the answer the title promised, on the subject the question was about` / `got: ('declined', 'com.chrismitchelmore.FocusKeyboardProbe', …)` |
+| SC-106 | `self-check.sh` keyboard | keyboard: `ruleVerdict = "unrelated"` | SC-105 — the receipt half is read separately | **PROVEN** — `FAIL: the rule is the verdict the title promised, on the subject the question was about` / `got: ('unrelated', 'com.chrismitchelmore.FocusKeyboardProbe', …)` |
+| SC-107 | `self-check.sh` keyboard | keyboard: `commandsObservedOnPress = ["answerYes", "answerYes"]` | SC-104 — one press, one ending | **PROVEN** — `FAIL: the key reached the command centre as exactly one answerYes` / `got: ['answerYes', 'answerYes']` |
+| SC-108 | `self-check.sh` keyboard | keyboard: `receiptsAfterSecondPress = 2` | SC-105 — the first press's receipt is still the one | **PROVEN** — `FAIL: a second ⌃⌘Y with no question open wrote nothing` / `got: (2, 1)` |
+| SC-109 | `self-check.sh` availability | primary: `report["commands"]["world"].pop("hasOpenQuestion")` | SC-110 — the per-item rule still reads the field | **PROVEN** — `FAIL: the app reported the whole world its menu availability is computed from` / `got: ['hasOpenNudge', 'hasPriority', 'sessionPhase']` |
+| SC-110 | `self-check.sh` availability | primary: `nudge.answerNotNow`'s `isAvailable = True` | SC-109 — the world is still whole | **PROVEN** — `FAIL: 'Answer Not Now' is offered exactly when the app could carry it out` / `got: (True, False, {… 'hasOpenQuestion': False …})` |
 
 ### `notification-denied` / `notification-denied-release` — `scripts/check-notification-denied.sh`
 

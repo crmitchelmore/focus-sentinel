@@ -22,11 +22,19 @@ import FocusCore
 /// objects rather than one object with a flag precisely because the safe call and the unsafe
 /// call are one word apart, and a flag would put both behaviours in one show path.
 ///
-/// ## Escape is an answer
+/// ## Escape is an answer — once the panel has been clicked into
 ///
 /// `cancelOperation(_:)` rather than a key handler in the SwiftUI content: a panel whose
 /// content holds first responder swallows Escape before any view sees it, and D-07 requires
 /// **every** surface — including the top rung — to be dismissible.
+///
+/// What `cancelOperation(_:)` does **not** do is reach this panel from another application
+/// (e07a). It travels the *key* window's responder chain; this panel is shown with
+/// `orderFrontRegardless()` and never made key (R-96m), and a nudge fires while the person is
+/// in the application it is about — so until they click the panel, their Escape goes to their
+/// editor. That is not a defect to fix here: making the panel key on show is exactly the focus
+/// theft R-89 forbids. The keyboard route from another application is the View menu's three
+/// answers (`CommandRegistry.shell`), reached after one ⌘-Tab.
 final class NudgePanel: NSPanel {
     /// Escape, or the close affordance. `.declined` for a question and `.dismissed` for an
     /// accusation; which of the two it is belongs to the caller, not to the window.

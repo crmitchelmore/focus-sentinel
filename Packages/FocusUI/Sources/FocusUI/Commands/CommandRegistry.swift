@@ -74,16 +74,17 @@ public enum ShellWindow: String, Sendable, CaseIterable, Hashable, Identifiable 
     /// alternative to this app choosing an opening size is not the person choosing one — it is
     /// AppKit choosing, which it does badly for a content-sized SwiftUI scene.
     ///
-    /// 520 × 660 is read off the committed baselines rather than chosen by eye:
-    /// `shortcutsHelp.light.standard` is **520 × 623.5** points, so the window opens wide enough
-    /// that no row wraps its glyphs under its label and tall enough that the whole reference is on
-    /// screen at standard type. At `accessibilityLarge` the same content measures 954 points and
-    /// does not fit — which is right, and is what a resizable window is for. Opening at the size
-    /// the largest type setting needs would give everybody else a window two-thirds empty.
+    /// 520 × 720 is read off the committed baselines rather than chosen by eye:
+    /// `shortcutsHelp.light.standard` is **520 × 689.5** points since e07a added the three
+    /// answers to the View menu (it was 623.5), so the window opens wide enough that no row
+    /// wraps its glyphs under its label and tall enough that the whole reference is on screen at
+    /// standard type. At `accessibilityLarge` the same content is far taller and does not fit —
+    /// which is right, and is what a resizable window is for. Opening at the size the largest
+    /// type setting needs would give everybody else a window two-thirds empty.
     public var defaultSize: (width: Double, height: Double)? {
         switch self {
         case .cockpit: (width: 560, height: 900)
-        case .help: (width: 520, height: 660)
+        case .help: (width: 520, height: 720)
         }
     }
 }
@@ -165,17 +166,27 @@ public struct ShellCommandWorld: Sendable, Equatable, Hashable {
     /// over"* are three readings of one value, and three booleans are three things to keep in
     /// step. `SessionControls.verbButtons` already draws from the phase for the same reason.
     public var sessionPhase: SessionPhase?
-    /// Whether a nudge is on screen for the two verbs that answer one.
+    /// Whether an **accusation** is on screen for the two verbs that answer one.
     public var hasOpenNudge: Bool
+    /// **Whether a question is on screen for the three verbs that answer one** (e07a T1).
+    ///
+    /// A second field rather than a widening of `hasOpenNudge`, because the loop that publishes
+    /// them keeps the two nudges apart and the five verbs are not interchangeable: *Mark as
+    /// Relevant* answers an accusation and *Yes, it's part of it* answers a question, and a menu
+    /// that offered either whenever the other was up would be back to the permanently-enabled
+    /// items focus-6uf measured.
+    public var hasOpenQuestion: Bool
 
     public init(
         hasPriority: Bool = false,
         sessionPhase: SessionPhase? = nil,
-        hasOpenNudge: Bool = false
+        hasOpenNudge: Bool = false,
+        hasOpenQuestion: Bool = false
     ) {
         self.hasPriority = hasPriority
         self.sessionPhase = sessionPhase
         self.hasOpenNudge = hasOpenNudge
+        self.hasOpenQuestion = hasOpenQuestion
     }
 
     /// **The world a process that has been told nothing is in**, and the honest default.
@@ -240,6 +251,12 @@ extension PriorityCommand {
         // nothing to snooze, and the loop's own guards say so.
         case .thisIsRelevant, .snoozeNudge:
             world.hasOpenNudge
+        // The three that answer a question — on the *question's* field, not the accusation's.
+        // The two nudges are separate values in the loop, and a menu that read one for the other
+        // would offer all five whenever either was up and drop three of them silently, which is
+        // the defect focus-6uf repaired.
+        case .answerYes, .answerNo, .answerNotNow:
+            world.hasOpenQuestion
         }
     }
 }
@@ -454,6 +471,40 @@ public struct CommandRegistry: Sendable, Equatable {
             shortcut: Shortcut("m", modifiers: [.control, .command]),
             placement: .view,
             effect: .priority(.showMenuBar)
+        ),
+        // --- e07a: a question can be answered with no mouse (U-1, F-145) --------------------
+        //
+        // Three more, beside the accusation's two, and the reason they are *menu* items rather
+        // than keys on the panel is measured: `NudgePanel` is a `.nonactivatingPanel`, shown with
+        // `orderFrontRegardless()` and never made key, so no `.keyboardShortcut` on its content
+        // would ever be evaluated and its Escape reaches the person's editor. A menu key
+        // equivalent fires while Focus is active, which is one ⌘-Tab away — and activating Focus
+        // leaves the question standing (`KeyboardAnswerTests`). A global hot key was rejected:
+        // `CarbonHotKeyRegistrar` is one registration, and P-55 measured that the API reports no
+        // system collision at all.
+        //
+        // ⌃⌘ for the reason every nudge verb is, and Y, U and L because no other action in this
+        // registry has those base characters — the rule the ⇧⌘W defect taught.
+        ShellAction(
+            id: "nudge.answerYes",
+            titleKey: .commandAnswerYes,
+            shortcut: Shortcut("y", modifiers: [.control, .command]),
+            placement: .view,
+            effect: .priority(.answerYes)
+        ),
+        ShellAction(
+            id: "nudge.answerNo",
+            titleKey: .commandAnswerNo,
+            shortcut: Shortcut("u", modifiers: [.control, .command]),
+            placement: .view,
+            effect: .priority(.answerNo)
+        ),
+        ShellAction(
+            id: "nudge.answerNotNow",
+            titleKey: .commandAnswerNotNow,
+            shortcut: Shortcut("l", modifiers: [.control, .command]),
+            placement: .view,
+            effect: .priority(.answerNotNow)
         ),
 
         ShellAction(

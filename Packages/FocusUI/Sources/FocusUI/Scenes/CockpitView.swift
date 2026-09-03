@@ -404,7 +404,8 @@ public struct CockpitView: View {
         // Listed one by one rather than caught by a `default:` — the exhaustive switch is what
         // tells the next epic that added a command that the cockpit has an opinion to form
         // about it, and a `default:` would silently form the opinion "ignore it".
-        case .thisIsRelevant, .snoozeNudge, .hideOverlays, .showMenuBar:
+        case .thisIsRelevant, .snoozeNudge, .hideOverlays, .showMenuBar,
+             .answerYes, .answerNo, .answerNotNow:
             break
         }
     }

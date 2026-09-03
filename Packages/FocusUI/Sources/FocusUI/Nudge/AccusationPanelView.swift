@@ -299,7 +299,9 @@ public struct AccusationPanelView: DecisionSurfaceContent {
     }
 
     /// The close affordance. **Every surface is dismissible** (D-07), including this one and
-    /// including rung 3; Escape does the same thing through `NudgePanel.cancelOperation(_:)`.
+    /// including rung 3; Escape does the same thing through `NudgePanel.cancelOperation(_:)`
+    /// once the panel has been clicked into — from another application it reaches that
+    /// application, because the panel is never made key (see `NudgePanel`).
     private var dismissButton: some View {
         Button {
             onAction(.dismiss, nil)
