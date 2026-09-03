@@ -25,6 +25,10 @@ only to `/private/tmp/mw/`. No tracked file is touched, and nothing here is ever
 | **H-SRC** | a throwaway worktree | `git worktree add --detach`, edit there, run the stage from that worktree |
 
 The scripts that drive them are `/private/tmp/mw/run-selfcheck-tzj-witnesses.zsh` (SC-46..SC-61),
+`/private/tmp/mw/run-sc-e06.zsh` (SC-71..SC-78, e06's model tier — it needs the self-check's own
+side artefacts, which the script deletes on exit, so it is pointed at a run of a copy with the
+`trap` removed and `SESSION_DIR` pinned; the copy reads its committed literals from the real
+repository so a literal that moves moves for the harness too),
 `/private/tmp/mw/run-json-witnesses.zsh`,
 `run-binary-witnesses.zsh` and `run-log-witnesses.zsh`, each of which prints, per row, either
 the red line it produced or `MISS`. Every harness runs its **unmutated** copy first and requires
@@ -35,7 +39,7 @@ it to be green: a red line means nothing if the clean run was red too.
 
 | stage | assertions witnessed | PROVEN | CANNOT-GO-RED |
 |---|---|---|---|
-| `selfcheck-debug` / `selfcheck-release` | 90 | 90 | — |
+| `selfcheck-debug` / `selfcheck-release` | 98 | 98 | — |
 | `notification-denied` (+ Release twin) | 17 | 17 | — |
 | `focus-steal` (+ Release twin) | 14 | 14 | — |
 | `forbidden-binary` | 6 | 6 | — |
@@ -44,7 +48,7 @@ it to be green: a red line means nothing if the clean run was red too.
 | `unit-counts` | 5 | 5 | — |
 | `evaluation` (B1–B5) | 9 | 9 | — |
 | `entitlements-debug` / `entitlements-release` | 6 | 6 | 2 (seven restatement lines; one unreachable branch) |
-| **total** | **162** | **162** | **3 findings** |
+| **total** | **170** | **170** | **3 findings** |
 
 The seven rows the gate audit named as unable to go red are all fallible now, and each was run:
 `self-check.sh`'s popover overflow (SC-37, SC-38) and its committed width (SC-39, SC-40),
@@ -145,6 +149,14 @@ fifth launch's report out beside the other four. The cases file is `/private/tmp
 | SC-68 | `self-check.sh` status menu | `[row.update(hasTarget=False) for row in drawn]` | SC-66 | **PROVEN** — `FAIL: every item in the secondary menu has something that performs it` |
 | SC-69 | `self-check.sh` status menu | `statusItemMenu["autoenablesItems"] = True` | SC-68 | **PROVEN** — `FAIL: the secondary menu decides its own enabled states rather than letting AppKit guess` |
 | SC-70 | `self-check.sh` status menu | `statusItemMenu["settingsMenuItemTitle"] = ""` | SC-66 | **PROVEN** — `FAIL: the app menu holds a ⌘, item for the secondary menu's Settings… to perform` |
+| SC-71 | `self-check.sh` model tier | `report["relevance"]["modelTier"] = {}` | SC-74 — the other model rows fire too, so an empty reading cannot pass as a quiet one | **PROVEN** — `FAIL: the running application reports a model-tier reading` |
+| SC-72 | `self-check.sh` model tier | `modelTier["availability"] = "definitelyOn"` | SC-71 | **PROVEN** — `FAIL: the model availability is one of the six named cases` |
+| SC-73 | `self-check.sh` model tier | `modelTier["availabilityIsExecutable"] = not …` | SC-72 — the vocabulary holds while the executability half breaks | **PROVEN** — ``FAIL: only `available` is executable, whatever this Mac said`` |
+| SC-74 | `self-check.sh` model tier | `modelTier["composesTheRung"] = True` | SC-75 — the composed-ladder witness is independent of the constant | **PROVEN** — `FAIL: this build does not compose the model rung — measured: seduced 15 of 30 hold cells, budget 0` |
+| SC-75 | `self-check.sh` model tier | `modelTier["rungIsComposed"] = True` | SC-74 — **the two witnesses of one decision, each red on its own** | **PROVEN** — `FAIL: the composed ladder agrees with the release decision` |
+| SC-76 | `self-check.sh` model tier | `modelTier["executableRungs"] = 9` | SC-75; and the number is read from `EvaluationPolicy.executableRungCeiling`, which stage 7d holds `evaluation.json` to | **PROVEN** — `FAIL: the running ladder holds 8 executable rungs` |
+| SC-77 | `self-check.sh` model tier | `modelTier["notComposedReason"] = ""` | SC-74 — the decision holds while its reason goes missing | **PROVEN** — `FAIL: the decision not to compose carries its reason` |
+| SC-78 | `self-check.sh` model tier | `modelTier["capabilityState"] = "denied"` | SC-72 — and it is the row the capability matrix is decided from, so the matrix cannot agree with a tier that disagrees with itself | **PROVEN** — ``FAIL: the capability matrix row follows the availability, and is never `denied` `` |
 | SC-71 | `self-check.sh` version | `report["settingsDrewnVersion"] = "9.9.9 (99)"` | SC-72 — both readings are non-empty, so this is a disagreement rather than an absence | **PROVEN** — `FAIL: the version the General pane drew is the version this build calls itself` |
 | SC-72 | `self-check.sh` version | `settingsDrewnVersion = ""; bundleVersion = ""` | is itself the non-vacuity control for SC-71 | **PROVEN** — `FAIL: the General pane drew a version at all` |
 | SC-73 | `self-check.sh` About | `report["aboutCredits"] = "shell.about.credits"` | SC-74 | **PROVEN** — `FAIL: the About panel's credits resolve to a paragraph rather than to their own key` |

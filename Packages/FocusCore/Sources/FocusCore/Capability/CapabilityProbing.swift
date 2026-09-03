@@ -57,12 +57,23 @@ extension CapabilityMatrix {
     /// holding no TCC row. `cameraActivity` is `.unavailable` **on every rig, not only on the
     /// one with no camera**: the enumeration was measured prompt-free, the deeper path never
     /// executed, and an unanswered question is not a pass. `screenCapture` is `.unavailable`
-    /// because pixel capture is parked. The remaining three are `.notRequested` because the
-    /// epics that own them have not landed — and in e03 the app has no way to ask.
+    /// because pixel capture is parked. Two of the remaining three are `.notRequested` because
+    /// the epics that own them have not landed — and in e03 the app has no way to ask.
+    ///
+    /// **`onDeviceModel` stopped being one of them in e06.** *"Nothing has been asked, and
+    /// nothing has been observed"* became a lie the moment the app could read
+    /// `SystemLanguageModel.default.availability`, so the row is now whatever
+    /// `ModelTierAvailability.capabilityState` says on the machine the probe ran on. It is a
+    /// PARAMETER here rather than a literal, because a fixture that pinned one answer would be
+    /// pinning a fact about one Mac; `.notRequested` remains the default, and it is the honest
+    /// answer for a composition built with no port, which has genuinely not looked.
     ///
     /// This is the shape the platform probe must produce, expressed once so that a test and
     /// the self-check can both compare against it rather than each carrying their own copy.
-    public static func zeroGrantExpectation(at instant: Date) -> CapabilityMatrix {
+    public static func zeroGrantExpectation(
+        at instant: Date,
+        onDeviceModel: CapabilityState = .notRequested
+    ) -> CapabilityMatrix {
         StaticCapabilityProbe([
             .frontmostApplication: .available,
             .windowMetadata: .available,
@@ -75,7 +86,7 @@ extension CapabilityMatrix {
             .screenCapture: .unavailable,
             .accessibilityWindowContext: .notRequested,
             .notifications: .notRequested,
-            .onDeviceModel: .notRequested
+            .onDeviceModel: onDeviceModel
         ]).probe(at: instant)
     }
 

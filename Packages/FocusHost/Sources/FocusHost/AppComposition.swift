@@ -1,5 +1,6 @@
 import FocusClassify
 import FocusCore
+import FocusModel
 import FocusRules
 import FocusSensing
 import FocusUI
@@ -323,7 +324,14 @@ public final class AppComposition {
 
         let (gate, exclusions) = Self.sensitivityLists(in: context, now: dateProvider.now)
 
-        let probe = PlatformCapabilityProbe()
+        // **One rung, read once, handed to two readers** (e06). The capability matrix and the
+        // relevance engine must never take their own answer about the model tier: two readings
+        // could disagree, and the Privacy pane would then be describing a build that is not
+        // running. The same argument the scorer already makes one paragraph down.
+        let modelRung = FocusModelRung()
+        let probe = PlatformCapabilityProbe(
+            onDeviceModel: modelRung.availability.capabilityState
+        )
         let sessions = SessionHost(
             context: context,
             events: events,
@@ -356,7 +364,8 @@ public final class AppComposition {
         let relevance = RelevanceHost(
             context: context,
             ruleStore: self.ruleStore,
-            monotonicClock: monotonicClock
+            monotonicClock: monotonicClock,
+            modelRung: modelRung
         )
         self.relevanceHost = relevance
         self.classifier = relevance.engine

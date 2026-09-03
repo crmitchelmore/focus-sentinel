@@ -39,18 +39,28 @@ public final class PlatformCapabilityProbe: CapabilityProbing {
     private let audio: any AudioDeviceEnumerating
     private let camera: CMIOMediaObserver
 
+    /// What the composition layer read from the model tier, or `.notRequested` when nothing
+    /// composed a port to read with (e06).
+    ///
+    /// Handed down rather than read here: `FoundationModels` is named in exactly one file in
+    /// this repository, that file is in `Packages/FocusModel`, and this package's framework row
+    /// does not permit it and must not. `FocusHost` is the only module that sees both.
+    private let onDeviceModel: CapabilityState
+
     public init(
         windowList: any WindowListReading = SystemWindowList(),
         screens: any ScreenListReading = SystemScreenList(),
         idleSource: any IdleSourceReading = CGEventIdleSource(),
         audio: any AudioDeviceEnumerating = SystemAudioDeviceEnumerator(),
-        camera: CMIOMediaObserver = CMIOMediaObserver()
+        camera: CMIOMediaObserver = CMIOMediaObserver(),
+        onDeviceModel: CapabilityState = .notRequested
     ) {
         self.windowList = windowList
         self.screens = screens
         self.idleSource = idleSource
         self.audio = audio
         self.camera = camera
+        self.onDeviceModel = onDeviceModel
     }
 
     /// `CapabilityProbing` is `Sendable` and its one requirement is not actor-isolated, but
@@ -117,7 +127,15 @@ public final class PlatformCapabilityProbe: CapabilityProbing {
             (.accessibilityWindowContext, .notRequested),
             (.screenCapture, .unavailable),
             (.notifications, .notRequested),
-            (.onDeviceModel, .notRequested)
+
+            // e06. `.notRequested` was a lie the moment the app could read the availability, and
+            // the reading itself cannot happen here — `FoundationModels` is named in exactly one
+            // file in this repository and it is in `Packages/FocusModel`, which this package's
+            // matrix row does not permit and must not. So the composition layer, which is the
+            // only module that sees both, hands the answer down as a `FocusCore` value.
+            // `.notRequested` is what a probe built with no answer reports, and it is honest:
+            // nothing has been asked, because nothing composed a port to ask with.
+            (.onDeviceModel, onDeviceModel)
         ]
     }
 

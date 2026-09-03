@@ -1,6 +1,7 @@
 import AppKit
 import ApplicationServices
 import FocusCore
+import FocusModel
 import FocusSensing
 import FocusUI
 import Foundation
@@ -2552,7 +2553,43 @@ enum SelfCheck {
         // makes it a stronger statement than it was.
         report["sessionRuleCount"] = AppComposition.shared.sessionHost.sessionRuleBox.count
 
+        // e06's tier, as three facts that fail differently rather than as one word.
+        report["modelTier"] = modelTierReading()
+
         return report
+    }
+
+    /// **What the running application believes about the model tier** (e06).
+    ///
+    /// Three readings and not one, because they fail differently and conflating them is how a
+    /// reader ends up guessing:
+    ///
+    /// * `availability` — a fact about **this Mac**, read once at launch from
+    ///   `SystemLanguageModel.default.availability` through the one file permitted to name it.
+    /// * `composesTheRung` — a fact about **this build**, and it is a programme decision rather
+    ///   than a machine one: the tier was measured on the committed grid and went quiet about
+    ///   fifteen of thirty hold cells, so it is not in the ladder. See `ModelTierRelease`.
+    /// * `executableRungs` — a fact about **this run**, read from the ladder the engine actually
+    ///   composed. It is the independent witness: `composesTheRung` is a constant somebody could
+    ///   edit, and this is what the cascade would really walk.
+    ///
+    /// The pin in `self-check.sh` reads all three and requires them to agree, which is what
+    /// makes a build that flipped the constant without composing anything — or composed
+    /// something without flipping it — red rather than merely inconsistent.
+    @MainActor
+    static func modelTierReading() -> [String: Any] {
+        let host = AppComposition.shared.relevanceHost
+        return [
+            "availability": host.modelAvailability.rawValue,
+            "availabilityIsExecutable": host.modelAvailability.isExecutable,
+            "capabilityState": host.modelAvailability.capabilityState.rawValue,
+            "composesTheRung": ModelTierRelease.composesTheRung,
+            "notComposedReason": ModelTierRelease.reason,
+            "rungIsComposed": host.modelRungIsComposed,
+            "executableRungs": host.engine.ladder.executableRungs.count,
+            "declaredRungs": host.engine.ladder.rungs.count,
+            "promptVersion": host.engine.stamp.promptVersion
+        ]
     }
 
     /// **The gateable form of "the app never triggers a permission prompt".**

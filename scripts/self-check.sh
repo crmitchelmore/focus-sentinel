@@ -71,6 +71,17 @@ COMMITTED_DECODE_TABLE=$(committed_literal \
 COMMITTED_DECODE_CELLS=$(committed_literal \
     "Packages/FocusUI/Tests/FocusUITests/NotificationDeliveryTests.swift" \
     "committedDecodeCells")
+# e06's ladder lengths, read out of the evaluation policy — the same file the SHIPPING GATE
+# reads them from at stage 7d, and the second of the two independent witnesses the model-tier
+# pin uses. The running application's composed ladder is the first; a build that composed a
+# ninth rung would disagree with the number the gate holds `evaluation.json` to, and it would
+# disagree here first.
+COMMITTED_EXECUTABLE_RUNGS=$(committed_literal \
+    "Packages/FocusEvaluate/Sources/FocusEvaluateCore/EvaluationPolicy.swift" \
+    "executableRungCeiling")
+COMMITTED_DECLARED_RUNGS=$(committed_literal \
+    "Packages/FocusEvaluate/Sources/FocusEvaluateCore/EvaluationPolicy.swift" \
+    "declaredRungCount")
 
 APP="${1:-}"
 if [[ -z "$APP" ]]; then
@@ -214,7 +225,8 @@ print
 print "== assertions"
 python3 - "$OUT" "$SEED_JSON" "$RESTORE_JSON" "$COMMITTED_STAMP" "$COMMITTED_DIGEST" \
     "$COMMITTED_INTERVENTION_DIGEST" "$COCKPIT_JSON" \
-    "$COMMITTED_DECODE_TABLE" "$COMMITTED_DECODE_CELLS" "$FIRSTRUN_JSON" <<'PYTHON'
+    "$COMMITTED_DECODE_TABLE" "$COMMITTED_DECODE_CELLS" "$FIRSTRUN_JSON" \
+    "$COMMITTED_EXECUTABLE_RUNGS" "$COMMITTED_DECLARED_RUNGS" <<'PYTHON'
 import json
 import sys
 
@@ -234,6 +246,10 @@ committed_decode_table = sys.argv[8]
 committed_decode_cells = sys.argv[9]
 with open(sys.argv[10]) as handle:
     relaunched_cockpit = json.load(handle)
+# e06. Read from `EvaluationPolicy`, so the number this pin holds the running application to is
+# the same number the shipping gate holds the evaluation report to — one literal, three readers.
+committed_executable_rungs = int(sys.argv[11]) if sys.argv[11] else 0
+committed_declared_rungs = int(sys.argv[12]) if sys.argv[12] else 0
 
 failures = []
 not_taken_readings = []
@@ -2236,6 +2252,10 @@ check(
 # The rule is restated here on purpose. That is the whole value of the leg: the matrix is what the
 # Settings Privacy pane draws, and a probe that stopped probing and answered `.available` twelve
 # times would have passed every line this block replaced.
+# e06. Read here as well as in the relevance block below, because the capability row is decided
+# from it: one reading, two readers, so the matrix and the tier can never be two opinions.
+model_tier_reading = ((report.get("relevance") or {}).get("modelTier")) or {}
+
 display_count = sensing.get("displayCount")
 input_devices = (sensing.get("media") or {}).get("inputDeviceCount")
 hardware_seconds = (sensing.get("idle") or {}).get("hardwareSeconds")
@@ -2254,11 +2274,21 @@ CAPABILITY_RULE_CONSTANTS = {
     # nobody put would be inventing a refusal.
     "accessibilityWindowContext": "notRequested",
     "notifications": "notRequested",
-    "onDeviceModel": "notRequested",
 }
 # The three the machine decides, each with the reading it is decided from. A reading that was not
 # taken makes its row unpredictable rather than wrong, so the row is routed rather than asserted.
 CAPABILITY_RULE_MEASURED = {
+    # **e06 moved this row out of the constants and it is not a weakening.** `notRequested` was
+    # a decision of e03's build — *"this epic has not asked, and in this epic it never will"* —
+    # and it stopped being true the moment the app could read
+    # `SystemLanguageModel.default.availability`. What decides it now is the machine, so it
+    # belongs with the machine-decided rows, and the reading it is decided from is the model
+    # tier's own — which the block further down pins for internal consistency, so this row
+    # cannot agree with a `modelTier` reading that disagrees with itself.
+    "onDeviceModel": (
+        bool(model_tier_reading),
+        model_tier_reading.get("capabilityState"),
+    ),
     "windowMetadata": (
         window_count_was_taken,
         "available" if isinstance(window_rows, int) and window_rows > 0 else "unavailable",
@@ -2493,6 +2523,11 @@ check(
     committed_stamp,
 )
 check(
+    committed_executable_rungs > 0 and committed_declared_rungs > 0,
+    "the committed ladder lengths were found in EvaluationPolicy",
+    (committed_executable_rungs, committed_declared_rungs),
+)
+check(
     bool(committed_digest),
     "the committed policy digest was found in RelevancePolicyTests",
     committed_digest,
@@ -2567,6 +2602,85 @@ else:
 # somebody presses the panel's *"not now"* correction — so this is no longer a record that a
 # mechanism is absent. It is the record that nothing wrote to the box **unbidden**: a self-check
 # presses nothing, so a non-zero count here is the loop correcting a person who never spoke.
+# --- e06: the model tier, as three facts that must agree -----------------------------------
+#
+# **The pin is two independent witnesses of one decision.** `composesTheRung` is a constant a
+# person could edit; `executableRungs` is what the engine's composed ladder actually holds, and
+# `EvaluationPolicy.executableRungCeiling` — read out of the evaluation policy the same way the
+# stamp and the digest are read out of their suites — is what the shipping gate requires of the
+# lane-1 report. A build that flipped the constant without composing anything, or composed
+# something without flipping it, fails here rather than merely disagreeing with itself.
+#
+# The availability is NOT pinned to a value: it is a fact about the machine the self-check ran
+# on, and pinning it would pin a fact about one Mac. What is pinned is that it is one of the
+# named cases and that the tier's three readings are consistent with each other.
+
+model_tier = relevance.get("modelTier") or {}
+
+check(
+    bool(model_tier),
+    "the running application reports a model-tier reading",
+    model_tier,
+)
+check(
+    model_tier.get("availability") in (
+        "available", "appleIntelligenceNotEnabled", "modelNotReady",
+        "deviceNotEligible", "suppressedByResources", "unknown",
+    ),
+    "the model availability is one of the six named cases",
+    model_tier.get("availability"),
+)
+check(
+    model_tier.get("availabilityIsExecutable")
+        == (model_tier.get("availability") == "available"),
+    "only `available` is executable, whatever this Mac said",
+    (model_tier.get("availability"), model_tier.get("availabilityIsExecutable")),
+)
+check(
+    model_tier.get("capabilityState")
+        == ("available" if model_tier.get("availability") == "available" else "unavailable"),
+    "the capability matrix row follows the availability, and is never `denied`",
+    model_tier.get("capabilityState"),
+)
+
+# **Witness one.** The programme decision, and the reason travels with it so a reader never has
+# to go and find out why the tier is not composed.
+check(
+    model_tier.get("composesTheRung") is False,
+    "this build does not compose the model rung — " + str(model_tier.get("notComposedReason")),
+    model_tier.get("composesTheRung"),
+)
+check(
+    bool(model_tier.get("notComposedReason")),
+    "the decision not to compose carries its reason",
+    model_tier.get("notComposedReason"),
+)
+
+# **Witness two, independent of the first.** What the engine actually composed. This is a
+# reading of the running ladder, not of the constant above, and the two are required to agree.
+check(
+    model_tier.get("rungIsComposed") is model_tier.get("composesTheRung"),
+    "the composed ladder agrees with the release decision",
+    (model_tier.get("rungIsComposed"), model_tier.get("composesTheRung")),
+)
+check(
+    model_tier.get("executableRungs") == committed_executable_rungs,
+    f"the running ladder holds {committed_executable_rungs} executable rungs",
+    model_tier.get("executableRungs"),
+)
+check(
+    model_tier.get("declaredRungs") == committed_declared_rungs,
+    f"the declared ladder is still {committed_declared_rungs} rungs long",
+    model_tier.get("declaredRungs"),
+)
+# And the stamp's own component, which is what a verdict cache would key on. A build with no
+# prompt has no prompt version, and `s1.p3.l1.e1.m0` is the stamp the gate pins.
+check(
+    model_tier.get("promptVersion") == 0,
+    "the engine stamps promptVersion 0 — a build with no composed prompt has no prompt",
+    model_tier.get("promptVersion"),
+)
+
 check(
     relevance.get("sessionRuleCount") == 0,
     "the session rule box is empty — nothing wrote to it without a person pressing something",
