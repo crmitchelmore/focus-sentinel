@@ -35,7 +35,7 @@ it to be green: a red line means nothing if the clean run was red too.
 
 | stage | assertions witnessed | PROVEN | CANNOT-GO-RED |
 |---|---|---|---|
-| `selfcheck-debug` / `selfcheck-release` | 61 | 61 | — |
+| `selfcheck-debug` / `selfcheck-release` | 90 | 90 | — |
 | `notification-denied` (+ Release twin) | 17 | 17 | — |
 | `focus-steal` (+ Release twin) | 14 | 14 | — |
 | `forbidden-binary` | 6 | 6 | — |
@@ -44,7 +44,7 @@ it to be green: a red line means nothing if the clean run was red too.
 | `unit-counts` | 5 | 5 | — |
 | `evaluation` (B1–B5) | 9 | 9 | — |
 | `entitlements-debug` / `entitlements-release` | 6 | 6 | 2 (seven restatement lines; one unreachable branch) |
-| **total** | **133** | **133** | **3 findings** |
+| **total** | **162** | **162** | **3 findings** |
 
 The seven rows the gate audit named as unable to go red are all fallible now, and each was run:
 `self-check.sh`'s popover overflow (SC-37, SC-38) and its committed width (SC-39, SC-40),
@@ -124,6 +124,48 @@ H-JSON on a copy of the RELEASE report. Both stages run the same reader; the Rel
 | SC-59 | `self-check.sh:2202` | `report["retention"]["seededActivityEventsRemoved"] = 2` | SC-60 — the intervention half holds while this moves | **PROVEN** — `FAIL: an activity event at 91 days goes and one at 89 stays` |
 | SC-60 | `self-check.sh:2208` | `report["retention"]["seededInterventionRowsKept"] = 0` | SC-59 | **PROVEN** — `FAIL: an intervention row at 91 days goes and one at 89 stays` |
 | SC-61 | `self-check.sh:2217` | `report["retention"]["seededQueryReceiptsRemoved"] = 1` | SC-59/SC-60 — the two age-only tables hold while the receipt rule breaks | **PROVEN** — `FAIL: a 91-day-old receipt under a live priority survives the window` |
+
+### Section 3's pins (focus-odz) — `selfcheck-debug` / `selfcheck-release`
+
+H-JSON, extended. focus-odz.4, .6 and .7 are pinned on the **fourth and fifth launches** — the
+cockpit drawn against a seeded store, and its relaunch against the same store — rather than on the
+primary report, because the facts they are about are only true of a store this run created. So the
+harness gained two reader kinds, `cockpit-release` and `relaunch-release`, each of which doctors one
+of those files while the primary report and the other three stay real; `prep-reports.zsh` copies the
+fifth launch's report out beside the other four. The cases file is `/private/tmp/mw/cases-odz.txt`.
+
+| # | script:line | mutation (H-JSON) | control | status — the line it printed |
+|---|---|---|---|---|
+| SC-62 | `self-check.sh` reopen | `report["reopen"]["cockpitVisibleAfterReopen"] = False` | SC-65 — the close half still reads shut, so this is not a probe that never ran | **PROVEN** — `FAIL: reopenOpensTheCockpit: a Dock click with no window open put the cockpit back on the screen` |
+| SC-63 | `self-check.sh` reopen | `report["reopen"]["answered"] = False` | SC-62 | **PROVEN** — `FAIL: the application answers applicationShouldHandleReopen, so a Dock click has somewhere to land` |
+| SC-64 | `self-check.sh` reopen | `reopen["requestsAfter"] = reopen["requestsBefore"]` | SC-62 — the window half holds while the request half breaks | **PROVEN** — `FAIL: the reopen asked the command centre for the cockpit exactly once` |
+| SC-65 | `self-check.sh` reopen | `report["reopen"]["cockpitVisibleBeforeReopen"] = True` | is itself the control for SC-62 | **PROVEN** — `FAIL: the cockpit really was shut before the Dock click was simulated` |
+| SC-66 | `self-check.sh` status menu | `statusItemMenu["items"].append("about")` | SC-68 | **PROVEN** — `FAIL: the status item's secondary menu is the four declared items, in reading order` |
+| SC-67 | `self-check.sh` status menu | `titlesWhilePaused = titlesWhileWatching` | SC-66 — the vocabulary holds while the state-following half breaks | **PROVEN** — `FAIL: exactly one of the four titles follows the watching state` |
+| SC-68 | `self-check.sh` status menu | `[row.update(hasTarget=False) for row in drawn]` | SC-66 | **PROVEN** — `FAIL: every item in the secondary menu has something that performs it` |
+| SC-69 | `self-check.sh` status menu | `statusItemMenu["autoenablesItems"] = True` | SC-68 | **PROVEN** — `FAIL: the secondary menu decides its own enabled states rather than letting AppKit guess` |
+| SC-70 | `self-check.sh` status menu | `statusItemMenu["settingsMenuItemTitle"] = ""` | SC-66 | **PROVEN** — `FAIL: the app menu holds a ⌘, item for the secondary menu's Settings… to perform` |
+| SC-71 | `self-check.sh` version | `report["settingsDrewnVersion"] = "9.9.9 (99)"` | SC-72 — both readings are non-empty, so this is a disagreement rather than an absence | **PROVEN** — `FAIL: the version the General pane drew is the version this build calls itself` |
+| SC-72 | `self-check.sh` version | `settingsDrewnVersion = ""; bundleVersion = ""` | is itself the non-vacuity control for SC-71 | **PROVEN** — `FAIL: the General pane drew a version at all` |
+| SC-73 | `self-check.sh` About | `report["aboutCredits"] = "shell.about.credits"` | SC-74 | **PROVEN** — `FAIL: the About panel's credits resolve to a paragraph rather than to their own key` |
+| SC-74 | `self-check.sh` About | `aboutCredits.replace("no permissions", "some permissions")` | SC-73 — the paragraph still resolves while what it says is false | **PROVEN** — `FAIL: the About panel says what the app does not look at and where what it records stays` |
+| SC-75 | `self-check.sh` restoration | `report["restoredWindows"] = []` | SC-77 — the record still reads, so this is not a launch that read nothing | **PROVEN** — `FAIL: the Keyboard Shortcuts window the last quit recorded was asked for again` |
+| SC-76 | `self-check.sh` restoration | `report["visibleSceneIdentifiers"] = ["cockpit"]` | SC-75 — the request half holds while the window half breaks | **PROVEN** — `FAIL: restoration put the Keyboard Shortcuts window back on the screen` |
+| SC-77 | `self-check.sh` restoration | `report["restorationRecord"] = []` | is itself the control for SC-75 | **PROVEN** — `FAIL: the restoring launch read the window record the seeding launch wrote` |
+| SC-78 | `self-check.sh` restoration | `report["hasRestoredWindows"] = False` | SC-77 | **PROVEN** — `FAIL: the launch ran its window restoration exactly once` |
+| SC-79 | `self-check.sh` login item | `loginItemStatusesDeclared.append("pending")` | SC-80 | **PROVEN** — `FAIL: the login-item vocabulary is the committed four, in order and with nothing else in it` |
+| SC-80 | `self-check.sh` login item | `report["loginItemOfferShown"] = not …` | SC-81 — the fold's inputs hold while its output breaks | **PROVEN** — `FAIL: loginItemOfferShown: the offer follows the service's status, the history and the record` |
+| SC-81 | `self-check.sh` login item | `report["loginItemCompletedSessions"] = 0` | is itself the control for SC-80 | **PROVEN** — `FAIL: the seeded store really holds a finished session for the offer to follow` |
+| SC-82 | `self-check.sh` login item | `loginItemOfferDrawn` flipped | SC-80 — the decision holds while the row disagrees with it | **PROVEN** — `FAIL: the cockpit footer drew the offer exactly when the host said to` |
+| SC-83 | `self-check.sh` first run | `report["firstRunExplanationShown"] = False` | SC-84 | **PROVEN** — `FAIL: a store the app had never opened was owed the first-run explanation, and got it` |
+| SC-84 | `self-check.sh` first run | `report["firstRunExplanationDrawn"] = "hidden"` | SC-83 — the decision holds while the window disagrees | **PROVEN** — `FAIL: the cockpit really put the first-run explanation on the screen` |
+| SC-85 | `self-check.sh` first run | `report["firstRunExplanationOwedNow"] = True` | SC-83 | **PROVEN** — `FAIL: showing the explanation wrote it down, in the store the next launch reads` |
+| SC-86 | `self-check.sh` first run | `report["firstRunExplanationStillShown"] = True` | SC-83 | **PROVEN** — `FAIL: the explanation's dismissal reached the composition root and took the sheet down` |
+| SC-90 | `self-check.sh` first run | `report["attachedSheetsAfterDismissal"] = 1` | SC-86 — the state came down while the window kept the sheet | **PROVEN** — `FAIL: no sheet is attached to any window by the time the process terminates` |
+| SC-87 | `self-check.sh` first run | `firstRunExplanationShown = True` (relaunch) | SC-89 — the relaunch still opened the same store | **PROVEN** — `FAIL: the launch after the one that explained is not owed the explanation again` |
+| SC-88 | `self-check.sh` first run | `firstRunExplanationDrawn = "shown"` (relaunch) | SC-87 | **PROVEN** — `FAIL: the relaunched cockpit drew no first-run sheet at all` |
+| SC-89 | `self-check.sh` first run | `livePriorityIntent` replaced (relaunch) | is itself the control for SC-87/SC-88 | **PROVEN** — `FAIL: the relaunch opened the same seeded store the explaining launch did` |
+
 
 ### `notification-denied` / `notification-denied-release` — `scripts/check-notification-denied.sh`
 
@@ -312,6 +354,7 @@ FOCUS_DERIVED_DATA=/private/tmp/dd FOCUS_LOG_DIR=/private/tmp/logs \
 FOCUS_MW_DD=/private/tmp/dd zsh /private/tmp/mw/prep-reports.zsh
 zsh /private/tmp/mw/run-json-witnesses.zsh /private/tmp/mw/cases-selfcheck.txt
 zsh /private/tmp/mw/run-json-witnesses.zsh /private/tmp/mw/cases-stages.txt
+zsh /private/tmp/mw/run-json-witnesses.zsh /private/tmp/mw/cases-odz.txt
 FOCUS_MW_DD=/private/tmp/dd zsh /private/tmp/mw/run-binary-witnesses.zsh
 FOCUS_MW_LOGS=/private/tmp/logs FOCUS_MW_DD=/private/tmp/dd \
     zsh /private/tmp/mw/run-log-witnesses.zsh
