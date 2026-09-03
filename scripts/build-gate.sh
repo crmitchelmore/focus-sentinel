@@ -156,7 +156,7 @@ EVAL_LOG="$LOG_DIR/focus-evaluate.log"
 # already unique per run, so there is nothing new to mint and nothing that can collide.
 GATE_RUN_ID="${LOG_DIR:t}"
 
-CORPUS_DIR="Packages/FocusClassify/Tests/FocusClassifyTests/Resources/GoldenCorpus"
+CORPUS_DIR="Packages/FocusEvaluate/Tests/FocusEvaluateTests/Resources/GoldenCorpus"
 
 # The committed engine literals, read from the one place they are written down.
 #
@@ -510,7 +510,7 @@ evaluation_stage() {
     # command in this gate follows. The log is printed at the foot of this stage rather than
     # here, so the binding verdict is what a reader meets first.
     FOCUS_EVAL_OUT="$EVAL_STAGING" FOCUS_GATE_RUN_ID="$GATE_RUN_ID" \
-        swift run --package-path Packages/FocusClassify -c release FocusEvaluate \
+        swift run --package-path Packages/FocusEvaluate -c release FocusEvaluate \
         > "$EVAL_LOG" 2>&1
     local produce_rc=$?
 

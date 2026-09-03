@@ -153,6 +153,7 @@ typeset -A ALLOWED_PRODUCTS
 ALLOWED_PRODUCTS[FocusCore]=""
 ALLOWED_PRODUCTS[FocusRules]="FocusCore"
 ALLOWED_PRODUCTS[FocusClassify]="FocusCore FocusRules"
+ALLOWED_PRODUCTS[FocusEvaluate]="FocusCore FocusRules FocusClassify"
 ALLOWED_PRODUCTS[FocusSensing]="FocusCore"
 ALLOWED_PRODUCTS[FocusUI]="FocusCore"
 ALLOWED_PRODUCTS[FocusHost]="FocusClassify FocusCore FocusRules FocusSensing FocusUI"
@@ -161,6 +162,11 @@ typeset -A FORBIDDEN_IMPORTS
 FORBIDDEN_IMPORTS[FocusCore]="AppKit SwiftUI Cocoa Network CFNetwork NetworkExtension FocusRules FocusClassify FocusSensing FocusUI"
 FORBIDDEN_IMPORTS[FocusRules]="AppKit SwiftUI Cocoa Network CFNetwork NetworkExtension FocusClassify FocusSensing FocusUI"
 FORBIDDEN_IMPORTS[FocusClassify]="AppKit SwiftUI Cocoa Network CFNetwork NetworkExtension FocusSensing FocusUI"
+# The evaluation lane is not in the shipping graph, and this row is what keeps it out of one.
+# It may reach the engine and the two packages beneath it and nothing else — no surface
+# framework, no sensing, no networking. The three test-lane reads further down add the positive
+# half over the same trees.
+FORBIDDEN_IMPORTS[FocusEvaluate]="AppKit SwiftUI Cocoa Network CFNetwork NetworkExtension FocusSensing FocusUI"
 FORBIDDEN_IMPORTS[FocusSensing]="SwiftUI Network CFNetwork NetworkExtension FocusClassify FocusRules FocusUI"
 # SwiftData is on FocusUI's forbidden list from e02, and it is the enforcement point for R-24:
 # the cockpit renders a `CockpitState` value and calls a `PriorityActing` protocol, both
@@ -179,11 +185,12 @@ typeset -A ALLOWED_FRAMEWORKS
 ALLOWED_FRAMEWORKS[FocusCore]="Foundation SwiftData os"
 ALLOWED_FRAMEWORKS[FocusRules]="Foundation SwiftData os"
 ALLOWED_FRAMEWORKS[FocusClassify]="Foundation NaturalLanguage os"
+ALLOWED_FRAMEWORKS[FocusEvaluate]="Foundation os"
 ALLOWED_FRAMEWORKS[FocusSensing]="Foundation AppKit CoreGraphics IOKit Carbon.HIToolbox CoreAudio CoreMediaIO ServiceManagement os"
 ALLOWED_FRAMEWORKS[FocusUI]="Foundation SwiftUI AppKit Observation QuickLook UniformTypeIdentifiers UserNotifications os"
 ALLOWED_FRAMEWORKS[FocusHost]="Foundation AppKit SwiftData Observation ApplicationServices os"
 
-PACKAGES=(FocusCore FocusRules FocusClassify FocusSensing FocusUI FocusHost)
+PACKAGES=(FocusCore FocusRules FocusClassify FocusEvaluate FocusSensing FocusUI FocusHost)
 
 # Foundation networking types that are the usual accidental route onto the network.
 NETWORK_SYMBOL_PATTERN='URLSession|URLRequest|URLConnection|NWConnection|NWListener|NWBrowser|CFStream|CFSocket'
@@ -287,7 +294,16 @@ else:
         "$dir/Sources/$package" --include='*.swift' 2>/dev/null \
         | sed -E 's/.*import[[:space:]]+//; s/[[:space:]].*//' | sort -u)
 
-    permitted_modules=(${=ALLOWED_FRAMEWORKS[$package]} ${=ALLOWED_PRODUCTS[$package]} "$package")
+    # A package's own targets are inside the boundary its row draws, so a sibling target in
+    # the same package is permitted the way `$package` itself always was. Read from `describe`
+    # rather than assumed: for the six packages that carry one shipping target this is exactly
+    # the old `"$package"` and nothing changes; for `FocusEvaluate`, whose executable imports
+    # the `FocusEvaluateCore` library beside it, it is what makes the row checkable at all.
+    own_targets=$(print -r -- "$describe" | python3 -c '
+import json, sys
+print(" ".join(t.get("name", "") for t in json.load(sys.stdin).get("targets", [])))
+')
+    permitted_modules=(${=ALLOWED_FRAMEWORKS[$package]} ${=ALLOWED_PRODUCTS[$package]} ${=own_targets})
     unlisted=()
     for module in ${(f)imported}; do
         [[ -z "$module" ]] && continue
@@ -633,8 +649,8 @@ fi
 # the forbidden-import half above already enforces across all of Sources/).
 EVALUATE_ALLOWED_MODULES=(Foundation FocusCore FocusRules FocusClassify FocusEvaluateCore)
 evaluate_imported=$(grep -rhE '^[[:space:]]*import[[:space:]]+[A-Za-z_]' \
-    Packages/FocusClassify/Sources/FocusEvaluateCore \
-    Packages/FocusClassify/Sources/FocusEvaluate --include='*.swift' 2>/dev/null \
+    Packages/FocusEvaluate/Sources/FocusEvaluateCore \
+    Packages/FocusEvaluate/Sources/FocusEvaluate --include='*.swift' 2>/dev/null \
     | sed -E 's/.*import[[:space:]]+//; s/[[:space:]].*//' | sort -u)
 evaluate_unlisted=()
 for module in ${(f)evaluate_imported}; do

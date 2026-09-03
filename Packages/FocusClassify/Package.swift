@@ -18,19 +18,11 @@ let package = Package(
     name: "FocusClassify",
     platforms: [.macOS(.v26)],
     products: [
-        .library(name: "FocusClassify", targets: ["FocusClassify"]),
-        // The test-lane library. R-75 moves the evaluation harness out of the test target
-        // because a harness that lives in a test target can only ever be run by a test, and
-        // T103a's `FocusEvaluate` executable and the swift-testing suites both need it. It is
-        // **not** in the shipping graph: no application target links it, and
-        // `check-boundaries.sh` asserts that rather than assuming it.
-        .library(name: "FocusEvaluateCore", targets: ["FocusEvaluateCore"]),
-        // Emission as a product rather than a test side effect (R-75, T103a). A plain process
-        // carries its environment, which `xcodebuild` does not do for a SwiftPM test target —
-        // measured twice on this machine — so `$FOCUS_EVAL_OUT` and `$FOCUS_GATE_RUN_ID` only
-        // reach the harness through an executable. Test-lane only: no application target links
-        // it, and `check-boundaries.sh` asserts that.
-        .executable(name: "FocusEvaluate", targets: ["FocusEvaluate"])
+        // The evaluation lane used to declare two more products here. e06 moved them into
+        // `Packages/FocusEvaluate`, because `FocusModel` depends on this package and lane 2 of
+        // the evaluation depends on `FocusModel` — SwiftPM dependencies are package-level, so
+        // keeping the harness here would have been a cycle.
+        .library(name: "FocusClassify", targets: ["FocusClassify"])
     ],
     dependencies: [
         .package(path: "../FocusCore"),
@@ -44,24 +36,9 @@ let package = Package(
                 .product(name: "FocusRules", package: "FocusRules")
             ]
         ),
-        .target(
-            name: "FocusEvaluateCore",
-            dependencies: [
-                "FocusClassify",
-                .product(name: "FocusCore", package: "FocusCore"),
-                .product(name: "FocusRules", package: "FocusRules")
-            ]
-        ),
-        .executableTarget(
-            name: "FocusEvaluate",
-            dependencies: [
-                "FocusEvaluateCore",
-                .product(name: "FocusCore", package: "FocusCore")
-            ]
-        ),
         .testTarget(
             name: "FocusClassifyTests",
-            dependencies: ["FocusClassify", "FocusEvaluateCore"],
+            dependencies: ["FocusClassify"],
             // `.copy`, never `.process` — the same ruling e02 made for the schema fixtures and
             // for the same reason: a directory of fixtures must reach the bundle with its
             // subdirectory structure intact, so that

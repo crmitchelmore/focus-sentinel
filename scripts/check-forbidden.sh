@@ -602,14 +602,14 @@ check_set "R-70d" "no NLContextualEmbedding or asset request" \
 #        replayable reducer is a non-determinism no fixture can catch.
 check_set "R-70e" "no timer or sleep in the classification package" \
     'Timer\(|DispatchSourceTimer|Task\.sleep|asyncAfter|RunLoop\.' \
-    Packages/FocusClassify/Sources
+    Packages/FocusClassify/Sources Packages/FocusEvaluate/Sources
 
 # R-70f  Every numeric threshold lives in RelevancePolicy.swift and nowhere else. This is what
 #        makes "no magic numbers" mechanical instead of a habit. Excepted: 0 and 1, and
 #        comparisons against `count`/`isEmpty`.
 #
 #        A SECOND excepted file, and the reason it is not a weakening. R-75 moves the evaluation
-#        harness into `Packages/FocusClassify/Sources/FocusEvaluateCore/` — emission has to be a
+#        harness into `FocusEvaluateCore` — emission has to be a
 #        product rather than a test side effect, and this search path predates that decision by
 #        two phases. A percentile rank, a cache-sweep capacity and a corpus floor are all
 #        numbers, and none of them is a threshold about a person: they size the evidence, not
@@ -619,9 +619,10 @@ check_set "R-70e" "no timer or sleep in the classification package" \
 #        engine's own exception list is untouched, and a threshold cannot be introduced anywhere
 #        a reviewer would not think to look in either tree.
 check_literals "R-70f" "no numeric literal outside RelevancePolicy" \
-    Packages/FocusClassify/Sources Packages/FocusCore/Sources/FocusCore/Relevance \
+    Packages/FocusClassify/Sources Packages/FocusEvaluate/Sources \
+    Packages/FocusCore/Sources/FocusCore/Relevance \
     --except Packages/FocusCore/Sources/FocusCore/Relevance/RelevancePolicy.swift \
-    --except Packages/FocusClassify/Sources/FocusEvaluateCore/EvaluationPolicy.swift
+    --except Packages/FocusEvaluate/Sources/FocusEvaluateCore/EvaluationPolicy.swift
 
 # R-70g  NormalisedToken and Explanation are constructed only where they are declared — the
 #        same shape as R-41's ActivityEvent.detail lint, applied to the other end of the
@@ -652,7 +653,8 @@ check_set "R-70h" "no FoundationModels in this epic" \
 #        * `Packages/FocusRules` — the store implementations that must still be able to write
 #          and wipe the legacy shape (`clearSessionRules()` keeps its shipped behaviour
 #          exactly), and their tests, which plant one to prove the builder skips it.
-#        * `Packages/FocusClassify/Tests` — R-72.3 requires the *engine* side to prove the skip
+#        * `Packages/FocusClassify/Tests` and `Packages/FocusEvaluate/Tests` — R-72.3 requires
+#          the *engine* side to prove the skip
 #          too: `RuleSnapshotBuilder` must drop a legacy row into `skippedRuleCount`, the
 #          cascade must treat it as absent rather than as contradicting, and the golden corpus
 #          carries a `legacySessionScopedRows` block for exactly that. A fixture that plants the
@@ -678,7 +680,8 @@ check_outside "R-70n" "no rule is constructed with the session scope" \
     --allow Packages/FocusRules/Sources/FocusRules/InMemoryRuleStore.swift \
     --allow Packages/FocusRules/Tests \
     --allow Packages/FocusClassify/Tests \
-    --allow Packages/FocusClassify/Sources/FocusEvaluateCore/CorpusRunner.swift \
+    --allow Packages/FocusEvaluate/Tests \
+    --allow Packages/FocusEvaluate/Sources/FocusEvaluateCore/CorpusRunner.swift \
     --allow Packages/FocusUI/Tests/FocusUITests/PrioritySnapshotTests.swift
 
 # ---- e05 -------------------------------------------------------------------------------

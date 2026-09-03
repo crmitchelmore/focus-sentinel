@@ -46,6 +46,16 @@
             skipped = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
+               BlueprintIdentifier = "FocusEvaluateTests"
+               BuildableName = "FocusEvaluateTests.xctest"
+               BlueprintName = "FocusEvaluateTests"
+               ReferencedContainer = "container:Packages/FocusEvaluate">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
                BlueprintIdentifier = "FocusSensingTests"
                BuildableName = "FocusSensingTests.xctest"
                BlueprintName = "FocusSensingTests"

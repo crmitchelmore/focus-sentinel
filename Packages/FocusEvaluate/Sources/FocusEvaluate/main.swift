@@ -29,15 +29,15 @@ let environment = ProcessInfo.processInfo.environment
 /// The gate recomputes the corpus digest from the working tree and refuses a report that does
 /// not match (R-75.5), so this executable has to read the *tree* rather than a bundled copy —
 /// otherwise the two could diverge and the check would be comparing a copy against itself.
-/// `#filePath` resolves to this file inside `Packages/FocusClassify/Sources/FocusEvaluate/`, so
+/// `#filePath` resolves to this file inside `Packages/FocusEvaluate/Sources/FocusEvaluate/`, so
 /// three steps up is the package root and the corpus sits under its test target's resources.
 func defaultCorpusDirectory() -> URL {
     URL(fileURLWithPath: #filePath)
         .deletingLastPathComponent()      // FocusEvaluate/
         .deletingLastPathComponent()      // Sources/
-        .deletingLastPathComponent()      // Packages/FocusClassify/
+        .deletingLastPathComponent()      // Packages/FocusEvaluate/
         .appendingPathComponent("Tests")
-        .appendingPathComponent("FocusClassifyTests")
+        .appendingPathComponent("FocusEvaluateTests")
         .appendingPathComponent("Resources")
         .appendingPathComponent(CorpusLoader.goldenCorpusDirectoryName)
 }

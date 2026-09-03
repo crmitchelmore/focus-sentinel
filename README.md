@@ -18,7 +18,8 @@ and `tuist` is not used.
 | `App/` | the thin app target — `@main`, the scenes, the appearance observer, the entitlements, the icon, and a deliberately empty string catalog (see "Strings" below). It owns no host and no wiring: those are `Packages/FocusHost` |
 | `Packages/FocusCore` | domain types, SwiftData schema, status tokens, clocks, appearance traits |
 | `Packages/FocusRules` | the deterministic rule model |
-| `Packages/FocusClassify` | the deterministic relevance engine and the classification seam — no networking, ever. It also holds `FocusEvaluateCore` and the `FocusEvaluate` product, which are test-lane only and which no application target links |
+| `Packages/FocusClassify` | the deterministic relevance engine and the classification seam — no networking, ever |
+| `Packages/FocusEvaluate` | the evaluation lane: `FocusEvaluateCore` and the `FocusEvaluate` product, test-lane only, which no application target links. It sat inside `FocusClassify` until e06, which needed a model package that depends on the engine *and* an evaluation lane that depends on the model — a cycle, because SwiftPM dependencies are package-level |
 | `Packages/FocusSensing` | macOS observation adapters |
 | `Packages/FocusUI` | every SwiftUI view, scene, command and design token |
 | `Packages/FocusHost` | the composition layer — `AppComposition` and the five hosts. The only module that imports more than one sibling package, and the reason it is a package rather than the app target is that `App/` is not one: no test bundle could import it, so every claim about the wiring in it was a source scan (see "Why the composition layer is a package" below) |

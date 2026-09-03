@@ -89,7 +89,8 @@ print "== hardcoded user-visible strings"
 
 typeset -a SOURCE_ROOTS
 SOURCE_ROOTS=(App Packages/FocusCore/Sources Packages/FocusRules/Sources
-              Packages/FocusClassify/Sources Packages/FocusSensing/Sources
+              Packages/FocusClassify/Sources Packages/FocusEvaluate/Sources
+              Packages/FocusSensing/Sources
               Packages/FocusUI/Sources)
 
 # `Text(` is matched only when the literal follows immediately, so `Text(verbatim: "…")` and
