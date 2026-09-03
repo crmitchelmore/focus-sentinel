@@ -139,7 +139,17 @@ extension CockpitConnection: ShellDrawnConnection {
             "didDraw": .undrawn(.receipt),
 
             "state.status": .drawn([.status]),
-            "state.storeIsReady": .drawn([.storeStatus]),
+            // **Two facts where there was one** (focus-tzj.4). `storeIsReady` was a stored flag
+            // that the store never opening and a write being refused were both OR-ed into; it is
+            // a derived reading now, and these are the two fields it is derived from. Both reach
+            // the footer's one line, which says which of the three states the store is in.
+            "state.storeOpened": .drawn([.storeStatus]),
+            "state.lastWriteFailed": .drawn([.storeStatus]),
+            // Drawn by the sheet the cockpit raises when the store did not open, which is a
+            // presentation rather than a label in the window — so there is no receipt site for
+            // it here, and saying so is the exemption.
+            "state.storeFailureAcknowledged": .undrawn(.notDrawnOnThisSurface),
+            "state.storeLocation": .undrawn(.notDrawnOnThisSurface),
             // The cockpit's footer draws `sensing`; this flag reaches no label in the window.
             // Written down as an exemption rather than left unlisted, because unlisted is a
             // failure and an exemption is a diff somebody can argue with.

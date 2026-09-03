@@ -187,7 +187,7 @@ enum PriorityFixture {
     static func cockpit(intent: String = PriorityFixture.intent) -> CockpitState {
         CockpitState(
             status: .uncertain,
-            storeIsReady: true,
+            storeOpened: true,
             isObservingActivity: true,
             priority: priority(intent: intent),
             recent: recent,

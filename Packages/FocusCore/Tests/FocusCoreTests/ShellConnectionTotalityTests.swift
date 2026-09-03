@@ -286,7 +286,8 @@ struct ShellConnectionTotalityTests {
         // `PrioritySnapshot` was reached by nothing while a three-line mutant gave 19/19 PASS with
         // an empty ok-assertion diff. These are the paths that were unreachable.
         for member in [
-            "state.storeIsReady",
+            "state.storeOpened",
+            "state.lastWriteFailed",
             "state.showsRitualPrompt",
             "state.priority.intent",
             "state.priority.timebox",
@@ -308,7 +309,7 @@ struct ShellConnectionTotalityTests {
     /// at every path the type declares.
     static let fullyPopulatedState = CockpitState(
         status: .relevant,
-        storeIsReady: true,
+        storeOpened: true,
         isObservingActivity: true,
         priority: PrioritySnapshot(
             id: UUID(uuidString: "70741117-0000-4000-8000-000000000001")!,

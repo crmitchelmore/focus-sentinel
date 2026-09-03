@@ -37,7 +37,9 @@ final class PriorityHost: PriorityActing {
     /// Facts about the rest of the app that the store knows nothing about.
     struct Environment: Sendable, Equatable {
         var status: FocusStatus
-        var storeIsReady: Bool
+        /// Whether the on-disk store opened. **Not** whether writing is working — see
+        /// `CockpitState.storeOpened` (focus-tzj.4).
+        var storeOpened: Bool
         var isObservingActivity: Bool
         /// The session the person is in, projected by `SessionHost`. `nil` when there is none.
         var session: SessionSnapshot?
@@ -143,6 +145,13 @@ final class PriorityHost: PriorityActing {
     private var pendingHandoff: HandoffRequest?
     /// Whether the store refused a write since the last successful one.
     private var writeFailure: String?
+    /// **Whether the person has been told the store did not open** (focus-tzj.4). Latched: a
+    /// store that did not open does not open later in the same launch, and asking twice about
+    /// one fact would be the app arguing with somebody who has already answered.
+    private var storeFailureAcknowledged = false
+
+    /// Where the store the app tried to open lives, for the sheet that says it did not.
+    static var storeLocation: String { FocusStore.applicationSupportURL.path(percentEncoded: false) }
 
     init(
         context: ModelContext,
@@ -159,7 +168,8 @@ final class PriorityHost: PriorityActing {
         self.environment = environment
         self.state = CockpitState(
             status: environment.status,
-            storeIsReady: environment.storeIsReady,
+            storeOpened: environment.storeOpened,
+            storeLocation: Self.storeLocation,
             isObservingActivity: environment.isObservingActivity,
             session: environment.session,
             sensing: environment.sensing,
@@ -212,6 +222,12 @@ final class PriorityHost: PriorityActing {
     // MARK: - PriorityActing
 
     func setPriority(intent: String, doneWhen: String?) {
+        // **Refused until the person has been told** (focus-tzj.4). With no store, a captured
+        // priority goes into an in-memory container that is thrown away when the process ends —
+        // so the app stops taking commitments it cannot keep until it has said so and been
+        // answered. `CockpitState.capturingIsRefused` is the one derivation; the sheet the
+        // cockpit draws is the other consumer of it.
+        guard !state.capturingIsRefused else { return }
         perform { store in
             _ = try store.setPriority(intent: intent, doneWhen: doneWhen, undo: self.undo)
         }
@@ -324,6 +340,9 @@ final class PriorityHost: PriorityActing {
     /// button** — `receive(_:)` above stores the request and draws it, and nothing else in the
     /// app calls this.
     func acceptHandoff(_ request: HandoffRequest) {
+        // The same refusal as `setPriority`, for the same reason and by the same reading: a
+        // handoff is a new commitment that arrived through a URL rather than through the field.
+        guard !state.capturingIsRefused else { return }
         pendingHandoff = nil
         perform { store in
             _ = try store.setPriority(
@@ -337,6 +356,17 @@ final class PriorityHost: PriorityActing {
     func cancelHandoff() {
         guard pendingHandoff != nil else { return }
         pendingHandoff = nil
+        refresh()
+    }
+
+    /// **The person read the sheet and pressed its button** (focus-tzj.4).
+    ///
+    /// It changes nothing about the store, because there is nothing to change. What it changes
+    /// is what the app is entitled to assume: from here on, a priority captured into a container
+    /// that will not survive quit is captured by somebody who has been told that.
+    func acknowledgeStoreFailure() {
+        guard !storeFailureAcknowledged else { return }
+        storeFailureAcknowledged = true
         refresh()
     }
 
@@ -453,7 +483,14 @@ final class PriorityHost: PriorityActing {
 
         let next = CockpitState(
             status: environment.status,
-            storeIsReady: environment.storeIsReady && writeFailure == nil,
+            // **Two facts, told apart** (focus-tzj.4). This was one boolean:
+            // `environment.storeIsReady && writeFailure == nil` — a store that never opened and
+            // a write that was refused a second ago, OR-ed into one warning line. They are two
+            // different things to say to somebody and only one of them costs a day's work.
+            storeOpened: environment.storeOpened,
+            lastWriteFailed: writeFailure != nil,
+            storeFailureAcknowledged: storeFailureAcknowledged,
+            storeLocation: Self.storeLocation,
             isObservingActivity: environment.isObservingActivity,
             priority: priority,
             recent: recent,

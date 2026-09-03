@@ -257,6 +257,18 @@ public struct CockpitView: View {
                 )
             }
         }
+        // **The store did not open, and nobody has been told** (focus-tzj.4).
+        //
+        // Presented from the state rather than from a local `@State`, for `handoffPresentation`'s
+        // reason: the acknowledgement belongs to the host — it is what lifts the capture refusal
+        // — and a local mirror could disagree with it. There is no dismissal that is not the
+        // button: the binding's setter routes every route out of the sheet through the same verb.
+        .sheet(isPresented: storeFailurePresentation) {
+            StoreUnavailableSheet(
+                storeLocation: state.storeLocation,
+                acknowledge: { wiring.acknowledgeStoreFailure?() }
+            )
+        }
         .sheet(isPresented: $isCompleting) {
             if let priority = state.priority {
                 CompletionSheet(
@@ -378,6 +390,21 @@ public struct CockpitView: View {
     /// Derived from the state rather than stored: the pending handoff belongs to the host, so
     /// dismissing the sheet by any route — the buttons, Escape, the window — has to tell the
     /// host, and a local `@State` mirror could disagree with it.
+    /// Whether the store-failure sheet is up (focus-tzj.4).
+    ///
+    /// `set` routes **every** way out of the sheet — the button, the window, anything AppKit
+    /// does — through the same acknowledgement, because the sheet's whole job is to have been
+    /// read, and a route out that did not record that would leave the capture refusal in force
+    /// with nothing on screen to explain it.
+    private var storeFailurePresentation: Binding<Bool> {
+        Binding(
+            get: { state.storeFailureNeedsAcknowledgement },
+            set: { presented in
+                if !presented { wiring.acknowledgeStoreFailure?() }
+            }
+        )
+    }
+
     private var handoffPresentation: Binding<Bool> {
         Binding(
             get: { state.pendingHandoff != nil },
@@ -772,9 +799,21 @@ public struct CockpitView: View {
             // the whole nineteen-stage gate. Reporting the **string key the label was actually
             // given** rather than the flag it came from is what binds the receipt to the screen:
             // a mutation to either ternary changes `storeLine`, and `storeLine` is what is said.
-            let storeLine = state.storeIsReady
-                ? (image: "internaldrive.fill", key: ShellStringKey.cockpitStoreReady)
-                : (image: "exclamationmark.triangle.fill", key: ShellStringKey.cockpitStoreUnavailable)
+            //
+            // **Three states, not two** (focus-tzj.4). This was a ternary on `storeIsReady`,
+            // which `PriorityHost` computed as `storeOpened && writeFailure == nil` — so *"the
+            // store never opened and nothing you type today will exist tomorrow"* and *"that one
+            // save did not go through"* were the same eight-point grey sentence. They are told
+            // apart here, in the order of severity, and the one that costs a day's work also
+            // raises a sheet.
+            let storeLine: (image: String, key: ShellStringKey) =
+                if !state.storeOpened {
+                    (image: "exclamationmark.triangle.fill", key: .cockpitStoreUnavailable)
+                } else if state.lastWriteFailed {
+                    (image: "exclamationmark.arrow.circlepath", key: .cockpitStoreWriteFailed)
+                } else {
+                    (image: "internaldrive.fill", key: .cockpitStoreReady)
+                }
             detail(systemImage: storeLine.image, key: storeLine.key)
                 .shellRendered(.storeStatus, storeLine.key.rawValue)
 

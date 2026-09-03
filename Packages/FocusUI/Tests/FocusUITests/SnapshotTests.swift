@@ -19,6 +19,14 @@ import Testing
 enum SnapshotComponent: String, CaseIterable, Sendable {
     case cockpit
     case cockpitStoreUnavailable
+    /// **The store opened and refused the last write** (focus-tzj.4). A separate picture from
+    /// the one above because it used to be the same one: both drew the same warning line from
+    /// the same boolean, and only one of the two costs a person a day's work.
+    case cockpitStoreWriteFailed
+    /// The sheet a person actually reads when their store did not open. Rendered on its own,
+    /// because `ImageRenderer` cannot rasterise a `.sheet` presentation — what is photographed
+    /// is the sheet's own content, which is what the presentation shows.
+    case cockpitStoreUnavailableSheet
     case shortcutsHelp
     case privacySettings
     case statusRelevant
@@ -74,6 +82,19 @@ enum SnapshotComponent: String, CaseIterable, Sendable {
             return AnyView(CockpitView(state: .ready))
         case .cockpitStoreUnavailable:
             return AnyView(CockpitView(state: .storeUnavailable))
+        case .cockpitStoreWriteFailed:
+            return AnyView(CockpitView(state: .storeWriteFailed))
+        case .cockpitStoreUnavailableSheet:
+            // `screens: []` for `privacySettings`'s reason: the bounded sheet derives its
+            // ceiling from the live display, and a baseline whose dimensions depend on the
+            // monitor that recorded it is not a baseline.
+            return AnyView(
+                StoreUnavailableSheet(
+                    storeLocation: Self.storeURL.path(percentEncoded: false),
+                    acknowledge: {},
+                    screens: []
+                )
+            )
         case .shortcutsHelp:
             return AnyView(ShortcutsHelpContent(registry: .shell))
         case .privacySettings:

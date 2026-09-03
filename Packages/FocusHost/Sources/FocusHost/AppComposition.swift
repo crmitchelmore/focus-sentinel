@@ -353,7 +353,7 @@ public final class AppComposition {
                 // `paused` when the person has the switch off. `start()` re-projects once the
                 // engine has actually looked.
                 status: settings.sensingPaused ? .paused : .uncertain,
-                storeIsReady: status.isReady,
+                storeOpened: status.isReady,
                 isObservingActivity: !settings.sensingPaused,
                 session: sessions.snapshot,
                 sensing: sensing.summary,
@@ -1352,12 +1352,19 @@ public final class AppComposition {
         // The **string key** the footer's label was given, not the flag behind it. A boolean flip
         // told the person their store was unavailable when it was fine, and the flag alone would
         // have been reported truthfully by a footer drawing the opposite sentence (focus-7ow).
-        expect(
-            .storeStatus,
-            (state.storeIsReady ? ShellStringKey.cockpitStoreReady : .cockpitStoreUnavailable)
-                .rawValue,
-            for: .cockpit
-        )
+        //
+        // **Three keys, not two** (focus-tzj.4). The footer tells "the store never opened" from
+        // "the last write was refused" now, and this audit has to expect what the footer draws
+        // or it would be green over a footer drawing the wrong one of the three.
+        let expectedStoreKey: ShellStringKey =
+            if !state.storeOpened {
+                .cockpitStoreUnavailable
+            } else if state.lastWriteFailed {
+                .cockpitStoreWriteFailed
+            } else {
+                .cockpitStoreReady
+            }
+        expect(.storeStatus, expectedStoreKey.rawValue, for: .cockpit)
         // The banner is on screen when the state asks for it **and** a host can dismiss it.
         // The window draws that conjunction and reports what it drew; this expects the half that
         // can actually vary, because `cockpitActions` is non-optional — the root has no way to
@@ -1892,7 +1899,7 @@ public final class AppComposition {
         priorityHost.update(
             environment: PriorityHost.Environment(
                 status: currentStatus,
-                storeIsReady: storeStatus.isReady,
+                storeOpened: storeStatus.isReady,
                 isObservingActivity: sensingHost.isRunning,
                 session: snapshot,
                 sensing: sensingHost.summary,

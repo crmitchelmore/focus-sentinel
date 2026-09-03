@@ -243,8 +243,34 @@ public struct SensingSummary: Sendable, Equatable, Hashable {
 public struct CockpitState: Sendable, Equatable, Hashable {
     /// What the app currently believes about the user's context.
     public var status: FocusStatus
-    /// Whether the local data store opened.
-    public var storeIsReady: Bool
+    /// **Whether the local data store opened at all** (focus-tzj.4).
+    ///
+    /// This was `storeIsReady`, a single flag that two entirely different facts were OR-ed into:
+    /// `AppComposition` falls back to an **in-memory** container when the on-disk store will not
+    /// open, and `PriorityHost` folded a transient write failure into the same boolean. So the
+    /// footer drew one warning line for two states that could not be more different — *"that
+    /// save did not go through, try again"* and *"nothing you type today will exist tomorrow"* —
+    /// and a person whose store was gone went on capturing priorities into memory until they
+    /// quit.
+    public var storeOpened: Bool
+    /// Whether the last write the host attempted was refused.
+    ///
+    /// A transient fact about one operation, and deliberately not folded into `storeOpened`: a
+    /// store that is open and refused a write is a store the next write may well succeed on.
+    public var lastWriteFailed: Bool
+    /// Whether the person has been told the store did not open, and said they understood.
+    ///
+    /// Held on the state rather than in the view because the **refusal** rests on it: capture is
+    /// refused until it is `true`, and a refusal enforced only by a view is a refusal any other
+    /// caller can walk around.
+    public var storeFailureAcknowledged: Bool
+    /// **Where the store the app tried to open lives**, as a path a person can go and look at.
+    ///
+    /// Carried on the value rather than read by the view, like everything else here: `FocusUI`
+    /// renders values and never learns which implementation produced them. It is the one thing
+    /// the sheet says that is neither authored prose nor a status — a person told their store did
+    /// not open is owed the place it was supposed to be.
+    public var storeLocation: String
     /// Whether any activity source is actually running.
     public var isObservingActivity: Bool
     /// The one thing, or `nil` when nothing has been committed to yet.
@@ -290,7 +316,10 @@ public struct CockpitState: Sendable, Equatable, Hashable {
 
     public init(
         status: FocusStatus,
-        storeIsReady: Bool,
+        storeOpened: Bool,
+        lastWriteFailed: Bool = false,
+        storeFailureAcknowledged: Bool = false,
+        storeLocation: String = "",
         isObservingActivity: Bool,
         priority: PrioritySnapshot? = nil,
         recent: [RecentPriority] = [],
@@ -302,7 +331,10 @@ public struct CockpitState: Sendable, Equatable, Hashable {
         capabilities: CapabilityMatrix = CapabilityMatrix()
     ) {
         self.status = status
-        self.storeIsReady = storeIsReady
+        self.storeOpened = storeOpened
+        self.lastWriteFailed = lastWriteFailed
+        self.storeFailureAcknowledged = storeFailureAcknowledged
+        self.storeLocation = storeLocation
         self.isObservingActivity = isObservingActivity
         self.priority = priority
         self.recent = recent
@@ -326,20 +358,69 @@ public struct CockpitState: Sendable, Equatable, Hashable {
     /// Whether there is a current commitment at all.
     public var hasPriority: Bool { priority != nil }
 
+    /// **Whether everything the store is asked to do is working**, which is the *conjunction*
+    /// and not either half (focus-tzj.4).
+    ///
+    /// Kept as a derived reading rather than a stored flag, because every consumer that wanted
+    /// "is the store fine?" still wants it and none of them may be allowed to answer it from one
+    /// of the two facts alone. The footer, which is the one surface that has to tell the two
+    /// apart, reads the two fields.
+    public var storeIsReady: Bool { storeOpened && !lastWriteFailed }
+
+    /// **The state a person must be told about before they type anything else** (focus-tzj.4).
+    ///
+    /// True exactly while the store did not open and nobody has acknowledged it. The cockpit
+    /// draws its sheet on this, and `capturingIsRefused` below is the same fact seen by the
+    /// host — one derivation, two consumers, so a sheet that was dismissed some other way cannot
+    /// leave the refusal on, and a refusal cannot be in force with nothing on screen explaining
+    /// it.
+    public var storeFailureNeedsAcknowledgement: Bool {
+        !storeOpened && !storeFailureAcknowledged
+    }
+
+    /// Whether a new commitment may be captured at all.
+    ///
+    /// A day's work evaporating at quit is the failure this exists to prevent: with no store,
+    /// every priority captured goes into a container that is thrown away when the process ends.
+    /// The app does not refuse for ever — a person who has read the sheet and pressed its button
+    /// has been told, and it is then their decision — it refuses until they have been told.
+    public var capturingIsRefused: Bool { storeFailureNeedsAcknowledgement }
+
     /// The store is open, nothing is being observed yet, and nothing has been committed to.
     ///
     /// `paused` is the honest answer, not a stand-in: the app has observed nothing and so has
     /// judged nothing. Showing `relevant` or `unrelated` here would be inventing a verdict.
     public static let ready = CockpitState(
         status: .paused,
-        storeIsReady: true,
+        storeOpened: true,
         isObservingActivity: false
     )
 
     /// The degraded state: the store could not be opened, so nothing will be saved.
     public static let storeUnavailable = CockpitState(
         status: .paused,
-        storeIsReady: false,
+        storeOpened: false,
+        isObservingActivity: false
+    )
+
+    /// The same degraded state, **after** the person has read the sheet and acknowledged it.
+    ///
+    /// A separate value because it is a different screen: the sheet is gone, capture is allowed
+    /// again, and the footer still says the store did not open — which it will go on saying for
+    /// the life of the launch.
+    public static let storeUnavailableAcknowledged = CockpitState(
+        status: .paused,
+        storeOpened: false,
+        storeFailureAcknowledged: true,
+        isObservingActivity: false
+    )
+
+    /// The store opened and the last write was refused. A different sentence from the one above,
+    /// and the whole of focus-tzj.4.
+    public static let storeWriteFailed = CockpitState(
+        status: .paused,
+        storeOpened: true,
+        lastWriteFailed: true,
         isObservingActivity: false
     )
 }

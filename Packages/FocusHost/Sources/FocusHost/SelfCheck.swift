@@ -1499,7 +1499,7 @@ enum SelfCheck {
                 locale: .autoupdatingCurrent,
                 environment: PriorityHost.Environment(
                     status: .uncertain,
-                    storeIsReady: true,
+                    storeOpened: true,
                     isObservingActivity: false
                 )
             )
@@ -1523,7 +1523,7 @@ enum SelfCheck {
                 host.update(
                     environment: PriorityHost.Environment(
                         status: .uncertain,
-                        storeIsReady: true,
+                        storeOpened: true,
                         isObservingActivity: false
                     )
                 )

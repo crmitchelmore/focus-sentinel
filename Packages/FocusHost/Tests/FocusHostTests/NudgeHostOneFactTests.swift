@@ -181,7 +181,7 @@ struct NudgeHostOneFactTests {
             locale: Locale(identifier: "en_GB"),
             environment: PriorityHost.Environment(
                 status: .paused,
-                storeIsReady: true,
+                storeOpened: true,
                 isObservingActivity: false
             )
         )

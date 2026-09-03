@@ -36,6 +36,14 @@ struct CockpitWiring {
 
     // MARK: - Capture
 
+    /// **The person has read the sheet that says nothing will be saved** (focus-tzj.4).
+    ///
+    /// `nil` for the read-only cockpit, like every other verb here — a surface with no host has
+    /// nothing to acknowledge to.
+    var acknowledgeStoreFailure: (() -> Void)? {
+        actions.map { host in { host.acknowledgeStoreFailure() } }
+    }
+
     /// Commit a sentence: a new priority, replacing whatever was there (F-02, F-07).
     var setPriority: ((String, String?) -> Void)? {
         actions.map { host in { intent, doneWhen in host.setPriority(intent: intent, doneWhen: doneWhen) } }

@@ -37,6 +37,7 @@ final class RecordingPriorityActing: PriorityActing {
         case acceptHandoff
         case cancelHandoff
         case dismissRitual
+        case acknowledgeStoreFailure
     }
 
     /// One thing the cockpit asked for: which verb, and enough of the payload to tell a
@@ -132,6 +133,10 @@ final class RecordingPriorityActing: PriorityActing {
 
     func dismissRitual() {
         calls.append(Call(.dismissRitual))
+    }
+
+    func acknowledgeStoreFailure() {
+        calls.append(Call(.acknowledgeStoreFailure))
     }
 }
 

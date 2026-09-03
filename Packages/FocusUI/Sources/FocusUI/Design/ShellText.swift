@@ -73,7 +73,16 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     // Cockpit
     case cockpitHeading = "shell.cockpit.heading"
     case cockpitStoreReady = "shell.cockpit.store.ready"
+    /// **The store did not open at all.** Distinct from the line below, and the distinction is
+    /// the whole of focus-tzj.4: one of these two states costs a person a day's work.
     case cockpitStoreUnavailable = "shell.cockpit.store.unavailable"
+    /// The store opened and refused the last write. Transient, and what is on disk is intact.
+    case cockpitStoreWriteFailed = "shell.cockpit.store.writeFailed"
+    case cockpitStoreSheetTitle = "shell.cockpit.store.sheet.title"
+    case cockpitStoreSheetWhatHappened = "shell.cockpit.store.sheet.whatHappened"
+    case cockpitStoreSheetLocation = "shell.cockpit.store.sheet.location"
+    case cockpitStoreSheetConsequence = "shell.cockpit.store.sheet.consequence"
+    case cockpitStoreSheetAcknowledge = "shell.cockpit.store.sheet.acknowledge"
     case cockpitOpenSettings = "shell.cockpit.openSettings"
 
     // The priority itself

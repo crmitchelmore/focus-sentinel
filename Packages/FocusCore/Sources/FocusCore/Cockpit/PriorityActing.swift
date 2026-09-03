@@ -143,6 +143,18 @@ public protocol PriorityActing: AnyObject {
 
     /// Record that today's ritual has been answered or dismissed, so it asks once (F-19).
     func dismissRitual()
+
+    /// **The person has been told the store did not open** (focus-tzj.4).
+    ///
+    /// Called from the one button on the sheet the cockpit shows when `storeOpened` is `false`,
+    /// and from nowhere else. It changes nothing about the store — there is nothing to change —
+    /// and it lifts `CockpitState.capturingIsRefused`, which is what stops a day's work being
+    /// captured into a container that evaporates at quit without anybody having said so.
+    ///
+    /// A verb on the host rather than a `@State` in the view, because the refusal is the host's:
+    /// a rule enforced only by the surface that draws it is a rule the next surface will not
+    /// have.
+    func acknowledgeStoreFailure()
 }
 
 /// Everything the session surfaces can *do*, as a sibling protocol.

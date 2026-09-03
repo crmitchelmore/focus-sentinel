@@ -3013,6 +3013,78 @@
         }
       }
     },
+    "shell.cockpit.store.sheet.acknowledge" : {
+      "comment" : "Button on the store-unavailable sheet. Pressing it lets the person go on capturing, knowing nothing is kept.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continue without saving"
+          }
+        }
+      }
+    },
+    "shell.cockpit.store.sheet.consequence" : {
+      "comment" : "Sheet body: the consequence a person needs to understand before capturing anything.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anything you capture now — priorities, sessions, rules — is lost when you quit. Quit and reopen once the file is reachable again."
+          }
+        }
+      }
+    },
+    "shell.cockpit.store.sheet.location" : {
+      "comment" : "Sheet body: where the store the app tried to open lives. %@ is a file path.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "It tried to open %@"
+          }
+        }
+      }
+    },
+    "shell.cockpit.store.sheet.title" : {
+      "comment" : "Title of the sheet shown when the local data store could not be opened at all.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your work will not be saved"
+          }
+        }
+      }
+    },
+    "shell.cockpit.store.sheet.whatHappened" : {
+      "comment" : "Sheet body: what happened, when the local data store could not be opened.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus Sentinel could not open its local data store, so it is running on a temporary one held in memory."
+          }
+        }
+      }
+    },
+    "shell.cockpit.store.writeFailed" : {
+      "comment" : "Cockpit line: the store opened but refused the last write. Distinct from shell.cockpit.store.unavailable, which is the store never opening at all.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The last change could not be saved. Your earlier work is still on disk."
+          }
+        }
+      }
+    },
     "shell.command.addFilesToContext" : {
       "comment" : "File menu item that opens the file importer for the current priority's context pack.",
       "extractionState" : "manual",
