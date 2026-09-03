@@ -2393,7 +2393,15 @@ enum SelfCheck {
             // (probe P-85), and the number is what makes that legible in a report.
             "hardwareMinusSessionSeconds": idle.hardwareSeconds - idle.sessionSeconds,
             "thresholdSeconds": host.settings.idleThresholdInterval,
+            // The last SAMPLED belief, which in a self-check launch is the value before any
+            // corroboration tick has fired. It is a fact about this process's lifetime, not a
+            // verdict on the pair above, and the script prints it under that name.
             "isIdle": host.isIdle,
+            // The shipped `IdleReading.isIdle` evaluated on the very pair published above, so
+            // the gate has the binary's own answer to compare with its own arithmetic. This is
+            // what makes `max(hardwareSeconds, sessionSeconds)` visible to a stage: under the
+            // rule it replaced, this Mac would publish `false` beside four hours of quiet.
+            "isIdleForThisReading": idle.isIdle(threshold: host.settings.idleThresholdInterval),
             "perEventType": perEventType.map {
                 [
                     "eventType": $0.eventType,

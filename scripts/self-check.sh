@@ -2159,6 +2159,31 @@ for r in per_event_type:
         f"note idle {r.get('eventType')}: hid = {r.get('hardwareSeconds')} s   "
         f"combined = {r.get('sessionSeconds')} s   difference = {r.get('differenceSeconds')} s"
     )
+
+# The shipped `IdleReading.isIdle` evaluated on the very pair the report published, against the
+# same arithmetic taken here: two readers of one rule, which is the only way a gate stage can see
+# that the verdict is the MAXIMUM of the two counters and not the hardware clock alone
+# (focus-7az). It is not a restatement — the left side crosses a process boundary and comes out
+# of the built product. Under the rule this replaced the binary would answer `false` on this Mac
+# while the line below computes `true`, and the stage would say so.
+idle_threshold = idle.get("thresholdSeconds")
+idle_pair_is_numeric = isinstance(idle.get("hardwareSeconds"), (int, float)) and isinstance(
+    idle.get("sessionSeconds"), (int, float)
+)
+check(
+    idle_pair_is_numeric
+    and isinstance(idle.get("isIdleForThisReading"), bool)
+    and isinstance(idle_threshold, (int, float))
+    and idle["isIdleForThisReading"]
+    == (max(idle["hardwareSeconds"], idle["sessionSeconds"]) >= idle_threshold),
+    "the app's idle verdict is the longer of the two counters against the threshold",
+    (
+        idle.get("isIdleForThisReading"),
+        idle.get("hardwareSeconds"),
+        idle.get("sessionSeconds"),
+        idle_threshold,
+    ),
+)
 # The `~0` sentinel's gap, published and never asserted: it is the signature of a phantom HID
 # reset, it can run to hours in either direction on a machine nobody has touched, and it is the
 # number that explains a verdict rather than a verdict of its own.
@@ -2166,7 +2191,9 @@ print(
     f"note idle hardware-minus-session at the ~0 sentinel = "
     f"{idle.get('hardwareMinusSessionSeconds')} s "
     f"(hid {idle.get('hardwareSeconds')} s, combined {idle.get('sessionSeconds')} s, "
-    f"threshold {idle.get('thresholdSeconds')} s, isIdle {idle.get('isIdle')})"
+    f"threshold {idle.get('thresholdSeconds')} s, "
+    f"verdict for this pair {idle.get('isIdleForThisReading')}, "
+    f"last sampled belief {idle.get('isIdle')})"
 )
 
 # F-35: the quorum's three inputs, recorded whatever the verdict.
