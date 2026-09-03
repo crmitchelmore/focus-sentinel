@@ -17,16 +17,21 @@ struct MigrationV4Tests {
     static let priorityID = UUID(uuidString: "12341234-1234-4123-8123-123412341234")!
     static let timestamp = Date(timeIntervalSince1970: 1_767_225_600)
 
-    @Test("the plan declares five schemas and exactly four stages")
+    /// The chain's first five links, and the four schemas that are migration **sources**.
+    ///
+    /// The plan's *tip* — how many schemas and stages there are in total — is asserted by the
+    /// newest version's suite, which is the only one that can be right about it. What this suite
+    /// keeps is the half that must never move: v4 is the fifth schema's predecessor, at index 3,
+    /// with v1, v2 and v3 in front of it in that order.
+    @Test("v4 is the fourth link in the chain, behind the versions that migrate into it")
     func planShape() {
         #expect(FocusSchemaV4.versionIdentifier == Schema.Version(4, 0, 0))
-        #expect(FocusMigrationPlan.schemas.count == 5)
+        #expect(FocusMigrationPlan.schemas.count >= 5)
         #expect(FocusMigrationPlan.schemas[0] is FocusSchemaV1.Type)
         #expect(FocusMigrationPlan.schemas[1] is FocusSchemaV2.Type)
         #expect(FocusMigrationPlan.schemas[2] is FocusSchemaV3.Type)
         #expect(FocusMigrationPlan.schemas[3] is FocusSchemaV4.Type)
         #expect(FocusMigrationPlan.schemas[4] is FocusSchemaV5.Type)
-        #expect(FocusMigrationPlan.stages.count == 4)
 
         // v1, v2, v3 and now v4 are migration sources and must stay exactly as they shipped. A
         // source you have edited is not a source.

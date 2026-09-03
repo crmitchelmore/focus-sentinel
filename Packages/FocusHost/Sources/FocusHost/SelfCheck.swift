@@ -134,6 +134,15 @@ enum SelfCheck {
     /// §4.6 asserts the restoring launch reports to within two seconds.
     static let seedBackdateSeconds: Double = 5_400
 
+    /// **The windows the seeded store says were open when its app last quit** (focus-odz.6).
+    ///
+    /// Both scenes, and each does a different job. The cockpit is the **control**: SwiftUI opens
+    /// it itself, so a launch that restored nothing would still have one, and a proof resting on
+    /// the cockpit alone would be green against a restoration that never ran. The Keyboard
+    /// Shortcuts window is the **claim**: nothing in a `--focus-self-check-cockpit` launch opens
+    /// it, so it is on the screen only if the record was read and acted on.
+    static let seededOpenWindows = [ShellWindow.cockpit.id, ShellWindow.help.id]
+
     /// The commitment the seeded store carries.
     ///
     /// A sentence no person would type, for the reason the handoff probe's is: it has to be a
@@ -223,7 +232,19 @@ enum SelfCheck {
             "storedAppearancePreference": composition.storedAppearancePreference().rawValue,
             "appearanceColorScheme": composition.appearance.traits.colorScheme.rawValue,
             "seededAppearancePreference": seededAppearancePreference.rawValue,
-            "windowTitles": NSApp.windows.filter(\.isVisible).map(\.title).sorted()
+            "windowTitles": NSApp.windows.filter(\.isVisible).map(\.title).sorted(),
+            // **What the last quit recorded, and what this launch put back** (focus-odz.6).
+            //
+            // Three facts because they fail differently: the record is what the store said, the
+            // restored list is what this launch actually got a route to, and the visible scene
+            // ids are what is really on the screen. A restoration that read the record and asked
+            // for nothing passes the first; one that asked and was refused — no scene graph, no
+            // opener — passes the first two and not the third.
+            "restorationRecord": composition.restorationRecord ?? [],
+            "restoredWindows": composition.restoredWindows,
+            "hasRestoredWindows": composition.hasRestoredWindows,
+            "canOpenWindows": FocusCommandCenter.shared.canOpenWindows,
+            "visibleSceneIdentifiers": FocusAppDelegate.visibleSceneIdentifiers().sorted()
         ]
     }
 
@@ -3725,6 +3746,21 @@ enum SelfCheck {
             now: wallNow
         )
 
+        // **And a record of which windows were open when this store's app last quit**
+        // (focus-odz.6).
+        //
+        // The same trick as the appearance above, for the same reason: the only reading that can
+        // tell "restored" from "never asked" is a second process opening a store the first one
+        // wrote, and this lane already spans two. The list names **both** scenes on purpose. The
+        // cockpit is the control — SwiftUI opens it itself, so a launch that restored nothing at
+        // all would still have one — and the Keyboard Shortcuts window is the claim, because
+        // nothing else in a `--focus-self-check-cockpit` launch opens it.
+        try FocusStore.recordOpenWindows(
+            seededOpenWindows,
+            in: context,
+            now: wallNow
+        )
+
         let store = SessionStore(
             context: context,
             dateProvider: FixedDateProvider(now: startedAt),
@@ -3736,6 +3772,7 @@ enum SelfCheck {
         return [
             "mode": "seed",
             "store": storePath,
+            "openWindows": seededOpenWindows,
             "sessionID": sessionID.uuidString,
             "priorityIntent": seededPriorityIntent,
             "appearancePreference": seededAppearancePreference.rawValue,
@@ -3901,6 +3938,15 @@ public final class FocusAppDelegate: NSObject, NSApplicationDelegate {
     }
 
     public func applicationDidFinishLaunching(_ notification: Notification) {
+        // **Put back the scenes the person left open** (focus-odz.6). One turn of the run loop
+        // later, because the opener it needs lives in a `Commands` body SwiftUI has not evaluated
+        // yet and the cockpit window it must not re-ask for does not exist yet either. It runs in
+        // every mode, including the self-check's, which is the only lane that can observe it.
+        DispatchQueue.main.async {
+            // Submitted to the main queue on the line above.
+            MainActor.assumeIsolated { FocusAppDelegate.restoreWindowsAfterLaunch() }
+        }
+
         guard let path = SelfCheck.requestedOutputPath else { return }
 
         // The headless modes first. None of them has anything to say about the shell, so none of
@@ -4030,5 +4076,41 @@ public final class FocusAppDelegate: NSObject, NSApplicationDelegate {
     public func applicationWillTerminate(_ notification: Notification) {
         guard AppComposition.isRunning else { return }
         AppComposition.shared.nudgeHost.applicationWillTerminate()
+        // **Which scenes were on screen when they left** (focus-odz.6). AppKit restores a
+        // window's frame and not whether a SwiftUI `Window(id:)` scene exists at all, so the
+        // existence half is written down here and asked for again at launch. The window list is
+        // read here because this is the file that imports AppKit; what counts as a scene worth
+        // recording is `ShellWindowRestoration.recordable(_:)`.
+        AppComposition.shared.recordOpenWindows(Self.visibleSceneIdentifiers())
+    }
+
+    /// Every scene identifier currently on screen.
+    ///
+    /// `isVisible` and not merely present: a `Window` scene that has been closed can linger in
+    /// `NSApp.windows` as an invisible object, and recording it would restore a window the person
+    /// had shut.
+    @MainActor
+    static func visibleSceneIdentifiers() -> [String] {
+        NSApp.windows.filter(\.isVisible).compactMap { $0.identifier?.rawValue }
+    }
+
+    /// **Ask for the scenes that were open at the last quit** (focus-odz.6).
+    ///
+    /// Scheduled a run-loop turn after launch rather than run inside
+    /// `applicationDidFinishLaunching`, and the delay is load-bearing twice over. SwiftUI has not
+    /// installed `NSApp.mainMenu` at that notification — which is the measurement
+    /// `applicationDidBecomeActive` above is written against — and the opener this needs is
+    /// installed by a `Commands` body, which is evaluated when that menu is built. Reading the
+    /// window list is the same story from the other end: the cockpit scene does not exist yet, so
+    /// "already open" would answer empty and the restoration would ask for a window that is on its
+    /// way.
+    ///
+    /// Guarded on `AppComposition.isRunning` for `applicationWillTerminate`'s reason: `shared` is
+    /// a `static let`, so reading it in a reduced self-check mode that never started a root would
+    /// build a whole store and observer graph to restore a window that mode has no scene for.
+    @MainActor
+    static func restoreWindowsAfterLaunch() {
+        guard AppComposition.isRunning else { return }
+        AppComposition.shared.restoreWindows(alreadyOpen: visibleSceneIdentifiers())
     }
 }

@@ -1768,6 +1768,57 @@ check(
     (seeded_cockpit.get("reading") or {}).get("summary"),
 )
 
+# --- the windows a person left open, on the launch after the one that closed them (focus-odz.6)
+#
+# The same fourth launch, and the same reason it exists: the only reading that can tell "restored"
+# from "never asked" is a second process opening a store the first one wrote. The seeding launch
+# recorded that BOTH scenes were open; this launch inherits that store.
+#
+# **AppKit does not do this half.** It restores a window's frame, and for a SwiftUI `Window(id:)`
+# scene it does not restore whether the window exists at all — measured in this very lane, where a
+# launch inheriting a closed cockpit has no `NSWindow` for it in `NSApp.windows`. So a person who
+# left the Keyboard Shortcuts window open and quit never got it back.
+#
+# The cockpit in the seeded list is the **control** and the reference is the **claim**: SwiftUI
+# opens the cockpit itself, so a launch that restored nothing at all would still have one, and a
+# proof resting on the cockpit alone would be green against a restoration that never ran. Nothing
+# in a `--focus-self-check-cockpit` launch opens the reference.
+
+check(
+    seeded_cockpit.get("hasRestoredWindows") is True,
+    "the launch ran its window restoration exactly once",
+    seeded_cockpit.get("hasRestoredWindows"),
+)
+check(
+    seeded_cockpit.get("restorationRecord") == ["cockpit", "help"],
+    "the restoring launch read the window record the seeding launch wrote",
+    seeded_cockpit.get("restorationRecord"),
+)
+# It has to be able to open one at all: a launch with no scene graph would report an empty
+# restored list for a reason that is about the process rather than about the code.
+check(
+    seeded_cockpit.get("canOpenWindows") is True,
+    "the shell installed the route that opens a declared scene by id",
+    seeded_cockpit.get("canOpenWindows"),
+)
+check(
+    "help" in (seeded_cockpit.get("restoredWindows") or []),
+    "the Keyboard Shortcuts window the last quit recorded was asked for again",
+    seeded_cockpit.get("restoredWindows"),
+)
+# **And it is really on the screen.** The three readings above are about a request; this is the
+# window. A restoration that asked and was refused passes all three and fails this.
+check(
+    "help" in (seeded_cockpit.get("visibleSceneIdentifiers") or []),
+    "restoration put the Keyboard Shortcuts window back on the screen",
+    seeded_cockpit.get("visibleSceneIdentifiers"),
+)
+check(
+    "Keyboard Shortcuts" in (seeded_cockpit.get("windowTitles") or []),
+    "the window that came back is the reference, by its title",
+    seeded_cockpit.get("windowTitles"),
+)
+
 # --- the appearance a person chose, on the launch after the one that chose it (focus-8ry) ------
 #
 # The same fourth launch, and the same reason it exists. The ordinary self-check opens the

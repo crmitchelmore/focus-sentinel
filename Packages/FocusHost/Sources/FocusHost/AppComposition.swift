@@ -1025,6 +1025,74 @@ public final class AppComposition {
         sensingHost.stop()
     }
 
+    // MARK: - Which windows were open, across a relaunch (focus-odz.6)
+
+    /// **Write down which of the app's declared scenes are on screen.**
+    ///
+    /// Called at termination. AppKit restores a window's *frame* by itself and does not restore
+    /// whether a SwiftUI `Window(id:)` scene exists at all — measured in this app's own
+    /// self-check, where a launch that inherits a closed cockpit has no `NSWindow` for it in
+    /// `NSApp.windows` — so the existence half is recorded here and asked for again at launch.
+    ///
+    /// The ids come from the caller rather than from `NSApp.windows` read here, because this
+    /// object does not import AppKit: `FocusAppDelegate` reads the window list, and
+    /// `ShellWindowRestoration.recordable(_:)` narrows whatever it saw down to scenes this app
+    /// can ask for again.
+    ///
+    /// A failed write is swallowed, and that is deliberate: this runs while the process is trying
+    /// to leave, and a store error at that moment must not stop somebody quitting. What it costs
+    /// is one relaunch that does not restore, which is what the app did before this existed.
+    @discardableResult
+    public func recordOpenWindows(_ identifiers: [String]) -> [String] {
+        let recordable = ShellWindowRestoration.recordable(identifiers)
+        lastRecordedOpenWindows = recordable
+        try? FocusStore.recordOpenWindows(
+            recordable,
+            in: modelContainer.mainContext,
+            now: dateProvider.now
+        )
+        return recordable
+    }
+
+    /// What the last call to `recordOpenWindows(_:)` wrote. Read by the self-check.
+    public private(set) var lastRecordedOpenWindows: [String] = []
+
+    /// **Ask for the scenes that were open at the last quit and are not open now.**
+    ///
+    /// Idempotent: it runs once per launch and records that it did, so a second call — a scene
+    /// graph rebuilt, a delegate notification arriving twice — cannot re-open a window somebody
+    /// has just closed.
+    ///
+    /// It is additive only. A person who quit with the cockpit shut gets it back, because
+    /// SwiftUI's `Window` scene opens itself and an app that closed its main window a moment after
+    /// launch would be a window vanishing for a reason nobody can see. The whole argument is at
+    /// `ShellWindowRestoration`.
+    @discardableResult
+    public func restoreWindows(alreadyOpen: [String]) -> [String] {
+        guard !hasRestoredWindows else { return [] }
+        hasRestoredWindows = true
+
+        let recorded = FocusStore.shellState(in: modelContainer.mainContext).openWindowsAtLastQuit
+        restorationRecord = recorded
+        let wanted = ShellWindowRestoration.windowsToReopen(
+            recorded: recorded,
+            alreadyOpen: alreadyOpen
+        )
+        // **Only what really opened is recorded as restored.** `open(_:)` answers `false` when no
+        // scene graph installed an opener — a reduced self-check mode, a unit process — and a
+        // restoration that counted a refusal as a success would be reporting a window nobody has.
+        let opened = wanted.filter { FocusCommandCenter.shared.open($0) }
+        restoredWindows = opened.map(\.id)
+        return restoredWindows
+    }
+
+    /// Whether this launch has already restored. One launch, one restoration.
+    public private(set) var hasRestoredWindows = false
+    /// What the store said was open at the last quit, as the restoration read it.
+    public private(set) var restorationRecord: [String]?
+    /// The scene ids this launch actually asked for and got a route to.
+    public private(set) var restoredWindows: [String] = []
+
     /// Offer a shortcut to the platform, recording what it said.
     ///
     /// The registrar consults `HotKeySpec.refusal` *before* calling the API, because the API

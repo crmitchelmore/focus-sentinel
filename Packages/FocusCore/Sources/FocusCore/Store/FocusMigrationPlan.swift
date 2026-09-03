@@ -1,8 +1,8 @@
 import Foundation
 import SwiftData
 
-/// The store's migration plan: v1 → v2 through one **custom** stage, then v2 → v3, v3 → v4 and
-/// v4 → v5 through **lightweight** ones.
+/// The store's migration plan: v1 → v2 and v5 → v6 through **custom** stages, with v2 → v3,
+/// v3 → v4 and v4 → v5 **lightweight** between them.
 ///
 /// This is the whole of F-139's insurance policy, and it was declared in e01 with no stages
 /// precisely so that this change would be *adding a stage to an existing plan* rather than
@@ -52,18 +52,70 @@ import SwiftData
 /// optional and its other two carry property defaults, which is the same condition P-51
 /// measured, met by a stage that has nothing to carry at all.
 ///
-/// The v1 fixture now migrates through **all four** stages. That chain is what makes "no data
+/// ## Why v5 → v6 is custom although its shape is lightweight
+///
+/// v6 adds one entity and touches nothing, so P-51's condition is met and the *shape* asks for a
+/// lightweight stage. It is custom for a reason that has nothing to do with the shape: a fresh
+/// store and a migrated store are indistinguishable by the absence of a row, and focus-odz.7 turns
+/// entirely on telling them apart — somebody upgrading must never be shown a screen explaining an
+/// app they have been using. Stages run only when there is an older store on disk, so the stage
+/// *is* the distinction, and it writes the fact down. The full argument is at `v5ToV6`.
+///
+/// The v1 fixture now migrates through **all five** stages. That chain is what makes "no data
 /// loss on upgrade" a fact rather than an intention, and it is asserted directly.
 public enum FocusMigrationPlan: SchemaMigrationPlan {
     public static var schemas: [any VersionedSchema.Type] {
         [
             FocusSchemaV1.self, FocusSchemaV2.self, FocusSchemaV3.self, FocusSchemaV4.self,
-            FocusSchemaV5.self
+            FocusSchemaV5.self, FocusSchemaV6.self
         ]
     }
 
     public static var stages: [MigrationStage] {
-        [v1ToV2, v2ToV3, v3ToV4, v4ToV5]
+        [v1ToV2, v2ToV3, v3ToV4, v4ToV5, v5ToV6]
+    }
+
+    /// **v5 → v6: custom, and it is the only thing this stage does** (focus-odz.7).
+    ///
+    /// v6 adds one entity and touches nothing, so the *shape* asks for a lightweight stage. The
+    /// reason it is custom is that a fresh store and a migrated store are indistinguishable by the
+    /// absence of a row, and the whole of the first-run explanation turns on telling them apart: a
+    /// person upgrading must never be shown a screen that says *"here is what this app does"*
+    /// about an app they have been using.
+    ///
+    /// Migration stages run **only** when there is an older store on disk. So this inserts the row
+    /// itself, with `firstRunExplanationShownAt` already set — *"this store has been used; the
+    /// explanation is not owed"*. A store created at v6 runs no stage, has no row, and is owed the
+    /// explanation exactly once.
+    ///
+    /// The offer and the window list are deliberately left `nil`: those are things that have
+    /// genuinely never happened for an upgrading store, and pretending otherwise would withhold a
+    /// feature from every existing person rather than protect them from a screen.
+    static var v5ToV6: MigrationStage {
+        MigrationStage.custom(
+            fromVersion: FocusSchemaV5.self,
+            toVersion: FocusSchemaV6.self,
+            willMigrate: nil,
+            didMigrate: { context in
+                // Idempotent by construction: SwiftData runs a stage once per store, and a store
+                // that somehow arrived here with a row already gets no second one.
+                let existing = try context.countedFetch(
+                    FetchDescriptor<FocusSchemaV6.ShellStateRecord>()
+                )
+                guard existing.isEmpty else { return }
+                // Through the sanctioned provider, never a bare `Date()`: R-26 bans that
+                // spelling repository-wide, and a migration is exactly the place where a clock
+                // nobody can substitute would be hardest to notice.
+                let now = SystemDateProvider().now
+                context.insert(
+                    FocusSchemaV6.ShellStateRecord(
+                        firstRunExplanationShownAt: now,
+                        touchedAt: now
+                    )
+                )
+                try context.save()
+            }
+        )
     }
 
     /// v2 → v3: every addition is optional or defaulted, so nothing has to be carried by hand.

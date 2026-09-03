@@ -193,6 +193,54 @@ public final class FocusCommandCenter {
         cockpitOpener = open
     }
 
+    /// **How any declared scene is opened, by id** (focus-odz.6).
+    ///
+    /// `cockpitOpener` above is a closure over one scene, installed because one surface — the
+    /// popover's *"Open Focus Sentinel"* button — needed exactly that scene and nothing else. Then
+    /// restoration needed the **other** one: a person who left the Keyboard Shortcuts window open
+    /// and quit should find it open again, and nothing in the application could ask for it.
+    ///
+    /// Kept beside the cockpit's rather than replacing it, and that is a decision. `requestCockpit`
+    /// is named in five places and its return value is what the popover's button reports; folding
+    /// it into this would change what those callers say for no gain. This one carries the
+    /// **general** case and the cockpit's carries the one the nudge surfaces need by name.
+    private var windowOpener: ((String) -> Void)?
+
+    /// How many scenes have been asked for through the general opener, cockpit or not.
+    ///
+    /// Observable whether an opener is installed or not, for `cockpitRequests`' reason: a test can
+    /// prove the *request* was made with no scene graph to answer it.
+    public private(set) var windowRequests = 0
+
+    /// Whether anything in this process can open a declared scene by id.
+    public var canOpenWindows: Bool { windowOpener != nil }
+
+    /// Install the one route to any declared scene.
+    ///
+    /// Idempotent, and installed by `ShellCommands` beside the cockpit's for the same reason: a
+    /// `Commands` body is the one place in the application that holds SwiftUI's `openWindow`, and
+    /// it is evaluated at launch whether any window is open or not.
+    public func registerWindowOpener(_ open: @escaping (String) -> Void) {
+        windowOpener = open
+    }
+
+    /// Take the general route away again, for a test that installed one.
+    public func unregisterWindowOpener() {
+        windowOpener = nil
+    }
+
+    /// **Open a declared scene**, and say whether anything could.
+    ///
+    /// Returned rather than discarded, for `send(_:)`'s reason: a caller has to say what it means
+    /// to do about a window that never opened, and restoration in particular must not record that
+    /// it restored something it did not.
+    public func open(_ window: ShellWindow) -> Bool {
+        windowRequests += 1
+        guard let windowOpener else { return false }
+        windowOpener(window.id)
+        return true
+    }
+
     /// Take the route away again.
     ///
     /// The symmetric half of `register`/`unregister`, and it exists for the same reason: a test

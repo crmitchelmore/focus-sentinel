@@ -73,6 +73,10 @@ public struct ShellCommands: Commands {
             //
             // Idempotent: the same closure over the same scene, re-installed on every evaluation.
             let _ = commandCenter.registerCockpitOpener { openWindow(id: ShellWindow.cockpit.id) }
+            // …and the general one beside it (focus-odz.6). Restoration needs the *other* scene:
+            // somebody who left the Keyboard Shortcuts window open and quit should find it open
+            // again, and before this nothing in the application could ask for it by id.
+            let _ = commandCenter.registerWindowOpener { openWindow(id: $0) }
             actionButtons(in: .file)
         }
 

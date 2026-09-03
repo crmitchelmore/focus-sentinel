@@ -84,6 +84,14 @@ struct FocusSentinelApp: App {
             ShortcutsHelpView(didRender: composition.helpWindowRendered)
                 .appearanceTraits(composition.appearanceTraits(for: .help))
         }
+        // The measured size, from the one place both windows' sizes are written down
+        // (focus-odz.6). This window had none, so it opened at AppKit's guess for a
+        // content-sized SwiftUI scene — a narrow column with the shortcut glyphs wrapped under
+        // their labels. `ShellWindowTests` holds these; `App/` computes nothing.
+        .defaultSize(
+            width: ShellWindow.help.defaultSize?.width ?? 0,
+            height: ShellWindow.help.defaultSize?.height ?? 0
+        )
 
         Settings {
             SettingsHost(composition: composition)

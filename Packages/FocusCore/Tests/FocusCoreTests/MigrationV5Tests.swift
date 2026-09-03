@@ -25,13 +25,15 @@ struct MigrationV5Tests {
         return directory.appending(path: FocusStore.storeFileName, directoryHint: .notDirectory)
     }
 
-    @Test("the plan's newest schema is v5 and its stage is the fourth")
+    /// v5's own link in the chain. The plan's **tip** — the count of schemas and stages, and the
+    /// version `FocusStore` opens at — moved to `MigrationV6Tests` with the version that owns it;
+    /// what stays here is that v5 is still the fifth link, which is what every assertion below
+    /// about a v5 row rests on.
+    @Test("v5 is the fifth link in the chain")
     func planShape() {
         #expect(FocusSchemaV5.versionIdentifier == Schema.Version(5, 0, 0))
-        #expect(FocusMigrationPlan.schemas.count == 5)
+        #expect(FocusMigrationPlan.schemas.count >= 5)
         #expect(FocusMigrationPlan.schemas[4] is FocusSchemaV5.Type)
-        #expect(FocusMigrationPlan.stages.count == 4)
-        #expect(FocusStore.schema.version == Schema.Version(5, 0, 0))
     }
 
     /// **v5 adds one entity and re-declares none**, which is what makes the stage lightweight

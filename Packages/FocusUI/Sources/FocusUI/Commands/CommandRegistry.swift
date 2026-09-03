@@ -65,13 +65,25 @@ public enum ShellWindow: String, Sendable, CaseIterable, Hashable, Identifiable 
     /// window e02 shipped and the footer was clipped below the fold. A window whose last two
     /// lines are unreachable is a defect however good the lines are.
     ///
-    /// `nil` for a window whose content sizes itself — the Keyboard Shortcuts reference is one
-    /// column of rows, and giving it a fixed frame would mean choosing a size for text whose
-    /// length the person's own type settings decide.
+    /// **The Keyboard Shortcuts window has one too now, and it is measured** (focus-odz.6).
+    ///
+    /// It was `nil`, on the argument that *"the reference is one column of rows, and giving it a
+    /// fixed frame would mean choosing a size for text whose length the person's own type settings
+    /// decide"*. That argument is about a **fixed frame**; `defaultSize` is the size a window
+    /// opens at when nothing has been saved for it, and it stays freely resizable afterwards. The
+    /// alternative to this app choosing an opening size is not the person choosing one — it is
+    /// AppKit choosing, which it does badly for a content-sized SwiftUI scene.
+    ///
+    /// 520 × 660 is read off the committed baselines rather than chosen by eye:
+    /// `shortcutsHelp.light.standard` is **520 × 623.5** points, so the window opens wide enough
+    /// that no row wraps its glyphs under its label and tall enough that the whole reference is on
+    /// screen at standard type. At `accessibilityLarge` the same content measures 954 points and
+    /// does not fit — which is right, and is what a resizable window is for. Opening at the size
+    /// the largest type setting needs would give everybody else a window two-thirds empty.
     public var defaultSize: (width: Double, height: Double)? {
         switch self {
         case .cockpit: (width: 560, height: 900)
-        case .help: nil
+        case .help: (width: 520, height: 660)
         }
     }
 }

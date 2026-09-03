@@ -435,8 +435,27 @@ struct CommandRegistryTests {
             size.height >= 900,
             "the cockpit opens shorter than the window that was measured to clip its footer"
         )
-        // The reference window sizes itself to one column of rows whose length the person's own
-        // type settings decide, so choosing a frame for it would be choosing for them.
-        #expect(ShellWindow.help.defaultSize == nil)
+    }
+
+    /// **The reference opens at the size its own baseline measures** (focus-odz.6).
+    ///
+    /// It had no default size at all, on the argument that a content-sized window should choose
+    /// its own — and the alternative to this app choosing is not the person choosing, it is AppKit
+    /// choosing, which it does badly for a content-sized SwiftUI scene. The numbers are read off
+    /// `shortcutsHelp.light.standard`, which is 520 × 623.5 points, so nothing wraps and the whole
+    /// reference is on screen at standard type.
+    @Test("the Keyboard Shortcuts window opens at the size its baseline measures")
+    func theHelpWindowHasAMeasuredDefaultSize() throws {
+        let size = try #require(ShellWindow.help.defaultSize)
+        #expect(size.width == 520)
+        #expect(
+            size.height >= 624,
+            "the reference opens shorter than the column its committed baseline draws"
+        )
+        // Every declared window opens at a size somebody wrote down. A scene added without one
+        // gets AppKit's guess, which is the defect this pair of assertions exists to stop.
+        for window in ShellWindow.allCases {
+            #expect(window.defaultSize != nil, "\(window) opens at a size nobody chose")
+        }
     }
 }
