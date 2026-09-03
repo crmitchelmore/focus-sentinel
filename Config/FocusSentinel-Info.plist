@@ -2,6 +2,13 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<!-- The commit the build came from. Substituted by Xcode's process-plist step from the
+	     FOCUS_GIT_HASH build setting, which is empty by default so a plain Xcode.app build
+	     renders nothing rather than a literal $(FOCUS_GIT_HASH); the gate and
+	     scripts/package-release.sh pass `git rev-parse --short HEAD`. Substitution happens
+	     BEFORE signing, so nothing here edits a signed artefact. -->
+	<key>FocusGitHash</key>
+	<string>$(FOCUS_GIT_HASH)</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

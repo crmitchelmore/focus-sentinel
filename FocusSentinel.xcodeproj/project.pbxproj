@@ -198,6 +198,7 @@
 				DEVELOPMENT_TEAM = "";
 				ENABLE_HARDENED_RUNTIME = NO;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				FOCUS_GIT_HASH = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Config/FocusSentinel-Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Focus Sentinel";
@@ -228,6 +229,7 @@
 				DEVELOPMENT_TEAM = "";
 				ENABLE_HARDENED_RUNTIME = NO;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				FOCUS_GIT_HASH = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Config/FocusSentinel-Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Focus Sentinel";
