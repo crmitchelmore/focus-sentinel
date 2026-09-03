@@ -740,7 +740,10 @@ for sync_path in \
     Packages/FocusClassify/Sources/FocusClassify/DeterministicRelevanceEngine.swift \
     Packages/FocusClassify/Sources/FocusClassify/Cascade/RuleCascade.swift
 do
-    await_hits=$(grep -nE 'await|async' "$sync_path" 2>/dev/null | strip_comments)
+    # `-H`, because `strip_comments` matches on a `path:line:` prefix and a single-file grep
+    # does not print one — without it the rule fails on its own doc comment, which is how this
+    # was found.
+    await_hits=$(grep -HnE 'await|async' "$sync_path" 2>/dev/null | strip_comments)
     if [[ -n "$await_hits" ]]; then
         print -u2 "FAIL [R-117f] the classification path is not allowed to await: ${sync_path:t}"
         print -u2 "$await_hits" | sed 's/^/    /'
