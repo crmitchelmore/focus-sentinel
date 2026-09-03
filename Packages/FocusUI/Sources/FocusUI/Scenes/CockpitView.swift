@@ -513,20 +513,40 @@ public struct CockpitView: View {
     /// answer, so there is no validation here and nothing is ever refused. The field commits
     /// on Return and on losing focus, because a person who types a sentence and then clicks
     /// elsewhere has not asked to throw it away.
+    ///
+    /// ## The heading belongs to the value, not to the section (focus-0ai)
+    ///
+    /// The caption was drawn unconditionally and the read-only branch under it drew
+    /// `priority.doneWhen ?? ""`, so a commitment with no definition of done rendered a caption
+    /// with nothing beneath it — the app appearing to hold something it does not.
+    /// `NudgeSubject`'s doctrine names this exact shape: *"a nudge that renders an empty string
+    /// is worse than one that renders an identifier — the empty string is a bug the person is
+    /// asked to answer."*
+    ///
+    /// **The two branches answer it differently, and that asymmetry is the fix rather than an
+    /// inconsistency.** The editable branch has somewhere to put the answer — the field's own
+    /// prompt, which invites the person to write one — so its caption is a control's label and
+    /// stays. The read-only branch has nowhere, so with nothing to show it shows nothing at all.
     @ViewBuilder
     private func doneWhenSection(_ priority: PrioritySnapshot) -> some View {
         VStack(alignment: .leading, spacing: rowSpacing / 3) {
-            ShellText(.priorityDoneWhenLabel, role: .caption)
-                .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
-
             if actions == nil {
                 // Read-only: the value, not a control. See `showsCapture` for why a cockpit
-                // with no host draws no fields.
-                Text(verbatim: priority.doneWhen ?? "")
-                    .font(DesignTokens.font(.body, scale: textScale))
-                    .lineLimit(nil)
-                    .fixedSize(horizontal: false, vertical: true)
+                // with no host draws no fields. Nothing at all when there is no value, heading
+                // included (focus-0ai).
+                if let doneWhen = CockpitWiring.doneWhenToDraw(priority.doneWhen) {
+                    ShellText(.priorityDoneWhenLabel, role: .caption)
+                        .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+
+                    Text(verbatim: doneWhen)
+                        .font(DesignTokens.font(.body, scale: textScale))
+                        .lineLimit(nil)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             } else {
+                ShellText(.priorityDoneWhenLabel, role: .caption)
+                    .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+
                 TextField(
                     text: $doneWhenDraft,
                     prompt: Text(ShellStrings.resource(.priorityDoneWhenPrompt))

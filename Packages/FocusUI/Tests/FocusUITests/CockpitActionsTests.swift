@@ -343,6 +343,25 @@ struct CockpitActionsTests {
         #expect(CockpitWiring.correction("   \n  ", replacing: intent) == nil)
     }
 
+    // MARK: - The definition of done, when there is none (focus-0ai, focus-odz.5)
+
+    /// **What the read-only cockpit has anything to say about.**
+    ///
+    /// The rule is the one the bead's acceptance criterion names: with nothing written down there
+    /// is nothing to head. A stored value that is only whitespace counts as nothing — a person who
+    /// typed a space and moved on has not defined done — and a value that has one is returned
+    /// **as stored**, because it is their sentence and trimming it would be the app editing it.
+    @Test("a definition of done that is absent or blank is nothing to draw")
+    func doneWhenToDrawRules() {
+        #expect(CockpitWiring.doneWhenToDraw("Legal has replied") == "Legal has replied")
+        // Returned as stored, not trimmed: the section draws it, it does not correct it.
+        #expect(CockpitWiring.doneWhenToDraw("  Legal has replied  ") == "  Legal has replied  ")
+        #expect(CockpitWiring.doneWhenToDraw(nil) == nil)
+        #expect(CockpitWiring.doneWhenToDraw("") == nil)
+        #expect(CockpitWiring.doneWhenToDraw("   ") == nil)
+        #expect(CockpitWiring.doneWhenToDraw(" \n\t ") == nil)
+    }
+
     @Test("correcting the wording is a different verb from replacing the priority")
     func correctingIsNotReplacing() {
         let host = RecordingPriorityActing()

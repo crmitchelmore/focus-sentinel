@@ -117,14 +117,20 @@ enum PriorityFixture {
         )
     ]
 
+    /// The committed definition of done. Named rather than inline, because focus-0ai's second
+    /// baseline is the same fixture with this **absent**, and two literals would let the two
+    /// pictures drift into being about two different priorities.
+    static let doneWhen = "The signed PDF is in the shared folder and legal has replied"
+
     static func priority(
         intent: String = PriorityFixture.intent,
+        doneWhen: String? = PriorityFixture.doneWhen,
         timebox: TimeboxState = .running(remaining: .seconds(19 * 60))
     ) -> PrioritySnapshot {
         PrioritySnapshot(
             id: id,
             intent: intent,
-            doneWhen: "The signed PDF is in the shared folder and legal has replied",
+            doneWhen: doneWhen,
             createdAt: now,
             lastActivatedAt: now,
             timeboxSeconds: 25 * 60,
@@ -184,12 +190,15 @@ enum PriorityFixture {
     /// standing lines of "never asked for" under a window whose whole point is one sentence, and
     /// a picture of that would be a picture of a state the app is only ever in for the instant
     /// before its first probe.
-    static func cockpit(intent: String = PriorityFixture.intent) -> CockpitState {
+    static func cockpit(
+        intent: String = PriorityFixture.intent,
+        doneWhen: String? = PriorityFixture.doneWhen
+    ) -> CockpitState {
         CockpitState(
             status: .uncertain,
             storeOpened: true,
             isObservingActivity: true,
-            priority: priority(intent: intent),
+            priority: priority(intent: intent, doneWhen: doneWhen),
             recent: recent,
             session: SessionFixture.session(phase: .focus),
             sensing: SensingSummary(
@@ -226,6 +235,12 @@ enum PriorityComponent: String, CaseIterable, Sendable {
     case priorityHero
     case priorityHeroEmpty
     case cockpitWithPriority
+    /// **The same cockpit with no definition of done** (focus-0ai, focus-odz.5).
+    ///
+    /// The bead's own acceptance criterion is that this picture exists: *"the snapshot fixture
+    /// always has a `doneWhen`, so no baseline covers the empty case"*. Without it the fix is
+    /// unwitnessed and the next fixture change reintroduces the heading-over-nothing silently.
+    case cockpitWithPriorityNoDoneWhen
     case contextPack
     case taskRules
     case timeboxRunning
@@ -283,6 +298,16 @@ enum PriorityComponent: String, CaseIterable, Sendable {
             AnyView(
                 CockpitView(
                     state: PriorityFixture.cockpit(),
+                    sessionElapsedSeconds: SessionFixture.elapsedSeconds
+                )
+            )
+        case .cockpitWithPriorityNoDoneWhen:
+            // One field different from the picture above, and that is the point: what a reader
+            // compares is the two baselines, where the *whole section* is gone rather than a
+            // caption standing over a blank line.
+            AnyView(
+                CockpitView(
+                    state: PriorityFixture.cockpit(doneWhen: nil),
                     sessionElapsedSeconds: SessionFixture.elapsedSeconds
                 )
             )

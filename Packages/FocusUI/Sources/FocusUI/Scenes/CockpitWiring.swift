@@ -74,6 +74,27 @@ struct CockpitWiring {
         return trimmed
     }
 
+    /// **The definition of done the read-only cockpit has anything to say about** (focus-0ai).
+    ///
+    /// `nil` when there is nothing written down, which includes a stored value that is only
+    /// whitespace — a person who typed a space and moved on has not defined done, and drawing a
+    /// caption over a blank line tells them the app is holding something it is not. `NudgeSubject`
+    /// states the doctrine: *"a nudge that renders an empty string is worse than one that renders
+    /// an identifier — the empty string is a bug the person is asked to answer."*
+    ///
+    /// Deliberately **not** used by the editable branch. There the caption is a control's label
+    /// and the emptiness is answered by the field's own prompt, so the section is drawn whether
+    /// or not there is a value in it. Two branches, one of which has a place to put the answer;
+    /// this is the rule for the one that does not.
+    ///
+    /// `nonisolated` and `static` for `correction(_:replacing:)`'s reason: it is a rule about a
+    /// string, and holding it here is what lets a test hold it.
+    nonisolated static func doneWhenToDraw(_ stored: String?) -> String? {
+        guard let stored else { return nil }
+        let trimmed = stored.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : stored
+    }
+
     /// Set or clear the definition of done (F-08).
     var editDoneWhen: ((String?) -> Void)? {
         guard let actions, let priority else { return nil }
