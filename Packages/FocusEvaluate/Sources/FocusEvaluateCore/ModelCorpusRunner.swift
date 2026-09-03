@@ -92,15 +92,25 @@ public struct ModelCorpusRunner: Sendable {
     }
 
     /// A stable identifier per cell, derived from its id rather than minted, so two runs of the
-    /// lane key the same cache entries and R-112's repeat comparison is comparing like with like.
+    /// lane key the same cache entries and R-112's repeat comparison compares like with like.
+    ///
+    /// Two FNV-1a hashes of the cell id, rendered as thirty-two hex digits and grouped 8-4-4-4-12.
+    /// No arithmetic and no numeric literal: the format strings are strings, and the grouping
+    /// lives in `EvaluationPolicy` where R-70f permits one.
     static func priorityID(for cell: ModelCorpusCell) -> UUID {
-        var bytes = [UInt8](repeating: 0, count: 16)
-        for (index, byte) in Array(cell.id.utf8).enumerated() {
-            bytes[index % 16] ^= byte &+ UInt8(index & 0x7F)
+        let digits = String(
+            format: "%016lx%016lx",
+            FNV1a.hash(Data(cell.id.utf8)),
+            FNV1a.hash(Data("focus-e06|\(cell.id)".utf8))
+        )
+        var remaining = Substring(digits)
+        var groups: [String] = []
+        for length in EvaluationPolicy.uuidGroupLengths {
+            groups.append(String(remaining.prefix(length)))
+            remaining = remaining.dropFirst(length)
         }
-        return UUID(uuid: (
-            bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],
-            bytes[8], bytes[9], bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15]
-        ))
+        // A hex string of exactly the right shape always parses; the fallback is the honest
+        // answer rather than a `!`, and the suite would fail loudly on a colliding identifier.
+        return UUID(uuidString: groups.joined(separator: "-")) ?? UUID()
     }
 }

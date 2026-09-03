@@ -153,7 +153,7 @@ typeset -A ALLOWED_PRODUCTS
 ALLOWED_PRODUCTS[FocusCore]=""
 ALLOWED_PRODUCTS[FocusRules]="FocusCore"
 ALLOWED_PRODUCTS[FocusClassify]="FocusCore FocusRules"
-ALLOWED_PRODUCTS[FocusEvaluate]="FocusCore FocusRules FocusClassify"
+ALLOWED_PRODUCTS[FocusEvaluate]="FocusCore FocusRules FocusClassify FocusModel"
 ALLOWED_PRODUCTS[FocusSensing]="FocusCore"
 ALLOWED_PRODUCTS[FocusUI]="FocusCore"
 ALLOWED_PRODUCTS[FocusModel]="FocusClassify FocusCore"

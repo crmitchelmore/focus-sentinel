@@ -61,6 +61,17 @@ func fail(_ message: String) -> Never {
     exit(1)
 }
 
+// **Lane 2 is a different entry point in the same executable, and it returns.**
+//
+// `--model` writes `evaluation-model.json` and never touches `evaluation.json`. Lane 1 below is
+// the shipping gate and stays deterministic; lane 2 is evidence, availability-gated, and exits 0
+// on a skip so it can never redden the gate on a Mac with Apple Intelligence off.
+if CommandLine.arguments.contains("--model") {
+    ModelLane.run(
+        corpusDirectory: corpusDirectory, outputDirectory: outputDirectory, runID: runID
+    )
+}
+
 let corpus: GoldenCorpus
 do {
     corpus = try CorpusLoader.load(directory: corpusDirectory)

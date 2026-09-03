@@ -492,6 +492,55 @@ eval_clean_stage() {
     return 0
 }
 
+# Stage 7e — the model lane (e06).
+#
+# Its report goes beside lane 1's in this run's log directory, and the stage never parses a
+# number itself: `ModelEvaluationGate` owns every threshold, `FocusEvaluate --model` decides its
+# own exit status from the contract half, and this script restates nothing — the same discipline
+# stage 7d already follows.
+MODEL_REPORT="$LOG_DIR/evaluation-model.json"
+MODEL_STAGED_REPORT="$EVAL_STAGING/evaluation-model.json"
+MODEL_LOG="$LOG_DIR/focus-evaluate-model.log"
+
+evaluation_model_stage() {
+    FOCUS_EVAL_OUT="$EVAL_STAGING" FOCUS_GATE_RUN_ID="$GATE_RUN_ID" \
+        swift run --package-path Packages/FocusEvaluate -c release FocusEvaluate --model \
+        > "$MODEL_LOG" 2>&1
+    local produce_rc=$?
+
+    if [[ ! -f "$MODEL_STAGED_REPORT" ]]; then
+        print -u2 "FAIL [R-110] FocusEvaluate --model wrote no report (EXIT=$produce_rc)"
+        print
+        cat -- "$MODEL_LOG"
+        return 1
+    fi
+
+    rm -f -- "$MODEL_REPORT"
+    cp -- "$MODEL_STAGED_REPORT" "$MODEL_REPORT" || {
+        print -u2 "FAIL [R-110] could not copy the model report to $MODEL_REPORT"
+        return 1
+    }
+    print "report copied to $MODEL_REPORT"
+    print
+
+    # The run token, because a model report from another run is no more evidence than a
+    # deterministic one would be (B1, applied to lane 2).
+    local reported_run
+    reported_run=$(python3 -c '
+import json, sys
+print(json.load(open(sys.argv[1])).get("runID", ""))
+' "$MODEL_REPORT" 2>/dev/null)
+    if [[ "$reported_run" != "$GATE_RUN_ID" ]]; then
+        print -u2 "FAIL [R-110] the model report carries runID '$reported_run', not '$GATE_RUN_ID'"
+        return 1
+    fi
+    print "ok   the model report is this run's ($GATE_RUN_ID)"
+    print
+
+    cat -- "$MODEL_LOG"
+    return $produce_rc
+}
+
 # Stage 7d — evaluation (R-67, R-75, §4.4).
 #
 # Order matters and is the ruling rather than a preference. The report is copied out of staging
@@ -813,6 +862,23 @@ gate() {
     # number that only lives inside an `.xcresult` is a number nobody reads.
     run_stage "evaluation" "$LOG_DIR/focus-evaluation.log" evaluation_stage
 
+    # 7e — the model lane (e06, R-110). **Evidence, never a gate on a model being present.**
+    #
+    # Two things make that true rather than claimed. It runs `FocusEvaluate --model`, which
+    # writes `evaluation-model.json` and never touches `evaluation.json` — so lane 1 above stays
+    # the shipping gate and stays deterministic. And it exits on the CONTRACT half alone
+    # (F-162's Court split): the bucket fold summing, the grid being complete on both axes, a
+    # model answer reaching `unrelated`, a mandate moving, an answer arriving on the
+    # classification path. The QUALITY half — `seduced`, `rescueRecall`, `unstable` — is printed
+    # and archived and decides whether the tier is composed into the shipping ladder, which is a
+    # ruling made from an artefact rather than a number that can redden somebody's build.
+    #
+    # A Mac with Apple Intelligence off writes `{"status":"skipped","reason":"<availability>"}`
+    # and exits 0. **That is recorded as an outcome, never a silent pass**: the summary line
+    # below reads the report and prints SKIP with the reason, so a reader can always tell "it
+    # ran and passed" from "it did not run".
+    run_stage "evaluation-model" "$LOG_DIR/focus-evaluation-model.log" evaluation_model_stage
+
     # 7b — the binary half of the zero-networking assertion.
     # Stage 2 runs before anything is built, so on a cold checkout `nm -u FocusClassify.o`
     # has no object to read and reports a skip. Re-running the same script here, with the
@@ -919,6 +985,21 @@ gate() {
     print "self-check:     $SELFCHECK_JSON"
     print "snapshots:      $SNAPSHOT_OUT (staged in $SNAPSHOT_STAGING)"
     print "evaluation:     $EVAL_REPORT (staged in $EVAL_STAGING, run token $GATE_RUN_ID)"
+    if [[ -f "$MODEL_REPORT" ]]; then
+        print "model lane:     $MODEL_REPORT — $(python3 -c '
+import json, sys
+report = json.load(open(sys.argv[1]))
+if report.get("status") != "ran":
+    print("SKIP  " + str(report.get("reason")))
+else:
+    buckets = report.get("buckets", {})
+    print("RAN   seduced=%s rescued=%s missedRescue=%s declined=%s unstable=%s"
+          % (report.get("seduced"), buckets.get("rescued"), buckets.get("missedRescue"),
+             buckets.get("declined"), len(report.get("unstable", []))))
+' "$MODEL_REPORT" 2>/dev/null)"
+    else
+        print "model lane:     no report was written"
+    fi
     print "finished:       $(date -u +%Y-%m-%dT%H:%M:%SZ)"
     print
     print "The live osascript/screencapture lane is deliberately NOT a stage: it needs"
@@ -974,6 +1055,9 @@ collect_evidence() {
         "focus-selfcheck-release.json:selfcheck-release.json"
         "focus-eval-clean.log:eval-clean.log"
         "focus-evaluation.log:evaluation.log"
+        "focus-evaluation-model.log:evaluation-model.log"
+        "focus-evaluate-model.log:focus-evaluate-model.log"
+        "evaluation-model.json:evaluation-model.json"
         "focus-evaluate.log:focus-evaluate.log"
         # The report itself, so a closing epic is audited from an artefact rather than from an
         # assertion about an artefact — and two runs of one tree produce two diffable files,

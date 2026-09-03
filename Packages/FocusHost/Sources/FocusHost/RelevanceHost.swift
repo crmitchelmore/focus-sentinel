@@ -95,6 +95,14 @@ final class RelevanceHost {
     /// (R-108).
     let modelAvailability: ModelTierAvailability
 
+    /// Whether the rung is actually in this composition's ladder.
+    ///
+    /// A different question from `modelAvailability`, and keeping them apart is the point: the
+    /// first is a fact about the Mac, the second is a fact about the run. A reading that
+    /// conflated them would say "available" and leave a reader to guess whether anything was
+    /// composed.
+    var modelRungIsComposed: Bool { engine.ladder.canExecute(.onDeviceModel) }
+
     private let builder: RuleSnapshotBuilder
     private let priorities: PriorityStore
     private let ruleStore: any RuleStore
@@ -200,7 +208,14 @@ final class RelevanceHost {
         modelRung: FocusModelRung? = FocusModelRung()
     ) {
         let availability = modelRung?.availability ?? .unknown
-        let composed = availability.isExecutable ? modelRung : nil
+        // **Two gates, and the second is a measurement.** Availability is what this Mac can do;
+        // `ModelTierRelease.composesTheRung` is whether the tier has earned a place in the
+        // ladder, and it is `false` — the on-device model went quiet about fifteen of the thirty
+        // cells the grid committed as holds, three prompt forms running, and a seduction is the
+        // app going silent about something the person's own evidence said to hold. See
+        // `ModelTierRelease` for the table and for what would flip it.
+        let composed = availability.isExecutable && ModelTierRelease.composesTheRung
+            ? modelRung : nil
         self.modelAvailability = availability
         let engine = DeterministicRelevanceEngine(
             normalizer: normalizer,

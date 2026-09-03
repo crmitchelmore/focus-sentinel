@@ -35,7 +35,11 @@ let package = Package(
     dependencies: [
         .package(path: "../FocusCore"),
         .package(path: "../FocusRules"),
-        .package(path: "../FocusClassify")
+        .package(path: "../FocusClassify"),
+        // e06 lane 2 only. This is the dependency the whole `FocusEvaluate` extraction was for:
+        // `FocusModel` depends on `FocusClassify`, so an evaluation lane that lived inside
+        // `FocusClassify` could not have named it without a cycle.
+        .package(path: "../FocusModel")
     ],
     targets: [
         .target(
@@ -58,6 +62,7 @@ let package = Package(
                 "FocusEvaluateCore",
                 .product(name: "FocusClassify", package: "FocusClassify"),
                 .product(name: "FocusCore", package: "FocusCore"),
+                .product(name: "FocusModel", package: "FocusModel"),
                 .product(name: "FocusRules", package: "FocusRules")
             ]
         ),

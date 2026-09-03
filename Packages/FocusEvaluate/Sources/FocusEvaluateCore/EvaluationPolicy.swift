@@ -287,6 +287,19 @@ public enum EvaluationPolicy {
     /// checks the claim rather than assuming it.
     public static let modelLaneRepeatCount = 3
 
+    /// Complete, and nothing less. A missing cell is not scored as passing; it fails.
+    public static let modelGridCompleteness = 1.0
+
+    /// The 8-4-4-4-12 hex grouping of a UUID string.
+    ///
+    /// It lives here rather than beside the code that uses it because R-70f permits a numeric
+    /// literal in exactly one file per tree, and a canonical UUID layout is a number about a
+    /// format rather than about a person — the same reason a percentile rank and a cache-sweep
+    /// capacity are allowed to sit in this file. `ModelCorpusRunner` derives one stable priority
+    /// identifier per cell from the cell's own id, so two runs of lane 2 key the same cache
+    /// entries and R-112's repeat comparison compares like with like.
+    public static let uuidGroupLengths = [8, 4, 4, 4, 12]
+
     /// R-56.1's route must be **exercised**, not merely present: if this ever falls to zero,
     /// family 11 has stopped testing anything.
     public static let noNegativeBasisFloor = 1

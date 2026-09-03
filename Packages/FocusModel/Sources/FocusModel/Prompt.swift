@@ -18,11 +18,23 @@ import Foundation
 enum Prompt {
     /// What the model is told it is doing, once per session.
     static let instructions = """
-        You judge whether an application a person has in front of them belongs to the task they \
-        wrote down. Answer with one label and nothing else. Answer "yes" when the application is \
-        the work itself, "supporting" when it serves the work (documentation, a reference, a \
-        tool the work needs), "unrelated" when it is not the work, and "unsure" when the words \
-        you were given do not settle it. Prefer "unsure" over a guess.
+        You are checking one thing: is this application part of the task the person wrote down, \
+        or have they gone off on something else?
+
+        Method. Read the task. Name to yourself the small set of applications somebody doing \
+        that exact task would have open. Then check whether the application in front of you is \
+        in that set.
+
+        yes — it is in that set, and it is where the task's output is made.
+        supporting — it is in that set, and it serves the output rather than making it.
+        unrelated — it is NOT in that set. Choose this whenever the application merely could be \
+        useful, is a capable tool, or is adjacent to the subject area. Most of the time this is \
+        the right answer.
+        unsure — the task is too vague for that set to have anything in it.
+
+        Saying "yes" about something that is not the task costs the person the interruption they \
+        asked for. Saying "unrelated" about something that turns out to be fine costs them one \
+        click. Prefer the cheap mistake.
         """
 
     /// One question, two interpolated values, both of them tokens.
@@ -40,7 +52,26 @@ enum Prompt {
     /// A bump is appending a line that says what moved, so a version that changed without a
     /// reason is unrepresentable. `promptVersion` is the count, never a digit somebody edits.
     static let revisions: [String] = [
-        "e06 · the first prompt: one task, one application, four labels, greedy sampling."
+        "e06 · the first prompt: one task, one application, four labels, greedy sampling.",
+        "e06 · the first prompt scored `seduced: 14` on the committed 45-cell grid — the model "
+            + "answered `supporting` for any capable tool it could tell a story about. R-111's "
+            + "ruling is that a seduction is a PROMPT defect and the remedy is the prompt, never "
+            + "the threshold, so: `unrelated` is named as the commonest answer, `supporting` is "
+            + "narrowed to what the task cannot be done without, and the model is told that "
+            + "needing a story means the answer is `unrelated`.",
+        "e06 · the narrowed prompt scored `seduced: 20`, worse: naming `unrelated` as the "
+            + "commonest answer did not stop a 3B model reading a bundle identifier as evidence "
+            + "of usefulness. Third form gives it a METHOD rather than a definition — name the "
+            + "small set of applications this exact task needs, then check membership — and "
+            + "states the asymmetry in the person's own currency: a false yes costs them the "
+            + "interruption they asked for, a false unrelated costs them one click.",
+        "e06 · the method prompt scored `seduced: 15`, `rescueRecall: 0.7333`, `unstable: []` "
+            + "across three passes. Three forms measured, best-of-three still fifteen "
+            + "seductions against a budget of zero, and the instability is zero — this is a "
+            + "property of the tier on this question, not noise a fourth run would wash out. "
+            + "The prompt shipped is this one; the rung is NOT composed into the ladder "
+            + "(`ModelTierRelease.composesTheRung == false`) until one green quality half "
+            + "earns it."
     ]
 
     static var version: Int { revisions.count }
