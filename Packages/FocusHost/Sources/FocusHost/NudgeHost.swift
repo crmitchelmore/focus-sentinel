@@ -636,6 +636,7 @@ final class NudgeHost {
             // keeps the decider a pure function of the values it is handed.
             snoozes = snoozes.pruned(at: surroundings.monotonic)
             rememberAnchor(judgement)
+            noticeAHeldReturn(judgement, at: surroundings.monotonic)
 
             let subject = NudgeDecider.querySubject(for: judgement)
             // **The commitment gate 1 is decided by, and the key everything this judgement writes
@@ -696,6 +697,52 @@ final class NudgeHost {
     /// Recorded here rather than inferred later, because by the time a mandate exists the
     /// frontmost application is the *distraction* — asking the workspace then would offer to
     /// return somebody to the thing they were being nudged about.
+    /// **How long the engine has said, unbroken, that this is real work** (focus-4xy).
+    ///
+    /// `nil` when the last judgement was not `.aligned`. Reset on every de-escalation this
+    /// produces, so a standing alignment cannot put the ladder down twice for one return.
+    private var alignedSince: Duration?
+
+    /// **The half of U-1's bargain the ladder never heard about** (focus-4xy).
+    ///
+    /// `LadderDeEscalation.verdictRelevant` — documented as *"the engine now says this is real
+    /// work"* — was a case in the vocabulary that no producer emitted. So the ladder was put down
+    /// by things the PERSON does — a correction, a snooze, a pause, a priority change, the end of
+    /// a session — and never by the app getting better at recognising the work in front of it,
+    /// which is the half of the ruling that says *getting better at recognising real work is how
+    /// the app avoids interrupting*.
+    ///
+    /// **Held, not instantaneous, and that is the whole design decision.** A single `.aligned`
+    /// judgement is one alt-tab back, and a ladder that reset on one would be defeated exactly
+    /// the way `focus-f2a` measured: the drift-return-drift rhythm resets the accumulator between
+    /// every pair of drifts, and the accumulator is the thing that repair exists to protect. So
+    /// the predicate is the one `DriftMachine` ruling 1 already uses to credit a return —
+    /// alignment **held past `RelevancePolicy.driftResetGrace`** — read from the value the loop is
+    /// already handed rather than from the accumulator itself. That is why this reads
+    /// `judgement.drift` and never `DriftMachine`: tying the ladder to the accumulator's own reset
+    /// would undo `focus-f2a`, which is why that round deliberately left this case unwired.
+    ///
+    /// It does nothing while the ladder is idle. A ladder that is not standing has nothing to put
+    /// down, and starting the clock for one would be the app remembering an alignment from before
+    /// the drift that provoked the rung.
+    private func noticeAHeldReturn(_ judgement: NudgeJudgement, at now: Duration) {
+        guard judgement.drift == .aligned, ladder.state.kind != .idle else {
+            alignedSince = nil
+            return
+        }
+        guard let since = alignedSince else {
+            alignedSince = now
+            return
+        }
+        guard now - since >= RelevancePolicy.driftResetGrace else { return }
+        alignedSince = nil
+        ladder.reduce(.deEscalated(.verdictRelevant), now: now)
+        // The rung on screen is over with the ladder that raised it, and it ended because the
+        // world moved rather than because anybody answered — the same ending a phase change out
+        // of `.focus` writes, and for the same reason (focus-qds: an expiry is not an answer).
+        closeSurfaces(endingAnyQuestionAs: .worldMovedOn, andAnyRungAs: .worldMovedOn)
+    }
+
     private func rememberAnchor(_ judgement: NudgeJudgement) {
         guard judgement.verdict == .relevant, let subject = judgement.subject else { return }
         let trimmed = subject.trimmingCharacters(in: .whitespacesAndNewlines)

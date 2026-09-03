@@ -79,6 +79,96 @@ struct NudgeHostLadderTests {
         #expect(rows.compactMap(\.rungRaw).sorted() == ["ambient", "panel"])
     }
 
+    /// **A held return puts the ladder down, and one alt-tab does not** (focus-4xy, U-1).
+    ///
+    /// `LadderDeEscalation.verdictRelevant` — *"the engine now says this is real work"* — was a
+    /// case in the vocabulary that nothing emitted. So the ladder came down for things the PERSON
+    /// did and never for the app getting better at recognising the work in front of it, which is
+    /// the half of U-1's bargain the ruling rests on.
+    ///
+    /// **Both halves are required, and the first is what stops the fix being the alt-tab defeat.**
+    /// `DriftMachine` ruling 1 credits a return only once it has been HELD past
+    /// `driftResetGrace`, and a ladder that reset on a single `.aligned` judgement would be
+    /// defeated exactly the way `focus-f2a` measured: the drift-return-drift rhythm produces one
+    /// aligned reading between every pair of drifts. So this drives the loop up to the panel,
+    /// feeds aligned judgements for less than the grace and requires the ladder to be STILL UP,
+    /// and only then steps over it.
+    @Test("a return the engine has held past the grace puts the ladder down; one does not")
+    func aHeldReturnPutsTheLadderDown() throws {
+        let fixture = try NudgeHostFixture()
+        defer { fixture.tearDown() }
+        try fixture.wireMenuBarToTheLoop()
+
+        // Climb to the panel, the same way theLoopClimbsTheWholeLadder does.
+        for _ in 0..<2 {
+            fixture.host.consider(NudgeHostFixture.unrelatedJudgement(subject: Self.subject))
+            NudgeHostFixture.settle()
+            fixture.clock.advance(by: RelevancePolicy.mandateCooldown + .seconds(1))
+        }
+        try #require(fixture.host.currentRung == .panel, "the ladder never reached the panel")
+
+        // The first aligned judgement starts the clock and puts nothing down.
+        fixture.host.consider(NudgeHostFixture.alignedJudgement(subject: Self.subject))
+        NudgeHostFixture.settle()
+        #expect(
+            fixture.host.currentRung == .panel,
+            "one aligned verdict put the ladder down — that is the alt-tab defeat focus-f2a is about"
+        )
+
+        // Held, but not yet past the grace: still up.
+        fixture.clock.advance(by: RelevancePolicy.driftResetGrace - .seconds(1))
+        fixture.host.consider(NudgeHostFixture.alignedJudgement(subject: Self.subject))
+        NudgeHostFixture.settle()
+        #expect(
+            fixture.host.currentRung == .panel,
+            "the ladder came down one second short of the grace"
+        )
+
+        // …and one step over it: down.
+        fixture.clock.advance(by: .seconds(2))
+        fixture.host.consider(NudgeHostFixture.alignedJudgement(subject: Self.subject))
+        NudgeHostFixture.settle()
+        #expect(
+            fixture.host.currentRung == nil,
+            "a return held past driftResetGrace left the ladder standing at \(String(describing: fixture.host.currentRung))"
+        )
+        #expect(!fixture.panel.isVisible, "the rung's own panel outlived the ladder that raised it")
+    }
+
+    /// **Drift breaking the alignment restarts the clock** (focus-4xy).
+    ///
+    /// The control for the test above: without it, "held past the grace" would be satisfied by
+    /// any two aligned readings far enough apart, whatever the person did in between — which is
+    /// the drift-return-drift rhythm, and is the shape the fix must not have.
+    @Test("a drift between two aligned verdicts restarts the grace")
+    func driftBetweenAlignmentsRestartsTheGrace() throws {
+        let fixture = try NudgeHostFixture()
+        defer { fixture.tearDown() }
+        try fixture.wireMenuBarToTheLoop()
+
+        for _ in 0..<2 {
+            fixture.host.consider(NudgeHostFixture.unrelatedJudgement(subject: Self.subject))
+            NudgeHostFixture.settle()
+            fixture.clock.advance(by: RelevancePolicy.mandateCooldown + .seconds(1))
+        }
+        try #require(fixture.host.currentRung == .panel)
+
+        fixture.host.consider(NudgeHostFixture.alignedJudgement(subject: Self.subject))
+        NudgeHostFixture.settle()
+        // A drift in the middle. The alignment is broken, so the clock starts again.
+        fixture.clock.advance(by: RelevancePolicy.driftResetGrace - .seconds(1))
+        fixture.host.consider(NudgeHostFixture.unrelatedJudgement(subject: Self.subject))
+        NudgeHostFixture.settle()
+        fixture.clock.advance(by: .seconds(2))
+        fixture.host.consider(NudgeHostFixture.alignedJudgement(subject: Self.subject))
+        NudgeHostFixture.settle()
+
+        #expect(
+            fixture.host.currentRung != nil,
+            "two aligned verdicts either side of a drift put the ladder down"
+        )
+    }
+
     /// **A rung that was only deferred is not a rung the ladder climbed past** (R-81).
     ///
     /// The other half of the same wire, and the one the fold above could have broken in the other

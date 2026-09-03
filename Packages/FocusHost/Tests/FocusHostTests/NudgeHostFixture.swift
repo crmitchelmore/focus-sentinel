@@ -411,6 +411,52 @@ struct NudgeHostFixture {
         )
     }
 
+    /// **A judgement the engine calls real work, with the drift accumulator aligned** (focus-4xy).
+    ///
+    /// The input `LadderDeEscalation.verdictRelevant` answers: the person is back on the thing
+    /// they committed to, so `DriftState` is `.aligned` and there is no subject to drift from.
+    static func alignedJudgement(
+        subject: String,
+        dwelled: Duration = .seconds(180)
+    ) -> NudgeJudgement {
+        let outcome = ClassificationOutcome(
+            verdict: .relevant, source: .heuristic, confidence: 1, band: .high
+        )
+        let explanation = Explanation.make(
+            stage: .heuristic,
+            band: .high,
+            clauses: [.sustainedDwell(seconds: 180)],
+            stamp: .current
+        )
+        let drift = DriftState.aligned
+        let eligibility = InterventionEligibility.decide(
+            outcome: outcome,
+            drift: drift,
+            phase: .focus,
+            status: .relevant,
+            isUserIdle: false,
+            hasActivePriority: true,
+            explanation: explanation,
+            stamp: .current
+        )
+        return NudgeJudgement(
+            outcome: outcome,
+            uncertainty: nil,
+            subject: subject,
+            dwelled: dwelled,
+            snapshot: VerdictSnapshot(
+                status: .relevant,
+                stage: .heuristic,
+                band: .high,
+                drift: drift,
+                eligibility: eligibility,
+                explanation: explanation,
+                stampKey: EngineStamp.current.cacheKey
+            ),
+            stamp: .current
+        )
+    }
+
     /// One turn of the run loop, so AppKit and SwiftUI get theirs.
     ///
     /// The interval between "the app showed the nudge" and "a person looked at it" is exactly
