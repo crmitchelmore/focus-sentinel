@@ -603,8 +603,21 @@ store *does* hold is the app's own conduct, and that is what History draws:
 
 Priority wording is labelled as **today's wording** on the surface, because that is the only wording
 the store has. The replay-fidelity measurement that decides whether a future epic may draw a
-timeline at all is published in the self-check as `history.replay.*` and is deliberately **not**
-gated: it is evidence about the plan, not a close condition.
+timeline at all is published in the self-check as `historyReplay` and is deliberately **not**
+gated: it is evidence about the plan, not a close condition. What it measured on the gate run that
+shipped this section, over a seeded day of 28 judged moments:
+
+| | |
+|---|---|
+| replay reached the verdict the app acted on | **8** |
+| diverged, no origin column | 4 |
+| diverged, the priority's wording has since been edited | 4 |
+| diverged, no history of when the commitment changed | 6 |
+| diverged, a correction written afterwards — *the legitimate case* | 6 |
+| diverged with no known cause | **0** |
+
+Read that as: **under a third of a modest day replays**, and only six of the twenty divergences are
+the case a timeline is *supposed* to render. That is why History is a ledger.
 
 ### Why it is not a scoreboard
 
