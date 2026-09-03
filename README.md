@@ -24,7 +24,7 @@ and `tuist` is not used.
 | `Packages/FocusUI` | every SwiftUI view, scene, command and design token |
 | `Packages/FocusHost` | the composition layer — `AppComposition` and the five hosts. The only module that imports more than one sibling package, and the reason it is a package rather than the app target is that `App/` is not one: no test bundle could import it, so every claim about the wiring in it was a source scan (see "Why the composition layer is a package" below) |
 | `Config/` | build inputs that are neither app source nor scripts. Exactly one file: `FocusSentinel-Info.plist`, the partial plist carrying `CFBundleURLTypes`. It lives here and **not** in `App/` — see "The project file" below |
-| `scripts/` | the build gate and its twenty-two stages, plus the six live evidence lanes |
+| `scripts/` | the build gate and its twenty-three stages, plus the six live evidence lanes |
 | `Tools/windowid` | a test driver: window ids for `screencapture -l`, read from the public window list without ever asking for a window *name*. Not part of the shipping app's package graph |
 
 ---
@@ -117,6 +117,7 @@ the stage logs are the evidence, and they are kilobytes. A pinned `FOCUS_DERIVED
 | 7 | the unit lane | every package test target, headless |
 | 7' | `unit-counts` | **the gate can see a test bundle die.** Reads the unit lane's own log: no `Program crashed`, no `Restarting after unexpected exit`, no `Test Suite 'Selected tests' started` retry banner — *regardless of exit status*, because a retry that then passes exits `0` having run a fraction of the suite — six `Test run with N tests` summaries, and each `>=` its committed floor in `Config/test-floors.txt`, paired positionally with the scheme's testables. Floors, never equalities: adding a test may not redden the gate and losing one must. See `focus-jg7` |
 | 7d | `evaluation` | runs the `FocusEvaluate` **product**, copies its report into this run's log directory *before* anything parses it, applies five binding checks to that copy, and only then reports the metric verdict. See "The evaluation lane" |
+| 7e | `evaluation-model` | **lane 2, and it is evidence rather than a gate on a model being present.** Runs `FocusEvaluate --model`, which writes `evaluation-model.json` and never touches lane 1's report. It exits on the *contract* half only — the bucket fold summing, the grid complete on both axes, no model answer reaching `unrelated`, no mandate moving, nothing answered on the classification path. The *quality* half (`seduced`, `rescueRecall`, `unstable`) is printed and archived and decides whether the tier is composed, which is a ruling made from an artefact. A Mac with Apple Intelligence off writes `{"status":"skipped","reason":"…"}` and exits 0, and the summary prints `SKIP` with the reason — an outcome, never a silent pass |
 | 7b | `check-boundaries.sh` again | `nm -u FocusClassify.o` has no networking symbol — the binary-level form of the assertion, which needs a build product to exist |
 | 7c | `check-forbidden.sh` again | the binary half of SC-1: `nm -u` finds no `_kCGWindowName` in **seven products named one by one** — the app binary, `FocusCore.o`, `FocusSensing.o`, `FocusRules.o`, `FocusClassify.o`, `FocusUI.o` and `Tools/windowid` — while the four sanctioned window-list symbols are asserted **present** in `windowid`, so the check cannot pass by the tool being gutted. Under `FOCUS_REQUIRE_BINARY_CHECK=1` a *missing* product is a failure, not a skipped line. `windowid` is built by the stage itself, because it lives outside the workspace scheme |
 | 8 | `entitlement-check.sh` ×2 | no network entitlement, Debug **and** Release; and `get-task-allow` present in Debug, **absent** in Release |
@@ -127,13 +128,14 @@ the stage logs are the evidence, and they are kilobytes. A pinned `FOCUS_DERIVED
 | 9d | `check-notification-denied.sh` again | the same, for the routing half: the 160-cell rung fold, the 80-cell question fold and `requestAuthorizationCallCount == 0`, read from the Release product |
 | 10 | `verify-project.sh` again | the build did not rewrite the project |
 
-**Twenty-two stages — it was twenty until `focus-steal-release` and
-`notification-denied-release` were added.** Saying so plainly, because the epic's close
-condition names the count: `project`, `boundaries`, `forbidden`, `strings`, `build-debug`,
-`build-release`, `packaging`, `eval-clean`, `unit`, **`unit-counts`**, `evaluation`,
-`boundaries-binary`, `forbidden-binary`, `entitlements-debug`, `entitlements-release`,
-`selfcheck-debug`, **`focus-steal`**, **`notification-denied`**, `selfcheck-release`,
-**`focus-steal-release`**, **`notification-denied-release`**, `project-post`.
+**Twenty-three stages — twenty until `focus-steal-release` and `notification-denied-release`
+were added, and twenty-three since e06 added `evaluation-model`.** Saying so plainly, because
+the epic's close condition names the count: `project`, `boundaries`, `forbidden`, `strings`,
+`build-debug`, `build-release`, `packaging`, `eval-clean`, `unit`, **`unit-counts`**,
+`evaluation`, **`evaluation-model`**, `boundaries-binary`, `forbidden-binary`,
+`entitlements-debug`, `entitlements-release`, `selfcheck-debug`, **`focus-steal`**,
+**`notification-denied`**, `selfcheck-release`, **`focus-steal-release`**,
+**`notification-denied-release`**, `project-post`.
 
 The two Release twins exist because a gate audit on 2026-09-02 found that `focus-steal` and
 `notification-denied` read the **Debug** product only, so `selfcheck-release` was the gate's
@@ -251,11 +253,23 @@ go red.
 
 ## The relevance engine
 
-The app has a judgement, and it is **deterministic**. There is no model: `FoundationModels` is
-not imported, not linked, not probed and not availability-gated anywhere, and a lint fails the
-gate on the mere mention of it. The heuristic layer is the *whole* engine, which is what makes
-the charter's "fallback always present and independently tested" clause temporally true rather
-than a promise about a later release.
+The app has a judgement, and it is **deterministic**. The heuristic layer is the *whole* engine
+in every shipping composition, which is what makes the charter's "fallback always present and
+independently tested" clause temporally true rather than a promise about a later release.
+
+**There is an on-device model tier, it is measured, and it is not composed.** e06 built it: a
+`FocusModel` package that is the only place in the repository naming `FoundationModels`, a port
+declared in `FocusClassify` beside the heuristic seam, a cache the classification path reads
+without ever awaiting, and a second evaluation lane that scores it against a 45-cell grid
+somebody wrote by hand before the rung existed. On this rig, with Apple Intelligence on and
+greedy sampling, the tier went quiet about **fifteen of the thirty cells the grid committed as
+holds** — three prompt forms measured, `seduced` 14 / 20 / 15, and zero instability across
+three passes of each, so it is a property of the tier rather than noise. A seduction is the app
+going *silent* about something the person's own evidence said to hold, and under the default-deny
+ruling silence is earned by confident relevance and by nothing else. So
+`ModelTierRelease.composesTheRung` is `false`, the ladder is eight rungs, `byStage.onDeviceModel`
+is zero, and the judgement a person gets is exactly the one measured over 202 corpus cases. One
+green quality half flips the constant, in the same commit as the prompt revision that earns it.
 
 **The mandate this engine emits is what the nudge ladder climbs.** `RelevanceHost` assigns the
 eligibility once and hands the same value to two readers: to Settings ▸ Privacy, where the
@@ -316,9 +330,26 @@ repository. Nine stages at integer ranks 0…8, of which **eight are executable 
 | 3 | context you attached | yes | yes |
 | 4 | built-in default | yes | yes |
 | 5 | what the words have in common | yes | yes |
-| 6 | on-device model | from a later release | **no** |
+| 6 | on-device model | `relevant` only, never `unrelated` | **built, measured, not composed** |
 | 7 | built-in "ask each time" | `uncertain` only | yes |
 | 8 | nothing matched | `uncertain` only | yes |
+
+**Rank 6 is reachable only from two answers, and that distinction had to exist before a model
+could.** The comment on the ladder used to say e06 would "flip one flag and supply an
+implementation". It cannot: the heuristic at rank 5 *answers* `uncertain`, and an `uncertain`
+answer terminates the walk, so a model rung inserted that way would have been consulted on
+mixed-use applications — the one subject class it must never judge — and on nothing else. So a
+rung answer now carries a `RungFinality`. Most answers are `decided`. Two are
+`reviewable(by: .onDeviceModel)`: `noNegativeBasis` and `languageNotSupported`, which are not
+decisions but the engine saying *"I lack the instrument"*. A reviewable answer consults **one**
+named rung and only that one — never a general fall-through, which would let a rung *below* the
+model overturn a provisional answer — and only if the composed ladder can execute it. A rung
+marked reviewable about a browser, a chat client or a media player is narrowed back to `decided`,
+because absence of information is not information about those. `RungFinalityTests` enumerates the
+reviewable set by running six priorities against eight subjects against four context packs
+against eight dwells and collecting finalities, so a third reviewable answer added without a
+ruling fails the suite — and it is what found that the language gate, which fires above the
+subject checks, was still handing browsers to the model.
 
 Four readers, three of them mechanically checked: the runtime iterates `executableRungs` (the
 unavailable rung is *not in the sequence*, rather than skipped by a special case); the
@@ -329,6 +360,12 @@ same authority **and** the same subject kind and disagree resolve to `uncertain`
 recency, and never to `unrelated`.
 
 ### The evaluation lane
+
+**Two lanes.** Lane 1 is the deterministic composition and it is the shipping gate. Lane 2 is
+the model composition and it is evidence — it can never redden a build for a fact about a
+language model, and it can never be skipped without saying so. They share a process and share
+nothing else; lane 2 has its own report type rather than a `status` field on lane 1's, because
+adding a field to `EvaluationReport` would change the JSON the gate binds to.
 
 `FocusEvaluate` is a **product**, not a test side effect, and stage 7d runs it. A report emitted
 as a side effect of a test run is a report whose existence depends on a test having been
@@ -377,6 +414,40 @@ regression and the gate script does not restate a single number:
 | `cache.hitRate` | `≥` its committed floor | so a workload regression is visible rather than inferred |
 | `cache.capacity` | `== cache.recommendedCapacity` | `similarityCacheCapacity` is class **C** and its derivation rule was committed before the sweep was run — the smallest capacity whose p95 is within ten per cent of the best measured. A hit rate alone does not enforce that: a capacity nobody derived would pass it every time |
 | `failures` | empty | a metric that fails without naming the case that failed it is a metric that costs an hour |
+
+#### Lane 2 — `evaluation-model.json`, and the number the epic exists to fail on
+
+`FocusEvaluate --model`, stage 7e. It loads `GoldenCorpus/Model/` — a **complete 6×6 grid** of
+six priorities against six subjects, plus a 3×3 multilingual grid, 45 hand-written cells, every
+one identity-free so it reaches `uncertain(.noNegativeBasis)` or `uncertain(.languageNotSupported)`
+in lane 1 and nowhere else — runs each cell through **both** compositions three times, and folds
+every case into exactly one bucket:
+
+| bucket | definition | gate |
+|---|---|---|
+| `rescued` | deterministic `uncertain` → model `relevant`, and the cell said `rescue` | recall floor |
+| `missedRescue` | the cell said `rescue`, the model declined | reported. Cheap: the app asks the question it would have asked anyway |
+| `seduced` | the cell said `hold`, the model rescued it anyway | **zero.** The app going *quiet* about something the person's own evidence said to hold |
+| `declined` | the cell said `hold`, the model declined | reported — the tier working |
+| `impossible` | a mandate moved, or a model answer reached `unrelated` | **zero**, and unrepresentable: `ModelAnswer` has no `unrelated` case |
+
+The buckets are asserted to sum to the cell count, so a case that fell out of the fold is not a
+case that passed. **Both axes of the grid move**: every row carries a rescue and a hold, so a
+model answering from the priority alone gets the whole row wrong, and every column does too, so
+a model answering from the subject alone gets the whole column wrong. **The hold cells are the
+mutation witness** — a yes-to-everything model scores 100 % recall and fails all thirty of them,
+which `ModelLaneTests` demonstrates with a stub judge and no Apple Intelligence at all.
+
+`corpus_entries` in `build-gate.sh` is an **explicit allow-list**, and that is load-bearing:
+adding `GoldenCorpus/Model/` moves nothing in lane 1's `corpusDigest`. The model corpus carries
+its own digest and a test asserts the two differ — if they ever agreed, somebody had generalised
+the allow-list to a tree walk and broken every committed baseline at once.
+
+**What it measured, and what that decided.** Three prompt forms on this rig, `.greedy`, three
+passes each: `seduced` 14, 20 and 15 against a budget of zero, with `unstable` empty every time.
+Narrowing the prompt raised recall and made the seductions worse. So the tier is not composed —
+see "The relevance engine" — and the lane exists to re-measure that decision rather than to
+argue it.
 
 ---
 
@@ -775,6 +846,17 @@ observe that the engine did not try another route, and the symbol table proves i
 `NLContextualEmbedding` is banned outright alongside it, not because it misbehaved but because
 its API surface includes an asset *request*, and a package whose whole guarantee is that it
 cannot reach the network may not name a type that can ask for a download.
+
+**`FoundationModels` gets the same treatment one package over.** It is named in exactly one
+file in this repository — a count, not a ban, so moving the producer is a reviewed act — and
+that file is in `Packages/FocusModel`, whose framework row is pinned to `Foundation
+FoundationModels os` and whose forbidden set covers every networking type. The asset-pulling
+surface is linted by name: `prewarm()`, `SystemLanguageModel.Adapter` and
+`SystemLanguageModel(useCase:)` appear nowhere in `App/` or `Packages/`, so "we never trigger a
+download" is a lint rather than a promise. It was also measured: `lsof -nP -i` sampled every
+100 ms across a probe's whole life produced **zero** lines over eighty samples, `nettop -P` a
+header and no data row, and the OS's own model daemon logged *"Unentitled inference allowed"* —
+no entitlement is added, and none of `entitlement-check.sh`'s five forbidden keys is implicated.
 
 Nothing the engine concludes can carry raw captured content. Every textual payload an
 explanation can hold is a `NormalisedToken`, which has no public `String` initialiser and
