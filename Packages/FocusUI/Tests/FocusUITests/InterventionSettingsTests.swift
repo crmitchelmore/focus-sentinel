@@ -344,16 +344,43 @@ struct InterventionSettingsTests {
         }
     }
 
-    @Test("a window is drawn as digits, zero-padded, in a fixed shape")
+    /// **The window is drawn in the person's own clock** (focus-43k).
+    ///
+    /// Red before this round on the `en_US` half: `render` was `String(format: "%02d:%02d")`
+    /// twice with an authored en dash, so a Mac set to a 12-hour clock was shown `22:00 – 08:00`.
+    /// The 24-hour half is what it always drew, and it still must — a locale whose clock is
+    /// 24-hour keeps its zero-padded digits. The separator is the catalog's, so it is asserted
+    /// through the same key the row draws rather than as a literal a translation could not move.
+    @Test(
+        "a window is drawn in the locale's own clock, joined by the catalog's separator",
+        .enabled(if: LocalizationLane.catalogsAreCompiled)
+    )
     func windowRendering() {
-        #expect(
-            InterventionSettingsView.render(InterventionSettingsView.startingWindow)
-                == "22:00 – 08:00"
+        let separator = String(localized: ShellStrings.resource(.interventionQuietHoursRange))
+        #expect(separator.contains("%1$@") && separator.contains("%2$@"))
+
+        let british = InterventionSettingsView.render(
+            InterventionSettingsView.startingWindow, locale: Locale(identifier: "en_GB")
         )
+        #expect(british == String(format: separator, arguments: ["22:00", "08:00"]))
         #expect(
             InterventionSettingsView.render(
-                QuietHoursWindow(startMinuteOfDay: 0, endMinuteOfDay: 545)
-            ) == "00:00 – 09:05"
+                QuietHoursWindow(startMinuteOfDay: 0, endMinuteOfDay: 545),
+                locale: Locale(identifier: "en_GB")
+            ) == String(format: separator, arguments: ["00:00", "09:05"])
+        )
+
+        // A 12-hour clock: `10:00 PM – 8:00 AM`-shaped. The space before the day period is the
+        // locale's own (a narrow no-break space on current macOS), so the shape is asserted
+        // rather than the exact bytes.
+        let american = InterventionSettingsView.render(
+            InterventionSettingsView.startingWindow, locale: Locale(identifier: "en_US")
+        )
+        #expect(american.hasPrefix("10:00"), "en_US drew \(american)")
+        #expect(american.contains("PM") && american.contains("AM"), "en_US drew \(american)")
+        #expect(!american.contains("22:00"), "en_US drew a 24-hour clock: \(american)")
+        #expect(
+            InterventionSettingsView.clock(8 * 60, locale: Locale(identifier: "en_US")).hasPrefix("8:00")
         )
     }
 
@@ -461,9 +488,26 @@ struct InterventionSettingsSnapshotTests {
             Issue.record("no fixture named \(state)")
             return
         }
+        // Pinned to a named locale, so the quiet-hours clock in the picture is a fact about the
+        // code and not about the Mac that recorded it (focus-43k).
         try SnapshotHarness.assertSnapshot(
-            InterventionSettingsView(settings: settings, screens: []),
+            InterventionSettingsView(settings: settings, screens: [])
+                .environment(\.locale, Locale(identifier: "en_GB")),
             component: "interventionSettings.\(state)",
+            variant: "light",
+            width: Self.paneWidth
+        )
+    }
+
+    /// **The same window on a 12-hour clock** (focus-43k). The baseline above is the 24-hour
+    /// picture; this is the one a person in the United States sees, and it is committed because a
+    /// formatter change is exactly the kind that produces a plausible-looking wrong string.
+    @Test("the quiet-hours window on a 12-hour clock")
+    func quietHoursOnATwelveHourClock() throws {
+        try SnapshotHarness.assertSnapshot(
+            InterventionSettingsView(settings: InterventionSettingsFixture.quiet, screens: [])
+                .environment(\.locale, Locale(identifier: "en_US")),
+            component: "interventionSettings.quiet.en_US",
             variant: "light",
             width: Self.paneWidth
         )

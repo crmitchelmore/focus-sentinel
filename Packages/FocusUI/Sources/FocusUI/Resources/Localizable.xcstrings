@@ -2593,6 +2593,18 @@
         }
       }
     },
+    "settings.intervention.quietHours.range" : {
+      "comment" : "The quiet-hours window on the Intervention pane. %1$@ and %2$@ are the start and end times, each already formatted for the person's locale; only the separator is authored here.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ \u2013 %2$@"
+          }
+        }
+      }
+    },
     "settings.intervention.quietHours.turnOff" : {
       "comment" : "Action: remove the quiet-hours window.",
       "extractionState" : "manual",

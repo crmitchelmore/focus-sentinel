@@ -67,7 +67,6 @@ Packages/FocusUI/Sources/FocusUI/Relevance/VerdictInspectorView.swift | verdict.
 Packages/FocusUI/Sources/FocusUI/Scenes/InterventionSettingsView.swift | "\(used.formatted()) / \(cap.formatted())") | NUMBER today's spend over its cap. The " / " is authored punctuation
 Packages/FocusUI/Sources/FocusUI/Scenes/InterventionSettingsView.swift | NudgeCopy.duration(span)) | NUMBER one threshold from `InterventionPolicy`
 Packages/FocusUI/Sources/FocusUI/Scenes/InterventionSettingsView.swift | InterventionPolicy.snoozeDurations | NUMBER every snooze span on offer, joined
-Packages/FocusUI/Sources/FocusUI/Scenes/InterventionSettingsView.swift | Self.render(window)) | NUMBER the quiet-hours window — as a 24-hour clock with an authored dash, in every locale (focus-43k)
 Packages/FocusUI/Sources/FocusUI/Scenes/RecentPrioritiesView.swift | row.contextItemCount.formatted()) | NUMBER how many context items a past priority had
 Packages/FocusUI/Sources/FocusUI/Sensing/SensingStatusView.swift | value.formatted()) | NUMBER one sensing reading
 Packages/FocusUI/Sources/FocusUI/Scenes/TimeboxControl.swift | Self.formatPreset(.seconds(seconds))) | NUMBER a timebox preset's length

@@ -96,6 +96,10 @@ public struct InterventionSettingsView: View {
 
     @Environment(\.appearanceTraits) private var traits
     @Environment(\.shellTextScale) private var textScale
+    /// The person's own clock — 12-hour or 24-hour is theirs to decide, not this pane's
+    /// (focus-43k). Read from the environment so a test can hand the pane a locale by name and
+    /// photograph what a person on that locale sees.
+    @Environment(\.locale) private var locale
     @ScaledMetric(relativeTo: .body) private var spacing: CGFloat = 12
 
     public init(
@@ -274,8 +278,17 @@ public struct InterventionSettingsView: View {
 
             if let window = settings.quietHours {
                 HStack(spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
-                    Text(verbatim: Self.render(window))
-                        .font(DesignTokens.font(.body, scale: textScale).monospacedDigit())
+                    // The two boundaries through the locale's own clock, joined by the catalog's
+                    // separator — not a `%02d:%02d` with an authored dash, which drew
+                    // `22:00 – 07:00` on a Mac set to a 12-hour clock (focus-43k).
+                    ShellText(
+                        .interventionQuietHoursRange,
+                        arguments: [
+                            Self.clock(window.startMinuteOfDay, locale: locale),
+                            Self.clock(window.endMinuteOfDay, locale: locale)
+                        ]
+                    )
+                    .monospacedDigit()
                     Spacer(minLength: 0)
                     boundaryButtons(window)
                 }
@@ -352,13 +365,52 @@ public struct InterventionSettingsView: View {
         ((minute % minutesPerDay) + minutesPerDay) % minutesPerDay
     }
 
-    /// `22:00 – 08:00`. Digits, so it is data rather than prose.
-    nonisolated public static func render(_ window: QuietHoursWindow) -> String {
-        "\(clock(window.startMinuteOfDay)) – \(clock(window.endMinuteOfDay))"
+    /// The window as the pane draws it for a locale: `22:00 – 08:00` under `en_GB`,
+    /// `10:00 PM – 8:00 AM` under `en_US` (focus-43k).
+    ///
+    /// The same two calls the row makes, joined by the same catalog entry, so a test of this
+    /// function is a test of the row. It was `String(format: "%02d:%02d")` twice with an
+    /// authored en dash between — a 24-hour clock in every locale, and punctuation no catalog
+    /// could reach — while every other time value in the app went through a locale-aware
+    /// formatter. One row that missed the treatment the app gives uniformly.
+    nonisolated public static func render(_ window: QuietHoursWindow, locale: Locale) -> String {
+        String(
+            format: String(localized: ShellStrings.resource(.interventionQuietHoursRange)),
+            arguments: [
+                clock(window.startMinuteOfDay, locale: locale),
+                clock(window.endMinuteOfDay, locale: locale)
+            ]
+        )
     }
 
-    nonisolated private static func clock(_ minuteOfDay: Int) -> String {
-        String(format: "%02d:%02d", minuteOfDay / 60, minuteOfDay % 60)
+    /// One boundary, as a time of day in the locale's own clock.
+    ///
+    /// `DateFormatter` at `.short` over a real instant rather than a hand-built string: the
+    /// hour cycle, the zero padding, the day-period words and their placement are the locale's
+    /// — `08:00` under `en_GB`, `8:00 AM` under `en_US`, `8:00 am` under `en_AU` (measured). It
+    /// is `DateFormatter` and not `Date.FormatStyle(time: .shortened)` because the latter drops a
+    /// 24-hour locale's leading zero (`8:00` for `en_GB`, measured), which is not what that
+    /// locale's own clock shows. The calendar and time zone are pinned so the same minute of the
+    /// day is the same instant on every Mac; a minute of the day is not a date, so the day it is
+    /// placed on is arbitrary and does not show.
+    nonisolated public static func clock(_ minuteOfDay: Int, locale: Locale) -> String {
+        var calendar = Calendar(identifier: .gregorian)
+        let zone = TimeZone(secondsFromGMT: 0) ?? .current
+        calendar.timeZone = zone
+        calendar.locale = locale
+        let instant = calendar.date(
+            from: DateComponents(
+                year: 2001, month: 1, day: 1,
+                hour: minuteOfDay / 60, minute: minuteOfDay % 60
+            )
+        ) ?? Date(timeIntervalSinceReferenceDate: Double(minuteOfDay) * 60)
+        let formatter = DateFormatter()
+        formatter.locale = locale
+        formatter.calendar = calendar
+        formatter.timeZone = zone
+        formatter.dateStyle = .none
+        formatter.timeStyle = .short
+        return formatter.string(from: instant)
     }
 
     // MARK: - The routing matrix — where a nudge actually appears

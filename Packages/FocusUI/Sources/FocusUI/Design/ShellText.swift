@@ -449,6 +449,10 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case interventionQuietHoursEndEarlier = "settings.intervention.quietHours.endEarlier"
     case interventionQuietHoursEndLater = "settings.intervention.quietHours.endLater"
     case interventionQuietHoursExplanation = "settings.intervention.quietHours.explanation"
+    /// The window's two boundaries, each already a locale-formatted time, joined by the
+    /// separator this entry authors (focus-43k). `%1$@ – %2$@`: the dash was an authored
+    /// literal in a format string for three epics, which no catalog could reach.
+    case interventionQuietHoursRange = "settings.intervention.quietHours.range"
     case interventionRoutingHeading = "settings.intervention.routing.heading"
     case interventionRoutingExplanation = "settings.intervention.routing.explanation"
     /// **Three surfaces, and there were five** (focus-pzl). `…surface.notification` read *"A
@@ -555,6 +559,9 @@ public struct ShellText: View {
     private let role: DesignTokens.FontRole
     /// The substitutions, for the format-string entries. Empty for every plain entry.
     private let arguments: [String]
+    /// Whether digits are drawn at a fixed advance, so a clock a person steps with two buttons
+    /// does not jitter as its digits change (e07a, focus-43k). Off for every plain entry.
+    private var monospacedDigits = false
 
     @Environment(\.shellStringTransform) private var transform
     @Environment(\.shellTextScale) private var scale
@@ -608,10 +615,19 @@ public struct ShellText: View {
         self.arguments = []
     }
 
+    /// The same entry, with its digits at a fixed advance. A `Text`-level modifier, so it is
+    /// offered here rather than lost behind the view — the quiet-hours row is the one caller.
+    public func monospacedDigit() -> ShellText {
+        var copy = self
+        copy.monospacedDigits = true
+        return copy
+    }
+
     public var body: some View {
         let format = transform(String(localized: resource))
         let drawn = arguments.isEmpty ? format : String(format: format, arguments: arguments)
-        return Text(verbatim: drawn)
+        let text = Text(verbatim: drawn)
             .font(DesignTokens.font(role, scale: scale))
+        return (monospacedDigits ? text.monospacedDigit() : text)
     }
 }
