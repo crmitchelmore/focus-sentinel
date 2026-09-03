@@ -35,6 +35,17 @@ enum SelfCheck {
     /// has not populated them yet.
     static let settleDelay: TimeInterval = 1.0
 
+    /// The idle pair the focus-7az probe read off this Mac while nobody was in the room, and the
+    /// threshold it was read against.
+    ///
+    /// `.hidSystemState` at the `~0` sentinel is IOHIDSystem's `HIDIdleTime`, and a HID device
+    /// report resets it without producing an input event: 105.71 s of "hardware activity" beside
+    /// 14 850.04 s in which no CGEvent of any concrete type arrived and `w` said every tty had
+    /// been idle 4:08. Published so the gate can put the shipped `IdleReading.isIdle` to the one
+    /// question the live counters on an untouched rig cannot ask it. See `sensingReport()`.
+    static let phantomHidReading = IdleReading(hardwareSeconds: 105.71, sessionSeconds: 14850.04)
+    static let phantomHidThreshold: Double = 180
+
     /// How long the nudge panel stays on screen inside `panelReport()` (focus-x7d).
     ///
     /// Long enough for two different things. **AppKit's** — a window whose size is being driven
@@ -2402,6 +2413,22 @@ enum SelfCheck {
             // what makes `max(hardwareSeconds, sessionSeconds)` visible to a stage: under the
             // rule it replaced, this Mac would publish `false` beside four hours of quiet.
             "isIdleForThisReading": idle.isIdle(threshold: host.settings.idleThresholdInterval),
+            // **And the case that discriminates the two rules on any rig, at any hour.**
+            //
+            // The line above is only as sharp as the machine it runs on: when both live counters
+            // are past the threshold — the usual state of a gate rig, which nobody is touching —
+            // `max(hid, session) >= t` and `hid >= t` agree, and a build that reverted would pass
+            // it. So the shipped `IdleReading.isIdle` is also evaluated here on the pair the
+            // probe measured: 105.71 s of hardware clock, reset by a HID report nobody produced,
+            // beside 14 850.04 s of real quiet, at the default 180 s threshold. `true` under the
+            // rule that ships and `false` under the rule it replaced, on every rig and at every
+            // hour. The figures travel with the answer so the checker asserts the pair it meant.
+            "phantomHidPair": [
+                "hardwareSeconds": Self.phantomHidReading.hardwareSeconds,
+                "sessionSeconds": Self.phantomHidReading.sessionSeconds,
+                "thresholdSeconds": Self.phantomHidThreshold,
+                "isIdle": Self.phantomHidReading.isIdle(threshold: Self.phantomHidThreshold)
+            ] as [String: Any],
             "perEventType": perEventType.map {
                 [
                     "eventType": $0.eventType,

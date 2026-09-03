@@ -2184,6 +2184,32 @@ check(
         idle_threshold,
     ),
 )
+
+# And the case that discriminates the two rules on any rig at any hour. The line above is only as
+# sharp as the machine it runs on: on an untouched gate rig both live counters are past the
+# threshold, `max(hid, session) >= t` and `hid >= t` agree, and a build that went back to the
+# hardware clock alone would pass it. So the product also evaluates its own `IdleReading.isIdle`
+# on the pair the probe measured — 105.71 s of HID clock, reset by a device report nobody
+# produced, beside 14 850.04 s of real quiet, at 180 s. `true` under the rule that ships and
+# `false` under the rule it replaced, everywhere. The figures are asserted with the answer, so a
+# report cannot get the verdict right about some other pair.
+phantom = idle.get("phantomHidPair") or {}
+check(
+    phantom.get("hardwareSeconds") == 105.71
+    and phantom.get("sessionSeconds") == 14850.04
+    and phantom.get("thresholdSeconds") == 180,
+    "the app judged the measured phantom-HID pair, 105.71 s against 14850.04 s at 180 s",
+    (
+        phantom.get("hardwareSeconds"),
+        phantom.get("sessionSeconds"),
+        phantom.get("thresholdSeconds"),
+    ),
+)
+check(
+    phantom.get("isIdle") is True,
+    "a hardware clock reset by a phantom HID report does not make an absent person present",
+    phantom.get("isIdle"),
+)
 # The `~0` sentinel's gap, published and never asserted: it is the signature of a phantom HID
 # reset, it can run to hours in either direction on a machine nobody has touched, and it is the
 # number that explains a verdict rather than a verdict of its own.
