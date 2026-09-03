@@ -904,9 +904,43 @@ public final class AppComposition {
         // `CorrectionAction.outcome(scope:at:)` stays the single place a click becomes a write.
         case .correct(let action, let span):
             nudgeHost.resolve(action, snoozeDuration: span)
+        // **The two the status item's secondary menu adds** (focus-odz.2). Both are app-level
+        // verbs rather than host ones, so both are recorded as well as performed: a menu item
+        // that reached nothing is the defect this whole channel was rebuilt to make visible.
+        case .openSettings:
+            settingsOpenRequests += 1
+            settingsMenuItemFound = ShellSettingsMenu.open()
+        case .quit:
+            quitRequests += 1
+            terminate()
         }
         refreshCockpit()
     }
+
+    /// **How many times something asked for the Settings window**, and whether the last ask found
+    /// an item to perform (focus-odz.2).
+    ///
+    /// Two facts because they are two: a request is observable in any process, and whether the
+    /// app menu was holding a ⌘, item is a fact only a launch with a scene graph has. The
+    /// self-check reads the second; the unit lane drives the first.
+    public private(set) var settingsOpenRequests = 0
+    public private(set) var settingsMenuItemFound = false
+
+    /// How many times the app has been asked to leave.
+    public private(set) var quitRequests = 0
+
+    /// **What leaving actually does.**
+    ///
+    /// A property rather than a call to `NSApp.terminate(nil)` inline, and the reason is that the
+    /// totality suite drives *every* `MenuBarAction` through the wire the status item calls — so
+    /// an inline terminate would take the test runner down with it, and the alternative (leaving
+    /// Quit out of the fold) is exactly the hole `MenuBarActionTotalityTests` exists to close. The
+    /// shipping value is the real one; a test replaces it and asserts `quitRequests` instead.
+    ///
+    /// `applicationWillTerminate` still runs, which is where the nudge loop writes the outcome of
+    /// anything that was on screen (focus-gmr): quitting from this menu is the same exit as
+    /// quitting from anywhere else.
+    var terminate: @MainActor () -> Void = ShellApplicationExit.terminate
 
     /// Redraw the menu bar from the same projection every other surface reads.
     ///

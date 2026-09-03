@@ -573,11 +573,63 @@ enum SelfCheck {
             nudge["notificationAuthorisationDecodeCells"] ?? -1
         root["requestAuthorizationCallCount"] = nudge["requestAuthorizationCallCount"] ?? -1
         root["ladderRungsDeclared"] = nudge["ladderRungsDeclared"] ?? -1
+        // The status item's secondary menu, built by the shipping controller (focus-odz.2).
+        // Reading it changes nothing: it constructs an `NSMenu` and never shows one.
+        root["statusItemMenu"] = statusItemMenuReport()
         // **Last of everything, because it shuts the cockpit and asks for it back**
         // (focus-odz.1). Every reading above describes a window this probe then closes, so it
         // cannot run anywhere else in this function without describing a different app.
         root["reopen"] = reopenReport()
         return root
+    }
+
+    /// **The status item's secondary menu, as the shipping controller builds it** (focus-odz.2).
+    ///
+    /// Three facts, and each answers something the others cannot.
+    ///
+    /// * The **table** — the four items and their titles in both watching states — is the
+    ///   vocabulary, resolved against the app's own compiled catalog. The unit lane cannot read
+    ///   these: under `swift test` SwiftPM copies String Catalogs rather than compiling them, so
+    ///   `ShellStrings.string(_:)` answers the key back. So the sentences a person reads are
+    ///   pinned here or nowhere.
+    /// * The **drawn menu** is what a right-click would put on the screen — every item's target,
+    ///   action and enabled state, from `secondaryMenu()` itself rather than from a second
+    ///   rendering of the table. An item with no target performs nothing.
+    /// * The **Settings item** the menu's third entry performs, found in this process's own menu
+    ///   bar by the key equivalent the system owns. It is *found* and not performed: performing it
+    ///   would open a window in the middle of a report about windows.
+    ///
+    /// Building a menu shows nothing and mutates nothing, so this is safe to read anywhere.
+    @MainActor
+    static func statusItemMenuReport() -> [String: Any] {
+        var report: [String: Any] = [:]
+        report["items"] = StatusItemMenuItem.allCases.map(\.rawValue)
+        report["titlesWhileWatching"] = StatusItemMenuItem.allCases.map {
+            ShellStrings.string($0.titleKey(sensingPaused: false))
+        }
+        report["titlesWhilePaused"] = StatusItemMenuItem.allCases.map {
+            ShellStrings.string($0.titleKey(sensingPaused: true))
+        }
+
+        let controller = AppComposition.shared.menuBar
+        report["installed"] = controller.isInstalled
+        report["sensingPaused"] = !AppComposition.shared.sensingHost.isRunning
+        let menu = controller.secondaryMenu()
+        report["autoenablesItems"] = menu.autoenablesItems
+        report["separators"] = menu.items.filter(\.isSeparatorItem).count
+        report["drawn"] = menu.items.filter { !$0.isSeparatorItem }.map { item in
+            [
+                "identity": item.representedObject as? String ?? "",
+                "title": item.title,
+                "isEnabled": item.isEnabled,
+                "hasTarget": item.target != nil,
+                "hasAction": item.action != nil
+            ] as [String: Any]
+        }
+        // The item *Settings…* performs, in this application's real menu bar.
+        report["settingsMenuItemTitle"] =
+            ShellSettingsMenu.settingsItem(in: NSApplication.shared.mainMenu)?.title ?? ""
+        return report
     }
 
     /// **A Dock click with no window open, driven in the shipping process** (focus-odz.1).

@@ -382,6 +382,12 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case menuBarSnoozedHeading = "shell.menuBar.snoozed"
     case menuBarCancelSnooze = "shell.menuBar.cancelSnooze"
     case menuBarPendingQuestion = "shell.menuBar.pendingQuestion"
+    // The status item's secondary menu (focus-odz.2). *Pause Watching* is deliberately absent:
+    // it is `commandPauseSensing`, which the app menu draws for the same act, and a second key
+    // reading "Pause Watching" would be a second thing to keep in step.
+    case menuBarResumeWatching = "shell.menuBar.resumeWatching"
+    case menuBarSettings = "shell.menuBar.settings"
+    case menuBarQuit = "shell.menuBar.quit"
     /// The **ladder** rung, not the cascade rung. `settings.verdict.rungLabel` reads "Decided
     /// by" and belongs to e04's precedence ladder; a nudge rung answers a different question —
     /// what the app would do next — so it gets a label of its own rather than borrowing one

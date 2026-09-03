@@ -1088,6 +1088,96 @@ print(
     f"system={shell.get('appearanceSystemColorScheme')!r}"
 )
 
+# --- the status item's secondary menu (focus-odz.2) -------------------------------------------
+#
+# The item had one gesture. A left click toggles the popover, and the popover has no Quit, no
+# Settings and no way to resume watching once the menu bar paused it — so somebody running the app
+# with the cockpit shut, which is the state the menu bar exists for, could not leave it from
+# anything they could see.
+#
+# What is pinned here is what the unit lane cannot read. Under `swift test` SwiftPM copies String
+# Catalogs rather than compiling them, so `ShellStrings.string(_:)` answers the key back and the
+# sentences a person reads are unassertable there. They are assertable here, in both watching
+# states, against the app's own compiled catalog.
+
+status_menu = report.get("statusItemMenu") or {}
+
+check(
+    status_menu.get("items") == ["openCockpit", "watching", "settings", "quit"],
+    "the status item's secondary menu is the four declared items, in reading order",
+    status_menu.get("items"),
+)
+check(
+    status_menu.get("titlesWhileWatching")
+    == ["Open Focus Sentinel", "Pause Watching", "Settings\u2026", "Quit Focus Sentinel"],
+    "the secondary menu reads Open / Pause Watching / Settings / Quit while watching",
+    status_menu.get("titlesWhileWatching"),
+)
+check(
+    status_menu.get("titlesWhilePaused")
+    == ["Open Focus Sentinel", "Resume Watching", "Settings\u2026", "Quit Focus Sentinel"],
+    "the same menu offers Resume Watching once watching is paused",
+    status_menu.get("titlesWhilePaused"),
+)
+# **Non-vacuity, and the whole point of the item.** A control labelled with the state it is in
+# rather than the act it performs is the shape a person misreads; two identical lists would be a
+# label that never followed the switch.
+watching_titles = status_menu.get("titlesWhileWatching") or []
+paused_titles = status_menu.get("titlesWhilePaused") or []
+check(
+    len(watching_titles) == len(paused_titles)
+    and [a != b for a, b in zip(watching_titles, paused_titles)].count(True) == 1,
+    "exactly one of the four titles follows the watching state",
+    (watching_titles, paused_titles),
+)
+
+# The menu a right-click would really put on the screen, from the shipping builder.
+drawn = status_menu.get("drawn") or []
+check(
+    [row.get("identity") for row in drawn] == status_menu.get("items"),
+    "the built menu draws every declared item, in the declared order",
+    [row.get("identity") for row in drawn],
+)
+# AppKit's automatic enabling walks the responder chain for a selector's validation, and every
+# item here is bound to one method on the controller — so left at its default AppKit would enable
+# all four whatever the availability predicate said.
+check(
+    status_menu.get("autoenablesItems") is False,
+    "the secondary menu decides its own enabled states rather than letting AppKit guess",
+    status_menu.get("autoenablesItems"),
+)
+check(
+    status_menu.get("separators") == 1,
+    "one separator, above Quit, where every Mac app puts it",
+    status_menu.get("separators"),
+)
+check(
+    all(row.get("hasTarget") and row.get("hasAction") for row in drawn),
+    "every item in the secondary menu has something that performs it",
+    drawn,
+)
+# The item is drawn in the state the app is really in, so the drawn titles are pinned against
+# whichever of the two committed lists that state names.
+expected_drawn = paused_titles if status_menu.get("sensingPaused") else watching_titles
+check(
+    [row.get("title") for row in drawn] == expected_drawn,
+    "the titles the menu really drew are the committed ones for the state it drew them in",
+    ([row.get("title") for row in drawn], status_menu.get("sensingPaused")),
+)
+check(
+    all(row.get("isEnabled") for row in drawn),
+    "every item in the secondary menu is offered, which is what its predicate answers here",
+    drawn,
+)
+# **The route Settings… performs.** It is the app menu's own item, found by the key equivalent the
+# system owns rather than by a private selector — so this says the item exists in the shipping menu
+# bar. An empty string is a Settings… that would do nothing.
+check(
+    bool(status_menu.get("settingsMenuItemTitle")),
+    "the app menu holds a \u2318, item for the secondary menu's Settings\u2026 to perform",
+    status_menu.get("settingsMenuItemTitle"),
+)
+
 # --- a Dock click with the cockpit shut brings it back (focus-odz.1, D5) ----------------------
 #
 # D5's default is a Dock icon rather than an accessory app, and

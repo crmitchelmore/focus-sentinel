@@ -3325,6 +3325,42 @@
         }
       }
     },
+    "shell.menuBar.resumeWatching" : {
+      "comment" : "Menu-bar secondary menu: turn watching back on after it was paused. The pausing half is shell.command.pauseSensing, which the app menu draws as well.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Resume Watching"
+          }
+        }
+      }
+    },
+    "shell.menuBar.settings" : {
+      "comment" : "Menu-bar secondary menu: open the Settings window. The ellipsis is the Mac's convention for an item that opens something rather than acting immediately.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Settings\u2026"
+          }
+        }
+      }
+    },
+    "shell.menuBar.quit" : {
+      "comment" : "Menu-bar secondary menu: leave the application.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quit Focus Sentinel"
+          }
+        }
+      }
+    },
     "shell.menuBar.snoozed" : {
       "comment" : "Heading above the list of subjects a snooze is currently running for.",
       "extractionState" : "manual",

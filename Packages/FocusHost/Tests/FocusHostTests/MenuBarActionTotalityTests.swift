@@ -39,6 +39,13 @@ struct MenuBarActionTotalityTests {
         case pausesTheSession
         case completesTheSession
         case pausesSensing
+        /// **Opens the Settings window** (focus-odz.2). It performs the app menu's own ⌘, item
+        /// rather than opening a second Settings surface, so what a unit process can observe is
+        /// the request; whether the menu bar was holding an item to perform is the self-check's.
+        case opensSettings
+        /// **Leaves.** Recorded rather than performed here: the shipping closure calls
+        /// `NSApp.terminate(nil)`, which in this process would take the runner with it.
+        case quits
         /// Straight to the nudge loop, which is an object rather than a window. These three were
         /// already right, and they are the pattern the four above now follow.
         case reachesTheNudgeLoop
@@ -53,6 +60,8 @@ struct MenuBarActionTotalityTests {
         case .pauseSession: .pausesTheSession
         case .completeSession: .completesTheSession
         case .setSensingPaused: .pausesSensing
+        case .openSettings: .opensSettings
+        case .quit: .quits
         case .cancelSnooze, .answerQuery, .correct: .reachesTheNudgeLoop
         }
     }
@@ -69,6 +78,8 @@ struct MenuBarActionTotalityTests {
         .pauseSession,
         .completeSession,
         .setSensingPaused(true),
+        .openSettings,
+        .quit,
         // Force-unwrapped, as the other menu-bar suites do: `named(_:)` answers `nil` only for
         // an identifier that is empty or whitespace, and this one is a compiled constant.
         .cancelSnooze(subject: NudgeSubject.named(decoySubject)!),
@@ -106,6 +117,10 @@ struct MenuBarActionTotalityTests {
     func nothingGoesThroughTheWindowsChannel(action: MenuBarAction) throws {
         let clock = FixedMonotonicClock()
         let (root, _) = try CompositionRootWireTests.joinedRoot(clock: clock)
+        // **Disarmed before anything is driven** (focus-odz.2). This suite is exhaustive over
+        // `MenuBarAction`, and one of them leaves: the shipping closure calls
+        // `NSApp.terminate(nil)`, which in this process is the test runner.
+        root.terminate = {}
         let sink = CommandSink()
         sink.install()
         defer {
@@ -129,6 +144,8 @@ struct MenuBarActionTotalityTests {
         let clock = FixedMonotonicClock()
         let (root, _) = try CompositionRootWireTests.joinedRoot(clock: clock)
         defer { CompositionRootWireTests.tearDown(root) }
+        // Disarmed for the reason the suite above states: one of these actions is Quit.
+        root.terminate = {}
 
         // The state under test, asserted rather than assumed. `joinHosts()` does not register a
         // command handler — only `CockpitView.onAppear` does — but a suite that ran after one
@@ -179,6 +196,16 @@ struct MenuBarActionTotalityTests {
             #expect(
                 FocusStore.sensingSettings(in: root.modelContainer.mainContext).sensingPaused
             )
+        case .opensSettings:
+            // The **request**, which is observable whether there is a menu bar to perform or not.
+            // A unit process has no ⌘, item, so `settingsMenuItemFound` is `false` here and is
+            // asserted in the shipping application by the self-check — the same division
+            // `raisesTheCockpit` above draws.
+            #expect(root.settingsOpenRequests == 1, "Settings… asked for nothing")
+        case .quits:
+            #expect(root.quitRequests == 1, "Quit left the application running")
+            // …and it did not go looking for a window on the way out.
+            #expect(FocusCommandCenter.shared.cockpitRequests == requestsBefore)
         case .reachesTheNudgeLoop:
             // These three were already objects rather than windows. What is asserted is that they
             // still are: nothing was raised and nothing was buffered on their behalf.

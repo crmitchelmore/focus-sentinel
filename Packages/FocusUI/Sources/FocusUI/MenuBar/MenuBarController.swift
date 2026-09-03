@@ -286,6 +286,16 @@ public enum MenuBarAction: Sendable, Equatable, Hashable {
     /// panel. The `Duration` is the chosen snooze span and is `nil` for every other action — the
     /// same shape `AccusationPanelView` reports on the panel, because it *is* the same view.
     case correct(CorrectionAction, snoozeDuration: Duration?)
+    /// **Open Settings, from a surface SwiftUI's environment does not reach** (focus-odz.2).
+    ///
+    /// An `NSStatusItem`'s menu is AppKit and lives outside every SwiftUI environment, so it has
+    /// no `openSettings` to call. `ShellSettingsMenu` performs the app menu's own item instead,
+    /// which is what keeps this the *same* route to the *same* single Settings scene.
+    case openSettings
+    /// **Leave.** `applicationShouldTerminateAfterLastWindowClosed` answers `false` on purpose, so
+    /// with the cockpit shut the only way out was the Dock icon's own menu — which is AppKit's,
+    /// and which the nudge loop's `applicationWillTerminate` write hangs off just as this does.
+    case quit
 }
 
 /// **The menu-bar command centre: `NSStatusItem` + `NSPopover`** (R-91).
@@ -521,6 +531,10 @@ public final class MenuBarController {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         item.button?.target = self
         item.button?.action = #selector(togglePopover)
+        // **Both buttons reach the one action** (focus-odz.2). `NSStatusBarButton` sends on
+        // `.leftMouseUp` alone by default, so a right-click on the item did nothing at all;
+        // `togglePopover` reads which gesture arrived and shows the menu or the popover.
+        item.button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
         item.button?.setAccessibilityLabel(ShellStrings.string(.menuBarStatusItem))
         statusItem = item
         redraw(force: true)
@@ -842,9 +856,96 @@ public final class MenuBarController {
 
     // MARK: - The popover
 
+    /// **What the world is, for the secondary menu's enabled states** (focus-6uf, focus-odz.2).
+    ///
+    /// A closure for `FocusCommandCenter.world`'s reason: the answer is read at the moment the
+    /// menu is built, out of the hosts the composition root installed, so a menu opened a second
+    /// after a session started is a menu about that session. A pushed value would need somebody
+    /// to remember to push it.
+    public var commandWorld: @MainActor () -> ShellCommandWorld = { FocusCommandCenter.shared.world }
+
+    /// **Whether this click asked for the menu rather than the popover** (focus-odz.2).
+    ///
+    /// A right-click, or a left-click with Control held — the Mac's two spellings of the same
+    /// gesture, and a person who knows only one of them must not find half a status item. Static
+    /// and event-taking so the rule is a value a test can drive rather than a condition only a
+    /// real mouse can reach.
+    nonisolated public static func isSecondaryClick(_ event: NSEvent?) -> Bool {
+        guard let event else { return false }
+        switch event.type {
+        case .rightMouseUp, .rightMouseDown:
+            return true
+        case .leftMouseUp, .leftMouseDown:
+            return event.modifierFlags.contains(.control)
+        default:
+            return false
+        }
+    }
+
+    /// **The secondary menu, built from the declared table** (focus-odz.2).
+    ///
+    /// `public` because it is what the self-check reads: the titles and enabled states the gate
+    /// pins are the ones this function really produced, resolved against the app's own bundle,
+    /// rather than a second rendering of the table taken in the script.
+    ///
+    /// `autoenablesItems = false` because AppKit's automatic enabling walks the responder chain
+    /// for a selector's validation, and every item here is bound to one method on this object —
+    /// so left to itself AppKit would enable all four whatever `isAvailable(in:)` said. The
+    /// predicate is the app menu's, and this is what makes it the one that decides.
+    public func secondaryMenu() -> NSMenu {
+        let menu = NSMenu(title: ShellStrings.string(.menuBarStatusItem))
+        menu.autoenablesItems = false
+        let world = commandWorld()
+        let paused = presentation.sensingPaused
+        for entry in StatusItemMenuItem.allCases {
+            if entry.isPrecededBySeparator { menu.addItem(.separator()) }
+            let item = NSMenuItem(
+                title: ShellStrings.string(entry.titleKey(sensingPaused: paused)),
+                action: #selector(performSecondaryItem(_:)),
+                keyEquivalent: ""
+            )
+            item.target = self
+            // The item carries its own identity rather than an index into `allCases`: a case
+            // inserted in the middle of that enum would otherwise silently re-point every item.
+            item.representedObject = entry.rawValue
+            item.isEnabled = entry.isAvailable(in: world)
+            menu.addItem(item)
+        }
+        return menu
+    }
+
+    /// Show it under the item, then take it off again.
+    ///
+    /// `NSStatusItem.menu` is the only supported way to pop a menu from a status item, and it is
+    /// *modal*: while it is set, a left click opens the menu instead of the popover. So it is set
+    /// for the length of one click and cleared immediately, which is what leaves the primary
+    /// gesture alone.
+    private func showSecondaryMenu() {
+        guard let statusItem else { return }
+        statusItem.menu = secondaryMenu()
+        statusItem.button?.performClick(nil)
+        statusItem.menu = nil
+    }
+
+    @objc
+    private func performSecondaryItem(_ sender: NSMenuItem) {
+        guard
+            let raw = sender.representedObject as? String,
+            let entry = StatusItemMenuItem(rawValue: raw)
+        else { return }
+        onAction?(entry.action(sensingPaused: presentation.sensingPaused))
+    }
+
     @objc
     public func togglePopover() {
         guard let button = statusItem?.button else { return }
+        // **The secondary gesture first** (focus-odz.2). One action is installed for both mouse
+        // buttons — `sendAction(on:)` in `install()` — because a status item has one action, so
+        // which gesture arrived is a fact about the event rather than about the binding.
+        if Self.isSecondaryClick(NSApplication.shared.currentEvent) {
+            showSecondaryMenu()
+            return
+        }
         if popover.isShown {
             popover.performClose(nil)
             return
