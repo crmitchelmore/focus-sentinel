@@ -11,8 +11,9 @@ import Foundation
 /// | 2 | the priority is not English | `uncertain(.languageNotSupported)` |
 /// | 3 | too few content tokens in the priority | `uncertain(.insufficientPriorityEvidence)` |
 /// | 4 | similarity inside the ceiling | `relevant`, `.low` — corroboration only |
-/// | 5 | **no `app`/`domain` context identity** | `uncertain(.noNegativeBasis)` |
-/// | 6 | the subject carries an `ask each time` seed | *decline* — rung 7 answers |
+/// | 5a | the subject is one the priority named | *decline* — rung 3 already answered |
+/// | 5b | the subject carries an `ask each time` seed | *decline* — rung 7 answers |
+/// | 6 | **no `app`/`domain` context identity** | `uncertain(.noNegativeBasis)`, **reviewable** |
 /// | 7 | drift not yet sustained | `uncertain(.noEvidence)` |
 /// | 8 | absence, sustained, behind the basis | `unrelated`, `.medium`, or `.high` past `escalationDwell` |
 ///
@@ -126,27 +127,42 @@ public struct HeuristicClassifier: HeuristicRung {
             )
         }
 
-        // 5 — **the negative basis.** The only clause in this epic whose copy carries an *ask*:
-        // name one application or site you expect to be looking at, and the engine gains
-        // something an absence can be an absence *of*.
-        guard snapshot.hasNegativeBasis else {
-            return RungAnswer(
-                verdict: .uncertain,
-                source: .heuristic,
-                band: .low,
-                clauses: [.noNegativeBasis, .insufficientEvidence(reason: .noNegativeBasis)],
-                uncertaintyReason: .noNegativeBasis
-            )
-        }
+        // 5 — **the two declines, hoisted above the negative basis (e06).**
+        //
+        // These were steps 6 and 5b, *below* the `hasNegativeBasis` guard. The adversarial
+        // review of the e06 plan found the ordering by reading this code rather than its
+        // comments: a priority with no identity in its context pack, with a browser in front
+        // of it, answered `uncertain(.noNegativeBasis)` here and terminated the cascade.
+        //
+        // That was wrong twice over, and only one of the two is about e06.
+        //
+        // The half that is not: this app ships an opinion about Safari — *"ask each time"* —
+        // and that opinion is a better account of why the engine declined than *"you named no
+        // app or site"*. A person reading the inspector was told to go and attach context when
+        // the engine would have declined about a browser whatever they attached. The engine
+        // already behaved correctly when the priority *had* a basis; the answer differed only
+        // in the one case where the person had least to go on.
+        //
+        // The half that is: `noNegativeBasis` is the answer e06 marks
+        // `.reviewable(by: .onDeviceModel)`, and §2.3 declares a mixed-use application
+        // non-consultable. Left in the old order, the deferral would have handed the model
+        // exactly the subjects it must not judge — a browser, whose identity is known to be
+        // uninformative — and nothing else.
+        //
+        // Swapping steps 5 and 6 wholesale was the other candidate fix and is not what
+        // happened: it would move lane-1 uncertainty reasons for cases that *do* have a basis
+        // and change thirty-three committed corpus expectations. Hoisting the two **declines**
+        // changes the answer for exactly one shape of input and leaves every answering route
+        // where it was.
 
-        // …and its third condition, checked here rather than assumed from the rung above. The
-        // context rung would already have answered `relevant` on a match; asserting it again
-        // costs one comparison and makes this rung correct in isolation.
+        // 5a — the basis-identity check, from the rung above. The context rung would already
+        // have answered `relevant` on a match; asserting it again costs one comparison and
+        // makes this rung correct in isolation.
         guard !matchesAnyBasisIdentity(evidence: evidence, snapshot: snapshot) else {
             return nil
         }
 
-        // 6 — a subject this app itself ships an *"ask each time"* opinion about is a subject
+        // 5b — a subject this app itself ships an *"ask each time"* opinion about is a subject
         // whose identity is **known to be uninformative**: a browser, a chat client, a media
         // player. That is R-56.1's own principle — an absence is only informative when there is
         // something for it to be an absence of — so the accusation route declines and rung 7
@@ -155,6 +171,24 @@ public struct HeuristicClassifier: HeuristicRung {
         if let bundleIdentifier = evidence.bundleIdentifier,
            RelevanceSeed.disposition(for: bundleIdentifier)?.seedStage == .seedFallback {
             return nil
+        }
+
+        // 6 — **the negative basis.** The only clause in this epic whose copy carries an *ask*:
+        // name one application or site you expect to be looking at, and the engine gains
+        // something an absence can be an absence *of*.
+        //
+        // e06 marks this answer `.reviewable(by: .onDeviceModel)`. It is not a decision; it is
+        // the engine saying it lacks the instrument, and one rung below it now has one. The
+        // two declines above are what make that marking safe: by the time this line is
+        // reached, the subject is not a mixed-use application and not one the person named.
+        guard snapshot.hasNegativeBasis else {
+            return RungAnswer(
+                verdict: .uncertain,
+                source: .heuristic,
+                band: .low,
+                clauses: [.noNegativeBasis, .insufficientEvidence(reason: .noNegativeBasis)],
+                uncertaintyReason: .noNegativeBasis
+            )
         }
 
         // 7 — the absence is real but not yet sustained. Time is the evidence, and there has

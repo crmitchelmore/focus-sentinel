@@ -558,7 +558,7 @@
     },
     {
       "id": "gc-0501",
-      "note": "queryDwellThreshold, below. Forty-four seconds on an askable uncertain subject, and the app says NOTHING — a question the moment somebody opens an application is a question about a keystroke rather than about their work. This is the committed mutation witness for queryDwellThreshold: at 44 the constant would have to move for this case to speak.",
+      "note": "queryDwellThreshold, below. Forty-four seconds on an askable uncertain subject, and the app says NOTHING — a question the moment somebody opens an application is a question about a keystroke rather than about their work. This is the committed mutation witness for queryDwellThreshold: at 44 the constant would have to move for this case to speak.  AMENDED BY e06: the rung ordering this fixture pinned was the defect, not the contract. `HeuristicClassifier` checked the negative basis BEFORE the `ask each time` seed, so a mixed-use subject with no identity context was told 'you named no app or site' when the app ships an opinion about that very subject — and, worse, `noNegativeBasis` is the answer e06 hands to the on-device model, which §2.3 forbids for a browser. The two declines were hoisted above the basis guard; this case now resolves at rung 7 with the reason the ladder always said it should have.",
       "priority": { "intent": "write the onboarding guide for new hires", "revision": 1 },
       "evidence": { "bundleID": "com.apple.Terminal", "titleTokens": [] },
       "dwellSeconds": 44,
@@ -567,11 +567,11 @@
       "expect": {
         "verdict": "uncertain",
         "source": "heuristic",
-        "stage": "heuristic",
+        "stage": "seedFallback",
         "band": null,
         "eligibility": "suppressed:verdictUncertain",
-        "clauses": ["noNegativeBasis", "insufficientEvidence"],
-        "uncertaintyReason": "noNegativeBasis"
+        "clauses": ["seedFallbackMixedUse", "insufficientEvidence"],
+        "uncertaintyReason": "mixedUseApplication"
       },
       "expectNudge": "silent:verdictDoesNotAuthorise",
       "queryGroundTruth": "eitherIsReasonable"
