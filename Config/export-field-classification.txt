@@ -12,7 +12,7 @@
 # a lint that read the exporter's field list to decide what to require would be the exporter
 # marking its own homework, and the two have to be able to disagree.
 #
-# THE CURRENT SCHEMA ONLY. v1…v6 are frozen migration sources; nothing fetches them and no
+# THE CURRENT SCHEMA ONLY. v1…v7 are frozen migration sources; nothing fetches them and no
 # exporter can reach them. The script derives the current entity set the way the schema chain
 # does — for each entity name, the declaration in the highest-numbered schema wins — so a
 # version that re-declares a class cannot leave this file describing the old columns.
@@ -43,8 +43,8 @@
 # text, image data of any kind, keystroke or input content, security-scoped bookmark blobs,
 # machine identifiers, Keychain material, and any similarity number.
 
-SCHEMA 7
-ENTITIES 14
+SCHEMA 8
+ENTITIES 15
 
 # ---------------------------------------------------------------- the commitment
 
@@ -179,6 +179,10 @@ NudgePreferencesRecord | reducedInterruption | MEASURE | Whether they asked to b
 NudgePreferencesRecord | quietHoursStartMinuteOfDay | MEASURE | Minutes past local midnight
 NudgePreferencesRecord | quietHoursEndMinuteOfDay | MEASURE | Minutes past local midnight
 NudgePreferencesRecord | touchedAt | MEASURE | When they last changed any of it
+
+PrivacyPreferencesRecord | id | KEY | The row's identifier
+PrivacyPreferencesRecord | retentionDays | MEASURE | How long they asked the app to keep things: 7, 30, 90, or 0 for forever
+PrivacyPreferencesRecord | touchedAt | MEASURE | When they last chose a window
 
 ShellStateRecord | id | KEY | The row's identifier
 ShellStateRecord | firstRunExplanationShownAt | MEASURE | When the first-run explanation was shown

@@ -2,7 +2,7 @@ import Foundation
 import SwiftData
 
 /// The store's migration plan: v1 → v2 and v5 → v6 through **custom** stages, with v2 → v3,
-/// v3 → v4, v4 → v5 and v6 → v7 **lightweight** around them.
+/// v3 → v4, v4 → v5, v6 → v7 and v7 → v8 **lightweight** around them.
 ///
 /// This is the whole of F-139's insurance policy, and it was declared in e01 with no stages
 /// precisely so that this change would be *adding a stage to an existing plan* rather than
@@ -61,18 +61,35 @@ import SwiftData
 /// app they have been using. Stages run only when there is an older store on disk, so the stage
 /// *is* the distinction, and it writes the fact down. The full argument is at `v5ToV6`.
 ///
-/// The v1 fixture now migrates through **all six** stages. That chain is what makes "no data
+/// The v1 fixture now migrates through **all seven** stages. That chain is what makes "no data
 /// loss on upgrade" a fact rather than an intention, and it is asserted directly.
 public enum FocusMigrationPlan: SchemaMigrationPlan {
     public static var schemas: [any VersionedSchema.Type] {
         [
             FocusSchemaV1.self, FocusSchemaV2.self, FocusSchemaV3.self, FocusSchemaV4.self,
-            FocusSchemaV5.self, FocusSchemaV6.self, FocusSchemaV7.self
+            FocusSchemaV5.self, FocusSchemaV6.self, FocusSchemaV7.self, FocusSchemaV8.self
         ]
     }
 
     public static var stages: [MigrationStage] {
-        [v1ToV2, v2ToV3, v3ToV4, v4ToV5, v5ToV6, v6ToV7]
+        [v1ToV2, v2ToV3, v3ToV4, v4ToV5, v5ToV6, v6ToV7, v7ToV8]
+    }
+
+    /// **v7 → v8: lightweight, and additive in the strictest sense** (F-115, focus-l7n).
+    ///
+    /// v8 adds one entity — the row the Privacy pane's retention window had never had anywhere —
+    /// and re-declares none. Its one meaningful column carries a property default, which is
+    /// precisely the condition probe P-51 measured for a stage with no code in it.
+    ///
+    /// A store that migrates arrives with **no row at all**, and that is the honest state rather
+    /// than a gap to backfill: the reader answers `RetentionWindow.committedDefault` for an
+    /// absent row, which is the ninety days that build was already keeping. Nobody's history is
+    /// shortened or lengthened by the upgrade; the difference is that from here on they can say.
+    static var v7ToV8: MigrationStage {
+        MigrationStage.lightweight(
+            fromVersion: FocusSchemaV7.self,
+            toVersion: FocusSchemaV8.self
+        )
     }
 
     /// **v6 → v7: lightweight, although it is the first stage since v1 → v2 to re-declare a

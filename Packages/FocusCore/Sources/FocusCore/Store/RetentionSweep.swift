@@ -26,12 +26,14 @@ import SwiftData
 /// deliberately generous — the failure it prevents is asking somebody twice, and the cost of
 /// being wrong the other way is a handful of rows.
 ///
-/// ## No user interface, on purpose
+/// ## The window is a fact about the run, not about the sweep
 ///
-/// e07 §5 owns the picker, the delete-everything button and the sentence in Settings that says
-/// what the window is. Inventing any of that here would be inventing a user-visible privacy
-/// promise outside its epic. What is committed now is the mechanism and the default, because a
-/// row that was never written is a row no later feature has to explain.
+/// This used to take a `RetentionPolicy` in its initialiser, defaulted to the committed ninety
+/// days — and the app built one sweep at launch and kept it, so the window a person chose in
+/// Settings could never have reached it even once the column existed to hold their choice
+/// (F-115, focus-l7n). It reads the window out of the store at the top of every run instead, and
+/// `Result` carries the window it used, so *which* promise a sweep kept is a published fact
+/// rather than an assumption about how the object was built.
 @MainActor
 public struct RetentionSweep {
     /// What one sweep did.
@@ -39,12 +41,25 @@ public struct RetentionSweep {
         /// The local day the sweep ran on. The daily rule compares against this, and the
         /// self-check publishes it.
         public let day: LocalDay
+        /// **The window this run actually kept**, read from the store when the run began.
+        ///
+        /// Published rather than inferred: a sweep that removed nothing because the person asked
+        /// for forever and a sweep that removed nothing because there was nothing old are the
+        /// same four numbers, and this is what tells them apart.
+        public let window: RetentionWindow
         public let activityEvents: Int
         public let interventionRows: Int
         public let queryReceipts: Int
 
-        public init(day: LocalDay, activityEvents: Int, interventionRows: Int, queryReceipts: Int) {
+        public init(
+            day: LocalDay,
+            window: RetentionWindow = .committedDefault,
+            activityEvents: Int,
+            interventionRows: Int,
+            queryReceipts: Int
+        ) {
             self.day = day
+            self.window = window
             self.activityEvents = activityEvents
             self.interventionRows = interventionRows
             self.queryReceipts = queryReceipts
@@ -56,7 +71,10 @@ public struct RetentionSweep {
         public var rowsRemoved: Int { activityEvents + interventionRows + queryReceipts }
     }
 
-    private let policy: RetentionPolicy
+    /// The context the window is read from. The four stores below are facades over this same
+    /// context; the sweep holds it directly because the window is the one thing it needs that no
+    /// store of rows owns.
+    private let context: ModelContext
     private let events: ActivityEventStore
     private let log: InterventionLog
     private let ledger: QueryLedger
@@ -65,7 +83,7 @@ public struct RetentionSweep {
     private let dateProvider: any DateProvider
 
     public init(
-        policy: RetentionPolicy = .committedDefault,
+        context: ModelContext,
         events: ActivityEventStore,
         log: InterventionLog,
         ledger: QueryLedger,
@@ -73,7 +91,7 @@ public struct RetentionSweep {
         calendar: Calendar,
         dateProvider: any DateProvider
     ) {
-        self.policy = policy
+        self.context = context
         self.events = events
         self.log = log
         self.ledger = ledger
@@ -82,16 +100,32 @@ public struct RetentionSweep {
         self.dateProvider = dateProvider
     }
 
-    /// Run the sweep once, against the window as of now.
+    /// Run the sweep once, against the window the person has stored, as of now.
     ///
     /// Every store is asked even if an earlier one removed nothing: three tables, three
     /// independent windows-worth of rows, and a sweep that stopped at the first empty one would
     /// be a sweep whose behaviour depended on which table filled up first.
+    ///
+    /// **Forever is a branch and not a very distant date.** A window of `forever` returns a run
+    /// that touched nothing, rather than a cutoff so far back that the purges happen to match no
+    /// rows: the difference is invisible on a young store and is the whole promise on an old one.
     @discardableResult
     public func run() throws -> Result {
         let now = dateProvider.now
-        let cutoff = policy.cutoff(from: now, calendar: calendar)
-        let cutoffDay = LocalDay.containing(cutoff, calendar: calendar)
+        let policy = FocusStore.retentionPolicy(in: context)
+        let today = LocalDay.containing(now, calendar: calendar)
+        guard
+            let cutoff = policy.cutoff(from: now, calendar: calendar),
+            let cutoffDay = policy.cutoffDay(from: now, calendar: calendar)
+        else {
+            return Result(
+                day: today,
+                window: policy.window,
+                activityEvents: 0,
+                interventionRows: 0,
+                queryReceipts: 0
+            )
+        }
 
         let living = Set(
             try priorities.recentTasks()
@@ -100,7 +134,8 @@ public struct RetentionSweep {
         )
 
         return Result(
-            day: LocalDay.containing(now, calendar: calendar),
+            day: today,
+            window: policy.window,
             activityEvents: try events.purge(before: cutoff),
             interventionRows: try log.purge(before: cutoffDay),
             queryReceipts: try ledger.purge(before: cutoff, livingPriorityIDs: living)

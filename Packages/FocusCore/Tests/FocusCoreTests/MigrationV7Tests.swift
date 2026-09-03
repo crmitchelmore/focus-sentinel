@@ -171,14 +171,13 @@ struct MigrationV7Tests {
         )
     }
 
-    /// **The plan's tip**, which the newest version's suite owns.
-    @Test("the plan's newest schema is v7, and it is the sixth stage")
+    /// v7's place in the plan. The **tip** — how long the chain is and what the store opens —
+    /// moved to `MigrationV8Tests` when v8 arrived, for the reason it was here in the first
+    /// place: the newest version's suite owns it, or two suites drift apart about it.
+    @Test("v7 is the seventh schema and the sixth stage's destination")
     func planShape() {
         #expect(FocusSchemaV7.versionIdentifier == Schema.Version(7, 0, 0))
-        #expect(FocusMigrationPlan.schemas.count == 7)
         #expect(FocusMigrationPlan.schemas[6] is FocusSchemaV7.Type)
-        #expect(FocusMigrationPlan.stages.count == 6)
-        #expect(FocusStore.schema.version == Schema.Version(7, 0, 0))
     }
 
     /// **Exactly one class re-declared, and exactly one property of difference.**

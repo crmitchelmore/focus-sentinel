@@ -22,18 +22,18 @@ struct StoreTests {
         )
     }
 
-    @Test("the current schema the store opens is v7")
-    func currentSchemaIsVersionSeven() {
+    @Test("the current schema the store opens is v8")
+    func currentSchemaIsVersionEight() {
         // The plan's own shape — how many schemas and how many stages — is asserted in
-        // MigrationV7Tests. This is the narrower claim that FocusStore names v7 as the version
+        // MigrationV8Tests. This is the narrower claim that FocusStore names v8 as the version
         // this build understands, which is what every caller inherits.
         //
-        // Still fourteen entities: v3's ten, plus the query ledger's receipts, the intervention
-        // log, the Intervention pane's own settings row, and v6's record of what the shell
-        // remembers about itself between launches. v7 adds none — it re-declares one, which is
-        // why the count is the reading that must NOT move here.
-        #expect(FocusStore.schema.entities.count == 14)
-        #expect(FocusMigrationPlan.schemas.last is FocusSchemaV7.Type)
+        // Fifteen entities: v3's ten, plus the query ledger's receipts, the intervention log,
+        // the Intervention pane's own settings row, v6's record of what the shell remembers
+        // about itself between launches, and v8's Privacy row carrying the retention window.
+        // v7 added none — it re-declared one — which is why fourteen stood for two versions.
+        #expect(FocusStore.schema.entities.count == 15)
+        #expect(FocusMigrationPlan.schemas.last is FocusSchemaV8.Type)
     }
 
     @Test("in-memory: insert, save and fetch round-trip")
@@ -104,7 +104,7 @@ struct StoreTests {
         let second = try FocusStore.makeContainer(kind: .inMemory)
 
         #expect(first.schema.entities.count == second.schema.entities.count)
-        #expect(first.schema.entities.count == 14)
+        #expect(first.schema.entities.count == 15)
     }
 
     @Test("every enum-backed field persists as its string raw value")
