@@ -804,27 +804,12 @@ public final class MenuBarController {
     ///   badge nudge in the programme would be unchargeable for a reason that is about the menu
     ///   bar rather than about the person.
     public func decisionSurfaceReading(of nudge: MenuBarNudge) -> DecisionSurfaceReading {
-        DecisionSurfaceReachability.evaluate(
+        SurfaceMeasurer.reading(
             isVisible: isDrawing(nudge),
             surfaceFrame: popoverFrame,
             screens: Self.popoverContainers(displays()),
-            contentBounds: ScreenRect(
-                x: 0,
-                y: 0,
-                width: popoverLayout.size.width,
-                height: popoverLayout.size.height
-            ),
-            actionTargets: currentPopoverActionFrames.map { identifier, rect in
-                ActionHitTarget(
-                    identifier: identifier,
-                    frame: ScreenRect(
-                        x: rect.origin.x,
-                        y: rect.origin.y,
-                        width: rect.width,
-                        height: rect.height
-                    )
-                )
-            },
+            contentSize: popoverLayout.size,
+            actionFrames: currentPopoverActionFrames,
             offering: offeredIdentifiers(of: nudge)
         )
     }
@@ -1046,49 +1031,18 @@ public final class MenuBarController {
         screens: [DisplayGeometry],
         constructions: inout Int
     ) -> PopoverLayout {
-        let ceiling = popoverMaximumContentHeight(screens: screens)
-        let measured = measureAtCommittedWidth(surface.whole, constructions: &constructions)
-        let commitment = SurfaceSizeCommitments.commit(
-            measuredHeight: measured,
+        // **The instrument is `SurfaceMeasurer`'s** (focus-tzj.6), the way the arithmetic became
+        // `SurfaceSizeCommitments`' in focus-nu6. What stays here is what is the popover's own:
+        // the width it commits to, the inset it wears, and a ceiling with no proportionality
+        // limit in it. The panel's copy of the measurement was byte-identical to this one.
+        let measurement = SurfaceMeasurer.layout(
+            measuring: surface,
             width: popoverContentWidth,
-            ceiling: ceiling
+            inset: popoverContentInset,
+            ceiling: popoverMaximumContentHeight(screens: screens),
+            constructions: &constructions
         )
-        return PopoverLayout(
-            size: CGSize(width: commitment.width, height: commitment.height),
-            overflow: SurfaceSizeCommitments.overflow(
-                measuredHeight: measured,
-                decisionHeight: measureAtCommittedWidth(
-                    surface.decision,
-                    constructions: &constructions
-                ),
-                ceiling: ceiling,
-                minimumContextHeight: DecisionSurfaceLayout.minimumContextHeight
-            )
-        )
-    }
-
-    /// The wrapped height of one part of the popover's content, at the width it commits to.
-    ///
-    /// `nothingScrolls` deliberately: this is the *unclamped* height, and a measurement taken
-    /// through a scroll view would answer whatever it was proposed.
-    private static func measureAtCommittedWidth(
-        _ part: AnyView,
-        constructions: inout Int
-    ) -> Double {
-        constructions += 1
-        let measurer = NSHostingController(
-            rootView: AnyView(
-                NudgePanelContent(
-                    inset: popoverContentInset,
-                    overflow: .nothingScrolls,
-                    layout: .undivided(part),
-                    onFrames: { _ in }
-                )
-            )
-        )
-        return measurer.sizeThatFits(
-            in: CGSize(width: popoverContentWidth, height: .greatestFiniteMagnitude)
-        ).height
+        return PopoverLayout(size: measurement.size, overflow: measurement.overflow)
     }
 }
 

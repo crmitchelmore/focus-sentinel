@@ -303,8 +303,9 @@ public final class NudgePanelController {
     /// A second hosting object rather than the live one because measuring must not disturb the
     /// view a person is looking at, and because the live one carries the frame reporter — asking
     /// *it* to measure would collect the frames of a layout nobody was shown. It is built per
-    /// measurement inside `panelLayout(measuring:screens:)` now, which is what makes that function
-    /// `static` and therefore reachable from a lane with no window (focus-din).
+    /// measurement, by `SurfaceMeasurer` (focus-tzj.6), inside `panelLayout(measuring:screens:)`,
+    /// which is what makes that function `static` and therefore reachable from a lane with no
+    /// window (focus-din).
 
     /// The content, before it was wrapped for the panel. Kept so a re-layout — a show, a screen
     /// change — can be performed without the caller handing the content in again.
@@ -355,23 +356,21 @@ public final class NudgePanelController {
         measuring surface: DecisionSurfaceLayout,
         screens: [DisplayGeometry]
     ) -> PanelLayout {
-        let ceiling = maximumContentHeight(screens: screens)
-        let measured = measureAtCommittedWidth(surface.whole)
-        let commitment = SurfaceSizeCommitments.commit(
-            measuredHeight: measured,
+        // **The instrument is `SurfaceMeasurer`'s** (focus-tzj.6), the way the arithmetic became
+        // `SurfaceSizeCommitments`' in focus-nu6. What stays here is what is the panel's own: the
+        // width it commits to, the inset it wears, its proportionality ceiling and the floor
+        // under its height. The popover's copy of the measurement was byte-identical to this one,
+        // and the tally the popover keeps is unread here — this surface is not built per tick.
+        var unread = 0
+        let measurement = SurfaceMeasurer.layout(
+            measuring: surface,
             width: contentWidth,
-            ceiling: ceiling,
-            minimum: startingSize.height
+            inset: contentInset,
+            ceiling: maximumContentHeight(screens: screens),
+            minimum: startingSize.height,
+            constructions: &unread
         )
-        return PanelLayout(
-            size: CGSize(width: commitment.width, height: commitment.height),
-            overflow: SurfaceSizeCommitments.overflow(
-                measuredHeight: measured,
-                decisionHeight: measureAtCommittedWidth(surface.decision),
-                ceiling: ceiling,
-                minimumContextHeight: DecisionSurfaceLayout.minimumContextHeight
-            )
-        )
+        return PanelLayout(size: measurement.size, overflow: measurement.overflow)
     }
 
     /// The size the panel is laid out at, and what gives way when it will not fit.
@@ -386,28 +385,6 @@ public final class NudgePanelController {
 
         /// Whether anything gives way at all.
         public var scrolls: Bool { overflow != .nothingScrolls }
-    }
-
-    /// The wrapped height of one part of the content at the committed width.
-    ///
-    /// `NSHostingController.sizeThatFits(in:)` answers "how tall is this content when it is
-    /// **given this width**" — the wrapped truth. It is not `NSView.fittingSize`, which is
-    /// SwiftUI's *unconstrained* fitting size and is the number that drove the window to
-    /// 380 × 2212. `nothingScrolls` deliberately: this is the unclamped height, and a measurement
-    /// taken through a scroll view would answer whatever it was proposed.
-    private static func measureAtCommittedWidth(_ part: AnyView) -> Double {
-        NSHostingController(
-            rootView: AnyView(
-                NudgePanelContent(
-                    inset: contentInset,
-                    overflow: .nothingScrolls,
-                    layout: .undivided(part),
-                    onFrames: { _ in }
-                )
-            )
-        )
-        .sizeThatFits(in: CGSize(width: contentWidth, height: .greatestFiniteMagnitude))
-        .height
     }
 
     /// Where every offered action landed, in the panel's content space, as the layout last
@@ -851,27 +828,12 @@ public final class NudgePanelController {
     ///   `AccusationPresentation.offeredActionIdentifiers` and
     ///   `QueryPresentation.offeredAnswerIdentifiers` are what the callers pass.
     public func decisionSurfaceReading(offering identifiers: [String]) -> DecisionSurfaceReading {
-        DecisionSurfaceReachability.evaluate(
+        SurfaceMeasurer.reading(
             isVisible: panel.isVisible,
             surfaceFrame: frame,
             screens: displays(),
-            contentBounds: ScreenRect(
-                x: 0,
-                y: 0,
-                width: contentSize.width,
-                height: contentSize.height
-            ),
-            actionTargets: currentActionFrames.map { identifier, rect in
-                ActionHitTarget(
-                    identifier: identifier,
-                    frame: ScreenRect(
-                        x: rect.origin.x,
-                        y: rect.origin.y,
-                        width: rect.width,
-                        height: rect.height
-                    )
-                )
-            },
+            contentSize: contentSize,
+            actionFrames: currentActionFrames,
             offering: identifiers
         )
     }
