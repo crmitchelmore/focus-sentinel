@@ -19,13 +19,41 @@ public struct DisplayGeometry: Sendable, Equatable, Hashable {
     public let visibleFrame: ScreenRect
     public let backingScaleFactor: Double
 
+    // MARK: - The four readings the notch companion is derived from (e08a)
+    //
+    // Additive, and defaulted to what this rig reports, so every existing construction site keeps
+    // compiling and keeps describing the machine it was written on. `NotchLanding.of(_:)` is the
+    // only thing in the app that reads them together, and it is a pure function — these four are
+    // facts, not a decision.
+
+    /// `NSScreen.safeAreaInsets.top`: how much of the top of this display the system has already
+    /// reserved. **`0` on this rig**, and `0` on every notchless panel.
+    public let safeAreaTopInset: Double
+    /// `NSScreen.auxiliaryTopLeftArea`: the strip of menu bar to the *left* of the housing.
+    /// **`nil` on this rig** — measured `nil` rather than a degenerate rectangle, which is why the
+    /// absence is modelled as `nil` and not as `.zero`.
+    public let auxiliaryTopLeft: ScreenRect?
+    /// `NSScreen.auxiliaryTopRightArea`, the same strip on the right. **`nil` on this rig.**
+    public let auxiliaryTopRight: ScreenRect?
+    /// `CGDisplayIsBuiltin`: whether this is the Mac's own panel.
+    ///
+    /// **The field the review's §0 finding is about.** "No built-in display" is a stronger fact
+    /// than "notchless", F-80's built-in-only policy has no branch without it, and an external
+    /// monitor that happened to report a plausible inset would otherwise be indistinguishable from
+    /// a MacBook's panel. `false` on this rig, which is a Mac mini.
+    public let isBuiltIn: Bool
+
     public init(
         displayID: Int,
         screenIndex: Int,
         isPrimary: Bool,
         frame: ScreenRect,
         visibleFrame: ScreenRect,
-        backingScaleFactor: Double
+        backingScaleFactor: Double,
+        safeAreaTopInset: Double = 0,
+        auxiliaryTopLeft: ScreenRect? = nil,
+        auxiliaryTopRight: ScreenRect? = nil,
+        isBuiltIn: Bool = false
     ) {
         self.displayID = displayID
         self.screenIndex = screenIndex
@@ -33,7 +61,18 @@ public struct DisplayGeometry: Sendable, Equatable, Hashable {
         self.frame = frame
         self.visibleFrame = visibleFrame
         self.backingScaleFactor = backingScaleFactor
+        self.safeAreaTopInset = safeAreaTopInset
+        self.auxiliaryTopLeft = auxiliaryTopLeft
+        self.auxiliaryTopRight = auxiliaryTopRight
+        self.isBuiltIn = isBuiltIn
     }
+
+    /// Where the companion may draw on this display, or the named reason it may not.
+    ///
+    /// Derived rather than stored, for `MenuBarPresentation.attention`'s reason: the facts it is
+    /// made of are already here, and a stored landing would be a second statement of the same
+    /// thing for a path to get wrong.
+    public var notchLanding: NotchLanding { NotchLanding.of(self) }
 
     /// Whether work on this display should be weighed differently.
     ///

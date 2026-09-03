@@ -27,15 +27,28 @@ public final class SystemScreenList: ScreenListReading {
     /// Index `0` is the primary by AppKit's own contract, and the flip every consumer performs
     /// is anchored on it. `NSScreenNumber` is the `CGDirectDisplayID`, carried as an `Int` so
     /// that nothing above this file needs CoreGraphics.
+    /// **The four e08a readings are taken here and nowhere else.** `safeAreaInsets`,
+    /// `auxiliaryTopLeftArea`, `auxiliaryTopRightArea` and `CGDisplayIsBuiltin` are the only
+    /// window-server facts the notch companion rests on, and they enter the app through the same
+    /// seam the frame does — so `NotchLanding` stays a pure function of a value a fixture can
+    /// build. Measured on this rig: insets `top: 0`, both auxiliary areas `nil`, built-in `false`.
     public static func geometry(of screens: [NSScreen]) -> [DisplayGeometry] {
         screens.enumerated().map { index, screen in
-            DisplayGeometry(
-                displayID: displayID(of: screen) ?? index,
+            let id = displayID(of: screen)
+            return DisplayGeometry(
+                displayID: id ?? index,
                 screenIndex: index,
                 isPrimary: index == 0,
                 frame: rect(screen.frame),
                 visibleFrame: rect(screen.visibleFrame),
-                backingScaleFactor: Double(screen.backingScaleFactor)
+                backingScaleFactor: Double(screen.backingScaleFactor),
+                safeAreaTopInset: Double(screen.safeAreaInsets.top),
+                auxiliaryTopLeft: screen.auxiliaryTopLeftArea.map(rect),
+                auxiliaryTopRight: screen.auxiliaryTopRightArea.map(rect),
+                // A screen whose `NSScreenNumber` could not be read between the enumeration and
+                // this line is not claimed to be built in: the honest answer about a display that
+                // has just been unplugged is that the app knows nothing about it.
+                isBuiltIn: id.map { CGDisplayIsBuiltin(CGDirectDisplayID($0)) != 0 } ?? false
             )
         }
     }
