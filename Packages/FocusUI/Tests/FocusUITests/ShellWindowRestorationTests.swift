@@ -62,7 +62,7 @@ struct ShellWindowRestorationTests {
     func theOrderIsDeclared() {
         #expect(
             ShellWindowRestoration.windowsToReopen(
-                recorded: ["help", "cockpit"],
+                recorded: ["history", "help", "cockpit"],
                 alreadyOpen: []
             ) == ShellWindow.allCases
         )

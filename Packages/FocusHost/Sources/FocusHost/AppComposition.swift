@@ -1641,6 +1641,88 @@ public final class AppComposition {
     /// — it renders `CommandRegistry.shell`, a committed value. So the receipt is a verb the
     /// view calls from its body, which is the one thing that distinguishes the shipping window
     /// from a correctly titled empty one.
+    // MARK: - History (e09a, focus-tee.5)
+
+    /// The silent intervals a correction has already been written for, so the button becomes a
+    /// sentence rather than staying live and inviting a second identical rule.
+    ///
+    /// In memory and not in the store on purpose. The rule itself is the durable record — it is
+    /// in the Rules pane, deletable and undoable like any other — and a second stored fact
+    /// saying *"and History has drawn a tick for this"* would be a row whose only reader is a
+    /// window's appearance.
+    public private(set) var correctedHistoryRows: Set<UUID> = []
+
+    /// **Today's ledger**, read fresh every time the window draws it.
+    ///
+    /// Fresh store handles over the one `ModelContext`, exactly as `RetentionSweep`'s are: a
+    /// store object is a facade over the context, and holding one for the life of the app would
+    /// be holding a cache rather than holding rows.
+    ///
+    /// Returns an empty day rather than throwing. A window that cannot open because a fetch
+    /// failed is worse than one that says nothing happened, and the failure is logged where the
+    /// other store refusals in this object are.
+    public func todaysHistory() -> DayHistory {
+        let context = modelContainer.mainContext
+        do {
+            return try DayHistory.build(
+                day: LocalDay.today(calendar: calendar, dateProvider: dateProvider),
+                log: InterventionLog(
+                    context: context,
+                    dateProvider: dateProvider,
+                    calendar: calendar
+                ),
+                ledger: QueryLedger(context: context, dateProvider: dateProvider),
+                events: ActivityEventStore(context: context, dateProvider: dateProvider),
+                sessions: SessionStore(
+                    context: context,
+                    dateProvider: dateProvider,
+                    uptimeClock: uptimeClock,
+                    bootIdentity: bootIdentity
+                ),
+                priorities: PriorityStore(context: context, dateProvider: dateProvider),
+                calendar: calendar
+            )
+        } catch {
+            logger.error(
+                "the store refused a history read: \(error.localizedDescription, privacy: .public)"
+            )
+            return DayHistory(
+                day: LocalDay.today(calendar: calendar, dateProvider: dateProvider),
+                entries: [],
+                priorityWording: [:]
+            )
+        }
+    }
+
+    /// **"This was a distraction"** — the person disagreeing with a silence.
+    ///
+    /// Writes one task-authority rule through `HistoryCorrection`, which is constructed with no
+    /// `QueryLedger` at all: a correction here can never settle or re-open a question. A refusal
+    /// — a priority deleted while the window was open — is logged and drawn as nothing, because
+    /// the affordance the person clicked is withdrawn on the next read with its reason.
+    public func correctHistorySilence(_ silence: HistorySilence, undo: UndoManager? = nil) {
+        let context = modelContainer.mainContext
+        do {
+            _ = try HistoryCorrection.markAsDistraction(
+                silence.correction,
+                priorities: PriorityStore(context: context, dateProvider: dateProvider),
+                at: dateProvider.now,
+                undo: undo
+            )
+            correctedHistoryRows.insert(silence.id)
+            // The engine holds a snapshot built before this rule existed; without this the next
+            // judgement about the same subject would still answer from the old one.
+            relevanceHost.invalidateSnapshot()
+        } catch {
+            logger.error(
+                """
+                the store refused a history correction: \
+                \(error.localizedDescription, privacy: .public)
+                """
+            )
+        }
+    }
+
     public func helpWindowRendered(_ values: ShellRenderedValues) {
         shellWires.insert(.helpRendered)
         record(values, for: .help)

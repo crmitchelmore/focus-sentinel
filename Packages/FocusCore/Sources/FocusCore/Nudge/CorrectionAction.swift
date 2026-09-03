@@ -47,6 +47,19 @@ public struct CorrectionScope: Sendable, Equatable, Hashable {
         CorrectionScope(kind: warrant.subject.kind, subject: warrant.subject.identifier)
     }
 
+    /// The scope a correction on a **row History drew** writes (focus-tee.5).
+    ///
+    /// The third producer, and it keeps R-86 rather than weakening it. The other two take an
+    /// authorisation because the correction is happening *while* the judgement is live; History
+    /// corrects a judgement whose authorisation is hours gone, and what it has instead is the
+    /// app's own **record** of that judgement — the same fact, written down. `HistorySubject` has
+    /// an `internal` initialiser with one caller, `DayHistory.build(…)`, which reads every value
+    /// it makes straight off a stored row. So there is still no path by which a correction names
+    /// a subject the judgement did not use; there is now a second kind of evidence that it did.
+    public static func from(_ subject: HistorySubject) -> CorrectionScope {
+        CorrectionScope(kind: subject.kind, subject: subject.identifier)
+    }
+
     /// The rule this scope writes at the given verdict.
     ///
     /// One function, so that every correction in the programme produces the same shape of row

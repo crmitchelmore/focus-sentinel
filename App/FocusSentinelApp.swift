@@ -93,6 +93,20 @@ struct FocusSentinelApp: App {
             height: ShellWindow.help.defaultSize?.height ?? 0
         )
 
+        // e09a. The day's ledger. A window rather than a sidebar row: the shell has no split
+        // view and `ShellActionEffect` has no "select destination" member, so this is the
+        // destination that exists today (see `ShellWindow.history`).
+        Window(Text(ShellStrings.resource(ShellWindow.history.titleKey)), id: ShellWindow.history.id) {
+            HistoryHost(composition: composition)
+                .appearanceTraits(composition.appearanceTraits(for: .cockpit))
+        }
+        // The measured size, from the one place every window's size is written down.
+        .defaultSize(
+            width: ShellWindow.history.defaultSize?.width ?? 0,
+            height: ShellWindow.history.defaultSize?.height ?? 0
+        )
+        .modelContainer(composition.modelContainer)
+
         Settings {
             SettingsHost(composition: composition)
                 .appearanceTraits(composition.appearanceTraits(for: .settings))
@@ -213,5 +227,30 @@ private struct SettingsHost: View {
             .onAppear {
                 composition.settingsWindowAppeared()
             }
+    }
+}
+
+/// The day's ledger, connected to the store.
+///
+/// A view of its own rather than a `HistoryView` built inline in the scene, for `CockpitHost`'s
+/// reason: `@Environment(\.undoManager)` is the window's own manager and is `nil` until there is
+/// a window, and a correction has to be undoable like every other rule the person writes.
+///
+/// The ledger is rebuilt on every body evaluation rather than cached. It is a read of four
+/// tables over one local day — the same order of work `refreshCockpit` already does per tick —
+/// and a cached one would be a window that quietly stopped agreeing with the store the moment
+/// anything else in the app wrote a row.
+private struct HistoryHost: View {
+    let composition: AppComposition
+
+    @Environment(\.undoManager) private var undoManager
+
+    var body: some View {
+        HistoryView(
+            history: composition.todaysHistory(),
+            corrected: composition.correctedHistoryRows
+        ) { silence in
+            composition.correctHistorySilence(silence, undo: undoManager)
+        }
     }
 }

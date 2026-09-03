@@ -361,6 +361,294 @@
         }
       }
     },
+    "history.answer.answeredRelevant" : {
+      "comment" : "The person's own answer to a question.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yes"
+          }
+        }
+      }
+    },
+    "history.answer.answeredUnrelated" : {
+      "comment" : "The person's own answer to a question.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No"
+          }
+        }
+      }
+    },
+    "history.answer.declined" : {
+      "comment" : "The person's own answer to a question.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not now"
+          }
+        }
+      }
+    },
+    "history.answer.expired" : {
+      "comment" : "The person's own answer to a question.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing — it went away"
+          }
+        }
+      }
+    },
+    "history.disposition.deferred" : {
+      "comment" : "What became of an interruption.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Held back — nothing could carry it"
+          }
+        }
+      }
+    },
+    "history.disposition.delivered" : {
+      "comment" : "What became of an interruption.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You saw it"
+          }
+        }
+      }
+    },
+    "history.disposition.suppressed" : {
+      "comment" : "What became of an interruption.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kept quiet on purpose"
+          }
+        }
+      }
+    },
+    "history.disposition.unopened" : {
+      "comment" : "What became of an interruption.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shown, but never opened"
+          }
+        }
+      }
+    },
+    "history.outcome.answered" : {
+      "comment" : "What the person did about an interruption.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Answered it"
+          }
+        }
+      }
+    },
+    "history.outcome.corrected" : {
+      "comment" : "What the person did about an interruption.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Said it was relevant"
+          }
+        }
+      }
+    },
+    "history.outcome.dismissed" : {
+      "comment" : "What the person did about an interruption.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Closed it"
+          }
+        }
+      }
+    },
+    "history.outcome.ignored" : {
+      "comment" : "What the person did about an interruption.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Left it"
+          }
+        }
+      }
+    },
+    "history.outcome.pausedSession" : {
+      "comment" : "What the person did about an interruption.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paused the session"
+          }
+        }
+      }
+    },
+    "history.outcome.priorityChanged" : {
+      "comment" : "What the person did about an interruption.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Changed priority"
+          }
+        }
+      }
+    },
+    "history.outcome.returned" : {
+      "comment" : "What the person did about an interruption.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Went back to the task"
+          }
+        }
+      }
+    },
+    "history.outcome.snoozed" : {
+      "comment" : "What the person did about an interruption.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Asked for quiet"
+          }
+        }
+      }
+    },
+    "history.surface.menuBar" : {
+      "comment" : "Where an interruption was carried.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On the menu-bar glyph"
+          }
+        }
+      }
+    },
+    "history.surface.notification" : {
+      "comment" : "Where an interruption was carried.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "As a notification"
+          }
+        }
+      }
+    },
+    "history.surface.panel" : {
+      "comment" : "Where an interruption was carried.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On a panel"
+          }
+        }
+      }
+    },
+    "history.surface.popoverBadge" : {
+      "comment" : "Where an interruption was carried.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On the menu-bar popover"
+          }
+        }
+      }
+    },
+    "history.withdrawal.noPriority" : {
+      "comment" : "Why a correction is not offered.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing was set as the priority at the time."
+          }
+        }
+      }
+    },
+    "history.withdrawal.noSubject" : {
+      "comment" : "Why a correction is not offered.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This was not about anything in particular."
+          }
+        }
+      }
+    },
+    "history.withdrawal.originSubject" : {
+      "comment" : "Why a correction is not offered.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This is a site, and Focus cannot yet correct what it decided about one."
+          }
+        }
+      }
+    },
+    "history.withdrawal.priorityDeleted" : {
+      "comment" : "Why a correction is not offered.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "That priority has been deleted, so a rule has nowhere to go."
+          }
+        }
+      }
+    },
     "nudge.attention.noticing" : {
       "comment" : "Read by VoiceOver off the menu-bar item when the ambient rung has landed on the glyph: the app has spoken, and there is nothing on it to press.",
       "extractionState" : "manual",

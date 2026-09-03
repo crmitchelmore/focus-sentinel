@@ -572,8 +572,12 @@ lane that photographs whatever it happens to find is a live lane that proves not
 ## History
 
 History is a **fact ledger**, not a timeline. It lists what the app did today and why it said so,
-row by row, with the person's own answers beside it — and it is reached from the cockpit and from
-the View menu, not from a sidebar.
+row by row, with the person's own answers beside it — and it is reached from the **View menu**
+(⌃⌘D, listed in the Keyboard Shortcuts window like every other bound verb), not from a sidebar.
+
+A cockpit entry point is deliberately *not* in this epic. `FocusTraversal` commits the cockpit's
+keyboard order as a pinned list, and adding a focusable control to it is a change to that order
+and to the assertions over it — real work, and not the same work as building the surface.
 
 ### Why it is a ledger and not a replay
 

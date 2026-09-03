@@ -53,6 +53,10 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     // Window titles
     case cockpitWindowTitle = "shell.window.cockpit.title"
     case helpWindowTitle = "shell.window.help.title"
+    /// e09a. The ledger of what the app did today, reached from the cockpit and the View menu —
+    /// deliberately a window rather than a sidebar row (the shell has two destinations and no
+    /// split view; see `CommandRegistry.shell`).
+    case historyWindowTitle = "shell.window.history.title"
 
     // Menu commands
     case commandCloseWindow = "shell.command.closeWindow"
@@ -77,6 +81,32 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case commandAnswerYes = "shell.command.answerYes"
     case commandAnswerNo = "shell.command.answerNo"
     case commandAnswerNotNow = "shell.command.answerNotNow"
+    // e09a: History, in the View menu beside the other things a person can look at.
+    case commandShowHistory = "shell.command.showHistory"
+
+    // History (e09a) — what the app did today, and the one place a person can say
+    // *you were wrong to stay quiet*.
+    case historyHeading = "shell.history.heading"
+    case historyIntroduction = "shell.history.introduction"
+    /// The sentence that stops the surface implying a person was shown these words at the time.
+    /// `PriorityTask.revision` counts edits and keeps no prior text, so today's wording is all
+    /// there is — and saying so is the difference between a record and a claim.
+    case historyWordingNote = "shell.history.wordingNote"
+    case historyEmpty = "shell.history.empty"
+    /// `nil` explanation kinds: the app did not record why. **Not** "no reasons", which would be
+    /// a claim about the verdict rather than about the record.
+    case historyReasonNotRecorded = "shell.history.reasonNotRecorded"
+    case historyAnswerLabel = "shell.history.answerLabel"
+    /// What the person DID about an interruption, which is a different sentence from what they
+    /// ANSWERED a question — "You said · You closed it" is not English.
+    case historyOutcomeLabel = "shell.history.outcomeLabel"
+    case historyUnderLabel = "shell.history.underLabel"
+    case historyRowAccusation = "shell.history.rowAccusation"
+    case historyRowQuestion = "shell.history.rowQuestion"
+    case historyRowSession = "shell.history.rowSession"
+    case historyRowSilence = "shell.history.rowSilence"
+    case historyCorrectAction = "shell.history.correctAction"
+    case historyCorrectionWritten = "shell.history.correctionWritten"
 
     // Cockpit
     case cockpitHeading = "shell.cockpit.heading"

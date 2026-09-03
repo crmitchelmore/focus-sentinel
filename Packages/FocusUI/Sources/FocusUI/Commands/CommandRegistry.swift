@@ -45,6 +45,11 @@ public enum MenuPlacement: String, Sendable, CaseIterable, Hashable {
 public enum ShellWindow: String, Sendable, CaseIterable, Hashable, Identifiable {
     case cockpit
     case help
+    /// e09a. The day's ledger. A **window**, not a sidebar row: the shell has two destinations
+    /// and no split view, and `ShellActionEffect` has no "select destination" member — adding
+    /// one is uncosted work the epic review left to e09b. History is reached from the cockpit
+    /// and from the View menu, which is the route that exists today.
+    case history
 
     public var id: String { rawValue }
 
@@ -53,6 +58,7 @@ public enum ShellWindow: String, Sendable, CaseIterable, Hashable, Identifiable 
         switch self {
         case .cockpit: .cockpitWindowTitle
         case .help: .helpWindowTitle
+        case .history: .historyWindowTitle
         }
     }
 
@@ -85,6 +91,11 @@ public enum ShellWindow: String, Sendable, CaseIterable, Hashable, Identifiable 
         switch self {
         case .cockpit: (width: 560, height: 900)
         case .help: (width: 520, height: 720)
+        // Wider than the reference and as tall: a ledger row carries a label, a subject, a
+        // reason and — on a silent interval — a button, and at 520 the reason wraps under the
+        // subject on every row. Read off the committed `history.light.standard` baseline the
+        // same way the two above were.
+        case .history: (width: 620, height: 720)
         }
     }
 }
@@ -505,6 +516,18 @@ public struct CommandRegistry: Sendable, Equatable {
             shortcut: Shortcut("l", modifiers: [.control, .command]),
             placement: .view,
             effect: .priority(.answerNotNow)
+        ),
+
+        // --- e09a: the day's ledger, in the View menu (F-104, focus-tee.5) ------------------
+        //
+        // ⌃⌘D like every other verb a person reaches while working, and D because no other
+        // action in this registry has that base character — the rule the ⇧⌘W defect taught.
+        ShellAction(
+            id: "shell.history",
+            titleKey: .commandShowHistory,
+            shortcut: Shortcut("d", modifiers: [.control, .command]),
+            placement: .view,
+            effect: .openWindow(.history)
         ),
 
         ShellAction(

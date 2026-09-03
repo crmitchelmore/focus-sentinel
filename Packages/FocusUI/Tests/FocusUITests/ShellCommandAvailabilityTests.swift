@@ -148,7 +148,7 @@ struct ShellCommandAvailabilityTests {
                 }
             }
         }
-        #expect(CommandRegistry.shell.actions.count == 16)
+        #expect(CommandRegistry.shell.actions.count == 17)
     }
 
     /// **What this proof would still be green for** (repair doctrine, clause 3).

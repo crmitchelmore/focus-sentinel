@@ -25,6 +25,9 @@
 #   R-05  Every `ModelContainer` is constructed through the migration plan. The plan-less
 #         initialiser is forbidden so that no later epic can open the store by a route that
 #         skips migration.
+#   R-119 `HistorySubject` is constructed in exactly one file in the shipping graph, which is
+#         what keeps R-86 true now that a correction can be made from a stored row rather than
+#         from a live authorisation.
 #   R-118 Every stored column in the CURRENT schema carries a row in
 #         `Config/export-field-classification.txt` saying what it is and whether it may ever
 #         leave the app, and every row in that file names a column that exists. Delegated to
@@ -1125,6 +1128,20 @@ print "== e05: the nudge, the two authorisations and the panel's show path"
 # R-96a — the second authorisation has exactly one producer, as the first one does.
 count_files "R-96a" "QueryWarrant is constructed in exactly one file" \
     'QueryWarrant(' 1 App Packages
+
+# R-119 — History's correction has exactly one producer, in the shipping graph (e09a).
+#
+# `CorrectionScope` gained a third producer, from a `HistorySubject`, so that a person can correct
+# a judgement whose authorisation is hours gone. R-86's property — no correction ever names a
+# subject the judgement did not use — then rests on `HistorySubject` being made in exactly one
+# place, from a stored row, which is the shape R-96a already pins for `QueryWarrant`.
+#
+# **Sources only**, unlike R-96a's `App Packages`: the snapshot lane builds a day by hand because
+# `FocusUI` holds no SwiftData and a picture of the correctable row would otherwise be a picture
+# of the withdrawn one. A test that constructs one writes nothing; a second producer in the
+# shipping graph is the failure this pins.
+count_files "R-119" "HistorySubject is constructed in exactly one shipping file" \
+    'HistorySubject(' 1 App Packages/*/Sources
 
 # R-96b — and no file can build both.
 check_not_both "R-96b" "no file constructs both a QueryWarrant and an InterventionMandate" \

@@ -3241,6 +3241,18 @@
         }
       }
     },
+    "shell.command.showHistory" : {
+      "comment" : "View-menu item that opens the History window.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show History"
+          }
+        }
+      }
+    },
     "shell.firstRun.dismiss" : {
       "comment" : "First-run sheet: the one button, which puts it away for good.",
       "extractionState" : "manual",
@@ -3601,6 +3613,174 @@
         }
       }
     },
+    "shell.history.answerLabel" : {
+      "comment" : "Label before the person's own answer to a question.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You said"
+          }
+        }
+      }
+    },
+    "shell.history.correctAction" : {
+      "comment" : "Button on an interval Focus watched go past in silence.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This was a distraction"
+          }
+        }
+      }
+    },
+    "shell.history.correctionWritten" : {
+      "comment" : "Confirmation after the correction is written.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Added to this priority’s rules."
+          }
+        }
+      }
+    },
+    "shell.history.empty" : {
+      "comment" : "Shown when the day has no rows at all.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing has happened yet today."
+          }
+        }
+      }
+    },
+    "shell.history.heading" : {
+      "comment" : "Heading of the History window.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "What Focus did today"
+          }
+        }
+      }
+    },
+    "shell.history.introduction" : {
+      "comment" : "One sentence under the History heading.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Every interruption, every question, and every app Focus watched go past without saying anything."
+          }
+        }
+      }
+    },
+    "shell.history.outcomeLabel" : {
+      "comment" : "Label before what the person did about an interruption.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "What you did"
+          }
+        }
+      }
+    },
+    "shell.history.reasonNotRecorded" : {
+      "comment" : "Shown when a row was written before Focus recorded its reasons.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not recorded"
+          }
+        }
+      }
+    },
+    "shell.history.rowAccusation" : {
+      "comment" : "Row label for an interruption that said the person had drifted.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Said you had drifted"
+          }
+        }
+      }
+    },
+    "shell.history.rowQuestion" : {
+      "comment" : "Row label for a question Focus asked.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Asked about this"
+          }
+        }
+      }
+    },
+    "shell.history.rowSession" : {
+      "comment" : "Row label for a focus session.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Session"
+          }
+        }
+      }
+    },
+    "shell.history.rowSilence" : {
+      "comment" : "Row label for an app Focus watched without saying anything.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watched, said nothing"
+          }
+        }
+      }
+    },
+    "shell.history.underLabel" : {
+      "comment" : "Label before the priority a row happened under.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Under"
+          }
+        }
+      }
+    },
+    "shell.history.wordingNote" : {
+      "comment" : "Footnote explaining that priority wording is today's.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Priorities are shown in the words they carry now. Editing a priority does not keep the earlier wording."
+          }
+        }
+      }
+    },
     "shell.menuBar.cancelSnooze" : {
       "comment" : "Popover action: end one subject's snooze now.",
       "extractionState" : "manual",
@@ -3753,6 +3933,18 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Keyboard Shortcuts"
+          }
+        }
+      }
+    },
+    "shell.window.history.title" : {
+      "comment" : "Title of the History window.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "History"
           }
         }
       }

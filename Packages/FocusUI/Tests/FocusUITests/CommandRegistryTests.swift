@@ -28,7 +28,9 @@ struct CommandRegistryTests {
         // *only* way to reach an affordance.
         // Sixteen since e07a: the three answers to a question, which exist because the panel
         // that draws them can never carry a keystroke (U-1, F-145).
-        #expect(registry.actions.count == 16)
+        // Seventeen since e09a: History, which is a destination rather than a verb — the shell
+        // has no split view, so a window opened from the View menu is the route that exists.
+        #expect(registry.actions.count == 17)
         #expect(registry.actions.map(\.id) == [
             "priority.new",
             "context.addFiles",
@@ -45,6 +47,7 @@ struct CommandRegistryTests {
             "nudge.answerYes",
             "nudge.answerNo",
             "nudge.answerNotNow",
+            "shell.history",
             "shell.help"
         ])
     }
@@ -66,7 +69,8 @@ struct CommandRegistryTests {
             "nudge.menuBar",
             "nudge.answerYes",
             "nudge.answerNo",
-            "nudge.answerNotNow"
+            "nudge.answerNotNow",
+            "shell.history"
         ])
 
         // Pause and Change priority reach the panel's own actions through the commands that
@@ -189,7 +193,7 @@ struct CommandRegistryTests {
             "shell.closeWindow"
         ])
         #expect(registry.actions(in: .help).map(\.id) == ["shell.help"])
-        #expect(registry.actions(in: .view).count == 7)
+        #expect(registry.actions(in: .view).count == 8)
     }
 
     @Test("every populated placement has a heading for the shortcut reference")
@@ -454,7 +458,7 @@ struct CommandRegistryTests {
 
     @Test("every window the shell can open has a title key")
     func everyWindowIsNamed() {
-        #expect(ShellWindow.allCases.map(\.id) == ["cockpit", "help"])
+        #expect(ShellWindow.allCases.map(\.id) == ["cockpit", "help", "history"])
         #expect(Set(ShellWindow.allCases.map(\.titleKey)).count == ShellWindow.allCases.count)
     }
 

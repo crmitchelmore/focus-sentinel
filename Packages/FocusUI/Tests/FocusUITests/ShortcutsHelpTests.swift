@@ -32,6 +32,8 @@ struct ShortcutsHelpTests {
             "⌘N", "⌘O", "⌃⌘↩", "⌃⌘S", "⌃⌘P", "⌃⌘F", "⌃⌘E", "⌘W",
             "⌃⌘R", "⌃⌘Z", "⌃⌘H", "⌃⌘M",
             "⌃⌘Y", "⌃⌘U", "⌃⌘L",
+            // e09a's destination, in the same modifier family as every other View-menu verb.
+            "⌃⌘D",
             "⌘?"
         ])
         #expect(rows.map(\.titleKey) == [
@@ -54,6 +56,9 @@ struct ShortcutsHelpTests {
             .commandAnswerYes,
             .commandAnswerNo,
             .commandAnswerNotNow,
+            // e09a's History, which is a destination rather than a verb but is bound and
+            // therefore listed like everything else that is.
+            .commandShowHistory,
             .commandHelp
         ])
     }
@@ -115,6 +120,7 @@ struct ShortcutsHelpTests {
             "nudge.answerYes",
             "nudge.answerNo",
             "nudge.answerNotNow",
+            "shell.history",
             "shell.help"
         ])
         #expect(rows.first { $0.id == "shell.test.unbound" }?.glyphs == nil)

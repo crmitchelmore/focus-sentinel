@@ -273,7 +273,13 @@ root = sys.argv[1]
 NAMESPACES = ("shell.", "settings.", "status.", "priority.", "capture.", "context.",
               "handoff.", "undo.", "session.", "sensing.", "capability.",
               "cascade.", "explanation.", "suppression.", "evidence.", "rule.",
-              "nudge.")
+              "nudge.",
+              # e09a. The ledger's own vocabularies: what became of an interruption, where it
+              # was carried, what the person did about it, what they answered, and why a
+              # correction is not offered. A namespace missing from this tuple is a namespace
+              # every check below is silently blind to, which is why it is a list and not a
+              # prefix match on "anything with two dots".
+              "history.")
 
 # module name -> (catalog path, source directory)
 MODULES = {

@@ -18,11 +18,11 @@
 # must. Raise a floor when a run has legitimately produced more, in the same commit as the
 # tests that produced them, and never lower one without saying in the commit message which
 # tests went and why.
-FocusCoreTests 992
+FocusCoreTests 1002
 FocusRulesTests 28
 FocusClassifyTests 185
 FocusEvaluateTests 115
 FocusModelTests 13
 FocusSensingTests 140
-FocusUITests 393
+FocusUITests 405
 FocusHostTests 258

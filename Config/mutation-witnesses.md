@@ -41,7 +41,7 @@ it to be green: a red line means nothing if the clean run was red too.
 
 | stage | assertions witnessed | PROVEN | CANNOT-GO-RED |
 |---|---|---|---|
-| `selfcheck-debug` / `selfcheck-release` | 118 | 118 | — |
+| `selfcheck-debug` / `selfcheck-release` | 127 | 127 | — |
 | `notification-denied` (+ Release twin) | 17 | 17 | — |
 | `focus-steal` (+ Release twin) | 14 | 14 | — |
 | `forbidden-binary` | 6 | 6 | — |
@@ -251,6 +251,33 @@ surprise in the next repair.
 | SC-110 | `self-check.sh` availability | primary: `nudge.answerNotNow`'s `isAvailable = True` | SC-109 — the world is still whole | **PROVEN** — `FAIL: 'Answer Not Now' is offered exactly when the app could carry it out` / `got: (True, False, {… 'hasOpenQuestion': False …})` |
 | SC-111 | `self-check.sh` privacy | primary: `shellRendering.privacyActionsDeclared = ["deleteEverything", "exportEverything"]` | SC-112 — the sink is still held | **PROVEN** — `FAIL: the Privacy pane's action vocabulary is exactly deleteEverything` / `got: ['deleteEverything', 'exportEverything']` |
 | SC-112 | `self-check.sh` privacy | primary: `shellRendering.privacySinkHeld = False` | SC-111 — the vocabulary is still one case | **PROVEN** — `FAIL: the Settings window handed back the sink the Privacy pane's control reaches` / `got: False` |
+
+### History, and correcting a silence (e09a, focus-tee.4 / focus-tee.5) — `selfcheck-debug` / `selfcheck-release`
+
+H-JSON, run by `/private/tmp/mw/run-sc-e09a.zsh <FOCUS_EVIDENCE_DIR>` against a
+`scripts/self-check.sh` run of the Debug product with `FOCUS_EVIDENCE_DIR` set
+(`/private/tmp/mw/e09a-evid`, `SELF-CHECK OK`), in the same shape as `run-sc-e07a.zsh`: the
+reader's own python heredoc is extracted from the script and run against a doctored **copy** of
+the primary report with the argv the stage passes. Nothing tracked is touched. The harness runs
+the unmutated copy first and refuses to report a row if the control is not green.
+
+SC-121 is the one row in this block that is about a **measurement rather than a claim**. The
+replay-fidelity figures are printed and asserted about in no way at all — that is deliberate, and
+the argument is in `SelfCheck.replayFidelityReport()` — so the only thing there is to witness is
+that the block ran, which is exactly what a block that quietly stopped producing figures would
+otherwise look like.
+
+| # | script:line | mutation (H-JSON) | control | status — the line it printed |
+|---|---|---|---|---|
+| SC-113 | `self-check.sh` history | `historyLedger.available = False; error = "doctored"` | the harness runs the unmutated copy first: `CONTROL … EXIT=0` | **PROVEN** — `FAIL: the seeded history ledger was built` / `got: 'doctored'` |
+| SC-114 | `self-check.sh` history | `historyLedger.sessions = 0` | SC-115 — the silent-interval count is asserted in its own right | **PROVEN** — `FAIL: the ledger drew the one intervention, the one question and the one session it was seeded` / `got: (1, 1, 0)` |
+| SC-115 | `self-check.sh` history | `historyLedger.silences = 4` | SC-114 — the other three counts still hold | **PROVEN** — `FAIL: four observations over three subjects become three silent intervals` / `got: (4, 4)` |
+| SC-116 | `self-check.sh` history | `silencesWithdrawn = 0; silencesOffered = 3; withdrawalReasons = ""` | SC-115 — the interval count is unchanged, so this is about the affordance and not about the rows | **PROVEN** — `FAIL: the two application intervals are correctable and the origin one is withdrawn, with a reason` / `got: (3, 0, '')` |
+| SC-117 | `self-check.sh` history | `historyLedger.entriesAreChronological = False` | the harness runs the unmutated copy first: `CONTROL … EXIT=0` | **PROVEN** — `FAIL: the ledger's rows are one list in one order` / `got: False` |
+| SC-118 | `self-check.sh` history | `historyLedger.rulesWrittenByCorrection = 0` | SC-119, SC-120 — the ledger and the log are asserted separately | **PROVEN** — `FAIL: correcting a silence writes exactly one rule` / `got: (True, 0)` |
+| SC-119 | `self-check.sh` history | `historyLedger.queryReceiptsAfter = 2` | SC-118 — the rule was still written, so this is D3 and not "nothing happened" | **PROVEN** — `FAIL: correcting a silence is never a re-ask: the query ledger does not move` / `got: (1, 2)` |
+| SC-120 | `self-check.sh` history | `historyLedger.interventionRowsAfterCorrection = 2` | SC-118 — the rule was still written | **PROVEN** — `FAIL: correcting a silence never edits the log` / `got: 2` |
+| SC-121 | `self-check.sh` history | `historyReplay.available = False; error = "doctored"` | the harness runs the unmutated copy first: `CONTROL … EXIT=0` | **PROVEN** — `FAIL: the replay-fidelity measurement ran` / `got: 'doctored'` |
 
 ### `notification-denied` / `notification-denied-release` — `scripts/check-notification-denied.sh`
 

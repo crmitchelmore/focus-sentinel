@@ -644,6 +644,10 @@ enum SelfCheck {
         // replayed timeline at all, and a measurement that can redden somebody's build is a
         // measurement people learn to make go green.
         root["historyReplay"] = replayFidelityReport()
+        // The ledger the History window draws, built by the shipping function over a store this
+        // survey seeds. Unlike the measurement above, these ARE asserted: the counts are facts
+        // about a day the survey arranged, so a zero is a defect rather than a quiet Tuesday.
+        root["historyLedger"] = historyLedgerReport()
 
         // --- e05 -------------------------------------------------------------------------
         let nudge = nudgeReport()
@@ -1964,6 +1968,158 @@ enum SelfCheck {
         return report
     }
 
+    /// **The day's ledger, built by the shipping code over a store this survey seeds**
+    /// (focus-tee.5).
+    ///
+    /// ## What it is for
+    ///
+    /// `DayHistory.build(…)` is the function the History window draws from. Its unit tests prove
+    /// what it does; this proves that the **shipping binary** still does it, and it is the only
+    /// reading in the gate that exercises the correction end to end — the rule written, the
+    /// query ledger untouched, in one process, on the real code.
+    ///
+    /// ## The non-vacuity seed
+    ///
+    /// A ledger built over the launch's own store on a gate machine holds nothing, and every
+    /// count below would be zero. So the survey seeds a store of its own with one of each: a
+    /// session, an intervention the app delivered, a question it asked, two application
+    /// intervals it said nothing about, and one **origin** interval — which must come back with
+    /// its correction withdrawn rather than offered, because an origin judgement is
+    /// unreplayable.
+    ///
+    /// A store of its own rather than the launch's for `tickFetchSurvey`'s reason: the counts
+    /// are facts about a day this survey arranged, and a reading taken against whatever the
+    /// person happened to have done would be a different number on every machine.
+    @MainActor
+    static func historyLedgerReport() -> [String: Any] {
+        var report: [String: Any] = [:]
+        do {
+            let container = try FocusStore.makeContainer(kind: .inMemory)
+            let context = ModelContext(container)
+            let clock = SystemDateProvider()
+            let calendar = Calendar.autoupdatingCurrent
+            let priorities = PriorityStore(context: context, dateProvider: clock)
+            let events = ActivityEventStore(context: context, dateProvider: clock)
+            let log = InterventionLog(context: context, dateProvider: clock, calendar: calendar)
+            let ledger = QueryLedger(context: context, dateProvider: clock)
+            let sessions = SessionStore(
+                context: context,
+                dateProvider: clock,
+                uptimeClock: AppComposition.shared.uptimeClock,
+                bootIdentity: AppComposition.shared.bootIdentity
+            )
+
+            let accused = "com.chrismitchelmore.FocusDecoy"
+            let asked = "com.chrismitchelmore.FocusDecoy2"
+            let silent = "com.apple.TextEdit"
+            let alsoSilent = "com.apple.Preview"
+            let origin = "https://news.example"
+
+            let priorityID = try priorities.setPriority(
+                intent: "Self-check history seed",
+                doneWhen: "The ledger has one of each row"
+            )
+            let sessionID = try sessions.start(taskID: priorityID)
+
+            _ = try log.record(
+                InterventionEvent(
+                    kind: .accusation,
+                    rung: .panel,
+                    subject: accused,
+                    surface: .panel,
+                    disposition: .delivered,
+                    outcome: .dismissed,
+                    explanationKinds: [.userRule, .sustainedDwell]
+                ),
+                priorityID: priorityID
+            )
+            _ = try ledger.record(
+                priorityID: priorityID,
+                subjectKind: .app,
+                subject: asked,
+                reason: .noNegativeBasis,
+                outcome: .declined,
+                askedAt: clock.now
+            )
+            // Two application intervals and one origin, plus a repeat of the first: the repeat
+            // must collapse into its own run, so "four events, three rows" is the reading that
+            // says the run-collapsing is still there.
+            for bundleID in [silent, silent, alsoSilent, origin] {
+                _ = try events.append(
+                    kind: .frontmostApplicationChanged,
+                    bundleID: bundleID,
+                    sessionID: sessionID,
+                    dwellSeconds: 120
+                )
+            }
+
+            let history = try DayHistory.build(
+                day: LocalDay.today(calendar: calendar, dateProvider: clock),
+                log: log,
+                ledger: ledger,
+                events: events,
+                sessions: sessions,
+                priorities: priorities,
+                calendar: calendar
+            )
+
+            let counts = history.countsByKind
+            report["interventions"] = counts["intervention"] ?? -1
+            report["questions"] = counts["question"] ?? -1
+            report["sessions"] = counts["session"] ?? -1
+            report["silences"] = counts["silence"] ?? -1
+            report["entries"] = history.entries.count
+            report["activityEventsSeeded"] = 4
+            report["prioritiesNamed"] = history.priorityWording.count
+
+            let silences = history.entries.compactMap { entry -> HistorySilence? in
+                if case .silence(let value) = entry { return value }
+                return nil
+            }
+            report["silencesOffered"] = silences.count { $0.correction.isOffered }
+            report["silencesWithdrawn"] = silences.count { !$0.correction.isOffered }
+            report["withdrawalReasons"] = Set(silences.compactMap { $0.correction.withdrawal })
+                .map(\.rawValue).sorted().joined(separator: ",")
+            // The rows are one list in one order: a ledger whose entries were not sorted would
+            // draw a day out of sequence, and the value is what sorts them.
+            report["entriesAreChronological"] = zip(
+                history.entries, history.entries.dropFirst()
+            ).allSatisfy { $0.at <= $1.at }
+
+            // **The correction, end to end, in the shipping binary.**
+            //
+            // D3's structural claim as a measurement: a rule is written, and the query ledger is
+            // byte-identical afterwards. A receipt written here would settle or re-open a
+            // question retroactively, and no gate outside this one runs that code in the product.
+            let ledgerBefore = try ledger.count()
+            let rulesBefore = try context.countedFetch(
+                FetchDescriptor<FocusSchemaV3.RelevanceRule>()
+            ).count
+            var correctionWrote = false
+            if let offered = silences.first(where: { $0.correction.isOffered }) {
+                _ = try HistoryCorrection.markAsDistraction(
+                    offered.correction,
+                    priorities: priorities,
+                    at: clock.now
+                )
+                correctionWrote = true
+            }
+            let rulesAfter = try context.countedFetch(
+                FetchDescriptor<FocusSchemaV3.RelevanceRule>()
+            ).count
+            report["correctionAttempted"] = correctionWrote
+            report["rulesWrittenByCorrection"] = rulesAfter - rulesBefore
+            report["queryReceiptsBefore"] = ledgerBefore
+            report["queryReceiptsAfter"] = try ledger.count()
+            report["interventionRowsAfterCorrection"] = try log.all().count
+            report["available"] = true
+        } catch {
+            report["available"] = false
+            report["error"] = "\(error)"
+        }
+        return report
+    }
+
     /// **How much of a stored day the engine can replay, and what stops it** (focus-tee.4).
     ///
     /// ## Why this exists
@@ -2064,7 +2220,7 @@ enum SelfCheck {
             /// row the association is on, exactly as `RelevanceHost.storedRuleRows(priorityID:)`
             /// derives it — never inferred from the shape of a subject string (R-72.3).
             func storedRules(under priorityID: UUID) throws -> [StoredRuleRow] {
-                try context.fetch(FetchDescriptor<FocusSchemaV3.RelevanceRule>())
+                try context.countedFetch(FetchDescriptor<FocusSchemaV3.RelevanceRule>())
                     .filter { $0.task == nil || $0.task?.id == priorityID }
                     .compactMap { row in
                         // A row this build cannot read is dropped rather than guessed, which is

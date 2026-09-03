@@ -569,6 +569,10 @@ def expected_availability(action_id, world):
         # The popover exists for the life of the process.
         "nudge.menuBar": True,
         "shell.help": True,
+        # e09a. The ledger draws whatever the day holds, including nothing — a window that
+        # refused to open on a quiet day would withhold exactly the page a person wants after a
+        # day the app said nothing on.
+        "shell.history": True,
     }
     if action_id in always:
         return always[action_id]
@@ -613,7 +617,7 @@ KNOWN_COMMAND_IDS = {
     "priority.new", "context.addFiles", "priority.complete", "session.start", "session.pause",
     "session.complete", "sensing.pause", "shell.closeWindow", "nudge.relevant", "nudge.snooze",
     "nudge.hideOverlays", "nudge.menuBar", "nudge.answerYes", "nudge.answerNo",
-    "nudge.answerNotNow", "shell.help",
+    "nudge.answerNotNow", "shell.help", "shell.history",
 }
 check(
     set(reported_ids) == KNOWN_COMMAND_IDS,
@@ -621,8 +625,8 @@ check(
     sorted(set(reported_ids) ^ KNOWN_COMMAND_IDS),
 )
 check(
-    len(reported_ids) == len(set(reported_ids)) and len(reported_ids) == 16,
-    "all sixteen of the app's own actions were reported, once each",
+    len(reported_ids) == len(set(reported_ids)) and len(reported_ids) == 17,
+    "all seventeen of the app's own actions were reported, once each",
     reported_ids,
 )
 
@@ -2955,6 +2959,95 @@ if history_replay.get("available"):
             history_replay.get("shippingInputCarriesOrigin")
         )
     )
+
+# --- e09a: the day's ledger, built by the shipping code (focus-tee.5) ----------------------
+#
+# THE COUNTS ARE ASSERTED, unlike the replay measurement above, and the difference is the seed.
+# These are facts about a day the survey ARRANGED — one session, one accusation, one question,
+# four activity events over three subjects — so a zero here is a defect rather than a quiet
+# Tuesday. Without the seed every count would be zero on a gate machine and every assertion
+# below would pass over a `DayHistory.build(…)` that had been deleted.
+#
+# **Nothing here is a per-day tally of a person's own day** (D-01). It is the survey counting
+# its own seed, in a store nobody uses, so the gate can say the ledger is not empty.
+history_ledger = report.get("historyLedger") or {}
+check(
+    history_ledger.get("available") is True,
+    "the seeded history ledger was built",
+    history_ledger.get("error", history_ledger.get("available")),
+)
+check(
+    history_ledger.get("interventions") == 1
+    and history_ledger.get("questions") == 1
+    and history_ledger.get("sessions") == 1,
+    "the ledger drew the one intervention, the one question and the one session it was seeded",
+    (
+        history_ledger.get("interventions"),
+        history_ledger.get("questions"),
+        history_ledger.get("sessions"),
+    ),
+)
+# Four activity events over three subjects, one of them repeated: the repeat collapses into its
+# own run, so three rows is the reading that says the run-collapsing is still there. A ledger
+# that drew one row per event would report four.
+check(
+    history_ledger.get("silences") == 3 and history_ledger.get("activityEventsSeeded") == 4,
+    "four observations over three subjects become three silent intervals",
+    (history_ledger.get("silences"), history_ledger.get("activityEventsSeeded")),
+)
+# D1's teeth as a number: the intervals the app said nothing about carry the correction.
+check(
+    history_ledger.get("silencesOffered") == 2
+    and history_ledger.get("silencesWithdrawn") == 1
+    and history_ledger.get("withdrawalReasons") == "originSubject",
+    "the two application intervals are correctable and the origin one is withdrawn, with a reason",
+    (
+        history_ledger.get("silencesOffered"),
+        history_ledger.get("silencesWithdrawn"),
+        history_ledger.get("withdrawalReasons"),
+    ),
+)
+check(
+    history_ledger.get("entriesAreChronological") is True,
+    "the ledger's rows are one list in one order",
+    history_ledger.get("entriesAreChronological"),
+)
+# **The correction, end to end, in the product.** One rule written, and the query ledger
+# byte-identical afterwards: a correction that wrote a receipt would settle or re-open a
+# question retroactively, and no other stage runs this code in the shipping binary.
+check(
+    history_ledger.get("correctionAttempted") is True
+    and history_ledger.get("rulesWrittenByCorrection") == 1,
+    "correcting a silence writes exactly one rule",
+    (
+        history_ledger.get("correctionAttempted"),
+        history_ledger.get("rulesWrittenByCorrection"),
+    ),
+)
+check(
+    history_ledger.get("queryReceiptsBefore") == history_ledger.get("queryReceiptsAfter")
+    and history_ledger.get("queryReceiptsAfter") == 1,
+    "correcting a silence is never a re-ask: the query ledger does not move",
+    (
+        history_ledger.get("queryReceiptsBefore"),
+        history_ledger.get("queryReceiptsAfter"),
+    ),
+)
+check(
+    history_ledger.get("interventionRowsAfterCorrection") == 1,
+    "correcting a silence never edits the log",
+    history_ledger.get("interventionRowsAfterCorrection"),
+)
+print(
+    "note historyLedger: {} entries — {} intervention(s), {} question(s), {} session(s), "
+    "{} silent interval(s)".format(
+        history_ledger.get("entries"),
+        history_ledger.get("interventions"),
+        history_ledger.get("questions"),
+        history_ledger.get("sessions"),
+        history_ledger.get("silences"),
+    )
+)
 
 # --- e05: the nudge loop, as the running application reports it ----------------------------
 #

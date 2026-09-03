@@ -120,6 +120,21 @@ public final class SessionStore {
     /// reason (focus-tzj.2): the launch-at-login offer reads this on every projection of the
     /// cockpit state, and pulling a day's session rows across to count them would be a fetch per
     /// tick for a number.
+    /// **Every session that STARTED on one local day**, oldest first (focus-tee.5).
+    ///
+    /// Started, not overlapped: a session that runs past midnight belongs to the day the person
+    /// began it, which is the day they would look for it on. Filtered in Swift rather than by a
+    /// predicate for `LocalDay`'s reason — the day boundary is a fact about the user's calendar,
+    /// and a `#Predicate` on a `Date` range would have to be built from one anyway.
+    public func sessions(startedOn day: LocalDay, calendar: Calendar) throws -> [FocusSchemaV3.FocusSessionRecord] {
+        try context.countedFetch(FetchDescriptor<FocusSchemaV3.FocusSessionRecord>())
+            .filter { LocalDay.containing($0.startedAt, calendar: calendar) == day }
+            .sorted { lhs, rhs in
+                if lhs.startedAt != rhs.startedAt { return lhs.startedAt < rhs.startedAt }
+                return lhs.id.uuidString < rhs.id.uuidString
+            }
+    }
+
     public func finishedSessionCount() throws -> Int {
         try context.countedFetchCount(
             FetchDescriptor<FocusSchemaV3.FocusSessionRecord>(

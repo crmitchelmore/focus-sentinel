@@ -33,6 +33,11 @@ enum SnapshotComponent: String, CaseIterable, Sendable {
     /// presentation shows.
     case firstRunSheet
     case shortcutsHelp
+    /// **The day's ledger** (e09a). Rendered from a fixed value with one of every row type —
+    /// an accusation, a question, a session, a correctable silent interval and a withdrawn one —
+    /// so the picture shows every shape the surface can draw rather than whichever shapes the
+    /// machine that recorded it happened to have.
+    case history
     case privacySettings
     case statusRelevant
     case statusUncertain
@@ -113,6 +118,19 @@ enum SnapshotComponent: String, CaseIterable, Sendable {
             )
         case .shortcutsHelp:
             return AnyView(ShortcutsHelpContent(registry: .shell))
+        case .history:
+            // The content, not the window: `HistoryView`'s `ScrollView` cannot be rasterised by
+            // `ImageRenderer` at all (`BoundedSurfaceTests` re-measures that every run), and the
+            // thing that must not clip is the content inside it.
+            return AnyView(
+                HistoryContent(
+                    history: HistoryFixture.day,
+                    corrected: [],
+                    // `nil`, so the affordance is drawn as the disabled control a picture can
+                    // show rather than as a live button pointing at a store this lane has none of.
+                    correct: nil
+                )
+            )
         case .privacySettings:
             // **The real pane, handed no display** (focus-nu6).
             //

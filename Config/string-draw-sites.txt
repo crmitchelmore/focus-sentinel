@@ -91,3 +91,17 @@ status.unrelated.   | Packages/FocusUI/Sources/FocusUI/Design/StatusBadge.swift 
 # The row used to name the `guard` on the line above, which mentions the vocabulary and draws
 # nothing — a row that would have stayed true if the sentence it guards were deleted (focus-cv3).
 nudge.attention.   | Packages/FocusUI/Sources/FocusUI/MenuBar/MenuBarController.swift | return "\(head). \(String(localized: resource))"
+
+# --- e09a's History vocabularies -------------------------------------------------------------
+#
+# Five closed enums the ledger has always stored and nothing ever drew, because nothing rendered
+# a stored row back to a person. Each row names the file and the expression that draws it; four
+# of the five are drawn by `HistoryRow`'s `detail`, which is one function precisely so that a
+# vocabulary cannot be added to the ledger and left undrawn. The answer and the outcome go
+# through `labelled(_:resource:)`, whose one `ShellText(resource:…)` is the expression named
+# here — the same shape the `nudge.*` rows use for `NudgeText(_:voice:)`.
+history.answer.      | Packages/FocusUI/Sources/FocusUI/Scenes/HistoryView.swift | ShellText(resource: resource, role: .caption)
+history.disposition. | Packages/FocusUI/Sources/FocusUI/Scenes/HistoryView.swift | ShellText(resource: value.disposition.historyCopyResource, role: .caption)
+history.outcome.     | Packages/FocusUI/Sources/FocusUI/Scenes/HistoryView.swift | ShellText(resource: resource, role: .caption)
+history.surface.     | Packages/FocusUI/Sources/FocusUI/Scenes/HistoryView.swift | ShellText(resource: surface.historyCopyResource, role: .caption)
+history.withdrawal.  | Packages/FocusUI/Sources/FocusUI/Scenes/HistoryView.swift | ShellText(resource: reason.copyResource, role: .caption)

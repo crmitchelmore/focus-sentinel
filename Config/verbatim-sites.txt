@@ -72,3 +72,8 @@ Packages/FocusUI/Sources/FocusUI/Sensing/SensingStatusView.swift | value.formatt
 Packages/FocusUI/Sources/FocusUI/Scenes/TimeboxControl.swift | Self.formatPreset(.seconds(seconds))) | NUMBER a timebox preset's length
 Packages/FocusUI/Sources/FocusUI/Scenes/GeneralSettingsView.swift | appVersion) | NUMBER the version and build this copy was made from, selectable so it can be quoted in a defect report (focus-odz.3)
 Packages/FocusUI/Sources/FocusUI/Scenes/FirstRunSheet.swift | storeLocation) | OWN the path their store is at, on the one screen that says where it is (focus-odz.7)
+
+# --- e09a: the ledger's three verbatim draws -------------------------------------------------
+Packages/FocusUI/Sources/FocusUI/Scenes/HistoryView.swift | Self.time.string(from: entry.at)) | NUMBER the time of day a row happened, through a locale-aware DateFormatter
+Packages/FocusUI/Sources/FocusUI/Scenes/HistoryView.swift | intent) | OWN the priority a row happened under, in the words the person typed
+Packages/FocusUI/Sources/FocusUI/Scenes/HistoryView.swift | subject) | NAME the app or site a row is about, resolved by SubjectDisplay and never the bundle key (R-96o)
