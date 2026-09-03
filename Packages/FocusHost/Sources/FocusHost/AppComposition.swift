@@ -66,6 +66,8 @@ public final class AppComposition {
     }
 
     public let modelContainer: ModelContainer
+    /// Where `modelContainer` lives, kept so delete-everything can name every file it owns.
+    let storeKind: FocusStore.Kind
     let storeStatus: StoreStatus
 
     /// **The one thing that ever shortens this app's memory** (F-115, focus-tzj.3).
@@ -270,6 +272,7 @@ public final class AppComposition {
         // restarts takes the process with it — so re-reading it would be re-asking a question
         // whose answer is fixed.
         self.bootIdentity = BootIdentity.current()
+        self.storeKind = storeKind
 
         // Every container in this programme is built through `FocusStore.makeContainer`,
         // which always goes through the migration plan. If the on-disk store cannot be
@@ -1134,6 +1137,46 @@ public final class AppComposition {
     /// The switch's position comes from `loginItem.status` every time a connection is built, so a
     /// person who removed the app from Login Items in System Settings sees the switch move on
     /// their next visit to the pane rather than a remembered answer.
+    /// **What the Privacy pane asked for** (e07a, focus-6pr.3).
+    ///
+    /// `.deleteEverything` is the one verb in the application whose effect cannot be observed
+    /// in the same process that performed it, and that is by design rather than by shortcut.
+    /// Every host in this object holds a `ModelContext` on `modelContainer` as a `let`; a store
+    /// destroyed under them is a store they would go on writing through, and the review's
+    /// ordering finding is that a SQLite file unlinked under a live connection is recreated at
+    /// the next checkpoint with the plaintext still in it. So the order is: detach the observer
+    /// graph, destroy and rebuild the store through `FocusStore.deleteEverything` (which releases
+    /// the descriptors and removes all three files), and **relaunch** — the new process opens the
+    /// rebuilt, empty store, and nothing in this one touches a context again. The termination
+    /// hooks read `hasDeletedEverything` and write nothing.
+    public func perform(_ action: PrivacySettingsAction) {
+        switch action {
+        case .deleteEverything:
+            deleteEverythingAndRelaunch()
+        }
+    }
+
+    /// Set the moment the store is destroyed, and read by every write that runs at termination.
+    public private(set) var hasDeletedEverything = false
+
+    private func deleteEverythingAndRelaunch() {
+        stop()
+        hasDeletedEverything = true
+        do {
+            _ = try FocusStore.deleteEverything(modelContainer, kind: storeKind)
+        } catch {
+            logger.error(
+                "delete everything could not rebuild the store: \(error.localizedDescription, privacy: .public)"
+            )
+        }
+        relaunch()
+    }
+
+    /// How the process is replaced. Installed by the app delegate, which is the file that
+    /// imports AppKit; a unit process has none and a call to delete everything there ends with
+    /// the rebuilt store and no relaunch — which is also what the witness measures.
+    public var relaunch: () -> Void = {}
+
     public func perform(_ action: LaunchAtLoginAction) {
         switch action {
         case .setEnabled(let enabled):

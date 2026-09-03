@@ -26,6 +26,23 @@ public final class FocusAppDelegate: NSObject, NSApplicationDelegate {
     }
 
     public func applicationDidFinishLaunching(_ notification: Notification) {
+        // **How delete-everything replaces the process** (e07a, focus-6pr.3). Installed here
+        // because this is the file that imports AppKit: a new instance of this bundle is asked
+        // for, and this one leaves once the request has been accepted. Guarded the way the
+        // termination hook is, so a reduced self-check mode never builds a composition root to
+        // hand it a closure it will not use.
+        if AppComposition.isRunning {
+            AppComposition.shared.relaunch = {
+                let configuration = NSWorkspace.OpenConfiguration()
+                configuration.createsNewApplicationInstance = true
+                NSWorkspace.shared.openApplication(
+                    at: Bundle.main.bundleURL,
+                    configuration: configuration
+                ) { _, _ in
+                    DispatchQueue.main.async { NSApp.terminate(nil) }
+                }
+            }
+        }
         // **Put back the scenes the person left open** (focus-odz.6). One turn of the run loop
         // later, because the opener it needs lives in a `Commands` body SwiftUI has not evaluated
         // yet and the cockpit window it must not re-ask for does not exist yet either. It runs in
@@ -163,6 +180,11 @@ public final class FocusAppDelegate: NSObject, NSApplicationDelegate {
     /// the process is trying to leave.
     public func applicationWillTerminate(_ notification: Notification) {
         guard AppComposition.isRunning else { return }
+        // **Nothing is written into a store that has just been destroyed** (e07a, focus-6pr.3).
+        // Delete-everything ends in a relaunch, and the two writes below would be the first
+        // rows in the rebuilt file — a record of the quit, and the window list — written by
+        // contexts built on the container that no longer exists.
+        guard !AppComposition.shared.hasDeletedEverything else { return }
         AppComposition.shared.nudgeHost.applicationWillTerminate()
         // **Which scenes were on screen when they left** (focus-odz.6). AppKit restores a
         // window's frame and not whether a SwiftUI `Window(id:)` scene exists at all, so the

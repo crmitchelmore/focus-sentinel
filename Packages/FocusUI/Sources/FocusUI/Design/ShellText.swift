@@ -233,6 +233,14 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case settingsPrivacyStatement = "settings.privacy.statement"
     case settingsPrivacyStoreLabel = "settings.privacy.storeLabel"
     case settingsPrivacyReveal = "settings.privacy.reveal"
+    // Delete everything (e07a, focus-6pr.3): the pane's one destructive control and its sheet.
+    case settingsPrivacyDeleteHeading = "settings.privacy.delete.heading"
+    case settingsPrivacyDeleteExplanation = "settings.privacy.delete.explanation"
+    case settingsPrivacyDeleteEverything = "settings.privacy.delete.button"
+    case settingsPrivacyDeleteConfirmHeading = "settings.privacy.delete.confirm.heading"
+    case settingsPrivacyDeleteConfirmBody = "settings.privacy.delete.confirm.body"
+    case settingsPrivacyDeleteCancel = "settings.privacy.delete.confirm.cancel"
+    case settingsPrivacyDeleteConfirm = "settings.privacy.delete.confirm.action"
 
     // The session runtime (F-98, F-99, F-101).
     //

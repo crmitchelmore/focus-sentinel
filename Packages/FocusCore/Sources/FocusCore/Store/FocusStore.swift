@@ -83,6 +83,59 @@ public enum FocusStore {
         return try ModelContainer(for: schema, migrationPlan: FocusMigrationPlan.self, configurations: configuration)
     }
 
+    /// **Every file a store of this kind puts on disk**, or nothing for an in-memory one.
+    ///
+    /// The database and its two sidecars, resolved against the kind's own URL rather than
+    /// against `storeFileName`: a `--focus-store` path is whatever the caller named it, and a
+    /// deletion that looked for `FocusSentinel.store-wal` beside `keyboard.store` would leave
+    /// the write-ahead log — the file the plaintext is most likely still in — exactly where it
+    /// was.
+    public static func storeFileURLs(for kind: Kind) -> [URL] {
+        let store: URL
+        switch kind {
+        case .inMemory: return []
+        case .temporary(let url): store = url
+        case .applicationSupport: store = applicationSupportURL
+        }
+        return [store, URL(filePath: store.path + "-wal"), URL(filePath: store.path + "-shm")]
+    }
+
+    /// **Delete everything, and come back with a store that never held it** (e07a,
+    /// focus-6pr.3, e07 S4).
+    ///
+    /// The store runs SwiftData's defaults — `journal_mode=WAL`, `secure_delete=OFF`,
+    /// `auto_vacuum=NONE` — and `ModelConfiguration` exposes no pragma hook, so a logical delete
+    /// leaves a person's sentences on the freelist of the main file and in the write-ahead log.
+    /// A promise to forget that leaves the bytes on disk is not one. So this is three things in
+    /// an order that is load-bearing:
+    ///
+    /// 1. **Release.** `deleteAllData()` closes the persistent store and destroys it through the
+    ///    coordinator — the one door SwiftData offers for giving up the file descriptors. A file
+    ///    unlinked under a live connection is a file SQLite goes on writing through, and
+    ///    recreates at the next checkpoint (the review's ordering finding).
+    /// 2. **Remove.** All three files, by the kind's own URLs, in case the destroy left a
+    ///    sidecar behind.
+    /// 3. **Rebuild.** A fresh container at the same URL, through the same migration plan every
+    ///    container goes through, so the caller is handed a store and not a hole.
+    ///
+    /// The witness is `DeleteEverythingWitnessTests`: sentinels written through the real write
+    /// paths, asserted **present in `-wal` while the connection is open** — the deterministic
+    /// non-vacuity control — and then absent from every byte of the directory afterwards.
+    ///
+    /// Every `ModelContext` built on the old container is dead after this returns; the caller
+    /// is responsible for reaching none of them again. The composition root relaunches the
+    /// application for exactly that reason.
+    public static func deleteEverything(
+        _ container: ModelContainer,
+        kind: Kind
+    ) throws -> ModelContainer {
+        container.deleteAllData()
+        for url in storeFileURLs(for: kind) where FileManager.default.fileExists(atPath: url.path) {
+            try FileManager.default.removeItem(at: url)
+        }
+        return try makeContainer(kind: kind)
+    }
+
     /// The file names that together make up a store: the database and its two sidecars.
     ///
     /// Copying a SwiftData store means copying all three. A fixture that ships only the

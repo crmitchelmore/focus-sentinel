@@ -21,8 +21,25 @@ import SwiftUI
 /// counter has climbed past the threshold the app considers them away whatever the session counter
 /// says. That is a real consequence of taking the longer of the two idle silences (R-36,
 /// focus-7az), and the honest place for it is the pane about what the app can and cannot see.
+/// **What the Privacy pane can be asked to do** (e07a, focus-6pr.3).
+///
+/// One case, and a vocabulary rather than a bare closure so the pane's reach is a closed set a
+/// test can fold: the review's I-4 asks that a person be able to see the pane offers *exactly*
+/// this and nothing that would be an ask in disguise. It is the one action in the application
+/// no self-check may press — it deletes the person's own store — so its effect is witnessed in
+/// the unit lane against a store the test owns, and the running app is asked only to declare it.
+public enum PrivacySettingsAction: String, Sendable, Equatable, Hashable, CaseIterable {
+    /// Delete every row the app holds about the person, and the file they were in, and start
+    /// again with a store that never held them. Confirmed on a sheet first; never undoable.
+    case deleteEverything
+}
+
 public struct PrivacySettingsView: View {
     private let storeURL: URL
+    /// What the pane's one destructive control reaches. `{ _ in }` in a preview and in the
+    /// snapshot lane; the composition root's `perform(_:)` in the shipping window.
+    private let onAction: (PrivacySettingsAction) -> Void
+    @State private var isConfirmingDeletion = false
     private let summary: SensingSummary
     private let capabilities: CapabilityMatrix
     private let verdict: VerdictSnapshot?
@@ -41,13 +58,15 @@ public struct PrivacySettingsView: View {
         summary: SensingSummary = .inactive,
         capabilities: CapabilityMatrix = CapabilityMatrix(),
         verdict: VerdictSnapshot? = nil,
-        screens: ShellScreens = nil
+        screens: ShellScreens = nil,
+        onAction: @escaping (PrivacySettingsAction) -> Void = { _ in }
     ) {
         self.storeURL = storeURL
         self.summary = summary
         self.capabilities = capabilities
         self.verdict = verdict
         self.screens = screens
+        self.onAction = onAction
     }
 
     /// The strings this pane draws. Non-empty by construction, and asserted so: a Settings
@@ -57,6 +76,9 @@ public struct PrivacySettingsView: View {
             .settingsPrivacyStatement,
             .settingsPrivacyStoreLabel,
             .settingsPrivacyReveal,
+            .settingsPrivacyDeleteHeading,
+            .settingsPrivacyDeleteExplanation,
+            .settingsPrivacyDeleteEverything,
             .sensingHeading,
             .sensingLimitationScreenSharing,
             .capabilityHeading,
@@ -143,6 +165,35 @@ public struct PrivacySettingsView: View {
 
             Divider()
 
+            // **The one thing here a person can undo the app with** (e07a, focus-6pr.3). The
+            // statement above says everything lives in one local file; this is the button that
+            // makes that a promise with an exit. It confirms on a sheet, because the deletion
+            // is not undoable and a destructive control one click from a settings tab would be
+            // a control somebody presses by mistake.
+            VStack(alignment: .leading, spacing: spacing / 2) {
+                ShellText(.settingsPrivacyDeleteHeading, role: .headline)
+                ShellText(.settingsPrivacyDeleteExplanation, role: .footnote)
+                    .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button(role: .destructive) {
+                    isConfirmingDeletion = true
+                } label: {
+                    ShellText(.settingsPrivacyDeleteEverything)
+                }
+            }
+            .sheet(isPresented: $isConfirmingDeletion) {
+                DeleteEverythingSheet(
+                    confirm: {
+                        isConfirmingDeletion = false
+                        onAction(.deleteEverything)
+                    },
+                    cancel: { isConfirmingDeletion = false }
+                )
+            }
+
+            Divider()
+
             // What is being watched right now, with its working shown — including the lines
             // whose answer is "no". A surface that only reported the interesting half would be
             // showing half of it.
@@ -206,4 +257,55 @@ public struct PrivacySettingsView: View {
 
     /// The store's location, as one string: what the person reads, and what the receipt reports.
     private var storePath: String { storeURL.path(percentEncoded: false) }
+}
+
+/// **The confirmation for deleting everything** (e07a, focus-6pr.3).
+///
+/// Rendered on its own for the interruption sheet's reason: `ImageRenderer` cannot rasterise a
+/// `.sheet` presentation, so what a lane photographs is this content. The harmless button comes
+/// first and carries Escape; the destructive one is a plain destructive button and is **not** the
+/// default action — Return must never delete somebody's data.
+public struct DeleteEverythingSheet: View {
+    let confirm: () -> Void
+    let cancel: () -> Void
+
+    @Environment(\.appearanceTraits) private var traits
+    @ScaledMetric(relativeTo: .body) private var spacing: CGFloat = 12
+
+    public init(confirm: @escaping () -> Void, cancel: @escaping () -> Void) {
+        self.confirm = confirm
+        self.cancel = cancel
+    }
+
+    /// The strings the sheet draws, in order.
+    nonisolated public static let contentKeys: [ShellStringKey] = [
+        .settingsPrivacyDeleteConfirmHeading,
+        .settingsPrivacyDeleteConfirmBody,
+        .settingsPrivacyDeleteCancel,
+        .settingsPrivacyDeleteConfirm
+    ]
+
+    public var body: some View {
+        VStack(alignment: .leading, spacing: spacing) {
+            ShellText(.settingsPrivacyDeleteConfirmHeading, role: .headline)
+            ShellText(.settingsPrivacyDeleteConfirmBody, role: .callout)
+                .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+                .lineLimit(nil)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: spacing / 2) {
+                Spacer(minLength: 0)
+                Button(action: cancel) {
+                    ShellText(.settingsPrivacyDeleteCancel)
+                }
+                .keyboardShortcut(.cancelAction)
+                Button(role: .destructive, action: confirm) {
+                    ShellText(.settingsPrivacyDeleteConfirm)
+                }
+            }
+        }
+        .padding(spacing * 2)
+        .frame(width: ShellSurfaceBounds.settingsWidth)
+        .fixedSize(horizontal: false, vertical: true)
+        .accessibilityElement(children: .contain)
+    }
 }

@@ -79,6 +79,9 @@ public struct ShellSettingsConnection {
     /// `onInterventionAction`'s reason and driven the same way: no lane in this programme holds
     /// the Accessibility grant it would take to click a switch.
     public let onLaunchAtLogin: @MainActor (LaunchAtLoginAction) -> Void
+    /// What the Privacy pane's one destructive control reaches (e07a, focus-6pr.3). A sink like
+    /// the two above, and unlike them **never driven by a lane**: it deletes the person's store.
+    public let onPrivacyAction: @MainActor (PrivacySettingsAction) -> Void
     /// **Which pane is on screen, decided by the composition root** (focus-7ow).
     ///
     /// A macOS `TabView` builds only the selected pane. Measured on the first run of the render
@@ -125,6 +128,7 @@ public struct ShellSettingsConnection {
         intervention: InterventionSettings,
         onInterventionAction: @escaping @MainActor (InterventionSettingsAction) -> Void,
         onLaunchAtLogin: @escaping @MainActor (LaunchAtLoginAction) -> Void = { _ in },
+        onPrivacyAction: @escaping @MainActor (PrivacySettingsAction) -> Void = { _ in },
         selectedTab: SettingsTab = .general,
         selectTab: @escaping @MainActor (SettingsTab) -> Void = { _ in },
         generation: Int = 0,
@@ -142,6 +146,7 @@ public struct ShellSettingsConnection {
         self.intervention = intervention
         self.onInterventionAction = onInterventionAction
         self.onLaunchAtLogin = onLaunchAtLogin
+        self.onPrivacyAction = onPrivacyAction
         self.selectedTab = selectedTab
         self.selectTab = selectTab
         self.generation = generation
@@ -167,6 +172,7 @@ extension ShellSettingsConnection: ShellDrawnConnection {
             "launchAtLogin": .drawn([.launchAtLoginStatus]),
             "launchAtLogin.status": .drawn([.launchAtLoginStatus]),
             "onLaunchAtLogin": .undrawn(.sink),
+            "onPrivacyAction": .undrawn(.sink),
             "summary": .drawn([.privacySummary, .sensingDetail]),
             "capabilities": .drawn([.privacyCapabilities]),
             "verdict": .drawn([.verdictBand, .verdictDetail]),
@@ -286,15 +292,21 @@ public struct ShellSettingsRendering {
     public let setPreference: (AppearancePreference) -> Void
     /// What the Intervention pane's Voice and Reduced-Interruption controls reach.
     public let onInterventionAction: (InterventionSettingsAction) -> Void
+    /// What the Privacy pane's delete-everything control reaches (e07a). Handed back so the
+    /// self-check can see the pane is holding a sink and not `{ _ in }` — and **never pressed**
+    /// by it, because pressing it deletes the person's store.
+    public let onPrivacyAction: (PrivacySettingsAction) -> Void
 
     public init(
         values: ShellRenderedValues,
         setPreference: @escaping (AppearancePreference) -> Void,
-        onInterventionAction: @escaping (InterventionSettingsAction) -> Void
+        onInterventionAction: @escaping (InterventionSettingsAction) -> Void,
+        onPrivacyAction: @escaping (PrivacySettingsAction) -> Void = { _ in }
     ) {
         self.values = values
         self.setPreference = setPreference
         self.onInterventionAction = onInterventionAction
+        self.onPrivacyAction = onPrivacyAction
     }
 }
 
@@ -323,6 +335,7 @@ public struct ShellSettingsView: View {
     private let onLaunchAtLogin: (LaunchAtLoginAction) -> Void
     private let intervention: InterventionSettings
     private let onInterventionAction: (InterventionSettingsAction) -> Void
+    private let onPrivacyAction: (PrivacySettingsAction) -> Void
     /// Which pane is on screen. A `Binding` over the composition root's own value, never a
     /// `@State`: the root drives it so each pane can be made to draw and report (focus-7ow).
     @Binding private var selectedTab: SettingsTab
@@ -346,6 +359,7 @@ public struct ShellSettingsView: View {
         verdict: VerdictSnapshot? = nil,
         intervention: InterventionSettings = InterventionSettings(),
         onInterventionAction: @escaping (InterventionSettingsAction) -> Void = { _ in },
+        onPrivacyAction: @escaping (PrivacySettingsAction) -> Void = { _ in },
         selectedTab: Binding<SettingsTab> = .constant(.general)
     ) {
         self._preference = preference
@@ -358,6 +372,7 @@ public struct ShellSettingsView: View {
         self.verdict = verdict
         self.intervention = intervention
         self.onInterventionAction = onInterventionAction
+        self.onPrivacyAction = onPrivacyAction
         self._selectedTab = selectedTab
         self.didRender = nil
         self.generation = 0
@@ -384,6 +399,7 @@ public struct ShellSettingsView: View {
         self.verdict = connection.verdict
         self.intervention = connection.intervention
         self.onInterventionAction = connection.onInterventionAction
+        self.onPrivacyAction = connection.onPrivacyAction
         self._selectedTab = Binding(
             get: { connection.selectedTab },
             set: { connection.selectTab($0) }
@@ -419,7 +435,8 @@ public struct ShellSettingsView: View {
                 storeURL: storeURL,
                 summary: summary,
                 capabilities: capabilities,
-                verdict: verdict
+                verdict: verdict,
+                onAction: onPrivacyAction
             )
             .tabItem { tabLabel(.privacy) }
             .tag(SettingsTab.privacy)
@@ -478,7 +495,8 @@ public struct ShellSettingsView: View {
                     ShellSettingsRendering(
                         values: values,
                         setPreference: { preference = $0 },
-                        onInterventionAction: onInterventionAction
+                        onInterventionAction: onInterventionAction,
+                        onPrivacyAction: onPrivacyAction
                     )
                 )
             }

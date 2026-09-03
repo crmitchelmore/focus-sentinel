@@ -248,6 +248,7 @@ enum ShellConnectionFactory {
             intervention: intervention,
             onInterventionAction: { [weak root] action in root?.perform(action) },
             onLaunchAtLogin: { [weak root] action in root?.perform(action) },
+            onPrivacyAction: { [weak root] action in root?.perform(action) },
             selectedTab: root.settingsTab,
             selectTab: { [weak root] tab in root?.selectSettingsTab(tab) },
             generation: generation,

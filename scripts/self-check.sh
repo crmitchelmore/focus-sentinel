@@ -3899,6 +3899,26 @@ check(
     panel.get("wasVisible"),
 )
 
+# --- delete everything: declared, held, never pressed (e07a, focus-6pr.3) ----------------------
+#
+# The Privacy pane's one destructive verb is the one action in the application this script may
+# not drive: it destroys the person's store and relaunches the app. What can be asserted here is
+# the review's I-4 — the pane's action vocabulary is exactly one case, so a second button that
+# would be an ask in disguise is a red line rather than a surprise — and that the window handed
+# the composition root a sink for it. The effect is witnessed in the unit lane against a store
+# the test owns (`DeleteEverythingWitnessTests`): sentinels present in -wal while open, absent
+# from every byte of the directory afterwards.
+check(
+    rendering.get("privacyActionsDeclared") == ["deleteEverything"],
+    "the Privacy pane's action vocabulary is exactly deleteEverything",
+    rendering.get("privacyActionsDeclared"),
+)
+check(
+    rendering.get("privacySinkHeld") is True,
+    "the Settings window handed back the sink the Privacy pane's control reaches",
+    rendering.get("privacySinkHeld"),
+)
+
 # --- a question answered with no mouse (e07a, U-1, F-145) --------------------------------------
 #
 # U-1 licenses the interruption BECAUSE the question is cheaply answerable, and until e07a it was

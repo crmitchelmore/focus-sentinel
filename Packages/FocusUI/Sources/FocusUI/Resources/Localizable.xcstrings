@@ -2869,6 +2869,90 @@
         }
       }
     },
+    "settings.privacy.delete.button" : {
+      "comment" : "Privacy pane: the destructive button that opens the delete-everything confirmation sheet.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete Everything\u2026"
+          }
+        }
+      }
+    },
+    "settings.privacy.delete.confirm.action" : {
+      "comment" : "Delete-everything sheet: the destructive confirmation button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete Everything"
+          }
+        }
+      }
+    },
+    "settings.privacy.delete.confirm.body" : {
+      "comment" : "Delete-everything sheet: what will happen, stated plainly. Not undoable.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Every priority, session, rule, question and record Focus Sentinel holds about you is removed, and the file they lived in is destroyed and rebuilt empty. The app then restarts. This cannot be undone."
+          }
+        }
+      }
+    },
+    "settings.privacy.delete.confirm.cancel" : {
+      "comment" : "Delete-everything sheet: the harmless button, which also answers Escape.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep My Data"
+          }
+        }
+      }
+    },
+    "settings.privacy.delete.confirm.heading" : {
+      "comment" : "Delete-everything sheet heading.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete everything Focus Sentinel knows?"
+          }
+        }
+      }
+    },
+    "settings.privacy.delete.explanation" : {
+      "comment" : "Privacy pane: what the delete-everything button does and what it costs.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Removes everything the app has stored about you, destroys the file it lived in, and starts again with an empty one. The app restarts to do it."
+          }
+        }
+      }
+    },
+    "settings.privacy.delete.heading" : {
+      "comment" : "Privacy pane: heading over the delete-everything control.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete everything"
+          }
+        }
+      }
+    },
     "settings.privacy.reveal" : {
       "comment" : "Button that reveals the local data store in the Finder.",
       "extractionState" : "manual",

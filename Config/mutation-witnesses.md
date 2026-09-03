@@ -41,7 +41,7 @@ it to be green: a red line means nothing if the clean run was red too.
 
 | stage | assertions witnessed | PROVEN | CANNOT-GO-RED |
 |---|---|---|---|
-| `selfcheck-debug` / `selfcheck-release` | 116 | 116 | — |
+| `selfcheck-debug` / `selfcheck-release` | 118 | 118 | — |
 | `notification-denied` (+ Release twin) | 17 | 17 | — |
 | `focus-steal` (+ Release twin) | 14 | 14 | — |
 | `forbidden-binary` | 6 | 6 | — |
@@ -50,7 +50,7 @@ it to be green: a red line means nothing if the clean run was red too.
 | `unit-counts` | 5 | 5 | — |
 | `evaluation` (B1–B5) | 9 | 9 | — |
 | `entitlements-debug` / `entitlements-release` | 6 | 6 | 2 (seven restatement lines; one unreachable branch) |
-| **total** | **188** | **188** | **3 findings** |
+| **total** | **190** | **190** | **3 findings** |
 
 The seven rows the gate audit named as unable to go red are all fallible now, and each was run:
 `self-check.sh`'s popover overflow (SC-37, SC-38) and its committed width (SC-39, SC-40),
@@ -216,11 +216,11 @@ any hour, because the pair is the committed one the probe measured rather than w
 is doing.
 
 
-### A question answered with no mouse (e07a, focus-6pr.1) — `selfcheck-debug` / `selfcheck-release`
+### A question answered with no mouse (e07a, focus-6pr.1; SC-111 and SC-112 are focus-6pr.3's) — `selfcheck-debug` / `selfcheck-release`
 
 H-JSON, run by `/private/tmp/mw/run-sc-e07a.zsh <FOCUS_EVIDENCE_DIR>` against a
 `scripts/self-check.sh` run of the Debug product with `FOCUS_EVIDENCE_DIR` set
-(`/private/tmp/focus-s6-logs-0/evidence-t1c`, `SELF-CHECK OK`). The reader takes a **thirteenth**
+(`/private/tmp/focus-s6-logs-0/evidence-t1c` for SC-98..SC-110, `evidence-t5` for all fourteen, `SELF-CHECK OK`). The reader takes a **thirteenth**
 argument since e07a — the sixth launch's report (`keyboard-answer.json`), the nudge block alone
 against a store the script owns — and the harness doctors a copy of either the primary report or
 that one. The control (unmutated copies) is green: `EXIT=0`.
@@ -249,6 +249,8 @@ surprise in the next repair.
 | SC-108 | `self-check.sh` keyboard | keyboard: `receiptsAfterSecondPress = 2` | SC-105 — the first press's receipt is still the one | **PROVEN** — `FAIL: a second ⌃⌘Y with no question open wrote nothing` / `got: (2, 1)` |
 | SC-109 | `self-check.sh` availability | primary: `report["commands"]["world"].pop("hasOpenQuestion")` | SC-110 — the per-item rule still reads the field | **PROVEN** — `FAIL: the app reported the whole world its menu availability is computed from` / `got: ['hasOpenNudge', 'hasPriority', 'sessionPhase']` |
 | SC-110 | `self-check.sh` availability | primary: `nudge.answerNotNow`'s `isAvailable = True` | SC-109 — the world is still whole | **PROVEN** — `FAIL: 'Answer Not Now' is offered exactly when the app could carry it out` / `got: (True, False, {… 'hasOpenQuestion': False …})` |
+| SC-111 | `self-check.sh` privacy | primary: `shellRendering.privacyActionsDeclared = ["deleteEverything", "exportEverything"]` | SC-112 — the sink is still held | **PROVEN** — `FAIL: the Privacy pane's action vocabulary is exactly deleteEverything` / `got: ['deleteEverything', 'exportEverything']` |
+| SC-112 | `self-check.sh` privacy | primary: `shellRendering.privacySinkHeld = False` | SC-111 — the vocabulary is still one case | **PROVEN** — `FAIL: the Settings window handed back the sink the Privacy pane's control reaches` / `got: False` |
 
 ### `notification-denied` / `notification-denied-release` — `scripts/check-notification-denied.sh`
 

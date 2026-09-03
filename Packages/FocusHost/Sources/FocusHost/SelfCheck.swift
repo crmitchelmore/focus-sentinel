@@ -3322,6 +3322,11 @@ enum SelfCheck {
 
         report["driveSetPreference"] = driveAppearanceSink()
         report["driveInterventionSink"] = driveInterventionSink()
+        // **The Privacy pane's vocabulary, declared and not driven** (e07a, focus-6pr.3). Its one
+        // case deletes the person's store, so no lane presses it; what the running app can say
+        // is that the pane holds exactly that verb and that the window handed a sink back for it.
+        report["privacyActionsDeclared"] = PrivacySettingsAction.allCases.map(\.rawValue)
+        report["privacySinkHeld"] = composition.settingsSinks != nil
 
         // **The appearance is moved, and that is what makes the traits reading mean anything.**
         //
