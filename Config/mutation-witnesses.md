@@ -29,6 +29,8 @@ The scripts that drive them are `/private/tmp/mw/run-selfcheck-tzj-witnesses.zsh
 side artefacts, which the script deletes on exit, so it is pointed at a run of a copy with the
 `trap` removed and `SESSION_DIR` pinned; the copy reads its committed literals from the real
 repository so a literal that moves moves for the harness too),
+`/private/tmp/mw/run-sc-idle.zsh` (SC-91..SC-97, focus-7az's idle rows — pointed at the same kind
+of pinned-`SESSION_DIR`, `trap`-free copy for the same reason),
 `/private/tmp/mw/run-json-witnesses.zsh`,
 `run-binary-witnesses.zsh` and `run-log-witnesses.zsh`, each of which prints, per row, either
 the red line it produced or `MISS`. Every harness runs its **unmutated** copy first and requires
@@ -39,7 +41,7 @@ it to be green: a red line means nothing if the clean run was red too.
 
 | stage | assertions witnessed | PROVEN | CANNOT-GO-RED |
 |---|---|---|---|
-| `selfcheck-debug` / `selfcheck-release` | 98 | 98 | — |
+| `selfcheck-debug` / `selfcheck-release` | 103 | 103 | — |
 | `notification-denied` (+ Release twin) | 17 | 17 | — |
 | `focus-steal` (+ Release twin) | 14 | 14 | — |
 | `forbidden-binary` | 6 | 6 | — |
@@ -48,7 +50,7 @@ it to be green: a red line means nothing if the clean run was red too.
 | `unit-counts` | 5 | 5 | — |
 | `evaluation` (B1–B5) | 9 | 9 | — |
 | `entitlements-debug` / `entitlements-release` | 6 | 6 | 2 (seven restatement lines; one unreachable branch) |
-| **total** | **170** | **170** | **3 findings** |
+| **total** | **175** | **175** | **3 findings** |
 
 The seven rows the gate audit named as unable to go red are all fallible now, and each was run:
 `self-check.sh`'s popover overflow (SC-37, SC-38) and its committed width (SC-39, SC-40),
@@ -177,6 +179,39 @@ fifth launch's report out beside the other four. The cases file is `/private/tmp
 | SC-87 | `self-check.sh` first run | `firstRunExplanationShown = True` (relaunch) | SC-89 — the relaunch still opened the same store | **PROVEN** — `FAIL: the launch after the one that explained is not owed the explanation again` |
 | SC-88 | `self-check.sh` first run | `firstRunExplanationDrawn = "shown"` (relaunch) | SC-87 | **PROVEN** — `FAIL: the relaunched cockpit drew no first-run sheet at all` |
 | SC-89 | `self-check.sh` first run | `livePriorityIntent` replaced (relaunch) | is itself the control for SC-87/SC-88 | **PROVEN** — `FAIL: the relaunch opened the same seeded store the explaining launch did` |
+
+### The idle sources (focus-7az) — `selfcheck-debug` / `selfcheck-release`
+
+H-JSON, run by `/private/tmp/mw/run-sc-idle.zsh <log dir> release` against gate run
+`/private/tmp/focus-idle-logs-3` (23/23 green). Like the focus-odz rows it needs the self-check's
+own side artefacts, which the stage deletes on exit, so it is pointed at a run of a **copy** of
+`self-check.sh` with three lines changed — `REPO_ROOT` pinned to the real repository so a literal
+that moves moves for the harness too, `SESSION_DIR` pinned, and the `trap` removed. The control
+(unmutated copy) is green: `EXIT=0`.
+
+**What these rows replaced.** `self-check.sh` used to assert "the hardware idle figure is not
+below the session one (the sources are not swapped)", on the argument that `.combinedSessionState`
+counts a superset of the events `.hidSystemState` counts. It had no witness row, and it was false:
+at `kCGAnyInputEventType` the hardware state returns IOHIDSystem's `HIDIdleTime`, which a HID
+device report resets without producing an input event. The run above published hid **3 457.77 s**
+beside combined **18 456.16 s** — the deleted assertion was red on a machine telling the truth.
+
+| # | script:line | mutation (H-JSON) | control | status — the line it printed |
+|---|---|---|---|---|
+| SC-91 | `self-check.sh:2136` | `report["sensing"]["idle"]["perEventType"] = report["sensing"]["idle"]["perEventType"][:3]` | SC-93 — the agreement holds while the floor breaks | **PROVEN** — `FAIL: both idle states were read for at least 4 distinct concrete event types` / `got: ['keyDown', 'leftMouseDown', 'mouseMoved']` |
+| SC-92 | `self-check.sh:2136` | four copies of one row: `r = …["perEventType"]; …["perEventType"] = [dict(r[0]) for _ in range(4)]` | SC-91 — the count alone would pass this | **PROVEN** — `FAIL: both idle states were read for at least 4 distinct concrete event types` / `got: ['mouseMoved']` |
+| SC-93 | `self-check.sh:2154` | `report["sensing"]["idle"]["perEventType"][0]["hardwareSeconds"] += 5.0` | SC-91 — the floor holds while the agreement breaks | **PROVEN** — `FAIL: per concrete event type the two idle states agree within 1.0 s` / `got: [('mouseMoved', 18461.4181935, 18456.418193209)]` |
+| SC-94 | `self-check.sh:2154` | `report["sensing"]["idle"]["perEventType"][2]["sessionSeconds"] += 3600.0` | SC-93 — the gap the *other* way is red too, which is the whole point | **PROVEN** — `FAIL: per concrete event type the two idle states agree within 1.0 s` / `got: [('leftMouseDown', 18456.389179583, 22056.389179542)]` |
+| SC-95 | `self-check.sh:2179` | `i = report["sensing"]["idle"]; i["isIdleForThisReading"] = not i["isIdleForThisReading"]` | SC-96 — the committed pair's verdict holds while the live one breaks | **PROVEN** — `FAIL: the app's idle verdict is the longer of the two counters against the threshold` / `got: (False, 3457.770909375, 18456.162585334, 180)` |
+| SC-96 | `self-check.sh:2210` | `report["sensing"]["idle"]["phantomHidPair"]["isIdle"] = False` | SC-97 — the figures hold while the verdict breaks | **PROVEN** — `FAIL: a hardware clock reset by a phantom HID report does not make an absent person present` / `got: False` |
+| SC-97 | `self-check.sh:2201` | `report["sensing"]["idle"]["phantomHidPair"]["sessionSeconds"] = 14850.05` | SC-96 — the verdict holds while the pair it is about moves | **PROVEN** — `FAIL: the app judged the measured phantom-HID pair, 105.71 s against 14850.04 s at 180 s` / `got: (105.71, 14850.05, 180)` |
+
+SC-95 is the row that needed SC-96 beside it. On a gate rig nobody is touching, both live counters
+are hours past the 180 s threshold, so `max(hid, session) >= t` and the `hid >= t` it replaced
+agree and a reverted build passes SC-95's assertion in silence — measured: the first attempt at
+that witness came back `MISS`. SC-96 is the case that discriminates the two rules on any rig at
+any hour, because the pair is the committed one the probe measured rather than whatever the room
+is doing.
 
 
 ### `notification-denied` / `notification-denied-release` — `scripts/check-notification-denied.sh`
@@ -367,6 +402,7 @@ FOCUS_MW_DD=/private/tmp/dd zsh /private/tmp/mw/prep-reports.zsh
 zsh /private/tmp/mw/run-json-witnesses.zsh /private/tmp/mw/cases-selfcheck.txt
 zsh /private/tmp/mw/run-json-witnesses.zsh /private/tmp/mw/cases-stages.txt
 zsh /private/tmp/mw/run-json-witnesses.zsh /private/tmp/mw/cases-odz.txt
+zsh /private/tmp/mw/run-sc-idle.zsh /private/tmp/mw/idle-run release
 FOCUS_MW_DD=/private/tmp/dd zsh /private/tmp/mw/run-binary-witnesses.zsh
 FOCUS_MW_LOGS=/private/tmp/logs FOCUS_MW_DD=/private/tmp/dd \
     zsh /private/tmp/mw/run-log-witnesses.zsh
