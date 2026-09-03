@@ -3073,6 +3073,78 @@
         }
       }
     },
+    "settings.privacy.retention.explanation" : {
+      "comment" : "Sentence under the retention heading, saying what choosing a window does.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anything older than the window you choose is deleted the next time Focus checks, which is once a day. Answers you have already given outlive it while the priority they were given for is still live, so Focus never asks you the same question twice."
+          }
+        }
+      }
+    },
+    "settings.privacy.retention.forever" : {
+      "comment" : "Retention-window button: never delete anything on age.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Forever"
+          }
+        }
+      }
+    },
+    "settings.privacy.retention.heading" : {
+      "comment" : "Heading over the Privacy pane's retention-window control.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How long Focus keeps this"
+          }
+        }
+      }
+    },
+    "settings.privacy.retention.ninetyDays" : {
+      "comment" : "Retention-window button: keep ninety days, which is the default.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "90 days"
+          }
+        }
+      }
+    },
+    "settings.privacy.retention.sevenDays" : {
+      "comment" : "Retention-window button: keep one week.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "7 days"
+          }
+        }
+      }
+    },
+    "settings.privacy.retention.thirtyDays" : {
+      "comment" : "Retention-window button: keep thirty days.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "30 days"
+          }
+        }
+      }
+    },
     "settings.privacy.reveal" : {
       "comment" : "Button that reveals the local data store in the Finder.",
       "extractionState" : "manual",

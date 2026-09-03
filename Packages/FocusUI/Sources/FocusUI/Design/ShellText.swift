@@ -1,3 +1,4 @@
+import FocusCore
 import Foundation
 import SwiftUI
 
@@ -268,6 +269,16 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case settingsPrivacyStatement = "settings.privacy.statement"
     case settingsPrivacyStoreLabel = "settings.privacy.storeLabel"
     case settingsPrivacyReveal = "settings.privacy.reveal"
+    // The retention window (F-115, focus-l7n): a heading, the sentence that says what choosing
+    // one means, and one label per window. The labels are a closed vocabulary over
+    // `RetentionWindow` — `RetentionWindow.titleKey` is the only mapping, and it is a bijection
+    // both ways in `RetentionWindowVocabularyTests`.
+    case settingsPrivacyRetentionHeading = "settings.privacy.retention.heading"
+    case settingsPrivacyRetentionExplanation = "settings.privacy.retention.explanation"
+    case settingsPrivacyRetentionSevenDays = "settings.privacy.retention.sevenDays"
+    case settingsPrivacyRetentionThirtyDays = "settings.privacy.retention.thirtyDays"
+    case settingsPrivacyRetentionNinetyDays = "settings.privacy.retention.ninetyDays"
+    case settingsPrivacyRetentionForever = "settings.privacy.retention.forever"
     // Delete everything (e07a, focus-6pr.3): the pane's one destructive control and its sheet.
     case settingsPrivacyDeleteHeading = "settings.privacy.delete.heading"
     case settingsPrivacyDeleteExplanation = "settings.privacy.delete.explanation"
@@ -690,5 +701,23 @@ public struct ShellText: View {
         let text = Text(verbatim: drawn)
             .font(DesignTokens.font(role, scale: scale))
         return (monospacedDigits ? text.monospacedDigit() : text)
+    }
+}
+
+/// **The word for each retention window** (F-115, focus-l7n).
+///
+/// The mapping lives in `FocusUI` rather than on the type, because `FocusCore` owns the window
+/// and this package owns every word a person reads — the same split `NudgeVoice` and the e04
+/// vocabularies keep. It is an exhaustive `switch`, so a window added without a word does not
+/// compile, and `RetentionWindowVocabularyTests` folds it the other way: every
+/// `settings.privacy.retention.` key in the catalog belongs to exactly one window.
+extension RetentionWindow {
+    public var titleKey: ShellStringKey {
+        switch self {
+        case .sevenDays: .settingsPrivacyRetentionSevenDays
+        case .thirtyDays: .settingsPrivacyRetentionThirtyDays
+        case .ninetyDays: .settingsPrivacyRetentionNinetyDays
+        case .forever: .settingsPrivacyRetentionForever
+        }
     }
 }

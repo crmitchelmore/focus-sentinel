@@ -468,6 +468,7 @@ public final class AppComposition {
         // facade over the one `ModelContext`, and sharing an instance would be sharing a cache
         // rather than sharing rows.
         self.retentionSweep = RetentionSweep(
+            context: context,
             events: events,
             log: InterventionLog(
                 context: context,
@@ -1195,7 +1196,36 @@ public final class AppComposition {
         switch action {
         case .deleteEverything:
             deleteEverythingAndRelaunch()
+        case .setRetentionWindow(let window):
+            setRetentionWindow(window)
         }
+    }
+
+    /// **Write the window, and sweep to it now** (F-115, focus-l7n).
+    ///
+    /// Writing alone would be a promise with a delay in it: somebody who shortens the window to
+    /// seven days because they are about to hand the Mac over would have three months of rows on
+    /// disk until the next local day turned. So the day marker is cleared and the sweep is run,
+    /// which is the same call the tick makes and reads the value that was just written.
+    ///
+    /// Lengthening the window sweeps too, and removes nothing — the sweep is not a deletion verb,
+    /// it is the window being applied, and running it in one direction only would be a second
+    /// code path to get wrong.
+    func setRetentionWindow(_ window: RetentionWindow) {
+        do {
+            try FocusStore.setRetentionWindow(
+                window,
+                in: modelContainer.mainContext,
+                now: dateProvider.now
+            )
+        } catch {
+            logger.error(
+                "the retention window could not be stored: \(error.localizedDescription, privacy: .public)"
+            )
+            return
+        }
+        lastRetentionSweep = nil
+        sweepRetentionIfDue()
     }
 
     /// Set the moment the store is destroyed, and read by every write that runs at termination.
@@ -2160,6 +2190,9 @@ public final class AppComposition {
             // sweep; what is prevented is a write attempt on every tick for the life of the run.
             lastRetentionSweep = RetentionSweep.Result(
                 day: today,
+                window: FocusStore.privacyPreferences(
+                    in: modelContainer.mainContext
+                ).retention,
                 activityEvents: 0,
                 interventionRows: 0,
                 queryReceipts: 0

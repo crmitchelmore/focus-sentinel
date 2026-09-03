@@ -105,8 +105,17 @@ public struct ShellSettingsConnection {
     /// What the General pane's ritual switch and shortcut picker reach (focus-d3g). A sink for
     /// `onLaunchAtLogin`'s reason and driven the same way.
     public let onCaptureAction: @MainActor (CaptureSettingsAction) -> Void
+    /// **How long the app keeps what it wrote down, as the store holds it** (F-115, focus-l7n).
+    ///
+    /// Read from the store every time this value is built, for `ritualEnabled`'s reason: a
+    /// control answering from its own memory would go on saying *90 days* after a
+    /// delete-everything, and this is a promise rather than a decoration.
+    public let retention: RetentionWindow
     /// What the Privacy pane's one destructive control reaches (e07a, focus-6pr.3). A sink like
     /// the two above, and unlike them **never driven by a lane**: it deletes the person's store.
+    ///
+    /// It also carries the retention window now, which **is** driven by a lane: setting a window
+    /// costs nobody their data, so unlike delete-everything the self-check presses it.
     public let onPrivacyAction: @MainActor (PrivacySettingsAction) -> Void
     /// **Which pane is on screen, decided by the composition root** (focus-7ow).
     ///
@@ -157,6 +166,7 @@ public struct ShellSettingsConnection {
         onInterventionAction: @escaping @MainActor (InterventionSettingsAction) -> Void,
         onLaunchAtLogin: @escaping @MainActor (LaunchAtLoginAction) -> Void = { _ in },
         onCaptureAction: @escaping @MainActor (CaptureSettingsAction) -> Void = { _ in },
+        retention: RetentionWindow = .committedDefault,
         onPrivacyAction: @escaping @MainActor (PrivacySettingsAction) -> Void = { _ in },
         selectedTab: SettingsTab = .general,
         selectTab: @escaping @MainActor (SettingsTab) -> Void = { _ in },
@@ -178,6 +188,7 @@ public struct ShellSettingsConnection {
         self.onInterventionAction = onInterventionAction
         self.onLaunchAtLogin = onLaunchAtLogin
         self.onCaptureAction = onCaptureAction
+        self.retention = retention
         self.onPrivacyAction = onPrivacyAction
         self.selectedTab = selectedTab
         self.selectTab = selectTab
@@ -212,6 +223,7 @@ extension ShellSettingsConnection: ShellDrawnConnection {
             "quickCaptureShortcut.keyCode": .drawn([.quickCaptureShortcut]),
             "quickCaptureShortcut.modifierFlags": .drawn([.quickCaptureShortcut]),
             "onCaptureAction": .undrawn(.sink),
+            "retention": .drawn([.retentionWindow]),
             "onPrivacyAction": .undrawn(.sink),
             "summary": .drawn([.privacySummary, .sensingDetail]),
             "capabilities": .drawn([.privacyCapabilities]),
@@ -384,6 +396,8 @@ public struct ShellSettingsView: View {
     private let onCaptureAction: (CaptureSettingsAction) -> Void
     private let intervention: InterventionSettings
     private let onInterventionAction: (InterventionSettingsAction) -> Void
+    /// How long the app keeps what it wrote down, as the store holds it (F-115, focus-l7n).
+    private let retention: RetentionWindow
     private let onPrivacyAction: (PrivacySettingsAction) -> Void
     /// Which pane is on screen. A `Binding` over the composition root's own value, never a
     /// `@State`: the root drives it so each pane can be made to draw and report (focus-7ow).
@@ -411,6 +425,7 @@ public struct ShellSettingsView: View {
         verdict: VerdictSnapshot? = nil,
         intervention: InterventionSettings = InterventionSettings(),
         onInterventionAction: @escaping (InterventionSettingsAction) -> Void = { _ in },
+        retention: RetentionWindow = .committedDefault,
         onPrivacyAction: @escaping (PrivacySettingsAction) -> Void = { _ in },
         selectedTab: Binding<SettingsTab> = .constant(.general)
     ) {
@@ -427,6 +442,7 @@ public struct ShellSettingsView: View {
         self.verdict = verdict
         self.intervention = intervention
         self.onInterventionAction = onInterventionAction
+        self.retention = retention
         self.onPrivacyAction = onPrivacyAction
         self._selectedTab = selectedTab
         self.didRender = nil
@@ -457,6 +473,7 @@ public struct ShellSettingsView: View {
         self.verdict = connection.verdict
         self.intervention = connection.intervention
         self.onInterventionAction = connection.onInterventionAction
+        self.retention = connection.retention
         self.onPrivacyAction = connection.onPrivacyAction
         self._selectedTab = Binding(
             get: { connection.selectedTab },
@@ -497,6 +514,7 @@ public struct ShellSettingsView: View {
                 summary: summary,
                 capabilities: capabilities,
                 verdict: verdict,
+                retention: retention,
                 onAction: onPrivacyAction
             )
             .tabItem { tabLabel(.privacy) }

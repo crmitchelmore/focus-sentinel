@@ -28,10 +28,39 @@ import SwiftUI
 /// this and nothing that would be an ask in disguise. It is the one action in the application
 /// no self-check may press — it deletes the person's own store — so its effect is witnessed in
 /// the unit lane against a store the test owns, and the running app is asked only to declare it.
-public enum PrivacySettingsAction: String, Sendable, Equatable, Hashable, CaseIterable {
+public enum PrivacySettingsAction: Sendable, Equatable, Hashable {
     /// Delete every row the app holds about the person, and the file they were in, and start
     /// again with a store that never held them. Confirmed on a sheet first; never undoable.
     case deleteEverything
+    /// **How long the app keeps what it wrote down** (F-115, focus-l7n). Not confirmed on a
+    /// sheet: shortening the window is reversible in the sense that matters — the person can
+    /// lengthen it again — and the rows it takes go on the next daily sweep rather than under
+    /// the click, which is the same promise the pane's sentence makes.
+    case setRetentionWindow(RetentionWindow)
+
+    /// **The pane's vocabulary, as verbs.**
+    ///
+    /// One row per verb rather than per value: `setRetentionWindow` is one thing the pane can
+    /// ask for, four times over, and a list that grew by four when a window was added would be
+    /// a list nobody could read the review's I-4 out of — *the pane offers exactly these and
+    /// nothing that would be an ask in disguise*.
+    ///
+    /// Derived from an exhaustive `switch`, so a case added without a name does not compile.
+    public var verb: String {
+        switch self {
+        case .deleteEverything: "deleteEverything"
+        case .setRetentionWindow: "setRetentionWindow"
+        }
+    }
+
+    /// Every action the pane can produce, one per value it can produce it with. The self-check
+    /// folds this to `verb`; the unit lane folds it to check nothing here is unreachable.
+    public static var allDeclared: [PrivacySettingsAction] {
+        [.deleteEverything] + RetentionWindow.ordered.map(PrivacySettingsAction.setRetentionWindow)
+    }
+
+    /// The vocabulary the self-check publishes, in the order the pane draws it.
+    public static let vocabulary: [String] = ["deleteEverything", "setRetentionWindow"]
 }
 
 public struct PrivacySettingsView: View {
@@ -43,6 +72,12 @@ public struct PrivacySettingsView: View {
     private let summary: SensingSummary
     private let capabilities: CapabilityMatrix
     private let verdict: VerdictSnapshot?
+    /// **How long the app keeps what it wrote down, as the store holds it** (F-115, focus-l7n).
+    ///
+    /// Passed in rather than read here, for the reason every other stored value on this pane is:
+    /// a control answering from its own memory would go on saying *90 days* after a
+    /// delete-everything rebuilt the store.
+    private let retention: RetentionWindow
     /// The displays this pane bounds itself against; `nil` for the live ones. Injectable for the
     /// reason `NudgePanelController.displays` is: the display this defect is worst on is a 13-inch
     /// laptop, and no lane can hand the pane one if it reads `NSScreen` for itself.
@@ -58,6 +93,7 @@ public struct PrivacySettingsView: View {
         summary: SensingSummary = .inactive,
         capabilities: CapabilityMatrix = CapabilityMatrix(),
         verdict: VerdictSnapshot? = nil,
+        retention: RetentionWindow = .committedDefault,
         screens: ShellScreens = nil,
         onAction: @escaping (PrivacySettingsAction) -> Void = { _ in }
     ) {
@@ -65,6 +101,7 @@ public struct PrivacySettingsView: View {
         self.summary = summary
         self.capabilities = capabilities
         self.verdict = verdict
+        self.retention = retention
         self.screens = screens
         self.onAction = onAction
     }
@@ -76,6 +113,8 @@ public struct PrivacySettingsView: View {
             .settingsPrivacyStatement,
             .settingsPrivacyStoreLabel,
             .settingsPrivacyReveal,
+            .settingsPrivacyRetentionHeading,
+            .settingsPrivacyRetentionExplanation,
             .settingsPrivacyDeleteHeading,
             .settingsPrivacyDeleteExplanation,
             .settingsPrivacyDeleteEverything,
@@ -83,7 +122,7 @@ public struct PrivacySettingsView: View {
             .sensingLimitationScreenSharing,
             .capabilityHeading,
             .capabilityExplanation
-        ] + VerdictInspectorView.contentKeys
+        ] + RetentionWindow.ordered.map(\.titleKey) + VerdictInspectorView.contentKeys
 
     /// **The pane, bounded** (focus-nu6).
     ///
@@ -165,6 +204,45 @@ public struct PrivacySettingsView: View {
 
             Divider()
 
+            // **How long any of this is kept** (F-115, focus-l7n). It sits directly above the
+            // delete-everything control because the two are the same promise at two speeds: one
+            // says what goes on its own, the other says everything, now.
+            //
+            // Four plain buttons rather than a `Picker`, and the reason is a measured one rather
+            // than a taste: an AppKit-backed control does not rasterise under `ImageRenderer`, so
+            // a picker here would make the committed baseline a picture of SwiftUI's
+            // unrenderable-view placeholder — evidence of nothing. A row of buttons is also the
+            // shape that keeps the *chosen* value legible without colour (F-146): the selected
+            // one is bordered-prominent and carries the accessibility trait, so VoiceOver and a
+            // person with `differentiateWithoutColor` on both get the same answer.
+            VStack(alignment: .leading, spacing: spacing / 2) {
+                ShellText(.settingsPrivacyRetentionHeading, role: .headline)
+                ShellText(.settingsPrivacyRetentionExplanation, role: .footnote)
+                    .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
+                HStack(spacing: spacing / 2) {
+                    ForEach(RetentionWindow.ordered, id: \.self) { window in
+                        Button {
+                            onAction(.setRetentionWindow(window))
+                        } label: {
+                            ShellText(window.titleKey)
+                        }
+                        .buttonStyle(.bordered)
+                        // The same tint the timebox presets use for the same job — and, because
+                        // a tint is a colour, the accessibility trait beside it carries the
+                        // selection where colour cannot (F-146, F-144).
+                        .tint(window == retention ? DesignTokens.Palette.accent(for: traits) : nil)
+                        .accessibilityAddTraits(window == retention ? [.isSelected] : [])
+                    }
+                    Spacer(minLength: 0)
+                }
+                .accessibilityElement(children: .contain)
+                .accessibilityLabel(ShellStrings.resource(.settingsPrivacyRetentionHeading))
+            }
+
+            Divider()
+
             // **The one thing here a person can undo the app with** (e07a, focus-6pr.3). The
             // statement above says everything lives in one local file; this is the button that
             // makes that a promise with an exit. It confirms on a sheet, because the deletion
@@ -238,6 +316,8 @@ public struct PrivacySettingsView: View {
         // window drives the selection from the composition root now, and these are stamps on the
         // values this view is actually holding.
         .shellRendered(.privacyStorePath, storePath)
+        // The number the sweep reads, not the label the button draws (F-115, focus-l7n).
+        .shellRendered(.retentionWindow, retention.storedDays)
         .shellRendered(.privacyCapabilities, capabilities.renderedDescription)
         .shellRendered(
             .privacySummary,

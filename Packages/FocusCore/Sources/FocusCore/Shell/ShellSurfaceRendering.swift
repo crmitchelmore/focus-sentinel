@@ -92,6 +92,14 @@ public enum ShellRenderedField: String, Sendable, CaseIterable, Codable, Hashabl
     /// **Where the Privacy pane told the person their data lives** — the path it actually drew,
     /// which is also what its Reveal in Finder button opens. A mutation printed `/` (focus-7ow).
     case privacyStorePath
+    /// **The retention window the Privacy pane drew as chosen**, as its stored day count —
+    /// `7`, `30`, `90`, or `0` for forever (F-115, focus-l7n).
+    ///
+    /// The number rather than the button's label, because the number is what the sweep reads: a
+    /// pane that highlighted the right row while holding a different value would be a pane that
+    /// tells somebody their history is being kept for a week when it is being kept for a
+    /// quarter. Reported by the pane for `privacyStorePath`'s reason.
+    case retentionWindow
     /// The band the verdict inspector drew, or `"none"`.
     case verdictBand
     /// The whole verdict, as `ShellValueDigest`. The band is one field: a verdict about a

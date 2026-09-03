@@ -208,6 +208,11 @@ enum ShellConnectionFactory {
         // Where the Privacy pane tells the person their data lives, and what its Reveal in Finder
         // button opens. A mutation printed `/` and nothing anywhere noticed (focus-7ow).
         root.expect(.privacyStorePath, storeURL.path(percentEncoded: false), for: .settings)
+        // **How long the app keeps what it wrote down** (F-115, focus-l7n). Read from the store
+        // every time this value is built, for `ritualEnabled`'s reason — and expected as the
+        // stored day count, which is the number the sweep reads rather than the button's word.
+        let retention = FocusStore.privacyPreferences(in: root.modelContainer.mainContext).retention
+        root.expect(.retentionWindow, String(retention.storedDays), for: .settings)
         root.expect(.verdictBand, currentVerdict?.band?.rawValue ?? "none", for: .settings)
         root.expect(.verdictDetail, ShellValueDigest.describe(currentVerdict), for: .settings)
         root.expect(.sensingDetail, ShellValueDigest.describe(summary), for: .settings)
@@ -268,6 +273,7 @@ enum ShellConnectionFactory {
             onInterventionAction: { [weak root] action in root?.perform(action) },
             onLaunchAtLogin: { [weak root] action in root?.perform(action) },
             onCaptureAction: { [weak root] action in root?.perform(action) },
+            retention: retention,
             onPrivacyAction: { [weak root] action in root?.perform(action) },
             selectedTab: root.settingsTab,
             selectTab: { [weak root] tab in root?.selectSettingsTab(tab) },
