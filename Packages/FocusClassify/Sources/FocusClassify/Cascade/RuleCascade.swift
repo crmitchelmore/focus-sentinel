@@ -340,7 +340,7 @@ public struct RuleCascade: Sendable {
     /// looked; the version strings exist only in `modelmanagerd`'s logs), so the coarser fact is
     /// used: a point release that ships a new asset moves this string and invalidates every
     /// entry, and one that does not costs a session's worth of re-asking.
-    static let osVersionKey = ProcessInfo.processInfo.operatingSystemVersionString
+    public static let osVersionKey = ProcessInfo.processInfo.operatingSystemVersionString
 
     // MARK: - Rungs 0–2 · the user's own rules
 

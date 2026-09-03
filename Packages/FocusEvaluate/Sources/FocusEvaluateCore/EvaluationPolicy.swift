@@ -245,6 +245,48 @@ public enum EvaluationPolicy {
     /// The declared ladder length, including the rung e06 fills.
     public static let declaredRungCount = 9
 
+    // MARK: - Lane 2 · the model corpus and its budgets (e06)
+    //
+    // Every constant here sizes the *evidence*, not the judgement, which is why they live in
+    // this file and not in `RelevancePolicy` — the same argument R-70f's second exception
+    // already made for the rest of this type.
+
+    /// R-113's grid: six priorities against six subjects, complete and fail-closed.
+    public static let modelGridPriorities = 6
+    public static let modelGridSubjects = 6
+    /// The second competence: three non-English priorities against three subjects.
+    public static let modelLanguageCount = 3
+    public static let modelLanguageSubjects = 3
+
+    /// **The sum of the two grids, not a round number chosen first** — the same discipline
+    /// `corpusFloor` already uses. `GridCompletenessTests` asserts the arithmetic rather than
+    /// the literal, so a grid that shrank could not be accommodated by editing this line.
+    public static let modelCorpusFloor =
+        modelGridPriorities * modelGridSubjects + modelLanguageCount * modelLanguageSubjects
+
+    /// How many of those cells a human committed as `rescue`, counted from the files rather than
+    /// chosen: 12 of the 36 in the 6×6 and 3 of the 9 multilingual cells.
+    ///
+    /// The remaining 30 are holds, and **the holds are the mutation witness**. A yes-to-everything
+    /// model scores 100 % recall and fails on every one of them; `GridCompletenessTests` asserts
+    /// the holds outnumber the rescues so that witness can never become a rump.
+    public static let modelRescuableCells = 15
+
+    /// **The recall floor, and the asymmetry that sets it** (R-111).
+    ///
+    /// A missed rescue costs a question the app would have asked anyway — today's behaviour, a
+    /// known-safe posture — so the floor tolerates an imperfect model. A seduction costs the app
+    /// going quiet about something it was told to hold, and its budget is zero with no floor to
+    /// argue about. Set at three quarters: a tier that cannot rescue three cases in four is not
+    /// worth the weight of a package.
+    public static let modelRescueRecallFloor = 0.75
+
+    /// Runs of the whole model lane, whose per-case bucket assignment must be identical across
+    /// all of them (R-112). A language model is not a pure function and this does not pretend it
+    /// is; `.greedy` sampling is the strongest reproducibility the tier offers and this is what
+    /// checks the claim rather than assuming it.
+    public static let modelLaneRepeatCount = 3
+
     /// R-56.1's route must be **exercised**, not merely present: if this ever falls to zero,
     /// family 11 has stopped testing anything.
     public static let noNegativeBasisFloor = 1

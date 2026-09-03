@@ -1,0 +1,546 @@
+{
+  "file": "grid",
+  "note": "R-113's complete 6x6 grid: six priorities x six subjects, every cell carrying a committed `modelExpectation`. EVERY CELL IS IDENTITY-FREE — no context pack at all — because `noNegativeBasis` is a property of the PRIORITY, not of the subject: it fires when the pack holds fewer than `minimumNegativeBasisItems` app or domain identities. So every cell resolves to `uncertain(.noNegativeBasis)` at rung 5 in lane 1, which is the one route this grid probes. No subject is a seeded mixed-use application (those decline to rung 7 and are never consultable, §2.3), and no subject's identifier tokens overlap its priority's words (that would answer `relevant` at rung 5 step 1 and never reach the deferral). BOTH AXES MOVE, and that is the ruling rather than a nicety: every ROW contains at least one rescue and one hold, so a model answering from the priority alone gets the whole row wrong; every COLUMN contains at least one of each, so a model answering from the subject alone gets the whole column wrong. The hold cells are the twelfth adversarial family in substance — a genuine, identifiable, lexically-silent distraction against a clear priority — and a yes-to-everything model scores 100% recall and fails every one of them. That is the mutation witness this epic owes. Every expectation here is justifiable from the case's own prose by a human reader who has never run the model, and this file was committed before any model output was looked at.",
+  "cells": [
+    {
+      "id": "mg-p1s1",
+      "row": "p1",
+      "column": "s1",
+      "note": "A proposal is priced. The numbers behind 'what will this cost Acme' live in a spreadsheet, and a person writing one is in and out of it all afternoon.",
+      "priority": {
+        "intent": "write the q3 proposal for acme",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "com.microsoft.Excel"
+      },
+      "dwellSeconds": 400,
+      "modelExpectation": "rescue"
+    },
+    {
+      "id": "mg-p1s2",
+      "row": "p1",
+      "column": "s2",
+      "note": "A proposal for a client is a designed document — the diagram on page two is drawn somewhere, and this is where.",
+      "priority": {
+        "intent": "write the q3 proposal for acme",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "com.figma.Desktop"
+      },
+      "dwellSeconds": 400,
+      "modelExpectation": "rescue"
+    },
+    {
+      "id": "mg-p1s3",
+      "row": "p1",
+      "column": "s3",
+      "note": "Nothing in a client proposal is compiled. An IDE open beside it is a different piece of work, not this one.",
+      "priority": {
+        "intent": "write the q3 proposal for acme",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "com.apple.dt.Xcode"
+      },
+      "dwellSeconds": 400,
+      "modelExpectation": "hold"
+    },
+    {
+      "id": "mg-p1s4",
+      "row": "p1",
+      "column": "s4",
+      "note": "A games storefront is not where anybody writes a proposal for a client.",
+      "priority": {
+        "intent": "write the q3 proposal for acme",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "com.valvesoftware.steam"
+      },
+      "dwellSeconds": 400,
+      "modelExpectation": "hold"
+    },
+    {
+      "id": "mg-p1s5",
+      "row": "p1",
+      "column": "s5",
+      "note": "A media library is not where anybody writes a proposal for a client.",
+      "priority": {
+        "intent": "write the q3 proposal for acme",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "tv.plex.desktop"
+      },
+      "dwellSeconds": 400,
+      "modelExpectation": "hold"
+    },
+    {
+      "id": "mg-p1s6",
+      "row": "p1",
+      "column": "s6",
+      "note": "A 3D suite has no part in a written commercial proposal.",
+      "priority": {
+        "intent": "write the q3 proposal for acme",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "org.blenderfoundation.blender"
+      },
+      "dwellSeconds": 400,
+      "modelExpectation": "hold"
+    },
+    {
+      "id": "mg-p2s1",
+      "row": "p2",
+      "column": "s1",
+      "note": "An audit IS a spreadsheet. If any single cell in this grid is a rescue, it is this one.",
+      "priority": {
+        "intent": "close the bergman audit before friday",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "com.microsoft.Excel"
+      },
+      "dwellSeconds": 400,
+      "modelExpectation": "rescue"
+    },
+    {
+      "id": "mg-p2s2",
+      "row": "p2",
+      "column": "s2",
+      "note": "An audit produces a workbook and a memo, not a designed interface.",
+      "priority": {
+        "intent": "close the bergman audit before friday",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "com.figma.Desktop"
+      },
+      "dwellSeconds": 400,
+      "modelExpectation": "hold"
+    },
+    {
+      "id": "mg-p2s3",
+      "row": "p2",
+      "column": "s3",
+      "note": "An audit is not compiled. Nothing in closing a client's books happens inside a development environment, however long the person has had it open.",
+      "priority": {
+        "intent": "close the bergman audit before friday",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "com.apple.dt.Xcode"
+      },
+      "dwellSeconds": 400,
+      "modelExpectation": "hold"
+    },
+    {
+      "id": "mg-p2s4",
+      "row": "p2",
+      "column": "s4",
+      "note": "A games storefront is not an audit tool. This is the plausible-but-unrelated shape the hold half of the grid exists for: identifiable, lexically silent, and genuinely not the work.",
+      "priority": {
+        "intent": "close the bergman audit before friday",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "com.valvesoftware.steam"
+      },
+      "dwellSeconds": 400,
+      "modelExpectation": "hold"
+    },
+    {
+      "id": "mg-p2s5",
+      "row": "p2",
+      "column": "s5",
+      "note": "A media library is not an audit tool. Closing an audit before Friday has nothing in it that a film catalogue serves.",
+      "priority": {
+        "intent": "close the bergman audit before friday",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "tv.plex.desktop"
+      },
+      "dwellSeconds": 400,
+      "modelExpectation": "hold"
+    },
+    {
+      "id": "mg-p2s6",
+      "row": "p2",
+      "column": "s6",
+      "note": "A 3D suite is not an audit tool. There is nothing to model in a set of accounts, and a model that answered otherwise would be reasoning from the shape of the word rather than from the work.",
+      "priority": {
+        "intent": "close the bergman audit before friday",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "org.blenderfoundation.blender"
+      },
+      "dwellSeconds": 400,
+      "modelExpectation": "hold"
+    },
+    {
+      "id": "mg-p3s1",
+      "row": "p3",
+      "column": "s1",
+      "note": "A crash triaged from a support export: the rows of affected sessions arrive as a spreadsheet, and reading them is the first hour of the work.",
+      "priority": {
+        "intent": "fix the checkout crash reported by support",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "com.microsoft.Excel"
+      },
+      "dwellSeconds": 400,
+      "modelExpectation": "rescue"
+    },
+    {
+      "id": "mg-p3s2",
+      "row": "p3",
+      "column": "s2",
+      "note": "A checkout crash is a code defect. Redrawing the screen is not fixing it.",
+      "priority": {
+        "intent": "fix the checkout crash reported by support",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "com.figma.Desktop"
+      },
+      "dwellSeconds": 400,
+      "modelExpectation": "hold"
+    },
+    {
+      "id": "mg-p3s3",
+      "row": "p3",
+      "column": "s3",
+      "note": "Fixing a crash in a shipped product is what an IDE is for.",
+      "priority": {
+        "intent": "fix the checkout crash reported by support",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "com.apple.dt.Xcode"
+      },
+      "dwellSeconds": 400,
+      "modelExpectation": "rescue"
+    },
+    {
+      "id": "mg-p3s4",
+      "row": "p3",
+      "column": "s4",
+      "note": "A games storefront has nothing to do with a checkout defect in somebody else's product.",
+      "priority": {
+        "intent": "fix the checkout crash reported by support",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "com.valvesoftware.steam"
+      },
+      "dwellSeconds": 400,
+      "modelExpectation": "hold"
+    },
+    {
+      "id": "mg-p3s5",
+      "row": "p3",
+      "column": "s5",
+      "note": "A media library has nothing to do with a checkout defect.",
+      "priority": {
+        "intent": "fix the checkout crash reported by support",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "tv.plex.desktop"
+      },
+      "dwellSeconds": 400,
+      "modelExpectation": "hold"
+    },
+    {
+      "id": "mg-p3s6",
+      "row": "p3",
+      "column": "s6",
+      "note": "A 3D suite has nothing to do with a checkout defect.",
+      "priority": {
+        "intent": "fix the checkout crash reported by support",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "org.blenderfoundation.blender"
+      },
+      "dwellSeconds": 400,
+      "modelExpectation": "hold"
+    },
+    {
+      "id": "mg-p4s1",
+      "row": "p4",
+      "column": "s1",
+      "note": "Redrawing screens is not a spreadsheet task. The screens are drawn, not tabulated.",
+      "priority": {
+        "intent": "redraw the onboarding screens for the mobile product",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "com.microsoft.Excel"
+      },
+      "dwellSeconds": 400,
+      "modelExpectation": "hold"
+    },
+    {
+      "id": "mg-p4s2",
+      "row": "p4",
+      "column": "s2",
+      "note": "Redrawing the onboarding screens is exactly what an interface design tool is for.",
+      "priority": {
+        "intent": "redraw the onboarding screens for the mobile product",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "com.figma.Desktop"
+      },
+      "dwellSeconds": 400,
+      "modelExpectation": "rescue"
+    },
+    {
+      "id": "mg-p4s3",
+      "row": "p4",
+      "column": "s3",
+      "note": "The redrawn screens have to be built into the product, and a designer working against the running app has the IDE open beside the canvas.",
+      "priority": {
+        "intent": "redraw the onboarding screens for the mobile product",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "com.apple.dt.Xcode"
+      },
+      "dwellSeconds": 400,
+      "modelExpectation": "rescue"
+    },
+    {
+      "id": "mg-p4s4",
+      "row": "p4",
+      "column": "s4",
+      "note": "A games storefront has no part in redrawing a product's onboarding.",
+      "priority": {
+        "intent": "redraw the onboarding screens for the mobile product",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "com.valvesoftware.steam"
+      },
+      "dwellSeconds": 400,
+      "modelExpectation": "hold"
+    },
+    {
+      "id": "mg-p4s5",
+      "row": "p4",
+      "column": "s5",
+      "note": "A media library has no part in redrawing a product's onboarding.",
+      "priority": {
+        "intent": "redraw the onboarding screens for the mobile product",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "tv.plex.desktop"
+      },
+      "dwellSeconds": 400,
+      "modelExpectation": "hold"
+    },
+    {
+      "id": "mg-p4s6",
+      "row": "p4",
+      "column": "s6",
+      "note": "An onboarding illustration rendered in 3D is a real and common way to make one. Supporting the work rather than being it.",
+      "priority": {
+        "intent": "redraw the onboarding screens for the mobile product",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "org.blenderfoundation.blender"
+      },
+      "dwellSeconds": 400,
+      "modelExpectation": "rescue"
+    },
+    {
+      "id": "mg-p5s1",
+      "row": "p5",
+      "column": "s1",
+      "note": "Reviewing a game is writing. There is no ledger in it.",
+      "priority": {
+        "intent": "review the new indie platformer for the blog",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "com.microsoft.Excel"
+      },
+      "dwellSeconds": 400,
+      "modelExpectation": "hold"
+    },
+    {
+      "id": "mg-p5s2",
+      "row": "p5",
+      "column": "s2",
+      "note": "A review published on a blog needs its header art and its screenshot layout, and that is drawn here.",
+      "priority": {
+        "intent": "review the new indie platformer for the blog",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "com.figma.Desktop"
+      },
+      "dwellSeconds": 400,
+      "modelExpectation": "rescue"
+    },
+    {
+      "id": "mg-p5s3",
+      "row": "p5",
+      "column": "s3",
+      "note": "Writing about a game is not compiling one.",
+      "priority": {
+        "intent": "review the new indie platformer for the blog",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "com.apple.dt.Xcode"
+      },
+      "dwellSeconds": 400,
+      "modelExpectation": "hold"
+    },
+    {
+      "id": "mg-p5s4",
+      "row": "p5",
+      "column": "s4",
+      "note": "The game being reviewed is played and captured through the storefront it ships on. This is the work itself.",
+      "priority": {
+        "intent": "review the new indie platformer for the blog",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "com.valvesoftware.steam"
+      },
+      "dwellSeconds": 400,
+      "modelExpectation": "rescue"
+    },
+    {
+      "id": "mg-p5s5",
+      "row": "p5",
+      "column": "s5",
+      "note": "A personal film library is not where anybody plays the game they are reviewing.",
+      "priority": {
+        "intent": "review the new indie platformer for the blog",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "tv.plex.desktop"
+      },
+      "dwellSeconds": 400,
+      "modelExpectation": "hold"
+    },
+    {
+      "id": "mg-p5s6",
+      "row": "p5",
+      "column": "s6",
+      "note": "Reviewing somebody else's game does not involve modelling anything.",
+      "priority": {
+        "intent": "review the new indie platformer for the blog",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "org.blenderfoundation.blender"
+      },
+      "dwellSeconds": 400,
+      "modelExpectation": "hold"
+    },
+    {
+      "id": "mg-p6s1",
+      "row": "p6",
+      "column": "s1",
+      "note": "Cataloguing films by hand in a spreadsheet is conceivable, but the person has a library application open in the same grid and that is the tool for it. A hold rather than a rescue, deliberately: this is the cell a model that answers from plausibility alone gets wrong.",
+      "priority": {
+        "intent": "catalogue the family films and pick five for sunday",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "com.microsoft.Excel"
+      },
+      "dwellSeconds": 400,
+      "modelExpectation": "hold"
+    },
+    {
+      "id": "mg-p6s2",
+      "row": "p6",
+      "column": "s2",
+      "note": "An interface design tool has no part in choosing five films for Sunday.",
+      "priority": {
+        "intent": "catalogue the family films and pick five for sunday",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "com.figma.Desktop"
+      },
+      "dwellSeconds": 400,
+      "modelExpectation": "hold"
+    },
+    {
+      "id": "mg-p6s3",
+      "row": "p6",
+      "column": "s3",
+      "note": "An IDE has no part in choosing five films for Sunday.",
+      "priority": {
+        "intent": "catalogue the family films and pick five for sunday",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "com.apple.dt.Xcode"
+      },
+      "dwellSeconds": 400,
+      "modelExpectation": "hold"
+    },
+    {
+      "id": "mg-p6s4",
+      "row": "p6",
+      "column": "s4",
+      "note": "A games storefront is not a film library, however adjacent the leisure.",
+      "priority": {
+        "intent": "catalogue the family films and pick five for sunday",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "com.valvesoftware.steam"
+      },
+      "dwellSeconds": 400,
+      "modelExpectation": "hold"
+    },
+    {
+      "id": "mg-p6s5",
+      "row": "p6",
+      "column": "s5",
+      "note": "Cataloguing the family films IS this application. The clearest rescue in the second half of the grid.",
+      "priority": {
+        "intent": "catalogue the family films and pick five for sunday",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "tv.plex.desktop"
+      },
+      "dwellSeconds": 400,
+      "modelExpectation": "rescue"
+    },
+    {
+      "id": "mg-p6s6",
+      "row": "p6",
+      "column": "s6",
+      "note": "Rendering a title card for the family film night is a real thing people do with a 3D suite, and it serves the cataloguing rather than being it.",
+      "priority": {
+        "intent": "catalogue the family films and pick five for sunday",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "org.blenderfoundation.blender"
+      },
+      "dwellSeconds": 400,
+      "modelExpectation": "rescue"
+    }
+  ]
+}
