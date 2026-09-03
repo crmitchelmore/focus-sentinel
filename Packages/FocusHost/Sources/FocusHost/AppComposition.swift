@@ -192,6 +192,12 @@ public final class AppComposition {
     /// The menu-bar command centre. Installed in `start()`, because it touches `NSStatusBar`.
     let menuBar: MenuBarController
 
+    /// **The second renderer of the ambient rung** (e08a). It draws a hairline under the housing
+    /// of a built-in notched display and nothing else, from the same presentation the item above
+    /// is handed — which is what makes it a renderer rather than a surface. On this Mac it never
+    /// draws at all, and `SelfCheck.notchReport()` publishes both the counter and the named reason.
+    let notchCompanion: NotchCompanionController
+
     /// The notification boundary. It reads `getNotificationSettings`, which P-134 measured never
     /// prompting, and contains no call that can raise one — the single `requestAuthorization`
     /// call site in the repository is the Intervention settings pane's button (R-96g).
@@ -431,6 +437,7 @@ public final class AppComposition {
         let notifications = NotificationDelivery(centre: centre)
         self.nudgePanel = nudgePanel
         self.menuBar = menuBar
+        self.notchCompanion = NotchCompanionController()
         self.notificationDelivery = notifications
 
         self.nudgeHost = NudgeHost(
@@ -774,6 +781,17 @@ public final class AppComposition {
     /// **the value the gates are actually handed**, so a setting that reaches the loop's own
     /// field but never reaches the suppression stack is visible as a failing reading rather than
     /// as a green one (focus-z7g).
+    /// **The router's own menu-bar reading, in one place** (focus-zeq, P-131, e08a).
+    ///
+    /// Extracted rather than duplicated when the notch companion became a second reader of it: the
+    /// companion must be absent in exactly the states the ambient rung defers in, and two
+    /// expressions of "is the menu bar there" would be two things to keep in step — which is the
+    /// shape of the defect the whole visibility conjunct exists to prevent. It is deliberately not
+    /// a store read, so the tick path's fetch budget is untouched by having a second caller.
+    func menuBarIsVisible() -> Bool {
+        menuBar.isInstalled && !sensingHost.presentationState.suppressesOverlays
+    }
+
     func nudgeSurroundings() -> NudgeSurroundings {
         NudgeSurroundings(
             // **Gate 1 and the key are the same value** (focus-zrs). This was
@@ -805,8 +823,7 @@ public final class AppComposition {
             // a status-item window stays listed when nobody can see it, so it is the wrong
             // reading in the direction that matters — over-permissive — and the reading that
             // catches the case it is right about is `suppressesOverlays` beside it.
-            menuBarVisible: menuBar.isInstalled
-                && !sensingHost.presentationState.suppressesOverlays,
+            menuBarVisible: menuBarIsVisible(),
             // **The person's own window, not the constant** (focus-z7g). This was
             // `QuietHours.off` unconditionally, which made gate 8 of the twelve-gate suppression
             // stack dead code in the shipping app: `evaluation.json` reported
@@ -1015,7 +1032,19 @@ public final class AppComposition {
     /// title is written once a minute, and there is no timer anywhere for anybody to leak.
     private func refreshMenuBar(session: SessionSnapshot?) {
         chooseMenuBarTimerFormat(for: session)
-        menuBar.update(menuBarPresentation(), traits: appearance.traits)
+        let presentation = menuBarPresentation()
+        menuBar.update(presentation, traits: appearance.traits)
+        // **The same presentation, in the same breath** (e08a). A second call that built its own
+        // value would be a second state; this is one state drawn twice, which is the whole of what
+        // "second renderer" means. The two visibility readings are deliberately different
+        // questions: `nudgeSurroundings().menuBarVisible` is the router's own — the item installed
+        // and no presentation claiming the screen — and `isItemVisible` is the overflow case the
+        // review's §3 is about, which nothing else in the app had ever read for this purpose.
+        notchCompanion.update(
+            presentation: presentation,
+            menuBarVisible: menuBarIsVisible(),
+            itemVisible: menuBar.isItemVisible
+        )
     }
 
     /// Choose the timer's shape **once per session**, and widen it at most once thereafter.
@@ -1087,6 +1116,9 @@ public final class AppComposition {
     /// fact about the app closing rather than about their day.
     public func stop() {
         sensingHost.stop()
+        // The strip goes with the graph that fed it. A borderless window left on screen after the
+        // app stopped watching is the picture of a claim the app is no longer making.
+        notchCompanion.remove()
     }
 
     // MARK: - The first-run explanation (focus-odz.7)
