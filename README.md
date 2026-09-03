@@ -569,6 +569,67 @@ field for frame 17). Frame numbers are stable identifiers rather than an executi
 precondition that cannot be reached **aborts the scenario** with the observed state dumped — a live
 lane that photographs whatever it happens to find is a live lane that proves nothing.
 
+## History
+
+History is a **fact ledger**, not a timeline. It lists what the app did today and why it said so,
+row by row, with the person's own answers beside it — and it is reached from the cockpit and from
+the View menu, not from a sidebar.
+
+### Why it is a ledger and not a replay
+
+The epic plan asked for a day drawn by **replaying** the stored activity stream through the
+relevance engine and colouring each interval `focused` / `unsure` / `off`. A verdict is a function
+of `ClassificationInput`'s five fields, and three of them are not in the store:
+
+| field | why replay cannot have it |
+|---|---|
+| `origin` | `ActivityEvent` has no origin column, and `NormalisedDetail`'s closed vocabulary has no origin token. Storing one would make "this epic records no new observation about a person" false, so it is **not stored**: browser intervals draw as *unattributed*. |
+| `titleTokens` | not stored, and unreachable under PD-1 — the app never reads a window title. |
+| `priorityIntent` / `priorityDoneWhen` | reachable through `priorityID`, but `intent` is mutable and `revision` counts edits without keeping prior text. Replaying Tuesday would silently use **today's** wording. |
+
+So a coloured timeline would be an assertion about the past that the data cannot support. What the
+store *does* hold is the app's own conduct, and that is what History draws:
+
+| row | what it says |
+|---|---|
+| `InterventionRecord` | every interruption — the rung and the surface that carried it, whether it was delivered, deferred, unopened or suppressed, what the person did about it, and which click wrote the rule the verdict rested on |
+| `AskedQuestion` | every question, the person's own answer, and **the app's reason for asking** |
+| `FocusSessionRecord` | the day's sessions and their phase changes |
+| `ActivityEvent` | app identity and dwell for the intervals where the app said nothing |
+
+Priority wording is labelled as **today's wording** on the surface, because that is the only wording
+the store has. The replay-fidelity measurement that decides whether a future epic may draw a
+timeline at all is published in the self-check as `history.replay.*` and is deliberately **not**
+gated: it is evidence about the plan, not a close condition.
+
+### Why it is not a scoreboard
+
+Ruling D-01 is binding here and is the reason there is no arithmetic on this surface. History shows
+**no score, no streak, no total distracted time and no per-day tally** that could be read as a
+grade. A count of rows by kind is published in the self-check for non-vacuity; nothing on the
+surface aggregates a person's day into a number they could feel judged by.
+
+### Correcting a silence
+
+The one thing nothing else in the app can do: say *you were wrong to stay quiet*. An app interval
+History drew without an interruption carries a "this was a distraction" action, and taking it writes
+a **rule** — a task-authority `ScopedRuleValue` through `CorrectionAction`, scoped to the priority
+that judgement ran under, never the current one, and byte-identical to an in-the-moment correction
+but for its id and timestamp.
+
+Three things it deliberately is not:
+
+* **never a re-ask.** `CorrectionAction.outcome(…)` returns a rule *and* a receipt; History takes
+  the rule half only, and is constructed with no `QueryLedger` reference at all — so a correction
+  cannot settle or reopen a question retroactively. The ledger's row count is byte-identical before
+  and after.
+* **never an edit.** The log is append-only; `InterventionLog.complete(…)` fills an outcome once and
+  refuses a second call. Disagreeing with a silence appends a rule, it does not rewrite the day.
+* **never a widening.** A judgement whose priority has since been deleted has the affordance
+  **withdrawn with a stated reason** rather than promoted to a global rule. The same withdrawal
+  covers origin subjects, whose judgements are unreplayable and, before e09a, were mis-stored as
+  application judgements.
+
 ## Verification
 
 There are two kinds of check in this repository and the difference is not a matter of taste.
