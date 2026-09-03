@@ -154,6 +154,49 @@ struct QueryPanelTests {
         #expect(QueryableUncertainty.allCases.count == 3)
     }
 
+    // MARK: - The rule down the leading edge (focus-0nm, U-1)
+
+    /// **The question wears the "cannot tell" mark, and never the "not part of this" one.**
+    ///
+    /// This is the colour half of U-1's separation, and the direction it matters in is this one:
+    /// a question that looked like an accusation would teach a person that the mark they have
+    /// learned to answer sometimes means they have drifted, which is exactly the erosion R-96v
+    /// stops in the grammar.
+    @Test("the question is marked uncertain, and its accessibility tree says nothing else")
+    func theQuestionIsMarkedUncertain() {
+        let mark = DesignTokens.decisionRuleTint(for: QueryPanelView.decisionSurface)
+        #expect(
+            mark.flatMap { DesignTokenTests.drawnComponents($0, .light) }
+                == DesignTokenTests.drawnComponents(DesignTokens.tint(for: .uncertain), .light),
+            "the question is not wearing the app's own mark for \"I cannot tell\""
+        )
+        #expect(
+            mark.flatMap { DesignTokenTests.drawnComponents($0, .light) }
+                != DesignTokenTests.drawnComponents(DesignTokens.tint(for: .unrelated), .light),
+            "the question is wearing the accusation's mark"
+        )
+    }
+
+    /// **And the rule is decoration, so VoiceOver never hears it.**
+    ///
+    /// Colour is the fourth channel and never the first: the question's own words, its three
+    /// answers and its stated scope are what a person who cannot see the rule is served, and
+    /// the word the accusation's mark stands for must not appear in the question's spoken
+    /// sentence at all.
+    @Test(
+        "no status word reaches what the question says out loud",
+        .enabled(if: LocalizationLane.catalogsAreCompiled)
+    )
+    func theQuestionSpeaksNoStatusWord() {
+        let announced = QueryFixture.noNegativeBasis().announcement().lowercased()
+        for status in FocusStatus.allCases {
+            #expect(
+                !announced.contains(status.rawValue.lowercased()),
+                "the question announces the status word \(status.rawValue)"
+            )
+        }
+    }
+
     // MARK: - The clicks
 
     @Test("every button reports its own answer and nothing else")

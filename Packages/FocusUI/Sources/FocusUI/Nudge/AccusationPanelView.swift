@@ -209,6 +209,20 @@ public struct AccusationPanelView: DecisionSurfaceContent {
                 in: Rectangle(),
                 traits: traits
             )
+            .overlay(alignment: .leading) {
+                // **The rule is drawn, and it is not the only channel** (focus-0nm). Colour is
+                // the fourth channel here as everywhere else: the grammar of the title (R-96v),
+                // the action set and the announcement all already say which surface this is, and
+                // a person who cannot use colour loses nothing by this rule being absent. So it
+                // is hidden from the accessibility tree rather than labelled — a rule with a
+                // spoken name would be VoiceOver reading out a decoration.
+                if let tint = DesignTokens.decisionRuleTint(for: Self.decisionSurface) {
+                    Rectangle()
+                        .fill(tint)
+                        .frame(width: DesignTokens.decisionRuleWidth)
+                        .accessibilityHidden(true)
+                }
+            }
     }
 
     public static let decisionSurface: DecisionSurface = .accusationPanel

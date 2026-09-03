@@ -256,6 +256,65 @@ struct AccusationPanelTests {
         )
     }
 
+    /// **The two panels do not draw the same rule**, measured on the pixels rather than on the
+    /// token, so a rule that resolved correctly and was never drawn fails here.
+    ///
+    /// The leading edge only. The rest of the two panels legitimately differs — different words,
+    /// different actions — so a whole-frame comparison would pass whatever the rule did.
+    @Test(
+        "the accusation and the question are marked apart down the leading edge",
+        .enabled(if: LocalizationLane.catalogsAreCompiled)
+    )
+    @MainActor
+    func theTwoPanelsAreMarkedApart() throws {
+        let accusation = try SnapshotHarness.render(
+            AccusationPanelView(presentation: AccusationFixture.rungTwo()),
+            traits: .light,
+            width: AccusationPanelSnapshotTests.panelWidth,
+            name: "accusationPanel.rule.light"
+        )
+        let question = try SnapshotHarness.render(
+            QueryPanelView(presentation: QueryFixture.noNegativeBasis()),
+            traits: .light,
+            width: AccusationPanelSnapshotTests.panelWidth,
+            name: "queryPanel.rule.light"
+        )
+        let accusationEdge = Self.leadingEdgeColours(accusation.pixels)
+        let questionEdge = Self.leadingEdgeColours(question.pixels)
+
+        #expect(!accusationEdge.isEmpty && !questionEdge.isEmpty)
+        #expect(
+            accusationEdge != questionEdge,
+            """
+            the two panels paint the same leading edge, so the rule either is not drawn or does \
+            not distinguish the surfaces
+            """
+        )
+        // Non-vacuity: each edge really is one solid colour, which is what a 3-point rule at
+        // full column height looks like and what a missing rule does not.
+        #expect(accusationEdge.count == 1, "the accusation's leading edge is not a rule")
+        #expect(questionEdge.count == 1, "the question's leading edge is not a rule")
+    }
+
+    /// The distinct colours down the rule's own column, sampled inside the harness's padding.
+    ///
+    /// The harness pads the content by 16 points and then frames the padded whole at the
+    /// committed width, so the rule begins one padding in and the image is the committed width
+    /// times the display scale. One column is sampled rather than a band, so anti-aliasing at
+    /// the rule's outer edge cannot make a solid rule look like several colours.
+    static func leadingEdgeColours(_ buffer: PixelBuffer) -> Set<[UInt8]> {
+        let scale = buffer.width / Int(AccusationPanelSnapshotTests.panelWidth)
+        guard scale > 0 else { return [] }
+        let column = 16 * scale + scale / 2
+        var colours: Set<[UInt8]> = []
+        for row in (buffer.height / 4)..<(buffer.height * 3 / 4) {
+            let offset = (row * buffer.width + column) * 4
+            guard offset + 3 < buffer.bytes.count else { continue }
+            colours.insert(Array(buffer.bytes[offset..<(offset + 4)]))
+        }
+        return colours
+    }
+
     // MARK: - What VoiceOver hears (F-144)
 
     @Test(

@@ -84,6 +84,38 @@ struct DesignTokenTests {
         #expect(SurfaceProvenance.allCases.count == 2, "a third provenance decides nothing yet")
     }
 
+    // MARK: - The leading-edge rule (focus-0nm, U-1)
+
+    /// **A question and an accusation must not look alike**, and this is the colour half of it.
+    ///
+    /// Resolved rather than described, for the reason the status fold is: e11b moves both hues
+    /// into an asset catalogue, and two Color Sets with one value would otherwise stay "distinct"
+    /// for ever. The popover takes no rule at all — it is summoned, and a person who clicked the
+    /// status item already knows why it is on their screen.
+    @Test("the question's rule and the accusation's rule are different colours")
+    func theTwoDecisionSurfacesAreTintedApart() {
+        for traits in [AppearanceTraits.light, .dark, .increasedContrast] {
+            let accusation = DesignTokens.decisionRuleTint(for: .accusationPanel)
+            let question = DesignTokens.decisionRuleTint(for: .questionPanel)
+            let drawnAccusation = accusation.flatMap { Self.drawnComponents($0, traits) }
+            let drawnQuestion = question.flatMap { Self.drawnComponents($0, traits) }
+            #expect(drawnAccusation != nil && drawnQuestion != nil)
+            #expect(
+                drawnAccusation != drawnQuestion,
+                """
+                the question and the accusation draw the same rule in \(traits.colorScheme): \
+                \(String(describing: drawnAccusation)) — U-1's two surfaces have stopped being \
+                told apart at a glance
+                """
+            )
+        }
+        #expect(
+            DesignTokens.decisionRuleTint(for: .menuBarPopover) == nil,
+            "the summoned surface grew a rule it does not need"
+        )
+        #expect(DesignTokens.decisionRuleWidth == 3)
+    }
+
     // MARK: - The colour-scheme mapping (P-32: the only place the two vocabularies meet)
 
     @Test("the domain colour scheme maps to the SwiftUI one it names")

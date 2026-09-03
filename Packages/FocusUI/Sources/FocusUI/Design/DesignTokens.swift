@@ -93,6 +93,35 @@ public enum DesignTokens {
         return traits.reduceTransparency ? .opaque : .material
     }
 
+    // MARK: - The leading-edge rule: which surface a person is looking at (focus-0nm, U-1)
+
+    /// The width of the rule down the leading edge of a decision surface.
+    ///
+    /// Three points, and it is a rule rather than a border: a border says "this is a box", and
+    /// what this has to say is "this is a question" or "this is a statement", at a glance, before
+    /// a word is read.
+    public static let decisionRuleWidth: CGFloat = 3
+
+    /// The tint of that rule, which is what tells the two surfaces apart.
+    ///
+    /// **The question and the accusation must not look alike.** U-1's whole shape is that "I
+    /// cannot tell" and "this is not on your list" are different acts, and a person who has
+    /// learned to answer the first must never mistake the second for it. R-96v gives them
+    /// different grammar; this gives them different colour, so the distinction survives being
+    /// glanced at.
+    ///
+    /// The status palette, not a new one: `uncertain` is already what this app's vocabulary
+    /// means by "cannot tell", and `unrelated` by "not part of this". e11b remaps those two
+    /// hues; this function is where the remap lands, so the panels do not need touching again.
+    /// The popover keeps no rule — it is summoned, and the person already knows why it is there.
+    public static func decisionRuleTint(for surface: DecisionSurface) -> Color? {
+        switch surface {
+        case .accusationPanel: tint(for: .unrelated)
+        case .questionPanel: tint(for: .uncertain)
+        case .menuBarPopover: nil
+        }
+    }
+
     // MARK: - Emphasis
 
     /// How hard to draw structure under these traits.
