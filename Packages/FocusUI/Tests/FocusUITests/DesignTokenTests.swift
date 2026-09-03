@@ -73,7 +73,67 @@ struct DesignTokenTests {
         #expect(Set(statuses.map(\.symbolName)).count == statuses.count)
         #expect(Set(statuses.map(\.shape)).count == statuses.count)
         #expect(Set(statuses.map(\.shortLabelKey)).count == statuses.count)
-        #expect(Set(statuses.map { DesignTokens.tint(for: $0).description }).count == statuses.count)
+        // **Resolved, not described** (focus-0nm). This line used to compare
+        // `tint(for:).description`, and for a `Color` backed by an asset Color Set that string
+        // is the ASSET NAME: two Color Sets holding identical values stay "distinct" for ever,
+        // and the witness this assertion is supposed to be could never go red. e11b moves these
+        // five tints into an asset catalogue, so the witness had to start working before the
+        // palette arrives, not after. It now collapses each dynamic colour to the four numbers
+        // a person's eye is actually served, in both schemes.
+        for traits in [AppearanceTraits.light, .dark, .increasedContrast] {
+            let drawn = statuses.map { Self.drawnComponents(DesignTokens.tint(for: $0), traits) }
+            #expect(
+                drawn.allSatisfy { $0 != nil },
+                "a status tint could not be resolved at all in \(traits.colorScheme)"
+            )
+            #expect(
+                Set(drawn.map { $0 ?? [] }).count == statuses.count,
+                """
+                two statuses draw the same colour in \(traits.colorScheme): \(drawn) — colour is                 the fourth channel and it has stopped telling the five apart
+                """
+            )
+        }
+    }
+
+    /// **The repair itself, red-proofed** (focus-0nm).
+    ///
+    /// The old spelling compared `Color.description`, and for a *named* colour — which is what
+    /// an asset Color Set produces — that string carries the name. Two Color Sets holding the
+    /// same values are therefore "distinct" for ever under it, which is precisely the leak e11b's
+    /// palette work needs this witness to catch. There is no asset catalogue in the build yet, so
+    /// the case is constructed the way `NSColor` constructs one: two names over one value.
+    ///
+    /// Without this test the repair above would rest on an argument. With it, restoring
+    /// `.description` fails here as well as leaving the fold vacuous.
+    @Test("the tint witness compares what is drawn, not what a colour calls itself")
+    func theTintWitnessResolvesRatherThanDescribes() {
+        let spruce = Color(nsColor: NSColor(name: "Spruce") { _ in .systemGreen })
+        let kiln = Color(nsColor: NSColor(name: "Kiln") { _ in .systemGreen })
+
+        #expect(
+            spruce.description != kiln.description,
+            "two named colours over one value describe themselves alike — the leak is elsewhere"
+        )
+        #expect(
+            Self.drawnComponents(spruce, .light) == Self.drawnComponents(kiln, .light),
+            "the two names really do draw the same colour, so the witness must say so"
+        )
+        #expect(Self.drawnComponents(spruce, .light) != nil)
+    }
+
+    /// A dynamic colour as the four 8-bit numbers it is drawn with, in the appearance the traits
+    /// name, or `nil` when it cannot be resolved at all.
+    ///
+    /// sRGB because that is the space the snapshot lane rasterises into, so this compares what a
+    /// person sees rather than what a colour calls itself. `nil` rather than a substitute value:
+    /// an unresolvable tint is a finding, and a substitute would let two of them collide into
+    /// "distinct enough".
+    static func drawnComponents(_ color: Color, _ traits: AppearanceTraits) -> [Int]? {
+        guard let srgb = NSColor(color).resolved(for: traits).usingColorSpace(.sRGB) else {
+            return nil
+        }
+        return [srgb.redComponent, srgb.greenComponent, srgb.blueComponent, srgb.alphaComponent]
+            .map { Int(($0 * 255).rounded()) }
     }
 
     @Test("the status label is forced on when the user differentiates without colour")
