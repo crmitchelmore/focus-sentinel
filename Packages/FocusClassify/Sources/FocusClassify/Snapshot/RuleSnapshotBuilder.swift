@@ -37,16 +37,30 @@ import Foundation
 /// title-token row was therefore a rule the engine read and could never match, and the pane drew
 /// it as live. `PriorityRuleScope.isRetired` names the scope; this builder honours it the way it
 /// honours a legacy `.session` row, so "no longer read" on the pane is a fact about the engine.
+///
+/// **Except where the road not taken is being measured.** PD-1 parks the AX-title dial rather
+/// than deleting it and promises the measured cost of that road (e07 §S0); the golden corpus is
+/// that measurement, and eleven of its cases are title-token rules. The evaluation lane builds
+/// its snapshots with `readsRetiredScopes: true` so those cells keep computing through the
+/// shipping cascade; the shipping `RelevanceHost` takes the default and skips them.
 public struct RuleSnapshotBuilder: Sendable {
     public let normalizer: TokenNormalizer
     /// Optional so that a corpus case, a unit test or a build with no embedding can construct
     /// a snapshot without one — in which case `prioritySentence` is `nil`, the similarity
     /// signal never runs, and every route it could have taken ends at `uncertain`.
     private let scorer: SimilarityScorer?
+    /// Whether a stored row of a retired scope is promoted to a rung (e07a). `false` for the
+    /// shipping engine; `true` only for the evaluation lane, which measures the road not taken.
+    public let readsRetiredScopes: Bool
 
-    public init(normalizer: TokenNormalizer = TokenNormalizer(), scorer: SimilarityScorer? = nil) {
+    public init(
+        normalizer: TokenNormalizer = TokenNormalizer(),
+        scorer: SimilarityScorer? = nil,
+        readsRetiredScopes: Bool = false
+    ) {
         self.normalizer = normalizer
         self.scorer = scorer
+        self.readsRetiredScopes = readsRetiredScopes
     }
 
     public func build(
@@ -76,7 +90,8 @@ public struct RuleSnapshotBuilder: Sendable {
         var skipped = sessionRules.count - sessionScoped.count
 
         for row in storedRules {
-            guard let subjectKind = Self.subjectKind(for: row.rule.scope) else {
+            guard let subjectKind = Self.subjectKind(for: row.rule.scope, readingRetired: readsRetiredScopes)
+            else {
                 // A legacy `.session` row, or a retired `.titleToken` one (e07a). It reaches no
                 // rung, is counted, and is never assigned an inferred subject kind (R-72.3).
                 skipped += 1
@@ -113,14 +128,15 @@ public struct RuleSnapshotBuilder: Sendable {
     /// (R-45's doctrine): the totality is held by a test over `allCases`, and a fifth scope added
     /// without touching this function fails that test rather than silently becoming a rung.
     ///
-    /// `.titleToken` answers `nil` **for stored rows only**: `RuleSubjectKind.titleToken` and the
-    /// cascade arm that matches it stay, because the corpus builds its rules through its own
-    /// producer and measures what the road not taken would have cost (PD-1, e07 S0).
-    static func subjectKind(for scope: RuleScope) -> RuleSubjectKind? {
+    /// `.titleToken` answers `nil` unless the caller is reading retired scopes on purpose:
+    /// `RuleSubjectKind.titleToken` and the cascade arm that matches it stay, because the corpus
+    /// measures what the road not taken would have cost (PD-1, e07 S0) and does so through this
+    /// very function with `readingRetired: true`.
+    static func subjectKind(for scope: RuleScope, readingRetired: Bool = false) -> RuleSubjectKind? {
         switch scope {
         case .app: .app
         case .domain: .domain
-        case .titleToken: nil
+        case .titleToken: readingRetired ? .titleToken : nil
         case .session: nil
         }
     }

@@ -204,7 +204,9 @@ public struct CorpusRunner: Sendable {
             )
         }
 
-        return RuleSnapshotBuilder(normalizer: normalizer, scorer: scorer).build(
+        // `readsRetiredScopes`: the corpus is the measurement of the road not taken (PD-1, e07
+        // §S0), so its title-token rules are promoted here as the shipping engine no longer does.
+        return RuleSnapshotBuilder(normalizer: normalizer, scorer: scorer, readsRetiredScopes: true).build(
             priority: priority,
             storedRules: storedRules,
             sessionRules: sessionRules,

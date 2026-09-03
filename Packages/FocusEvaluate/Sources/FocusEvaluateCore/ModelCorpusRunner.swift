@@ -20,7 +20,8 @@ public struct ModelCorpusRunner: Sendable {
     ) {
         self.normalizer = normalizer
         self.scorer = scorer
-        self.builder = RuleSnapshotBuilder(normalizer: normalizer, scorer: scorer)
+        // The evaluation lane reads retired scopes on purpose — see `CorpusRunner`.
+        self.builder = RuleSnapshotBuilder(normalizer: normalizer, scorer: scorer, readsRetiredScopes: true)
     }
 
     public func snapshot(_ cell: ModelCorpusCell) -> RuleSnapshot {

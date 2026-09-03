@@ -165,6 +165,13 @@ struct RuleSnapshotTests {
         #expect(Set(mapped) == Set(RuleSubjectKind.allCases).subtracting([.titleToken]))
         #expect(Set(unmapped) == [.session, .titleToken])
         #expect(mapped.count + unmapped.count == RuleScope.allCases.count)
+        // Reading retired scopes on purpose restores the whole codomain and still never promotes
+        // a lifetime row.
+        let measured = RuleScope.allCases.compactMap {
+            RuleSnapshotBuilder.subjectKind(for: $0, readingRetired: true)
+        }
+        #expect(Set(measured) == Set(RuleSubjectKind.allCases))
+        #expect(RuleSnapshotBuilder.subjectKind(for: .session, readingRetired: true) == nil)
     }
 
     @Test("the verdict mapping is total over RuleVerdict and preserves the raw value")
@@ -226,9 +233,14 @@ struct RuleSnapshotTests {
         #expect(snapshot.rules.count == 1)
         #expect(snapshot.rules.first?.subject == "com.apple.Notes")
         #expect(!snapshot.rules.contains { $0.subjectKind == .titleToken })
-        // …while the corpus's own producer can still build one, so the measured cost of the road
-        // not taken is still measurable (PD-1, e07 S0).
-        #expect(RuleSubjectKind.allCases.contains(.titleToken))
+        // …while the evaluation lane, which measures the road not taken (PD-1, e07 S0), can still
+        // ask for the row on purpose — and only on purpose.
+        let measured = RuleSnapshotBuilder(readsRetiredScopes: true).build(
+            priority: Self.priority(),
+            storedRules: [Self.stored(.titleToken, "proposal", .relevant, task: true)]
+        )
+        #expect(measured.skippedRuleCount == 0)
+        #expect(measured.rules.map(\.subjectKind) == [.titleToken])
     }
 
     /// Ties on authority and narrowness are broken by age and then by identity, so a snapshot
