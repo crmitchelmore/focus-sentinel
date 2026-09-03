@@ -542,6 +542,10 @@ public final class AppComposition {
         // **The offer's first reading, at launch** (D-12, focus-odz.4). One of the three moments
         // it can move; the other two are a session's state changing and the offer being answered.
         refreshLaunchAtLoginOffer()
+        // **And whether this launch owes the first-run explanation** (focus-odz.7). Once, here,
+        // for the same reason: the answer changes once in the life of a store and the projection
+        // that would otherwise ask it runs every five seconds.
+        decideFirstRunScreen()
         sensingHost.onSessionChanged = { [weak self] in
             self?.sessionHost.refresh()
         }
@@ -1046,6 +1050,44 @@ public final class AppComposition {
         sensingHost.stop()
     }
 
+    // MARK: - The first-run explanation (focus-odz.7)
+
+    /// **Whether this launch owes the person the one screen that says what the app looks at.**
+    ///
+    /// Decided **once, at launch**, and held — not asked on every projection of the cockpit state,
+    /// which runs on every corroboration tick and would put a store read in the tick path for a
+    /// fact that changes once in the life of a store (focus-tzj.2, `TickFetchBudgetTests`).
+    ///
+    /// The showing is recorded at the moment the app decides to show it rather than when the sheet
+    /// is dismissed, and that is a decision: the alternative shows it again to somebody who quit
+    /// with it on screen, and this app's rule is that it explains itself once and then gets out of
+    /// the way. Dismissal takes it off *this* launch's screen and writes nothing further.
+    private(set) var showsFirstRunExplanation = false
+
+    /// Read the store once and, if the explanation is owed, mark it shown and put it on screen.
+    ///
+    /// Idempotent: a second call in the same launch finds the store already stamped and answers
+    /// `false`, so a delegate notification arriving twice cannot raise a second sheet.
+    func decideFirstRunScreen() {
+        let state = FocusStore.shellState(in: modelContainer.mainContext)
+        guard state.owesFirstRunExplanation else {
+            showsFirstRunExplanation = false
+            return
+        }
+        showsFirstRunExplanation = true
+        try? FocusStore.recordFirstRunExplanationShown(
+            in: modelContainer.mainContext,
+            now: dateProvider.now
+        )
+    }
+
+    /// The sheet's one button — and every other route out of it, which the window's binding sends
+    /// here too.
+    public func dismissFirstRunScreen() {
+        showsFirstRunExplanation = false
+        refreshCockpit()
+    }
+
     // MARK: - Opening at login (D-12, focus-odz.4)
 
     /// **What the launch-at-login controls perform.**
@@ -1275,6 +1317,7 @@ public final class AppComposition {
         // A **stored** answer, not a computation: this projection runs on every corroboration
         // tick, and the decision reads the store twice. See `refreshLaunchAtLoginOffer()`.
         state.showsLaunchAtLoginOffer = showsLaunchAtLoginOffer
+        state.showsFirstRunExplanation = showsFirstRunExplanation
         return state
     }
 
@@ -1651,6 +1694,11 @@ public final class AppComposition {
             state.showsLaunchAtLoginOffer ? "shown" : "hidden",
             for: .cockpit
         )
+        expect(
+            .firstRunExplanation,
+            state.showsFirstRunExplanation ? "shown" : "hidden",
+            for: .cockpit
+        )
         expect(.capabilityStates, state.capabilities.renderedDescription, for: .cockpit)
         expect(.sensingDetail, ShellValueDigest.describe(state.sensing), for: .cockpit)
         expect(
@@ -1673,6 +1721,9 @@ public final class AppComposition {
             sessionElapsedSeconds: elapsed,
             lastActiveBundleID: lastActiveBundleID,
             onLaunchAtLoginOffer: { [weak self] action in self?.perform(action) },
+            onFirstRunExplanationDismissed: { [weak self] in
+                self?.dismissFirstRunScreen()
+            },
             generation: generation,
             didRender: { [weak self] in self?.shellWires.insert(.cockpitRendered) },
             didDraw: { [weak self] values in self?.record(values, for: .cockpit) }

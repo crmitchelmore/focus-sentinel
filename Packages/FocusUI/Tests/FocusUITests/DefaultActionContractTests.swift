@@ -51,7 +51,9 @@ struct DefaultActionContractTests {
         "InterruptionSheet.swift":
             "a modal sheet the user opened by pressing Stop; Escape keeps the session going, and Stop is enabled with every field empty because reflection is offered rather than extracted",
         "StoreUnavailableSheet.swift":
-            "a modal sheet the app raised because the store did not open, with one action and no Escape: Return means \"I have read this\", and there is nothing to lose by pressing it because there is nothing being saved (focus-tzj.4)"
+            "a modal sheet the app raised because the store did not open, with one action and no Escape: Return means \"I have read this\", and there is nothing to lose by pressing it because there is nothing being saved (focus-tzj.4)",
+        "FirstRunSheet.swift":
+            "a modal sheet the app raised on the first launch against a store, with one action and no Escape: Return means \"I have read this\", and there is nothing to lose by pressing it because the sheet holds no field and changes nothing (focus-odz.7)"
     ]
 
     /// The surface the whole defect ran through. Named separately from the allowlist so the

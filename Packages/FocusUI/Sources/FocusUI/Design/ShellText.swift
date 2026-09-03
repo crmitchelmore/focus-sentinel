@@ -83,6 +83,13 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case cockpitStoreWriteFailed = "shell.cockpit.store.writeFailed"
     /// The About panel's credits paragraph (focus-odz.3).
     case aboutCredits = "shell.about.credits"
+    // The first-run explanation, shown once on a store the app has never opened (focus-odz.7).
+    case firstRunTitle = "shell.firstRun.title"
+    case firstRunObserves = "shell.firstRun.observes"
+    case firstRunNever = "shell.firstRun.never"
+    case firstRunPermissions = "shell.firstRun.permissions"
+    case firstRunStoreLabel = "shell.firstRun.storeLabel"
+    case firstRunDismiss = "shell.firstRun.dismiss"
     // The cockpit's one-time launch-at-login offer (D-12, focus-odz.4).
     case cockpitLaunchAtLoginOffer = "shell.cockpit.launchAtLogin.offer"
     case cockpitLaunchAtLoginAccept = "shell.cockpit.launchAtLogin.accept"

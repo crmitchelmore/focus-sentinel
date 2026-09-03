@@ -323,6 +323,13 @@ public struct CockpitState: Sendable, Equatable, Hashable {
     /// direction — accepting and declining both record the asking.
     public var showsLaunchAtLoginOffer: Bool
 
+    /// **Whether the first-run explanation is on screen** (focus-odz.7).
+    ///
+    /// True only on a launch that opened a store the app has never opened — which the v5 → v6
+    /// migration is what makes decidable, since a fresh store and an upgraded one are otherwise
+    /// indistinguishable by the absence of a row. The host decides; the window draws.
+    public var showsFirstRunExplanation: Bool
+
     public init(
         status: FocusStatus,
         storeOpened: Bool,
@@ -338,7 +345,8 @@ public struct CockpitState: Sendable, Equatable, Hashable {
         sensing: SensingSummary = .inactive,
         verdict: VerdictSnapshot? = nil,
         capabilities: CapabilityMatrix = CapabilityMatrix(),
-        showsLaunchAtLoginOffer: Bool = false
+        showsLaunchAtLoginOffer: Bool = false,
+        showsFirstRunExplanation: Bool = false
     ) {
         self.status = status
         self.storeOpened = storeOpened
@@ -355,6 +363,7 @@ public struct CockpitState: Sendable, Equatable, Hashable {
         self.verdict = verdict
         self.capabilities = capabilities
         self.showsLaunchAtLoginOffer = showsLaunchAtLoginOffer
+        self.showsFirstRunExplanation = showsFirstRunExplanation
     }
 
     /// The capabilities the surface has something to say about, in `Capability.allCases`

@@ -202,6 +202,16 @@ enum SelfCheck {
         let drawn = composition.shellRenderings[.cockpit] ?? .nothing
         let session = composition.sessionHost.snapshot
 
+        // **Put the first-run sheet away before this process leaves** (focus-odz.7).
+        //
+        // Read first, reported above, then dismissed — a sheet still attached when
+        // `NSApp.terminate` runs is how a self-check turns into a hung gate stage, measured twice
+        // at twenty minutes apiece for the handoff's sheet. It also drives the sink: the closure
+        // the connection carries is only ever reached by a click, so this is the one lane that can
+        // prove it reaches the root at all.
+        let dismissedFirstRun = composition.showsFirstRunExplanation
+        composition.dismissFirstRunScreen()
+
         return [
             "mode": "cockpit",
             "reading": reading.dictionary,
@@ -259,6 +269,16 @@ enum SelfCheck {
                 .hasOfferedLaunchAtLogin,
             "loginItemOfferShown": composition.cockpitState.showsLaunchAtLoginOffer,
             "loginItemOfferDrawn": drawn[.launchAtLoginOffer] ?? "",
+            // **The first-run explanation** (focus-odz.7): whether this launch owed it, and
+            // whether the window put it on the screen. Two readings, because a host that decided
+            // to show it and a window that drew nothing are two different broken promises.
+            "firstRunExplanationShown": composition.showsFirstRunExplanation,
+            "firstRunExplanationDrawn": drawn[.firstRunExplanation] ?? "",
+            "firstRunExplanationOwedNow": FocusStore
+                .shellState(in: composition.modelContainer.mainContext)
+                .owesFirstRunExplanation,
+            "firstRunExplanationDismissed": dismissedFirstRun,
+            "firstRunExplanationStillShown": composition.showsFirstRunExplanation,
             "restorationRecord": composition.restorationRecord ?? [],
             "restoredWindows": composition.restoredWindows,
             "hasRestoredWindows": composition.hasRestoredWindows,

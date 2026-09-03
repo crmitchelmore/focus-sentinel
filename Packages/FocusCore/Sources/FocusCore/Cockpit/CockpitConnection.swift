@@ -84,6 +84,10 @@ public struct CockpitConnection {
     /// the totality table and driven by the self-check rather than drawn.
     public let onLaunchAtLoginOffer: @MainActor (LaunchAtLoginOfferAction) -> Void
 
+    /// **What the first-run explanation's one button performs** (focus-odz.7). A sink for
+    /// `onLaunchAtLoginOffer`'s reason and driven the same way: only a click reaches it.
+    public let onFirstRunExplanationDismissed: @MainActor () -> Void
+
     /// Called from the view's body: the far end of the one wire this type leaves in `App/`.
     ///
     /// Idempotent by construction — the composition root records it in a `Set` — so a body
@@ -106,6 +110,7 @@ public struct CockpitConnection {
         sessionElapsedSeconds: Double?,
         lastActiveBundleID: String?,
         onLaunchAtLoginOffer: @escaping @MainActor (LaunchAtLoginOfferAction) -> Void = { _ in },
+        onFirstRunExplanationDismissed: @escaping @MainActor () -> Void = {},
         generation: Int = 0,
         didRender: @escaping @MainActor () -> Void = {},
         didDraw: @escaping @MainActor (ShellRenderedValues) -> Void = { _ in }
@@ -116,6 +121,7 @@ public struct CockpitConnection {
         self.sessionElapsedSeconds = sessionElapsedSeconds
         self.lastActiveBundleID = lastActiveBundleID
         self.onLaunchAtLoginOffer = onLaunchAtLoginOffer
+        self.onFirstRunExplanationDismissed = onFirstRunExplanationDismissed
         self.generation = generation
         self.didRender = didRender
         self.didDraw = didDraw
@@ -148,6 +154,7 @@ extension CockpitConnection: ShellDrawnConnection {
             "sessionElapsedSeconds": .drawn([.sessionElapsedSeconds]),
             "lastActiveBundleID": .drawn([.lastActiveApp]),
             "onLaunchAtLoginOffer": .undrawn(.sink),
+            "onFirstRunExplanationDismissed": .undrawn(.sink),
             "didRender": .undrawn(.receipt),
             "didDraw": .undrawn(.receipt),
 
@@ -180,6 +187,7 @@ extension CockpitConnection: ShellDrawnConnection {
             "state.verdict": .undrawn(.notDrawnOnThisSurface),
             "state.capabilities": .drawn([.capabilityStates]),
             "state.showsLaunchAtLoginOffer": .drawn([.launchAtLoginOffer]),
+            "state.showsFirstRunExplanation": .drawn([.firstRunExplanation]),
 
             // --- one level down (focus-cxs) -----------------------------------------------
             //

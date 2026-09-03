@@ -180,6 +180,29 @@ if (( cockpit_rc != 0 )); then
     exit 1
 fi
 
+# --- the first-run explanation, shown once and not again (focus-odz.7) ------------------------
+#
+# A FIFTH launch, against the store the fourth one just used. The fourth was the first time this
+# app had ever opened that store, so it owed the explanation and showed it; this one is the
+# relaunch, and it must not. Two processes are the whole point — a flag set and read back in one
+# process is satisfied by a plain in-memory `Bool`, which is exactly the defect the v5 → v6
+# migration exists to make impossible.
+
+FIRSTRUN_JSON="$SESSION_DIR/cockpit-relaunch.json"
+
+print "== $BINARY --focus-self-check-cockpit --focus-store $COCKPIT_STORE (relaunch)"
+"$BINARY" --focus-self-check "$FIRSTRUN_JSON" --focus-self-check-cockpit --focus-store "$COCKPIT_STORE"
+relaunch_rc=$?
+print "relaunch EXIT=$relaunch_rc"
+if (( relaunch_rc != 0 )); then
+    print -u2 "FAIL: the first-run relaunch exited $relaunch_rc"
+    exit 1
+fi
+
+if [[ -n "${FOCUS_EVIDENCE_DIR:-}" ]]; then
+    cp -- "$FIRSTRUN_JSON" "$FOCUS_EVIDENCE_DIR/cockpit-relaunch.json"
+fi
+
 if [[ -n "${FOCUS_EVIDENCE_DIR:-}" ]]; then
     cp -- "$SEED_JSON" "$FOCUS_EVIDENCE_DIR/session-seed.json"
     cp -- "$RESTORE_JSON" "$FOCUS_EVIDENCE_DIR/session-restore.json"
@@ -191,7 +214,7 @@ print
 print "== assertions"
 python3 - "$OUT" "$SEED_JSON" "$RESTORE_JSON" "$COMMITTED_STAMP" "$COMMITTED_DIGEST" \
     "$COMMITTED_INTERVENTION_DIGEST" "$COCKPIT_JSON" \
-    "$COMMITTED_DECODE_TABLE" "$COMMITTED_DECODE_CELLS" <<'PYTHON'
+    "$COMMITTED_DECODE_TABLE" "$COMMITTED_DECODE_CELLS" "$FIRSTRUN_JSON" <<'PYTHON'
 import json
 import sys
 
@@ -209,6 +232,8 @@ committed_digest = sys.argv[5]
 committed_intervention_digest = sys.argv[6]
 committed_decode_table = sys.argv[8]
 committed_decode_cells = sys.argv[9]
+with open(sys.argv[10]) as handle:
+    relaunched_cockpit = json.load(handle)
 
 failures = []
 not_taken_readings = []
@@ -1766,6 +1791,74 @@ check(
     seeded_cockpit.get("drewWhatTheAppKnows") is True,
     "the cockpit drew every value the composition root handed it, against a seeded session",
     (seeded_cockpit.get("reading") or {}).get("summary"),
+)
+
+# --- the one screen that says what this app looks at, shown once (focus-odz.7) ----------------
+#
+# A first launch installed a status item and started recording activations with nothing on screen
+# saying so. Every claim the product rests on was true and reachable only by opening Settings and
+# choosing the Privacy tab.
+#
+# **Two launches against one store, which is the only way this can be proved.** A flag set and read
+# back in one process is satisfied by a plain in-memory `Bool`. The fourth launch was the first
+# time the app had ever opened that store — so it was owed the explanation — and the fifth is the
+# relaunch. The distinction between "a store this build created" and "a store carried forward from
+# an earlier version" is the v5 → v6 migration's, and `MigrationV6Tests` holds that half.
+
+check(
+    seeded_cockpit.get("firstRunExplanationShown") is True,
+    "a store the app had never opened was owed the first-run explanation, and got it",
+    seeded_cockpit.get("firstRunExplanationShown"),
+)
+check(
+    seeded_cockpit.get("firstRunExplanationDrawn") == "shown",
+    "the cockpit really put the first-run explanation on the screen",
+    seeded_cockpit.get("firstRunExplanationDrawn"),
+)
+# The showing is recorded when the app decides to show it, so the store is already stamped by the
+# time this reading is taken — which is what makes the relaunch below a different launch rather
+# than a second chance.
+check(
+    seeded_cockpit.get("firstRunExplanationOwedNow") is False,
+    "showing the explanation wrote it down, in the store the next launch reads",
+    seeded_cockpit.get("firstRunExplanationOwedNow"),
+)
+# …and the sheet was put away before the process left. A sheet still attached when NSApp.terminate
+# runs is how a self-check turns into a hung gate stage — measured twice, at twenty minutes apiece.
+# It is also the one lane that can drive the sink: the closure is only ever reached by a click.
+check(
+    seeded_cockpit.get("firstRunExplanationDismissed") is True
+    and seeded_cockpit.get("firstRunExplanationStillShown") is False,
+    "the explanation's dismissal reached the composition root and took the sheet down",
+    (
+        seeded_cockpit.get("firstRunExplanationDismissed"),
+        seeded_cockpit.get("firstRunExplanationStillShown"),
+    ),
+)
+
+# **The relaunch**, against the same store. This is the claim.
+check(
+    relaunched_cockpit.get("firstRunExplanationShown") is False,
+    "the launch after the one that explained is not owed the explanation again",
+    relaunched_cockpit.get("firstRunExplanationShown"),
+)
+check(
+    relaunched_cockpit.get("firstRunExplanationDrawn") == "hidden",
+    "the relaunched cockpit drew no first-run sheet at all",
+    relaunched_cockpit.get("firstRunExplanationDrawn"),
+)
+# Non-vacuity: the relaunch really did open the same store and draw the same window, so "hidden"
+# is a decision about this store rather than a launch that drew nothing.
+check(
+    relaunched_cockpit.get("livePriorityIntent")
+    == seeded_cockpit.get("seededPriorityIntent"),
+    "the relaunch opened the same seeded store the explaining launch did",
+    relaunched_cockpit.get("livePriorityIntent"),
+)
+check(
+    relaunched_cockpit.get("drewWhatTheAppKnows") is True,
+    "the relaunched cockpit drew every value the composition root handed it",
+    (relaunched_cockpit.get("reading") or {}).get("summary"),
 )
 
 # --- opening at login, offered once and never on a first launch (D-12, focus-odz.4) ----------

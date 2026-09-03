@@ -75,6 +75,13 @@ public enum ShellRenderedField: String, Sendable, CaseIterable, Codable, Hashabl
     /// offer that appears when it should not is a row asking somebody for a commitment they have
     /// already declined, and one that never appears is a feature nobody can find.
     case launchAtLoginOffer
+    /// **Whether the first-run explanation is on screen**: `"shown"` or `"hidden"`
+    /// (focus-odz.7).
+    ///
+    /// The one screen that says what this app looks at, and it is shown exactly once. A receipt
+    /// is what tells "shown on the wrong launch" from "never shown at all", and those are two
+    /// different broken promises.
+    case firstRunExplanation
 
     // --- the Settings window --------------------------------------------------------------
     /// The sensing sentence the **Privacy** pane drew. Separate from the cockpit's, because a

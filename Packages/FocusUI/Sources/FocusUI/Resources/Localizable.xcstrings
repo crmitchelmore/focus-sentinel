@@ -3145,6 +3145,78 @@
         }
       }
     },
+    "shell.firstRun.dismiss" : {
+      "comment" : "First-run sheet: the one button, which puts it away for good.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continue"
+          }
+        }
+      }
+    },
+    "shell.firstRun.storeLabel" : {
+      "comment" : "First-run sheet: the label above the path where the local store lives. The same path Settings > Privacy shows.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Everything it records stays on this Mac, here:"
+          }
+        }
+      }
+    },
+    "shell.firstRun.permissions" : {
+      "comment" : "First-run sheet: the permissions posture.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "It asks for no permissions. Nothing here needs Screen Recording or Accessibility."
+          }
+        }
+      }
+    },
+    "shell.firstRun.never" : {
+      "comment" : "First-run sheet: what the app never reads. The list is exhaustive on purpose.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "It never reads window titles, web addresses, file paths, document names, or anything typed."
+          }
+        }
+      }
+    },
+    "shell.firstRun.observes" : {
+      "comment" : "First-run sheet: what the app reads.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "It reads which application is in front. When a browser offers it without asking for a permission, it also reads the site \u2014 as its host name, and nothing more."
+          }
+        }
+      }
+    },
+    "shell.firstRun.title" : {
+      "comment" : "First-run sheet: the heading. Shown once, on a store the app has never opened.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "What Focus Sentinel watches"
+          }
+        }
+      }
+    },
     "shell.cockpit.launchAtLogin.dismiss" : {
       "comment" : "Cockpit footer: decline the one-time launch-at-login offer. It is not asked again.",
       "extractionState" : "manual",

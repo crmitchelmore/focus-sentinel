@@ -102,6 +102,8 @@ public struct CockpitView: View {
 
     /// What the footer's one-time launch-at-login offer performs (D-12, focus-odz.4).
     private let onLaunchAtLoginOffer: (LaunchAtLoginOfferAction) -> Void
+    /// What the first-run explanation's one button performs (focus-odz.7).
+    private let onFirstRunExplanationDismissed: () -> Void
 
     public init(
         state: CockpitState,
@@ -110,6 +112,7 @@ public struct CockpitView: View {
         sessionElapsedSeconds: Double? = nil,
         lastActiveBundleID: String? = nil,
         onLaunchAtLoginOffer: @escaping (LaunchAtLoginOfferAction) -> Void = { _ in },
+        onFirstRunExplanationDismissed: @escaping () -> Void = {},
         commandCenter: FocusCommandCenter = .shared
     ) {
         self.state = state
@@ -118,6 +121,7 @@ public struct CockpitView: View {
         self.sessionElapsedSeconds = sessionElapsedSeconds
         self.lastActiveBundleID = lastActiveBundleID
         self.onLaunchAtLoginOffer = onLaunchAtLoginOffer
+        self.onFirstRunExplanationDismissed = onFirstRunExplanationDismissed
         self.commandCenter = commandCenter
         self.didRender = nil
         self.generation = 0
@@ -139,6 +143,7 @@ public struct CockpitView: View {
         self.sessionElapsedSeconds = connection.sessionElapsedSeconds
         self.lastActiveBundleID = connection.lastActiveBundleID
         self.onLaunchAtLoginOffer = connection.onLaunchAtLoginOffer
+        self.onFirstRunExplanationDismissed = connection.onFirstRunExplanationDismissed
         self.commandCenter = commandCenter
         self.didRender = connection.didRender
         self.generation = connection.generation
@@ -275,6 +280,19 @@ public struct CockpitView: View {
                 acknowledge: { wiring.acknowledgeStoreFailure?() }
             )
         }
+        // **The one screen that says what this app looks at** (focus-odz.7).
+        //
+        // Presented from the state rather than from a local `@State`, for `storeFailurePresentation`'s
+        // reason: whether it is owed is the host's fact, written into the store, and a local mirror
+        // could disagree with it. It is a sheet on the cockpit, so it can only ever appear over a
+        // window somebody opened — nothing on the nudge path can raise it, which is what keeps an
+        // explanation from becoming an interruption.
+        .sheet(isPresented: firstRunPresentation) {
+            FirstRunSheet(
+                storeLocation: state.storeLocation,
+                dismiss: onFirstRunExplanationDismissed
+            )
+        }
         .sheet(isPresented: $isCompleting) {
             if let priority = state.priority {
                 CompletionSheet(
@@ -407,6 +425,20 @@ public struct CockpitView: View {
             get: { state.storeFailureNeedsAcknowledgement },
             set: { presented in
                 if !presented { wiring.acknowledgeStoreFailure?() }
+            }
+        )
+    }
+
+    /// **The first-run explanation's presentation** (focus-odz.7).
+    ///
+    /// The same shape as the store-failure sheet's, and for the same reason: every route out of
+    /// the sheet — the button, a click outside, a system dismissal — goes through the one verb, so
+    /// the app cannot end up believing it has explained itself when nobody saw the screen.
+    private var firstRunPresentation: Binding<Bool> {
+        Binding(
+            get: { state.showsFirstRunExplanation },
+            set: { presented in
+                if !presented { onFirstRunExplanationDismissed() }
             }
         )
     }
@@ -846,6 +878,13 @@ public struct CockpitView: View {
                 .shellRendered(
                     .launchAtLoginOffer,
                     state.showsLaunchAtLoginOffer ? "shown" : "hidden"
+                )
+                // …and whether the first-run explanation is up (focus-odz.7). Reported from the
+                // window that presents it, so "shown on the wrong launch" and "never shown at
+                // all" are two readings rather than one silence.
+                .shellRendered(
+                    .firstRunExplanation,
+                    state.showsFirstRunExplanation ? "shown" : "hidden"
                 )
 
             SensingStatusView(
