@@ -2,7 +2,7 @@ import Foundation
 import SwiftData
 
 /// The store's migration plan: v1 → v2 and v5 → v6 through **custom** stages, with v2 → v3,
-/// v3 → v4 and v4 → v5 **lightweight** between them.
+/// v3 → v4, v4 → v5 and v6 → v7 **lightweight** around them.
 ///
 /// This is the whole of F-139's insurance policy, and it was declared in e01 with no stages
 /// precisely so that this change would be *adding a stage to an existing plan* rather than
@@ -61,18 +61,39 @@ import SwiftData
 /// app they have been using. Stages run only when there is an older store on disk, so the stage
 /// *is* the distinction, and it writes the fact down. The full argument is at `v5ToV6`.
 ///
-/// The v1 fixture now migrates through **all five** stages. That chain is what makes "no data
+/// The v1 fixture now migrates through **all six** stages. That chain is what makes "no data
 /// loss on upgrade" a fact rather than an intention, and it is asserted directly.
 public enum FocusMigrationPlan: SchemaMigrationPlan {
     public static var schemas: [any VersionedSchema.Type] {
         [
             FocusSchemaV1.self, FocusSchemaV2.self, FocusSchemaV3.self, FocusSchemaV4.self,
-            FocusSchemaV5.self, FocusSchemaV6.self
+            FocusSchemaV5.self, FocusSchemaV6.self, FocusSchemaV7.self
         ]
     }
 
     public static var stages: [MigrationStage] {
-        [v1ToV2, v2ToV3, v3ToV4, v4ToV5, v5ToV6]
+        [v1ToV2, v2ToV3, v3ToV4, v4ToV5, v5ToV6, v6ToV7]
+    }
+
+    /// **v6 → v7: lightweight, although it is the first stage since v1 → v2 to re-declare a
+    /// class** (focus-tee.3).
+    ///
+    /// v7 adds one optional column, `InterventionRecord.explanationKindsRaw`, to an entity v4
+    /// declared. The column belongs on that entity and v4 is a migration source, so v7
+    /// re-declares the class rather than editing v4's copy — and re-declaring is a fact about
+    /// *this repository's* namespaces, not about the store: SwiftData matches the entity by
+    /// name, the other twelve columns are byte-identical, and the thirteenth is optional. That
+    /// is exactly P-51's condition, so the stage has nothing to carry and no closure to get
+    /// wrong.
+    ///
+    /// An old row arrives with `explanationKindsRaw == nil`. That is the honest value and not a
+    /// gap to be backfilled: the app really did not record why, and no later reading can invent
+    /// the reason it had at the time.
+    static var v6ToV7: MigrationStage {
+        MigrationStage.lightweight(
+            fromVersion: FocusSchemaV6.self,
+            toVersion: FocusSchemaV7.self
+        )
     }
 
     /// **v5 → v6: custom, and it is the only thing this stage does** (focus-odz.7).

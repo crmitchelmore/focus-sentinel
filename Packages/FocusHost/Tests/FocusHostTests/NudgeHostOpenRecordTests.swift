@@ -116,7 +116,7 @@ struct NudgeHostOpenRecordTests {
     static func row(
         _ fixture: NudgeHostFixture,
         kind: InterruptionKind
-    ) throws -> FocusSchemaV4.InterventionRecord {
+    ) throws -> FocusSchemaV7.InterventionRecord {
         let rows = try fixture.interventions().filter { $0.kind == kind && $0.surface == .popoverBadge }
         return try #require(rows.first, "no delivered badge row of kind \(kind.rawValue)")
     }

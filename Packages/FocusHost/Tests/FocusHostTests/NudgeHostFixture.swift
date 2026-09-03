@@ -423,8 +423,8 @@ struct NudgeHostFixture {
 
     // MARK: - Reading the record back
 
-    func interventions() throws -> [FocusSchemaV4.InterventionRecord] {
-        try context.fetch(FetchDescriptor<FocusSchemaV4.InterventionRecord>())
+    func interventions() throws -> [FocusSchemaV7.InterventionRecord] {
+        try context.fetch(FetchDescriptor<FocusSchemaV7.InterventionRecord>())
     }
 
     func receipts() throws -> [FocusSchemaV4.AskedQuestion] {

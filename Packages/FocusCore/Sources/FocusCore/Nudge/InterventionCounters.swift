@@ -116,6 +116,18 @@ public struct InterventionEvent: Sendable, Equatable, Hashable {
     /// a query that escalated, and the Rules pane and the judgment inspector can both show them
     /// exactly what their click did.
     public let originatingAnswer: QueryAnswer?
+    /// **The shape of the reason the verdict carried, and nothing of its content** (v7,
+    /// focus-tee.3).
+    ///
+    /// The `ExplanationClauseKind`s of the `Explanation` the mandate was built on, in the order
+    /// the engine found them. `nil` means the app had no explanation to hand at this point —
+    /// a suppression before the engine ran, a rung whose mandate is gone — and it is stored as
+    /// `nil` rather than as an empty list because *"not recorded"* and *"no reasons"* are two
+    /// different things to say to somebody reading their day back.
+    ///
+    /// A kind and never a clause: `ExplanationClauseKind` is a closed enum with no payload, so
+    /// no `NormalisedToken`, subject or number can reach the log through this field.
+    public let explanationKinds: [ExplanationClauseKind]?
 
     public init(
         kind: InterruptionKind,
@@ -127,7 +139,8 @@ public struct InterventionEvent: Sendable, Equatable, Hashable {
         deferralReason: DeferralReason? = nil,
         suppressionReason: NudgeSuppressionReason? = nil,
         queryReason: QueryableUncertainty? = nil,
-        originatingAnswer: QueryAnswer? = nil
+        originatingAnswer: QueryAnswer? = nil,
+        explanationKinds: [ExplanationClauseKind]? = nil
     ) {
         self.kind = kind
         self.rung = rung
@@ -139,6 +152,7 @@ public struct InterventionEvent: Sendable, Equatable, Hashable {
         self.suppressionReason = suppressionReason
         self.queryReason = queryReason
         self.originatingAnswer = originatingAnswer
+        self.explanationKinds = explanationKinds
     }
 
     /// Whether this event spends a cap. **Only a delivery does** (R-81, R-83).

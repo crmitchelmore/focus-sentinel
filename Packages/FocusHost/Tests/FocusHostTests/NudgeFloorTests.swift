@@ -138,7 +138,7 @@ struct NudgeFloorTests {
 
     static func deliveredRows(_ root: AppComposition) throws -> Int {
         try root.modelContainer.mainContext
-            .fetch(FetchDescriptor<FocusSchemaV4.InterventionRecord>())
+            .fetch(FetchDescriptor<FocusSchemaV7.InterventionRecord>())
             .count { $0.disposition == .delivered }
     }
 
@@ -375,7 +375,7 @@ struct NudgeFloorTests {
             """
         )
         let rungRows = try root.modelContainer.mainContext
-            .fetch(FetchDescriptor<FocusSchemaV4.InterventionRecord>())
+            .fetch(FetchDescriptor<FocusSchemaV7.InterventionRecord>())
             .filter { $0.disposition == .delivered && $0.kind == .accusation }
         #expect(
             rungRows.count == 1,

@@ -54,7 +54,7 @@ public enum FocusStore {
     /// existing call site keeps fetching the entities it already knew and the version bump
     /// costs the rest of the programme nothing.
     public static var schema: Schema {
-        Schema(versionedSchema: FocusSchemaV6.self)
+        Schema(versionedSchema: FocusSchemaV7.self)
     }
 
     /// Build a container for the given kind of storage.

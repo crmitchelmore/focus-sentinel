@@ -28,15 +28,16 @@ struct MigrationV6Tests {
         return directory.appending(path: FocusStore.storeFileName, directoryHint: .notDirectory)
     }
 
-    /// **The plan's tip**, which the newest version's suite owns: the older ones assert their own
-    /// link and nothing about how long the chain has become.
-    @Test("the plan's newest schema is v6, and it is the fifth stage")
+    /// **v6's own link in the chain.** The plan's *tip* — how many schemas and stages there are
+    /// in total — is asserted by the newest version's suite, which is the only one that can be
+    /// right about it; v7 took that over. What this suite keeps is the half that must never move.
+    @Test("v6 is the sixth link in the chain, behind the version that migrates into it")
     func planShape() {
         #expect(FocusSchemaV6.versionIdentifier == Schema.Version(6, 0, 0))
-        #expect(FocusMigrationPlan.schemas.count == 6)
+        #expect(FocusMigrationPlan.schemas.count >= 6)
         #expect(FocusMigrationPlan.schemas[5] is FocusSchemaV6.Type)
-        #expect(FocusMigrationPlan.stages.count == 5)
-        #expect(FocusStore.schema.version == Schema.Version(6, 0, 0))
+        #expect(FocusMigrationPlan.stages.count >= 5)
+        #expect(FocusStore.schema.version >= Schema.Version(6, 0, 0))
     }
 
     /// **v6 adds one entity and re-declares none**, which is what keeps every existing call site
@@ -235,10 +236,10 @@ struct MigrationV6Tests {
         #expect(rows.first?.openWindowsAtLastQuit == ["cockpit"])
     }
 
-    /// The whole chain, in one open: a **v1** file across all five stages, with the active
-    /// priority the first custom stage carries still there and the last custom stage's row written.
+    /// The whole chain, in one open: a **v1** file across every stage, with the active priority
+    /// the first custom stage carries still there and the v5 → v6 custom stage's row written.
     @Test(
-        "the committed v1 fixture migrates through all five stages to v6",
+        "the committed v1 fixture migrates through every stage to v6's row",
         .enabled(if: !SchemaV1Fixture.isRecording)
     )
     @MainActor
@@ -250,7 +251,7 @@ struct MigrationV6Tests {
         let context = container.mainContext
 
         let pointers = try context.fetch(FetchDescriptor<FocusSchemaV3.ActivePriority>())
-        #expect(pointers.count == 1, "the active priority did not survive the five-stage chain")
+        #expect(pointers.count == 1, "the active priority did not survive the chain")
         #expect(pointers.first?.task?.id == SchemaV1Fixture.taskID)
 
         #expect(!FocusStore.shellState(in: context).owesFirstRunExplanation)

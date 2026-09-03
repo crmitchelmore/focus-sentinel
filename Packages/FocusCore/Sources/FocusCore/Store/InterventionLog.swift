@@ -91,7 +91,7 @@ public final class InterventionLog {
         at instant: Date? = nil
     ) throws -> UUID {
         let now = instant ?? dateProvider.now
-        let row = FocusSchemaV4.InterventionRecord(
+        let row = FocusSchemaV7.InterventionRecord(
             at: now,
             localDayKey: LocalDay.containing(now, calendar: calendar).key,
             kindRaw: event.kind.rawValue,
@@ -102,7 +102,10 @@ public final class InterventionLog {
             surfaceRaw: event.surface?.rawValue ?? "",
             dispositionRaw: event.disposition.rawValue,
             outcomeRaw: event.outcome?.rawValue,
-            originatingAnswerRaw: event.originatingAnswer?.rawValue
+            originatingAnswerRaw: event.originatingAnswer?.rawValue,
+            explanationKindsRaw: event.explanationKinds.map {
+                $0.map(\.rawValue).joined(separator: ",")
+            }
         )
         context.insert(row)
         try context.save()
@@ -137,7 +140,7 @@ public final class InterventionLog {
         _ id: UUID,
         outcome: InterventionOutcome
     ) throws {
-        let descriptor = FetchDescriptor<FocusSchemaV4.InterventionRecord>(
+        let descriptor = FetchDescriptor<FocusSchemaV7.InterventionRecord>(
             predicate: #Predicate { $0.id == id }
         )
         guard let row = try context.countedFetch(descriptor).first else { return }
@@ -181,7 +184,7 @@ public final class InterventionLog {
     ///   be the app editing history rather than correcting it.
     @discardableResult
     public func withdraw(_ id: UUID) throws -> Bool {
-        let descriptor = FetchDescriptor<FocusSchemaV4.InterventionRecord>(
+        let descriptor = FetchDescriptor<FocusSchemaV7.InterventionRecord>(
             predicate: #Predicate { $0.id == id }
         )
         guard let row = try context.countedFetch(descriptor).first else { return false }
@@ -202,26 +205,26 @@ public final class InterventionLog {
     /// in the table on every classification, and this is the largest table the nudge touches.
     public static func descriptor(
         forDay day: LocalDay
-    ) -> FetchDescriptor<FocusSchemaV4.InterventionRecord> {
+    ) -> FetchDescriptor<FocusSchemaV7.InterventionRecord> {
         let key = day.key
-        return FetchDescriptor<FocusSchemaV4.InterventionRecord>(
+        return FetchDescriptor<FocusSchemaV7.InterventionRecord>(
             predicate: #Predicate { $0.localDayKey == key }
         )
     }
 
     /// Every row on one local day, oldest first.
-    public func records(on day: LocalDay) throws -> [FocusSchemaV4.InterventionRecord] {
+    public func records(on day: LocalDay) throws -> [FocusSchemaV7.InterventionRecord] {
         try context.countedFetch(Self.descriptor(forDay: day)).sorted(by: Self.chronological)
     }
 
     /// Every row in the log, oldest first.
-    public func all() throws -> [FocusSchemaV4.InterventionRecord] {
-        try context.countedFetch(FetchDescriptor<FocusSchemaV4.InterventionRecord>())
+    public func all() throws -> [FocusSchemaV7.InterventionRecord] {
+        try context.countedFetch(FetchDescriptor<FocusSchemaV7.InterventionRecord>())
             .sorted(by: Self.chronological)
     }
 
     public func count() throws -> Int {
-        try context.countedFetchCount(FetchDescriptor<FocusSchemaV4.InterventionRecord>())
+        try context.countedFetchCount(FetchDescriptor<FocusSchemaV7.InterventionRecord>())
     }
 
     /// The local day an instant falls in, in this log's calendar.
@@ -304,7 +307,7 @@ public final class InterventionLog {
     }
 
     /// One stored row, as the value type the counters and e09 read.
-    public static func event(from row: FocusSchemaV4.InterventionRecord) -> InterventionEvent {
+    public static func event(from row: FocusSchemaV7.InterventionRecord) -> InterventionEvent {
         InterventionEvent(
             kind: row.kind,
             rung: row.rung,
@@ -312,7 +315,8 @@ public final class InterventionLog {
             surface: row.surface,
             disposition: row.disposition,
             outcome: row.outcome,
-            originatingAnswer: row.originatingAnswer
+            originatingAnswer: row.originatingAnswer,
+            explanationKinds: row.explanationKinds
         )
     }
 
@@ -360,8 +364,8 @@ public final class InterventionLog {
     /// Oldest first, tie-broken by identifier so rows stamped at the same instant read back in
     /// one stable order rather than in whatever order the store felt like.
     private static func chronological(
-        _ lhs: FocusSchemaV4.InterventionRecord,
-        _ rhs: FocusSchemaV4.InterventionRecord
+        _ lhs: FocusSchemaV7.InterventionRecord,
+        _ rhs: FocusSchemaV7.InterventionRecord
     ) -> Bool {
         lhs.at == rhs.at ? lhs.id.uuidString < rhs.id.uuidString : lhs.at < rhs.at
     }

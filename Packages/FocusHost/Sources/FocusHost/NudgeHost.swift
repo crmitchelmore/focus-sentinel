@@ -1554,7 +1554,11 @@ final class NudgeHost {
                     rung: open.rung.kind,
                     subject: open.rung.subject ?? "",
                     surface: open.landedOn,
-                    disposition: .unopened
+                    disposition: .unopened,
+                    // The same reading as the delivered twin: a rung nobody looked at still had
+                    // a reason, and a row that omitted it here would make History's "why" depend
+                    // on whether the person happened to open the popover.
+                    explanationKinds: open.rung.mandate.explanation.clauses.map(\.kind)
                 ),
                 priorityID: open.priorityID
             )
@@ -1605,7 +1609,13 @@ final class NudgeHost {
             rung: rung.kind,
             subject: rung.subject ?? "",
             surface: change.surface,
-            disposition: .delivered
+            disposition: .delivered,
+            // **The shape of the reason, off the mandate the rung was raised on** (v7,
+            // focus-tee.3). `LadderRung` carries the mandate and the mandate carries the
+            // `Explanation`, so the row records what the verdict was going on rather than what a
+            // later replay would decide today — which is the conflation the epic's §8.4 forbids.
+            // Only the clause *kinds*: closed enum, no payload, no token, no number.
+            explanationKinds: rung.mandate.explanation.clauses.map(\.kind)
         )
 
         // **The cooldown is a spend, and it is charged like one** (focus-uru). This line read

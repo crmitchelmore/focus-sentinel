@@ -298,7 +298,7 @@ struct NudgeDayShapeTests {
             calendar: NudgeHostFixture.londonCalendar
         )
         let rows = try root.modelContainer.mainContext
-            .fetch(FetchDescriptor<FocusSchemaV4.InterventionRecord>())
+            .fetch(FetchDescriptor<FocusSchemaV7.InterventionRecord>())
             .count { $0.disposition == .delivered }
         return Day(
             name: name,

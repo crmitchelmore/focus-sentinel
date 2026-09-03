@@ -126,7 +126,7 @@ struct MigrationV4Tests {
 
         // The two v4 tables: present and empty.
         #expect(try context.fetch(FetchDescriptor<FocusSchemaV4.AskedQuestion>()).isEmpty)
-        #expect(try context.fetch(FetchDescriptor<FocusSchemaV4.InterventionRecord>()).isEmpty)
+        #expect(try context.fetch(FetchDescriptor<FocusSchemaV7.InterventionRecord>()).isEmpty)
     }
 
     /// The whole chain, in one open: a **v1** file across all three stages.
@@ -154,7 +154,7 @@ struct MigrationV4Tests {
         #expect(pointers.first?.task?.id == SchemaV1Fixture.taskID)
 
         #expect(try context.fetch(FetchDescriptor<FocusSchemaV4.AskedQuestion>()).isEmpty)
-        #expect(try context.fetch(FetchDescriptor<FocusSchemaV4.InterventionRecord>()).isEmpty)
+        #expect(try context.fetch(FetchDescriptor<FocusSchemaV7.InterventionRecord>()).isEmpty)
     }
 
     /// Re-opening a store already at v4 must not run a stage again. The v1 → v2 stage is the
@@ -185,7 +185,7 @@ struct MigrationV4Tests {
         #expect(receipts.first?.priorityID == Self.priorityID)
         #expect(receipts.first?.outcome == .answeredRelevant)
 
-        let records = try context.fetch(FetchDescriptor<FocusSchemaV4.InterventionRecord>())
+        let records = try context.fetch(FetchDescriptor<FocusSchemaV7.InterventionRecord>())
         #expect(records.count == 1)
         #expect(records.first?.kind == .accusation)
         #expect(records.first?.disposition == .delivered)
@@ -218,7 +218,7 @@ struct MigrationV4Tests {
         #expect(receipt.answeredAt == Self.timestamp)
 
         let record = try #require(
-            try context.fetch(FetchDescriptor<FocusSchemaV4.InterventionRecord>()).first
+            try context.fetch(FetchDescriptor<FocusSchemaV7.InterventionRecord>()).first
         )
         #expect(record.localDayKey == "2026-01-01")
         #expect(record.kind == .accusation)
@@ -245,7 +245,7 @@ struct MigrationV4Tests {
         let container = try FocusStore.makeContainer(kind: .inMemory)
         let context = container.mainContext
 
-        let deferred = FocusSchemaV4.InterventionRecord(
+        let deferred = FocusSchemaV7.InterventionRecord(
             at: Self.timestamp,
             localDayKey: "2026-01-01",
             kindRaw: InterruptionKind.accusation.rawValue,
@@ -259,7 +259,7 @@ struct MigrationV4Tests {
         try context.save()
 
         let stored = try #require(
-            try context.fetch(FetchDescriptor<FocusSchemaV4.InterventionRecord>()).first
+            try context.fetch(FetchDescriptor<FocusSchemaV7.InterventionRecord>()).first
         )
         #expect(stored.surface == nil)
         #expect(stored.disposition == .deferred)
@@ -338,7 +338,7 @@ struct MigrationV4Tests {
         let container = try FocusStore.makeContainer(kind: .inMemory)
         let context = container.mainContext
 
-        let record = FocusSchemaV4.InterventionRecord(
+        let record = FocusSchemaV7.InterventionRecord(
             at: Self.timestamp,
             localDayKey: "2026-01-01",
             kindRaw: "notchPulse",                   // e08's, hypothetically
@@ -354,7 +354,7 @@ struct MigrationV4Tests {
         try context.save()
 
         let stored = try #require(
-            try context.fetch(FetchDescriptor<FocusSchemaV4.InterventionRecord>()).first
+            try context.fetch(FetchDescriptor<FocusSchemaV7.InterventionRecord>()).first
         )
         #expect(stored.kind == .accusation)
         #expect(stored.rung == .ambient)
@@ -385,8 +385,8 @@ struct MigrationV4Tests {
         )
     }
 
-    static func record() -> FocusSchemaV4.InterventionRecord {
-        FocusSchemaV4.InterventionRecord(
+    static func record() -> FocusSchemaV7.InterventionRecord {
+        FocusSchemaV7.InterventionRecord(
             at: timestamp,
             localDayKey: "2026-01-01",
             kindRaw: InterruptionKind.accusation.rawValue,

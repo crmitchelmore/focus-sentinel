@@ -38,7 +38,7 @@ struct NudgeHostUnopenedInvitationTests {
     static let subject = NudgeHostFixture.decoy
 
     /// Rows the log marked `unopened`, with the surface and kind they name.
-    static func unopened(_ fixture: NudgeHostFixture) throws -> [FocusSchemaV4.InterventionRecord] {
+    static func unopened(_ fixture: NudgeHostFixture) throws -> [FocusSchemaV7.InterventionRecord] {
         try fixture.interventions()
             .filter { $0.dispositionRaw == InterventionDisposition.unopened.rawValue }
     }

@@ -25,6 +25,10 @@
 #   R-05  Every `ModelContainer` is constructed through the migration plan. The plan-less
 #         initialiser is forbidden so that no later epic can open the store by a route that
 #         skips migration.
+#   R-118 Every stored column in the CURRENT schema carries a row in
+#         `Config/export-field-classification.txt` saying what it is and whether it may ever
+#         leave the app, and every row in that file names a column that exists. Delegated to
+#         `scripts/check-export-fields.sh`; see the argument at the top of that file.
 #   R-18  `@Attribute(.unique)` appears only on `ActivePriority.slot` and on `id` fields.
 #         Measured (e02 P-44): SwiftData resolves a unique collision by merging whole rows,
 #         so the losing row is *deleted*. On `PriorityTask` that would silently destroy the
@@ -2087,6 +2091,22 @@ done
 if (( r96s_binaries_seen == 0 )) && [[ "${FOCUS_REQUIRE_BINARY_CHECK:-0}" != "1" ]]; then
     print "     [R-96s] SKIPPED — nothing built yet (the gate re-runs this after the build)"
 fi
+
+# ---------------------------------------------------------------------------
+# R-118 — every stored column is classified (e09 plan §7, focus-tee.3).
+#
+# Delegated to `scripts/check-export-fields.sh`, which is a standalone script anybody can run,
+# and invoked from here rather than as a gate stage of its own: the standing conditions are
+# already this stage's remit — R-05's migration-plan rule and R-41's `detail` ban are both rules
+# about the store — and a stage that exists to run one text scan is a stage whose name a reader
+# has to learn for no reason.
+#
+# It runs in the source pass and the binary re-run alike. The scan reads no build product, so
+# both passes assert the same true thing and neither can be the one that was skipped.
+print
+"${0:A:h}/check-export-fields.sh"
+export_fields_rc=$?
+(( export_fields_rc != 0 )) && rc=1
 
 print
 if (( rc == 0 )); then

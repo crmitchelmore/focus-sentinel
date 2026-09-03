@@ -22,17 +22,18 @@ struct StoreTests {
         )
     }
 
-    @Test("the current schema the store opens is v6")
-    func currentSchemaIsVersionFive() {
-        // The plan's own shape — five schemas, four stages — is asserted in
-        // MigrationV6Tests. This is the narrower claim that FocusStore names v6 as the
-        // version this build understands, which is what every caller inherits.
+    @Test("the current schema the store opens is v7")
+    func currentSchemaIsVersionSeven() {
+        // The plan's own shape — how many schemas and how many stages — is asserted in
+        // MigrationV7Tests. This is the narrower claim that FocusStore names v7 as the version
+        // this build understands, which is what every caller inherits.
         //
-        // Fourteen entities: v3's ten, which v4, v5 and v6 reuse rather than re-declare, plus
-        // the query ledger's receipts, the intervention log, the Intervention pane's own settings
-        // row, and v6's record of what the shell remembers about itself between launches.
+        // Still fourteen entities: v3's ten, plus the query ledger's receipts, the intervention
+        // log, the Intervention pane's own settings row, and v6's record of what the shell
+        // remembers about itself between launches. v7 adds none — it re-declares one, which is
+        // why the count is the reading that must NOT move here.
         #expect(FocusStore.schema.entities.count == 14)
-        #expect(FocusMigrationPlan.schemas.last is FocusSchemaV6.Type)
+        #expect(FocusMigrationPlan.schemas.last is FocusSchemaV7.Type)
     }
 
     @Test("in-memory: insert, save and fetch round-trip")

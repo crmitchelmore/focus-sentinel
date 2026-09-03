@@ -70,7 +70,7 @@ struct NudgeUnseenAttemptTests {
 
     /// One row, read out of the store as plain values.
     ///
-    /// Copied rather than carried: a `FocusSchemaV4.InterventionRecord` belongs to the fixture's
+    /// Copied rather than carried: a `FocusSchemaV7.InterventionRecord` belongs to the fixture's
     /// container, and this suite outlives every fixture it makes.
     struct Row {
         let kind: String
