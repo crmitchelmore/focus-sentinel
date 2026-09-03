@@ -39,7 +39,7 @@ final class ScriptedIdleSource: IdleSourceReading, @unchecked Sendable {
 @MainActor
 @Suite("Idle reader")
 struct IdleReaderTests {
-    // MARK: - Both sources, hardware primary (R-36)
+    // MARK: - Both sources, neither of them primary (R-36, focus-7az)
 
     @Test("Both counters are read on every sample")
     func readsBothSources() {
@@ -53,25 +53,51 @@ struct IdleReaderTests {
         #expect(sample.reading.sessionSeconds == 267.14)
     }
 
-    @Test("The hardware counter decides, even when the session counter says the user is here")
-    func hardwareSourceIsThePrimary() {
+    @Test("A counter past the threshold is enough, even when the other says the user is here")
+    func eitherCounterPastTheThresholdIsIdle() {
         // The exact P-85 divergence: something is posting synthetic events while nobody has
-        // touched the keyboard for twenty-five minutes.
+        // touched the keyboard for twenty-five minutes. The session figure is well under the
+        // threshold and the verdict is still idle, because the hardware clock's silence is
+        // evidence of absence and the session clock's noise is not evidence of presence.
         let source = ScriptedIdleSource(hardwareSeconds: 1536.37, sessionSeconds: 267.14)
-        let reader = IdleReader(source: source, thresholdSeconds: 180)
+        let reader = IdleReader(source: source, thresholdSeconds: 1000)
 
         let sample = reader.sample()
 
+        #expect(sample.reading.sessionSeconds < 1000)
         #expect(sample.isIdle)
-        #expect(sample.reading.isIdle(threshold: 180))
+        #expect(sample.reading.isIdle(threshold: 1000))
     }
 
-    @Test("hardwareSeconds >= sessionSeconds holds, because combined counts a superset")
-    func sourcesAreInTheRightOrder() {
-        let source = ScriptedIdleSource(hardwareSeconds: 1536.37, sessionSeconds: 267.14)
-        let reader = IdleReader(source: source, thresholdSeconds: 180)
+    /// The figures are the ones probe `/private/tmp/idleprobe` read off this Mac on 2026-09-03
+    /// while `w` said every tty had been idle 4:08 and nobody was in the room.
+    ///
+    /// At HEAD this returned **false** — `isIdle` was `hardwareSeconds >= threshold`, and
+    /// `.hidSystemState` at the `~0` sentinel is IOHIDSystem's `HIDIdleTime`, which a HID device
+    /// report resets without producing an input event. The app called a four-hours-absent person
+    /// present and kept nudging an empty chair, which is the exact failure idle detection exists
+    /// to prevent.
+    @Test("A phantom HID reset does not make an absent person present")
+    func phantomHardwareResetDoesNotDefeatIdle() {
+        let reading = IdleReading(hardwareSeconds: 105.71, sessionSeconds: 14850.04)
 
-        #expect(reader.read().sourcesAreInTheRightOrder)
+        #expect(reading.isIdle(threshold: 180))
+    }
+
+    /// The mirror: the session counter is the blind one when input arrives from outside this
+    /// login session, so neither source may be trusted to say "present" on its own.
+    @Test("A busy session counter does not make an absent person present either")
+    func phantomSessionResetDoesNotDefeatIdle() {
+        let reading = IdleReading(hardwareSeconds: 14850.04, sessionSeconds: 105.71)
+
+        #expect(reading.isIdle(threshold: 180))
+    }
+
+    @Test("Both counters quiet for less than the threshold is present, not idle")
+    func bothCountersBelowTheThresholdIsPresent() {
+        let reading = IdleReading(hardwareSeconds: 105.71, sessionSeconds: 179.99)
+
+        #expect(!reading.isIdle(threshold: 180))
     }
 
     @Test("The threshold is injected, and moving it moves the verdict")
@@ -159,13 +185,20 @@ struct IdleReaderTests {
         #expect(seam.availability == .available)
     }
 
-    @Test("idleDuration() answers from the hardware counter")
-    func idleDurationUsesTheHardwareCounter() {
-        let source = ScriptedIdleSource(hardwareSeconds: 42, sessionSeconds: 1)
-        let reader = IdleReader(source: source)
-        let seam: any IdleObserving = reader
+    /// The seam answers the same figure `isIdle` compares against the threshold — the longest
+    /// silence either source can testify to — rather than the hardware clock alone, which on
+    /// this Mac read 105 s for a chair that had been empty four hours (focus-7az).
+    @Test("idleDuration() answers the longer of the two counters, whichever it is")
+    func idleDurationTakesTheLongerSilence() {
+        let hardwareIsLonger: any IdleObserving = IdleReader(
+            source: ScriptedIdleSource(hardwareSeconds: 42, sessionSeconds: 1)
+        )
+        #expect(hardwareIsLonger.idleDuration() == .seconds(42))
 
-        #expect(seam.idleDuration() == .seconds(42))
+        let sessionIsLonger: any IdleObserving = IdleReader(
+            source: ScriptedIdleSource(hardwareSeconds: 1, sessionSeconds: 42)
+        )
+        #expect(sessionIsLonger.idleDuration() == .seconds(42))
     }
 
     // MARK: - The real source
@@ -173,22 +206,9 @@ struct IdleReaderTests {
     @Test("The production source reads a live counter with no prompt and no error")
     func productionSourceReadsBothCounters() {
         let source = CGEventIdleSource()
-        // **Session first, then hardware — the order `IdleReader.read()` itself uses.**
-        //
-        // The two counters are read microseconds apart, and on a machine where no input arrives
-        // between the reads the later one is larger by exactly that elapsed time. Taking hardware
-        // first therefore makes the session figure the larger of the two and violates
-        // `sourcesAreInTheRightOrder` by a few hundred nanoseconds — which is what happened here,
-        // on an unattended gate run against a machine that had been idle for 584 s:
-        //
-        //     hardware 584.292967667  session 584.292967875   (208 ns the wrong way)
-        //
-        // The invariant is real and worth asserting: `.combinedSessionState` counts a superset of
-        // the events `.hidSystemState` does, so `combined ≤ hid` is a property of the sources
-        // rather than a coincidence, and a violation would mean the reader had swapped them. What
-        // was wrong was this test reading them in the opposite order from the shipping code —
-        // which is why `read()` puts the session figure in a local first, and why `self-check.sh`
-        // carries the same note beside its own half-second tolerance.
+        // **Session first, then hardware — the order `IdleReader.read()` itself uses**, so that
+        // the syscall's worth of elapsed time between the two reads always lands on the same
+        // side and the published gap is a fact about the sources rather than about read order.
         let sessionSeconds = source.sessionSeconds
         let reading = IdleReading(
             hardwareSeconds: source.hardwareSeconds,
@@ -200,7 +220,35 @@ struct IdleReaderTests {
         #expect(reading.sessionSeconds >= 0)
         #expect(reading.hardwareSeconds.isFinite)
         #expect(reading.sessionSeconds.isFinite)
-        // And the invariant that says the sources were not swapped, on a live reading.
-        #expect(reading.sourcesAreInTheRightOrder)
+        // NO ORDERING IS ASSERTED HERE. `hardware >= session` was never a property of the two
+        // states at the `~0` sentinel; see the agreement test below for the one that is.
+    }
+
+    /// The invariant that replaced the deleted `hardware >= session` pin, on the **live** reader.
+    ///
+    /// Measured 2026-09-03: for every concrete event type `.hidSystemState` and
+    /// `.combinedSessionState` return the same seconds, and only the `kCGAnyInputEventType`
+    /// sentinel diverges — because under `.hidSystemState` that sentinel is IOHIDSystem's
+    /// `HIDIdleTime`, not a fold over CGEvent types. This is the same assertion `self-check.sh`
+    /// makes on the shipped product's report, with the same one-second tolerance and the same
+    /// non-vacuity floor.
+    @Test("Per concrete event type, the two idle states agree — the invariant that is true")
+    func concreteEventTypesAgreeAcrossBothStates() {
+        let rows = CGEventIdleSource.secondsPerConcreteEventType()
+
+        // Non-vacuity: "every row agrees" is satisfied by no rows at all.
+        #expect(rows.count >= 4)
+        #expect(Set(rows.map(\.eventType)).count >= 4)
+
+        for row in rows {
+            #expect(row.hardwareSeconds.isFinite, "\(row.eventType) hardware is not finite")
+            #expect(row.sessionSeconds.isFinite, "\(row.eventType) session is not finite")
+            #expect(row.hardwareSeconds >= 0, "\(row.eventType) hardware is negative")
+            #expect(row.sessionSeconds >= 0, "\(row.eventType) session is negative")
+            #expect(
+                abs(row.differenceSeconds) <= 1,
+                "\(row.eventType): hid \(row.hardwareSeconds) s vs combined \(row.sessionSeconds) s"
+            )
+        }
     }
 }

@@ -2368,12 +2368,23 @@ enum SelfCheck {
         windowMetadata["countNotTakenBecause"] = host.frontmostReadingObstacle?.rawValue ?? ""
         report["windowMetadata"] = windowMetadata
 
-        // Both idle sources on every sample. `hardwareSeconds >= sessionSeconds` is a property
-        // rather than a coincidence — `.combinedSessionState` counts a superset of the events
-        // `.hidSystemState` does — so a violation means the reader swapped its sources (P-85).
-        // The two are read microseconds apart, session first, so the elapsed time between them
-        // lands on the side the invariant wants it on; see `IdleReader.read()`.
+        // Both idle sources on every sample, at the `~0` sentinel — and, beside them, the
+        // invariant that is actually true of the two states.
+        //
+        // The old pin here asserted `hardwareSeconds >= sessionSeconds`, on the argument that
+        // `.combinedSessionState` counts a superset of the events `.hidSystemState` does. It
+        // does not. At `kCGAnyInputEventType` the hardware state returns IOHIDSystem's raw
+        // `HIDIdleTime`, which a device report resets without producing an input event, so the
+        // two sentinel figures can diverge by hours in **either** direction and did (focus-7az).
+        // The gap stays in the report as a number — a fact worth seeing, and the signature of a
+        // phantom HID reset — but it is no longer a verdict.
+        //
+        // What replaces it: per **concrete** event type the two states answer with the same
+        // seconds, and that is a property of the sources rather than a coincidence. A reader
+        // that swapped its states, or a state that stopped meaning what it means, shows up here
+        // as a disagreement, while an idle Mac and a busy one both pass.
         let idle = host.idleReading
+        let perEventType = CGEventIdleSource.secondsPerConcreteEventType()
         report["idle"] = [
             "hardwareSeconds": idle.hardwareSeconds,
             "sessionSeconds": idle.sessionSeconds,
@@ -2382,7 +2393,15 @@ enum SelfCheck {
             // (probe P-85), and the number is what makes that legible in a report.
             "hardwareMinusSessionSeconds": idle.hardwareSeconds - idle.sessionSeconds,
             "thresholdSeconds": host.settings.idleThresholdInterval,
-            "isIdle": host.isIdle
+            "isIdle": host.isIdle,
+            "perEventType": perEventType.map {
+                [
+                    "eventType": $0.eventType,
+                    "hardwareSeconds": $0.hardwareSeconds,
+                    "sessionSeconds": $0.sessionSeconds,
+                    "differenceSeconds": $0.differenceSeconds
+                ] as [String: Any]
+            }
         ]
 
         // The quorum's three inputs, recorded whatever the verdict — a surface that only showed

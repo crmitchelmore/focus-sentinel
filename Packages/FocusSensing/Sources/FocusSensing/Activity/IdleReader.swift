@@ -9,11 +9,33 @@ import Foundation
 /// on demand: probe P-85 caught a 21-minute disagreement once, and a test may not wait
 /// twenty-one minutes for it.
 public protocol IdleSourceReading: Sendable {
-    /// `.hidSystemState` — **hardware input only**. The primary.
+    /// `.hidSystemState` at `kCGAnyInputEventType` — IOHIDSystem's raw `HIDIdleTime` clock.
     var hardwareSeconds: Double { get }
-    /// `.combinedSessionState` — hardware *and* synthetic posted events. Recorded, never
-    /// decisive.
+    /// `.combinedSessionState` at `kCGAnyInputEventType` — this session's newest CGEvent.
     var sessionSeconds: Double { get }
+}
+
+/// One concrete `CGEventType` read under **both** source states at nearly one instant.
+///
+/// This is the invariant that is actually true of the two states, and the reason the old one
+/// (`hardware >= session`) was not: for a concrete event type the two states answer with the
+/// same number. See `CGEventIdleSource.secondsPerConcreteEventType()`.
+public struct IdleSourceAgreement: Sendable, Equatable, Hashable {
+    /// The event type's own name, as the report and the gate print it.
+    public let eventType: String
+    /// `.hidSystemState`, for this one type.
+    public let hardwareSeconds: Double
+    /// `.combinedSessionState`, for this one type.
+    public let sessionSeconds: Double
+
+    public init(eventType: String, hardwareSeconds: Double, sessionSeconds: Double) {
+        self.eventType = eventType
+        self.hardwareSeconds = hardwareSeconds
+        self.sessionSeconds = sessionSeconds
+    }
+
+    /// Signed, so a report reader can see which way a disagreement went.
+    public var differenceSeconds: Double { hardwareSeconds - sessionSeconds }
 }
 
 /// The production idle source: `CGEventSource.secondsSinceLastEventType`.
@@ -38,7 +60,50 @@ public struct CGEventIdleSource: IdleSourceReading {
     /// sentinel as a case, so the raw value is written out here once, with its name, rather
     /// than at four call sites. `.null` is the fallback purely to keep the expression total;
     /// the initialiser does not fail for this value on any Mac this app runs on.
+    ///
+    /// **It is not "the newest event of any type."** Under `.hidSystemState` it is IOHIDSystem's
+    /// `HIDIdleTime` — measured byte-identical to `ioreg`'s across six paired samples — which a
+    /// HID device report resets even when no input event is produced. That is why `isIdle` no
+    /// longer trusts it alone, and why the pin below reads concrete types instead.
     static let anyInputEventType: CGEventType = CGEventType(rawValue: ~UInt32(0)) ?? .null
+
+    /// The concrete event types the agreement pin reads, with the names it publishes.
+    ///
+    /// Four kinds of real input a person produces — a pointer moving, a key going down, a click,
+    /// a scroll — chosen so no one input device carries the pin on its own. The self-check
+    /// publishes a row per entry and the gate asserts a floor on how many it got, so shrinking
+    /// this list is a red gate rather than a quieter one.
+    public static let concreteEventTypes: [(name: String, type: CGEventType)] = [
+        ("mouseMoved", .mouseMoved),
+        ("keyDown", .keyDown),
+        ("leftMouseDown", .leftMouseDown),
+        ("scrollWheel", .scrollWheel)
+    ]
+
+    /// Both states, per concrete event type, session read first for the same reason `read()`
+    /// reads it first: whichever is read second is measured a hair later and comes back a hair
+    /// larger, and putting that on the hardware side keeps the difference one-signed.
+    ///
+    /// Measured 2026-09-03: every row's two figures agreed to the nanosecond-ish width of one
+    /// syscall while the `~0` sentinel disagreed by four hours. That is the true property of
+    /// the two states, and it is what the gate and the suite assert now.
+    public static func secondsPerConcreteEventType() -> [IdleSourceAgreement] {
+        concreteEventTypes.map { entry in
+            let session = CGEventSource.secondsSinceLastEventType(
+                .combinedSessionState,
+                eventType: entry.type
+            )
+            let hardware = CGEventSource.secondsSinceLastEventType(
+                .hidSystemState,
+                eventType: entry.type
+            )
+            return IdleSourceAgreement(
+                eventType: entry.name,
+                hardwareSeconds: hardware,
+                sessionSeconds: session
+            )
+        }
+    }
 
     private static func seconds(since state: CGEventSourceStateID) -> Double {
         CGEventSource.secondsSinceLastEventType(state, eventType: anyInputEventType)
@@ -56,21 +121,20 @@ public struct FixedIdleSource: IdleSourceReading {
     }
 }
 
-/// Whether the person is at the keyboard — read from the **hardware** counter, with the other
-/// one recorded beside it.
+/// Whether the person is at the keyboard — read from **both** counters, neither of them alone.
 ///
-/// ## Why the hardware source is the primary
+/// ## Why neither source is the primary any more
 ///
-/// Measured on this machine at one instant (probe P-85): `.combinedSessionState` read **267 s**
-/// while `.hidSystemState` read **1536 s**. The combined counter includes synthetic posted
-/// events, so a daemon, an automation tool or a Screen Sharing session keeps it small while the
-/// human is demonstrably absent.
+/// The old note here said `.combinedSessionState` counts a strict superset of what
+/// `.hidSystemState` counts, so `combined ≤ hid` always, which made the hardware figure the
+/// pessimistic one. Measured 2026-09-03, that is false: at `kCGAnyInputEventType` the hardware
+/// state does not report the newest CGEvent at all but IOHIDSystem's `HIDIdleTime`, which a HID
+/// device report resets without any input event being produced. On this Mac it read 105.71 s
+/// against 14 850 s of real quiet, and gate 5 kept nudging an empty chair.
 ///
-/// Because combined counts a strict superset of events, `combined ≤ hid` **always**, which
-/// makes the hardware source the strictly more pessimistic one — it declares the user idle
-/// sooner. That asymmetry is the argument: idle **suppresses** intervention, so calling a
-/// present user idle costs a nudge that would have been welcome, while calling an absent user
-/// present nudges an empty chair, which is the exact failure idle detection exists to prevent.
+/// `IdleReading.isIdle` therefore takes the **maximum**, which keeps the asymmetry the design
+/// always wanted: calling a present user idle costs a nudge that would have been welcome, while
+/// calling an absent user present nudges an empty chair.
 ///
 /// ## The limitation, stated rather than hidden
 ///
@@ -176,26 +240,18 @@ public final class IdleReader: IdleObserving {
         )
     }
 
-    /// Both counters, in the order that makes `hardwareSeconds >= sessionSeconds` a property
-    /// rather than a coincidence. A reading that violates it means the sources were swapped,
-    /// which would silently invert the safe direction — so the self-check asserts it on live
-    /// readings and the suite asserts it on every fixture.
+    /// Both counters, session first.
     ///
-    /// **The session figure is read first, and the order is load-bearing.** Both counters are
-    /// "seconds since the last event of their kind", so both grow with the passage of time, and
-    /// the two reads cannot happen at the same instant. Whichever is read *second* is therefore
-    /// measured a little later and comes back a little larger. Reading hardware first inverted
-    /// the invariant on live readings by the width of one syscall — measured on this machine
-    /// through `--focus-self-check`: `hardware 1671.844242084` against
-    /// `session 1671.844242125`, a 41-nanosecond violation of a property the whole design rests
-    /// on. Reading session first puts the elapsed time on the hardware side, which is the side
-    /// the invariant wants it on.
-    ///
-    /// The one thing this cannot rule out is a real input event landing between the two reads,
-    /// which resets the hardware counter to nearly zero while the session figure it already took
-    /// stays large. That is a genuine race rather than a swapped source, and it is why the
-    /// self-check's assertion carries a small tolerance instead of demanding the invariant to
-    /// the nanosecond.
+    /// **The order is still load-bearing, for a smaller reason than it used to be.** Both
+    /// counters are "seconds since the last event of their kind", so both grow with the passage
+    /// of time and the two reads cannot happen at the same instant; whichever is read *second*
+    /// is measured a little later and comes back a little larger. Reading session first keeps
+    /// that syscall's worth of elapsed time on one known side, so the published
+    /// `hardwareMinusSessionSeconds` gap is a fact about the sources and not about read order.
+    /// It no longer props up an ordering invariant, because there is no ordering invariant:
+    /// `hardware >= session` was never a property of these two states (focus-7az). What is
+    /// asserted instead is `CGEventIdleSource.secondsPerConcreteEventType()` — per concrete
+    /// event type, the two states agree.
     public func read() -> IdleReading {
         let sessionSeconds = source.sessionSeconds
         return IdleReading(
@@ -220,8 +276,13 @@ public final class IdleReader: IdleObserving {
     /// Reading the idle counter needs no grant, on either source (probe P-84).
     public nonisolated var availability: ObservationAvailability { .available }
 
-    /// How long the person has been away, by the pessimistic source.
+    /// How long the person has been away — the longest silence either source can testify to,
+    /// which is the same figure `IdleReading.isIdle` compares against the threshold.
+    ///
+    /// It was `source.hardwareSeconds` alone, which on this Mac answered 105 s for a chair that
+    /// had been empty four hours (focus-7az). A seam that disagreed with the verdict it exists
+    /// to explain would be worse than no seam.
     public nonisolated func idleDuration() -> Duration {
-        .seconds(source.hardwareSeconds)
+        .seconds(max(source.hardwareSeconds, source.sessionSeconds))
     }
 }

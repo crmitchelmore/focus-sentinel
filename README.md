@@ -160,9 +160,21 @@ they are part of the pass/fail contract rather than evidence:
   proves something whatever their setting is, and the stored setting itself is never touched.
 * **Nothing named a window.** The seven decoded window-list keys, verbatim, with `kCGWindowName`
   asserted absent and no decoded key naming a window rather than its owning application.
-* **Both idle sources.** `.hidSystemState` and `.combinedSessionState`, with the hardware figure
-  asserted no smaller. The two are read microseconds apart, session first, so the elapsed time
-  between them lands on the side the invariant wants it on.
+* **Both idle sources, and the invariant that is actually true of them.** `.hidSystemState` and
+  `.combinedSessionState` are both read and both published, at the `kCGAnyInputEventType`
+  sentinel and again for each of four concrete event types — `.mouseMoved`, `.keyDown`,
+  `.leftMouseDown`, `.scrollWheel`. The assertion is that **each concrete type's two figures
+  agree within a second**, with a floor of four distinct types read so an empty list cannot
+  satisfy it vacuously. This replaced a pin that asserted the hardware figure was never the
+  smaller of the two, on the argument that the combined source counts a superset of the events
+  the hardware one does. It does not: at the `~0` sentinel `.hidSystemState` returns
+  IOHIDSystem's raw `HIDIdleTime`, which a HID device report resets even when no input event is
+  produced, so the two sentinel figures can diverge by hours in either direction — measured on
+  this Mac, 105.71 s against 14 850 s while nobody was in the room. That gap is still published,
+  as a number rather than a verdict. `IdleReading.isIdle` now trusts
+  `max(hardwareSeconds, sessionSeconds)`: either source having gone quiet for the threshold is
+  enough to call the person away, because a silent counter is evidence of absence and a counter
+  reset by a device nobody touched is not evidence of presence.
 * **The camera path was never entered.** `cameraState` is `unavailable` unconditionally,
   `cameraRunning` is `false`, and `cameraListenersInstalled` is `0` — on every rig, camera or not.
   That is the assertion, rather than an assertion about this Mac happening to have no camera.

@@ -2104,24 +2104,69 @@ if window_count_was_taken:
         windows_read.get("count"),
     )
 
-# F-32: `.combinedSessionState` counts a superset of the events `.hidSystemState` does, so the
-# hardware figure can never be the smaller of the two at a single instant. The tolerance is for
-# the one thing ordering cannot fix: a real input event landing between the two reads resets the
-# hardware counter while the session figure already taken stays large. Half a second is generous
-# for two adjacent syscalls and far too small to hide a swapped source, which would show up as a
-# divergence of minutes (P-85 measured 21 of them).
+# F-32, corrected (focus-7az). This block used to assert `hardwareSeconds >= sessionSeconds`, on
+# the argument that `.combinedSessionState` counts a superset of the events `.hidSystemState`
+# does, so the hardware figure could never be the smaller of the two. THAT WAS NEVER TRUE OF THE
+# SOURCES. At `kCGAnyInputEventType` the hardware state does not return the newest CGEvent at
+# all: it returns IOHIDSystem's raw `HIDIdleTime` — measured byte-identical to `ioreg`'s across
+# six paired samples — which a HID device report resets even when no input event is produced.
+# Measured on this Mac 2026-09-03: hardware 105.71 s against session 14 850.04 s, four hours the
+# "wrong" way, with `w` agreeing that nobody had touched the machine. Neither event set contains
+# the other, so there was no ordering to assert, and asserting it turned three gate stages red
+# against a machine that was telling the truth.
+#
+# What is true, and what goes red for a swapped or broken source: FOR EVERY CONCRETE EVENT TYPE
+# THE TWO STATES ANSWER WITH THE SAME SECONDS. The divergence lives only at the `~0` sentinel.
+# One second is generous for two adjacent syscalls and far too small to hide a state that has
+# stopped meaning what it means, which shows up as minutes or hours.
+#
+# The floor is not decoration: "every row agrees" is satisfied by a report with no rows, so the
+# count of DISTINCT event types read is asserted first. Distinct, so four copies of one row
+# cannot stand in for four types.
 idle = sensing.get("idle") or {}
-IDLE_READ_TOLERANCE = 0.5
-check(
-    isinstance(idle.get("hardwareSeconds"), (int, float))
-    and isinstance(idle.get("sessionSeconds"), (int, float))
-    and idle["hardwareSeconds"] >= idle["sessionSeconds"] - IDLE_READ_TOLERANCE,
-    "the hardware idle figure is not below the session one (the sources are not swapped)",
-    (idle.get("hardwareSeconds"), idle.get("sessionSeconds")),
+IDLE_AGREEMENT_TOLERANCE = 1.0
+IDLE_EVENT_TYPE_FLOOR = 4
+idle_rows = idle.get("perEventType")
+per_event_type = [r for r in idle_rows if isinstance(r, dict)] if isinstance(idle_rows, list) else []
+idle_types_read = sorted(
+    {r["eventType"] for r in per_event_type if isinstance(r.get("eventType"), str)}
 )
+check(
+    len(idle_types_read) >= IDLE_EVENT_TYPE_FLOOR,
+    f"both idle states were read for at least {IDLE_EVENT_TYPE_FLOOR} distinct concrete event types",
+    idle_types_read,
+)
+idle_disagreements = [
+    (
+        r.get("eventType"),
+        r.get("hardwareSeconds"),
+        r.get("sessionSeconds"),
+    )
+    for r in per_event_type
+    if not (
+        isinstance(r.get("hardwareSeconds"), (int, float))
+        and isinstance(r.get("sessionSeconds"), (int, float))
+        and abs(r["hardwareSeconds"] - r["sessionSeconds"]) <= IDLE_AGREEMENT_TOLERANCE
+    )
+]
+check(
+    not idle_disagreements,
+    f"per concrete event type the two idle states agree within {IDLE_AGREEMENT_TOLERANCE} s",
+    idle_disagreements,
+)
+for r in per_event_type:
+    print(
+        f"note idle {r.get('eventType')}: hid = {r.get('hardwareSeconds')} s   "
+        f"combined = {r.get('sessionSeconds')} s   difference = {r.get('differenceSeconds')} s"
+    )
+# The `~0` sentinel's gap, published and never asserted: it is the signature of a phantom HID
+# reset, it can run to hours in either direction on a machine nobody has touched, and it is the
+# number that explains a verdict rather than a verdict of its own.
 print(
-    f"note idle hardware-minus-session = {idle.get('hardwareMinusSessionSeconds')} s "
-    f"(threshold {idle.get('thresholdSeconds')} s)"
+    f"note idle hardware-minus-session at the ~0 sentinel = "
+    f"{idle.get('hardwareMinusSessionSeconds')} s "
+    f"(hid {idle.get('hardwareSeconds')} s, combined {idle.get('sessionSeconds')} s, "
+    f"threshold {idle.get('thresholdSeconds')} s, isIdle {idle.get('isIdle')})"
 )
 
 # F-35: the quorum's three inputs, recorded whatever the verdict.
