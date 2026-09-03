@@ -324,7 +324,9 @@ public enum SuppressionStack {
             (.sensitiveApplication, sensitivity.clearedActivation == nil),
             // 4 — the session phase (e03, F-99). `.focus` alone.
             (.sessionPhaseForbids, !phase.permitsIntervention),
-            // 5 — the person is away (e03, F-32), by the hardware idle source and their threshold.
+            // 5 — the person is away (e03, F-32), by the longer silence either idle source can
+            // testify to and their threshold (focus-7az: the HID clock alone was resettable by a
+            // device report with no input event behind it, and this gate stayed open).
             (.userIdle, idle.isIdle(threshold: idleThresholdSeconds)),
             // 6 — a microphone or camera is running (e03, F-36), if the user left that switch on.
             (.mediaInUse, mediaSuppressionEnabled && media.suppressesIntervention),

@@ -332,7 +332,7 @@ public enum RelevancePolicy {
     /// conservative.
     public static let detourExtension: Duration = .seconds(90)
 
-    /// **S.** e03 already owns the hardware idle source and its 180-second threshold. A person
+    /// **S.** e03 already owns the two idle sources and their 180-second threshold. A person
     /// who walked away is not drifting, so an idle observation freezes the accumulator rather
     /// than advancing or resetting it.
     public static let idleSuspendsAccumulation = true

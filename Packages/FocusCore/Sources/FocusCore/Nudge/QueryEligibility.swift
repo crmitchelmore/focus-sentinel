@@ -98,7 +98,8 @@ public enum QueryWithholdingReason: String, Sendable, CaseIterable, Codable, Has
     case verdictUnrelated
     /// There is nothing to be off-task *from*.
     case noActivePriority
-    /// The person is away from the keyboard, by e03's hardware idle source.
+    /// The person is away from the keyboard, by the longer silence either of e03's two idle
+    /// sources can testify to (focus-7az).
     case userIdle
     /// The session is on a break, a deliberate detour, paused, interrupted or complete.
     case sessionPhaseForbids

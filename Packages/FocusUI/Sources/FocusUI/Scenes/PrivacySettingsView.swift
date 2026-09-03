@@ -17,9 +17,10 @@ import SwiftUI
 /// banned from the shipping graph by lint (R-33).
 ///
 /// The one limitation that is easy to hide is stated here instead: a person working over Screen
-/// Sharing produces only synthetic input events, so the hardware idle source will consider them
-/// away. That is a real consequence of choosing the more pessimistic of the two idle sources
-/// (R-36), and the honest place for it is the pane about what the app can and cannot see.
+/// Sharing produces only synthetic input events, which never reach the HID counter, so once that
+/// counter has climbed past the threshold the app considers them away whatever the session counter
+/// says. That is a real consequence of taking the longer of the two idle silences (R-36,
+/// focus-7az), and the honest place for it is the pane about what the app can and cannot see.
 public struct PrivacySettingsView: View {
     private let storeURL: URL
     private let summary: SensingSummary

@@ -138,7 +138,10 @@ public struct NudgeSurroundings: Sendable, Equatable {
         self.monotonic = monotonic
     }
 
-    /// Whether the person is away, by e03's pessimistic hardware source and their own threshold.
+    /// Whether the person is away, by the longer silence either idle source can testify to and
+    /// the person's own threshold. It was "e03's pessimistic hardware source"; that source turned
+    /// out to be IOHIDSystem's clock, which a device report resets with no input event behind it
+    /// (focus-7az).
     public var isUserIdle: Bool { idle.isIdle(threshold: idleThresholdSeconds) }
 }
 

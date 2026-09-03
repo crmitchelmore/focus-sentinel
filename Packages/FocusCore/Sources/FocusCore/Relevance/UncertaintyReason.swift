@@ -67,7 +67,8 @@ public enum SuppressionReason: String, Sendable, CaseIterable, Codable, Hashable
     case sessionPhaseForbids
     /// `FocusStatus.permitsIntervention` is `unrelated` alone.
     case statusForbids
-    /// The person is away from the keyboard, by e03's hardware idle source.
+    /// The person is away from the keyboard, by the longer silence either of e03's two idle
+    /// sources can testify to (focus-7az).
     case userIdle
     /// There is nothing to be off-task *from*.
     case noActivePriority

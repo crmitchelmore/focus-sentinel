@@ -700,9 +700,21 @@ final class SensingHost {
         isIdle = sample.isIdle
 
         if let transition = sample.idleTransition {
+            // **The figure the verdict was taken from, under the name of the source it came
+            // from** (focus-7az). This wrote `hardwareIdleSeconds` unconditionally, which was
+            // honest while `isIdle` read the hardware counter alone. It no longer does: a
+            // `userIdle` row can now be caused by the session counter's silence while the HID
+            // clock sits at 105 s because a device report nobody produced reset it. Writing 105
+            // beside "the person went away" would put a number in the timeline that explains
+            // nothing and contradicts the row it is attached to.
+            let reading = sample.reading
+            let hardwareIsTheLongerSilence = reading.hardwareSeconds >= reading.sessionSeconds
             record(
                 kind: transition == .becameIdle ? .userIdle : .userActive,
-                detail: .measurement(.hardwareIdleSeconds, Int(sample.reading.hardwareSeconds))
+                detail: .measurement(
+                    hardwareIsTheLongerSilence ? .hardwareIdleSeconds : .sessionIdleSeconds,
+                    Int(max(reading.hardwareSeconds, reading.sessionSeconds))
+                )
             )
         }
 
