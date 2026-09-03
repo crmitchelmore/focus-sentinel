@@ -363,6 +363,25 @@ public struct EvaluationHarness: Sendable {
 
         for fixture in corpus.days.sorted(by: { $0.id < $1.id }) {
             let transcript = dayHarness.replay(fixture)
+            // **The day lane replayed three whole days and checked nothing about them**
+            // (focus-237). `DayReplayHarness.compare` existed and was called only from the unit
+            // lane, so the shipping gate read three transcripts for their maxima and never asked
+            // whether the day had gone the way its fixture committed. A day that stopped
+            // accusing — day-01 commits one — was invisible here.
+            if let mismatch = dayHarness.compare(fixture, to: transcript) {
+                nudgeFailures.append(
+                    EvaluationFailure(
+                        id: fixture.id,
+                        expected: "\(fixture.expectQueries) question(s), "
+                            + "\(fixture.expectAccusations) rung(s), "
+                            + "\(fixture.expectInterruptions) interruption(s)",
+                        actual: "\(transcript.queryCount) question(s), "
+                            + "\(transcript.accusationCount) rung(s), "
+                            + "\(transcript.interruptionCount) interruption(s)",
+                        note: mismatch.differences.joined(separator: "; ")
+                    )
+                )
+            }
             queriesPerDay.append(transcript.queryCount)
             interruptionsPerDay.append(transcript.interruptionCount)
             queriesPerPriority.append(transcript.queriesForBusiestPriority)

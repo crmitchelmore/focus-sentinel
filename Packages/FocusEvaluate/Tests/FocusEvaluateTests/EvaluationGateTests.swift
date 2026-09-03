@@ -350,7 +350,8 @@ struct EvaluationGateTests {
         queriesPerPriorityMax: Int? = nil,
         queryAnsweredRelevantShare: Double? = nil,
         queryGroundTruthCoverage: Double? = nil,
-        unaskableUncertaintyShare: Double? = nil
+        unaskableUncertaintyShare: Double? = nil,
+        byRung: [(String, Int)]? = nil
     ) -> EvaluationReport {
         let nudge = report.nudge
         return report.replacingNudge(
@@ -378,7 +379,7 @@ struct EvaluationGateTests {
                     ?? nudge.unaskableUncertaintyShare,
                 deferredRungShare: nudge.deferredRungShare,
                 byKind: nudge.byKind,
-                byRung: nudge.byRung,
+                byRung: byRung ?? nudge.byRung,
                 bySurface: nudge.bySurface,
                 byDisposition: nudge.byDisposition,
                 byQueryReason: nudge.byQueryReason,
@@ -391,6 +392,40 @@ struct EvaluationGateTests {
 
     static func failingNames(_ report: EvaluationReport) -> Set<String> {
         Set(EvaluationGate.checks(for: report).filter { !$0.passed }.map(\.name))
+    }
+
+    /// **The floor on the app accusing at all** (focus-237).
+    ///
+    /// Before this floor the evaluation lane had eleven gated nudge metrics and every one of them
+    /// was a ceiling, a zero-equality, or a floor that silence satisfies. The two halves of this
+    /// test are the two halves of that finding: silence the ladder and the gate must go red on
+    /// `byRung.panel` **and on nothing else**, because a silent app was passing all eleven.
+    @Test("silencing the ladder fails the gate on byRung.panel, and on nothing else")
+    func aSilentLadderFailsTheAccusationFloor() throws {
+        let report = try Self.report()
+        #expect(Self.failingNames(report).isEmpty, "the measured report is green to begin with")
+
+        let silent = Self.regressed(
+            report,
+            byRung: report.nudge.byRung.map { ($0.0, 0) }
+        )
+        #expect(
+            Self.failingNames(silent) == ["nudge.byRung.panel"],
+            "a ladder that delivered nothing failed on the floor and on nothing else: \(Self.failingNames(silent).sorted())"
+        )
+
+        // And the floor is not satisfied by some *other* rung going on working: the panel rung is
+        // the one that accuses, so its own count is what is read.
+        let ambientOnly = Self.regressed(
+            report,
+            byRung: report.nudge.byRung.map {
+                ($0.0, $0.0 == LadderRung.Kind.panel.rawValue ? 0 : 99)
+            }
+        )
+        #expect(
+            Self.failingNames(ambientOnly) == ["nudge.byRung.panel"],
+            "a busy ambient rung does not stand in for an accusation"
+        )
     }
 
     /// The five exact-zero metrics, one at a time. Every one of them is a **defect**, and a
@@ -533,7 +568,7 @@ struct EvaluationGateTests {
     /// Twelve gated metrics carrying **thirteen** bounds — the extra bound being the band's lower
     /// end. Counted, so that a metric quietly dropped from the list is a red test rather than a
     /// silently smaller gate.
-    @Test("the nudge gate carries twelve metrics and thirteen bounds")
+    @Test("the nudge gate carries thirteen metrics and fourteen bounds")
     func theNudgeGateIsComplete() throws {
         let report = try Self.report()
         let names = EvaluationGate.checks(for: report)
@@ -555,7 +590,9 @@ struct EvaluationGateTests {
             "nudge.queriesPerPriorityMax",
             "nudge.queryGroundTruthCoverage",
             "nudge.queryAnsweredRelevantShare",
-            "nudge.unaskableUncertaintyShare"
+            "nudge.unaskableUncertaintyShare",
+            // focus-237: the only one of the fifteen that a silent app fails.
+            "nudge.byRung.panel"
         ]
         #expect(Set(names) == expected, "the gated nudge metrics changed")
     }

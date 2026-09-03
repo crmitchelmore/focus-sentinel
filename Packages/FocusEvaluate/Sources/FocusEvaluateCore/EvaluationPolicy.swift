@@ -318,6 +318,24 @@ public enum EvaluationPolicy {
     /// **equal** to `falseNudgeRate` so the split is explicit and the two halves cannot disagree.
     public static let accusationFalsePositiveCeiling: Double = 0
 
+    /// **A floor on the app ACCUSING, because every other nudge metric is satisfied by silence**
+    /// (focus-237).
+    ///
+    /// Measured on the shipping corpus at HEAD: all eleven gated nudge metrics are a ceiling, a
+    /// zero-equality, or a floor a silent app meets — `accusationFalsePositiveRate == 0`,
+    /// `accusationsFromQuery == 0`, `queryVolumeRate <= 0.17`, and so on down to
+    /// `queryGroundTruthCoverage >= 1.0`, whose own comment says it "fails closed" and which for
+    /// a silent app fails **open**, because `owedLabel == 0` returns the floor itself. So an app
+    /// that had stopped accusing altogether passed the evaluation lane with eleven green metrics.
+    ///
+    /// One, not "several": this is the line between an app that accuses and an app that does not,
+    /// and a bigger number would be this file choosing how loud the product is, which is
+    /// `InterventionPolicy`'s job and the day fixtures' job. The days carry the shape — day-01
+    /// commits one accusation, day-02 and day-03 commit none — and `measureNudge` now compares
+    /// every replayed day against what its fixture claims, so a day that went silent is a named
+    /// failure rather than a number that moved.
+    public static let accusationsDeliveredFloor = 1
+
     /// **A volume ceiling, and it is named for what it measures** (R-94a, finding 2).
     ///
     /// Renamed from `queryRate` in adversarial review because the old name claimed a measurement

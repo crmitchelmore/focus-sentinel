@@ -181,7 +181,7 @@ public enum EvaluationGate {
         return checks
     }
 
-    /// **The split metric** (R-94, R-94a, §4.4): twelve gated metrics carrying thirteen bounds.
+    /// **The split metric** (R-94, R-94a, §4.4): thirteen gated metrics carrying fourteen bounds.
     ///
     /// The thirteenth bound is `queryAnsweredRelevantShare`'s lower end. It is a **band**, not a
     /// ceiling, and the reason is recorded here because it is the one place somebody would think
@@ -243,6 +243,20 @@ public enum EvaluationGate {
             "ladderRungsDeclared", "== \(InterventionPolicy.ladderRungCount)",
             "\(nudge.ladderRungsDeclared)",
             nudge.ladderRungsDeclared == InterventionPolicy.ladderRungCount
+        )
+
+        // --- the floor on the app opening its mouth at all (focus-237) ------------------------
+        //
+        // Every check above this line is satisfied by an application that never accuses anybody.
+        // This is the one that is not. It reads the panel rung's own count out of `byRung`, which
+        // the report has always published and the gate has never named.
+        let accusationsDelivered = nudge.byRung
+            .first { $0.0 == LadderRung.Kind.panel.rawValue }?.1 ?? 0
+        check(
+            "byRung.panel",
+            ">= \(EvaluationPolicy.accusationsDeliveredFloor) (a FLOOR — every other nudge metric passes for a silent app)",
+            "\(accusationsDelivered)",
+            accusationsDelivered >= EvaluationPolicy.accusationsDeliveredFloor
         )
 
         // --- the volume ceilings ------------------------------------------------------------
