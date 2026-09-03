@@ -24,6 +24,10 @@ only to `/private/tmp/mw/`. No tracked file is touched, and nothing here is ever
 | **H-LOG** | a copy of a log | `source <(sed -n '/^stage_name() {/,/^}/p' scripts/build-gate.sh)` with `LOG_DIR` and `DD` pointed at the copies |
 | **H-SRC** | a throwaway worktree | `git worktree add --detach`, edit there, run the stage from that worktree |
 
+The R-168 round (e10a) added a seventh driver, `/private/tmp/mw2/run.zsh`, and with it the two
+copies of `self-check.sh` the H-JSON rows for that round are run against; `/private/tmp/mw2/pk/`
+holds the `published-keys` stage's own copy, with its own `Config/`.
+
 The scripts that drive them are `/private/tmp/mw/run-selfcheck-tzj-witnesses.zsh` (SC-46..SC-61),
 `/private/tmp/mw/run-sc-e06.zsh` (SC-71..SC-78, e06's model tier — it needs the self-check's own
 side artefacts, which the script deletes on exit, so it is pointed at a run of a copy with the
@@ -41,16 +45,17 @@ it to be green: a red line means nothing if the clean run was red too.
 
 | stage | assertions witnessed | PROVEN | CANNOT-GO-RED |
 |---|---|---|---|
-| `selfcheck-debug` / `selfcheck-release` | 127 | 127 | — |
+| `selfcheck-debug` / `selfcheck-release` | 151 | 151 | — |
 | `notification-denied` (+ Release twin) | 17 | 17 | — |
 | `focus-steal` (+ Release twin) | 14 | 14 | — |
 | `forbidden-binary` | 6 | 6 | — |
 | `boundaries-binary` | 9 | 9 | 1 (the row literal, superseded by B-14/B-15) |
+| `published-keys` | 7 | 7 | — |
 | `packaging` | 6 | 6 | — |
 | `unit-counts` | 5 | 5 | — |
 | `evaluation` (B1–B5) | 9 | 9 | — |
 | `entitlements-debug` / `entitlements-release` | 6 | 6 | 2 (seven restatement lines; one unreachable branch) |
-| **total** | **190** | **190** | **3 findings** |
+| **total** | **221** | **221** | **3 findings** |
 
 The seven rows the gate audit named as unable to go red are all fallible now, and each was run:
 `self-check.sh`'s popover overflow (SC-37, SC-38) and its committed width (SC-39, SC-40),
@@ -69,67 +74,67 @@ H-JSON on a copy of the RELEASE report. Both stages run the same reader; the Rel
 
 | # | script:line | mutation (H-JSON) | control | status — the line it printed |
 |---|---|---|---|---|
-| SC-01 | `self-check.sh:1809` | `report["capabilityStatesDeclared"].append("pending")` | SC-05 — the matrix is not one answer twelve times | **PROVEN** — `FAIL: the capability vocabulary is the committed five, in order and with nothing else in it` |
-| SC-02 | `self-check.sh:1779` | `report["capabilities"].pop()` | SC-05 | **PROVEN** — `FAIL: all twelve capabilities are reported, in order` |
-| SC-03 | `self-check.sh:1887` | `[c.update(state="available") for c in report["capabilities"] if c["capability"] == "cameraActivity"]` | SC-05 | **PROVEN** — `FAIL: cameraActivity is unavailable, which is a decision of this build` |
-| SC-04 | `self-check.sh:1900` | `[c.update(state="unavailable") for c in report["capabilities"] if c["capability"] == "windowMetadata"]` | SC-05 | **PROVEN** — `FAIL: windowMetadata is available, which is what this machine's own reading says` |
-| SC-05 | `self-check.sh:1909` | `[c.update(state="available") for c in report["capabilities"]]` | is itself the control for SC-01..SC-04 | **PROVEN** — `FAIL: the matrix the app reported is not one answer repeated twelve times` |
-| SC-06 | `self-check.sh:1968` | `report["authorisationSurfaceScan"]["windowsOwnedByThisProcess"] = 0` | `taken()` routes the scan (SC-35/SC-36 floors) | **PROVEN** — `FAIL: the scan listed a window belonging to this very process, so the instrument can see` |
-| SC-07 | `self-check.sh:1985` | `report["authorisationSurfaces"] = ["a dialog"]` | SC-06 | **PROVEN** — `FAIL: the root's summary of the scan is the scan` |
-| SC-08 | `self-check.sh:2251` | `report["notificationAuthorisationDecodeTable"] = report["notificationAuthorisationDecodeTable"].replace("denied", "authorised", 1)` | SC-09 — the cell count cannot be shrunk with the table | **PROVEN** — `FAIL: the running boundary decodes every raw status exactly as the committed table says` |
-| SC-09 | `self-check.sh:2246` | `report["notificationAuthorisationDecodeCells"] = 3` | is the control for SC-08 | **PROVEN** — `FAIL: the boundary folded all 11 raw statuses it can be handed` |
-| SC-10 | `self-check.sh:2215` | `report["notificationAuthorisationReads"] = 0` | SC-11, SC-12 | **PROVEN** — `FAIL: getNotificationSettings was really read: at least one completion landed` |
-| SC-11 | `self-check.sh:2229` | `report["notificationAuthorisationWasRead"] = False` | SC-10 | **PROVEN** — `FAIL: the report waited for that read rather than racing it` |
-| SC-12 | `self-check.sh:2234` | `report["notificationAuthorisation"] = "unread"` | SC-10 | **PROVEN** — `FAIL: the run had a decoded authorisation in hand rather than the absence of one` |
-| SC-13 | `self-check.sh:2421` | `report["nudge"]["dispositionsDeclared"].pop()` | the harness runs the unmutated copy first: `CONTROL … GREEN (EXIT=0)` | **PROVEN** — `FAIL: the record's dispositions are exactly these four, one of which is a badge nobody opened` |
-| SC-14 | `self-check.sh:2645` | `report["nudge"]["questionExitsDeclared"].pop()` | the harness runs the unmutated copy first: `CONTROL … GREEN (EXIT=0)` | **PROVEN** — `FAIL: every way an open question can end is enumerated, and they are exactly these five` |
-| SC-15 | `self-check.sh:2683` | `report["nudge"]["rungExitsDeclared"].pop()` | the harness runs the unmutated copy first: `CONTROL … GREEN (EXIT=0)` | **PROVEN** — `FAIL: every way a delivered rung can end is enumerated, and they are exactly these six` |
-| SC-16 | `self-check.sh:2729` | `report["nudge"]["ladderStatesDeclared"].pop()` | the harness runs the unmutated copy first: `CONTROL … GREEN (EXIT=0)` | **PROVEN** — `FAIL: every state the ladder can be in is a folded, named case` |
-| SC-17 | `self-check.sh:2735` | `report["nudge"]["ladderSilencesDeclared"].pop()` | the harness runs the unmutated copy first: `CONTROL … GREEN (EXIT=0)` | **PROVEN** — `FAIL: every reason the ladder has for having nothing to climb to is enumerated` |
-| SC-18 | `self-check.sh:2710` | `report["nudge"]["rungExitsCountingAnIgnoredAccusation"].append("answered")` | the harness runs the unmutated copy first: `CONTROL … GREEN (EXIT=0)` | **PROVEN** — `FAIL: exactly the endings the person authored advance the two ignored-accusation runs` |
-| SC-19 | `self-check.sh:2662` | `report["nudge"]["questionExitsWritingAnExpiry"].append("answered")` | the harness runs the unmutated copy first: `CONTROL … GREEN (EXIT=0)` | **PROVEN** — `FAIL: exactly the exit that means the world ended it writes the question down` |
-| SC-20 | `self-check.sh:2696` | `report["nudge"]["rungExitsTakingBackTheDelivery"].append("answered")` | the harness runs the unmutated copy first: `CONTROL … GREEN (EXIT=0)` | **PROVEN** — `FAIL: exactly the endings where the app took the surface away un-deliver the rung` |
-| SC-21 | `self-check.sh:2745` | `report["nudge"]["ladderSilencesRetainingTheGlyph"].append("toppedOut")` | the harness runs the unmutated copy first: `CONTROL … GREEN (EXIT=0)` | **PROVEN** — `FAIL: exactly the ladder's refusals still owe the person the rung that says nothing` |
-| SC-22 | `self-check.sh:2491` | `n = report["nudge"]; n["fatigueRefusalsPassingTheGlyph"].remove("cooldown"); n["fatigueRefusalsSilencingTheGlyph"].append("cooldown")` | SC-23 — the partition identity holds while the literals move | **PROVEN** — `FAIL: the only fatigue refusal that stops the glyph is the person saying it is real work` |
-| SC-23 | `self-check.sh:2523` | `report["nudge"]["fatigueRefusalsDeclared"].append("seventhRefusal")` | SC-22 — the literals hold while the identity breaks | **PROVEN** — `FAIL: the three fatigue readings partition the declared refusals: each one in exactly one part` |
-| SC-24 | `self-check.sh:2562` | `report["nudge"]["budgetAfterADayOfLandingsRungs"].append("badge")` | the harness runs the unmutated copy first: `CONTROL … GREEN (EXIT=0)` | **PROVEN** — `FAIL: this script prices exactly the rungs the ladder declares` |
-| SC-25 | `self-check.sh:2576` | `report["nudge"]["budgetAfterADayOfLandings"]["panel"]["chargesFolded"] = 0` | SC-26 — one rung's day costs nothing and another's the whole day | **PROVEN** — `FAIL: a day of panel landings builds every landing charge(s) — stated, never inferred from an empty budget` |
-| SC-26 | `self-check.sh:2594` | `d = report["nudge"]["budgetAfterADayOfLandings"]; [d[r].update(chargesFolded=0, interruptionsToday=0) for r in d]` | is the control for SC-24/SC-25 | **PROVEN** — `FAIL: the table discriminates: one rung's day costs nothing and another's costs the whole day` |
-| SC-27 | `self-check.sh:2833` | `report["nudge"]["surfacesARungCanReachCellsChecked"] = 80` | SC-28 — conservation | **PROVEN** — `FAIL: the surfaces-a-rung-reaches fold covers all 160 cells rather than two` |
-| SC-28 | `self-check.sh:2844` | `report["nudge"]["surfacesARungCanReachCellsDelivered"] -= 1` | SC-27 — the cell count | **PROVEN** — `FAIL: every cell of the every-rung fold either reached a surface or deferred` |
-| SC-29 | `self-check.sh:2903` | `report["nudge"]["accusationRouteCellsChecked"] = 40` | SC-30 — conservation | **PROVEN** — `FAIL: the accusation-route fold covers all 80 cells rather than a subset` |
-| SC-30 | `self-check.sh:2923` | `report["nudge"]["accusationRouteCellsDelivered"] -= 1` | SC-29 — the cell count | **PROVEN** — `FAIL: every cell of the accusation-route fold either reached a surface or deferred` |
-| SC-31 | `self-check.sh:2932` | `n = report["nudge"]; short = 23; n["accusationRouteCellsDeferred"] += n["accusationRouteCellsDelivered"] - short; n["accusationRouteCellsDelivered"] = short` | SC-29/SC-30 | **PROVEN** — `FAIL: at least 24 of the fold's cells reach a surface, so the answerability verdict is a claim about something` |
-| SC-32 | `self-check.sh:2861` | `report["nudge"]["surfacesOfferingAnAnswer"].append("notification")` | SC-27/SC-28 precede the verdict | **PROVEN** — `FAIL: exactly the two in-app decision surfaces offer the person a way to answer back` |
-| SC-33 | `self-check.sh:2866` | `report["nudge"]["surfacesARungCanReach"].append("notification")` | SC-27/SC-28 precede the verdict | **PROVEN** — `FAIL: over the whole input space a rung reaches the glyph, the panel and the badge — and nothing else, so no rung reaches a notification` |
-| SC-34 | `self-check.sh:2980` | `report["nudge"]["surfacesAQuestionCanReach"].append("notification")` | SC-43 precedes the verdict | **PROVEN** — `FAIL: over the whole input space a question reaches the panel and the badge, and nothing else — so no question reaches the glyph and none reaches a notification` |
-| SC-35 | `self-check.sh:3294` | `report["fooWasTaken"] = True` | SC-36 — the five-fact floor | **PROVEN** — `FAIL: every reading that can be unavailable is routed through the one NOT-TAKEN mechanism` |
-| SC-36 | `self-check.sh:3313` | `del report["nudge"]["panel"]["deltaReadingWasTaken"]` | is the control for SC-35 | **PROVEN** — `FAIL: every probe that may be unavailable still publishes whether its reading was taken` |
-| SC-37 | `self-check.sh:2353` | `report["nudge"]["popover"]["overflowsDeclared"].remove("theContextScrolls")` | SC-38 — a value outside the published list | **PROVEN** — `FAIL: every way the popover can give way is a folded, named case` |
-| SC-38 | `self-check.sh:2361` | `report["nudge"]["popover"]["fullest"]["overflow"] = "somethingElseEntirely"` | SC-37 — the published list itself | **PROVEN** — `FAIL: the fullest popover says which way it gives way` |
-| SC-39 | `self-check.sh:2321` | `report["nudge"]["popover"]["fullest"]["width"] += 5` | SC-40 — the binary's own verdict must agree | **PROVEN** — `FAIL: the fullest popover is laid out at the committed width, at any priority length` |
-| SC-40 | `self-check.sh:2326` | `report["nudge"]["popover"]["fullest"]["isTheCommittedWidth"] = False` | SC-39 — the arithmetic taken here | **PROVEN** — `FAIL: the popover's own width verdict agrees with the width it reported` |
-| SC-41 | `self-check.sh:2366` | `p = report["nudge"]["popover"]["empty"]; p["scrolls"] = not p["scrolls"]` | SC-37/SC-38 | **PROVEN** — `FAIL: the empty popover's scroll flag and its overflow are one fact` |
-| SC-42 | `self-check.sh:2964` | `report["nudge"]["querySurface"] = "notification"` | the harness runs the unmutated copy first: `CONTROL … GREEN (EXIT=0)` | **PROVEN** — `FAIL: the row the settings pane describes routes a question to the panel` |
-| SC-43 | `self-check.sh:2972` | `report["nudge"]["surfacesAQuestionCanReachCellsChecked"] = 40` | the harness runs the unmutated copy first: `CONTROL … GREEN (EXIT=0)` | **PROVEN** — `FAIL: the surfaces-a-question-reaches fold covers all 80 cells rather than one` |
-| SC-44 | `self-check.sh:2272` | `report["nudge"]["orphanedNudgeSurfaces"] = ["panel"]` | the harness runs the unmutated copy first: `CONTROL … GREEN (EXIT=0)` | **PROVEN** — `FAIL: no surface is offering a nudge the loop has forgotten, of either kind` |
-| SC-45 | `self-check.sh:2938` | `report["nudge"]["everyAccusationRouteCanBeAnswered"] = False` | the harness runs the unmutated copy first: `CONTROL … GREEN (EXIT=0)` | **PROVEN** — `FAIL: every accusation route offers the person a way to answer back` |
-| SC-46 | `self-check.sh:2479` | `report["nudge"]["popover"]["rebuild"]["unchangedTicks"] = 0` | SC-47/SC-48 — the ceilings they state are about ticks this row requires to exist | **PROVEN** — `FAIL: the popover rebuild survey really ticked, and most of its ticks changed nothing` |
-| SC-47 | `self-check.sh:2484` | `report["nudge"]["popover"]["rebuild"]["buildsOnUnchangedTicks"] = 1` | SC-46 — the survey really ticked | **PROVEN** — `FAIL: a tick that changes nothing rebuilds nothing` |
-| SC-48 | `self-check.sh:2491` | `r = report["nudge"]["popover"]["rebuild"]; r["contentBuilds"] = r["presentationChanges"] + 1` | SC-49 — the hosting identity moves with it | **PROVEN** — `FAIL: the popover's content is built at most once per presentation change` |
-| SC-49 | `self-check.sh:2502` | `report["nudge"]["popover"]["rebuild"]["hostingConstructions"] += 1` | SC-48 — the build count itself | **PROVEN** — `FAIL: each popover build costs three hosting controllers, and nothing else builds one` |
-| SC-50 | `self-check.sh:2526` | `report["nudge"]["tickFetches"]["available"] = False` | SC-51 — the per-state rows are read from the same object | **PROVEN** — `FAIL: the per-tick fetch survey ran` |
-| SC-51 | `self-check.sh:2543` | `report["nudge"]["tickFetches"]["noCommitment"]["firstTickFetches"] = 0` | SC-52/SC-53 — the ceilings it makes readable | **PROVEN** — `FAIL: the noCommitment tick survey really ticked, and its first tick really fetched` |
-| SC-52 | `self-check.sh:2550` | `r = report["nudge"]["tickFetches"]["noCommitment"]; r["fetchesOverSteadyTicks"] = 2 * r["steadyTicks"] + 1` | SC-51 — the survey really ticked | **PROVEN** — `FAIL: a quiet noCommitment tick costs at most two fetches` |
-| SC-53 | `self-check.sh:2558` | `report["nudge"]["tickFetches"]["noCommitment"]["nudgeFetchesOverSteadyTicks"] = 1` | SC-51 | **PROVEN** — `FAIL: the nudge half of a quiet noCommitment tick goes to the store not at all` |
-| SC-54 | `self-check.sh:2563` | `report["nudge"]["tickFetches"]["commitmentPopoverOpen"]["popoverFetchesOverSteadyTicks"] = 1` | SC-51 | **PROVEN** — `FAIL: building the popover's content on a commitmentPopoverOpen tick touches no store` |
-| SC-55 | `self-check.sh:2177` | `report["retention"]["windowDays"] = 30` | SC-59 — the seeded sweep cuts where the window says | **PROVEN** — `FAIL: the committed retention window is ninety days` |
-| SC-56 | `self-check.sh:2184` | `report["retention"]["ranAtLaunch"] = False` | SC-58 — the seeded half still runs | **PROVEN** — `FAIL: the retention sweep ran at launch and says which local day it ran on` |
-| SC-57 | `self-check.sh:2189` | `report["retention"]["rowsRemoved"] = -1` | SC-56 | **PROVEN** — `FAIL: the launch sweep says how many rows it removed` |
-| SC-58 | `self-check.sh:2196` | `report["retention"]["seedAvailable"] = False` | SC-56 — the launch half is unaffected | **PROVEN** — `FAIL: the seeded retention sweep ran` |
-| SC-59 | `self-check.sh:2202` | `report["retention"]["seededActivityEventsRemoved"] = 2` | SC-60 — the intervention half holds while this moves | **PROVEN** — `FAIL: an activity event at 91 days goes and one at 89 stays` |
-| SC-60 | `self-check.sh:2208` | `report["retention"]["seededInterventionRowsKept"] = 0` | SC-59 | **PROVEN** — `FAIL: an intervention row at 91 days goes and one at 89 stays` |
-| SC-61 | `self-check.sh:2217` | `report["retention"]["seededQueryReceiptsRemoved"] = 1` | SC-59/SC-60 — the two age-only tables hold while the receipt rule breaks | **PROVEN** — `FAIL: a 91-day-old receipt under a live priority survives the window` |
+| SC-01 | `self-check.sh:2405` | `report["capabilityStatesDeclared"].append("pending")` | SC-05 — the matrix is not one answer twelve times | **PROVEN** — `FAIL: the capability vocabulary is the committed five, in order and with nothing else in it` |
+| SC-02 | `self-check.sh:2375` | `report["capabilities"].pop()` | SC-05 | **PROVEN** — `FAIL: all twelve capabilities are reported, in order` |
+| SC-03 | `self-check.sh:2497` | `[c.update(state="available") for c in report["capabilities"] if c["capability"] == "cameraActivity"]` | SC-05 | **PROVEN** — `FAIL: cameraActivity is unavailable, which is a decision of this build` |
+| SC-04 | `self-check.sh:2510` | `[c.update(state="unavailable") for c in report["capabilities"] if c["capability"] == "windowMetadata"]` | SC-05 | **PROVEN** — `FAIL: windowMetadata is available, which is what this machine's own reading says` |
+| SC-05 | `self-check.sh:2519` | `[c.update(state="available") for c in report["capabilities"]]` | is itself the control for SC-01..SC-04 | **PROVEN** — `FAIL: the matrix the app reported is not one answer repeated twelve times` |
+| SC-06 | `self-check.sh:2578` | `report["authorisationSurfaceScan"]["windowsOwnedByThisProcess"] = 0` | `taken()` routes the scan (SC-35/SC-36 floors) | **PROVEN** — `FAIL: the scan listed a window belonging to this very process, so the instrument can see` |
+| SC-07 | `self-check.sh:2594` | `report["authorisationSurfaces"] = ["a dialog"]` | SC-06 | **PROVEN** — `FAIL: the root's summary of the scan is the scan` |
+| SC-08 | `self-check.sh:3150` | `report["notificationAuthorisationDecodeTable"] = report["notificationAuthorisationDecodeTable"].replace("denied", "authorised", 1)` | SC-09 — the cell count cannot be shrunk with the table | **PROVEN** — `FAIL: the running boundary decodes every raw status exactly as the committed table says` |
+| SC-09 | `self-check.sh:3145` | `report["notificationAuthorisationDecodeCells"] = 3` | is the control for SC-08 | **PROVEN** — `FAIL: the boundary folded all 11 raw statuses it can be handed` |
+| SC-10 | `self-check.sh:3114` | `report["notificationAuthorisationReads"] = 0` | SC-11, SC-12 | **PROVEN** — `FAIL: getNotificationSettings was really read: at least one completion landed` |
+| SC-11 | `self-check.sh:3128` | `report["notificationAuthorisationWasRead"] = False` | SC-10 | **PROVEN** — `FAIL: the report waited for that read rather than racing it` |
+| SC-12 | `self-check.sh:3133` | `report["notificationAuthorisation"] = "unread"` | SC-10 | **PROVEN** — `FAIL: the run had a decoded authorisation in hand rather than the absence of one` |
+| SC-13 | `self-check.sh:3439` | `report["nudge"]["dispositionsDeclared"].pop()` | the harness runs the unmutated copy first: `CONTROL … GREEN (EXIT=0)` | **PROVEN** — `FAIL: the record's dispositions are exactly these four, one of which is a badge nobody opened` |
+| SC-14 | `self-check.sh:3663` | `report["nudge"]["questionExitsDeclared"].pop()` | the harness runs the unmutated copy first: `CONTROL … GREEN (EXIT=0)` | **PROVEN** — `FAIL: every way an open question can end is enumerated, and they are exactly these five` |
+| SC-15 | `self-check.sh:3700` | `report["nudge"]["rungExitsDeclared"].pop()` | the harness runs the unmutated copy first: `CONTROL … GREEN (EXIT=0)` | **PROVEN** — `FAIL: every way a delivered rung can end is enumerated, and they are exactly these six` |
+| SC-16 | `self-check.sh:3749` | `report["nudge"]["ladderStatesDeclared"].pop()` | the harness runs the unmutated copy first: `CONTROL … GREEN (EXIT=0)` | **PROVEN** — `FAIL: every state the ladder can be in is a folded, named case` |
+| SC-17 | `self-check.sh:3754` | `report["nudge"]["ladderSilencesDeclared"].pop()` | the harness runs the unmutated copy first: `CONTROL … GREEN (EXIT=0)` | **PROVEN** — `FAIL: every reason the ladder has for having nothing to climb to is enumerated` |
+| SC-18 | `self-check.sh:3730` | `report["nudge"]["rungExitsCountingAnIgnoredAccusation"].append("answered")` | the harness runs the unmutated copy first: `CONTROL … GREEN (EXIT=0)` | **PROVEN** — `FAIL: exactly the endings the person authored advance the two ignored-accusation runs` |
+| SC-19 | `self-check.sh:3682` | `report["nudge"]["questionExitsWritingAnExpiry"].append("answered")` | the harness runs the unmutated copy first: `CONTROL … GREEN (EXIT=0)` | **PROVEN** — `FAIL: exactly the exit that means the world ended it writes the question down` |
+| SC-20 | `self-check.sh:3716` | `report["nudge"]["rungExitsTakingBackTheDelivery"].append("answered")` | the harness runs the unmutated copy first: `CONTROL … GREEN (EXIT=0)` | **PROVEN** — `FAIL: exactly the endings where the app took the surface away un-deliver the rung` |
+| SC-21 | `self-check.sh:3765` | `report["nudge"]["ladderSilencesRetainingTheGlyph"].append("toppedOut")` | the harness runs the unmutated copy first: `CONTROL … GREEN (EXIT=0)` | **PROVEN** — `FAIL: exactly the ladder's refusals still owe the person the rung that says nothing` |
+| SC-22 | `self-check.sh:3511` | `n = report["nudge"]; n["fatigueRefusalsPassingTheGlyph"].remove("cooldown"); n["fatigueRefusalsSilencingTheGlyph"].append("cooldown")` | SC-23 — the partition identity holds while the literals move | **PROVEN** — `FAIL: the only fatigue refusal that stops the glyph is the person saying it is real work` |
+| SC-23 | `self-check.sh:3542` | `report["nudge"]["fatigueRefusalsDeclared"].append("seventhRefusal")` | SC-22 — the literals hold while the identity breaks | **PROVEN** — `FAIL: the three fatigue readings partition the declared refusals: each one in exactly one part` |
+| SC-24 | `self-check.sh:3581` | `report["nudge"]["budgetAfterADayOfLandingsRungs"].append("badge")` | the harness runs the unmutated copy first: `CONTROL … GREEN (EXIT=0)` | **PROVEN** — `FAIL: this script prices exactly the rungs the ladder declares` |
+| SC-25 | `self-check.sh:3596` | `report["nudge"]["budgetAfterADayOfLandings"]["panel"]["chargesFolded"] = 0` | SC-26 — one rung's day costs nothing and another's the whole day | **PROVEN** — `FAIL: a day of panel landings builds every landing charge(s) — stated, never inferred from an empty budget` |
+| SC-26 | `self-check.sh:3611` | `d = report["nudge"]["budgetAfterADayOfLandings"]; [d[r].update(chargesFolded=0, interruptionsToday=0) for r in d]` | is the control for SC-24/SC-25 | **PROVEN** — `FAIL: the table discriminates: one rung's day costs nothing and another's costs the whole day` |
+| SC-27 | `self-check.sh:3855` | `report["nudge"]["surfacesARungCanReachCellsChecked"] = 80` | SC-28 — conservation | **PROVEN** — `FAIL: the surfaces-a-rung-reaches fold covers all 160 cells rather than two` |
+| SC-28 | `self-check.sh:3864` | `report["nudge"]["surfacesARungCanReachCellsDelivered"] -= 1` | SC-27 — the cell count | **PROVEN** — `FAIL: every cell of the every-rung fold either reached a surface or deferred` |
+| SC-29 | `self-check.sh:3925` | `report["nudge"]["accusationRouteCellsChecked"] = 40` | SC-30 — conservation | **PROVEN** — `FAIL: the accusation-route fold covers all 80 cells rather than a subset` |
+| SC-30 | `self-check.sh:3948` | `report["nudge"]["accusationRouteCellsDelivered"] -= 1` | SC-29 — the cell count | **PROVEN** — `FAIL: every cell of the accusation-route fold either reached a surface or deferred` |
+| SC-31 | `self-check.sh:3959` | `n = report["nudge"]; short = 23; n["accusationRouteCellsDeferred"] += n["accusationRouteCellsDelivered"] - short; n["accusationRouteCellsDelivered"] = short` | SC-29/SC-30 | **PROVEN** — `FAIL: at least 24 of the fold's cells reach a surface, so the answerability verdict is a claim about something` |
+| SC-32 | `self-check.sh:3883` | `report["nudge"]["surfacesOfferingAnAnswer"].append("notification")` | SC-27/SC-28 precede the verdict | **PROVEN** — `FAIL: exactly the two in-app decision surfaces offer the person a way to answer back` |
+| SC-33 | `self-check.sh:3888` | `report["nudge"]["surfacesARungCanReach"].append("notification")` | SC-27/SC-28 precede the verdict | **PROVEN** — `FAIL: over the whole input space a rung reaches the glyph, the panel and the badge — and nothing else, so no rung reaches a notification` |
+| SC-34 | `self-check.sh:4007` | `report["nudge"]["surfacesAQuestionCanReach"].append("notification")` | SC-43 precedes the verdict | **PROVEN** — `FAIL: over the whole input space a question reaches the panel and the badge, and nothing else — so no question reaches the glyph and none reaches a notification` |
+| SC-35 | `self-check.sh:5019` | `report["fooWasTaken"] = True` | SC-36 — the five-fact floor | **PROVEN** — `FAIL: every reading that can be unavailable is routed through the one NOT-TAKEN mechanism` |
+| SC-36 | `self-check.sh:5041` | `del report["nudge"]["panel"]["deltaReadingWasTaken"]` | is the control for SC-35 | **PROVEN** — `FAIL: every probe that may be unavailable still publishes whether its reading was taken` |
+| SC-37 | `self-check.sh:3252` | `report["nudge"]["popover"]["overflowsDeclared"].remove("theContextScrolls")` | SC-38 — a value outside the published list | **PROVEN** — `FAIL: every way the popover can give way is a folded, named case` |
+| SC-38 | `self-check.sh:3260` | `report["nudge"]["popover"]["fullest"]["overflow"] = "somethingElseEntirely"` | SC-37 — the published list itself | **PROVEN** — `FAIL: the fullest popover says which way it gives way` |
+| SC-39 | `self-check.sh:3220` | `report["nudge"]["popover"]["fullest"]["width"] += 5` | SC-40 — the binary's own verdict must agree | **PROVEN** — `FAIL: the fullest popover is laid out at the committed width, at any priority length` |
+| SC-40 | `self-check.sh:3225` | `report["nudge"]["popover"]["fullest"]["isTheCommittedWidth"] = False` | SC-39 — the arithmetic taken here | **PROVEN** — `FAIL: the popover's own width verdict agrees with the width it reported` |
+| SC-41 | `self-check.sh:3265` | `p = report["nudge"]["popover"]["empty"]; p["scrolls"] = not p["scrolls"]` | SC-37/SC-38 | **PROVEN** — `FAIL: the empty popover's scroll flag and its overflow are one fact` |
+| SC-42 | `self-check.sh:3991` | `report["nudge"]["querySurface"] = "notification"` | the harness runs the unmutated copy first: `CONTROL … GREEN (EXIT=0)` | **PROVEN** — `FAIL: the row the settings pane describes routes a question to the panel` |
+| SC-43 | `self-check.sh:3999` | `report["nudge"]["surfacesAQuestionCanReachCellsChecked"] = 40` | the harness runs the unmutated copy first: `CONTROL … GREEN (EXIT=0)` | **PROVEN** — `FAIL: the surfaces-a-question-reaches fold covers all 80 cells rather than one` |
+| SC-44 | `self-check.sh:3171` | `report["nudge"]["orphanedNudgeSurfaces"] = ["panel"]` | the harness runs the unmutated copy first: `CONTROL … GREEN (EXIT=0)` | **PROVEN** — `FAIL: no surface is offering a nudge the loop has forgotten, of either kind` |
+| SC-45 | `self-check.sh:3965` | `report["nudge"]["everyAccusationRouteCanBeAnswered"] = False` | the harness runs the unmutated copy first: `CONTROL … GREEN (EXIT=0)` | **PROVEN** — `FAIL: every accusation route offers the person a way to answer back` |
+| SC-46 | `self-check.sh:3307` | `report["nudge"]["popover"]["rebuild"]["unchangedTicks"] = 0` | SC-47/SC-48 — the ceilings they state are about ticks this row requires to exist | **PROVEN** — `FAIL: the popover rebuild survey really ticked, and most of its ticks changed nothing` |
+| SC-47 | `self-check.sh:3316` | `report["nudge"]["popover"]["rebuild"]["buildsOnUnchangedTicks"] = 1` | SC-46 — the survey really ticked | **PROVEN** — `FAIL: a tick that changes nothing rebuilds nothing` |
+| SC-48 | `self-check.sh:3321` | `r = report["nudge"]["popover"]["rebuild"]; r["contentBuilds"] = r["presentationChanges"] + 1` | SC-49 — the hosting identity moves with it | **PROVEN** — `FAIL: the popover's content is built at most once per presentation change` |
+| SC-49 | `self-check.sh:3331` | `report["nudge"]["popover"]["rebuild"]["hostingConstructions"] += 1` | SC-48 — the build count itself | **PROVEN** — `FAIL: each popover build costs three hosting controllers, and nothing else builds one` |
+| SC-50 | `self-check.sh:3358` | `report["nudge"]["tickFetches"]["available"] = False` | SC-51 — the per-state rows are read from the same object | **PROVEN** — `FAIL: the per-tick fetch survey ran` |
+| SC-51 | `self-check.sh:3374` | `report["nudge"]["tickFetches"]["noCommitment"]["firstTickFetches"] = 0` | SC-52/SC-53 — the ceilings it makes readable | **PROVEN** — `FAIL: the noCommitment tick survey really ticked, and its first tick really fetched` |
+| SC-52 | `self-check.sh:3380` | `r = report["nudge"]["tickFetches"]["noCommitment"]; r["fetchesOverSteadyTicks"] = 2 * r["steadyTicks"] + 1` | SC-51 — the survey really ticked | **PROVEN** — `FAIL: a quiet noCommitment tick costs at most two fetches` |
+| SC-53 | `self-check.sh:3390` | `report["nudge"]["tickFetches"]["noCommitment"]["nudgeFetchesOverSteadyTicks"] = 1` | SC-51 | **PROVEN** — `FAIL: the nudge half of a quiet noCommitment tick goes to the store not at all` |
+| SC-54 | `self-check.sh:3395` | `report["nudge"]["tickFetches"]["commitmentPopoverOpen"]["popoverFetchesOverSteadyTicks"] = 1` | SC-51 | **PROVEN** — `FAIL: building the popover's content on a commitmentPopoverOpen tick touches no store` |
+| SC-55 | `self-check.sh:2871` | `report["retention"]["windowDays"] = 30` | SC-59 — the seeded sweep cuts where the window says | **PROVEN** — `FAIL: the committed retention window is ninety days` |
+| SC-56 | `self-check.sh:2876` | `report["retention"]["ranAtLaunch"] = False` | SC-58 — the seeded half still runs | **PROVEN** — `FAIL: the retention sweep ran at launch and says which local day it ran on` |
+| SC-57 | `self-check.sh:2883` | `report["retention"]["rowsRemoved"] = -1` | SC-56 | **PROVEN** — `FAIL: the launch sweep says how many rows it removed` |
+| SC-58 | `self-check.sh:2890` | `report["retention"]["seedAvailable"] = False` | SC-56 — the launch half is unaffected | **PROVEN** — `FAIL: the seeded retention sweep ran` |
+| SC-59 | `self-check.sh:2895` | `report["retention"]["seededActivityEventsRemoved"] = 2` | SC-60 — the intervention half holds while this moves | **PROVEN** — `FAIL: an activity event at 91 days goes and one at 89 stays` |
+| SC-60 | `self-check.sh:2901` | `report["retention"]["seededInterventionRowsKept"] = 0` | SC-59 | **PROVEN** — `FAIL: an intervention row at 91 days goes and one at 89 stays` |
+| SC-61 | `self-check.sh:2910` | `report["retention"]["seededQueryReceiptsRemoved"] = 1` | SC-59/SC-60 — the two age-only tables hold while the receipt rule breaks | **PROVEN** — `FAIL: a 91-day-old receipt under a live priority survives the window` |
 
 ### Section 3's pins (focus-odz) — `selfcheck-debug` / `selfcheck-release`
 
@@ -179,8 +184,8 @@ fifth launch's report out beside the other four. The cases file is `/private/tmp
 | SC-87 | `self-check.sh` first run | `firstRunExplanationShown = True` (relaunch) | SC-89 — the relaunch still opened the same store | **PROVEN** — `FAIL: the launch after the one that explained is not owed the explanation again` |
 | SC-88 | `self-check.sh` first run | `firstRunExplanationDrawn = "shown"` (relaunch) | SC-87 | **PROVEN** — `FAIL: the relaunched cockpit drew no first-run sheet at all` |
 | SC-89 | `self-check.sh` first run | `livePriorityIntent` replaced (relaunch) | is itself the control for SC-87/SC-88 | **PROVEN** — `FAIL: the relaunch opened the same seeded store the explaining launch did` |
-| SC-91 | `self-check.sh` intervention | `intervention_drive["storedVoiceWasRecognised"] = False` | SC-92 — the decoder still answers on a raw value no build declares, so this is a disagreement about THIS Mac's row rather than a decoder that has stopped reading | **PENDING** (focus-0nm) — no green gate run exists on this Mac to point the harness at: `combinedSessionState` and `hidSystemState` have diverged (measured outside the app: 2998 s vs 13356 s), so `IdleReaderTests` and both self-check stages are red on a fact about the machine. The readings themselves ran and are in the report (`storedVoiceWasRecognised`, `anUnreadableDeckIsReported`, both `True`). The red line each mutation must produce is `FAIL: this build can read the deck the store holds, so nobody's voice was quietly reinterpreted` |
-| SC-92 | `self-check.sh` intervention | `intervention_drive["anUnreadableDeckIsReported"] = False` | SC-91 — this Mac's own row still reads, so the pair cannot be green on a decoder that answers `True` to everything | **PENDING** (focus-0nm) — no green gate run exists on this Mac to point the harness at: `combinedSessionState` and `hidSystemState` have diverged (measured outside the app: 2998 s vs 13356 s), so `IdleReaderTests` and both self-check stages are red on a fact about the machine. The readings themselves ran and are in the report (`storedVoiceWasRecognised`, `anUnreadableDeckIsReported`, both `True`). The red line each mutation must produce is `FAIL: a deck this build cannot read is reported as unread and answered with the shipped deck` |
+| SC-122 | `self-check.sh:1795` | `report["shellRendering"]["driveInterventionSink"]["storedVoiceWasRecognised"] = False` | SC-123 — the decoder still answers on a raw value no build declares, so this is a disagreement about THIS Mac's row rather than a decoder that has stopped reading | **PROVEN** — `FAIL: this build can read the deck the store holds, so nobody's voice was quietly reinterpreted` |
+| SC-123 | `self-check.sh:1803` | `report["shellRendering"]["driveInterventionSink"]["anUnreadableDeckIsReported"] = False` | SC-122 — this Mac's own row still reads, so the pair cannot be green on a decoder that answers `True` to everything | **PROVEN** — `FAIL: a deck this build cannot read is reported as unread and answered with the shipped deck` |
 
 ### The idle sources (focus-7az) — `selfcheck-debug` / `selfcheck-release`
 
@@ -200,13 +205,13 @@ beside combined **18 456.16 s** — the deleted assertion was red on a machine t
 
 | # | script:line | mutation (H-JSON) | control | status — the line it printed |
 |---|---|---|---|---|
-| SC-91 | `self-check.sh:2136` | `report["sensing"]["idle"]["perEventType"] = report["sensing"]["idle"]["perEventType"][:3]` | SC-93 — the agreement holds while the floor breaks | **PROVEN** — `FAIL: both idle states were read for at least 4 distinct concrete event types` / `got: ['keyDown', 'leftMouseDown', 'mouseMoved']` |
-| SC-92 | `self-check.sh:2136` | four copies of one row: `r = …["perEventType"]; …["perEventType"] = [dict(r[0]) for _ in range(4)]` | SC-91 — the count alone would pass this | **PROVEN** — `FAIL: both idle states were read for at least 4 distinct concrete event types` / `got: ['mouseMoved']` |
-| SC-93 | `self-check.sh:2154` | `report["sensing"]["idle"]["perEventType"][0]["hardwareSeconds"] += 5.0` | SC-91 — the floor holds while the agreement breaks | **PROVEN** — `FAIL: per concrete event type the two idle states agree within 1.0 s` / `got: [('mouseMoved', 18461.4181935, 18456.418193209)]` |
-| SC-94 | `self-check.sh:2154` | `report["sensing"]["idle"]["perEventType"][2]["sessionSeconds"] += 3600.0` | SC-93 — the gap the *other* way is red too, which is the whole point | **PROVEN** — `FAIL: per concrete event type the two idle states agree within 1.0 s` / `got: [('leftMouseDown', 18456.389179583, 22056.389179542)]` |
-| SC-95 | `self-check.sh:2179` | `i = report["sensing"]["idle"]; i["isIdleForThisReading"] = not i["isIdleForThisReading"]` | SC-96 — the committed pair's verdict holds while the live one breaks | **PROVEN** — `FAIL: the app's idle verdict is the longer of the two counters against the threshold` / `got: (False, 3457.770909375, 18456.162585334, 180)` |
-| SC-96 | `self-check.sh:2210` | `report["sensing"]["idle"]["phantomHidPair"]["isIdle"] = False` | SC-97 — the figures hold while the verdict breaks | **PROVEN** — `FAIL: a hardware clock reset by a phantom HID report does not make an absent person present` / `got: False` |
-| SC-97 | `self-check.sh:2201` | `report["sensing"]["idle"]["phantomHidPair"]["sessionSeconds"] = 14850.05` | SC-96 — the verdict holds while the pair it is about moves | **PROVEN** — `FAIL: the app judged the measured phantom-HID pair, 105.71 s against 14850.04 s at 180 s` / `got: (105.71, 14850.05, 180)` |
+| SC-91 | `self-check.sh:2203` | `report["sensing"]["idle"]["perEventType"] = report["sensing"]["idle"]["perEventType"][:3]` | SC-93 — the agreement holds while the floor breaks | **PROVEN** — `FAIL: both idle states were read for at least 4 distinct concrete event types` / `got: ['keyDown', 'leftMouseDown', 'mouseMoved']` |
+| SC-92 | `self-check.sh:2203` | four copies of one row: `r = …["perEventType"]; …["perEventType"] = [dict(r[0]) for _ in range(4)]` | SC-91 — the count alone would pass this | **PROVEN** — `FAIL: both idle states were read for at least 4 distinct concrete event types` / `got: ['mouseMoved']` |
+| SC-93 | `self-check.sh:2221` | `report["sensing"]["idle"]["perEventType"][0]["hardwareSeconds"] += 5.0` | SC-91 — the floor holds while the agreement breaks | **PROVEN** — `FAIL: per concrete event type the two idle states agree within 1.0 s` / `got: [('mouseMoved', 18461.4181935, 18456.418193209)]` |
+| SC-94 | `self-check.sh:2221` | `report["sensing"]["idle"]["perEventType"][2]["sessionSeconds"] += 3600.0` | SC-93 — the gap the *other* way is red too, which is the whole point | **PROVEN** — `FAIL: per concrete event type the two idle states agree within 1.0 s` / `got: [('leftMouseDown', 18456.389179583, 22056.389179542)]` |
+| SC-95 | `self-check.sh:2242` | `i = report["sensing"]["idle"]; i["isIdleForThisReading"] = not i["isIdleForThisReading"]` | SC-96 — the committed pair's verdict holds while the live one breaks | **PROVEN** — `FAIL: the app's idle verdict is the longer of the two counters against the threshold` / `got: (False, 3457.770909375, 18456.162585334, 180)` |
+| SC-96 | `self-check.sh:2277` | `report["sensing"]["idle"]["phantomHidPair"]["isIdle"] = False` | SC-97 — the figures hold while the verdict breaks | **PROVEN** — `FAIL: a hardware clock reset by a phantom HID report does not make an absent person present` / `got: False` |
+| SC-97 | `self-check.sh:2266` | `report["sensing"]["idle"]["phantomHidPair"]["sessionSeconds"] = 14850.05` | SC-96 — the verdict holds while the pair it is about moves | **PROVEN** — `FAIL: the app judged the measured phantom-HID pair, 105.71 s against 14850.04 s at 180 s` / `got: (105.71, 14850.05, 180)` |
 
 SC-95 is the row that needed SC-96 beside it. On a gate rig nobody is touching, both live counters
 are hours past the 180 s threshold, so `max(hid, session) >= t` and the `hid >= t` it replaced
@@ -215,6 +220,13 @@ that witness came back `MISS`. SC-96 is the case that discriminates the two rule
 any hour, because the pair is the committed one the probe measured rather than whatever the room
 is doing.
 
+
+SC-122 and SC-123 were **PENDING** for two rounds — no green gate run existed on this Mac to point
+the harness at, because `combinedSessionState` and `hidSystemState` had diverged and both
+self-check stages were red on a fact about the machine. `focus-7az` closed that (SC-91..SC-97
+above), and both rows were run for this round against the green run at
+`/private/tmp/focus-s8-logs-1` (23/23). They were also renumbered: they carried SC-91/SC-92, which
+the idle section above had since taken, so the file held two different rows under one identifier.
 
 ### A question answered with no mouse (e07a, focus-6pr.1; SC-111 and SC-112 are focus-6pr.3's) — `selfcheck-debug` / `selfcheck-release`
 
@@ -278,6 +290,65 @@ otherwise look like.
 | SC-119 | `self-check.sh` history | `historyLedger.queryReceiptsAfter = 2` | SC-118 — the rule was still written, so this is D3 and not "nothing happened" | **PROVEN** — `FAIL: correcting a silence is never a re-ask: the query ledger does not move` / `got: (1, 2)` |
 | SC-120 | `self-check.sh` history | `historyLedger.interventionRowsAfterCorrection = 2` | SC-118 — the rule was still written | **PROVEN** — `FAIL: correcting a silence never edits the log` / `got: 2` |
 | SC-121 | `self-check.sh` history | `historyReplay.available = False; error = "doctored"` | the harness runs the unmutated copy first: `CONTROL … EXIT=0` | **PROVEN** — `FAIL: the replay-fidelity measurement ran` / `got: 'doctored'` |
+
+### R-168 — the facts the report publishes that nothing used to read — `selfcheck-debug` / `selfcheck-release`
+
+H-JSON, run by `/private/tmp/mw2/run.zsh <label> <mutation>` against the green run at
+`/private/tmp/focus-s8-logs-1` (23/23). Like the focus-odz and focus-7az rows it needs the
+self-check's own side artefacts, which the stage deletes on exit, so it is pointed at a **copy**
+of `self-check.sh` with `REPO_ROOT` pinned to the real repository, `SESSION_DIR` pinned and the
+`trap` removed; a second copy replaces the six application launches with copies of the captured
+reports, so a mutation costs a second rather than a launch. The control (unmutated copy) is
+green: `EXIT=0`, 671 ok.
+
+Every row below is an assertion the `published-keys` round added: before it, each of these keys
+was published by the Release binary and fetched by no reader at all.
+
+| # | script:line | mutation (H-JSON) | control | status — the line it printed |
+|---|---|---|---|---|
+| SC-124 | `self-check.sh:4478` | `r["nudge"]["chargesPaidFor"] += 1` | SC-125 — the channels hold while the join breaks | **PROVEN** — `FAIL: every delivered intervention row was paid for by a perception receipt` |
+| SC-125 | `self-check.sh:4486` | `r["nudge"]["chargeChannels"] = ["notAChannel"]` | SC-124 | **PROVEN** — `FAIL: every charge was perceived on a channel some surface really has` |
+| SC-126 | `self-check.sh:4515` | `r["nudge"]["budgetAfterADayOfLandings"]["panel"]["accusationsToday"] = 7` | SC-124 — the live join holds while the seeded day breaks, which is the non-vacuous half | **PROVEN** — `FAIL: a day of eight panel landings spends eight accusations and binds on the daily cap` |
+| SC-127 | `self-check.sh:4584` | `r["relevance"]["skippedRuleCount"] = 1` | the harness runs the unmutated copy first: `CONTROL … GREEN (EXIT=0, 671 ok)` | **PROVEN** — `FAIL: the snapshot builder dropped no rule it could not read` |
+| SC-128 | `self-check.sh:4532` | `r["nudge"]["surfacesOfferingAnAnswer"] = list(r["nudge"]["surfacesHoldingTheInterruptionSlot"])` | SC-129 — the row-wise table holds while the two lists are conflated | **PROVEN** — `FAIL: holding the interruption slot and offering an answer are still two different questions` |
+| SC-129 | `self-check.sh:4556` | `[row.__setitem__("holdsTheInterruptionSlot", True) for row in r["nudge"]["surfaceAttention"] if row["surface"] == "popoverBadge"]` | SC-128 — the lists hold while the table they are folded from breaks | **PROVEN** — `FAIL: the surfaces whose rows hold the interruption slot are exactly the list that says so` |
+| SC-130 | `self-check.sh:4648` | `[w.__setitem__("title", "Nope") for w in r["windows"] if w.get("identifier") == "cockpit"]` | SC-131 — the summary holds while the list disagrees with it | **PROVEN** — `FAIL: the cockpit's row in the window list agrees with the cockpitWindow summary field by field` |
+| SC-131 | `self-check.sh:4677` | `r["cockpitWindow"]["styleMask"] += 16` | SC-130 | **PROVEN** — `FAIL: the cockpit window's style mask is exactly titled, closable, miniaturizable, resizable and full-size content` |
+| SC-132 | `self-check.sh:4697` | `r["nudge"]["panel"]["properties"]["canBecomeKey"] = False` | the app's own `propertiesAreCorrect` fold stays green, which is why the nine are read one by one | **PROVEN** — `FAIL: the nudge panel's canBecomeKey is True` |
+| SC-133 | `self-check.sh:4711` | `r["nudge"]["panel"]["subjectNaming"]["running"]["displayName"] = "Something Else"` | the other four naming cases hold | **PROVEN** — `FAIL: asked about a running application, the panel gives its display name and its bundle id` |
+| SC-134 | `self-check.sh:4753` | `r["nudge"]["panel"]["frontMovedDuringTheShow"] = True` | R-89 reading 1 holds; this is reading 4's own fact | **PROVEN** — `FAIL: reading 4: the frontmost application was read both times and did not move` |
+| SC-135 | `self-check.sh:4882` | `r["shellRendering"]["rendered"]["cockpit"]["values"]["status"] = None` | SC-136 — the totality holds while a receipt goes missing | **PROVEN** — `FAIL: every field the cockpit drew carries a receipt` |
+| SC-136 | `self-check.sh:4897` | `r["shellRendering"]["totalities"]["cockpit"]["strandedPaths"] = ["state.ghost"]` | SC-135 | **PROVEN** — `FAIL: the cockpit connection is total: nothing stranded, unmapped or unreported` |
+| SC-137 | `self-check.sh:4924` | `r["shell"]["handoffURL"] = "focus://start?task=Something%20else"` | the handoff rendering's own fold holds | **PROVEN** — `FAIL: the handoff URL carries exactly the task the app says it received` |
+| SC-138 | `self-check.sh:4977` | `r["historyReplay"]["momentsBeforeIntentEdit"] = 15` | the three seeded counts hold | **PROVEN** — `FAIL: sixteen of the replayed moments predate the intent edit that makes them unreplayable` |
+| SC-139 | `self-check.sh:4961` | `r["nudge"]["tickFetches"]["noCommitment"]["cockpitFetchesOverSteadyTicks"] = 17` | the other two lanes hold, so this is one lane's rate and not the fold | **PROVEN** — `FAIL: the cockpit fetched the store exactly twice a tick over the noCommitment lane` |
+| SC-140 | `self-check.sh:4936` | `r["sensing"]["cascade"] = ["windowMetadata", "frontmostApplication"]` | the order is the assertion: the same two sources, reversed | **PROVEN** — `FAIL: the sensing cascade is exactly the two sources, in order` |
+| SC-141 | `self-check.sh:5093` | `r["authorisationSurfaceScan"]["notTakenBecause"] = "a reason it should not have"` | the NOT-TAKEN sweep and its six-fact floor hold; this is the pair's consistency | **PROVEN** — `FAIL: every reading that was taken gives no reason, and every one refused says why` |
+| SC-142 | `self-check.sh:4598` | `r["relevance"]["verdict"]["stampKey"] = "s9.p9.l9.e9.m9"` | the block's own stamp and digest hold | **PROVEN** — `FAIL: the verdict carries the stamp of the engine that produced it` |
+| SC-143 | `self-check.sh:4786` | `r["nudge"]["routes"][0]["isInApp"] = False` | the folded `everyRungIsInApp` holds, which is why the rows are read too | **PROVEN** — `FAIL: every route in the table stays inside the application` |
+| SC-144 | `self-check.sh:4798` | `r["statusItemMenu"]["installed"] = False` | the menu's four drawn items hold | **PROVEN** — `FAIL: the status item's menu is installed` |
+| SC-145 | `self-check.sh:4813` | `r["settingsDrewnVersion"] = "9.9.9 (9)"` | the bundle's own version fields hold | **PROVEN** — `FAIL: the version Settings drew is the version the bundle carries` |
+
+### `published-keys` — `scripts/check-published-keys.sh`
+
+The stage reads two artefacts of one run — the report the Release binary wrote and the read set
+`scripts/keyreads.py` recorded — against one committed list. So its harness is neither H-JSON nor
+H-SRC: a copy of the script sits in `/private/tmp/mw2/pk/scripts/` with its own `Config/`, and each
+row doctors the report, the read set or the list. The control (nothing doctored) is green:
+`PUBLISHED-KEYS OK — 772 published, 758 read, 14 listed`.
+
+All four rules are witnessed, in both directions, because a list linted one way is an off-switch:
+PK-02 is the row deleted, PK-03b is the row added to excuse a key that is still read.
+
+| # | rule | mutation | control | status — the line it printed |
+|---|---|---|---|---|
+| PK-01 | 1 | `report["witnessOnlyKey"] = 1` — a published key no reader fetches | the unmutated copy is green | **PROVEN** — `FAIL [R-168] every published key is either read by a gate reader or listed with a reason` / `got: ['witnessOnlyKey']` |
+| PK-02 | 1 | delete the `relevance.verdict.band` row while the key is still unread | PK-01 — the report is untouched, so this is the list's own rot | **PROVEN** — `FAIL [R-168] every published key is either read by a gate reader or listed with a reason` / `got: ['relevance.verdict.band']` |
+| PK-03a | 1 | remove `nudge.surfacesOfferingAnAnswer` from the read set, as deleting its `check(...)` would | PK-01 | **PROVEN** — `FAIL [R-168] every published key is either read by a gate reader or listed with a reason` / `got: ['nudge.surfacesOfferingAnAnswer']` |
+| PK-03b | 3 | add that same key to the list **without** deleting the read | PK-03a — the two halves of one defect; rule 3 is what stops the list excusing a key that is asserted | **PROVEN** — `FAIL [R-168] no listed key is now read; a key that gained an assertion loses its row` / `got: ['nudge.surfacesOfferingAnAnswer']` |
+| PK-04 | 2 | add a row for `nudge.keyThatWasRemoved`, a key nothing publishes | PK-01 | **PROVEN** — `FAIL [R-168] every listed key is still published by the self-check` / `got: ['nudge.keyThatWasRemoved']` |
+| PK-05 | 4 | blank the reason column of the `sensing.media.audioListenerCount` row | PK-01 | **PROVEN** — `FAIL [R-168] every row carries a path, a reason and a bead column` / `got: [(27, 'sensing.media.audioListenerCount ·  · NONE-BY-DESIGN')]` |
+| PK-06 | floor | empty the read set, as a reader dying before its first fetch would | the four rules above are all satisfied by a read set that is merely short — this is the case where the FILE is empty | **PROVEN** — `FAIL [R-168] <path> is empty: no gate reader recorded a single fetch` |
 
 ### `notification-denied` / `notification-denied-release` — `scripts/check-notification-denied.sh`
 
