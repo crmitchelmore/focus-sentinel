@@ -116,6 +116,13 @@ H-JSON on a copy of the RELEASE report. Both stages run the same reader; the Rel
 | SC-52 | `self-check.sh:2550` | `r = report["nudge"]["tickFetches"]["noCommitment"]; r["fetchesOverSteadyTicks"] = 2 * r["steadyTicks"] + 1` | SC-51 — the survey really ticked | **PENDING** — expected red line: `FAIL: a quiet noCommitment tick costs at most two fetches` |
 | SC-53 | `self-check.sh:2558` | `report["nudge"]["tickFetches"]["noCommitment"]["nudgeFetchesOverSteadyTicks"] = 1` | SC-51 | **PENDING** — expected red line: `FAIL: the nudge half of a quiet noCommitment tick goes to the store not at all` |
 | SC-54 | `self-check.sh:2563` | `report["nudge"]["tickFetches"]["commitmentPopoverOpen"]["popoverFetchesOverSteadyTicks"] = 1` | SC-51 | **PENDING** — expected red line: `FAIL: building the popover's content on a commitmentPopoverOpen tick touches no store` |
+| SC-55 | `self-check.sh:2177` | `report["retention"]["windowDays"] = 30` | SC-59 — the seeded sweep cuts where the window says | **PENDING** — expected red line: `FAIL: the committed retention window is ninety days` |
+| SC-56 | `self-check.sh:2184` | `report["retention"]["ranAtLaunch"] = False` | SC-58 — the seeded half still runs | **PENDING** — expected red line: `FAIL: the retention sweep ran at launch and says which local day it ran on` |
+| SC-57 | `self-check.sh:2189` | `report["retention"]["rowsRemoved"] = -1` | SC-56 | **PENDING** — expected red line: `FAIL: the launch sweep says how many rows it removed` |
+| SC-58 | `self-check.sh:2196` | `report["retention"]["seedAvailable"] = False` | SC-56 — the launch half is unaffected | **PENDING** — expected red line: `FAIL: the seeded retention sweep ran` |
+| SC-59 | `self-check.sh:2202` | `report["retention"]["seededActivityEventsRemoved"] = 2` | SC-60 — the intervention half holds while this moves | **PENDING** — expected red line: `FAIL: an activity event at 91 days goes and one at 89 stays` |
+| SC-60 | `self-check.sh:2208` | `report["retention"]["seededInterventionRowsKept"] = 0` | SC-59 | **PENDING** — expected red line: `FAIL: an intervention row at 91 days goes and one at 89 stays` |
+| SC-61 | `self-check.sh:2217` | `report["retention"]["seededQueryReceiptsRemoved"] = 1` | SC-59/SC-60 — the two age-only tables hold while the receipt rule breaks | **PENDING** — expected red line: `FAIL: a 91-day-old receipt under a live priority survives the window` |
 
 ### `notification-denied` / `notification-denied-release` — `scripts/check-notification-denied.sh`
 

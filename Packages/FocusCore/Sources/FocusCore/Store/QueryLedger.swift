@@ -479,6 +479,37 @@ public final class QueryLedger {
         return doomed.count
     }
 
+    /// **Delete the old receipts of priorities that are themselves old** (focus-tzj.3, F-115).
+    ///
+    /// ## Why this is not `purge(before:)`
+    ///
+    /// A receipt is the never-ask-twice memory: gate 11 reads it, and deleting one puts a
+    /// question the person has already answered back on the ladder. A retention window is a
+    /// promise about how long the app *remembers a day*, and it must not become a mechanism for
+    /// re-asking. So age alone is not enough — a receipt written ninety-one days ago about the
+    /// commitment somebody is working on **this morning** stays, because that priority is still
+    /// live and the promise made about it was permanent.
+    ///
+    /// Both conditions, therefore: the row is older than the window **and** the priority it
+    /// belongs to is not in `livingPriorityIDs`. The caller decides what "living" means —
+    /// `RetentionSweep` counts a priority as living if it was created or last activated inside
+    /// the same window — which keeps this function a set operation rather than a second opinion
+    /// about a table it does not own.
+    ///
+    /// - Returns: how many receipts went.
+    @discardableResult
+    public func purge(before cutoff: Date, livingPriorityIDs: Set<UUID>) throws -> Int {
+        let doomed = try all().filter {
+            $0.askedAt < cutoff && !livingPriorityIDs.contains($0.priorityID)
+        }
+        for receipt in doomed { context.delete(receipt) }
+        if !doomed.isEmpty {
+            try context.save()
+            Self.writeCount += 1
+        }
+        return doomed.count
+    }
+
     /// Delete every receipt whose priority no longer exists.
     ///
     /// The completeness half of the retention contract: a row whose priority was deleted by a

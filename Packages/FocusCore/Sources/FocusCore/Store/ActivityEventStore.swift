@@ -116,6 +116,33 @@ public final class ActivityEventStore {
         try context.countedFetchCount(FetchDescriptor<FocusSchemaV3.ActivityEvent>())
     }
 
+    // MARK: - Retention (F-115, focus-tzj.3)
+
+    /// **Delete every observation older than `cutoff`.**
+    ///
+    /// The one thing that ever removes a row here. It is a predicate rather than a fetch-all and
+    /// filter, because this is the largest table in the store — the corroboration tick appends
+    /// to it twelve times a minute — and the sweep that calls it runs at launch, when the app is
+    /// doing everything else it does at launch.
+    ///
+    /// Half-open the other way round from `events(from:to:)`: a row stamped **exactly** at the
+    /// cutoff is inside the window and is kept, so a row is never removed on the day it becomes
+    /// eligible-by-rounding.
+    ///
+    /// - Returns: how many rows went. Read by `RetentionSweep`, published by the self-check, and
+    ///   the reason this is a count rather than `Void`: "the sweep ran" and "the sweep removed
+    ///   something" are different facts and only the second one is evidence.
+    @discardableResult
+    public func purge(before cutoff: Date) throws -> Int {
+        let descriptor = FetchDescriptor<FocusSchemaV3.ActivityEvent>(
+            predicate: #Predicate { $0.at < cutoff }
+        )
+        let doomed = try context.countedFetch(descriptor)
+        for row in doomed { context.delete(row) }
+        if !doomed.isEmpty { try context.save() }
+        return doomed.count
+    }
+
     private static func chronological(
         _ lhs: FocusSchemaV3.ActivityEvent,
         _ rhs: FocusSchemaV3.ActivityEvent

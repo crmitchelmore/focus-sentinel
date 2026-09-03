@@ -2158,6 +2158,73 @@ check(
     relevance.get("sessionRuleCount"),
 )
 
+# --- retention: the app forgets, and it forgets the right things (F-115, focus-tzj.3) --------
+#
+# Three tables grew without bound. `ActivityEventStore` said so in its own doc comment and
+# deferred a policy to a later epic; `InterventionLog.purge(before:)`, `QueryLedger.purge(...)`
+# and `purgeAll()` were written, tested, and called by NOTHING. A privacy posture that is only a
+# plan is not a posture, so the mechanism ships now and e07 §5 puts a picker on top of it.
+#
+# TWO HALVES, and the second is why the first is worth reading. The launch half says the sweep
+# ran, on which local day, and what it removed — which on a gate machine whose store holds
+# nothing older than ninety days is three zeroes and a date, and a sweep deleted from the launch
+# path entirely would publish the same three zeroes. So the binary also runs the SAME sweep over
+# a store it seeds with one row at 89 days and one at 91 in each table that dies of age, and
+# publishes both sides of that boundary.
+retention = report.get("retention") or {}
+check(
+    retention.get("windowDays") == 90,
+    "the committed retention window is ninety days",
+    retention.get("windowDays"),
+)
+check(
+    retention.get("ranAtLaunch") is True
+    and isinstance(retention.get("lastRunDay"), str)
+    and len(retention.get("lastRunDay") or "") == 10,
+    "the retention sweep ran at launch and says which local day it ran on",
+    (retention.get("ranAtLaunch"), retention.get("lastRunDay")),
+)
+check(
+    isinstance(retention.get("rowsRemoved"), int) and retention["rowsRemoved"] >= 0,
+    "the launch sweep says how many rows it removed",
+    retention.get("rowsRemoved"),
+)
+# The non-vacuity control, and the whole reason this section can go red on a store with nothing
+# old in it: the mechanism the launch used, shown cutting exactly where it says it cuts.
+check(
+    retention.get("seedAvailable") is True,
+    "the seeded retention sweep ran",
+    retention.get("seedError", retention.get("seedAvailable")),
+)
+check(
+    retention.get("seededActivityEventsRemoved") == 1
+    and retention.get("seededActivityEventsKept") == 1,
+    "an activity event at 91 days goes and one at 89 stays",
+    (retention.get("seededActivityEventsRemoved"), retention.get("seededActivityEventsKept")),
+)
+check(
+    retention.get("seededInterventionRowsRemoved") == 1
+    and retention.get("seededInterventionRowsKept") == 1,
+    "an intervention row at 91 days goes and one at 89 stays",
+    (retention.get("seededInterventionRowsRemoved"), retention.get("seededInterventionRowsKept")),
+)
+# **The exception, and it is U-1's.** A receipt is what gate 11 reads, so deleting one puts a
+# question the person has already answered back on the ladder. The seeded receipt is 91 days old
+# and its priority was created a moment ago, so it must survive the window it is outside.
+check(
+    retention.get("seededQueryReceiptsRemoved") == 0
+    and retention.get("seededQueryReceiptsKept") == 1,
+    "a 91-day-old receipt under a live priority survives the window",
+    (retention.get("seededQueryReceiptsRemoved"), retention.get("seededQueryReceiptsKept")),
+)
+print(
+    "note retention: window {} days, last run {}, {} row(s) removed at launch".format(
+        retention.get("windowDays"),
+        retention.get("lastRunDay"),
+        retention.get("rowsRemoved"),
+    )
+)
+
 # --- e05: the nudge loop, as the running application reports it ----------------------------
 #
 # Three claims, and each is what one of this epic's gates rests on. Every one of them is made

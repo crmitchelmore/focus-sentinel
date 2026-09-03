@@ -545,6 +545,8 @@ enum SelfCheck {
         root["engineStamp"] = relevance["engineStamp"] ?? ""
         root["policyDigest"] = relevance["policyDigest"] ?? ""
 
+        root["retention"] = retentionReport()
+
         // --- e05 -------------------------------------------------------------------------
         let nudge = nudgeReport()
         root["nudge"] = nudge
@@ -1329,6 +1331,102 @@ enum SelfCheck {
         report["tickFetches"] = tickFetchSurvey()
         report["menuBarInstalled"] = composition.menuBar.isInstalled
         report["decisionCount"] = host.decisionCount
+        return report
+    }
+
+    /// **That the app forgets, and that it forgets the right things** (F-115, focus-tzj.3).
+    ///
+    /// ## Two halves, and both are needed
+    ///
+    /// The first is a fact about **this launch**: the sweep ran, on which local day, and how many
+    /// rows it removed. On a machine whose store holds nothing older than the window that is
+    /// three zeroes and a date — true, and worth nothing on its own, because a sweep that had
+    /// been deleted from the launch path would publish the same three zeroes if the day were
+    /// absent, and a day with no rows is the *ordinary* case for a fresh gate machine.
+    ///
+    /// So the second half is a **seeded** sweep on a store of this survey's own, holding one row
+    /// at 89 days and one at 91 in each of the two tables that die of age. It is the non-vacuity
+    /// control for the first: the mechanism the launch used is shown removing exactly the rows it
+    /// is supposed to remove and exactly none of the others, in the same process, on the same
+    /// code, in a run where the answer cannot be zero by accident.
+    ///
+    /// The receipts are deliberately not in the seed's expected count. They die with their
+    /// priority rather than of age (see `RetentionSweep`), and the seed's priority is one the
+    /// survey just created — so a receipt under it must survive, which is the third row below.
+    @MainActor
+    static func retentionReport() -> [String: Any] {
+        var report: [String: Any] = [:]
+        report["windowDays"] = RetentionPolicy.committedDefault.days
+        let live = AppComposition.shared.lastRetentionSweep
+        report["ranAtLaunch"] = live != nil
+        report["lastRunDay"] = live?.day.key ?? ""
+        report["rowsRemoved"] = live?.rowsRemoved ?? -1
+        report["activityEventsRemoved"] = live?.activityEvents ?? -1
+        report["interventionRowsRemoved"] = live?.interventionRows ?? -1
+        report["queryReceiptsRemoved"] = live?.queryReceipts ?? -1
+
+        do {
+            let container = try FocusStore.makeContainer(kind: .inMemory)
+            let context = ModelContext(container)
+            // The one sanctioned wall clock (R-26): the seed's dates are computed from the same
+            // reading the sweep will take, so the 89/91-day boundary is exact rather than nearly.
+            let clock = SystemDateProvider()
+            let now = clock.now
+            let calendar = Calendar.autoupdatingCurrent
+            let events = ActivityEventStore(context: context, dateProvider: clock)
+            let log = InterventionLog(context: context, dateProvider: clock, calendar: calendar)
+            let ledger = QueryLedger(context: context, dateProvider: clock)
+            let priorities = PriorityStore(context: context, dateProvider: clock)
+
+            func daysAgo(_ days: Int) -> Date {
+                calendar.date(byAdding: .day, value: -days, to: now) ?? now
+            }
+            for days in [89, 91] {
+                _ = try events.append(
+                    kind: .frontmostApplicationChanged,
+                    bundleID: FocusStore.bundleIdentifier,
+                    at: daysAgo(days)
+                )
+                _ = try log.record(
+                    InterventionEvent(
+                        kind: .query,
+                        subject: FocusStore.bundleIdentifier,
+                        disposition: .delivered
+                    ),
+                    at: daysAgo(days)
+                )
+            }
+            let priorityID = try priorities.setPriority(intent: "Self-check retention seed")
+            _ = try ledger.record(
+                priorityID: priorityID,
+                subjectKind: .app,
+                subject: FocusStore.bundleIdentifier,
+                reason: .noNegativeBasis,
+                outcome: .declined,
+                askedAt: daysAgo(91),
+                at: daysAgo(91)
+            )
+
+            let result = try RetentionSweep(
+                events: events,
+                log: log,
+                ledger: ledger,
+                priorities: priorities,
+                calendar: calendar,
+                dateProvider: clock
+            ).run()
+
+            report["seededActivityEventsRemoved"] = result.activityEvents
+            report["seededInterventionRowsRemoved"] = result.interventionRows
+            report["seededQueryReceiptsRemoved"] = result.queryReceipts
+            report["seededActivityEventsKept"] = try events.count()
+            report["seededInterventionRowsKept"] = try log.count()
+            report["seededQueryReceiptsKept"] = try ledger.receipts(priorityID: priorityID).count
+            report["seedAvailable"] = true
+        } catch {
+            report["seedAvailable"] = false
+            report["seedError"] = "\(error)"
+        }
         return report
     }
 

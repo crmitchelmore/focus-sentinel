@@ -61,6 +61,17 @@ public final class AppComposition {
     public let modelContainer: ModelContainer
     let storeStatus: StoreStatus
 
+    /// **The one thing that ever shortens this app's memory** (F-115, focus-tzj.3).
+    ///
+    /// Held here rather than on a host because it is about the store rather than about any one
+    /// surface, and because the two moments it runs at — the launch, and the first tick of a new
+    /// local day — are both this object's.
+    private let retentionSweep: RetentionSweep
+
+    /// What the last sweep did, or `nil` before one has run. Read by the self-check, so "old
+    /// rows are removed" is a number rather than a promise.
+    private(set) var lastRetentionSweep: RetentionSweep.Result?
+
     /// Wall-clock time. Injected everywhere rather than called directly, so that every
     /// timestamp in the programme is reproducible in a test.
     public let dateProvider: any DateProvider
@@ -404,6 +415,23 @@ public final class AppComposition {
             dateProvider: dateProvider,
             calendar: calendar
         )
+        // **Retention, built here and run from `start()`** (focus-tzj.3). Its four stores are
+        // fresh handles over the same context, exactly as every host's are: a store object is a
+        // facade over the one `ModelContext`, and sharing an instance would be sharing a cache
+        // rather than sharing rows.
+        self.retentionSweep = RetentionSweep(
+            events: events,
+            log: InterventionLog(
+                context: context,
+                dateProvider: dateProvider,
+                calendar: calendar
+            ),
+            ledger: QueryLedger(context: context, dateProvider: dateProvider),
+            priorities: PriorityStore(context: context, dateProvider: dateProvider),
+            calendar: calendar,
+            dateProvider: dateProvider
+        )
+
         // One click on a notification's own button. Only the system centre has one; a supplied
         // centre delivers its actions however it likes and this wire has nothing to say about it.
         (centre as? FocusUI.SystemNotificationCentre)?.onAction = {
@@ -472,6 +500,13 @@ public final class AppComposition {
         // and no timer is started, because there is none to start.
         sessionHost.restore()
         sensingHost.start()
+
+        // **Once at launch, after the store has opened** (focus-tzj.3). Here rather than in
+        // `init` for `start()`'s own reason: `init` builds the graph and a test process builds
+        // one on every suite, and a sweep is a write. It is deliberately before the first
+        // projection below, so the cockpit's first paint already draws the history the app is
+        // keeping rather than one that is about to be shortened.
+        sweepRetentionIfDue()
 
         // One last projection, so the cockpit's first paint already shows the reconciled
         // session, the live observer count and the capability matrix as the probe just read it —
@@ -1799,7 +1834,54 @@ public final class AppComposition {
     /// Without this the app would have a visible defect rather than a stale one: locking the
     /// screen pauses the session in the store, and the window would keep saying *Focus* until
     /// the person happened to press something.
+    /// **Sweep, if the day has turned since the last one** (F-115, focus-tzj.3).
+    ///
+    /// Two moments, and they are the same call: the launch, and the first corroboration tick of
+    /// a new local day. There is no timer — this programme has none — and there does not need to
+    /// be one: the tick already runs every five seconds and the local day is already computed on
+    /// it, so "once a day" is a comparison rather than a schedule.
+    ///
+    /// The day is the person's own calendar's, for `LocalDay`'s reason: a retention window is a
+    /// promise about days, and somebody who flies to Auckland mid-morning is in a different one.
+    ///
+    /// A failed sweep is logged and **not** retried until the next day boundary. Retrying on the
+    /// next tick would turn a store that will not delete into a store the app tries to delete
+    /// from twelve times a minute, which is the shape of an unbounded table seen from the other
+    /// side.
+    func sweepRetentionIfDue() {
+        let today = LocalDay.today(calendar: calendar, dateProvider: dateProvider)
+        guard lastRetentionSweep?.day != today else { return }
+        do {
+            let result = try retentionSweep.run()
+            lastRetentionSweep = result
+            if result.rowsRemoved > 0 {
+                logger.notice(
+                    """
+                    retention swept \(result.rowsRemoved, privacy: .public) row(s) \
+                    older than the window
+                    """
+                )
+            }
+        } catch {
+            // The day is recorded even so, for the reason above. What is lost is one day's
+            // sweep; what is prevented is a write attempt on every tick for the life of the run.
+            lastRetentionSweep = RetentionSweep.Result(
+                day: today,
+                activityEvents: 0,
+                interventionRows: 0,
+                queryReceipts: 0
+            )
+            logger.error(
+                "the retention sweep failed: \(error.localizedDescription, privacy: .public)"
+            )
+        }
+    }
+
     public func refreshCockpit() {
+        // The day boundary the budget already computes, read for the other thing that happens
+        // once a day (focus-tzj.3). It is a comparison against a stored `LocalDay` and nothing
+        // else on the overwhelming majority of ticks.
+        sweepRetentionIfDue()
         let snapshot = sessionHost.snapshot
         // Before the judgement, so a question that belongs to a session which has just ended is
         // written down and taken off screen rather than left standing for the next one to
