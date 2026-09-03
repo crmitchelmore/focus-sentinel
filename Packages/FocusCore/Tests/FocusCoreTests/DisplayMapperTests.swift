@@ -200,9 +200,16 @@ struct DisplayMapperTests {
     func noSpaceIdentityIsCarried() {
         let mirror = Mirror(reflecting: primary)
         let labels = Set(mirror.children.compactMap(\.label))
+        // e08a's four readings are here now, and the census grows with them rather than being
+        // weakened: the point of this list is that a field cannot appear without a reviewer
+        // seeing it, and each of these four is a fact about a *display's own geometry* — the
+        // inset macOS reserves at the top of it, the two strips of menu bar beside its housing,
+        // and whether it is the Mac's own panel. None of them is about a Space, a window or a
+        // person, and the loop below still says so name by name.
         #expect(labels == [
             "displayID", "screenIndex", "isPrimary", "frame", "visibleFrame",
-            "backingScaleFactor"
+            "backingScaleFactor",
+            "safeAreaTopInset", "auxiliaryTopLeft", "auxiliaryTopRight", "isBuiltIn"
         ])
         for label in labels {
             #expect(!label.localizedCaseInsensitiveContains("space"))
