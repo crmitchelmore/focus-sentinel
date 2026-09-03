@@ -116,4 +116,84 @@ struct MenuBarPopoverTests {
         #expect(rows.count == 1)
         #expect(rows.first?.surfaceRaw == NudgeSurface.popoverBadge.rawValue)
     }
+
+    /// **What twelve ticks cost an open popover** (focus-tzj.1).
+    ///
+    /// `update(_:)` is called on every accepted activation and every five-second corroboration
+    /// tick, and while the popover was open each of those assigned a freshly built
+    /// `NSHostingController` — plus the two `popoverLayout(measuring:)` builds behind it. Three
+    /// SwiftUI hosts per tick, thirty-six a minute, to draw a surface whose every input was the
+    /// value it already had; and each rebuild re-stamped `popoverLayoutGeneration`, which
+    /// discards the action frames the layout reported, so `decisionSurfaceReading(of:)` saw no
+    /// action targets at all until SwiftUI delivered the preference again.
+    ///
+    /// It is driven through the shipping projection rather than through a presentation this test
+    /// composes: `NudgeHostFixture.menuBarPresentation(of:)` is what `AppComposition` builds, and
+    /// the whole claim is that *the app's own tick* produces the same value twice. A test that
+    /// handed the controller a literal it had just written would be proving that `==` works.
+    ///
+    /// Both halves are asserted, because they fail differently: nothing is built while nothing
+    /// moves, and exactly one thing is built when something does. A controller that had simply
+    /// stopped rebuilding would pass the first and fail the second — and would draw a stale
+    /// question in a popover somebody is looking at, which is the defect on the other side.
+    @Test("an open popover is rebuilt for a change and never for a tick")
+    func anOpenPopoverIsRebuiltForAChangeAndNeverForATick() throws {
+        let fixture = try NudgeHostFixture()
+        defer { fixture.tearDown() }
+        fixture.host.choose(reducedInterruption: true)
+
+        try MenuBarStage.open(
+            fixture.menuBar,
+            showing: NudgeHostFixture.menuBarPresentation(of: fixture.host),
+            onDidShow: { fixture.host.popoverPresented() }
+        )
+        try #require(fixture.menuBar.isPopoverShown)
+        // One tick to settle on the projection: the stage's own retries may have opened the
+        // popover on an earlier value, and what is being measured is the ticks after that.
+        fixture.menuBar.update(NudgeHostFixture.menuBarPresentation(of: fixture.host))
+
+        let buildsBefore = fixture.menuBar.popoverContentBuildCount
+        let hostsBefore = fixture.menuBar.popoverHostingConstructions
+        try #require(
+            buildsBefore > 0,
+            "the popover was never built at all, so a count of rebuilds is not a reading"
+        )
+
+        let ticks = 12
+        for _ in 0..<ticks {
+            fixture.menuBar.update(NudgeHostFixture.menuBarPresentation(of: fixture.host))
+        }
+
+        #expect(
+            fixture.menuBar.popoverContentBuildCount == buildsBefore,
+            """
+            \(ticks) ticks with an unchanged presentation rebuilt the open popover \
+            \(fixture.menuBar.popoverContentBuildCount - buildsBefore) time(s)
+            """
+        )
+        #expect(
+            fixture.menuBar.popoverHostingConstructions == hostsBefore,
+            """
+            \(ticks) ticks with an unchanged presentation constructed \
+            \(fixture.menuBar.popoverHostingConstructions - hostsBefore) hosting controller(s)
+            """
+        )
+
+        // And now something really moves: a question is routed to the badge, and the popover the
+        // person is looking at has to be built out of it.
+        fixture.host.consider(NudgeHostFixture.uncertainJudgement(subject: "com.example.Reader"))
+        NudgeHostFixture.settle()
+        try #require(fixture.host.pendingPopoverQuery != nil)
+        fixture.menuBar.update(NudgeHostFixture.menuBarPresentation(of: fixture.host))
+
+        #expect(
+            fixture.menuBar.popoverContentBuildCount == buildsBefore + 1,
+            "a presentation change built the popover \(fixture.menuBar.popoverContentBuildCount - buildsBefore) times"
+        )
+        #expect(
+            fixture.menuBar.popoverHostingConstructions == hostsBefore + 3,
+            "one build cost \(fixture.menuBar.popoverHostingConstructions - hostsBefore) hosting controllers"
+        )
+        #expect(fixture.menuBar.isDrawing(.query))
+    }
 }

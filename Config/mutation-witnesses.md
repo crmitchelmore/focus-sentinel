@@ -107,6 +107,10 @@ H-JSON on a copy of the RELEASE report. Both stages run the same reader; the Rel
 | SC-43 | `self-check.sh:2972` | `report["nudge"]["surfacesAQuestionCanReachCellsChecked"] = 40` | the harness runs the unmutated copy first: `CONTROL … GREEN (EXIT=0)` | **PROVEN** — `FAIL: the surfaces-a-question-reaches fold covers all 80 cells rather than one` |
 | SC-44 | `self-check.sh:2272` | `report["nudge"]["orphanedNudgeSurfaces"] = ["panel"]` | the harness runs the unmutated copy first: `CONTROL … GREEN (EXIT=0)` | **PROVEN** — `FAIL: no surface is offering a nudge the loop has forgotten, of either kind` |
 | SC-45 | `self-check.sh:2938` | `report["nudge"]["everyAccusationRouteCanBeAnswered"] = False` | the harness runs the unmutated copy first: `CONTROL … GREEN (EXIT=0)` | **PROVEN** — `FAIL: every accusation route offers the person a way to answer back` |
+| SC-46 | `self-check.sh:2479` | `report["nudge"]["popover"]["rebuild"]["unchangedTicks"] = 0` | SC-47/SC-48 — the ceilings they state are about ticks this row requires to exist | **PENDING** — expected red line: `FAIL: the popover rebuild survey really ticked, and most of its ticks changed nothing` |
+| SC-47 | `self-check.sh:2484` | `report["nudge"]["popover"]["rebuild"]["buildsOnUnchangedTicks"] = 1` | SC-46 — the survey really ticked | **PENDING** — expected red line: `FAIL: a tick that changes nothing rebuilds nothing` |
+| SC-48 | `self-check.sh:2491` | `r = report["nudge"]["popover"]["rebuild"]; r["contentBuilds"] = r["presentationChanges"] + 1` | SC-49 — the hosting identity moves with it | **PENDING** — expected red line: `FAIL: the popover's content is built at most once per presentation change` |
+| SC-49 | `self-check.sh:2502` | `report["nudge"]["popover"]["rebuild"]["hostingConstructions"] += 1` | SC-48 — the build count itself | **PENDING** — expected red line: `FAIL: each popover build costs three hosting controllers, and nothing else builds one` |
 
 ### `notification-denied` / `notification-denied-release` — `scripts/check-notification-denied.sh`
 

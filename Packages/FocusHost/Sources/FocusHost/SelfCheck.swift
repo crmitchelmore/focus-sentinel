@@ -1366,6 +1366,7 @@ enum SelfCheck {
         // membership test then reads the running binary's own enumeration rather than the
         // script's copy of it.
         report["overflowsDeclared"] = DecisionSurfaceOverflow.allCases.map(\.rawValue).sorted()
+        report["rebuild"] = popoverRebuildSurvey()
 
         for (name, presentation) in popoverSurveyContents {
             let layout = MenuBarController.popoverLayout(
@@ -1387,6 +1388,66 @@ enum SelfCheck {
             ]
         }
         return report
+    }
+
+    /// **What an open popover costs per tick** (focus-tzj.1).
+    ///
+    /// ## The defect this measures
+    ///
+    /// `MenuBarController.update(_:)` is called on every accepted activation and every
+    /// five-second corroboration tick, and while the popover was open each of those assigned a
+    /// freshly built `NSHostingController` — plus the two `popoverLayout(measuring:)` builds to
+    /// measure it. Three SwiftUI hosts every five seconds, thirty-six a minute, for a surface
+    /// whose every input was the value it already had. It also re-stamped the layout generation,
+    /// which throws away the action frames `decisionSurfaceReading(of:)` needs, so a popover the
+    /// person was looking at read as unchargeable for the moment after each tick.
+    ///
+    /// ## Why it is measured this way
+    ///
+    /// The popover opens only when a person clicks the status item, and this launch clicks
+    /// nothing — so the survey drives the two statements a tick makes while the popover is open,
+    /// on a controller of its own: `update(_:traits:)`, which is what the composition root calls,
+    /// and `refreshPopoverContent()`, which is what `update(_:)` itself calls once the popover is
+    /// shown. Same functions, same staleness test, same builder. The counters are the
+    /// controller's own — assignments, not requests — so a build that stopped happening shows up
+    /// as a number and not as a promise.
+    ///
+    /// Ten ticks per presentation, two presentations: the first tick of each must build, because
+    /// the presentation really did move, and the nine after it must build nothing at all.
+    @MainActor
+    static func popoverRebuildSurvey() -> [String: Any] {
+        let controller = MenuBarController()
+        let ticksPerPresentation = 10
+        var ticks = 0
+        var presentationChanges = 0
+        var unchangedTicks = 0
+        var buildsOnUnchangedTicks = 0
+        for (_, presentation) in popoverSurveyContents {
+            presentationChanges += 1
+            for tick in 0..<ticksPerPresentation {
+                let buildsBefore = controller.popoverContentBuildCount
+                // The two statements `update(_:)` makes while the popover is open, in the order
+                // it makes them.
+                controller.update(presentation, traits: .systemDefault)
+                controller.refreshPopoverContent()
+                ticks += 1
+                guard tick > 0 else { continue }
+                unchangedTicks += 1
+                buildsOnUnchangedTicks += controller.popoverContentBuildCount - buildsBefore
+            }
+        }
+        return [
+            "ticks": ticks,
+            "presentationChanges": presentationChanges,
+            "unchangedTicks": unchangedTicks,
+            "contentBuilds": controller.popoverContentBuildCount,
+            "buildsOnUnchangedTicks": buildsOnUnchangedTicks,
+            // Three per build, and counted rather than assumed: the content is one host and the
+            // two measurements are one each, because a wrapped height is not a number SwiftUI
+            // will answer without one. Published so the amplification is visible — the tick's
+            // real cost is this, not the build count.
+            "hostingConstructions": controller.popoverHostingConstructions
+        ]
     }
 
     /// The two contents the popover survey measures: the plainest thing this surface draws, and

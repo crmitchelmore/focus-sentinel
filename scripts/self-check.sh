@@ -2381,6 +2381,66 @@ for popover_case in ("empty", "fullest"):
         )
     )
 
+# **An open popover is not rebuilt by the clock** (focus-tzj.1).
+#
+# `MenuBarController.update(_:)` is called on every accepted activation and every five-second
+# corroboration tick, and while the popover was open each of those assigned a freshly built
+# `NSHostingController` — plus the two `popoverLayout(measuring:)` builds behind it. Measured
+# before the repair: 3 hosting controllers per tick, 36 per minute, for a surface whose every
+# input was the value it already had; and each rebuild re-stamped the layout generation, which
+# discards the action frames `decisionSurfaceReading(of:)` reads, so the popover a person was
+# looking at was briefly unchargeable once per tick.
+#
+# The reading is the binary's own counters — assignments to `popover.contentViewController`, not
+# requests for one — taken over twenty ticks in which the presentation moved exactly twice.
+popover_rebuild = popover.get("rebuild") or {}
+rebuild_ticks = popover_rebuild.get("ticks")
+rebuild_changes = popover_rebuild.get("presentationChanges")
+rebuild_unchanged = popover_rebuild.get("unchangedTicks")
+rebuild_builds = popover_rebuild.get("contentBuilds")
+rebuild_on_unchanged = popover_rebuild.get("buildsOnUnchangedTicks")
+rebuild_hosts = popover_rebuild.get("hostingConstructions")
+# **Non-vacuity first.** Every row under it is a statement about ticks that did not build, and a
+# survey that ticked nothing would satisfy all of them. So the ticks have to exist, more of them
+# than there were changes, and the presentation has to have really moved.
+check(
+    isinstance(rebuild_ticks, int) and isinstance(rebuild_changes, int)
+    and isinstance(rebuild_unchanged, int)
+    and rebuild_changes > 0
+    and rebuild_unchanged > 0
+    and rebuild_ticks == rebuild_changes + rebuild_unchanged,
+    "the popover rebuild survey really ticked, and most of its ticks changed nothing",
+    (rebuild_ticks, rebuild_changes, rebuild_unchanged),
+)
+check(
+    rebuild_on_unchanged == 0,
+    "a tick that changes nothing rebuilds nothing",
+    (rebuild_on_unchanged, rebuild_unchanged),
+)
+check(
+    isinstance(rebuild_builds, int)
+    and isinstance(rebuild_changes, int)
+    and rebuild_builds <= rebuild_changes,
+    "the popover's content is built at most once per presentation change",
+    (rebuild_builds, rebuild_changes),
+)
+# And the amplification, because the build count is a third of the cost: one host for the content
+# and one for each of the two measurements. Pinned as an identity rather than a ceiling, so a
+# fourth construction joining the build path is as red as the three going away.
+check(
+    isinstance(rebuild_hosts, int)
+    and isinstance(rebuild_builds, int)
+    and rebuild_builds > 0
+    and rebuild_hosts == 3 * rebuild_builds,
+    "each popover build costs three hosting controllers, and nothing else builds one",
+    (rebuild_hosts, rebuild_builds),
+)
+print(
+    "note popover rebuild: {} ticks, {} changes, {} builds, {} hosting controllers".format(
+        rebuild_ticks, rebuild_changes, rebuild_builds, rebuild_hosts
+    )
+)
+
 check(
     nudge.get("surfacesWithNoWindowAndNoMark") == [],
     "every nudge surface that raises no window marks the status item",

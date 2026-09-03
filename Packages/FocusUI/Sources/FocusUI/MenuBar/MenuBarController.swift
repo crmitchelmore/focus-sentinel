@@ -433,6 +433,30 @@ public final class MenuBarController {
     private var reportedPopoverFrames = NudgeActionFrameSet.empty
     private var presentation = MenuBarPresentation(status: .uncertain)
     private var traits: AppearanceTraits = .systemDefault
+    /// **Everything the popover's content was last built out of** (focus-tzj.1).
+    ///
+    /// `nil` until something has been built, which is why the first refresh after an install is
+    /// always a build: a popover holding no content view controller is not a popover whose
+    /// content is current, whatever the presentation says.
+    private var builtPopoverKey: PopoverBuildKey?
+    /// **How many times the popover's content view controller has really been rebuilt.**
+    ///
+    /// The number focus-tzj.1 is about. `update(_:)` is called on every accepted activation and
+    /// every five-second corroboration tick, and while the popover was open each of those
+    /// assigned a freshly built `NSHostingController` — a whole SwiftUI hierarchy discarded and
+    /// remade for a presentation that had not moved. It is a count of assignments and not of
+    /// requests, for `glyphWriteCount`'s reason: a reading that could be satisfied by asking is
+    /// not a reading of what the app did.
+    public private(set) var popoverContentBuildCount = 0
+    /// **How many `NSHostingController`s those rebuilds really constructed.**
+    ///
+    /// Three per rebuild, not one, and that is the measurement rather than an assumption: the
+    /// content is one, and `popoverLayout(measuring:)` builds one more for the whole surface and
+    /// one for its decision, because a wrapped height is not a value SwiftUI will answer without
+    /// a host. Published beside the build count so the amplification is visible rather than
+    /// inferred — a future measurement that stopped needing a host would show up here as a
+    /// change in the ratio, and a fourth construction sneaking into the build path likewise.
+    public private(set) var popoverHostingConstructions = 0
     /// The last string actually written to the button. The coalescing cadence is this
     /// comparison and nothing else.
     private var drawnTitle: String?
@@ -557,15 +581,7 @@ public final class MenuBarController {
         }
         redraw(force: false)
         guard popover.isShown else { return }
-        let sizeBefore = popoverLayout.size
-        popover.contentViewController = popoverController()
-        // **Only when the size really changed** (focus-5yu). `update(_:)` is called on every
-        // accepted activation and every five-second corroboration tick, and while the popover is
-        // open each of those rebuilds its content view controller. Re-placing it every time would
-        // ask AppKit to show an already-shown popover once a tick — a repeated show under a
-        // person's cursor — for a size that has not moved. It moves when a nudge arrives or
-        // leaves, which is exactly when the content changed anyway.
-        if popoverLayout.size != sizeBefore { reanchorPopover() }
+        refreshPopoverContent()
         // A nudge that arrived while the popover was already open is a nudge the person is
         // looking at, and the loop is told for the same reason it is told about an opening.
         //
@@ -833,9 +849,69 @@ public final class MenuBarController {
             popover.performClose(nil)
             return
         }
-        popover.contentViewController = popoverController()
+        refreshPopoverContent()
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
         onPopoverDidShow?()
+    }
+
+    /// **Build the popover's content, but only out of something that has moved** (focus-tzj.1).
+    ///
+    /// ## What this used to be, and what it cost
+    ///
+    /// `update(_:)` assigned `popover.contentViewController = popoverController()` on every call
+    /// where the popover happened to be open — every accepted activation and every five-second
+    /// corroboration tick — and `popoverController()` constructs one `NSHostingController` for
+    /// the content and, through `popoverLayout(measuring:)`, two more for the measurement. So an
+    /// open popover cost **three SwiftUI hosts per tick**, thirty-six a minute, to redraw a
+    /// surface whose every input was the same value it had five seconds earlier. It also
+    /// re-stamped `popoverLayoutGeneration`, which invalidates the action frames the layout
+    /// reported: for the moment between the assignment and SwiftUI delivering the new
+    /// preference, `decisionSurfaceReading(of:)` sees no action targets at all and refuses a
+    /// charge for a popover the person is looking at.
+    ///
+    /// ## What decides it
+    ///
+    /// Everything `popoverController()` reads, as one comparable value: the presentation, the
+    /// traits, and the displays the layout is clamped against. All three are value types and the
+    /// comparison is over the whole of them, so a field added to `MenuBarPresentation` is
+    /// diffed by construction rather than by somebody remembering to add it here — which is the
+    /// failure mode a hand-written "did anything important change?" predicate has.
+    ///
+    /// A popover holding no content view controller is never current, whatever the key says: an
+    /// empty popover is not a drawn one, and `togglePopover()` leans on exactly that to reuse a
+    /// content it built before the last close.
+    ///
+    /// It is `public` because it is what a tick does, and the self-check measures the tick by
+    /// calling it — the same function, with the same staleness test, on the same builder. It
+    /// deliberately does not read `popover.isShown`: whether a tick is worth spending is
+    /// `update(_:)`'s question, and re-placing an open popover is `reanchorPopover()`'s, which
+    /// keeps its own guard.
+    public func refreshPopoverContent() {
+        let key = PopoverBuildKey(presentation: presentation, traits: traits, screens: displays())
+        guard popover.contentViewController == nil || key != builtPopoverKey else { return }
+        let sizeBefore = popoverLayout.size
+        popover.contentViewController = popoverController(screens: key.screens)
+        builtPopoverKey = key
+        popoverContentBuildCount += 1
+        // **Only when the size really changed** (focus-5yu). Re-placing it every time would ask
+        // AppKit to show an already-shown popover once a tick — a repeated show under a person's
+        // cursor — for a size that has not moved. It moves when a nudge arrives or leaves, which
+        // is exactly when the content changed anyway.
+        if popoverLayout.size != sizeBefore { reanchorPopover() }
+    }
+
+    /// **What the popover's content was built out of**, as one value.
+    ///
+    /// A `struct` of the three inputs rather than three stored fields, so the staleness test is
+    /// one `!=` over the whole of them and cannot be written for two of the three.
+    private struct PopoverBuildKey: Equatable {
+        let presentation: MenuBarPresentation
+        let traits: AppearanceTraits
+        /// The displays the layout was clamped against. A display arriving, leaving or changing
+        /// resolution moves the ceiling `popoverMaximumContentHeight(screens:)` computes, so a
+        /// content built against the old geometry is stale even when nothing the person did
+        /// changed — and `NudgeHostDisplayChangeTests` is about exactly that transition.
+        let screens: [DisplayGeometry]
     }
 
     /// **Put an already-open popover back under the item it hangs from** (focus-5yu).
@@ -1050,7 +1126,11 @@ public final class MenuBarController {
     /// `NudgePanelContent`: the popover now **reports where its actions landed**, which is what
     /// `decisionSurfaceReading(of:)` reads and what stops a badge nudge being charged to somebody
     /// whose Pause button is off the bottom.
-    private func popoverController() -> NSViewController {
+    ///
+    /// - Parameter screens: the displays the layout is clamped against, passed in rather than
+    ///   read again so that the content and the `PopoverBuildKey` recording what it was built
+    ///   from are the same geometry — a second `displays()` call could answer differently.
+    private func popoverController(screens: [DisplayGeometry]) -> NSViewController {
         popoverLayoutGeneration += 1
         // The traits are applied through the split rather than to the view, so all three
         // renderings — and the measurement taken of them — are in one environment (focus-din).
@@ -1060,9 +1140,14 @@ public final class MenuBarController {
         .surfaceLayout
         .modified { $0.appearanceTraits(traits) }
 
-        let layout = Self.popoverLayout(measuring: surface, screens: displays())
+        let layout = Self.popoverLayout(
+            measuring: surface,
+            screens: screens,
+            constructions: &popoverHostingConstructions
+        )
         popoverLayout = layout
 
+        popoverHostingConstructions += 1
         let hosting = NSHostingController(
             rootView: AnyView(
                 NudgePanelContent(
@@ -1139,8 +1224,25 @@ public final class MenuBarController {
         measuring surface: DecisionSurfaceLayout,
         screens: [DisplayGeometry]
     ) -> PopoverLayout {
+        var unread = 0
+        return popoverLayout(measuring: surface, screens: screens, constructions: &unread)
+    }
+
+    /// The same measurement, **counting the hosts it needs to take it** (focus-tzj.1).
+    ///
+    /// The two `NSHostingController`s below are two thirds of what one open-popover tick used to
+    /// cost, so a reading of the cost that did not count them would be a reading of a third of
+    /// it. The tally is an `inout` parameter rather than a static on the type because the survey
+    /// that reads it and the snapshot lane that calls the plain overload run in one process:
+    /// a shared counter would have every popover baseline in `FocusUITests` adding to a number
+    /// that is supposed to describe a controller's ticks.
+    static func popoverLayout(
+        measuring surface: DecisionSurfaceLayout,
+        screens: [DisplayGeometry],
+        constructions: inout Int
+    ) -> PopoverLayout {
         let ceiling = popoverMaximumContentHeight(screens: screens)
-        let measured = measureAtCommittedWidth(surface.whole)
+        let measured = measureAtCommittedWidth(surface.whole, constructions: &constructions)
         let commitment = SurfaceSizeCommitments.commit(
             measuredHeight: measured,
             width: popoverContentWidth,
@@ -1150,7 +1252,10 @@ public final class MenuBarController {
             size: CGSize(width: commitment.width, height: commitment.height),
             overflow: SurfaceSizeCommitments.overflow(
                 measuredHeight: measured,
-                decisionHeight: measureAtCommittedWidth(surface.decision),
+                decisionHeight: measureAtCommittedWidth(
+                    surface.decision,
+                    constructions: &constructions
+                ),
                 ceiling: ceiling,
                 minimumContextHeight: DecisionSurfaceLayout.minimumContextHeight
             )
@@ -1161,7 +1266,11 @@ public final class MenuBarController {
     ///
     /// `nothingScrolls` deliberately: this is the *unclamped* height, and a measurement taken
     /// through a scroll view would answer whatever it was proposed.
-    private static func measureAtCommittedWidth(_ part: AnyView) -> Double {
+    private static func measureAtCommittedWidth(
+        _ part: AnyView,
+        constructions: inout Int
+    ) -> Double {
+        constructions += 1
         let measurer = NSHostingController(
             rootView: AnyView(
                 NudgePanelContent(
