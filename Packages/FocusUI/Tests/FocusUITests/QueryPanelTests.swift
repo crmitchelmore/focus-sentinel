@@ -228,6 +228,28 @@ struct QueryPanelSnapshotTests {
         )
     }
 
+    /// The question's half of the same gap. See `AccusationPanelSnapshotTests.tallBody`.
+    @Test(
+        "the question keeps its answers when the question outgrows the panel",
+        arguments: ["light", "dark"], SnapshotTypeSize.allCases
+    )
+    func tallBody(variant: String, size: SnapshotTypeSize) throws {
+        try SnapshotHarness.assertSnapshot(
+            QueryPanelView(
+                presentation: QueryPresentation(
+                    task: DecisionSurfaceScrollTests.tallPriority(6),
+                    subject: QueryFixture.word,
+                    reason: .noNegativeBasis,
+                    dwelled: .seconds(90)
+                )
+            ),
+            component: "queryPanel.tallBody",
+            variant: variant,
+            textScale: size.textScale,
+            width: Self.panelWidth
+        )
+    }
+
     @Test(
         "the panel survives the appearance variants at both text sizes",
         arguments: ["increasedContrast", "reduceTransparency"], SnapshotTypeSize.allCases

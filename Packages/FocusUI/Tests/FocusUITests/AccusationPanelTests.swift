@@ -405,6 +405,36 @@ struct AccusationPanelSnapshotTests {
         )
     }
 
+    /// **A body taller than the panel's ceiling, at both text sizes and in both schemes.**
+    ///
+    /// The gap the review found: every baseline in this suite was content that fits, so the
+    /// pinned action shelf — the branch a person at the largest text size actually meets — had no
+    /// picture anywhere in the estate. `DecisionSurfaceScrollTests` proves the actions are in
+    /// reach; this is what a person sees while they are.
+    @Test(
+        "the panel keeps its shelf when the body outgrows it",
+        arguments: ["light", "dark"], SnapshotTypeSize.allCases
+    )
+    func tallBody(variant: String, size: SnapshotTypeSize) throws {
+        try SnapshotHarness.assertSnapshot(
+            AccusationPanelView(
+                presentation: AccusationPresentation(
+                    rung: .panel,
+                    task: DecisionSurfaceScrollTests.tallPriority(6),
+                    subject: AccusationFixture.safari,
+                    dwelled: .seconds(600),
+                    returnTarget: "Pages",
+                    snoozeRemaining: .seconds(305),
+                    hasOpenSession: true
+                )
+            ),
+            component: "accusationPanel.tallBody",
+            variant: variant,
+            textScale: size.textScale,
+            width: Self.panelWidth
+        )
+    }
+
     /// Increased contrast and reduced transparency, at both text sizes. A panel that truncated
     /// an action at the accessibility size would be a panel that stopped offering it.
     @Test(

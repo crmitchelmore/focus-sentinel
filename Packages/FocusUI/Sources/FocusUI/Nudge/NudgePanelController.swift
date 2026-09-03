@@ -269,11 +269,18 @@ public final class NudgePanelController {
 
     /// **An absolute ceiling on how much of a screen a nudge may take.**
     ///
-    /// Every real combination measured on this machine fits under it — the tallest is the
-    /// recommitment rung at the largest accessibility text size, at 737 points — so it is a bound
-    /// on pathology rather than a size anything is squeezed into. Content that exceeds it
-    /// **scrolls**; it is never clipped, and while any offered action is out of reach the panel is
-    /// not a surface a question may be counted as delivered on.
+    /// Every real combination measured on this machine fits under it — **re-measured for e11a**,
+    /// because the number this comment used to cite, 737 points, was the recommitment rung, and
+    /// U-2 deleted that rung. At the largest accessibility text size the accusation the app
+    /// really draws is 451 points and the question 344; a deliberately long priority reaches 868
+    /// and scrolls, which is what makes this a bound on pathology rather than a size anything
+    /// ordinary is squeezed into. `DecisionSurfaceScrollTests.theCeilingIsABoundOnPathology`
+    /// asserts both halves, so the next time the copy or the type moves these numbers are read
+    /// from a run rather than from this sentence.
+    ///
+    /// Content that exceeds it **scrolls**; it is never clipped, and while any offered action is
+    /// out of reach the panel is not a surface a question may be counted as delivered on. What
+    /// scrolls is the context, never the actions (`DecisionSurfaceOverflow.theContextScrolls`).
     public static let absoluteMaximumHeight: Double = 800
 
     /// How far a measured size may be from the size in force before it is a different size.

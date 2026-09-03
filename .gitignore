@@ -24,6 +24,10 @@ explainers/
 build/
 DerivedData/
 .build/
+# …and `.build` itself, which on this machine is a SYMLINK into a shared build cache.
+# `.build/` matches a directory only, so the symlink was invisible to it and eight of them
+# were committed by a `git add -A` before this line existed (focus-0nm).
+.build
 *.xcresult
 *.xcuserstate
 xcuserdata/

@@ -235,7 +235,62 @@ struct DecisionSurfaceScrollTests {
         }
     }
 
-    static let space: [Cell] = accusationCells() + questionCells() + popoverCells()
+    // MARK: - The content-height space (focus-0nm)
+
+    /// **A priority long enough to drive the panel to a stated multiple of its own ceiling.**
+    ///
+    /// The fixtures above are the contents the app really draws, and they are the right cells to
+    /// fold over — but they are four heights that happen to exist rather than a *space*. A pinned
+    /// action shelf is a claim about what happens when the content grows without bound, and the
+    /// only honest way to make it is to grow the content without bound and look.
+    ///
+    /// The multiplier is applied to the sentence, not to a measured height: heights differ
+    /// between the two lanes — under `swift test` every label resolves to its key — so a cell
+    /// built from a number read in one lane lands in a different branch in the other. Built from
+    /// the text, the space spans the same shape in both, and `theContentSpaceReachesThreeCeilings`
+    /// asserts what it actually spanned rather than assuming it.
+    static func tallPriority(_ multiple: Int) -> String {
+        ([PopoverSpace.longPriority] + Array(
+            repeating: "and then reconcile the figures against last quarter before anything else",
+            count: multiple
+        )).joined(separator: " ")
+    }
+
+    /// Panel cells over a parameterised content height, both surfaces, both text sizes.
+    ///
+    /// `0` is a priority that fits under the ceiling with room to spare; the largest is well past
+    /// three times it. Every one of them is folded into `space`, so the pinned-shelf invariant is
+    /// asserted over the whole range rather than over the four heights the fixtures happen to be.
+    static func tallContentCells() -> [Cell] {
+        let multiples = [0, 2, 6, 14, 30]
+        let accusations: [(String, AccusationPresentation)] = multiples.map { multiple in
+            ("tall\(multiple)", AccusationPresentation(
+                rung: .panel,
+                task: tallPriority(multiple),
+                subject: AccusationFixture.safari,
+                dwelled: .seconds(600),
+                returnTarget: "Pages",
+                snoozeRemaining: .seconds(305),
+                hasOpenSession: true
+            ))
+        }
+        let questions: [(String, QueryPresentation)] = multiples.map { multiple in
+            ("tall\(multiple)", QueryPresentation(
+                task: tallPriority(multiple),
+                subject: QueryFixture.word,
+                reason: .noNegativeBasis,
+                dwelled: .seconds(90)
+            ))
+        }
+        return cells(surface: .accusationPanel, contents: accusations) { presentation in
+            (AccusationPanelView(presentation: presentation), presentation.offeredActionIdentifiers)
+        } + cells(surface: .questionPanel, contents: questions) { presentation in
+            (QueryPanelView(presentation: presentation), presentation.offeredAnswerIdentifiers)
+        }
+    }
+
+    static let space: [Cell] =
+        accusationCells() + questionCells() + tallContentCells() + popoverCells()
 
     // MARK: - The instruments
 
@@ -339,6 +394,107 @@ struct DecisionSurfaceScrollTests {
             }
         }
         #expect(Self.space.count > 40, "the space collapsed to \(Self.space.count) cells")
+    }
+
+    /// **The content space really does run from under the ceiling to past three times it.**
+    ///
+    /// Without this the fold above is satisfied by twenty cells that all fit, which is the shape
+    /// the fixtures alone had. The ceiling is read from the shipping constant and the display's
+    /// own geometry — never written down — because the two numbers this claim used to be
+    /// expressed in, 648 and 737, were measurements of a rung that no longer exists (U-2) and of a
+    /// text size on one machine. A ceiling that is a literal is a ceiling that outlives what it
+    /// measured.
+    @Test("the content space runs from under the panel's ceiling to past three times it")
+    func theContentSpaceReachesThreeCeilings() {
+        let ceiling = min(
+            NudgePanelController.absoluteMaximumHeight,
+            Self.display.visibleFrame.height - Self.chromeReserved(by: .accusationPanel)
+        )
+        var shortest = Double.greatestFiniteMagnitude
+        var tallest = 0.0
+        for cell in Self.tallContentCells() {
+            let whole = Self.measuredHeights(of: cell).whole
+            shortest = min(shortest, whole)
+            tallest = max(tallest, whole)
+        }
+        #expect(
+            shortest < ceiling,
+            """
+            the shortest cell (\(shortest)) already exceeds the ceiling (\(ceiling)), so nothing \
+            in the space tests a surface that fits
+            """
+        )
+        #expect(
+            tallest >= ceiling * 3,
+            """
+            the tallest cell is \(tallest) against a ceiling of \(ceiling): the space does not \
+            reach three ceilings, so the shelf is never asked the hard question
+            """
+        )
+    }
+
+    /// **What the ceiling is a bound on**, measured rather than remembered.
+    ///
+    /// `absoluteMaximumHeight` is 800 and its doc comment used to justify that with 737 — the
+    /// recommitment rung at the largest accessibility text size, on one machine, for a rung U-2
+    /// deleted. Re-measured here: the contents the app really draws fit at `accessibilityLarge`
+    /// with room to spare, and the deliberately long priority does not, which is what makes the
+    /// ceiling a bound on pathology rather than a size anything ordinary is squeezed into.
+    ///
+    /// Both directions, because either alone is satisfiable by a layout that has stopped
+    /// measuring: if nothing exceeded the ceiling the scroll branches would be unreachable, and
+    /// if the ordinary contents exceeded it the panel would be scrolling for everybody.
+    @Test("the ordinary contents fit under the ceiling and the pathological one does not")
+    func theCeilingIsABoundOnPathology() {
+        let ceiling = NudgePanelController.absoluteMaximumHeight
+        let large = (Self.accusationCells() + Self.questionCells())
+            .filter { $0.name.hasSuffix("accessibilityLarge") }
+        var exceeded = 0
+        for cell in large {
+            let whole = Self.measuredHeights(of: cell).whole
+            if cell.name.hasPrefix("longTask") {
+                if whole > ceiling { exceeded += 1 }
+                continue
+            }
+            #expect(
+                whole <= ceiling,
+                """
+                \(cell.testDescription) is \(whole) points at the largest text size, past a \
+                ceiling of \(ceiling): an ordinary nudge has started scrolling
+                """
+            )
+        }
+        #expect(
+            exceeded > 0,
+            "no content in the suite exceeds the ceiling, so the scroll branches are unreachable"
+        )
+    }
+
+    /// **Every offered action is in reach at `accessibilityLarge`, over the whole content space.**
+    ///
+    /// The same claim as the whole-space fold, taken alone at the text size that breaks layouts,
+    /// so a regression there names itself instead of arriving inside a fold of two hundred cells.
+    @Test("at the largest text size every action stays in reach however tall the content grows")
+    func theShelfHoldsAtTheLargestTextSize() {
+        let cells = Self.tallContentCells().filter { $0.name.hasSuffix("accessibilityLarge") }
+        #expect(!cells.isEmpty, "the content space no longer contains a large-text panel")
+        var gaveWay = 0
+        for cell in cells {
+            let (reading, overflow) = Self.reading(cell, on: [Self.display])
+            if overflow == .theContextScrolls { gaveWay += 1 }
+            guard overflow != .everythingScrolls else { continue }
+            #expect(
+                reading.everyActionIsReachable,
+                "\(cell.testDescription) left actions out of reach: \(reading.summary)"
+            )
+        }
+        #expect(
+            gaveWay > 0,
+            """
+            not one large-text cell had to pin its shelf, so this proof is measuring a set of \
+            panels that all fit
+            """
+        )
     }
 
     /// **The bead's own table, inverted.** It measured that every popover state scrolls at

@@ -204,6 +204,8 @@ public struct AccusationPanelView: DecisionSurfaceContent {
 
     public var body: some View {
         column { context; actions }
+            // The rule lives in this inset, never on top of the words (see `decisionRuleInset`).
+            .padding(.leading, DesignTokens.decisionRuleInset)
             .shellSurface(
                 DesignTokens.material(for: traits, provenance: provenance),
                 in: Rectangle(),

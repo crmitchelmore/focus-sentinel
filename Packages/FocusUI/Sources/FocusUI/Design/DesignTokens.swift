@@ -102,6 +102,15 @@ public enum DesignTokens {
     /// a word is read.
     public static let decisionRuleWidth: CGFloat = 3
 
+    /// How far the content is held off the rule.
+    ///
+    /// **Measured, not chosen** (focus-0nm). Drawn as a bare overlay the rule sits on the column's
+    /// own leading edge, and the first render showed it painted straight through the "S" of
+    /// "Safari" and the "Q" of "Quiet for" — a mark meant to say which surface this is, obscuring
+    /// the words that say the same thing. The content is inset by the rule and a gap, so the two
+    /// channels never occupy the same pixels.
+    public static let decisionRuleInset: CGFloat = 12
+
     /// The tint of that rule, which is what tells the two surfaces apart.
     ///
     /// **The question and the accusation must not look alike.** U-1's whole shape is that "I
