@@ -9,10 +9,16 @@ import os
 
 /// The composition root.
 ///
-/// This is the **only** file in the repository that imports more than one sibling package,
-/// and that is the point: the packages know nothing about each other beyond the published
-/// import matrix, and the concrete choices — which store, which observer, which classifier
-/// — are made here, once, where they can be read in one screen.
+/// `FocusHost` is the **only** module permitted to import more than one sibling package —
+/// `check-boundaries.sh`'s matrix says so, and it is the row with every sibling in it — and this
+/// is the file the concrete choices are made in: which store, which observer, which classifier,
+/// once, where they can be read in one screen. The packages know nothing about each other beyond
+/// the published import matrix.
+///
+/// The claim used to be about this **file** rather than about the module, and it had not been
+/// true for some time: `SelfCheck.swift` reads three siblings to report on them, and the two
+/// files this object's own code was split into read two apiece (focus-tzj.6). What the boundary
+/// check enforces is the module, and that is what this now says.
 ///
 /// `FocusUI` consumes protocol shapes and value types; it never learns which implementation
 /// it was handed. That one-way rule is what keeps the privacy posture checkable at the

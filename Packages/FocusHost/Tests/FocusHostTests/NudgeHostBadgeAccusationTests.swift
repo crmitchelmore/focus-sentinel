@@ -80,7 +80,7 @@ struct NudgeHostBadgeAccusationTests {
 
     /// **The rung lands on the badge carrying the panel's whole correction economy.**
     ///
-    /// The presentation is built by the same `accusationPresentation(for:commitment:)` the panel
+    /// The presentation is built by the same `NudgePresentationBuilder` the panel
     /// is drawn from, so this is not "the badge has some buttons" — it is the same six actions,
     /// in the same order, about the same subject, under the same commitment.
     @Test(
