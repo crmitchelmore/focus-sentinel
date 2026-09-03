@@ -550,4 +550,65 @@ struct InterventionLogTests {
         #expect(LadderRung.Kind.allCases.contains { $0.makesAnAccusation })
         #expect(LadderRung.Kind.allCases.contains { !$0.makesAnAccusation })
     }
+
+    /// **The stored subject kind is a fact about the subject, not a constant** (focus-tee.2).
+    ///
+    /// `record(_:priorityID:at:)` wrote `RuleSubjectKind.app.rawValue` as a literal, so
+    /// `subjectKindRaw` was the same string on every row this store has ever held and a
+    /// judgement about a site was indistinguishable from a judgement about an application.
+    /// History cannot offer a correction it cannot scope, so this is the column it rests on.
+    ///
+    /// The fold is over all four shapes a subject arrives in, because three of them were
+    /// already right and only the fourth was wrong — a test that asserted the origin case alone
+    /// would go green on a fix that broke the other three.
+    @Test("the stored subject kind is read off the subject, in all four of its shapes")
+    @MainActor
+    func theSubjectKindIsReadOffTheSubject() throws {
+        let (log, container) = try Self.makeLog()
+        _ = container
+
+        // subject, what it is, and the kind the row must carry.
+        let cases: [(subject: String, shape: String, kind: RuleSubjectKind)] = [
+            (Self.decoy, "an application", .app),
+            ("https://news.example", "an origin", .domain),
+            ("", "a mixed accusation, which names nobody", .app),
+            ("", "a gate-1 suppression, which never saw a subject", .app)
+        ]
+
+        for (index, expectation) in cases.enumerated() {
+            let event = InterventionEvent(
+                kind: .accusation,
+                rung: .panel,
+                subject: expectation.subject,
+                surface: index == 3 ? nil : .panel,
+                disposition: index == 3 ? .suppressed : .delivered
+            )
+            let id = try log.record(event, priorityID: index == 3 ? nil : UUID())
+            let row = try #require(try log.all().first { $0.id == id })
+            #expect(
+                row.subjectKind == expectation.kind,
+                "\(expectation.shape) was stored as \(row.subjectKindRaw)"
+            )
+        }
+
+        // Non-vacuity: the fold must have produced both answers, or a literal would pass it.
+        let stored = Set(try log.all().map(\.subjectKind))
+        #expect(stored == [.app, .domain])
+    }
+
+    /// The same discriminator as every other subject-kind decision in the programme, asserted as
+    /// an identity rather than as two implementations that happen to agree today.
+    @Test("the log decides origin-or-application by the shared discriminator")
+    func theDiscriminatorIsTheSharedOne() {
+        for subject in [
+            InterventionLogTests.decoy, "https://news.example", "http://a.example:8080", "",
+            "not a url"
+        ] {
+            #expect(
+                (InterventionLog.subjectKind(of: subject) == .domain)
+                    == NudgeSubject.isOrigin(subject),
+                "the log and NudgeSubject disagree about \(subject)"
+            )
+        }
+    }
 }

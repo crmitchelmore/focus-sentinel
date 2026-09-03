@@ -97,7 +97,7 @@ public final class InterventionLog {
             kindRaw: event.kind.rawValue,
             rungRaw: event.rung?.rawValue,
             subject: event.subject,
-            subjectKindRaw: RuleSubjectKind.app.rawValue,
+            subjectKindRaw: Self.subjectKind(of: event.subject).rawValue,
             priorityID: priorityID,
             surfaceRaw: event.surface?.rawValue ?? "",
             dispositionRaw: event.disposition.rawValue,
@@ -108,6 +108,25 @@ public final class InterventionLog {
         try context.save()
         Self.writeCount += 1
         return row.id
+    }
+
+    /// **What kind of thing the row is about, read off the subject rather than assumed.**
+    ///
+    /// This line used to be `RuleSubjectKind.app.rawValue`, a literal, which made
+    /// `InterventionRecord.subjectKindRaw` a constant column: every judgement about a site was
+    /// stored as a judgement about an application, and nothing downstream could tell the two
+    /// apart. History has to, because an origin judgement is not correctable the way an
+    /// application judgement is.
+    ///
+    /// It calls `NudgeSubject.isOrigin(_:)` rather than re-deciding, because that is the
+    /// discriminator `CorrectionScope.kind(of:)` and `QuerySubject.kind(of:)` already share — a
+    /// second spelling of `contains("://")` is a second answer waiting to disagree with the rule
+    /// a correction writes about the same subject.
+    ///
+    /// An empty subject answers `.app`, and that is the honest reading rather than a fallback: a
+    /// mixed accusation and a gate-1 suppression both name nobody, and neither is about a site.
+    nonisolated static func subjectKind(of subject: String) -> RuleSubjectKind {
+        NudgeSubject.isOrigin(subject) ? .domain : .app
     }
 
     /// Fill in what the person did. The one field a row ever gains after it is written.
