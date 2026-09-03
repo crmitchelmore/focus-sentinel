@@ -24,7 +24,8 @@ only to `/private/tmp/mw/`. No tracked file is touched, and nothing here is ever
 | **H-LOG** | a copy of a log | `source <(sed -n '/^stage_name() {/,/^}/p' scripts/build-gate.sh)` with `LOG_DIR` and `DD` pointed at the copies |
 | **H-SRC** | a throwaway worktree | `git worktree add --detach`, edit there, run the stage from that worktree |
 
-The scripts that drive them are `/private/tmp/mw/run-json-witnesses.zsh`,
+The scripts that drive them are `/private/tmp/mw/run-selfcheck-tzj-witnesses.zsh` (SC-46..SC-61),
+`/private/tmp/mw/run-json-witnesses.zsh`,
 `run-binary-witnesses.zsh` and `run-log-witnesses.zsh`, each of which prints, per row, either
 the red line it produced or `MISS`. Every harness runs its **unmutated** copy first and requires
 it to be green: a red line means nothing if the clean run was red too.
@@ -34,7 +35,7 @@ it to be green: a red line means nothing if the clean run was red too.
 
 | stage | assertions witnessed | PROVEN | CANNOT-GO-RED |
 |---|---|---|---|
-| `selfcheck-debug` / `selfcheck-release` | 45 | 45 | — |
+| `selfcheck-debug` / `selfcheck-release` | 61 | 61 | — |
 | `notification-denied` (+ Release twin) | 17 | 17 | — |
 | `focus-steal` (+ Release twin) | 14 | 14 | — |
 | `forbidden-binary` | 6 | 6 | — |
@@ -43,7 +44,7 @@ it to be green: a red line means nothing if the clean run was red too.
 | `unit-counts` | 5 | 5 | — |
 | `evaluation` (B1–B5) | 9 | 9 | — |
 | `entitlements-debug` / `entitlements-release` | 6 | 6 | 2 (seven restatement lines; one unreachable branch) |
-| **total** | **117** | **117** | **3 findings** |
+| **total** | **133** | **133** | **3 findings** |
 
 The seven rows the gate audit named as unable to go red are all fallible now, and each was run:
 `self-check.sh`'s popover overflow (SC-37, SC-38) and its committed width (SC-39, SC-40),
@@ -107,22 +108,22 @@ H-JSON on a copy of the RELEASE report. Both stages run the same reader; the Rel
 | SC-43 | `self-check.sh:2972` | `report["nudge"]["surfacesAQuestionCanReachCellsChecked"] = 40` | the harness runs the unmutated copy first: `CONTROL … GREEN (EXIT=0)` | **PROVEN** — `FAIL: the surfaces-a-question-reaches fold covers all 80 cells rather than one` |
 | SC-44 | `self-check.sh:2272` | `report["nudge"]["orphanedNudgeSurfaces"] = ["panel"]` | the harness runs the unmutated copy first: `CONTROL … GREEN (EXIT=0)` | **PROVEN** — `FAIL: no surface is offering a nudge the loop has forgotten, of either kind` |
 | SC-45 | `self-check.sh:2938` | `report["nudge"]["everyAccusationRouteCanBeAnswered"] = False` | the harness runs the unmutated copy first: `CONTROL … GREEN (EXIT=0)` | **PROVEN** — `FAIL: every accusation route offers the person a way to answer back` |
-| SC-46 | `self-check.sh:2479` | `report["nudge"]["popover"]["rebuild"]["unchangedTicks"] = 0` | SC-47/SC-48 — the ceilings they state are about ticks this row requires to exist | **PENDING** — expected red line: `FAIL: the popover rebuild survey really ticked, and most of its ticks changed nothing` |
-| SC-47 | `self-check.sh:2484` | `report["nudge"]["popover"]["rebuild"]["buildsOnUnchangedTicks"] = 1` | SC-46 — the survey really ticked | **PENDING** — expected red line: `FAIL: a tick that changes nothing rebuilds nothing` |
-| SC-48 | `self-check.sh:2491` | `r = report["nudge"]["popover"]["rebuild"]; r["contentBuilds"] = r["presentationChanges"] + 1` | SC-49 — the hosting identity moves with it | **PENDING** — expected red line: `FAIL: the popover's content is built at most once per presentation change` |
-| SC-49 | `self-check.sh:2502` | `report["nudge"]["popover"]["rebuild"]["hostingConstructions"] += 1` | SC-48 — the build count itself | **PENDING** — expected red line: `FAIL: each popover build costs three hosting controllers, and nothing else builds one` |
-| SC-50 | `self-check.sh:2526` | `report["nudge"]["tickFetches"]["available"] = False` | SC-51 — the per-state rows are read from the same object | **PENDING** — expected red line: `FAIL: the per-tick fetch survey ran` |
-| SC-51 | `self-check.sh:2543` | `report["nudge"]["tickFetches"]["noCommitment"]["firstTickFetches"] = 0` | SC-52/SC-53 — the ceilings it makes readable | **PENDING** — expected red line: `FAIL: the noCommitment tick survey really ticked, and its first tick really fetched` |
-| SC-52 | `self-check.sh:2550` | `r = report["nudge"]["tickFetches"]["noCommitment"]; r["fetchesOverSteadyTicks"] = 2 * r["steadyTicks"] + 1` | SC-51 — the survey really ticked | **PENDING** — expected red line: `FAIL: a quiet noCommitment tick costs at most two fetches` |
-| SC-53 | `self-check.sh:2558` | `report["nudge"]["tickFetches"]["noCommitment"]["nudgeFetchesOverSteadyTicks"] = 1` | SC-51 | **PENDING** — expected red line: `FAIL: the nudge half of a quiet noCommitment tick goes to the store not at all` |
-| SC-54 | `self-check.sh:2563` | `report["nudge"]["tickFetches"]["commitmentPopoverOpen"]["popoverFetchesOverSteadyTicks"] = 1` | SC-51 | **PENDING** — expected red line: `FAIL: building the popover's content on a commitmentPopoverOpen tick touches no store` |
-| SC-55 | `self-check.sh:2177` | `report["retention"]["windowDays"] = 30` | SC-59 — the seeded sweep cuts where the window says | **PENDING** — expected red line: `FAIL: the committed retention window is ninety days` |
-| SC-56 | `self-check.sh:2184` | `report["retention"]["ranAtLaunch"] = False` | SC-58 — the seeded half still runs | **PENDING** — expected red line: `FAIL: the retention sweep ran at launch and says which local day it ran on` |
-| SC-57 | `self-check.sh:2189` | `report["retention"]["rowsRemoved"] = -1` | SC-56 | **PENDING** — expected red line: `FAIL: the launch sweep says how many rows it removed` |
-| SC-58 | `self-check.sh:2196` | `report["retention"]["seedAvailable"] = False` | SC-56 — the launch half is unaffected | **PENDING** — expected red line: `FAIL: the seeded retention sweep ran` |
-| SC-59 | `self-check.sh:2202` | `report["retention"]["seededActivityEventsRemoved"] = 2` | SC-60 — the intervention half holds while this moves | **PENDING** — expected red line: `FAIL: an activity event at 91 days goes and one at 89 stays` |
-| SC-60 | `self-check.sh:2208` | `report["retention"]["seededInterventionRowsKept"] = 0` | SC-59 | **PENDING** — expected red line: `FAIL: an intervention row at 91 days goes and one at 89 stays` |
-| SC-61 | `self-check.sh:2217` | `report["retention"]["seededQueryReceiptsRemoved"] = 1` | SC-59/SC-60 — the two age-only tables hold while the receipt rule breaks | **PENDING** — expected red line: `FAIL: a 91-day-old receipt under a live priority survives the window` |
+| SC-46 | `self-check.sh:2479` | `report["nudge"]["popover"]["rebuild"]["unchangedTicks"] = 0` | SC-47/SC-48 — the ceilings they state are about ticks this row requires to exist | **PROVEN** — `FAIL: the popover rebuild survey really ticked, and most of its ticks changed nothing` |
+| SC-47 | `self-check.sh:2484` | `report["nudge"]["popover"]["rebuild"]["buildsOnUnchangedTicks"] = 1` | SC-46 — the survey really ticked | **PROVEN** — `FAIL: a tick that changes nothing rebuilds nothing` |
+| SC-48 | `self-check.sh:2491` | `r = report["nudge"]["popover"]["rebuild"]; r["contentBuilds"] = r["presentationChanges"] + 1` | SC-49 — the hosting identity moves with it | **PROVEN** — `FAIL: the popover's content is built at most once per presentation change` |
+| SC-49 | `self-check.sh:2502` | `report["nudge"]["popover"]["rebuild"]["hostingConstructions"] += 1` | SC-48 — the build count itself | **PROVEN** — `FAIL: each popover build costs three hosting controllers, and nothing else builds one` |
+| SC-50 | `self-check.sh:2526` | `report["nudge"]["tickFetches"]["available"] = False` | SC-51 — the per-state rows are read from the same object | **PROVEN** — `FAIL: the per-tick fetch survey ran` |
+| SC-51 | `self-check.sh:2543` | `report["nudge"]["tickFetches"]["noCommitment"]["firstTickFetches"] = 0` | SC-52/SC-53 — the ceilings it makes readable | **PROVEN** — `FAIL: the noCommitment tick survey really ticked, and its first tick really fetched` |
+| SC-52 | `self-check.sh:2550` | `r = report["nudge"]["tickFetches"]["noCommitment"]; r["fetchesOverSteadyTicks"] = 2 * r["steadyTicks"] + 1` | SC-51 — the survey really ticked | **PROVEN** — `FAIL: a quiet noCommitment tick costs at most two fetches` |
+| SC-53 | `self-check.sh:2558` | `report["nudge"]["tickFetches"]["noCommitment"]["nudgeFetchesOverSteadyTicks"] = 1` | SC-51 | **PROVEN** — `FAIL: the nudge half of a quiet noCommitment tick goes to the store not at all` |
+| SC-54 | `self-check.sh:2563` | `report["nudge"]["tickFetches"]["commitmentPopoverOpen"]["popoverFetchesOverSteadyTicks"] = 1` | SC-51 | **PROVEN** — `FAIL: building the popover's content on a commitmentPopoverOpen tick touches no store` |
+| SC-55 | `self-check.sh:2177` | `report["retention"]["windowDays"] = 30` | SC-59 — the seeded sweep cuts where the window says | **PROVEN** — `FAIL: the committed retention window is ninety days` |
+| SC-56 | `self-check.sh:2184` | `report["retention"]["ranAtLaunch"] = False` | SC-58 — the seeded half still runs | **PROVEN** — `FAIL: the retention sweep ran at launch and says which local day it ran on` |
+| SC-57 | `self-check.sh:2189` | `report["retention"]["rowsRemoved"] = -1` | SC-56 | **PROVEN** — `FAIL: the launch sweep says how many rows it removed` |
+| SC-58 | `self-check.sh:2196` | `report["retention"]["seedAvailable"] = False` | SC-56 — the launch half is unaffected | **PROVEN** — `FAIL: the seeded retention sweep ran` |
+| SC-59 | `self-check.sh:2202` | `report["retention"]["seededActivityEventsRemoved"] = 2` | SC-60 — the intervention half holds while this moves | **PROVEN** — `FAIL: an activity event at 91 days goes and one at 89 stays` |
+| SC-60 | `self-check.sh:2208` | `report["retention"]["seededInterventionRowsKept"] = 0` | SC-59 | **PROVEN** — `FAIL: an intervention row at 91 days goes and one at 89 stays` |
+| SC-61 | `self-check.sh:2217` | `report["retention"]["seededQueryReceiptsRemoved"] = 1` | SC-59/SC-60 — the two age-only tables hold while the receipt rule breaks | **PROVEN** — `FAIL: a 91-day-old receipt under a live priority survives the window` |
 
 ### `notification-denied` / `notification-denied-release` — `scripts/check-notification-denied.sh`
 
