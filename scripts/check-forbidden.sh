@@ -903,7 +903,10 @@ NUDGE_SURFACES=(
 # (R-96o). The rest of `NUDGE_SURFACES` is excluded for named reasons: `SubjectNaming` is the
 # seam that RESOLVES a name and has to take a key to do it, `NotificationDelivery`'s
 # identifiers are `UNNotificationRequest`'s and have nothing to do with a subject, and
-# `MenuBarController` declares the value type whose halves these are.
+# `MenuBarPresentation` declares the value types whose halves these are — it holds
+# `MenuBarSnooze`, which is identified and cancelled by `subject.identifier` while it draws
+# `subject.displayName`, so it names a key by construction and cannot be in this list
+# (focus-tzj.6 moved it out of `MenuBarController`, which draws nothing either).
 NUDGE_DRAWING_FILES=(
     Packages/FocusUI/Sources/FocusUI/Nudge/QueryPanelView.swift
     Packages/FocusUI/Sources/FocusUI/Nudge/AccusationPanelView.swift
