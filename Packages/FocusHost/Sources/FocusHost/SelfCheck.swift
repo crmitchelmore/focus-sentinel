@@ -4199,6 +4199,21 @@ enum SelfCheck {
                 if !names.contains(verb) { names.append(verb) }
             }
         report["privacyVocabulary"] = PrivacySettingsAction.vocabulary
+        // **The two things this app says it does not do** (F-122, F-137, focus-6n2).
+        //
+        // Both halves: that the pane *declares* the sentences among the strings it draws, and
+        // what those sentences resolve to **in this binary**, out of the compiled catalog. The
+        // second is what makes the first worth reading — a key declared and never translated
+        // resolves to its own name, and a pane drawing `settings.privacy.noNetwork` at a person
+        // is a disclosure nobody can read. The claims themselves are linted of the product by
+        // the `boundaries` stage, not asserted here.
+        report["privacyDeclaresNoNetwork"] = PrivacySettingsView.contentKeys
+            .contains(.settingsPrivacyNoNetwork)
+        report["privacyDeclaresNoUpdateCheck"] = PrivacySettingsView.contentKeys
+            .contains(.settingsPrivacyNoUpdateCheck)
+        report["privacyNoNetworkSentence"] = ShellStrings.string(.settingsPrivacyNoNetwork)
+        report["privacyNoUpdateCheckSentence"] = ShellStrings
+            .string(.settingsPrivacyNoUpdateCheck)
         report["privacySinkHeld"] = composition.settingsSinks != nil
         report["drivePrivacyRetention"] = drivePrivacyRetentionSink()
 

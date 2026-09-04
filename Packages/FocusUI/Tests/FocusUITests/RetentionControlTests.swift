@@ -74,6 +74,18 @@ struct RetentionControlTests {
             == PrivacySettingsAction.allDeclared.count)
     }
 
+    /// **The two disclosure sentences are declared among the strings the pane draws**
+    /// (F-122, F-137, focus-6n2), so the catalog-completeness suite and the reachability lint
+    /// both see them and neither can be a key nothing says.
+    @Test("the pane declares both disclosure sentences")
+    func theContentKeysCarryTheDisclosures() {
+        let keys = Set(PrivacySettingsView.contentKeys)
+        #expect(keys.contains(.settingsPrivacyNoNetwork))
+        #expect(keys.contains(.settingsPrivacyNoUpdateCheck))
+        // And they are two sentences, not one said twice.
+        #expect(ShellStringKey.settingsPrivacyNoNetwork != .settingsPrivacyNoUpdateCheck)
+    }
+
     /// The order the pane draws is the order the type commits to, shortest first.
     @Test("the control offers the windows shortest first, with forever last")
     func theOrderIsCommitted() {

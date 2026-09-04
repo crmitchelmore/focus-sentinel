@@ -396,6 +396,60 @@ for config in Debug Release; do
     check_classify_object "$config"
 done
 
+# --- no updater, proven on the product (F-137, D-09, focus-6n2) --------------------------
+#
+# The Privacy pane says *"It never checks for updates."* D-09 parked Sparkle because this
+# programme has no server, no remote and no deployment lane — the feed would point at nothing —
+# and a sentence a person reads has to be true of the thing they are running, not of the plan.
+#
+# Two readings, and both are needed. `nm -u` over the app's own binary must name no Sparkle
+# symbol; and the **merged** Info.plist must carry no `SUFeedURL`, because a feed URL with no
+# framework behind it is still an app announcing where it would phone. The control problem is the
+# same one the networking check has — an absence over an empty table is satisfied by nothing at
+# all — so the binary must still be seen naming its own symbols.
+check_no_updater() {
+    local config="$1"
+    local app="$DERIVED_DATA/Build/Products/$config/FocusSentinel.app"
+    local binary="$app/Contents/MacOS/FocusSentinel"
+    if [[ ! -f "$binary" ]]; then
+        if [[ "${FOCUS_REQUIRE_BINARY_CHECK:-0}" == "1" ]]; then
+            fail "FOCUS_REQUIRE_BINARY_CHECK=1 but there is no build product at $binary"
+        else
+            print "updater: SKIPPED — no build product at $binary (the gate re-runs this after the build)"
+        fi
+        return
+    fi
+
+    local symbols sparkle total
+    symbols=$(nm -u "$binary" 2>/dev/null)
+    total=$(print -r -- "$symbols" | grep -c .)
+    sparkle=$(print -r -- "$symbols" | grep -E 'SPUUpdater|SUUpdater|SPUStandardUpdater|Sparkle')
+    if [[ -n "$sparkle" ]]; then
+        fail "$config FocusSentinel names an updater symbol:"
+        print -u2 "$sparkle"
+    elif (( total < 100 )); then
+        # The control. A binary whose undefined-symbol table is empty or tiny is not the app, and
+        # "names no Sparkle symbol" would then be true of something other than the product.
+        fail "$config FocusSentinel names only $total undefined symbol(s) — that is not the app"
+    else
+        print "updater: nm -u $binary — 0 Sparkle symbols out of $total undefined"
+    fi
+
+    local feed
+    feed=$(/usr/libexec/PlistBuddy -c 'Print :SUFeedURL' "$app/Contents/Info.plist" 2>/dev/null)
+    if [[ -n "$feed" ]]; then
+        fail "$config Info.plist declares SUFeedURL=$feed, and the Privacy pane says there is none"
+    else
+        print "updater: $config Info.plist declares no SUFeedURL"
+    fi
+}
+
+# **Release only, and the reason is measured.** The Debug product is a preview shim: its
+# `nm -u` table holds 31 entries, so "names no Sparkle symbol" would be true of a binary that is
+# not the app and the control below could never be satisfied. Release is what ships, is what the
+# `release-artefact` stage packages, and is what a person reading the Privacy pane is running.
+check_no_updater Release
+
 # --- FocusClassify probes no privacy boundary, proven on the object (e04 R-70i) -----------
 #
 # The adversarial private-browsing fixtures assert that an absent origin yields `uncertain`

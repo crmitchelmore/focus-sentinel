@@ -3073,6 +3073,30 @@
         }
       }
     },
+    "settings.privacy.noNetwork" : {
+      "comment" : "Privacy pane disclosure: this app opens no network connection, ever.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus never connects to the internet."
+          }
+        }
+      }
+    },
+    "settings.privacy.noUpdateCheck" : {
+      "comment" : "Privacy pane disclosure: this app has no updater and phones nobody to ask about versions.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "It never checks for updates."
+          }
+        }
+      }
+    },
     "settings.privacy.portability.explanation" : {
       "comment" : "Sentence under the take-it-away heading.",
       "extractionState" : "manual",

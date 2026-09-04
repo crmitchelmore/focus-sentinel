@@ -4439,6 +4439,35 @@ check(
     "the probe put the person's own retention window back",
     (retention_sink.get("windowBefore"), retention_sink.get("windowRestored")),
 )
+# **The two things this app says it does not do** (F-122, F-137, focus-6n2). Declared among the
+# strings the pane draws, and resolved out of the compiled catalog in this binary — a key that
+# never got a translation resolves to its own name, and a pane showing somebody
+# `settings.privacy.noNetwork` is a disclosure nobody can read. The claims themselves are linted
+# of the product by the `boundaries` stage: no networking symbol in any package source or in
+# `FocusClassify.o`, and `nm -u` over the shipped app naming no Sparkle symbol with no `SUFeedURL`
+# in its merged Info.plist.
+check(
+    rendering.get("privacyDeclaresNoNetwork") is True
+    and rendering.get("privacyDeclaresNoUpdateCheck") is True,
+    "the Privacy pane declares both disclosure sentences among the strings it draws",
+    (
+        rendering.get("privacyDeclaresNoNetwork"),
+        rendering.get("privacyDeclaresNoUpdateCheck"),
+    ),
+)
+check(
+    isinstance(rendering.get("privacyNoNetworkSentence"), str)
+    and len(rendering["privacyNoNetworkSentence"]) > 0
+    and rendering["privacyNoNetworkSentence"] != "settings.privacy.noNetwork"
+    and isinstance(rendering.get("privacyNoUpdateCheckSentence"), str)
+    and len(rendering["privacyNoUpdateCheckSentence"]) > 0
+    and rendering["privacyNoUpdateCheckSentence"] != "settings.privacy.noUpdateCheck",
+    "both disclosure sentences resolve to real text in this binary",
+    (
+        rendering.get("privacyNoNetworkSentence"),
+        rendering.get("privacyNoUpdateCheckSentence"),
+    ),
+)
 check(
     rendering.get("privacySinkHeld") is True,
     "the Settings window handed back the sink the Privacy pane's control reaches",

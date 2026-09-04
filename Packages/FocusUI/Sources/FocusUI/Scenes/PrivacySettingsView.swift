@@ -139,6 +139,8 @@ public struct PrivacySettingsView: View {
     nonisolated public static let contentKeys: [ShellStringKey] =
         [
             .settingsPrivacyStatement,
+            .settingsPrivacyNoNetwork,
+            .settingsPrivacyNoUpdateCheck,
             .settingsPrivacyStoreLabel,
             .settingsPrivacyReveal,
             .settingsPrivacyRetentionHeading,
@@ -188,6 +190,24 @@ public struct PrivacySettingsView: View {
             ShellText(.settingsPrivacyStatement)
                 .lineLimit(nil)
                 .fixedSize(horizontal: false, vertical: true)
+
+            // **The two things this app does not do** (F-122, F-137, focus-6n2). Directly under
+            // the statement, because they are the same claim narrowed twice, and with no heading
+            // of their own: a section for *"what we do not do"* invites the list to grow, and a
+            // list of denials is a surface that reads as defensive rather than plain.
+            //
+            // Neither is a promise. The first is linted of the shipped binary by the gate's
+            // `boundaries` and `boundaries-binary` stages — no networking symbol in any package
+            // source, and none in `FocusClassify.o`. The second is linted the same way: no
+            // Sparkle symbol, no `SUFeedURL` in the merged Info.plist, and `nm -u` over the
+            // product naming neither. D-09 parked Sparkle for the reason this sentence states.
+            VStack(alignment: .leading, spacing: spacing / 4) {
+                ShellText(.settingsPrivacyNoNetwork, role: .footnote)
+                ShellText(.settingsPrivacyNoUpdateCheck, role: .footnote)
+            }
+            .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+            .lineLimit(nil)
+            .fixedSize(horizontal: false, vertical: true)
 
             VStack(alignment: .leading, spacing: spacing / 3) {
                 ShellText(.settingsPrivacyStoreLabel, role: .caption)

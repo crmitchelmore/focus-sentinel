@@ -290,6 +290,25 @@ would remove neither. The gate also presses the control itself: the pane's own s
 read back out of the store, the window the triggered sweep kept, and the person's own choice put
 back afterwards.
 
+## What it says it does not do
+
+Two sentences in Settings ▸ Privacy, directly under the statement about where the data lives and
+with no heading of their own — a section headed *"what we do not do"* invites the list to grow,
+and a list of denials reads as defensive rather than plain. *"Focus never connects to the
+internet."* (F-122) and *"It never checks for updates."* (F-137, D-09: this programme has no
+server, no remote and no deployment lane, so a Sparkle feed would point at nothing).
+
+**Neither is a promise.** The first is linted of the shipped product by the gate's `boundaries`
+stage — no networking symbol in any package source, and `nm -u FocusClassify.o` naming none,
+with the object's seven NaturalLanguage symbols as the control that stops an empty table passing.
+The second is linted the same way and in the same place: `nm -u` over the Release app's own
+binary names no Sparkle symbol out of 1 783 undefined ones — the count is the control, because
+the Debug product is a preview shim with 31 — and its merged `Info.plist` declares no
+`SUFeedURL`, because a feed URL with no framework behind it is still an app announcing where it
+would phone. The self-check adds the half a lint cannot see: that the pane declares both
+sentences among the strings it draws, and that both resolve to real text in the compiled catalog
+rather than to their own key names.
+
 ## Taking it away
 
 Two documents, and they are deliberately not one scope of the same thing (F-110, F-134).

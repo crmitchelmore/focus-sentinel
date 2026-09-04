@@ -267,6 +267,11 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case settingsLaunchAtLoginOpenSettings = "settings.general.launchAtLoginOpenSettings"
     case settingsLaunchAtLoginUnavailable = "settings.general.launchAtLoginUnavailable"
     case settingsPrivacyStatement = "settings.privacy.statement"
+    // The two things this app does not do, said plainly where a person asks what it does
+    // (F-122, F-137, focus-6n2). Both are linted true of the shipped binary rather than
+    // promised: `boundaries-binary` for the network, `nm -u` for the updater.
+    case settingsPrivacyNoNetwork = "settings.privacy.noNetwork"
+    case settingsPrivacyNoUpdateCheck = "settings.privacy.noUpdateCheck"
     case settingsPrivacyStoreLabel = "settings.privacy.storeLabel"
     case settingsPrivacyReveal = "settings.privacy.reveal"
     // The retention window (F-115, focus-l7n): a heading, the sentence that says what choosing
