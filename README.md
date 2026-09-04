@@ -24,7 +24,7 @@ and `tuist` is not used.
 | `Packages/FocusUI` | every SwiftUI view, scene, command and design token |
 | `Packages/FocusHost` | the composition layer — `AppComposition` and the five hosts. The only module that imports more than one sibling package, and the reason it is a package rather than the app target is that `App/` is not one: no test bundle could import it, so every claim about the wiring in it was a source scan (see "Why the composition layer is a package" below) |
 | `Config/` | build inputs that are neither app source nor scripts. Exactly one file: `FocusSentinel-Info.plist`, the partial plist carrying `CFBundleURLTypes`. It lives here and **not** in `App/` — see "The project file" below |
-| `scripts/` | the build gate and its twenty-five stages, plus the six live evidence lanes |
+| `scripts/` | the build gate and its twenty-seven stages, plus the six live evidence lanes |
 | `Tools/windowid` | a test driver: window ids for `screencapture -l`, read from the public window list without ever asking for a window *name*. Not part of the shipping app's package graph |
 
 ---
@@ -110,6 +110,7 @@ the stage logs are the evidence, and they are kilobytes. A pinned `FOCUS_DERIVED
 | 2 | `check-boundaries.sh` | the package import matrix holds; zero third-party dependencies |
 | 3 | `check-forbidden.sh` | no `kCGWindowName`, no Apple Events, no private APIs, no plan-less `ModelContainer`, and (R-97) no SwiftData fetch outside the counting wrappers — see "What the tick costs" |
 | 4 | `check-strings.sh` | no hardcoded user-visible string; the catalogs and the code agree both ways |
+| 4' | `glyphs` | **the five status marks are the app's own, and no two of them are alike at the size they ship at.** Two halves. `scripts/make-status-glyphs.py --check` re-renders the family from its own geometry on a 16-unit grid and compares the committed PNGs byte for byte, so a hand-edited asset — or two states' files swapped — cannot survive; the distance fold alone could not catch that, because a pairwise measure over a set is invariant under permuting the set. `scripts/glyph-distance.py` renders **all ten images the menu bar can draw** (five states × with and without the attention mark composited into the top-trailing corner), blurs them, and holds every pair above `Config/glyph-distance-floor.txt`. It is a sibling of `frame-ink.py`: the doctrine `FocusStatus` has stated since e01 — "silhouettes are deliberately unalike … even in monochrome at small sizes" — was a sentence and one person's reading of five SF Symbols that no longer ship, and is now a number. It earned its keep on the way in: the family the design canvas settled measured **1.43** on the tightest pair and the geometry was amended until it measured 10.75 |
 | 5 | Debug build | `EXIT=0` |
 | 6 | Release build | `EXIT=0` |
 | 6a | packaging | read from the two logs and the two products stages 5 and 6 just made: neither log contains `Copy Bundle Resources build phase contains`, neither product ships a `Contents/Resources/Info.plist`, and the merged `Contents/Info.plist` carries both the `focus` scheme and every generated key. See "The project file" |
@@ -129,11 +130,12 @@ the stage logs are the evidence, and they are kilobytes. A pinned `FOCUS_DERIVED
 | 9e | `check-grants.sh` | **invariant I-3 — the app uses no grant it never asked for.** One fold over `Config/tcc-families.txt`, ten TCC-protected API families, and it reads both halves of the claim: no request selector in either configuration's Mach-O (`nm -u` ∪ `strings -a`), and, in this run's two self-check reports, no capability in a state the table does not allow, `requestAuthorizationCallCount == 0`, and no authorisation surface on screen. See "What it says it does not do" |
 | 10 | `verify-project.sh` again | the build did not rewrite the project |
 
-**Twenty-six stages — twenty until `focus-steal-release` and `notification-denied-release`
+**Twenty-seven stages — twenty until `focus-steal-release` and `notification-denied-release`
 were added, twenty-three since e06 added `evaluation-model`, twenty-five since e10a added
-`published-keys` and `release-artefact`, and twenty-six since `grants`.** Saying so plainly,
-because the epic's close condition names the count: `project`, `boundaries`, `forbidden`,
-`strings`, `build-debug`, `build-release`, `packaging`, `eval-clean`, `unit`, **`unit-counts`**,
+`published-keys` and `release-artefact`, twenty-six since `grants`, and twenty-seven since e11b
+added `glyphs`.** Saying so plainly, because the epic's close condition names the count:
+`project`, `boundaries`, `forbidden`,
+`strings`, **`glyphs`**, `build-debug`, `build-release`, `packaging`, `eval-clean`, `unit`, **`unit-counts`**,
 `evaluation`, **`evaluation-model`**, `boundaries-binary`, `forbidden-binary`,
 `entitlements-debug`, `entitlements-release`, `selfcheck-debug`, **`focus-steal`**,
 **`notification-denied`**, `selfcheck-release`, **`focus-steal-release`**,

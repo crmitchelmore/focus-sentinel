@@ -891,6 +891,35 @@ check(
     "every status token has a distinct SF Symbol",
     [t["symbol"] for t in tokens],
 )
+# The drawn family, from e11b: the asset the app really renders, and the sentence a person who
+# cannot see it is told. `symbol` above is now the *fallback* name — kept, and kept distinct,
+# because a build with no compiled catalogue draws it.
+check(
+    report.get("statusMarkCatalogCompiled") is True,
+    "the running app draws its own status marks rather than the SF Symbol fallback",
+    report.get("statusMarkCatalogCompiled"),
+)
+check(
+    len({t["mark"] for t in tokens}) == len(tokens),
+    "every status token has a distinct drawn mark",
+    [t["mark"] for t in tokens],
+)
+check(
+    len({t["markDescriptionKey"] for t in tokens}) == len(tokens),
+    "every status token has a distinct mark-description key",
+    [t["markDescriptionKey"] for t in tokens],
+)
+check(
+    len({t["markDescription"] for t in tokens}) == len(tokens),
+    "every status mark is described in its own words",
+    [t["markDescription"] for t in tokens],
+)
+for token in tokens:
+    check(
+        token["markDescription"] and token["markDescription"] != token["markDescriptionKey"],
+        f"{token['case']}'s mark description resolves rather than echoing its key",
+        token["markDescription"],
+    )
 check(
     len({t["shape"] for t in tokens}) == len(tokens),
     "every status token has a distinct shape",

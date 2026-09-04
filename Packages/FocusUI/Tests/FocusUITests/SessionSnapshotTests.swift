@@ -232,7 +232,12 @@ struct SessionSnapshotTests {
 
         // …and no phase glyph may collide with a status glyph either: both badges appear on the
         // cockpit at once, and two identical silhouettes side by side would be worse than one.
-        let statusGlyphs = Set(FocusStatus.allCases.map(\.symbolName))
+        // The status marks are no longer SF Symbols at all (focus-w41), so the collision this
+        // guarded against cannot be spelled any more — a phase symbol and a status asset name are
+        // different kinds of name. What is still worth asserting is the fallback: a build with no
+        // compiled catalogue draws the SF Symbols, and *there* the two families still share a
+        // namespace and still must not collide.
+        let statusGlyphs = Set(FocusStatus.allCases.map(\.fallbackSymbolName))
         #expect(Set(glyphs).isDisjoint(with: statusGlyphs))
     }
 

@@ -13,12 +13,28 @@ struct FocusStatusTests {
         )
     }
 
-    @Test("every SF Symbol is distinct")
-    func symbolsAreDistinct() {
-        let symbols = FocusStatus.allCases.map(\.symbolName)
-        #expect(Set(symbols).count == 5, "two statuses share a glyph: \(symbols)")
-        for symbol in symbols {
-            #expect(!symbol.isEmpty)
+    @Test("every mark, fallback symbol and description is distinct")
+    func marksAreDistinct() {
+        // **Three vocabularies, all five apart** (focus-w41). The asset name is what the app
+        // draws, the SF Symbol is what a build with no compiled catalogue falls back to, and the
+        // description is what a person who cannot see either is told. A collision in any one of
+        // them is a state that has stopped being its own state on some surface.
+        for names in [
+            FocusStatus.allCases.map(\.markAssetName),
+            FocusStatus.allCases.map(\.fallbackSymbolName),
+            FocusStatus.allCases.map(\.markDescriptionKey)
+        ] {
+            #expect(Set(names).count == 5, "two statuses share a name: \(names)")
+            for name in names {
+                #expect(!name.isEmpty)
+            }
+        }
+
+        // And the two name spaces do not overlap: an asset name that looked like a catalogue key
+        // would be hunted for in a String Catalog for ever (`check-strings.sh`'s heuristic keys
+        // on dotted names under a known namespace).
+        for asset in FocusStatus.allCases.map(\.markAssetName) {
+            #expect(!asset.contains("."), "the asset name \(asset) is spelled like a catalog key")
         }
     }
 

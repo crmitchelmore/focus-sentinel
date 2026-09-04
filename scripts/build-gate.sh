@@ -393,6 +393,25 @@ forbidden_binary_stage() {
 # It is a stage of its own rather than a line inside `unit`, for the reason stage 7d is:
 # it has to fail the gate *on a number*, and a number that only lives inside an `.xcresult` is a
 # number nobody reads.
+glyph_stage() {
+    local rc=0
+
+    print "== the marks are what the geometry renders"
+    if ! python3 scripts/make-status-glyphs.py --check; then
+        print -u2 "FAIL [glyphs] a committed status mark is not what scripts/make-status-glyphs.py draws"
+        print -u2 "    Re-run scripts/make-status-glyphs.py, or say in a bead why the geometry moved."
+        rc=1
+    fi
+
+    print
+    print "== and no two of the ten are alike at 16 pt"
+    if ! python3 scripts/glyph-distance.py; then
+        rc=1
+    fi
+
+    return $rc
+}
+
 unit_counts_stage() {
     local log="$LOG_DIR/focus-test.log"
     local floors="Config/test-floors.txt"
@@ -1076,6 +1095,16 @@ gate() {
     # 4 — string externalisation: no hardcoded user-visible text, and the catalogs and the
     # code agree in both directions.
     run_stage "strings" "$LOG_DIR/focus-strings.log" scripts/check-strings.sh
+
+    # 4' — the status marks: generated from geometry, and provably unalike at the size they ship
+    # at. Two halves, because they catch different failures. `--check` re-renders the family from
+    # `scripts/make-status-glyphs.py`'s own geometry and compares the committed bytes, so a
+    # hand-edited asset — or two states' files swapped — cannot survive. `glyph-distance.py`
+    # folds over all ten images the menu bar can draw and holds every pair above
+    # `Config/glyph-distance-floor.txt`, so a *new* mark that happens to look like an existing one
+    # cannot either. Before this stage, "the silhouettes are unalike" was a sentence in a doc
+    # comment and a person's reading of five symbols that no longer ship.
+    run_stage "glyphs" "$LOG_DIR/focus-glyphs.log" glyph_stage
 
     # 5 — Debug build
     run_stage "build-debug" "$LOG_DIR/focus-build.log" \

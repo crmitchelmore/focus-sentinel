@@ -378,12 +378,19 @@ public final class MenuBarController {
         let attention: MenuBarAttention
     }
 
-    /// The glyph: the status's own SF Symbol, **template-rendered**.
+    /// The glyph: the status's own **drawn mark**, template-rendered (focus-w41).
     ///
     /// Template rendering is what makes the menu bar's own light and dark treatments apply, and
     /// it is also what makes the silhouette the whole signal — P-132 read all five in the real
     /// menu bar and confirmed they are distinguishable in monochrome, which is F-146 satisfied by
     /// the tokens e01 already shipped rather than by colour.
+    /// **And that reading is now a number rather than a person's** (e11 direction §1.2). The five
+    /// SF Symbols became the app's own family in e11b — one ring, its outline broken differently
+    /// per state — and `scripts/glyph-distance.py` renders the **ten** images this function can
+    /// return (five statuses × marked and unmarked), blurs them, and holds every pair above the
+    /// floor in `Config/glyph-distance-floor.txt`. The marked variants are folded in because they
+    /// are where a broken outline is likeliest to collide: the mark eats the top-trailing corner
+    /// of every silhouette it lands on.
     /// **And the mark, when a nudge is standing somewhere the menu bar speaks for** (focus-mkk,
     /// focus-2xw).
     ///
@@ -405,14 +412,38 @@ public final class MenuBarController {
         for status: FocusStatus,
         attention: MenuBarAttention = .unmarked
     ) -> NSImage? {
-        let image = NSImage(
-            systemSymbolName: status.symbolName,
-            accessibilityDescription: status.shortLabel
-        )
+        // **The app's own mark first, the SF Symbol only if there is no catalogue** (focus-w41).
+        // The fallback is not a nicety: SwiftPM copies an `.xcassets` verbatim rather than
+        // compiling it, so on `swift test` there is no `Assets.car` and a status item drawing
+        // `nil` would be a status item with nothing in it. The shipped app is asked which of the
+        // two it used — `StatusMark.catalogIsCompiled`, published by the self-check — so the
+        // fallback cannot become the quiet normal.
+        let image = Self.markImage(for: status)
         image?.isTemplate = true
         guard let image, attention.marksTheItem else { return image }
         return marked(image, attention: attention, describing: status)
     }
+
+    /// The mark, at the size the menu bar draws it, from whichever source this build has.
+    nonisolated static func markImage(for status: FocusStatus) -> NSImage? {
+        if let mark = StatusMark.nsImage(for: status) {
+            // Pinned to 16 pt. An asset resolves at its own pixel size and the menu bar would
+            // otherwise draw whatever the `@2x` file happens to be, so the one number the whole
+            // family is designed on is stated here rather than inherited from a file's height.
+            mark.size = NSSize(width: markPointSize, height: markPointSize)
+            return mark
+        }
+        let symbol = NSImage(
+            systemSymbolName: status.fallbackSymbolName,
+            accessibilityDescription: status.markDescription
+        )
+        symbol?.size = NSSize(width: markPointSize, height: markPointSize)
+        return symbol
+    }
+
+    /// The point size the marks are drawn and measured at — the size
+    /// `scripts/glyph-distance.py` renders them at, and the size the family was designed on.
+    nonisolated static let markPointSize: CGFloat = 16
 
     /// The diameter of the mark, as a fraction of the glyph's shorter side.
     nonisolated private static let markShare = 0.44

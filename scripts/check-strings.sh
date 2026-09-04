@@ -1137,9 +1137,18 @@ for number, prefix, _path, _expression in registry:
 # All three are closed below. The third is the coarsest of the checks — a call to one of the
 # app's drawing entry points is necessary, never sufficient — but it is the difference between a
 # row that has to point at a drawing and a row that has to point at a file.
+#
+# `accessibilityDescription` joined the list in e11b (focus-w41), and it belongs there rather
+# than being an exception to it. A drawing is a line that puts authored copy in front of a
+# person, and an image's accessibility description is exactly that for the person who cannot see
+# the image — it is the channel SF Symbols used to fill in automatically and that the app's own
+# drawn marks have to fill in by hand. `status.mark.*` reaches nobody through `Text(`: the
+# surface it serves is the menu bar, where the mark is the whole content and there is no label
+# anywhere near it. A list that could not name it would have forced that vocabulary to be drawn
+# somewhere it is not needed, purely to satisfy the lint.
 DRAW_CALLS = (
     "ShellText(", "NudgeText(", "Text(", "Label(",
-    "String(localized:", "setActionName(",
+    "String(localized:", "setActionName(", "accessibilityDescription",
 )
 
 for number, prefix, path, expression in registry:

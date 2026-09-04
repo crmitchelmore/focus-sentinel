@@ -73,6 +73,13 @@ status.relevant.    | Packages/FocusUI/Sources/FocusUI/Design/StatusBadge.swift 
 status.uncertain.   | Packages/FocusUI/Sources/FocusUI/Design/StatusBadge.swift | ShellText(resource: status.shortLabelResource, role: style.labelRole)
 status.unrelated.   | Packages/FocusUI/Sources/FocusUI/Design/StatusBadge.swift | ShellText(resource: status.shortLabelResource, role: style.labelRole)
 
+# The mark descriptions (focus-w41). A separate vocabulary from `status.<case>.short`, and a
+# separate drawing site: the short label is the status's NAME, drawn as text beside the badge,
+# while `status.mark.*` is what the PICTURE looks like, said in words. The surface that needs it
+# is the menu bar, where the mark is the whole content and there is no label anywhere near it —
+# so it is set on the `NSImage` itself, where it travels with the picture.
+status.mark.        | Packages/FocusUI/Sources/FocusUI/MenuBar/MenuBarController.swift | accessibilityDescription: status.markDescription
+
 # `undo.*` has no rows here, and the absence is the rule working rather than a gap.
 # `UndoActionName` is a raw-value enum in `FocusCore`, so its fourteen keys are **named** keys
 # like `FocusUI`'s and the case-name check reaches them without a declaration — the sentence the

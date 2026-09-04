@@ -605,6 +605,10 @@ enum SelfCheck {
         // wrong in the one place nobody photographs, so the app says which one it used.
         root["paletteCatalogCompiled"] = DesignTokens.Palette.catalogIsCompiled
         root["paletteRoles"] = paletteRoles()
+        // **And whether the drawn status marks resolved** (focus-w41). Same question, same
+        // reason: a build that fell back to the SF Symbols would be a build wearing the old
+        // identity, and no package test could ever say so.
+        root["statusMarkCatalogCompiled"] = StatusMark.catalogIsCompiled
         // Recorded *and* asserted: everything the menu survey says is conditional on this.
         root["activation"] = activation.dictionary
 
@@ -5218,7 +5222,10 @@ enum SelfCheck {
         FocusStatus.allCases.map { status in
             [
                 "case": status.rawValue,
-                "symbol": status.symbolName,
+                "symbol": status.fallbackSymbolName,
+                "mark": status.markAssetName,
+                "markDescriptionKey": status.markDescriptionKey,
+                "markDescription": status.markDescription,
                 "shape": status.shape.rawValue,
                 "labelKey": status.shortLabelKey,
                 "label": status.shortLabel

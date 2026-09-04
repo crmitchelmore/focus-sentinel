@@ -113,10 +113,16 @@ public struct StatusBadge: View {
                         DesignTokens.tint(for: status, traits: traits).opacity(emphasis.outlineOpacity),
                         lineWidth: emphasis.borderWidth
                     )
-                Image(systemName: status.symbolName)
-                    .symbolRenderingMode(.hierarchical)
+                // **The app's own mark, not an SF Symbol** (focus-w41). `resizable()` because
+                // it is a 16 pt asset and the badge's glyph box is a scaled metric — the
+                // silhouette is what carries the meaning and it survives being scaled; a fixed
+                // 16 pt picture in a growing box would shrink against its own label at
+                // accessibilityLarge.
+                StatusMark.image(for: status)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
                     .foregroundStyle(DesignTokens.tint(for: status, traits: traits))
-                    .font(DesignTokens.font(.title3, scale: textScale))
+                    .padding(DesignTokens.spacing(2, scale: textScale))
             }
             .frame(
                 width: DesignTokens.spacing(glyphSize * style.glyphScale, scale: textScale),

@@ -1429,6 +1429,66 @@
         }
       }
     },
+    "status.mark.break" : {
+      "comment" : "What the break mark looks like, for a reader who cannot see it.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "An empty ring, with no dot in it."
+          }
+        }
+      }
+    },
+    "status.mark.paused" : {
+      "comment" : "What the paused mark looks like, for a reader who cannot see it.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Two upright bars, and no ring."
+          }
+        }
+      }
+    },
+    "status.mark.relevant" : {
+      "comment" : "What the relevant mark looks like, for a reader who cannot see it.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A closed ring with a dot at its centre."
+          }
+        }
+      }
+    },
+    "status.mark.uncertain" : {
+      "comment" : "What the uncertain mark looks like, for a reader who cannot see it.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A ring open at the top, with a dot above the opening."
+          }
+        }
+      }
+    },
+    "status.mark.unrelated" : {
+      "comment" : "What the unrelated mark looks like, for a reader who cannot see it.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A three-quarter arc with a dot outside it, low and trailing."
+          }
+        }
+      }
+    },
     "status.paused.short" : {
       "comment" : "Short status label: the session is paused, or nothing is being observed.",
       "extractionState" : "manual",

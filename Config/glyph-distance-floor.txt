@@ -1,0 +1,34 @@
+# The floor `scripts/glyph-distance.py` holds the status marks above (F-146, focus-w41).
+#
+# ONE NUMBER, and it is a measurement rather than a preference. `FocusStatus` has claimed since
+# e01 that "silhouettes are deliberately unalike … even in monochrome at small sizes". Until e11b
+# the evidence for that was P-132: a person looked at five SF Symbols in the real menu bar, once,
+# and agreed. The symbols no longer ship. This file is what replaced the person.
+#
+# WHAT IS MEASURED. All ten images the menu bar can draw — five states, each with and without the
+# attention mark composited into its top-trailing corner — rendered at 16 pt at 1× as coverage
+# masks, box-downsampled by two and blurred twice with a 3×3 binomial kernel, compared pairwise
+# as the mean absolute difference in 0–255 units. Blurred, because two marks that differ only in
+# a detail a squint destroys are two marks a person glancing at a menu bar cannot tell apart.
+#
+# THE MEASURED SPREAD, on the family committed at focus-w41.3:
+#
+#     10.75   uncertain+mark  vs  onBreak+mark        the tightest pair, and the one that
+#                                                     forced the design amendment
+#     13.19   uncertain+mark  vs  unrelated+mark
+#     15.08   relevant        vs  onBreak             the presence/absence pair the direction
+#                                                     calls the strongest cue it has
+#     …
+#     61.85   relevant+mark   vs  unrelated           the widest
+#
+# THE FLOOR AND ITS MARGIN. 9.0 — the measured minimum less about 16 %. Wide enough that an
+# antialiasing difference or a one-pixel nudge cannot redden the gate; tight enough that the pair
+# the direction's own figure would have shipped (**1.43**, the 60°-gap `uncertain` against the
+# plain ring of `onBreak`) is nowhere near it, and neither is the 4.46 the 120° amendment reached
+# once the mark was composited.
+#
+# RAISING IT. Raise this the way `Config/test-floors.txt` is raised: in the same commit as the
+# family that legitimately produced more, never to make a run green. LOWERING IT is a statement
+# that two of the app's five states may look alike at the size they ship at, and needs a bead
+# saying which two and why.
+9.0

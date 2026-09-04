@@ -112,9 +112,46 @@ struct MenuBarTests {
         #expect(image.size.height > 0)
     }
 
+    /// **The mark carries its own description, and it is not the label** (focus-w41).
+    ///
+    /// An SF Symbol arrives with an accessibility description the system wrote; a drawn asset
+    /// arrives with nothing, and the direction names that loss (§5.2 item 5). This is where it is
+    /// paid back: the sentence is authored, per state, in the catalogue, and it is set on the
+    /// `NSImage` so it travels with the picture rather than with whichever view drew it.
+    ///
+    /// It must not be the short label. "Unrelated" is the status's *name* and every badge that
+    /// draws the mark also draws that word in text beside it; what a person who cannot see the
+    /// menu bar needs there is what the picture *is*.
+    @Test(
+        "every mark describes itself, in its own words, and not in the label's",
+        .enabled(if: LocalizationLane.catalogsAreCompiled)
+    )
+    func everyMarkCarriesItsOwnDescription() throws {
+        #expect(StatusMark.catalogIsCompiled, "the drawn family did not resolve — the SF Symbol fallback is being drawn")
+
+        var descriptions: Set<String> = []
+        for status in FocusStatus.allCases {
+            let image = try #require(MenuBarController.glyph(for: status))
+            let described = try #require(image.accessibilityDescription)
+            #expect(described == status.markDescription)
+            #expect(described != status.markDescriptionKey, "\(status) echoes its key")
+            #expect(described != status.shortLabel, "\(status)'s mark is described by its name")
+            descriptions.insert(described)
+        }
+        #expect(descriptions.count == FocusStatus.allCases.count)
+    }
+
+    /// The marks are drawn at the one size the whole family — and its gate — is designed on.
+    @Test("every mark is drawn at 16 points", arguments: FocusStatus.allCases)
+    func everyMarkIsSixteenPoints(status: FocusStatus) throws {
+        let image = try #require(MenuBarController.glyph(for: status))
+        #expect(image.size.width == MenuBarController.markPointSize)
+        #expect(image.size.height == MenuBarController.markPointSize)
+    }
+
     @Test("no two states share a symbol or a shape")
     func silhouettesAreDistinct() {
-        let symbols = Set(FocusStatus.allCases.map(\.symbolName))
+        let symbols = Set(FocusStatus.allCases.map(\.markAssetName))
         let shapes = Set(FocusStatus.allCases.map(\.shape))
         #expect(symbols.count == FocusStatus.allCases.count)
         #expect(shapes.count == FocusStatus.allCases.count)

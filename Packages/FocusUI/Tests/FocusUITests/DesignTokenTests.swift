@@ -134,7 +134,7 @@ struct DesignTokenTests {
 
         // The non-colour channels are the ones that must survive a user who cannot use
         // colour at all. Tint distinctness is asserted too, but it is the fourth channel.
-        #expect(Set(statuses.map(\.symbolName)).count == statuses.count)
+        #expect(Set(statuses.map(\.markAssetName)).count == statuses.count)
         #expect(Set(statuses.map(\.shape)).count == statuses.count)
         #expect(Set(statuses.map(\.shortLabelKey)).count == statuses.count)
         // **Resolved, not described** (focus-0nm). This line used to compare
