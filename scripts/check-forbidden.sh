@@ -1314,10 +1314,23 @@ fi
 # matched. `requestCockpit()` is deliberately NOT matched: it is the verb a surface uses to ask
 # for the window by name, it opens one rather than storing a command against one, and it reports
 # whether anything could.
+#
+# **A second caller, added deliberately** (F-141, focus-mn7). The three App Intents perform
+# through this channel because the brief for every one of them is *"perform through the same
+# command host the menu bar uses"* — an intent that reached past it into the hosts would be a
+# second implementation of three verbs whose availability is the interesting part, and the two
+# would disagree exactly as the menu and the cockpit did at focus-6uf.
+#
+# The rule's own reason is answered rather than waived: the defect it was written for is a click
+# that **silently does nothing** when the cockpit is shut, and the six controls it named all
+# discarded the return value. `FocusIntentRunner` reads it — `undeliverable` becomes
+# `FocusIntentRefusal.notRunning` and reaches the person as a sentence — so a shortcut that could
+# not land says so instead of reporting success. `FocusIntentTests` drives that arm.
 check_outside "R-96q" "only the menu bar sends a command down the cockpit's channel" \
     '(FocusCommandCenter\.shared|[Cc]ommandCenter)\.send\(' \
     App Packages/*/Sources \
-    --allow Packages/FocusUI/Sources/FocusUI/Commands/FocusCommands.swift
+    --allow Packages/FocusUI/Sources/FocusUI/Commands/FocusCommands.swift \
+    --allow Packages/FocusHost/Sources/FocusHost/FocusAppIntents.swift
 
 # R-96d — no shared abstraction over the two authorisations, and no retroactive conformance
 # added to either of them. The elegant refactor is the one that would destroy the guarantee.

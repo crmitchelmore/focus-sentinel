@@ -290,6 +290,28 @@ would remove neither. The gate also presses the control itself: the pane's own s
 read back out of the store, the window the triggered sweep kept, and the person's own choice put
 back afterwards.
 
+## Three shortcuts
+
+Set Focus Priority, Start Focus Session, Finish Focus Session (F-141). Each one performs through
+`FocusCommandCenter` — **the same command host the menu bar uses** — because the interesting half
+of a shortcut is when it refuses, and an intent that reached past the host into the session and
+priority hosts would be a second implementation of three verbs whose availability is the whole
+question. The menu and the cockpit disagreed exactly that way once (`focus-6uf`), and that is the
+defect this shape prevents.
+
+So each intent refuses in exactly the states the File menu would draw its item disabled in, and
+the fold that proves it is over every session phase there is: finishing with no session, starting
+with one already running, and a priority with nothing in it. A command nothing is listening to is
+a refusal too — `undeliverable` becomes a sentence a person hears — rather than a shortcut that
+reports success and does nothing, which is what six controls in this app used to do with a closed
+cockpit.
+
+`AppIntent.perform()` runs in a process the unit lane does not own, so what the tests drive is
+`FocusIntentRunner`: the whole of what the three intents do, minus three lines of framework
+shell. Every refusal has its own sentence in the catalog, because *"the operation could not be
+completed"* is what an intent says when nobody wrote it a reason, and a person hears these out of
+Shortcuts with the app nowhere on screen.
+
 ## The list a person could not add to
 
 `SensitivityGate` has a presentation-exclusion list, `SensingHost` consults it on every

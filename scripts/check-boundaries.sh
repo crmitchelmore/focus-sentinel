@@ -195,7 +195,10 @@ ALLOWED_FRAMEWORKS[FocusEvaluate]="Foundation os"
 ALLOWED_FRAMEWORKS[FocusModel]="Foundation FoundationModels os"
 ALLOWED_FRAMEWORKS[FocusSensing]="Foundation AppKit CoreGraphics IOKit Carbon.HIToolbox CoreAudio CoreMediaIO ServiceManagement os"
 ALLOWED_FRAMEWORKS[FocusUI]="Foundation SwiftUI AppKit Observation QuickLook UniformTypeIdentifiers UserNotifications os"
-ALLOWED_FRAMEWORKS[FocusHost]="Foundation AppKit SwiftData Observation ApplicationServices os"
+# `AppIntents` is added deliberately (F-141, focus-mn7): the three shortcuts live in the
+# composition root because that is where the command host is, and a package that could not
+# import the framework would have to reimplement three verbs it already performs.
+ALLOWED_FRAMEWORKS[FocusHost]="Foundation AppKit AppIntents SwiftData Observation ApplicationServices os"
 
 PACKAGES=(FocusCore FocusRules FocusClassify FocusEvaluate FocusModel FocusSensing FocusUI FocusHost)
 
