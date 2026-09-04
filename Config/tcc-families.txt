@@ -1,0 +1,54 @@
+# Every TCC-protected API family this application's code could touch, and the proof for each
+# that it neither asks for the grant nor holds one (e07 invariant **I-3**, F-128).
+#
+# WHY THIS FILE EXISTS. Five plans cite "this app asks for no TCC permission of any kind" as a
+# ruling, and until this round the proof of it was scattered: SC-1 banned one CoreGraphics key,
+# R-33 banned eight source-level request calls, R-96s banned five notification selectors in the
+# Release Mach-O, and `check-notification-denied.sh` read one counter out of the running app.
+# Four readings about three families. Nothing said what the *other* seven families were, and a
+# family nobody named is a family nobody checked. This table is the vocabulary; `check-grants.sh`
+# is the single fold over it, and it reads both the artefact and the running application.
+#
+# ROW SHAPE — six columns, separated by ` · `:
+#
+#     <family> · <banned> · <controls> · <capability> · <allowed states> · <note>
+#
+#   family          one of the ten names below. The vocabulary is closed: `check-grants.sh`
+#                   carries the same ten and fails if the table names a different set, so a row
+#                   cannot be deleted, renamed or quietly merged into its neighbour.
+#   banned          comma-separated selectors, class names and symbols whose presence in the
+#                   shipped Mach-O would mean the app can ASK for that grant. Matched against the
+#                   union of `nm -u` and `strings -a`, because a Swift call to a C function shows
+#                   up as an undefined symbol and an Objective-C selector shows up as a string.
+#   controls        symbols that must be PRESENT, because they are the grant-free reading the app
+#                   really does make of that family. Without one, "no request selector" is a
+#                   statement about a binary that has no relationship with the family at all —
+#                   which is the same green a build that dropped the framework would produce.
+#                   NONE where the app touches the family in no way whatsoever; the fold then
+#                   holds that family to the global symbol-universe floors instead.
+#   capability      the `Capability` case the app publishes for this family, or NONE.
+#   allowed states  the `CapabilityState` values the running app may report for it. `available`
+#                   appears in exactly one row, and that row's note has to say what grant-free
+#                   mechanism produces it.
+#   note            why the reading is grant-free, in one sentence a person reads.
+#
+# WHERE A FAMILY'S BAN LIVES SOMEWHERE STRONGER. `screenRecording`'s worst symbol is the
+# window-list key that needs the grant, and SC-1 already bans it by name across the whole
+# repository and in seven build products one at a time. Repeating it here would weaken nothing
+# and would make SC-1 fail on this file, so the row's note points at it instead.
+#
+# THE ONE `available`. `microphoneActivity` reads `available` on a Mac with a microphone, and it
+# is not a grant: `kAudioDevicePropertyDeviceIsRunningSomewhere` is a property of a CoreAudio
+# device object, readable by any process, and it says only that *somebody* on this Mac is
+# recording. Capturing audio would need `AVCaptureDevice`, which is in this row's banned column.
+
+accessibility · AXIsProcessTrustedWithOptions,kAXTrustedCheckOptionPrompt,AXUIElementCopyAttributeValue,AXUIElementCreateApplication · _AXIsProcessTrusted · accessibilityWindowContext · notRequested,denied,restricted,unavailable · The app reads whether it is trusted and never asks to become trusted; the window title and tab address D-02 wanted are parked under PD-1.
+screenRecording · CGRequestScreenCaptureAccess,CGPreflightScreenCaptureAccess,SCShareableContent,CGWindowListCreateImage,CGDisplayStream · _CGWindowListCopyWindowInfo · screenCapture · notRequested,denied,restricted,unavailable · The window list gives geometry, layer and owner name without a grant; the one key in it that would need one is banned by SC-1, repository-wide and in seven build products, which is a stronger reading than this row could take and is why it is not repeated here.
+automation · NSAppleScript,NSAppleEventDescriptor,AEDeterminePermissionToAutomateTarget,AESendMessage,OSAScript · NONE · NONE · NONE · The app drives no other application, so there is nothing to be automated and no Apple Event to send.
+notifications · requestAuthorizationWithOptions,addNotificationRequest,setNotificationCategories,UNNotificationRequest,UNMutableNotificationContent · currentNotificationCenter,getNotificationSettingsWithCompletionHandler · notifications · notRequested,denied,restricted,unavailable · U-2 took the notification rung off the ladder; what is left is reading the settings the person already chose, which prompts nobody.
+camera · AVCaptureDevice,AVCaptureSession,requestAccessForMediaType · _CMIOObjectGetPropertyData · cameraActivity · notRequested,denied,restricted,unavailable · CMIO property reads say whether a camera is running; opening one would need the grant and the app never opens one.
+microphone · AVAudioApplication,AVAudioSession,requestRecordPermission,AVCaptureDeviceInput · _AudioObjectGetPropertyData · microphoneActivity · available,notRequested,denied,restricted,unavailable · kAudioDevicePropertyDeviceIsRunningSomewhere is a device property any process may read; it needs no grant and yields no audio.
+inputMonitoring · IOHIDRequestAccess,CGRequestListenEventAccess,CGRequestPostEventAccess,CGEventTapCreate,IOHIDManagerCreate · NONE · NONE · NONE · Idle time comes from CGEventSource's seconds-since-last-event, which is a number and not a keystroke; the app taps no events.
+location · CLLocationManager,requestWhenInUseAuthorization,requestAlwaysAuthorization,startUpdatingLocation · NONE · NONE · NONE · Nothing this app decides depends on where the Mac is.
+contacts · CNContactStore,requestAccessForEntityType,CNAuthorizationStatus · NONE · NONE · NONE · The app knows about applications and priorities, never about people.
+calendar · EKEventStore,requestFullAccessToEvents,requestAccessToEntityType · NONE · NONE · NONE · Quiet hours are a clock the person sets, not a calendar the app reads.

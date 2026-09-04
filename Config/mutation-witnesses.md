@@ -412,6 +412,55 @@ compile error and `NotchGeometrySeamTests` fails on any divergence between the t
 but "both readers wrong in the same way" is **P-e08-B's** to close and is listed as such in the
 README's e08 section.
 
+### `grants` — `scripts/check-grants.sh` (invariant I-3, F-128)
+
+The stage folds `Config/tcc-families.txt` over two subjects at once: the build products of the run
+(the union of `nm -u` and `strings -a`, per configuration) and the two self-check reports that run
+produced. So it takes two harnesses and both are non-committing:
+
+* **H-BIN**, driven by `/private/tmp/mw-i3/run.zsh` with `/private/tmp/mw-i3/plant.py`. It copies
+  `$FOCUS_DERIVED_DATA/Build/Products` into `/private/tmp/mw-i3/dd` and rewrites **a donor string
+  taken from `strings -a -t d`'s own listing**, in place, NUL-padded to the donor's length. The
+  donor comes from the tool's listing rather than from a byte search of the file, because a byte
+  search finds runs in regions `strings` never reports: measured, a selector planted at offset
+  13 533 760 of the Release executable was in the file and invisible to both `nm` and `strings`, so
+  the first draft of this harness produced ten green runs that proved only that the harness could
+  not mutate.
+* **H-JSON**, a doctored copy of `focus-selfcheck-release.json`.
+
+The control (nothing doctored) is green: `I-3: no grant asked for, and none held.`
+
+**One row per family**, because the whole claim of the table is that no family is missing. The
+mutation is one banned selector from that family's own row; a different selector from the same row
+fails the same way.
+
+| # | family | mutation | control | status — the line it printed |
+|---|---|---|---|---|
+| I3-01 | accessibility | plant `AXIsProcessTrustedWithOptions` (H-BIN) | the unmutated copy is green | **PROVEN** — `FAIL [I-3] accessibility: the artefact carries no AXIsProcessTrustedWithOptions` |
+| I3-02 | screenRecording | plant `CGRequestScreenCaptureAccess` | I3-01's control | **PROVEN** — `FAIL [I-3] screenRecording: the artefact carries no CGRequestScreenCaptureAccess` |
+| I3-03 | automation | plant `AEDeterminePermissionToAutomateTarget` | I3-01's control | **PROVEN** — `FAIL [I-3] automation: the artefact carries no AEDeterminePermissionToAutomateTarget` |
+| I3-04 | notifications | plant `requestAuthorizationWithOptions` | I3-01's control | **PROVEN** — `FAIL [I-3] notifications: the artefact carries no requestAuthorizationWithOptions` |
+| I3-05 | camera | plant `AVCaptureSession` | I3-01's control | **PROVEN** — `FAIL [I-3] camera: the artefact carries no AVCaptureSession` |
+| I3-06 | microphone | plant `requestRecordPermission` | I3-01's control | **PROVEN** — `FAIL [I-3] microphone: the artefact carries no requestRecordPermission` |
+| I3-07 | inputMonitoring | plant `IOHIDRequestAccess` | I3-01's control | **PROVEN** — `FAIL [I-3] inputMonitoring: the artefact carries no IOHIDRequestAccess` |
+| I3-08 | location | plant `CLLocationManager` | I3-01's control | **PROVEN** — `FAIL [I-3] location: the artefact carries no CLLocationManager` |
+| I3-09 | contacts | plant `CNContactStore` | I3-01's control | **PROVEN** — `FAIL [I-3] contacts: the artefact carries no CNContactStore` |
+| I3-10 | calendar | plant `EKEventStore` | I3-01's control | **PROVEN** — `FAIL [I-3] calendar: the artefact carries no EKEventStore` |
+
+And the four readings that stop the ten above being green for the wrong reason:
+
+| # | what it protects | mutation | control | status — the line it printed |
+|---|---|---|---|---|
+| I3-11 | the per-family control | rename `_AXIsProcessTrusted` out of both configurations, as a build that stopped reading trust would (H-BIN, `erase.py`) | the ten bans stay green throughout — which is the point: a binary with no relationship to the family passes every one of them | **PROVEN** — `FAIL [I-3] control: accessibility is still read grant-free in Debug (_AXIsProcessTrusted)` and the Release twin, two findings |
+| I3-12 | the running-app half | `capabilities[accessibilityWindowContext].state = "available"` (H-JSON) | the binary half stays green: this is the Mac where somebody granted it by hand | **PROVEN** — `FAIL [I-3] report-available.json: accessibility (accessibilityWindowContext) is in a state the table allows, not a held grant: 'available'` |
+| I3-13 | the counter | `requestAuthorizationCallCount = 1` (H-JSON) | as I3-12 | **PROVEN** — `FAIL [I-3] report-count.json: requestAuthorizationCallCount is zero — the app asked for nothing` |
+| I3-14 | the surface scan | `authorisationSurfaceScan.suspects = ["tccd"]` (H-JSON) | the scan's own `wasTaken` and `windowsOwnedByThisProcess` are asserted beside it | **PROVEN** — `FAIL [I-3] report-suspects.json: no authorisation surface was on screen while the app ran` |
+
+The symbol-universe floor (`UNIVERSE_FLOOR = 2000`, judged per configuration rather than per file)
+was **found by a red run rather than reasoned into place**: the first draft judged it per file and
+went red on the Debug launcher stub, whose whole symbol table is libSystem. That is the same
+"two halves of one wrong subject" correction SC-1 and R-96s each needed.
+
 ### `published-keys` — `scripts/check-published-keys.sh`
 
 The stage reads two artefacts of one run — the report the Release binary wrote and the read set

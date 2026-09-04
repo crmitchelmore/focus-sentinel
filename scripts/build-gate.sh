@@ -1153,7 +1153,22 @@ gate() {
         run_stage "notification-denied-release" "$LOG_DIR/focus-notification-denied-release.log" \
         scripts/check-notification-denied.sh "$DD/Build/Products/Release/FocusSentinel.app"
 
-    # 9e — published-keys (R-168). **Every fact the self-check publishes is read by somebody.**
+    # 9e — grants (invariant I-3, F-128). **The app uses no grant it never asked for.**
+    #
+    # One fold over `Config/tcc-families.txt` — ten TCC-protected API families — and it reads both
+    # halves of the claim: no request selector in either configuration's Mach-O (`nm -u` ∪
+    # `strings -a`), and no capability in a state the table does not allow in the two self-check
+    # reports this run just produced. Until this stage existed the doctrine was proved by four
+    # unrelated readings about three of the ten families, and the other seven were named nowhere.
+    #
+    # It runs before `published-keys` because it is one of the readers that stage counts: the
+    # capability table and the authorisation-surface scan are fetched through `keyreads`, so a key
+    # this fold looks at is a key the gate can say was read.
+    FOCUS_REQUIRE_BINARY_CHECK=1 \
+        run_stage "grants" "$LOG_DIR/focus-grants.log" \
+        scripts/check-grants.sh "$SELFCHECK_JSON_RELEASE" "$SELFCHECK_JSON"
+
+    # 9f — published-keys (R-168). **Every fact the self-check publishes is read by somebody.**
     #
     # It runs here because it reads what the six stages above recorded: the file
     # `$FOCUS_KEYS_READ` holds every dotted path any of them really fetched, written at runtime by

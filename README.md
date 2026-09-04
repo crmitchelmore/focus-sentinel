@@ -126,17 +126,19 @@ the stage logs are the evidence, and they are kilobytes. A pinned `FOCUS_DERIVED
 | 9b | `check-notification-denied.sh` | **F-73's degraded path, and what discharges standing condition 5 for e05.** Zero grants, no prompt of any kind, and every rung of the ladder still reaches an in-app surface; `requestAuthorizationCallCount == 0` |
 | 9c | `check-focus-steal.sh` again | the same stage against the **Release** product — the artefact this programme ships. A whole-module-optimised binary is not the same binary, which is why the boundary and forbidden stages read both configurations; until this stage existed, every geometry reading in `check-focus-steal.sh` held of a build nobody installs |
 | 9d | `check-notification-denied.sh` again | the same, for the routing half: the 160-cell rung fold, the 80-cell question fold and `requestAuthorizationCallCount == 0`, read from the Release product |
+| 9e | `check-grants.sh` | **invariant I-3 — the app uses no grant it never asked for.** One fold over `Config/tcc-families.txt`, ten TCC-protected API families, and it reads both halves of the claim: no request selector in either configuration's Mach-O (`nm -u` ∪ `strings -a`), and, in this run's two self-check reports, no capability in a state the table does not allow, `requestAuthorizationCallCount == 0`, and no authorisation surface on screen. See "What it says it does not do" |
 | 10 | `verify-project.sh` again | the build did not rewrite the project |
 
-**Twenty-three stages — twenty until `focus-steal-release` and `notification-denied-release`
-were added, twenty-three since e06 added `evaluation-model`, and twenty-five since e10a added
-`published-keys` and `release-artefact`.** Saying so plainly, because the epic's close condition
-names the count: `project`, `boundaries`, `forbidden`, `strings`, `build-debug`,
-`build-release`, `packaging`, `eval-clean`, `unit`, **`unit-counts`**, `evaluation`,
-**`evaluation-model`**, `boundaries-binary`, `forbidden-binary`, `entitlements-debug`,
-`entitlements-release`, `selfcheck-debug`, **`focus-steal`**, **`notification-denied`**,
-`selfcheck-release`, **`focus-steal-release`**, **`notification-denied-release`**,
-**`published-keys`**, `project-post`, **`release-artefact`**.
+**Twenty-six stages — twenty until `focus-steal-release` and `notification-denied-release`
+were added, twenty-three since e06 added `evaluation-model`, twenty-five since e10a added
+`published-keys` and `release-artefact`, and twenty-six since `grants`.** Saying so plainly,
+because the epic's close condition names the count: `project`, `boundaries`, `forbidden`,
+`strings`, `build-debug`, `build-release`, `packaging`, `eval-clean`, `unit`, **`unit-counts`**,
+`evaluation`, **`evaluation-model`**, `boundaries-binary`, `forbidden-binary`,
+`entitlements-debug`, `entitlements-release`, `selfcheck-debug`, **`focus-steal`**,
+**`notification-denied`**, `selfcheck-release`, **`focus-steal-release`**,
+**`notification-denied-release`**, **`grants`**, **`published-keys`**, `project-post`,
+**`release-artefact`**.
 
 `published-keys` (R-168) exists because a quarter of what `SelfCheck` writes was read by nobody.
 A fact nobody reads is not evidence; it is a number in a file. The read set is **instrumented**
@@ -146,6 +148,20 @@ section counts as read in every section that spells it) and under-counts (`self-
 dynamically, so the key is never a literal at the read site). Measured at the close of e10a: 772
 keys published, 758 read, 14 listed with a reason in `Config/unasserted-keys.txt`, twelve of
 which are properties of the machine the gate happens to run on.
+
+`grants` (invariant I-3) exists because the zero-grant doctrine is cited by five epic plans and
+was proved, until this round, by four unrelated readings about three families: SC-1's one
+CoreGraphics key, R-33's eight source-level request calls, R-96s's five notification selectors in
+the Mach-O, and one counter read out of the running app. Nothing said what the other seven
+families were, and a family nobody names is a family nobody checks. `Config/tcc-families.txt` is
+that enumeration — Accessibility, Screen Recording, Automation, notifications, camera,
+microphone, input monitoring, location, contacts, calendar — and each row carries the selectors
+that would mean the app can ask, the grant-free reading it really does make (the control, without
+which "no request selector" is the same green a binary that dropped the framework would produce),
+the capability it publishes, and the states that capability may be in. Five of the ten families
+the app touches in no way at all; `microphoneActivity` is the one capability allowed to read
+`available`, because `kAudioDevicePropertyDeviceIsRunningSomewhere` is a device property any
+process may read and it yields no audio.
 
 `release-artefact` is the D-09 disk image, and it is described under **Distribution posture**
 below.
