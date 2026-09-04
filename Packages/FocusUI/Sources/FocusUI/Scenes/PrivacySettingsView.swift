@@ -369,18 +369,7 @@ public struct PrivacySettingsView: View {
                     .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
                     .lineLimit(nil)
                     .fixedSize(horizontal: false, vertical: true)
-                HStack(spacing: spacing / 2) {
-                    Button { onAction(.exportData) } label: {
-                        ShellText(.settingsPrivacyExportData)
-                    }
-                    Button { onAction(.exportSettings) } label: {
-                        ShellText(.settingsPrivacyExportSettings)
-                    }
-                    Button { onAction(.importSettings) } label: {
-                        ShellText(.settingsPrivacyImportSettings)
-                    }
-                    Spacer(minLength: 0)
-                }
+                PortabilityRow(spacing: spacing, onAction: onAction)
             }
 
             Divider()
@@ -506,5 +495,55 @@ public struct DeleteEverythingSheet: View {
         .frame(width: ShellSurfaceBounds.settingsWidth)
         .fixedSize(horizontal: false, vertical: true)
         .accessibilityElement(children: .contain)
+    }
+}
+
+/// **The three portability buttons, which do not fit on one line** (F-144 follow-up, focus-1dd,
+/// on the precedent of focus-0q4).
+///
+/// Measured at `accessibilityLarge` on the shipping pane: *Export My Data…*, *Export Settings…*
+/// and *Import Settings…* in one `HStack` are handed a third of the 460-point pane each, and a
+/// bordered button limits its label to one line — so all three read as an ellipsis with a word in
+/// front of it. **A column is never narrower than its longest word**: that is the rule the
+/// popover's rows were re-laid out under, and it is the same rule here.
+///
+/// `ViewThatFits` tries the row first, so at the shipping text size nothing moves and the pane a
+/// person opens today is byte-identical. What gives way under pressure is the *arrangement*, never
+/// the label: the buttons stack, each takes the full content width, and each reads in full.
+struct PortabilityRow: View {
+    let spacing: CGFloat
+    let onAction: (PrivacySettingsAction) -> Void
+
+    private var exportData: some View {
+        Button { onAction(.exportData) } label: { ShellText(.settingsPrivacyExportData) }
+    }
+
+    private var exportSettings: some View {
+        Button { onAction(.exportSettings) } label: { ShellText(.settingsPrivacyExportSettings) }
+    }
+
+    private var importSettings: some View {
+        Button { onAction(.importSettings) } label: { ShellText(.settingsPrivacyImportSettings) }
+    }
+
+    var body: some View {
+        // **No `Spacer` in the horizontal arm.** A `Spacer` makes the row's ideal width infinite,
+        // so `ViewThatFits` measures it as never fitting and takes the column in every case —
+        // measured: 84 points tall at the shipping text size, where the row is 24. The leading
+        // alignment the spacer was there for belongs on the frame, where it costs the measurement
+        // nothing.
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: spacing / 2) {
+                exportData
+                exportSettings
+                importSettings
+            }
+            VStack(alignment: .leading, spacing: spacing / 2) {
+                exportData
+                exportSettings
+                importSettings
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }

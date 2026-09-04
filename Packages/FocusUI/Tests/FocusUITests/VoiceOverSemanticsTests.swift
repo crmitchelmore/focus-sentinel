@@ -96,12 +96,6 @@ struct VoiceOverSemanticsTests {
         DecisionSurface.allCases.map(audited) + SettingsTab.allCases.map(audited)
     }
 
-    /// Whether the String Catalog was compiled into this run's bundle. False under `swift test`,
-    /// true in the gate's `xcodebuild` lane — measured, and the reason the README says the inner
-    /// loop is never trusted for localisation.
-    static let catalogIsCompiled: Bool =
-        ShellStrings.string(.cockpitWindowTitle) != ShellStringKey.cockpitWindowTitle.rawValue
-
     // MARK: - The source closure
 
     /// `…/Packages/FocusUI/Sources/FocusUI`, found from this file rather than from a bundle: the
@@ -437,12 +431,12 @@ struct VoiceOverSemanticsTests {
                 // A catalog that was copied rather than compiled resolves a key to itself, and a
                 // sentence that is a key is a sentence nobody can hear.
                 //
-                // **Taken only where it can be true.** `xcodebuild` compiles the String Catalog
-                // into `en.lproj/Localizable.strings` and `swift test` does not, which is why this
-                // repository's README says the inner loop is never trusted for localisation. The
-                // gate lane is `xcodebuild`, so the gate always takes this branch;
-                // `StringCatalogTests` holds the same ground for every `ShellStringKey`.
-                if Self.catalogIsCompiled {
+                // **Taken only where it can be true**, through the same `LocalizationLane` gate
+                // every other localisation-dependent test in this package uses: `xcodebuild`
+                // compiles the String Catalog and `swift test` copies it, so in the inner loop the
+                // key echoes itself. The gate lane is `xcodebuild`, so the gate always takes this
+                // branch; `StringCatalogTests` holds the same ground for every `ShellStringKey`.
+                if LocalizationLane.catalogsAreCompiled {
                     #expect(
                         !NudgeCopyKey.allCases.contains { sentence.contains($0.rawValue) },
                         "\(audited.name)'s announcement carries a raw catalog key: \(sentence)"
