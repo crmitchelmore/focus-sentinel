@@ -57,8 +57,38 @@ public struct LaunchAtLogin: Sendable, Equatable, Hashable {
         }
     }
 
+    /// **Which sentence the pane draws under the switch, if any** (F-138, e10 §7.3 H7.3).
+    ///
+    /// A named answer rather than a chain of `if`s in the view, because the hostile criterion this
+    /// row has to clear is *"the four statuses map to fewer than four distinct sentences"* — two
+    /// statuses sharing a drawing is a lie about one of them. With the footnote as a value, the
+    /// drawing of a status is `(isOn, isAdjustable, footnote)` and a fold can say whether the four
+    /// are really four.
+    public enum Footnote: String, Sendable, CaseIterable, Hashable, Codable {
+        /// Registered, and waiting for the person to approve it in Login Items settings. Drawn
+        /// beside the one button this app can honestly offer: the place they can approve it.
+        case approval
+        /// The service cannot find this bundle, so the switch would fail if it moved.
+        case unavailable
+    }
+
+    /// The footnote this status owes, or none.
+    public var footnote: Footnote? {
+        switch status {
+        case .requiresApproval: .approval
+        case .notFound: .unavailable
+        case .enabled, .notRegistered: nil
+        }
+    }
+
     /// Whether the pane draws the footnote that sends the person to Login Items settings.
-    public var needsApproval: Bool { status == .requiresApproval }
+    public var needsApproval: Bool { footnote == .approval }
+
+    /// **What the person is shown for this state, as a value.** Two statuses with the same
+    /// drawing are two statuses one of which is being lied about.
+    public var drawing: String {
+        "on=\(isOn) adjustable=\(isAdjustable) footnote=\(footnote?.rawValue ?? "none")"
+    }
 
     /// What the app believes before it has asked. Not a guess at "off": `notRegistered` is what
     /// an app that has never been registered really is, which is every first launch.
@@ -123,5 +153,67 @@ public enum LaunchAtLoginOffer {
         guard status == .notRegistered else { return false }
         guard !alreadyOffered else { return false }
         return completedSessions >= 1
+    }
+}
+
+/// **One cell of the launch-at-login fold** (F-138, e10 §7.3).
+///
+/// The acceptance criterion D-12 was given is a fold and not three examples: three session
+/// histories against all four service states, twelve cells, each saying whether the offer is made,
+/// exactly what is drawn, and whether registration is possible at all. A suite that tests three
+/// of them is green on an app that shows nothing when macOS asks the person to approve the item —
+/// which is the single likeliest real-world state (**H7.1**).
+public struct LaunchAtLoginCell: Sendable, Equatable, Hashable {
+    public let status: LoginItemStatus
+    public let completedSessions: Int
+
+    public init(status: LoginItemStatus, completedSessions: Int) {
+        self.status = status
+        self.completedSessions = completedSessions
+    }
+
+    /// (a) whether the offer is made.
+    public var offersToRegister: Bool {
+        LaunchAtLoginOffer.shouldOffer(
+            status: status,
+            completedSessions: completedSessions,
+            alreadyOffered: false
+        )
+    }
+
+    /// (b) exactly what is drawn for this state.
+    public var drawing: String { LaunchAtLogin(status: status).drawing }
+
+    /// (c) whether registration is possible — the switch may be moved.
+    public var registrationIsPossible: Bool { LaunchAtLogin(status: status).isAdjustable }
+
+    /// A name for the cell, so a fold can say which one it reached.
+    public var name: String { "\(status.rawValue)@\(completedSessions)" }
+}
+
+/// **The twelve cells, folded over the two vocabularies rather than listed** (F-138).
+///
+/// `LoginItemStatus.allCases` and nothing else, so a fifth service state joins the fold the day it
+/// exists instead of the day somebody remembers. The session histories are the three that differ:
+/// none, the first one, and more than one.
+public enum LaunchAtLoginFold {
+    /// None, the first, and more than one. `1` is the boundary the rule turns on and `0` and `3`
+    /// are its two sides; a fourth count would test the same three answers again.
+    public static let sessionCounts = [0, 1, 3]
+
+    public static var cells: [LaunchAtLoginCell] {
+        LoginItemStatus.allCases.flatMap { status in
+            sessionCounts.map { LaunchAtLoginCell(status: status, completedSessions: $0) }
+        }
+    }
+
+    /// The count a suite asserts it reached. A cell no input can produce is a cell the fold does
+    /// not test.
+    public static var cellCount: Int { LoginItemStatus.allCases.count * sessionCounts.count }
+
+    /// **H7.3 as a number.** Four statuses that draw fewer than four distinct things are four
+    /// statuses one of which is being lied about.
+    public static var distinctDrawings: Int {
+        Set(LoginItemStatus.allCases.map { LaunchAtLogin(status: $0).drawing }).count
     }
 }

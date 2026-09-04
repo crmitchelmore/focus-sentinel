@@ -2039,6 +2039,94 @@ check(
     (seeded_cockpit.get("loginItemOfferDrawn"), expected_offer),
 )
 
+# **And the eleven cells this Mac is not in** (F-138, e10 plan §7.3).
+#
+# Everything above is one cell of twelve: whatever this machine's Login Items happen to say,
+# against the history in the store this script seeded. The eleven it leaves are where the likeliest
+# real-world defect lives — an app that draws nothing at all when macOS asks the person to APPROVE
+# the login item is green on the real cell of every developer's machine, and `requiresApproval` is
+# the state a person is most likely actually to meet (H7.1). So the app publishes the whole fold
+# beside the real cell and this pins every row of it.
+#
+# It is the rule folded, never the service driven: nothing in any lane of this programme calls
+# `register()`, because that writes into the person's Login Items and would persist across reboots.
+login_fold = seeded_cockpit.get("loginItemFold") or []
+login_fold_cells = seeded_cockpit.get("loginItemFoldCells")
+login_session_counts = seeded_cockpit.get("loginItemFoldSessionCounts") or []
+check(
+    isinstance(login_fold_cells, int)
+    and login_fold_cells == len(seeded_cockpit.get("loginItemStatusesDeclared") or [])
+    * len(login_session_counts),
+    "the fold's own cell count is the product of the two vocabularies it folds",
+    (login_fold_cells, seeded_cockpit.get("loginItemStatusesDeclared"), login_session_counts),
+)
+check(
+    len(login_fold) == login_fold_cells == 12,
+    "the app published all twelve cells of the launch-at-login fold",
+    (len(login_fold), login_fold_cells),
+)
+check(
+    login_session_counts == [0, 1, 3],
+    "the three session histories are none, the first, and more than one",
+    login_session_counts,
+)
+# Every cell distinct, and every status really present. A fold of twelve rows that are all the
+# same status satisfies a count and tests one state.
+check(
+    len({row.get("cell") for row in login_fold}) == 12,
+    "the twelve cells are twelve different cells",
+    sorted({row.get("cell") for row in login_fold}),
+)
+fold_statuses = {(row.get("cell") or "").split("@")[0] for row in login_fold}
+check(
+    fold_statuses == set(seeded_cockpit.get("loginItemStatusesDeclared") or []),
+    "the fold reaches every declared service state, requiresApproval included (H7.1)",
+    sorted(fold_statuses),
+)
+# **The rule, re-derived here rather than read from the app.** The offer is made exactly when the
+# app is not registered and a session has been finished; anything else is the app answering its own
+# question.
+for row in login_fold:
+    cell = row.get("cell") or ""
+    status, _, sessions = cell.partition("@")
+    expected = status == "notRegistered" and int(sessions or 0) >= 1
+    check(
+        row.get("offer") is expected,
+        f"the fold's {cell} cell offers exactly when the rule says",
+        (row.get("offer"), expected),
+    )
+    check(
+        row.get("adjustable") is (status in ("enabled", "notRegistered")),
+        f"the fold's {cell} cell moves the switch only where moving it changes something",
+        (row.get("adjustable"), status),
+    )
+# **H7.3.** Two statuses that draw the same thing are two statuses one of which is being lied about.
+check(
+    seeded_cockpit.get("loginItemFoldDistinctDrawings")
+    == len(seeded_cockpit.get("loginItemStatusesDeclared") or []),
+    "each service state draws something of its own — four states, four drawings",
+    (
+        seeded_cockpit.get("loginItemFoldDistinctDrawings"),
+        sorted({row.get("drawing") for row in login_fold}),
+    ),
+)
+check(
+    len({row.get("drawing") for row in login_fold})
+    == seeded_cockpit.get("loginItemFoldDistinctDrawings"),
+    "the drawings the fold really published are the distinct count it claims",
+    sorted({row.get("drawing") for row in login_fold}),
+)
+check(
+    seeded_cockpit.get("loginItemFootnotesDeclared") == ["approval", "unavailable"],
+    "the footnote vocabulary is the committed two, in order",
+    seeded_cockpit.get("loginItemFootnotesDeclared"),
+)
+print(
+    "     launch at login: real cell {}, fold {} cells, {} drawings".format(
+        login_status, len(login_fold), seeded_cockpit.get("loginItemFoldDistinctDrawings")
+    )
+)
+
 # --- the windows a person left open, on the launch after the one that closed them (focus-odz.6)
 #
 # The same fourth launch, and the same reason it exists: the only reading that can tell "restored"

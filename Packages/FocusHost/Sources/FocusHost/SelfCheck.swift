@@ -293,6 +293,33 @@ enum SelfCheck {
                 .hasOfferedLaunchAtLogin,
             "loginItemOfferShown": composition.cockpitState.showsLaunchAtLoginOffer,
             "loginItemOfferDrawn": drawn[.launchAtLoginOffer] ?? "",
+            // **And the eleven cells this machine is not in** (F-138, e10 §7.3).
+            //
+            // The two readings above are the real cell: whatever this Mac's Login Items say,
+            // beside the history in this store. That is one of twelve, and the eleven it leaves
+            // are where the likeliest defect lives — an app that shows nothing at all when macOS
+            // asks the person to approve the item is green on the real cell of every developer's
+            // machine (**H7.1**).
+            //
+            // So the whole fold is published beside it: `LoginItemStatus.allCases` against the
+            // three session histories, one row per cell, each carrying whether the offer is made,
+            // exactly what is drawn, and whether the switch may be moved. It is the rule folded,
+            // not the service driven — **nothing here calls `register()`**, in this launch or any
+            // other, which is the one thing a gate stage must never do.
+            "loginItemFold": LaunchAtLoginFold.cells.map { cell in
+                [
+                    "cell": cell.name,
+                    "offer": cell.offersToRegister,
+                    "drawing": cell.drawing,
+                    "adjustable": cell.registrationIsPossible
+                ] as [String: Any]
+            },
+            "loginItemFoldCells": LaunchAtLoginFold.cellCount,
+            "loginItemFoldSessionCounts": LaunchAtLoginFold.sessionCounts,
+            // H7.3 as a number: four statuses that draw fewer than four distinct things are four
+            // statuses one of which is being lied about.
+            "loginItemFoldDistinctDrawings": LaunchAtLoginFold.distinctDrawings,
+            "loginItemFootnotesDeclared": LaunchAtLogin.Footnote.allCases.map(\.rawValue),
             // **The first-run explanation** (focus-odz.7): whether this launch owed it, and
             // whether the window put it on the screen. Two readings, because a host that decided
             // to show it and a window that drew nothing are two different broken promises.

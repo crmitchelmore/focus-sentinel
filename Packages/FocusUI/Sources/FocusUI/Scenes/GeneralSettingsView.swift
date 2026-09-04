@@ -211,7 +211,11 @@ public struct GeneralSettingsView: View {
         .disabled(!launchAtLogin.isAdjustable)
         .focused($focus, equals: .generalLaunchAtLogin)
 
-        if launchAtLogin.needsApproval {
+        // The footnote is a value on `LaunchAtLogin` rather than a chain of `if`s here, so that
+        // "the four statuses draw four distinct things" (H7.3) is a fold somebody can run rather
+        // than a property of this view's shape.
+        switch launchAtLogin.footnote {
+        case .approval:
             ShellText(.settingsLaunchAtLoginApproval, role: .footnote)
                 .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
                 .lineLimit(nil)
@@ -222,11 +226,13 @@ public struct GeneralSettingsView: View {
             } label: {
                 ShellText(.settingsLaunchAtLoginOpenSettings)
             }
-        } else if launchAtLogin.status == .notFound {
+        case .unavailable:
             ShellText(.settingsLaunchAtLoginUnavailable, role: .footnote)
                 .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
                 .lineLimit(nil)
                 .fixedSize(horizontal: false, vertical: true)
+        case nil:
+            EmptyView()
         }
     }
 }
