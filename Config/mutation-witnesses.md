@@ -412,9 +412,9 @@ compile error and `NotchGeometrySeamTests` fails on any divergence between the t
 but "both readers wrong in the same way" is **P-e08-B's** to close and is listed as such in the
 README's e08 section.
 
-### `selfcheck-debug` / `selfcheck-release` — the offline journey (F-160)
+### `selfcheck-debug` / `selfcheck-release` — the offline journey (F-160) and the budgets (F-163)
 
-The reader is `scripts/self-check.sh`'s own python, and its harness is
+Two rounds' worth of readings taken by the same reader, so they share a harness:
 `/private/tmp/mw-f163/reader.zsh`. It extracts the python heredoc out of `scripts/self-check.sh`,
 sources that script's own literal preamble rather than re-spelling its paths, and runs the reader
 against the reports of a **pinned** run — a copy of `self-check.sh` with `SESSION_DIR` fixed and
@@ -434,6 +434,26 @@ its own row, because three of them exist to stop the fourth being green for the 
 
 Measured on a Debug run at `c5cb2e4`: **68 samples, 68 with the process alive, 0 sockets**, and the
 sampler found **1** listening socket on the control process it opened one in.
+
+**F-163 — the five counter budgets**, each read out of `Config/performance-budgets.txt` by the
+reader rather than written into it.
+
+| # | budget | mutation (H-JSON) | control | status — the line it printed |
+|---|---|---|---|---|
+| PB-01 | `tick.fetchesPerQuietTick.*` | `noCommitment.fetchesOverSteadyTicks = 19` (over 2 × 9) | the survey's own `firstTickFetches > 0` and `steadyTicks >= 2` are asserted beside it | **PROVEN** — `FAIL: a quiet noCommitment tick costs at most 2 fetches (F-163)` |
+| PB-02 | `tick.nudgeFetchesPerQuietTick` | `noCommitment.nudgeFetchesOverSteadyTicks = 1` | PB-01's | **PROVEN** — `FAIL: the nudge half of a quiet noCommitment tick goes to the store not at all` |
+| PB-03 | `tick.popoverFetchesPerQuietTick` | `commitmentPopoverOpen.popoverFetchesOverSteadyTicks = 1` | PB-01's | **PROVEN** — `FAIL: building the popover's content on a commitmentPopoverOpen tick touches no store` |
+| PB-04 | `popover.hostingConstructionsPerPresentationChange` | `hostingConstructions = 60` — twenty ticks × three, which is what the defect focus-tzj.1 removed really cost | `rebuild_builds > 0`, so a popover that never built anything cannot pass by costing nothing | **PROVEN** — `FAIL: the popover costs at most 3 hosting controllers per presentation change (F-163)` |
+| PB-05 | `popover.buildsOnUnchangedTicks` | `buildsOnUnchangedTicks = 4` | the survey's `presentationChanges > 0` and `unchangedTicks > 0` | **PROVEN** — `FAIL: a tick that changes nothing rebuilds nothing (F-163)` |
+
+**F-163 — the two wall-time budgets**, read by the `unit-counts` stage out of the same file, with
+the H-LOG harness (`source <(sed -n '/^unit_counts_stage() {/,/^}/p' scripts/build-gate.sh)` plus
+`budget_limit`, with `LOG_DIR` pointed at a doctored copy of `focus-test.log`).
+
+| # | budget | mutation (H-LOG) | control | status — the line it printed |
+|---|---|---|---|---|
+| PB-06 | `lane.snapshot.seconds` | `FocusUITests … after 271.755 seconds` → `471.755` | the same stage's eight test-count floors are green throughout, and a snapshot lane reporting under 30 s is failed as "it did not run" | **PROVEN** — `FAIL [unit-counts] the snapshot lane took 471.755s, over its 420s budget` |
+| PB-07 | `lane.unit.seconds` | `FocusHostTests … after 360.054 seconds` → `660.054` | as PB-06 | **PROVEN** — `FAIL [unit-counts] the unit lane took 940.765s, over its 900s budget` |
 
 ### `grants` — `scripts/check-grants.sh` (invariant I-3, F-128)
 

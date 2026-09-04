@@ -337,7 +337,7 @@ python3 - "$OUT" "$SEED_JSON" "$RESTORE_JSON" "$COMMITTED_STAMP" "$COMMITTED_DIG
     "$COMMITTED_INTERVENTION_DIGEST" "$COCKPIT_JSON" \
     "$COMMITTED_DECODE_TABLE" "$COMMITTED_DECODE_CELLS" "$FIRSTRUN_JSON" \
     "$COMMITTED_EXECUTABLE_RUNGS" "$COMMITTED_DECLARED_RUNGS" "$KEYBOARD_JSON" \
-    "$COMMITTED_PANEL_ABSOLUTE_MAX" "$NETWORK_JSON" <<'PYTHON'
+    "$COMMITTED_PANEL_ABSOLUTE_MAX" "$NETWORK_JSON" "$REPO_ROOT/Config/performance-budgets.txt" <<'PYTHON'
 import json
 import os
 import sys
@@ -378,6 +378,20 @@ committed_panel_absolute_max = sys.argv[14]
 with open(sys.argv[15]) as handle:
     network = json.load(handle)
 
+# F-163. The committed energy and performance budgets, read rather than restated: the numbers the
+# tick is held to live in one file with the measurement each was derived from and its headroom, so
+# a budget cannot be relaxed in a reader without the row that justifies it moving too.
+budgets = {}
+with open(sys.argv[16]) as handle:
+    for raw in handle:
+        row = raw.rstrip("\n")
+        if not row.strip() or row.lstrip().startswith("#"):
+            continue
+        parts = [part.strip() for part in row.split("\u00b7")]
+        if len(parts) != 5:
+            continue
+        limit = parts[1].replace("<=", "").replace("==", "").strip()
+        budgets[parts[0]] = float(limit)
 
 failures = []
 not_taken_readings = []
@@ -3903,8 +3917,8 @@ check(
     (rebuild_ticks, rebuild_changes, rebuild_unchanged),
 )
 check(
-    rebuild_on_unchanged == 0,
-    "a tick that changes nothing rebuilds nothing",
+    rebuild_on_unchanged == budgets["popover.buildsOnUnchangedTicks"],
+    "a tick that changes nothing rebuilds nothing (F-163)",
     (rebuild_on_unchanged, rebuild_unchanged),
 )
 check(
@@ -3915,15 +3929,20 @@ check(
     (rebuild_builds, rebuild_changes),
 )
 # And the amplification, because the build count is a third of the cost: one host for the content
-# and one for each of the two measurements. Pinned as an identity rather than a ceiling, so a
-# fourth construction joining the build path is as red as the three going away.
+# and one for each of the two measurements. **The budget is per PRESENTATION CHANGE and not per
+# build** (F-163, `popover.hostingConstructionsPerPresentationChange`): the identity against the
+# build count is satisfied by an app that builds on every tick and pays three each time, which is
+# precisely the defect focus-tzj.1 removed — twenty ticks, two changes, sixty controllers.
+# `rebuild_builds > 0` beside it is the non-vacuity control, since a popover that never built
+# anything costs nothing per change.
+per_change = budgets["popover.hostingConstructionsPerPresentationChange"]
 check(
     isinstance(rebuild_hosts, int)
     and isinstance(rebuild_builds, int)
     and rebuild_builds > 0
-    and rebuild_hosts == 3 * rebuild_builds,
-    "each popover build costs three hosting controllers, and nothing else builds one",
-    (rebuild_hosts, rebuild_builds),
+    and rebuild_hosts <= per_change * rebuild_changes,
+    f"the popover costs at most {per_change:g} hosting controllers per presentation change (F-163)",
+    (rebuild_hosts, rebuild_builds, rebuild_changes, per_change),
 )
 print(
     "note popover rebuild: {} ticks, {} changes, {} builds, {} hosting controllers".format(
@@ -3966,23 +3985,27 @@ for tick_state in TICK_STATES:
         f"the {tick_state} tick survey really ticked, and its first tick really fetched",
         (steady_ticks, first_fetches),
     )
+    # **The budget, read from `Config/performance-budgets.txt` rather than written here** (F-163).
+    # One number, one file, beside the measurement it was derived from and its headroom — so a
+    # budget cannot be quietly relaxed at the reader while the row that justifies it stands still.
+    per_tick = budgets[f"tick.fetchesPerQuietTick.{tick_state}"]
     check(
         isinstance(steady_fetches, int)
         and isinstance(steady_ticks, int)
-        and steady_fetches <= 2 * steady_ticks,
-        f"a quiet {tick_state} tick costs at most two fetches",
-        (steady_fetches, steady_ticks),
+        and steady_fetches <= per_tick * steady_ticks,
+        f"a quiet {tick_state} tick costs at most {per_tick:g} fetches (F-163)",
+        (steady_fetches, steady_ticks, per_tick),
     )
     # The half this bead moved the guard in front of. With no commitment neither read is even
     # asked for; with one, both are answered from a cache keyed on their store's own write count,
     # and a tick writes nothing.
     check(
-        steady_nudge == 0,
+        steady_nudge == budgets["tick.nudgeFetchesPerQuietTick"],
         f"the nudge half of a quiet {tick_state} tick goes to the store not at all",
         (steady_nudge, steady_ticks),
     )
     check(
-        steady_popover == 0,
+        steady_popover == budgets["tick.popoverFetchesPerQuietTick"],
         f"building the popover's content on a {tick_state} tick touches no store",
         steady_popover,
     )

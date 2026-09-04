@@ -479,7 +479,83 @@ unit_counts_stage() {
         rc=1
     fi
 
+    # --- 4: the two wall-time budgets (F-163) ---------------------------------------------
+    #
+    # The same summary lines, read for the other number they carry. Two budgets and not one,
+    # because they fail differently: the snapshot lane is the one that renders and the one that
+    # grows with every surface, and the whole lane is what a person waits for. Both are the
+    # SUITES' own figures rather than a clock on this stage, so the reading moves when the tests
+    # move and not when the machine is busy — and the floors below it are the non-vacuity control,
+    # because a lane that reported nothing at all is under every ceiling.
+    local budgets="Config/performance-budgets.txt"
+    if [[ ! -f "$budgets" ]]; then
+        print -u2 "FAIL [unit-counts] the committed budgets are missing at $budgets"
+        return 1
+    fi
+    local -a SECONDS_SEEN
+    SECONDS_SEEN=(${(f)"$(grep -oE 'Test run with [0-9]+ tests in [0-9]+ suites [a-z]+ after [0-9.]+ seconds' "$log" | grep -oE '[0-9.]+ seconds' | grep -oE '^[0-9.]+')"})
+    print "budgets:    $budgets"
+
+    local snapshot_limit unit_limit
+    snapshot_limit=$(budget_limit "$budgets" "lane.snapshot.seconds")
+    unit_limit=$(budget_limit "$budgets" "lane.unit.seconds")
+    if [[ -z "$snapshot_limit" || -z "$unit_limit" ]]; then
+        print -u2 "FAIL [unit-counts] $budgets does not carry both wall-time rows"
+        return 1
+    fi
+
+    if (( ${#SECONDS_SEEN} != ${#NAMES} )); then
+        print -u2 "FAIL [unit-counts] ${#SECONDS_SEEN} durations for ${#NAMES} bundles"
+        print -u2 "    The durations are paired with the floors positionally, exactly as the"
+        print -u2 "    counts are. A mismatch means the summary lines changed shape."
+        rc=1
+    else
+        local snapshot_index=0 j
+        for j in {1..${#NAMES}}; do
+            [[ "${NAMES[$j]}" == "FocusUITests" ]] && snapshot_index=$j
+        done
+        if (( snapshot_index == 0 )); then
+            print -u2 "FAIL [unit-counts] no FocusUITests row — the snapshot lane has no budget"
+            rc=1
+        else
+            local snapshot_seconds total_seconds
+            snapshot_seconds="${SECONDS_SEEN[$snapshot_index]}"
+            total_seconds=$(print -r -- "${SECONDS_SEEN[@]}" | tr ' ' '\n' | awk '{s+=$1} END {printf "%.3f", s}')
+            # Non-vacuity first: a lane that reported a second of work reported no work.
+            if (( $(print -r -- "$snapshot_seconds" | awk '{print ($1 > 30) ? 1 : 0}') == 0 )); then
+                print -u2 "FAIL [unit-counts] the snapshot lane reported ${snapshot_seconds}s — it did not run"
+                rc=1
+            elif (( $(awk -v a="$snapshot_seconds" -v b="$snapshot_limit" 'BEGIN {print (a <= b) ? 1 : 0}') == 1 )); then
+                print "ok   [unit-counts] the snapshot lane took ${snapshot_seconds}s (budget ${snapshot_limit}s)"
+            else
+                print -u2 "FAIL [unit-counts] the snapshot lane took ${snapshot_seconds}s, over its ${snapshot_limit}s budget"
+                print -u2 "    Config/performance-budgets.txt, lane.snapshot.seconds. A budget is"
+                print -u2 "    never weakened to make a run green: fix the lane, or move the number"
+                print -u2 "    in a commit that carries a bead saying what moved and why."
+                rc=1
+            fi
+            if (( $(awk -v a="$total_seconds" -v b="$unit_limit" 'BEGIN {print (a <= b) ? 1 : 0}') == 1 )); then
+                print "ok   [unit-counts] the unit lane took ${total_seconds}s across ${#NAMES} bundles (budget ${unit_limit}s)"
+            else
+                print -u2 "FAIL [unit-counts] the unit lane took ${total_seconds}s, over its ${unit_limit}s budget"
+                print -u2 "    Config/performance-budgets.txt, lane.unit.seconds."
+                rc=1
+            fi
+        fi
+    fi
+
     return $rc
+}
+
+# One budget's limit, by name, out of Config/performance-budgets.txt.
+#
+# The row shape is `<name> · <limit> · <measured> · <headroom> · <sentence>` and the limit column
+# is `<= n` or `== n`; this returns the number. An unknown name returns nothing, and every caller
+# fails on that by name rather than defaulting to a limit nobody committed.
+budget_limit() {
+    local file="$1" name="$2"
+    awk -F' · ' -v want="$name" '$1 == want { print $2 }' "$file" \
+        | tr -d ' ' | sed -e 's/^<=//' -e 's/^==//' | head -1
 }
 
 # Stage 6b — eval-clean (R-75.1, R-75.3).

@@ -115,7 +115,7 @@ the stage logs are the evidence, and they are kilobytes. A pinned `FOCUS_DERIVED
 | 6a | packaging | read from the two logs and the two products stages 5 and 6 just made: neither log contains `Copy Bundle Resources build phase contains`, neither product ships a `Contents/Resources/Info.plist`, and the merged `Contents/Info.plist` carries both the `focus` scheme and every generated key. See "The project file" |
 | 6b | `eval-clean` | **the only cleanup stage in the gate.** It removes `$FOCUS_EVAL_OUT` (default `$TMPDIR/focus-eval`) in its entirety and touches an mtime marker, immediately before `unit`. A missing directory is a pass; a failure to remove is a hard fail. See "The evaluation lane" below for why a gate needs one |
 | 7 | the unit lane | every package test target, headless |
-| 7' | `unit-counts` | **the gate can see a test bundle die.** Reads the unit lane's own log: no `Program crashed`, no `Restarting after unexpected exit`, no `Test Suite 'Selected tests' started` retry banner — *regardless of exit status*, because a retry that then passes exits `0` having run a fraction of the suite — six `Test run with N tests` summaries, and each `>=` its committed floor in `Config/test-floors.txt`, paired positionally with the scheme's testables. Floors, never equalities: adding a test may not redden the gate and losing one must. See `focus-jg7` |
+| 7' | `unit-counts` | **the gate can see a test bundle die.** Reads the unit lane's own log: no `Program crashed`, no `Restarting after unexpected exit`, no `Test Suite 'Selected tests' started` retry banner — *regardless of exit status*, because a retry that then passes exits `0` having run a fraction of the suite — six `Test run with N tests` summaries, and each `>=` its committed floor in `Config/test-floors.txt`, paired positionally with the scheme's testables. Floors, never equalities: adding a test may not redden the gate and losing one must. See `focus-jg7`. **And the two wall-time budgets** (F-163): the same summary lines carry each bundle's own duration, and `FocusUITests` — the snapshot lane, the only one that renders — and the sum of all eight are held to `Config/performance-budgets.txt`. A lane reporting under 30 s is failed as *not run*, because every ceiling is satisfied by a lane that did nothing |
 | 7d | `evaluation` | runs the `FocusEvaluate` **product**, copies its report into this run's log directory *before* anything parses it, applies five binding checks to that copy, and only then reports the metric verdict. See "The evaluation lane" |
 | 7e | `evaluation-model` | **lane 2, and it is evidence rather than a gate on a model being present.** Runs `FocusEvaluate --model`, which writes `evaluation-model.json` and never touches lane 1's report. It exits on the *contract* half only — the bucket fold summing, the grid complete on both axes, no model answer reaching `unrelated`, no mandate moving, nothing answered on the classification path. The *quality* half (`seduced`, `rescueRecall`, `unstable`) is printed and archived and decides whether the tier is composed, which is a ruling made from an artefact. A Mac with Apple Intelligence off writes `{"status":"skipped","reason":"…"}` and exits 0, and the summary prints `SKIP` with the reason — an outcome, never a silent pass |
 | 7b | `check-boundaries.sh` again | `nm -u FocusClassify.o` has no networking symbol — the binary-level form of the assertion, which needs a build product to exist |
@@ -274,6 +274,21 @@ The popover has its own version of the same reading: an open popover was rebuilt
 controller for the content and two more to measure it — on every tick, whatever it was drawing.
 `popover.rebuild` in the self-check report is the count of builds and of hosting controllers, over
 twenty ticks in which the presentation moved exactly twice.
+
+**The numbers are committed** (F-163). `Config/performance-budgets.txt` carries nine rows — the
+three per-state tick budgets, the nudge and popover halves that must be zero, the two popover
+rebuild budgets, and the two lane wall times — each beside the measurement it was derived from and
+its headroom ratio. The binding rule is the roadmap's: they were read off a green run first and
+committed before the checks that read them were written, and a budget is never weakened to make a
+run green. A budget with more than 3× headroom has to justify itself in its own sentence or be
+tightened, which is why seven of the nine sit at 1.0× or exactly zero: they are counts of things
+that should not happen, and a count like that has no headroom to have.
+
+**No `XCTCPUMetric`, no `os_signpost`, no `powermetrics`.** `powermetrics` needs root (Court
+ruling, retained). The other two would measure the machine the gate happens to be running on. What
+this app has instead is better: the tick's cost does not show up in a stopwatch on a store with
+four rows in it, it shows up as a count of store fetches and of hosting controllers, and those
+counts are the app's own and published every run.
 
 ## Retention
 
