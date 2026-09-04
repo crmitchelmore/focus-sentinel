@@ -244,6 +244,8 @@ extension ShellSettingsConnection: ShellDrawnConnection {
             // e08a. A reading of the display, drawn as a sentence chosen by `NotchLanding` — so a
             // mutation that rendered the row from a preference instead moves this receipt.
             "intervention.notchRefusal": .drawn([.notchCompanion]),
+            "intervention.presentationExclusions": .drawn([.presentationExclusions]),
+            "intervention.addableApplications": .drawn([.presentationExclusions]),
 
             // --- one level down, and then to the leaves (focus-cxs) ------------------------
             //

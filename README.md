@@ -290,6 +290,32 @@ would remove neither. The gate also presses the control itself: the pane's own s
 read back out of the store, the window the triggered sweep kept, and the person's own choice put
 back afterwards.
 
+## The list a person could not add to
+
+`SensitivityGate` has a presentation-exclusion list, `SensingHost` consults it on every
+judgement, and `SensitiveAppSeed.add` had **no shipping call site at all** (F-121, focus-62o).
+The list seeds empty on purpose — seeding it with guesses would be a claim about applications
+this programme has not measured — so it was empty for every person for ever, and the Remove
+button beside a row was a button no row existed to carry. The section that drew it said *"Add an
+app here when Focus mistakes its full-screen window for a presentation"* and offered no way to,
+so it was deleted rather than reworded.
+
+It is back with the half that was missing: the list, a Remove on each row, and an add row naming
+the applications running right now by the name their own menus use. `NSWorkspace.runningApplications`
+needs no grant — it names applications, reads no window and names no document — and the reading is
+injected rather than taken in the pane, because a pane that scanned for itself would draw a
+different list in every lane that looks at it. Ordinary windowed applications only, this one
+excluded, one row per identifier, capped at twelve so a settings pane cannot grow without bound.
+
+A list of buttons rather than a `Menu` or a `Picker`, and the reason is measured: an AppKit-backed
+control does not rasterise under `ImageRenderer` — a picker renders as SwiftUI's unrenderable-view
+placeholder glyph — so a picker here would make any committed baseline a picture of a broken
+render.
+
+The gate presses both verbs. It adds an identifier no application on this Mac carries, reads the
+store back, checks the add row stops offering what is already listed, removes it, and asserts the
+person's own list is exactly as it was found.
+
 ## What it says it does not do
 
 Two sentences in Settings ▸ Privacy, directly under the statement about where the data lives and

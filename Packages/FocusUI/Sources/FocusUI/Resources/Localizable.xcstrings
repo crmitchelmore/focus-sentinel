@@ -3073,6 +3073,78 @@
         }
       }
     },
+    "settings.intervention.exclusion.addHeading" : {
+      "comment" : "Sub-heading over the list of running applications a person can add to the presentation-exclusion list.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Applications running now"
+          }
+        }
+      }
+    },
+    "settings.intervention.exclusion.empty" : {
+      "comment" : "Shown in place of the exclusion list when nothing is on it.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing is on this list."
+          }
+        }
+      }
+    },
+    "settings.intervention.exclusion.explanation" : {
+      "comment" : "Explains what putting an application on the presentation-exclusion list does.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus treats a full-screen window as a presentation and stays quiet. Put an app here when that is wrong for it."
+          }
+        }
+      }
+    },
+    "settings.intervention.exclusion.heading" : {
+      "comment" : "Heading over the presentation-exclusion list in the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not presentations"
+          }
+        }
+      }
+    },
+    "settings.intervention.exclusion.noneRunning" : {
+      "comment" : "Shown when no application is running that could be added.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing else is running."
+          }
+        }
+      }
+    },
+    "settings.intervention.exclusion.remove" : {
+      "comment" : "Button that takes one application off the presentation-exclusion list.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove"
+          }
+        }
+      }
+    },
     "settings.privacy.noNetwork" : {
       "comment" : "Privacy pane disclosure: this app opens no network connection, ever.",
       "extractionState" : "manual",

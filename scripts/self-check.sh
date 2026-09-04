@@ -3109,6 +3109,47 @@ print(
     )
 )
 
+# --- the exclusion list: the affordance that did not exist (F-121, focus-62o, focus-u3w) ------
+#
+# `SensitiveAppSeed.add` had NO SHIPPING CALL SITE AT ALL. The presentation-exclusion list seeds
+# empty, nothing in the application could put a row on it, and the Remove button beside a row was
+# a button no row existed to carry — which is why the whole section was deleted at a081d64 rather
+# than reworded. So what is read here is not "the pane draws a list": it is that pressing the
+# pane's own sink puts a row in the store and pressing the other one takes it out again.
+#
+# The subject is an identifier no application on this Mac carries, so the person's own list is
+# left exactly as it was found.
+exclusions = rendering.get("driveExclusionList") or {}
+check(
+    exclusions.get("available") is True,
+    "the Intervention pane handed back a sink for the exclusion list",
+    exclusions.get("available"),
+)
+check(
+    exclusions.get("addReachedTheStore") is True
+    and exclusions.get("subject") in (exclusions.get("listedAfterAdd") or []),
+    "pressing the add row put an application on the presentation-exclusion list",
+    (exclusions.get("subject"), exclusions.get("listedAfterAdd")),
+)
+# The other direction, and the control: a list that accepted everything and forgot nothing would
+# satisfy the reading above on its own.
+check(
+    exclusions.get("removeReachedTheStore") is True
+    and exclusions.get("subject") not in (exclusions.get("listedAfterRemove") or []),
+    "pressing Remove took it off again",
+    (exclusions.get("subject"), exclusions.get("listedAfterRemove")),
+)
+check(
+    exclusions.get("stillOffered") is False,
+    "the add row stops offering an application that is already on the list",
+    exclusions.get("stillOffered"),
+)
+check(
+    exclusions.get("listedBefore") == exclusions.get("listedAfterRemove"),
+    "the probe left the person's own exclusion list exactly as it found it",
+    (exclusions.get("listedBefore"), exclusions.get("listedAfterRemove")),
+)
+
 # --- the restart cue: the break ended and nobody came back (F-67, focus-2w1) ------------------
 #
 # `SessionEvent.breakEnded` and the break's suppression have shipped since e03 and the app did

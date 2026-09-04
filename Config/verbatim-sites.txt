@@ -80,3 +80,11 @@ Packages/FocusUI/Sources/FocusUI/Scenes/HistoryView.swift | subject) | NAME the 
 
 # --- e09a / focus-d3g: the quick-capture shortcut picker -------------------------------------
 Packages/FocusUI/Sources/FocusUI/Scenes/GeneralSettingsView.swift | option.glyphs) | RESOLVED a shortcut's own glyphs — ⌃⌥⌘Space — composed by HotKeySpec from a key code and a modifier mask, never prose the app authored
+
+# NAME — the presentation-exclusion list (F-121, focus-62o, focus-u3w). What a person's own Mac
+# calls another application. It is data, not prose: routing it through a catalog would be
+# translating somebody else's product name, and the identifier beside it is what the list is
+# keyed on.
+Packages/FocusUI/Sources/FocusUI/Scenes/PresentationExclusionSection.swift | entry.displayName) | NAME — one excluded application, in the row that removes it
+Packages/FocusUI/Sources/FocusUI/Scenes/PresentationExclusionSection.swift | entry.displayName)) | NAME — the same name, as that row's accessibility label
+Packages/FocusUI/Sources/FocusUI/Scenes/PresentationExclusionSection.swift | candidate.displayName) | NAME — one running application the add row offers

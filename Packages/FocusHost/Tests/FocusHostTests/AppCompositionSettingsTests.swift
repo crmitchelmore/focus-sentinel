@@ -177,19 +177,23 @@ struct AppCompositionSettingsTests {
     /// **Every action the pane can raise now writes something**, which is the state this round
     /// leaves the pane in. There was a test here for the ones that did not — a deliberate no-op
     /// rather than a fake write — and the set it covered is empty: quiet hours is wired
-    /// (focus-z7g), and the presentation-exclusion action went with the section that could never
-    /// draw a row for it to act on (focus-1qm). A total switch, so a case added to the vocabulary
-    /// is a compile error here rather than a control this suite silently stops covering.
+    /// (focus-z7g), and the presentation-exclusion actions are wired to `SensitiveAppSeed`'s own
+    /// verbs (focus-u3w) — which is the bead: `add` had no shipping call site at all before it.
+    /// A total switch, so a case added to the vocabulary is a compile error here rather than a
+    /// control this suite silently stops covering.
     @Test("every request the pane can make is one this root performs")
     func everyPaneActionIsPerformed() {
         func isPerformed(_ action: InterventionSettingsAction) -> Bool {
             switch action {
             case .setVoice, .setReducedInterruption, .setQuietHours: true
+            case .addPresentationExclusion, .removePresentationExclusion: true
             }
         }
         #expect(isPerformed(.setVoice(.warm)))
         #expect(isPerformed(.setReducedInterruption(true)))
         #expect(isPerformed(.setQuietHours(nil)))
+        #expect(isPerformed(.addPresentationExclusion("com.example.Keynote")))
+        #expect(isPerformed(.removePresentationExclusion("com.example.Keynote")))
     }
 
     // MARK: - The voice and "Interrupt me less" (focus-40i)

@@ -9,7 +9,20 @@ import Testing
 /// One render of one component under one set of conditions.
 struct Snapshot {
     let name: String
-    let data: Data
+    /// The PNG bytes, or `nil` for a render the encoder would not take.
+    ///
+    /// **Measured, and it is a fact about the encoder rather than about the picture**
+    /// (focus-6n2). `ImageRenderer` produces a `CGImage` for the Privacy pane at
+    /// `accessibilityLarge` under pseudo-localisation — 984 points wide and close to sixteen
+    /// thousand tall, because the lane renders that pane unclamped on purpose (see
+    /// `SnapshotComponent.privacySettings`) — and `CGImageDestination` then refuses to write it.
+    /// One render encoded at 15 950 rows and the next, 100 rows taller, did not.
+    ///
+    /// It is optional rather than fatal because **the comparison that needs this render does not
+    /// need bytes.** `PseudoLocalizationTests` counts ink in `pixels`, which is decoded from the
+    /// `CGImage` directly. Nothing is loosened: `verify(_:)` refuses outright when the bytes are
+    /// missing, so no baseline can be recorded, compared, or quietly skipped without them.
+    let data: Data?
     let pixels: PixelBuffer
 
     var width: Int { pixels.width }
@@ -154,13 +167,17 @@ enum SnapshotHarness {
             throw SnapshotFailure.renderProducedNothing(name)
         }
 
-        let data = try SnapshotMetrics.measure(.encode) { try PNGCompare.encode(image) }
+        // The encode is allowed to fail; see `Snapshot.data`. Everything downstream that needs
+        // the bytes says so for itself rather than inheriting a silence from here.
+        let data = SnapshotMetrics.measure(.encode) { try? PNGCompare.encode(image) }
         let pixels = try SnapshotMetrics.measure(.pixels) { try PNGCompare.pixels(of: image) }
         let snapshot = Snapshot(name: name, data: data, pixels: pixels)
 
-        try SnapshotMetrics.measure(.write) {
-            try write(snapshot)
-            Attachment.record(Attachment(data, named: "\(name).png"))
+        if let data {
+            try SnapshotMetrics.measure(.write) {
+                try write(snapshot, data: data)
+                Attachment.record(Attachment(data, named: "\(name).png"))
+            }
         }
         return snapshot
     }
@@ -198,13 +215,19 @@ enum SnapshotHarness {
     /// committing them is a human step this code cannot do for anyone.
     static func verify(_ snapshot: Snapshot) throws {
         let baselineURL = baselineDirectory.appending(path: "\(snapshot.name).png")
+        // **A baseline is bytes.** A render the encoder would not take cannot be recorded and
+        // cannot be compared, and saying so is the only honest answer: passing here would
+        // certify a picture nobody can look at.
+        guard let snapshotData = snapshot.data else {
+            throw SnapshotFailure.tooLargeToEncode(snapshot.name, snapshot.width, snapshot.height)
+        }
 
         if isRecording {
             try FileManager.default.createDirectory(
                 at: baselineDirectory,
                 withIntermediateDirectories: true
             )
-            try snapshot.data.write(to: baselineURL, options: .atomic)
+            try snapshotData.write(to: baselineURL, options: .atomic)
             return
         }
 
@@ -217,7 +240,7 @@ enum SnapshotHarness {
                 at: baselineDirectory,
                 withIntermediateDirectories: true
             )
-            try snapshot.data.write(to: baselineURL, options: .atomic)
+            try snapshotData.write(to: baselineURL, options: .atomic)
             throw SnapshotFailure.missingBaseline(
                 snapshot.name,
                 baselineURL.path(percentEncoded: false)
@@ -237,7 +260,7 @@ enum SnapshotHarness {
         // baseline's ink count — one scan discharges both of focus-pq8's obligations rather
         // than skipping one of them. The blank-baseline half is still checked: a committed
         // blank whose render matches it is still a blank render, and fails here.
-        if snapshot.data == baselineData {
+        if snapshotData == baselineData {
             try SnapshotMetrics.measure(.ink) {
                 try requireInk(snapshot.pixels, in: snapshot.name, side: "render and baseline")
             }
@@ -274,7 +297,7 @@ enum SnapshotHarness {
         if !comparison.isWithinTolerance {
             // Both sides are attached, so a failure in a log is enough to see what changed.
             Attachment.record(Attachment(baselineData, named: "\(snapshot.name).baseline.png"))
-            Attachment.record(Attachment(snapshot.data, named: "\(snapshot.name).candidate.png"))
+            Attachment.record(Attachment(snapshotData, named: "\(snapshot.name).candidate.png"))
             throw SnapshotFailure.mismatch(snapshot.name, comparison.summary)
         }
     }
@@ -338,12 +361,12 @@ enum SnapshotHarness {
 
     // MARK: - Evidence
 
-    private static func write(_ snapshot: Snapshot) throws {
+    private static func write(_ snapshot: Snapshot, data: Data) throws {
         try FileManager.default.createDirectory(
             at: outputDirectory,
             withIntermediateDirectories: true
         )
-        try snapshot.data.write(
+        try data.write(
             to: outputDirectory.appending(path: "\(snapshot.name).png"),
             options: .atomic
         )
@@ -358,11 +381,20 @@ enum SnapshotFailure: Error, CustomStringConvertible {
     case blank(String, String, Double)
     /// Two different pictures rendered under one name (focus-tzj.5).
     case nameCollision(String)
+    /// A render the PNG encoder would not take, with the size it refused (focus-6n2). Only ever
+    /// thrown by `verify`: a lane that needs pixels rather than bytes goes on working.
+    case tooLargeToEncode(String, Int, Int)
 
     var description: String {
         switch self {
         case .renderProducedNothing(let name):
             "ImageRenderer produced no image for \(name)"
+        case .tooLargeToEncode(let name, let width, let height):
+            """
+            \(name) rendered \(width)×\(height) and the PNG encoder would not take it, so there \
+            are no bytes to record or compare. Measured: an encode succeeded at 984×15 950 and \
+            failed 100 rows later. A baseline is bytes, so this is a failure rather than a skip
+            """
         case .blank(let name, let side, let share):
             """
             the \(side) for \(name) is blank: \(String(format: "%.4f", share)) of it is ink, \

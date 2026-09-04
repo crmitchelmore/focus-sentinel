@@ -31,6 +31,15 @@ public struct InterventionSettings: Sendable, Equatable {
     /// changed with its value would make `strandedPaths` a function of the display this Mac
     /// happens to have. `Refusal` has no payload, so this is one path on every Mac.
     public var notchRefusal: NotchLanding.Refusal?
+    /// **The applications this person has said are not presentations** (F-121, focus-62o,
+    /// focus-u3w). The list as the store holds it, resolved to names the person recognises.
+    public var presentationExclusions: [PresentationExclusion]
+    /// **What is running right now that could be added**, by the name its own menus use.
+    ///
+    /// A reading of the machine, so it is passed in rather than taken here: a pane that scanned
+    /// `NSWorkspace` for itself would draw a different list in every lane that looks at it, and
+    /// the gate would be pinning the machine rather than the product.
+    public var addableApplications: [PresentationExclusion]
 
     public init(
         voice: NudgeVoice = .standard,
@@ -38,7 +47,9 @@ public struct InterventionSettings: Sendable, Equatable {
         reducedInterruptionIsForced: Bool = false,
         quietHours: QuietHoursWindow? = InterventionPolicy.quietHoursDefault,
         usage: InterruptionBudget = .empty,
-        notchRefusal: NotchLanding.Refusal? = .noBuiltInDisplay
+        notchRefusal: NotchLanding.Refusal? = .noBuiltInDisplay,
+        presentationExclusions: [PresentationExclusion] = [],
+        addableApplications: [PresentationExclusion] = []
     ) {
         self.voice = voice
         self.reducedInterruption = reducedInterruption
@@ -46,6 +57,8 @@ public struct InterventionSettings: Sendable, Equatable {
         self.quietHours = quietHours
         self.usage = usage
         self.notchRefusal = notchRefusal
+        self.presentationExclusions = presentationExclusions
+        self.addableApplications = addableApplications
     }
 }
 
@@ -59,6 +72,15 @@ public enum InterventionSettingsAction: Sendable, Equatable {
     case setVoice(NudgeVoice)
     case setReducedInterruption(Bool)
     case setQuietHours(QuietHoursWindow?)
+    /// **Put one application on the presentation-exclusion list** (F-121, focus-62o, focus-u3w).
+    ///
+    /// The bundle identifier and nothing else. The pane draws the name the person recognises and
+    /// sends the identifier, because the list is keyed on the identifier and a localised name is
+    /// a different string on a different Mac.
+    case addPresentationExclusion(String)
+    /// Take one off again. This half shipped and was unreachable: nothing could ever put a row
+    /// on the list, so the Remove button beside a row was a button no row existed to carry.
+    case removePresentationExclusion(String)
 }
 
 /// **The Intervention settings pane** (R-98, R-92, F-132, F-148).
@@ -165,7 +187,8 @@ public struct InterventionSettingsView: View {
             //
             // There were seven. The notification authorisation went with the section that drew it
             // (focus-wy0), and the presentation-exclusion list with the section that instructed
-            // the person to add an app the application offered no way to add (focus-1qm).
+            // the person to add an app the application offered no way to add (focus-1qm) — and
+            // came back at focus-u3w with the add affordance that was the reason it went.
             voiceSection
                 .shellRendered(.interventionVoice, settings.voice.rawValue)
             Divider()
@@ -183,6 +206,24 @@ public struct InterventionSettingsView: View {
             Divider()
             notchSection
                 .shellRendered(.notchCompanion, Self.notchReceipt(settings.notchRefusal))
+            Divider()
+            // **The section that was deleted, with the half that was missing** (focus-62o,
+            // focus-u3w). It drew a heading and an instruction to add an application the
+            // application offered no way to add, so it went at a081d64 rather than being
+            // reworded. This is the list, a Remove on each row, and an add row naming what is
+            // running now.
+            PresentationExclusionSection(
+                excluded: settings.presentationExclusions,
+                addable: settings.addableApplications,
+                onAction: onAction
+            )
+            .shellRendered(
+                .presentationExclusions,
+                PresentationExclusionSection.rendered(
+                    excluded: settings.presentationExclusions,
+                    addable: settings.addableApplications
+                )
+            )
             Divider()
             routingMatrix
             Divider()

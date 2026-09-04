@@ -147,15 +147,20 @@ struct InterventionSettingsTests {
             .children.compactMap(\.label).sorted()
 
         #expect(!fields.contains("authorisation"), "the pane got its authorisation back: \(fields)")
-        // **And no presentation-exclusion list**, which went with the section that instructed
-        // the person to add an app the application offered no way to add (focus-1qm).
-        // e08a adds `notchRefusal`, and the census grows with it rather than being weakened: the
-        // point of this list is that a sixth field cannot appear without a reviewer seeing it.
+        // e08a adds `notchRefusal` and focus-u3w adds the two exclusion-list halves, and the
+        // census grows with them rather than being weakened: the point of this list is that a
+        // field cannot appear without a reviewer seeing it.
+        //
+        // The exclusion list went at focus-1qm because the section instructed a person to add an
+        // application the application offered no way to add — the *instruction* was the defect,
+        // not the list. It is back with the affordance that was missing, and it is still not an
+        // authorisation: `NSWorkspace.runningApplications` names applications, reads no window,
+        // and asks nobody for anything.
         #expect(fields == [
-            "notchRefusal", "quietHours", "reducedInterruption", "reducedInterruptionIsForced",
-            "usage", "voice"
+            "addableApplications", "notchRefusal", "presentationExclusions", "quietHours",
+            "reducedInterruption", "reducedInterruptionIsForced", "usage", "voice"
         ])
-        // …and the only requests it can make are the three that change a setting.
+        // …and the only requests it can make are the ones that change a setting.
         #expect(!InterventionSettingsView(settings: .init()).drawnRows.isEmpty)
     }
 
@@ -433,11 +438,18 @@ struct InterventionSettingsTests {
             switch action {
             case .setVoice, .setReducedInterruption, .setQuietHours:
                 true
+            // focus-u3w: the exclusion list. Two rows in the store, and still not a permission —
+            // `NSWorkspace.runningApplications` names applications, reads no window and asks
+            // nobody for anything.
+            case .addPresentationExclusion, .removePresentationExclusion:
+                true
             }
         }
         #expect(changesASetting(.setVoice(.warm)))
         #expect(changesASetting(.setReducedInterruption(true)))
         #expect(changesASetting(.setQuietHours(nil)))
+        #expect(changesASetting(.addPresentationExclusion("com.example.Keynote")))
+        #expect(changesASetting(.removePresentationExclusion("com.example.Keynote")))
 
         var seen: [InterventionSettingsAction] = []
         let view = InterventionSettingsView(settings: InterventionSettingsFixture.midDay) {
@@ -519,10 +531,14 @@ struct InterventionSettingsTests {
             case .setVoice: "setVoice"
             case .setReducedInterruption: "setReducedInterruption"
             case .setQuietHours: "setQuietHours"
+            case .addPresentationExclusion: "addPresentationExclusion"
+            case .removePresentationExclusion: "removePresentationExclusion"
             }
         }
         let actions: [InterventionSettingsAction] = [
-            .setVoice(.neutral), .setReducedInterruption(true), .setQuietHours(nil)
+            .setVoice(.neutral), .setReducedInterruption(true), .setQuietHours(nil),
+            .addPresentationExclusion("com.example.Keynote"),
+            .removePresentationExclusion("com.example.Keynote")
         ]
         #expect(actions.map(name).allSatisfy { !$0.lowercased().contains("notch") })
     }

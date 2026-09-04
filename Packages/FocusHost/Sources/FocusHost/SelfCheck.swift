@@ -4216,6 +4216,7 @@ enum SelfCheck {
             .string(.settingsPrivacyNoUpdateCheck)
         report["privacySinkHeld"] = composition.settingsSinks != nil
         report["drivePrivacyRetention"] = drivePrivacyRetentionSink()
+        report["driveExclusionList"] = driveExclusionSink()
 
         // **The appearance is moved, and that is what makes the traits reading mean anything.**
         //
@@ -4430,6 +4431,53 @@ enum SelfCheck {
     /// one: a probe that shortened somebody's window would delete their rows to take a reading,
     /// which is the one thing a self-check may never do. Restoring is unconditional, and the
     /// reading says whether it succeeded.
+    /// **The affordance that did not exist** (F-121, focus-62o, focus-u3w).
+    ///
+    /// `SensitiveAppSeed.add` had **no shipping call site at all**: the presentation-exclusion
+    /// list seeds empty, nothing could put a row on it, and the Remove button beside a row was a
+    /// button no row existed to carry. So the reading that matters is not "the pane draws a
+    /// list" — it is that pressing the pane's own sink puts a row in the store and pressing the
+    /// other one takes it out again.
+    ///
+    /// The subject is an identifier no application on this Mac carries, so a green run leaves
+    /// the person's list exactly as it found it even if the removal below were to fail.
+    static func driveExclusionSink() -> [String: Any] {
+        let composition = AppComposition.shared
+        var report: [String: Any] = [:]
+
+        guard let sinks = composition.settingsSinks else {
+            report["available"] = false
+            return report
+        }
+        report["available"] = true
+
+        let subject = "com.chrismitchelmore.FocusSelfCheckNotAPresentation"
+        report["subject"] = subject
+        report["listedBefore"] = composition.presentationExclusions().map(\.bundleID)
+
+        sinks.onInterventionAction(.addPresentationExclusion(subject))
+        let afterAdd = composition.presentationExclusions().map(\.bundleID)
+        report["listedAfterAdd"] = afterAdd
+        report["addReachedTheStore"] = afterAdd.contains(subject)
+        // And the pane stops offering what is already on the list, or the add row is a button
+        // that does nothing the second time.
+        report["stillOffered"] = composition.addablePresentationExclusions()
+            .map(\.bundleID)
+            .contains(subject)
+
+        sinks.onInterventionAction(.removePresentationExclusion(subject))
+        let afterRemove = composition.presentationExclusions().map(\.bundleID)
+        report["listedAfterRemove"] = afterRemove
+        report["removeReachedTheStore"] = !afterRemove.contains(subject)
+
+        // What the reading is *about*: how many applications the add row could offer at all. A
+        // machine-dependent number, published and never asserted — a gate that required somebody
+        // to have an application open would be a gate about the machine.
+        report["addableCount"] = composition.addablePresentationExclusions().count
+        return report
+    }
+
+    @MainActor
     static func drivePrivacyRetentionSink() -> [String: Any] {
         let composition = AppComposition.shared
         var report: [String: Any] = [:]

@@ -266,6 +266,15 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case settingsLaunchAtLoginApproval = "settings.general.launchAtLoginApproval"
     case settingsLaunchAtLoginOpenSettings = "settings.general.launchAtLoginOpenSettings"
     case settingsLaunchAtLoginUnavailable = "settings.general.launchAtLoginUnavailable"
+    // The presentation-exclusion list (F-121, focus-62o, focus-u3w). The section was deleted at
+    // a081d64 because it instructed a person to add an application the app offered no way to
+    // add; these are its copy back, with the affordance that was missing.
+    case interventionExclusionHeading = "settings.intervention.exclusion.heading"
+    case interventionExclusionExplanation = "settings.intervention.exclusion.explanation"
+    case interventionExclusionEmpty = "settings.intervention.exclusion.empty"
+    case interventionExclusionAddHeading = "settings.intervention.exclusion.addHeading"
+    case interventionExclusionNoneRunning = "settings.intervention.exclusion.noneRunning"
+    case interventionExclusionRemove = "settings.intervention.exclusion.remove"
     case settingsPrivacyStatement = "settings.privacy.statement"
     // The two things this app does not do, said plainly where a person asks what it does
     // (F-122, F-137, focus-6n2). Both are linted true of the shipped binary rather than

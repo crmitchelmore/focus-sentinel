@@ -2136,8 +2136,47 @@ public final class AppComposition {
             // **The geometry's own answer, taken from the renderer** (e08a). Not a preference and
             // not a constant: the row a person reads is the reason the companion is or is not
             // drawing, computed from the same `NotchLanding` the strip is placed from.
-            notchRefusal: notchCompanion.landing().refusal
+            notchRefusal: notchCompanion.landing().refusal,
+            // **The list, and what could be added to it** (F-121, focus-62o, focus-u3w). Read
+            // from the store and from the workspace every time this value is built, for
+            // `quietHours`' reason: a pane answering from its own memory would go on showing a
+            // row somebody had just removed, and a list of running applications is out of date
+            // the moment an app quits.
+            presentationExclusions: presentationExclusions(),
+            addableApplications: addablePresentationExclusions()
         )
+    }
+
+    /// The presentation-exclusion list, resolved to names a person recognises.
+    ///
+    /// The store keeps identifiers; the name comes from the workspace where the application is
+    /// running and from the identifier itself where it is not. An application that is not open
+    /// still belongs on the list — the person put it there — so a row that cannot be named is
+    /// drawn under its identifier rather than dropped.
+    func presentationExclusions() -> [PresentationExclusion] {
+        let rows = (try? SensitiveAppSeed.rows(in: modelContainer.mainContext)) ?? []
+        let names = Dictionary(
+            RunningApplications.choices().map { ($0.bundleID, $0.displayName) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        return rows
+            .filter { $0.kind?.list == .presentationExcluded && ($0.kind?.isActive ?? false) }
+            .map {
+                PresentationExclusion(
+                    bundleID: $0.bundleID,
+                    displayName: names[$0.bundleID] ?? $0.bundleID
+                )
+            }
+            .sorted {
+                $0.displayName.localizedStandardCompare($1.displayName) == .orderedAscending
+            }
+    }
+
+    /// What is running that is not already on the list. Offering an application a second time
+    /// would be offering a button that does nothing.
+    func addablePresentationExclusions() -> [PresentationExclusion] {
+        let already = Set(presentationExclusions().map(\.bundleID))
+        return RunningApplications.choices().filter { !already.contains($0.bundleID) }
     }
 
     /// What the Intervention pane asked for.
@@ -2171,7 +2210,43 @@ public final class AppComposition {
             nudgeHost.choose(quietHours: window)
             persistInterventionPreferences()
             refreshCockpit()
+        // **The two halves of the exclusion list** (F-121, focus-62o, focus-u3w). Straight to
+        // the store's own verbs, which are idempotent and tombstone-aware: adding twice is one
+        // row, and removing a built-in leaves a tombstone rather than a gap the next launch
+        // would re-seed. `SensitiveAppSeed.add` had **no shipping call site at all** before this.
+        case .addPresentationExclusion(let bundleID):
+            writeExclusion { context, now in
+                _ = try SensitiveAppSeed.add(
+                    bundleID: bundleID,
+                    to: .presentationExcluded,
+                    in: context,
+                    now: now
+                )
+            }
+        case .removePresentationExclusion(let bundleID):
+            writeExclusion { context, _ in
+                try SensitiveAppSeed.remove(
+                    bundleID: bundleID,
+                    from: .presentationExcluded,
+                    in: context
+                )
+            }
         }
+    }
+
+    /// One write, and then the pane and the loop both re-read. The sensing host consults the
+    /// list on every judgement, so a change that only reached the store would take effect on the
+    /// next launch — which is the shape of a setting that does not work.
+    private func writeExclusion(_ body: (ModelContext, Date) throws -> Void) {
+        do {
+            try body(modelContainer.mainContext, dateProvider.now)
+        } catch {
+            logger.error(
+                "the exclusion list refused a write: \(error.localizedDescription, privacy: .public)"
+            )
+            return
+        }
+        refreshCockpit()
     }
 
     /// Re-read everything the store knows nothing about and push it into the cockpit value.

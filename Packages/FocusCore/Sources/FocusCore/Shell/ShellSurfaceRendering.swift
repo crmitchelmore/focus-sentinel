@@ -116,6 +116,15 @@ public enum ShellRenderedField: String, Sendable, CaseIterable, Codable, Hashabl
     case reducedInterruptionForced
     /// The quiet-hours window the pane drew, or `"none"` for off (R-85).
     case quietHours
+    /// **The presentation-exclusion list as the Intervention pane drew it**, and how many
+    /// applications its add row offered (F-121, focus-62o, focus-u3w).
+    ///
+    /// The rows carry the name *and* the identifier, because the pane draws one and sends the
+    /// other and a receipt carrying only the name could not tell a row wired to the wrong app
+    /// from one wired to the right one. The addable half is a **count**: which applications
+    /// happen to be running is a fact about the machine, and asserting the names would be
+    /// asserting what somebody had open when the gate ran.
+    case presentationExclusions
     /// Today's spend over the cap, as the pane drew it (D-01: information, never a score).
     case interruptionUsage
     /// **The notch companion's row, as the geometry decided it** (e08a). The named refusal, or

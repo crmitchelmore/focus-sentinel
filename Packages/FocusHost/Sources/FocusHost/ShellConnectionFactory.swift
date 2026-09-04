@@ -240,6 +240,17 @@ enum ShellConnectionFactory {
             InterventionSettingsView.notchReceipt(intervention.notchRefusal),
             for: .settings
         )
+        // **The exclusion list, and how many applications the add row offered** (F-121,
+        // focus-62o, focus-u3w). Expected as the section's own rendering, so a pane handed the
+        // list and drawing something else is visible to the receipt.
+        root.expect(
+            .presentationExclusions,
+            PresentationExclusionSection.rendered(
+                excluded: intervention.presentationExclusions,
+                addable: intervention.addableApplications
+            ),
+            for: .settings
+        )
         // Which pane is in front. The window reports it, and it is what makes the other readings
         // legible: a value missing because its pane was never selected is a different thing from
         // a value missing because the pane drew nothing.
