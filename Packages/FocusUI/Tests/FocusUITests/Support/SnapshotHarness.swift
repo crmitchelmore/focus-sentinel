@@ -128,7 +128,16 @@ enum SnapshotHarness {
             .fixedSize(horizontal: width == nil, vertical: true)
             // Painted last, so the whole frame is filled rather than leaving an unpainted
             // margin around a dark render.
-            .background(DesignTokens.Palette.windowBackground(for: traits))
+            //
+            // **Bench, the shell's own ground** (focus-w41). It was `windowBackground`, and the
+            // moment `shellSurface`'s opaque branch became Bench the two stopped matching — by
+            // eleven counts in light and about four in dark, which is invisible to the eye and
+            // enormous to `PNGCompare.inkPixels`. That measure takes the top-left pixel as the
+            // background, so a margin a shade off the panel made *the whole panel* read as ink:
+            // `queryPanel` went from 35k ink pixels to 140k in light and stayed at 35k in dark,
+            // and `DarkModeLegibilityTests` failed a pair of renders that are both perfectly
+            // legible. The margin has to be the app's ground, not a neighbouring grey.
+            .background(DesignTokens.Palette.role(.bench, for: traits))
 
         let renderer = ImageRenderer(content: subject)
         renderer.scale = scale

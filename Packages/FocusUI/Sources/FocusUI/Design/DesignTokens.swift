@@ -532,8 +532,16 @@ public enum DesignTokens {
         /// The compiled catalogue first, because that is what the *shipped* app draws and what the
         /// system re-resolves when the person changes appearance mid-flight; the declared table
         /// when there is no `Assets.car` to read, which is every SwiftPM lane.
+        /// **The catalogue answers the light/dark axis; the declared table answers the contrast
+        /// one.** Not a preference — see `NSColor.resolved(for:)`, which carries the measurement:
+        /// a Color Set's High Contrast cell is unreachable through `NSAppearance`, because the
+        /// contrast axis is read from the person's live System Settings at resolve time and this
+        /// app draws in injected traits rather than in live settings. The table is the same six
+        /// colours, held byte-equal to the catalogue by `PaletteTests` in both directions, so
+        /// answering from it costs nothing but the extra branch.
         public static func nsColor(_ role: Role, for traits: AppearanceTraits) -> NSColor {
-            if let named = NSColor(named: NSColor.Name(role.assetName), bundle: .module) {
+            if !traits.increasedContrast,
+               let named = NSColor(named: NSColor.Name(role.assetName), bundle: .module) {
                 return named.resolved(for: traits)
             }
             return role.value(for: traits).nsColor
@@ -779,20 +787,33 @@ extension NSColor {
     /// Falls back to `self` when the appearance cannot be made or the round trip fails: an
     /// unresolvable colour is better drawn in the system's own scheme than not at all.
     ///
-    /// **Increase Contrast is part of the appearance, not a separate switch** (focus-w41). It was
-    /// not, until e11b: the four-cell Color Sets this file now resolves keep their High Contrast
-    /// pair behind `NSAppearance.Name.accessibilityHighContrast{Aqua,DarkAqua}`, so a resolution
-    /// that only ever named `.aqua` and `.darkAqua` could never reach two of the four cells and
-    /// the High Contrast half of the palette would have been dead the day it was committed. The
-    /// same correction reaches the three system colours above, which had the same hole for the
-    /// same reason — `increasedContrast` traits were resolving them in plain aqua.
+    /// **It resolves the light/dark axis and nothing else, and that is a measurement rather than an
+    /// omission** (focus-w41).
+    ///
+    /// e11b tried to make Increase Contrast part of the appearance here, by naming
+    /// `accessibilityHighContrast{Aqua,DarkAqua}` for `increasedContrast` traits. The names exist
+    /// and are non-nil; the *contrast axis is not reachable through them by this route*. Measured
+    /// on this machine, through exactly this round trip, in the compiled `Assets.car` and in
+    /// AppKit's own palette:
+    ///
+    ///     Bench             aqua #F2F4F3   hcAqua #F2F4F3   darkAqua #191D1F   hcDark #191D1F
+    ///     Spruce            aqua #176B73   hcAqua #176B73   darkAqua #57A9AF   hcDark #57A9AF
+    ///     systemGreen       aqua #34C759   hcAqua #34C759   darkAqua #30D158   hcDark #30D158
+    ///     separatorColor    aqua #000000   hcAqua #000000   darkAqua #FFFFFF   hcDark #FFFFFF
+    ///
+    /// Every High Contrast cell answers its plain twin. The luminosity axis resolves correctly, so
+    /// the mechanism works — the contrast one is read from the person's live System Settings at
+    /// resolve time rather than from the appearance an image is drawn in, and this app never
+    /// draws in the person's live settings: it draws in the traits it was injected (rule 3).
+    ///
+    /// So the branch was removed rather than left in place looking like it did something, and the
+    /// contrast axis is answered where it *can* be answered — `Palette.nsColor(_:for:)` reads the
+    /// declared table when `increasedContrast` is set. The self-check publishes all four cells of
+    /// all six roles, which is how this was found: `PaletteTests` compares the table against the
+    /// catalogue and could not see it, because both spellings were right and the *resolution* was
+    /// what was wrong.
     func resolved(for traits: AppearanceTraits) -> NSColor {
-        let name: NSAppearance.Name = switch (traits.colorScheme, traits.increasedContrast) {
-        case (.light, false): .aqua
-        case (.dark, false): .darkAqua
-        case (.light, true): .accessibilityHighContrastAqua
-        case (.dark, true): .accessibilityHighContrastDarkAqua
-        }
+        let name: NSAppearance.Name = traits.colorScheme == .dark ? .darkAqua : .aqua
         guard let appearance = NSAppearance(named: name) else { return self }
         var resolved: NSColor?
         appearance.performAsCurrentDrawingAppearance {
