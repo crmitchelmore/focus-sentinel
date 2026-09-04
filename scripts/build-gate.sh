@@ -409,6 +409,12 @@ glyph_stage() {
         rc=1
     fi
 
+    print
+    print "== and the app icon is the same mark, in the same palette"
+    if ! python3 scripts/check-appicon.py; then
+        rc=1
+    fi
+
     return $rc
 }
 
