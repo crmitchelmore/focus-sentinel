@@ -61,19 +61,36 @@ public struct StatusOutline: Shape {
 /// legible to someone who cannot use colour, and what makes "differentiate without colour"
 /// a behaviour rather than a claim.
 public struct StatusBadge: View {
+    /// **How much furniture the badge draws around itself** (focus-w41, direction §5.1).
+    ///
+    /// The two styles carry the same four channels — glyph, silhouette, label, tint — and differ
+    /// only in whether the badge is a *thing* or a *line*. That is the whole of the cockpit
+    /// density change at this control: a chip beside the priority reads as an object competing
+    /// with the sentence, and the sentence is the one thing on the screen the person wrote.
+    public enum Style: String, Sendable, CaseIterable, Hashable {
+        /// A capsule with its own fill and border. What a badge inside a list or a popover is:
+        /// the surface around it is busy, so the badge has to hold itself together.
+        case chip
+        /// Glyph and label on the line, with no fill and no border. What sits beside the hero.
+        case compact
+    }
+
     public let status: FocusStatus
     /// Whether the caller wants the label drawn. See `showsLabel(requested:traits:)`: the
     /// answer is not simply this value.
     public let labelRequested: Bool
+    /// How much furniture to draw. `chip` is what every surface but the cockpit header asks for.
+    public let style: Style
 
     @Environment(\.appearanceTraits) private var traits
     @Environment(\.shellTextScale) private var textScale
     @ScaledMetric(relativeTo: .title2) private var glyphSize: CGFloat = 22
     @ScaledMetric(relativeTo: .body) private var spacing: CGFloat = 8
 
-    public init(status: FocusStatus, showsLabel: Bool = true) {
+    public init(status: FocusStatus, showsLabel: Bool = true, style: Style = .chip) {
         self.status = status
         self.labelRequested = showsLabel
+        self.style = style
     }
 
     /// Whether the label is drawn.
@@ -102,29 +119,85 @@ public struct StatusBadge: View {
                     .font(DesignTokens.font(.title3, scale: textScale))
             }
             .frame(
-                width: DesignTokens.spacing(glyphSize, scale: textScale),
-                height: DesignTokens.spacing(glyphSize, scale: textScale)
+                width: DesignTokens.spacing(glyphSize * style.glyphScale, scale: textScale),
+                height: DesignTokens.spacing(glyphSize * style.glyphScale, scale: textScale)
             )
             .accessibilityHidden(true)
 
             if Self.showsLabel(requested: labelRequested, traits: traits) {
-                ShellText(resource: status.shortLabelResource)
+                ShellText(resource: status.shortLabelResource, role: style.labelRole)
                     .foregroundStyle(DesignTokens.Palette.primaryText)
                     .lineLimit(nil)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(.horizontal, spacing)
-        .padding(.vertical, spacing / 2)
-        .shellSurface(DesignTokens.material(for: traits, provenance: .summoned), in: Capsule(), traits: traits)
-        .overlay {
-            Capsule()
-                .strokeBorder(
-                    DesignTokens.Palette.separator(for: traits).opacity(emphasis.outlineOpacity),
-                    lineWidth: emphasis.borderWidth
-                )
-        }
+        // **The compact style draws no furniture at all** (focus-w41). Not a chip with its
+        // padding turned down: the capsule and its border are the thing being removed, because a
+        // bordered object beside the priority reads as a second heading. What is left is the
+        // glyph, the silhouette and the label — the three channels that were always the ones
+        // carrying the meaning — set on the line beside the sentence they are about.
+        .modifier(ChipChrome(drawn: style == .chip, spacing: spacing, traits: traits))
         .accessibilityElement(children: .combine)
         .accessibilityLabel(Text(status.shortLabelResource))
+    }
+}
+
+extension StatusBadge.Style {
+    /// How large the glyph is drawn, as a factor of the badge's own metric.
+    ///
+    /// The compact badge sits beside body text on one line, so it is drawn at the size of the
+    /// text it is beside rather than at the chip's own. Not a separate metric: one number, scaled,
+    /// so the `@ScaledMetric` the chip already grows by still governs both.
+    var glyphScale: CGFloat {
+        switch self {
+        case .chip: 1
+        case .compact: 0.72
+        }
+    }
+
+    /// The type role the label is set in.
+    ///
+    /// `.callout` for the compact form, because it is a supporting line beside the hero and not
+    /// a heading of its own. The chip keeps whatever `ShellText` defaults to, which is `.body`.
+    var labelRole: DesignTokens.FontRole {
+        switch self {
+        case .chip: .body
+        case .compact: .callout
+        }
+    }
+}
+
+/// The chip's capsule and border, or nothing at all.
+///
+/// A modifier rather than an `if` around the whole badge, so the two styles share one
+/// accessibility element and one label — the compact badge is the same control drawn quieter, and
+/// a branch that rebuilt it would be a second control that happened to look similar.
+private struct ChipChrome: ViewModifier {
+    let drawn: Bool
+    let spacing: CGFloat
+    let traits: AppearanceTraits
+
+    func body(content: Content) -> some View {
+        if drawn {
+            let emphasis = DesignTokens.emphasis(for: traits)
+            content
+                .padding(.horizontal, spacing)
+                .padding(.vertical, spacing / 2)
+                .shellSurface(
+                    DesignTokens.material(for: traits, provenance: .summoned),
+                    in: Capsule(),
+                    traits: traits
+                )
+                .overlay {
+                    Capsule()
+                        .strokeBorder(
+                            DesignTokens.Palette.separator(for: traits)
+                                .opacity(emphasis.outlineOpacity),
+                            lineWidth: emphasis.borderWidth
+                        )
+                }
+        } else {
+            content
+        }
     }
 }

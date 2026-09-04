@@ -195,11 +195,41 @@ public struct SessionControls: View {
         }
     }
 
-    /// Exactly the verbs the machine would accept from this phase, and no others.
+    /// Exactly the verbs the machine would accept from this phase, and no others —
+    /// **grouped by what they cost** (focus-w41, direction §5.1).
+    ///
+    /// `D02` shows what this looked like before: one row of identically weighted lozenges in
+    /// which "Pause Session", "Finish Session" and "25 min" were all the same object. Pausing a
+    /// session and ending one are not the same act and must not read as one, so the row now has
+    /// three registers, in the order the canvas puts them:
+    ///
+    /// - **The one thing you are most likely to want**, filled in the person's own accent:
+    ///   Pause while it runs, Resume while it is held, Start when there is none.
+    /// - **The two ways of stepping out and coming back**, bordered and secondary: a detour and
+    ///   a break. They change what the session *is* without ending it.
+    /// - **The ways it ends**, at the trailing edge, drawn as plain links rather than buttons.
+    ///   A link is not a lesser control — it is a control that does not invite the pointer, which
+    ///   is the correct posture for the two verbs that cannot be undone.
+    ///
+    /// Nothing is added, removed or renamed: the same verbs the transition table accepts, in the
+    /// same phases, with the same keys. `FocusTraversal`'s pinned order is therefore unchanged —
+    /// `cockpitSessionPrimary` is still the section's one focus identity and still lands on
+    /// whichever verb is primary in the phase the session is in.
     @ViewBuilder
     private func verbs(_ session: SessionSnapshot) -> some View {
-        let row = HStack(spacing: spacing) { verbButtons(session) }
-        let column = VStack(alignment: .leading, spacing: spacing) { verbButtons(session) }
+        let row = HStack(spacing: spacing) {
+            verbButtons(session)
+            // The shelf between the reversible verbs and the terminal ones. It is the whole of
+            // the grouping in the wide case: consequence reads as distance.
+            if session.phase.offersAnEnding {
+                Spacer(minLength: spacing)
+                endings
+            }
+        }
+        let column = VStack(alignment: .leading, spacing: spacing) {
+            verbButtons(session)
+            if session.phase.offersAnEnding { endings }
+        }
 
         // The same discipline the priority actions use: the row wraps to a column rather than
         // letting a label truncate. A button reading "Stop and Say…" is a control a person has
@@ -211,6 +241,15 @@ public struct SessionControls: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    /// The two verbs that end a session, drawn as links at the trailing edge.
+    @ViewBuilder
+    private var endings: some View {
+        HStack(spacing: spacing) {
+            linkButton(.sessionActionInterrupt) { isInterrupting = true }
+            linkButton(.sessionActionComplete) { actions?.completeSession() }
+        }
+    }
+
     @ViewBuilder
     private func verbButtons(_ session: SessionSnapshot) -> some View {
         switch session.phase {
@@ -218,8 +257,6 @@ public struct SessionControls: View {
             primaryButton(.sessionActionPause) { actions?.pauseSession() }
             button(.sessionActionBreakStart) { actions?.startBreak(reason: .user) }
             button(.sessionActionDetourStart) { actions?.startDetour(reason: .user) }
-            interruptButton
-            completeButton
 
         case .intentionalDetour:
             primaryButton(.sessionActionPause) { actions?.pauseSession() }
@@ -227,14 +264,10 @@ public struct SessionControls: View {
             // Legal only from focus, so the host ends the detour first and the machine records
             // two transitions — which is what keeps the timeline honest about what happened.
             button(.sessionActionBreakStart) { actions?.startBreak(reason: .user) }
-            interruptButton
-            completeButton
 
         case .onBreak:
             primaryButton(.sessionActionPause) { actions?.pauseSession() }
             button(.sessionActionBreakEnd) { actions?.endBreak() }
-            interruptButton
-            completeButton
 
         case .paused:
             // Disabled, with the reasons listed above it, whenever a cause the person did not
@@ -242,8 +275,6 @@ public struct SessionControls: View {
             primaryButton(.sessionActionResume, isEnabled: session.userMayResume) {
                 actions?.resumeSession()
             }
-            interruptButton
-            completeButton
 
         case .interrupted, .complete:
             // Terminal is terminal. The only thing left to do is begin again.
@@ -255,14 +286,6 @@ public struct SessionControls: View {
         primaryButton(.sessionActionStart) {
             actions?.startSession(kind: .openEnded, plannedSeconds: nil, deadlineAt: nil)
         }
-    }
-
-    private var interruptButton: some View {
-        button(.sessionActionInterrupt) { isInterrupting = true }
-    }
-
-    private var completeButton: some View {
-        button(.sessionActionComplete) { actions?.completeSession() }
     }
 
     /// The one button in this section that carries the surface's declared focus identity.
@@ -278,7 +301,11 @@ public struct SessionControls: View {
         Button(action: perform) {
             ShellText(key, role: .callout)
         }
-        .buttonStyle(.bordered)
+        // **Filled, not merely tinted** (focus-w41). `.bordered` with a tint drew the primary
+        // verb as the same object as the four beside it in a slightly different colour, which is
+        // the flattening `D02` shows. `.borderedProminent` is the platform's own way of saying
+        // "this one", and the fill is the person's accent rather than a hue the app chose.
+        .buttonStyle(.borderedProminent)
         .tint(DesignTokens.Palette.accent(for: traits))
         .focused($focus, equals: .cockpitSessionPrimary)
         .disabled(actions == nil || !isEnabled)
@@ -292,6 +319,24 @@ public struct SessionControls: View {
             ShellText(key, role: .callout)
         }
         .buttonStyle(.bordered)
+        .disabled(actions == nil)
+    }
+
+    /// A verb that ends the session: drawn as a link, in the person's accent, with no border.
+    ///
+    /// Not a *lesser* control. A link does not invite the pointer the way a lozenge does, and the
+    /// two verbs it draws — stop and say why, and finish — are the two that cannot be undone.
+    /// They stay full-sized, full-contrast and fully keyboard-reachable; what they lose is the
+    /// visual claim on being pressed next.
+    private func linkButton(
+        _ key: ShellStringKey,
+        perform: @escaping () -> Void
+    ) -> some View {
+        Button(action: perform) {
+            ShellText(key, role: .callout)
+        }
+        .buttonStyle(.link)
+        .tint(DesignTokens.Palette.accent(for: traits))
         .disabled(actions == nil)
     }
 
@@ -314,5 +359,24 @@ public struct SessionControls: View {
         return duration.formatted(
             .units(allowed: [.hours, .minutes], width: .abbreviated, zeroValueUnits: .hide)
         )
+    }
+}
+
+extension SessionPhase {
+    /// Whether a session in this phase can still be ended from the cockpit.
+    ///
+    /// Four of the six can: a running, detoured, paused or resting session is a session, and the
+    /// two verbs that end one apply to all four. `interrupted` and `complete` are already ended —
+    /// offering to end them again would be a control that is refused on press, which is exactly
+    /// what this view refuses to draw.
+    ///
+    /// Declared here rather than inlined at the two call sites in `verbs(_:)` so the row and the
+    /// column cannot disagree about it: a wrapped layout that dropped the endings would be a
+    /// window in which the only way to finish a session is to make it wider.
+    var offersAnEnding: Bool {
+        switch self {
+        case .focus, .intentionalDetour, .onBreak, .paused: true
+        case .interrupted, .complete: false
+        }
     }
 }

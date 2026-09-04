@@ -76,13 +76,51 @@ struct TypeHierarchyTests {
         )
     }
 
-    @Test("the hero is semibold, and no system role forces a weight of its own")
+    @Test("the hero forces a weight, and no system role does")
     func onlyTheHeroForcesAWeight() {
-        #expect(DesignTokens.FontRole.priorityHero.weight == .semibold)
+        // **Medium, not semibold** (focus-w41). The hero is set in New York from e11b, and New
+        // York carries at a weight where SF would read thin. Nothing is lost: the hero's
+        // prominence is guaranteed by `heroScale`, asserted three tests above, and never by its
+        // weight — so the weight is free to be the one the face wants.
+        #expect(DesignTokens.FontRole.priorityHero.weight == .medium)
         for role in DesignTokens.FontRole.allCases where role != .priorityHero {
             #expect(
                 role.weight == nil,
                 "\(role.rawValue) forces a weight, so a call site's own .fontWeight would be ignored"
+            )
+        }
+    }
+
+    /// **The change of speaker is a change of face, and it happens exactly once** (focus-w41).
+    ///
+    /// The direction's one type exception, with its boundary asserted rather than described: the
+    /// serif belongs to the role that draws the person's own sentence, and to nothing else. A
+    /// later round that gives a second role a face has to fail here first — which is the same
+    /// shape as `heroIsUsedExactlyOnce`, and for the same reason. An identity that spread would
+    /// eventually put a serif on an uninvited panel, and §6 of the direction is that the
+    /// uninvited surfaces get no face at all.
+    @Test("the serif is the hero's alone")
+    func onlyTheHeroTakesAFace() {
+        #expect(DesignTokens.FontRole.priorityHero.design == .serif)
+        for role in DesignTokens.FontRole.allCases where role != .priorityHero {
+            #expect(
+                role.design == .default,
+                "\(role.rawValue) has taken a face of its own — the exception is the hero's alone"
+            )
+        }
+
+        // And the face survives the scale, because the scaled branch builds its own font rather
+        // than returning the role's: a scale that dropped the design would silently put the
+        // cockpit's hero back in SF at accessibilityLarge and nowhere else.
+        for scale in ShellTextScale.allCases {
+            #expect(
+                DesignTokens.font(.priorityHero, scale: scale)
+                    == .system(
+                        size: DesignTokens.pointSize(.priorityHero, scale: scale),
+                        weight: .medium,
+                        design: .serif
+                    ),
+                "the hero loses its face at \(scale.rawValue)"
             )
         }
     }

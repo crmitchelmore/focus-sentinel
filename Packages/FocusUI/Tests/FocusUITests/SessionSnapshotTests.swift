@@ -323,3 +323,43 @@ struct SessionSnapshotTests {
         )
     }
 }
+
+/// **The session controls' grouping by consequence, held to the machine rather than to taste**
+/// (focus-w41, e11 direction §5.1).
+///
+/// Runs on every lane — no catalogs, no rendering — because the question is structural: `D02`
+/// showed five identically weighted lozenges in which pausing a session and ending one were the
+/// same object, and the repair splits them into three registers. The register a verb lands in is
+/// a claim about what the verb *costs*, and the one claim that can be checked mechanically is
+/// which phases can still be ended at all.
+@Suite("Session controls group by consequence")
+struct SessionConsequenceTests {
+    /// The endings are offered in exactly the phases `SessionMachine` would accept an ending in.
+    ///
+    /// Not a restatement of `offersAnEnding`'s own switch: the right-hand side is the real
+    /// transition table, asked the real question, one phase at a time. A future round that made
+    /// `complete` legal from a terminal phase — or illegal from a paused one — would fail here
+    /// rather than producing a button that is refused on press, which is the shape
+    /// `SessionControls` exists to refuse to draw.
+    @Test("a verb that ends the session is offered exactly where the machine accepts one")
+    func endingsMatchTheTransitionTable() {
+        for phase in SessionPhase.allCases {
+            let state = SessionState(
+                phase: phase,
+                pauseCauses: phase == .paused ? [.user] : [],
+                phaseChangedAt: SessionFixture.now
+            )
+            let outcome = SessionMachine.apply(.completed, to: state, at: SessionFixture.now)
+            let machineAccepts = if case .accepted = outcome { true } else { false }
+
+            #expect(
+                phase.offersAnEnding == machineAccepts,
+                """
+                the session controls offer an ending in \(phase) (\(phase.offersAnEnding)) and the \
+                machine answers \(outcome) — a button offered where the table refuses is a button \
+                that teaches people the app is unreliable
+                """
+            )
+        }
+    }
+}

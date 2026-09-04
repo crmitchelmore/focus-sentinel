@@ -54,20 +54,36 @@ public struct RitualBanner: View {
             }
             .focused($focus, equals: .cockpitRitualDismiss)
         }
-        .padding(spacing)
+        // **A quiet inset strip, not a raised card** (focus-w41, direction §5.1).
+        //
+        // It was a material surface with a full stroked border — a floating object above the
+        // priority, drawn with more weight than the priority itself. What it actually is, is a
+        // strip: a band across the top of the column asking one question once a day. So it takes
+        // Inlay, the palette's quiet inset ground, at a small radius, and its outline is drawn
+        // only where an outline is what the person asked for.
+        //
+        // The border is not simply deleted. Under Increase Contrast, Inlay sits close to Bench by
+        // construction — the two grounds both move away from the ink — so the fill alone would
+        // stop saying "strip" at exactly the setting where structure matters most. `Emphasis`
+        // already answers that question everywhere else in the shell, and it answers it here:
+        // the outline appears when it is asked for, at the width it is asked for.
+        .padding(.horizontal, spacing)
+        .padding(.vertical, spacing * 0.75)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .shellSurface(
-            DesignTokens.material(for: traits, provenance: .summoned),
-            in: RoundedRectangle(cornerRadius: spacing / 2, style: .continuous),
-            traits: traits
+        .background(
+            DesignTokens.Palette.role(.inlay, for: traits),
+            in: RoundedRectangle(cornerRadius: spacing / 3, style: .continuous)
         )
         .overlay {
-            RoundedRectangle(cornerRadius: spacing / 2, style: .continuous)
-                .strokeBorder(
-                    DesignTokens.Palette.separator(for: traits)
-                        .opacity(DesignTokens.emphasis(for: traits).outlineOpacity),
-                    lineWidth: DesignTokens.emphasis(for: traits).borderWidth
-                )
+            let emphasis = DesignTokens.emphasis(for: traits)
+            if emphasis.promotesSecondaryText {
+                RoundedRectangle(cornerRadius: spacing / 3, style: .continuous)
+                    .strokeBorder(
+                        DesignTokens.Palette.role(.mist, for: traits)
+                            .opacity(emphasis.outlineOpacity),
+                        lineWidth: emphasis.borderWidth
+                    )
+            }
         }
     }
 }

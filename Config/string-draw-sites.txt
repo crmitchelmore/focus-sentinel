@@ -67,11 +67,11 @@ nudge.query.        | Packages/FocusUI/Sources/FocusUI/Nudge/QueryPanelView.swif
 nudge.rung.         | Packages/FocusUI/Sources/FocusUI/Scenes/InterventionSettingsView.swift | ShellText(resource: row.rung.copyResource, role: .footnote)
 
 # --- e01/e03: the status word, and the Edit menu -----------------------------------------------
-status.break.       | Packages/FocusUI/Sources/FocusUI/Design/StatusBadge.swift | ShellText(resource: status.shortLabelResource)
-status.paused.      | Packages/FocusUI/Sources/FocusUI/Design/StatusBadge.swift | ShellText(resource: status.shortLabelResource)
-status.relevant.    | Packages/FocusUI/Sources/FocusUI/Design/StatusBadge.swift | ShellText(resource: status.shortLabelResource)
-status.uncertain.   | Packages/FocusUI/Sources/FocusUI/Design/StatusBadge.swift | ShellText(resource: status.shortLabelResource)
-status.unrelated.   | Packages/FocusUI/Sources/FocusUI/Design/StatusBadge.swift | ShellText(resource: status.shortLabelResource)
+status.break.       | Packages/FocusUI/Sources/FocusUI/Design/StatusBadge.swift | ShellText(resource: status.shortLabelResource, role: style.labelRole)
+status.paused.      | Packages/FocusUI/Sources/FocusUI/Design/StatusBadge.swift | ShellText(resource: status.shortLabelResource, role: style.labelRole)
+status.relevant.    | Packages/FocusUI/Sources/FocusUI/Design/StatusBadge.swift | ShellText(resource: status.shortLabelResource, role: style.labelRole)
+status.uncertain.   | Packages/FocusUI/Sources/FocusUI/Design/StatusBadge.swift | ShellText(resource: status.shortLabelResource, role: style.labelRole)
+status.unrelated.   | Packages/FocusUI/Sources/FocusUI/Design/StatusBadge.swift | ShellText(resource: status.shortLabelResource, role: style.labelRole)
 
 # `undo.*` has no rows here, and the absence is the rule working rather than a gap.
 # `UndoActionName` is a raw-value enum in `FocusCore`, so its fourteen keys are **named** keys

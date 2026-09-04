@@ -198,6 +198,13 @@ public struct CockpitView: View {
                 .background(absentCommitmentReceipts)
 
             if let priority = state.priority {
+                // **A separator before a container** (focus-w41, direction §5.1). The sections
+                // below were told apart by whitespace alone, which at accessibilityLarge is not
+                // enough to say where the commitment stops and its machinery starts; and the
+                // alternative — putting each section in a box — is what the direction rejects,
+                // because five bordered boxes make the window a form. One hairline under the
+                // header does the work all five boxes would have done.
+                Divider()
                 doneWhenSection(priority)
                 timeboxSection(priority)
                 sessionSection
@@ -455,22 +462,22 @@ public struct CockpitView: View {
 
     // MARK: - The hero
 
-    /// The priority and the status badge, side by side while both fit.
+    /// The priority, with the status stated under it.
     ///
-    /// `ViewThatFits` tries the row first and falls back to the column, so what gives way
-    /// under pressure is the *badge's* place on the line — never the hero's width. The hero
-    /// is therefore free to wrap to as many lines as the sentence needs.
+    /// **The badge is demoted, and the demotion is the point** (focus-w41, direction §5.1). It was
+    /// a decorated chip on the hero's baseline, which made the app's verdict a second object of
+    /// the same weight as the person's own sentence — `D02` shows the result, a red warning
+    /// triangle sharing the top line with the priority. It is now the compact style, on its own
+    /// line beneath the hero, which is where the canvas puts it: a supporting statement about the
+    /// sentence rather than a rival to it.
+    ///
+    /// `ViewThatFits` is gone with the chip. It existed to decide which of two same-weight objects
+    /// gave way when the line was tight, and there is no longer a contest to arbitrate: the hero
+    /// has the width, always, and wraps to as many lines as the sentence needs.
     private var header: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(alignment: .firstTextBaseline, spacing: rowSpacing) {
-                hero
-                Spacer(minLength: rowSpacing)
-                StatusBadge(status: state.status)
-            }
-            VStack(alignment: .leading, spacing: rowSpacing) {
-                hero
-                StatusBadge(status: state.status)
-            }
+        VStack(alignment: .leading, spacing: rowSpacing / 2) {
+            hero
+            StatusBadge(status: state.status, style: .compact)
         }
         // **The two values at the top of the window, reported from where they are drawn**
         // (focus-h7h). A cockpit handed a frozen placeholder draws a hero with no sentence in it

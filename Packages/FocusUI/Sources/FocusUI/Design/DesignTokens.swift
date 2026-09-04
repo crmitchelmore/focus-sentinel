@@ -205,7 +205,8 @@ public enum DesignTokens {
             case .priorityHero:
                 .system(
                     size: NSFont.preferredFont(forTextStyle: .largeTitle).pointSize * Self.heroScale,
-                    weight: .semibold
+                    weight: weight ?? .regular,
+                    design: design
                 )
             case .largeTitle: .largeTitle
             case .title2: .title2
@@ -246,8 +247,34 @@ public enum DesignTokens {
         /// role does, so that a call site's own `.fontWeight(_:)` still wins.
         var weight: Font.Weight? {
             switch self {
-            case .priorityHero: .semibold
+            case .priorityHero: .medium
             default: nil
+            }
+        }
+
+        /// **The face this role is drawn in** (focus-w41, e11 direction §1.2).
+        ///
+        /// `.default` — SF Pro — everywhere but one place. System faces only, throughout: a
+        /// licensed face on an uninvited window reads as adware, and this app needs the
+        /// platform's borrowed authority far more than it needs a wordmark.
+        ///
+        /// **The exception, and why its boundary is the whole point.** The cockpit's priority
+        /// hero is the person's *own sentence*, standing alone, uncomposed — the one place in the
+        /// app where their words are not embedded in the app's. `.serif` resolves to New York, and
+        /// the change of face reads as a change of speaker with no inline mixing anywhere. It is
+        /// paired with `.medium` rather than the semibold this role used to force, because New
+        /// York carries at a weight where SF would look thin: the hero's prominence is already
+        /// guaranteed by being 1.6× the largest system role, so the weight is free to be the one
+        /// the face actually wants.
+        ///
+        /// Everywhere the task is quoted *inside* an app sentence it stays SF in curly quotes.
+        /// The boundary is load-bearing rather than a compromise — a semantic type system that
+        /// gave the person a face wherever they appear would put a serif inside the accusation
+        /// panel, and an uninvited window has no right to a voice of its own (§6).
+        var design: Font.Design {
+            switch self {
+            case .priorityHero: .serif
+            default: .default
             }
         }
 
@@ -302,8 +329,8 @@ public enum DesignTokens {
         // The weight is applied only where the role forces one. Passing `.regular` for the
         // system roles would override a call site's own `.fontWeight(.semibold)`, which is
         // how the cockpit heading and the help headings are drawn.
-        guard let weight = role.weight else { return .system(size: size) }
-        return .system(size: size, weight: weight)
+        guard let weight = role.weight else { return .system(size: size, design: role.design) }
+        return .system(size: size, weight: weight, design: role.design)
     }
 
     /// Spacing that grows with the text around it.
@@ -417,7 +444,7 @@ public enum DesignTokens {
             /// **The declared value of this role in this appearance.**
             ///
             /// This table and `Resources/Palette.xcassets` are the same six colours written twice,
-            /// and `PaletteCatalogTests` compares them cell by cell in both directions. Two
+            /// and `PaletteTests` compares them cell by cell in both directions. Two
             /// spellings are needed because they are read on different lanes: the compiled catalogue
             /// is what the *running app* draws, and it is what lets the system pick the cell for the
             /// person's own appearance and contrast settings — but SwiftPM copies an `.xcassets`
