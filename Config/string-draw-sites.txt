@@ -90,7 +90,8 @@ status.unrelated.   | Packages/FocusUI/Sources/FocusUI/Design/StatusBadge.swift 
 #
 # The row used to name the `guard` on the line above, which mentions the vocabulary and draws
 # nothing — a row that would have stayed true if the sentence it guards were deleted (focus-cv3).
-nudge.attention.   | Packages/FocusUI/Sources/FocusUI/MenuBar/MenuBarController.swift | return "\(head). \(String(localized: resource))"
+nudge.attention.   | Packages/FocusUI/Sources/FocusUI/MenuBar/MenuBarController.swift | String(localized: attentionSentence)
+nudge.restart.     | Packages/FocusUI/Sources/FocusUI/MenuBar/MenuBarController.swift | String(localized: cueSentence)
 
 # --- e09a's History vocabularies -------------------------------------------------------------
 #

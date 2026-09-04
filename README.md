@@ -554,6 +554,32 @@ question widening into an accusation, and each is sufficient on its own:
 `nudge.accusationsFromQuery == 0` asserts the same thing as a number, over the whole corpus, every
 sequence fixture and every realistic day.
 
+### The break ending is a state, not an event
+
+`SessionEvent.breakEnded` and the break's own suppression have shipped since e03: the machine
+knew a break began, knew it ended, and did nothing at all with the ending (F-67). A person who
+takes fifteen minutes and comes back is who this app is for; a person who takes fifteen minutes
+and then reads the news for twenty more had only the ordinary drift ladder waiting for them,
+starting from scratch as though the break had never happened.
+
+What ships is **one sentence on the ambient rung** — the menu-bar item's tooltip and the line
+VoiceOver reads off it, which is also the first tooltip that item has ever had. Not a panel: U-2
+left the app one, for an unrelated verdict, and a break ending must not spend the interruption
+slot. Not a notification: PD-1 leaves none to post. Not praise and not a count (D-01). And not a
+nag — it is a *state*, so it stops being true the moment the person is back on task, and there is
+nothing to dismiss.
+
+`RestartCue.state(phase:sinceBreakEnded:isBackOnTask:)` is the whole rule, and it is a fold over
+`SessionPhase` rather than an `if`: a break ends into `focus`, but `focus` is also where a session
+starts, and every other phase reaches the function too. Each has its own **named** silence, so a
+test can require every phase to produce a reason rather than a `false` that covers six
+situations, and the self-check publishes which one the running app is in. The grace is two
+minutes — chosen rather than measured, and said so.
+
+`.relevant` and nothing else counts as being back. Under U-1 an `uncertain` verdict is the app not
+knowing, and treating not-knowing as *"they are back"* would silence the cue exactly where it is
+most likely to be right.
+
 ### Two memories, two jobs
 
 Answering a question performs **one atomic transaction that writes two records**:

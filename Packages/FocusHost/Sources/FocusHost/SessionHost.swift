@@ -229,9 +229,30 @@ final class SessionHost: SessionActing {
 
     private func apply(_ event: SessionEvent) {
         perform {
-            lastRejection = try store.apply(event, undo: undo).rejection
+            let rejection = try store.apply(event, undo: undo).rejection
+            lastRejection = rejection
+            // **When this session last came back from a break** (F-67, focus-2w1).
+            //
+            // Recorded here rather than read off the snapshot, because the snapshot cannot say
+            // it: it carries the phase and not the event that produced it, and a session enters
+            // `focus` from a break, from a detour and from being started. Only the machine
+            // accepting `breakEnded` is the fact the cue is about, so the moment is taken where
+            // the machine answers — and never when it refused, which is why the rejection is
+            // read first.
+            if event.kind == .breakEnded, rejection == nil {
+                breakEndedAt = dateProvider.now
+            }
         }
     }
+
+    /// When this session last came back from a break, or `nil` if it never has.
+    ///
+    /// Cleared with the session rather than kept: a break that ended inside a session which has
+    /// since finished is history, and `RestartCue` says so by its own rule as well. Both, because
+    /// one of them is a fact about the host's memory and the other is a fact about the phase, and
+    /// a cue that survived into the *next* session would be the app asking somebody to go back to
+    /// something they finished.
+    private(set) var breakEndedAt: Date?
 
     /// Every verb funnels through here: run it, remember what went wrong if anything did, and
     /// rebuild the value the cockpit draws.
@@ -262,6 +283,8 @@ final class SessionHost: SessionActing {
         } catch {
             record(error)
         }
+        // A different session — or none — has nothing to do with the break the last one took.
+        if snapshot?.sessionID != previous { breakEndedAt = nil }
         expireSessionRules(previouslyOpen: previous)
         onChange?()
     }

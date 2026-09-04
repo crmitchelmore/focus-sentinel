@@ -1113,6 +1113,21 @@ public final class AppComposition {
             rungSurface: nudgeHost.landedRungSurface,
             band: relevanceHost.verdict?.band,
             sensingPaused: !sensingHost.isRunning,
+            // **F-67's cue** (focus-2w1). Assembled here because this is the only object that
+            // holds all three facts: the phase is the session host's, the moment the break ended
+            // is the session host's memory of an accepted transition, and whether the person is
+            // back on the thing they committed to is the relevance host's verdict.
+            //
+            // `.relevant` and nothing else counts as back. Under U-1 an `uncertain` verdict is
+            // the app not knowing, and treating not-knowing as *"they are back"* would silence
+            // the cue exactly where it is most likely to be right.
+            restartCue: RestartCue.state(
+                phase: sessionHost.snapshot?.phase,
+                sinceBreakEnded: sessionHost.breakEndedAt.map {
+                    .seconds(Int(dateProvider.now.timeIntervalSince($0)))
+                },
+                isBackOnTask: relevanceHost.verdict?.status == .relevant
+            ),
             // **F-146's channel, actually connected** (focus-pq8). This argument was never passed,
             // so it took its default of `false` and the status item never drew the short label
             // beside the glyph — for a person who has turned Differentiate Without Colour on, the

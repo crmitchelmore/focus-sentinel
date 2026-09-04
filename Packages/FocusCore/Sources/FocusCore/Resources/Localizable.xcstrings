@@ -1045,6 +1045,18 @@
         }
       }
     },
+    "nudge.restart.cue" : {
+      "comment" : "Read by VoiceOver off the menu-bar item, and shown as its tooltip, when a break ended and the person has not gone back to their commitment within the grace. States a fact and asks for nothing: no praise, no count, nothing to press. PENDING HUMAN APPROVAL (D-11): drafted by an agent; the user has not signed this line off.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your break ended a while ago. Nothing to answer."
+          }
+        }
+      }
+    },
     "nudge.silentVisual.accusation.action.notNow" : {
       "comment" : "[silentVisual] Accusation action: a session-lived rule that dies with the session.",
       "extractionState" : "manual",

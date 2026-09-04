@@ -435,7 +435,7 @@ check(
     report.get("menuBarTitles"),
 )
 
-# File: the registry's four actions in registry order, then AppKit's own two. AppKit's
+# File: the registry's actions in registry order, then AppKit's own two. AppKit's
 # un-shortcutted `Close` is a system-injected sibling, not a duplicate to delete.
 expected_file = [
     "New Priority",
@@ -445,6 +445,11 @@ expected_file = [
     "Pause Session",
     "Finish Session",
     "Pause Watching",
+    # e09b: the three portability verbs, between the last session verb and Close Window, which is
+    # where the registry puts them (F-110, F-134).
+    "Export My Data…",
+    "Export Settings…",
+    "Import Settings…",
     "Close Window",
     "<separator>",
     "Close",
@@ -3104,6 +3109,50 @@ print(
     )
 )
 
+# --- the restart cue: the break ended and nobody came back (F-67, focus-2w1) ------------------
+#
+# `SessionEvent.breakEnded` and the break's suppression have shipped since e03 and the app did
+# nothing with the ending. It says one sentence now, on the ambient rung's tooltip and the line
+# VoiceOver reads off it — no panel (U-2 left one, for an accusation), no notification (PD-1),
+# no praise and no count (D-01).
+#
+# TWO HALVES. The live one is what this app is saying about the session it actually has, which on
+# a gate machine is that there is none — published as the NAMED silence rather than as a `false`,
+# so a reading taken before anything happened is distinguishable from a rule that has stopped
+# answering. The seeded one is the control: the same label function, handed a due cue, carries the
+# sentence, and handed every named silence adds no word at all.
+nudge_cue = report.get("nudge") or {}
+check(
+    nudge_cue.get("restartCueLive") in (
+        "due", "noSession", "noBreakHasEnded", "withinGrace", "backOnTask", "sessionIsOver",
+        "notRunning",
+    ),
+    "the restart cue answers with a state this build names",
+    nudge_cue.get("restartCueLive"),
+)
+check(
+    nudge_cue.get("restartCueGraceSeconds") == 120,
+    "the grace after a break is two minutes",
+    nudge_cue.get("restartCueGraceSeconds"),
+)
+check(
+    nudge_cue.get("restartCueLabelCarriesIt") is True
+    and len(nudge_cue.get("restartCueSentence") or "") > 0,
+    "a due cue puts its sentence on the menu-bar item",
+    (nudge_cue.get("restartCueLabelCarriesIt"), nudge_cue.get("restartCueSentence")),
+)
+# Silence adds NO WORD — not an empty clause, which reads as a pause to somebody listening. One
+# label across all six named silences is the shape of that claim.
+check(
+    nudge_cue.get("restartCueSilenceIsOneLabel") is True
+    and nudge_cue.get("restartCueSilenceAddsNothing") is True,
+    "every named silence leaves the item saying exactly what it said before",
+    (
+        nudge_cue.get("restartCueSilenceIsOneLabel"),
+        nudge_cue.get("restartCueSilenceAddsNothing"),
+    ),
+)
+
 # --- portability: a person can take their data away, and asking costs no permission ----------
 #
 # F-110 and F-134 (focus-ix9). Two documents and three verbs. The save panel is the one part no
@@ -3178,6 +3227,14 @@ check(
     and portability["settingsFileBytes"] > 0,
     "the settings export wrote a file",
     portability.get("settingsFileBytes"),
+)
+# The two verbs report what they did in their own words, and the words say `exported` — the
+# reading that separates "the file has bytes in it" from "the verb believes it wrote one".
+check(
+    (portability.get("dataOutcome") or "").startswith("exported ")
+    and (portability.get("settingsOutcome") or "").startswith("exported "),
+    "both export verbs report that they exported something",
+    (portability.get("dataOutcome"), portability.get("settingsOutcome")),
 )
 check(
     portability.get("settingsNamesHistory") == [],

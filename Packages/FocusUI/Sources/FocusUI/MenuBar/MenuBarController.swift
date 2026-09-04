@@ -342,9 +342,14 @@ public final class MenuBarController {
         button.imagePosition = presentation.timerText.isEmpty ? .imageOnly : .imageLeading
         if announceGlyphChange(button: button, glyph: glyph) { theItemMoved = true }
 
+        // **One sentence, two channels** (F-67, focus-2w1). The status item had an accessibility
+        // label and no tooltip at all, so everything the ambient rung ever said was said only to
+        // somebody using VoiceOver: a sighted person got a glyph and a dot. The tooltip is the
+        // same string, because two renderings of one state are how they drift.
         let label = Self.accessibilityLabel(presentation)
         if force || label != drawnAccessibilityLabel {
             button.setAccessibilityLabel(label)
+            button.toolTip = label
             drawnAccessibilityLabel = label
         }
 
@@ -496,7 +501,8 @@ public final class MenuBarController {
         accessibilityLabel(
             status: presentation.status,
             attention: presentation.attention,
-            timer: presentation.timerText
+            timer: presentation.timerText,
+            restartCue: presentation.restartCue
         )
     }
 
@@ -505,11 +511,22 @@ public final class MenuBarController {
     nonisolated static func accessibilityLabel(
         status: FocusStatus,
         attention: MenuBarAttention,
-        timer: String
+        timer: String,
+        restartCue: RestartCue = .silent(.noSession)
     ) -> String {
         let head = timer.isEmpty ? status.shortLabel : "\(status.shortLabel) \(timer)"
-        guard let resource = attention.copyResource else { return head }
-        return "\(head). \(String(localized: resource))"
+        var sentence = head
+        if let attentionSentence = attention.copyResource {
+            sentence = "\(sentence). \(String(localized: attentionSentence))"
+        }
+        // **The restart cue, last** (F-67, focus-2w1). Last because it is the least urgent thing
+        // the item can be saying: a question waiting behind the click is something to answer, and
+        // this is a fact about a break. It is deliberately additive rather than a replacement —
+        // a person can have come back from a break to a nudge, and the item has to say both.
+        if let cueSentence = restartCue.copyResource {
+            sentence = "\(sentence). \(String(localized: cueSentence))"
+        }
+        return sentence
     }
 
     /// **What VoiceOver is told when the item changes**, with no timer in it.

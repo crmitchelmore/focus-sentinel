@@ -3080,7 +3080,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Your data leaves as one JSON file. Settings are a separate file you can carry to another Mac."
+            "value" : "Two files: your data, and your settings."
           }
         }
       }

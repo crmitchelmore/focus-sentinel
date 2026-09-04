@@ -1908,6 +1908,36 @@ enum SelfCheck {
         // opens a real question through the loop and answers it with a key (e07a).
         report["keyboardAnswer"] = keyboardAnswerReport()
         report["tickFetches"] = tickFetchSurvey()
+        // **F-67's cue, live and seeded** (focus-2w1). The live half is what the app is actually
+        // saying about this session — on a gate machine, that there is no session — and it is a
+        // named silence rather than a `false`, so a reading taken before anything happened is
+        // distinguishable from a rule that stopped answering. The seeded half is the non-vacuity
+        // control: the same label function, handed a due cue, must carry the sentence, and handed
+        // every named silence must add no word at all.
+        let liveCue = composition.menuBarPresentation().restartCue
+        report["restartCueLive"] = liveCue.isDue ? "due" : {
+            if case .silent(let reason) = liveCue { return reason.rawValue }
+            return "due"
+        }()
+        report["restartCueGraceSeconds"] = Int(RestartCue.grace.components.seconds)
+        let dueLabel = MenuBarController.accessibilityLabel(
+            MenuBarPresentation(status: .relevant, restartCue: .due)
+        )
+        let quietLabels = Set(
+            RestartCue.Reason.allCases.map { reason in
+                MenuBarController.accessibilityLabel(
+                    MenuBarPresentation(status: .relevant, restartCue: .silent(reason))
+                )
+            }
+        )
+        let cueSentence = RestartCue.due.copyResource.map { String(localized: $0) } ?? ""
+        report["restartCueSentence"] = cueSentence
+        report["restartCueLabelCarriesIt"] = !cueSentence.isEmpty
+            && dueLabel.contains(cueSentence)
+        report["restartCueSilenceIsOneLabel"] = quietLabels.count == 1
+        report["restartCueSilenceAddsNothing"] = quietLabels.allSatisfy {
+            !$0.contains(cueSentence) && $0 == FocusStatus.relevant.shortLabel
+        }
         report["menuBarInstalled"] = composition.menuBar.isInstalled
         report["decisionCount"] = host.decisionCount
         return report

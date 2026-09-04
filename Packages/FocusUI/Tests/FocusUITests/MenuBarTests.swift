@@ -596,3 +596,66 @@ struct MenuBarSnapshotTests {
         #expect(PNGCompare.areDistinct(without.pixels, with.pixels))
     }
 }
+
+/// **The restart cue reaches the two channels the ambient rung has** (F-67, focus-2w1).
+///
+/// The rule is `FocusCore`'s and is folded there. What this owns is the join: that the sentence
+/// reaches the status item's label at all, that silence adds no word, and that the cue is
+/// additive rather than a replacement — a person can come back from a break to a question
+/// waiting, and the item has to say both.
+@Suite("Restart cue on the item", .enabled(if: LocalizationLane.catalogsAreCompiled))
+@MainActor
+struct RestartCueLabelTests {
+    static func label(_ cue: RestartCue, attention: MenuBarAttention = .unmarked) -> String {
+        MenuBarController.accessibilityLabel(
+            status: .relevant,
+            attention: attention,
+            timer: "",
+            restartCue: cue
+        )
+    }
+
+    @Test("a due cue puts its sentence on the item")
+    func aDueCueSpeaks() throws {
+        let sentence = String(localized: try #require(RestartCue.due.copyResource))
+        #expect(!sentence.isEmpty)
+        #expect(Self.label(.due).contains(sentence))
+    }
+
+    /// Silence adds **no word at all** — not an empty clause, which reads as a pause to somebody
+    /// listening. Folded over every named reason rather than over one of them.
+    @Test("every silence leaves the item saying exactly what it said before")
+    func silenceAddsNothing() {
+        let quiet = Self.label(.silent(.noSession))
+        for reason in RestartCue.Reason.allCases {
+            #expect(Self.label(.silent(reason)) == quiet)
+        }
+        #expect(quiet == FocusStatus.relevant.shortLabel)
+    }
+
+    /// **Additive, not a replacement.** A question waiting behind the click is still announced,
+    /// and the cue comes after it because it is the less urgent of the two.
+    @Test("a cue and a waiting nudge are both said, in that order")
+    func bothAreSaid() throws {
+        let waiting = String(localized: try #require(MenuBarAttention.waiting.copyResource))
+        let cue = String(localized: try #require(RestartCue.due.copyResource))
+        let label = Self.label(.due, attention: .waiting)
+
+        #expect(label.contains(waiting))
+        #expect(label.contains(cue))
+        let waitingAt = try #require(label.range(of: waiting))
+        let cueAt = try #require(label.range(of: cue))
+        #expect(waitingAt.lowerBound < cueAt.lowerBound, "the cue displaced the waiting nudge")
+    }
+
+    /// The presentation carries it, so the item drawn from a presentation says it.
+    @Test("the presentation the composition root builds carries the cue to the label")
+    func thePresentationCarriesIt() throws {
+        let sentence = String(localized: try #require(RestartCue.due.copyResource))
+        let presentation = MenuBarPresentation(status: .relevant, restartCue: .due)
+        #expect(MenuBarController.accessibilityLabel(presentation).contains(sentence))
+
+        let quiet = MenuBarPresentation(status: .relevant)
+        #expect(!MenuBarController.accessibilityLabel(quiet).contains(sentence))
+    }
+}

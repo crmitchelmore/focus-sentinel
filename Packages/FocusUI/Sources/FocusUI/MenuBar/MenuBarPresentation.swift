@@ -135,6 +135,15 @@ public struct MenuBarPresentation: Sendable, Equatable {
     public let band: EvidenceBand?
     /// F-119's one global switch, as the popover shows it.
     public let sensingPaused: Bool
+    /// **Whether the break is over and the person has not gone back** (F-67, focus-2w1).
+    ///
+    /// Carried rather than derived, because the two facts it is made of are not here: how long
+    /// ago this session came back from a break is the session host's, and whether what is in
+    /// front of the person supports the commitment is the relevance host's.
+    /// `RestartCue.state(phase:sinceBreakEnded:isBackOnTask:)` is where the rule lives; this is
+    /// the answer it gave, and `.silent` carries **why** so a reading can tell a cue that is not
+    /// due from one that was never computed.
+    public let restartCue: RestartCue
     /// Whether the person has asked to differentiate without colour. When they have, the short
     /// label is drawn **beside** the glyph in the menu bar itself rather than only in the
     /// popover — at that point the label has stopped being decoration and become the channel
@@ -154,6 +163,7 @@ public struct MenuBarPresentation: Sendable, Equatable {
         rungSurface: NudgeSurface? = nil,
         band: EvidenceBand? = nil,
         sensingPaused: Bool = false,
+        restartCue: RestartCue = .silent(.noSession),
         differentiateWithoutColor: Bool = false
     ) {
         self.status = status
@@ -168,6 +178,7 @@ public struct MenuBarPresentation: Sendable, Equatable {
         self.rungSurface = rungSurface
         self.band = band
         self.sensingPaused = sensingPaused
+        self.restartCue = restartCue
         self.differentiateWithoutColor = differentiateWithoutColor
     }
 
