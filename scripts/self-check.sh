@@ -914,6 +914,56 @@ check(
     report.get("localizationCatalogsCompiled"),
 )
 
+# --- the palette (focus-w41) ----------------------------------------------------------------
+#
+# The six Color Sets are written twice — as `Palette.xcassets` and as the declared table in
+# `DesignTokens.Palette.Role` — because SwiftPM copies an asset catalogue and xcodebuild compiles
+# it. `PaletteTests` holds the two spellings together in both directions, in every lane. What no
+# package test can say is whether the built *product* carries a compiled `Assets.car`, and that is
+# what decides whether the system re-resolves the palette when the person changes appearance or
+# contrast while the app is running. So the app is asked, from the artefact that ships.
+
+check(
+    report.get("paletteCatalogCompiled") is True,
+    "the running app resolves its palette from the compiled Color Sets",
+    report.get("paletteCatalogCompiled"),
+)
+
+roles = report.get("paletteRoles", [])
+check(len(roles) == 6, "there are six palette roles", len(roles))
+check(
+    len({r["asset"] for r in roles}) == len(roles),
+    "every palette role names a distinct Color Set",
+    [r["asset"] for r in roles],
+)
+check(
+    len({r["role"] for r in roles}) == len(roles),
+    "every palette role has a distinct name",
+    [r["role"] for r in roles],
+)
+# Four appearance cells, six roles, and no two of the twenty-four the same *within a role*: a
+# build whose appearance resolution had collapsed would answer one colour in all four, which is
+# the focus-pq8 failure seen from the outside.
+for role in roles:
+    cells = [role["light"], role["dark"], role["lightHighContrast"], role["darkHighContrast"]]
+    check(
+        len(set(cells)) == 4,
+        f"the {role['asset']} Color Set draws four different colours across the appearances",
+        cells,
+    )
+# And the two hues the app owns are the ones the direction settled on, read off the artefact.
+by_asset = {r["asset"]: r for r in roles}
+check(
+    by_asset.get("Spruce", {}).get("light") == "#176B73",
+    "Spruce — the question — is the committed hue in the light appearance",
+    by_asset.get("Spruce", {}).get("light"),
+)
+check(
+    by_asset.get("Kiln", {}).get("light") == "#B06A10",
+    "Kiln — the drift — is the committed hue in the light appearance",
+    by_asset.get("Kiln", {}).get("light"),
+)
+
 # --- e02 · the URL type (F-142) -------------------------------------------------------------
 #
 # Read from the *built product*, which is the only witness that can say whether the partial

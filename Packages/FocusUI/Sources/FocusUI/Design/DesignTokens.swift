@@ -58,9 +58,24 @@ public struct Emphasis: Sendable, Equatable, Hashable {
 ///
 /// Three rules hold everywhere in this file:
 ///
-/// 1. **No hardcoded colour values.** Every colour resolves from a semantic system colour, so
-///    the shell follows the user's accent colour and both appearance modes without knowing
-///    anything about either.
+/// 1. **No colour literal at a call site. Colours resolve from asset-catalogue Color Sets or
+///    from system semantic colours** (focus-w41, e11 direction §5.1). This rule used to read
+///    "no hardcoded colour values — every colour resolves from a semantic system colour", and
+///    the amendment is deliberate rather than a relaxation. What the old wording was *for* was
+///    the promise that the shell follows the user's accent colour and both appearance modes
+///    without knowing anything about either; a Color Set with a light value, a dark value and a
+///    High Contrast pair keeps exactly that promise, because the appearance still decides which
+///    of the four cells is drawn. What it buys is that the app may own two hues of its own —
+///    Spruce for a question and Kiln for drift — which the system palette cannot express: the
+///    system's only "not this" colour is `systemRed`, and under U-1 an unrelated verdict is
+///    neither an error nor destructive.
+///
+///    The rule's teeth are unchanged in the place they matter. A call site still may not write a
+///    colour: `Palette.role(_:for:)` is the only way to reach one of the six, every value lives
+///    in `Palette.Role.value(for:)` and in `Resources/Palette.xcassets`, and
+///    `PaletteTests` compares the two **in both directions** so neither can drift.
+///    Destructive actions keep `systemRed` and the running session keeps `controlAccentColor`;
+///    the app ships no red of its own and no accent of its own.
 /// 2. **No fixed point sizes.** Type comes from the system text styles; spacing that must
 ///    grow with text is `@ScaledMetric` at the call site.
 /// 3. **Every accessibility setting is read from injected `AppearanceTraits`, never from
@@ -120,13 +135,17 @@ public enum DesignTokens {
     /// glanced at.
     ///
     /// The status palette, not a new one: `uncertain` is already what this app's vocabulary
-    /// means by "cannot tell", and `unrelated` by "not part of this". e11b remaps those two
-    /// hues; this function is where the remap lands, so the panels do not need touching again.
+    /// means by "cannot tell", and `unrelated` by "not part of this". e11b remapped those two
+    /// hues to Spruce and Kiln, and this function is where the remap landed — the panels were
+    /// not touched for it.
     /// The popover keeps no rule — it is summoned, and the person already knows why it is there.
-    public static func decisionRuleTint(for surface: DecisionSurface) -> Color? {
+    public static func decisionRuleTint(
+        for surface: DecisionSurface,
+        traits: AppearanceTraits
+    ) -> Color? {
         switch surface {
-        case .accusationPanel: tint(for: .unrelated)
-        case .questionPanel: tint(for: .uncertain)
+        case .accusationPanel: tint(for: .unrelated, traits: traits)
+        case .questionPanel: tint(for: .uncertain, traits: traits)
         case .menuBarPopover: nil
         }
     }
@@ -232,6 +251,17 @@ public enum DesignTokens {
             }
         }
 
+        /// Whether this role is drawn semibold or heavier.
+        ///
+        /// Read by `tintMayCarryText(_:at:traits:)`: WCAG's large-text threshold is 14 pt **bold**
+        /// or 18 pt regular, so the weight is half the question and cannot be inferred from the
+        /// size. Spelled as a membership test rather than a comparison because `Font.Weight` is
+        /// `Equatable` and not `Comparable` — there is no `>=` to write.
+        var drawsSemiboldOrHeavier: Bool {
+            guard let weight else { return false }
+            return [Font.Weight.semibold, .bold, .heavy, .black].contains(weight)
+        }
+
         /// The hero's factor over `largeTitle`. One number, in one place, named.
         static let heroScale: CGFloat = 1.6
     }
@@ -331,6 +361,227 @@ public enum DesignTokens {
         public static func separator(for traits: AppearanceTraits) -> Color {
             Color(nsColor: NSColor.separatorColor.resolved(for: traits))
         }
+
+        // MARK: - The six roles (focus-w41, e11 direction §1.2)
+
+        /// **A role in the app's own palette — named for what it does, never for what it looks
+        /// like.**
+        ///
+        /// Five of the six are hues the system cannot express, and the sixth is the quiet ground
+        /// they sit on. `Bench` and `Inlay` are grounds; `Slate`, `Mist`, `Spruce` and `Kiln` are
+        /// inks. The user's accent is deliberately **not** a role here: it stays
+        /// `controlAccentColor` (see `accent(for:)`), because it is the person's colour and not
+        /// the app's, and a Color Set would freeze it.
+        ///
+        /// The neutral is biased cool, about five degrees toward green. Warm neutrals flatter,
+        /// and a *friend* who accuses you forty times a day is a bad friend where an *instrument*
+        /// that reports forty times is just an instrument. macOS chrome is itself a cool grey, so
+        /// a cool-green ground lets an uninvited panel read as furniture of the operating system
+        /// rather than as a third-party skin.
+        public enum Role: String, Sendable, CaseIterable, Hashable {
+            /// The ground: window and panel backgrounds.
+            case bench
+            /// The ink: primary text and glyph strokes.
+            case slate
+            /// Supporting text, hairlines, separators.
+            case mist
+            /// **The question.** Query-panel rule, query glyph, query body text.
+            case spruce
+            /// **The drift.** Accusation rule, drift glyph tint, timer digits. A lamp, never a
+            /// voice — see `tintMayCarryText(_:at:traits:)`.
+            case kiln
+            /// The quiet inset ground: the ritual strip, and chips that must not read as buttons.
+            case inlay
+
+            /// The Color Set's name in `Resources/Palette.xcassets`.
+            ///
+            /// Capitalised because that is the asset-catalogue convention, and deliberately **not**
+            /// a dotted name under a known namespace: `check-strings.sh` keys its "this looks like
+            /// a catalog key" heuristic on dotted names under `nudge.`, `shell.` and `status.`, and
+            /// an asset name that tripped it would be hunted for in a String Catalog for ever.
+            public var assetName: String {
+                switch self {
+                case .bench: "Bench"
+                case .slate: "Slate"
+                case .mist: "Mist"
+                case .spruce: "Spruce"
+                case .kiln: "Kiln"
+                case .inlay: "Inlay"
+                }
+            }
+
+            /// Whether this role is a ground rather than an ink. Grounds move *away* from the ink
+            /// under Increase Contrast; inks move toward it.
+            public var isGround: Bool { self == .bench || self == .inlay }
+
+            /// **The declared value of this role in this appearance.**
+            ///
+            /// This table and `Resources/Palette.xcassets` are the same six colours written twice,
+            /// and `PaletteCatalogTests` compares them cell by cell in both directions. Two
+            /// spellings are needed because they are read on different lanes: the compiled catalogue
+            /// is what the *running app* draws, and it is what lets the system pick the cell for the
+            /// person's own appearance and contrast settings — but SwiftPM copies an `.xcassets`
+            /// rather than compiling it (the same split `LocalizationLane` records for String
+            /// Catalogs), so on `swift test` there is no `Assets.car` to read and `NSColor(named:)`
+            /// answers `nil`. A table that resolves in every lane is what keeps the palette
+            /// *assertable* rather than only viewable.
+            ///
+            /// **The High Contrast pair is a measured step, not a taste.** Every role moves 18 % of
+            /// the remaining distance toward its own scheme's extreme — inks toward the ink, grounds
+            /// toward the ground — and 18 % is the smallest such step that carries all three text
+            /// roles to 7:1 against the High Contrast ground in *both* schemes: light Mist 7.05,
+            /// light Spruce 7.48, dark Mist 8.36, dark Spruce 7.96. At 16 % light Mist is 7.02 and
+            /// the margin is a rounding error; at 14 % it is 6.80 and the promise is broken.
+            public func value(for traits: AppearanceTraits) -> PaletteValue {
+                switch (traits.colorScheme, traits.increasedContrast) {
+                case (.light, false): lightValue
+                case (.dark, false): darkValue
+                case (.light, true): lightHighContrastValue
+                case (.dark, true): darkHighContrastValue
+                }
+            }
+
+            /// The light value.
+            public var lightValue: PaletteValue {
+                switch self {
+                case .bench: PaletteValue(0xF2, 0xF4, 0xF3)
+                case .slate: PaletteValue(0x1E, 0x24, 0x27)
+                case .mist: PaletteValue(0x5E, 0x68, 0x66)
+                case .spruce: PaletteValue(0x17, 0x6B, 0x73)
+                case .kiln: PaletteValue(0xB0, 0x6A, 0x10)
+                case .inlay: PaletteValue(0xE3, 0xE7, 0xE5)
+                }
+            }
+
+            /// The dark value.
+            public var darkValue: PaletteValue {
+                switch self {
+                case .bench: PaletteValue(0x19, 0x1D, 0x1F)
+                case .slate: PaletteValue(0xED, 0xF1, 0xF0)
+                case .mist: PaletteValue(0x98, 0xA2, 0xA0)
+                case .spruce: PaletteValue(0x57, 0xA9, 0xAF)
+                case .kiln: PaletteValue(0xE3, 0x9A, 0x2E)
+                case .inlay: PaletteValue(0x2A, 0x30, 0x33)
+                }
+            }
+
+            /// The light value under Increase Contrast.
+            public var lightHighContrastValue: PaletteValue {
+                switch self {
+                case .bench: PaletteValue(0xF4, 0xF6, 0xF5)
+                case .slate: PaletteValue(0x19, 0x1E, 0x20)
+                case .mist: PaletteValue(0x4D, 0x55, 0x54)
+                case .spruce: PaletteValue(0x13, 0x58, 0x5E)
+                case .kiln: PaletteValue(0x90, 0x57, 0x0D)
+                case .inlay: PaletteValue(0xE8, 0xEB, 0xEA)
+                }
+            }
+
+            /// The dark value under Increase Contrast.
+            public var darkHighContrastValue: PaletteValue {
+                switch self {
+                case .bench: PaletteValue(0x14, 0x18, 0x19)
+                case .slate: PaletteValue(0xF0, 0xF4, 0xF3)
+                case .mist: PaletteValue(0xAB, 0xB3, 0xB1)
+                case .spruce: PaletteValue(0x75, 0xB8, 0xBD)
+                case .kiln: PaletteValue(0xE8, 0xAC, 0x54)
+                case .inlay: PaletteValue(0x22, 0x27, 0x2A)
+                }
+            }
+        }
+
+        /// **The one way a call site reaches one of the six.**
+        ///
+        /// Resolved against the injected traits for the reason the three system colours above are
+        /// (focus-pq8): a dynamic `NSColor` resolves against `NSAppearance.current` at draw time,
+        /// not against the traits, and the last time this file let that happen the nudge surfaces
+        /// drew white text on a white background.
+        public static func role(_ role: Role, for traits: AppearanceTraits) -> Color {
+            Color(nsColor: nsColor(role, for: traits))
+        }
+
+        /// The same colour as an `NSColor`, for AppKit call sites and for the contrast arithmetic.
+        ///
+        /// The compiled catalogue first, because that is what the *shipped* app draws and what the
+        /// system re-resolves when the person changes appearance mid-flight; the declared table
+        /// when there is no `Assets.car` to read, which is every SwiftPM lane.
+        public static func nsColor(_ role: Role, for traits: AppearanceTraits) -> NSColor {
+            if let named = NSColor(named: NSColor.Name(role.assetName), bundle: .module) {
+                return named.resolved(for: traits)
+            }
+            return role.value(for: traits).nsColor
+        }
+
+        /// **Whether this build is drawing the palette from the compiled catalogue.**
+        ///
+        /// The sibling of `LocalizationLane.catalogsAreCompiled`, and it exists for the same
+        /// reason: SwiftPM copies an `.xcassets` into the resource bundle verbatim and there is no
+        /// `Assets.car` for `NSColor(named:)` to read, while xcodebuild compiles it. Everything
+        /// still *draws* — the declared table answers — but only the compiled catalogue lets the
+        /// system re-resolve a colour when the person changes appearance or contrast while the app
+        /// is running. Published by the self-check so the shipped build is asked the question
+        /// rather than assumed to pass it.
+        public static var catalogIsCompiled: Bool {
+            NSColor(named: NSColor.Name(Role.bench.assetName), bundle: .module) != nil
+        }
+    }
+
+    /// One palette value: eight bits per channel, sRGB, opaque.
+    ///
+    /// Integer channels rather than `Double`s because this is what an asset catalogue stores and
+    /// what `PaletteCatalogTests` compares — a float round trip would make "the two spellings
+    /// agree" a question about tolerances instead of a question about the palette.
+    public struct PaletteValue: Sendable, Equatable, Hashable {
+        public let red: Int
+        public let green: Int
+        public let blue: Int
+
+        public init(_ red: Int, _ green: Int, _ blue: Int) {
+            self.red = red
+            self.green = green
+            self.blue = blue
+        }
+
+        /// The eight-bit sRGB components of an already-resolved colour.
+        ///
+        /// For the three statuses that keep a system colour: they have no declared table, so the
+        /// only honest source for their components is the colour the machine is about to draw.
+        /// A colour that cannot be converted to sRGB reads as black, which is a value the
+        /// contrast fold will notice rather than one it will wave through.
+        public init(_ color: NSColor) {
+            let srgb = color.usingColorSpace(.sRGB)
+            self.init(
+                Int(((srgb?.redComponent ?? 0) * 255).rounded()),
+                Int(((srgb?.greenComponent ?? 0) * 255).rounded()),
+                Int(((srgb?.blueComponent ?? 0) * 255).rounded())
+            )
+        }
+
+        /// This value as an opaque sRGB `NSColor`.
+        public var nsColor: NSColor {
+            NSColor(
+                srgbRed: CGFloat(red) / 255,
+                green: CGFloat(green) / 255,
+                blue: CGFloat(blue) / 255,
+                alpha: 1
+            )
+        }
+
+        /// The WCAG relative luminance of this value.
+        public var relativeLuminance: Double {
+            func linear(_ channel: Int) -> Double {
+                let value = Double(channel) / 255
+                return value <= 0.04045 ? value / 12.92 : pow((value + 0.055) / 1.055, 2.4)
+            }
+            return 0.2126 * linear(red) + 0.7152 * linear(green) + 0.0722 * linear(blue)
+        }
+
+        /// The WCAG contrast ratio between this value and another, 1…21.
+        public func contrastRatio(against other: PaletteValue) -> Double {
+            let mine = relativeLuminance
+            let theirs = other.relativeLuminance
+            return (max(mine, theirs) + 0.05) / (min(mine, theirs) + 0.05)
+        }
     }
 
     /// The colour for supporting text under these traits.
@@ -343,16 +594,87 @@ public enum DesignTokens {
 
     /// The tint for a status token.
     ///
-    /// System colours, so they track the user's appearance and accessibility settings. Read
-    /// this together with `FocusStatus.symbolName` and `FocusStatus.shape`: the tint is the
-    /// third channel, never the first.
-    public static func tint(for status: FocusStatus) -> Color {
+    /// Read this together with `FocusStatus.markAssetName` and `FocusStatus.shape`: the tint is
+    /// the third channel, never the first.
+    ///
+    /// **Two of the five moved off the system palette in e11b** (focus-w41, direction §1.2), and
+    /// both moves are rulings rather than preferences:
+    ///
+    /// - **`unrelated` moves off `systemRed` onto Kiln.** Red is macOS's error-and-destructive
+    ///   semantic, and an unrelated verdict is neither: by the app's own content rules the person
+    ///   has done nothing wrong. Under U-1 the app also speaks when it is *not confident*, so the
+    ///   loudest colour available would be spent on a verdict the app itself concedes it may have
+    ///   got wrong.
+    /// - **`uncertain` moves off `systemYellow` onto Spruce.** Yellow and amber are not a legible
+    ///   distinction at 16 pt, and the one distinction that must never fail is question versus
+    ///   accusation. Teal against amber is hue-opposed and survives the common colour vision
+    ///   deficiencies.
+    ///
+    /// The other three keep their system colours, and now take the traits for the reason
+    /// focus-pq8 gave: a dynamic `NSColor` read outside `resolved(for:)` follows whatever
+    /// appearance happens to be current when SwiftUI rasterises it, which is not necessarily the
+    /// one these traits name.
+    public static func tint(for status: FocusStatus, traits: AppearanceTraits) -> Color {
         switch status {
-        case .relevant: Color(nsColor: .systemGreen)
-        case .uncertain: Color(nsColor: .systemYellow)
-        case .unrelated: Color(nsColor: .systemRed)
-        case .paused: Color(nsColor: .systemGray)
-        case .onBreak: Color(nsColor: .systemTeal)
+        case .relevant: Color(nsColor: NSColor.systemGreen.resolved(for: traits))
+        case .uncertain: Palette.role(.spruce, for: traits)
+        case .unrelated: Palette.role(.kiln, for: traits)
+        case .paused: Color(nsColor: NSColor.systemGray.resolved(for: traits))
+        case .onBreak: Color(nsColor: NSColor.systemTeal.resolved(for: traits))
+        }
+    }
+
+    /// **Whether this status's tint may be the colour of *text*, at this role, under these
+    /// traits.**
+    ///
+    /// The rule the direction states in one line — *Kiln carries no body text on the light
+    /// ground; it is a lamp, never a voice* — expressed as arithmetic over the palette that
+    /// actually ships, so it cannot become a claim that outlives the values it was made about.
+    ///
+    /// Measured on the committed values: Kiln on Bench in the light scheme is **3.87:1**, which
+    /// clears WCAG's 3:1 large-text threshold and misses the 4.5:1 body-text one. (The direction
+    /// says "about 4.4:1" at §1.2; that figure is wrong, and wrong in the unsafe direction — the
+    /// real number makes the ban *more* necessary, not less.) Spruce measures 5.61:1 and may
+    /// carry text at any size.
+    ///
+    /// "Large text" is WCAG's own definition, which is also the one the direction uses when it
+    /// says the timer digits may be Kiln at ≥ 17 pt semibold: 14 pt bold or 18 pt regular, which
+    /// in points-not-CSS-pixels is **≥ 17 pt when the role is drawn semibold or heavier**, and
+    /// ≥ 22 pt otherwise.
+    public static func tintMayCarryText(
+        _ status: FocusStatus,
+        at role: FontRole,
+        traits: AppearanceTraits
+    ) -> Bool {
+        let size = pointSize(role)
+        let threshold = (role.drawsSemiboldOrHeavier && size >= 17) || size >= 22 ? 3.0 : 4.5
+        return contrastAgainstBench(of: status, traits: traits) >= threshold
+    }
+
+    /// The measured contrast between a status tint and the ground it is drawn on.
+    ///
+    /// Public because the number is the argument: a reviewer asking "why may Kiln not carry body
+    /// text" gets an answer they can check rather than a rule they have to trust.
+    public static func contrastAgainstBench(
+        of status: FocusStatus,
+        traits: AppearanceTraits
+    ) -> Double {
+        paletteValue(of: status, traits: traits)
+            .contrastRatio(against: Palette.Role.bench.value(for: traits))
+    }
+
+    /// A status tint as a measurable value.
+    ///
+    /// The two palette roles answer from the declared table; the three system colours are
+    /// resolved and read back through sRGB, because a system colour has no declared table and
+    /// the only honest source for its components is the one the machine will draw.
+    static func paletteValue(of status: FocusStatus, traits: AppearanceTraits) -> PaletteValue {
+        switch status {
+        case .uncertain: Palette.Role.spruce.value(for: traits)
+        case .unrelated: Palette.Role.kiln.value(for: traits)
+        case .relevant: PaletteValue(NSColor.systemGreen.resolved(for: traits))
+        case .paused: PaletteValue(NSColor.systemGray.resolved(for: traits))
+        case .onBreak: PaletteValue(NSColor.systemTeal.resolved(for: traits))
         }
     }
 
@@ -395,6 +717,14 @@ extension View {
     /// The two branches are deliberately different *views*, not one view with an opacity
     /// tweak: `.regularMaterial` blurs what is behind it, and the point of the opaque branch
     /// is that nothing shows through at all.
+    ///
+    /// **The opaque branch is Bench** (focus-w41, direction §1.2). It used to be
+    /// `windowBackgroundColor`, and the swap is the one place the ground the app owns is
+    /// actually drawn. It reaches both kinds of opacity on purpose: an uninvited panel is opaque
+    /// because it landed over whatever the person was doing, and a summoned surface goes opaque
+    /// because the person asked for Reduce Transparency — and in both cases what should appear
+    /// underneath the app's words is the app's own ground, cool-biased so it reads as furniture
+    /// of the operating system rather than as a third-party skin.
     @ViewBuilder
     public func shellSurface(
         _ fill: SurfaceFill,
@@ -405,7 +735,7 @@ extension View {
         case .material:
             background(.regularMaterial, in: shape)
         case .opaque:
-            background(DesignTokens.Palette.windowBackground(for: traits), in: shape)
+            background(DesignTokens.Palette.role(.bench, for: traits), in: shape)
         }
     }
 }
@@ -421,8 +751,21 @@ extension NSColor {
     ///
     /// Falls back to `self` when the appearance cannot be made or the round trip fails: an
     /// unresolvable colour is better drawn in the system's own scheme than not at all.
+    ///
+    /// **Increase Contrast is part of the appearance, not a separate switch** (focus-w41). It was
+    /// not, until e11b: the four-cell Color Sets this file now resolves keep their High Contrast
+    /// pair behind `NSAppearance.Name.accessibilityHighContrast{Aqua,DarkAqua}`, so a resolution
+    /// that only ever named `.aqua` and `.darkAqua` could never reach two of the four cells and
+    /// the High Contrast half of the palette would have been dead the day it was committed. The
+    /// same correction reaches the three system colours above, which had the same hole for the
+    /// same reason — `increasedContrast` traits were resolving them in plain aqua.
     func resolved(for traits: AppearanceTraits) -> NSColor {
-        let name: NSAppearance.Name = traits.colorScheme == .dark ? .darkAqua : .aqua
+        let name: NSAppearance.Name = switch (traits.colorScheme, traits.increasedContrast) {
+        case (.light, false): .aqua
+        case (.dark, false): .darkAqua
+        case (.light, true): .accessibilityHighContrastAqua
+        case (.dark, true): .accessibilityHighContrastDarkAqua
+        }
         guard let appearance = NSAppearance(named: name) else { return self }
         var resolved: NSColor?
         appearance.performAsCurrentDrawingAppearance {

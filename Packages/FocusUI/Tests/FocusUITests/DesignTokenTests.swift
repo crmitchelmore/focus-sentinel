@@ -95,8 +95,8 @@ struct DesignTokenTests {
     @Test("the question's rule and the accusation's rule are different colours")
     func theTwoDecisionSurfacesAreTintedApart() {
         for traits in [AppearanceTraits.light, .dark, .increasedContrast] {
-            let accusation = DesignTokens.decisionRuleTint(for: .accusationPanel)
-            let question = DesignTokens.decisionRuleTint(for: .questionPanel)
+            let accusation = DesignTokens.decisionRuleTint(for: .accusationPanel, traits: traits)
+            let question = DesignTokens.decisionRuleTint(for: .questionPanel, traits: traits)
             let drawnAccusation = accusation.flatMap { Self.drawnComponents($0, traits) }
             let drawnQuestion = question.flatMap { Self.drawnComponents($0, traits) }
             #expect(drawnAccusation != nil && drawnQuestion != nil)
@@ -110,7 +110,7 @@ struct DesignTokenTests {
             )
         }
         #expect(
-            DesignTokens.decisionRuleTint(for: .menuBarPopover) == nil,
+            DesignTokens.decisionRuleTint(for: .menuBarPopover, traits: .light) == nil,
             "the summoned surface grew a rule it does not need"
         )
         #expect(DesignTokens.decisionRuleWidth == 3)
@@ -145,7 +145,7 @@ struct DesignTokenTests {
         // palette arrives, not after. It now collapses each dynamic colour to the four numbers
         // a person's eye is actually served, in both schemes.
         for traits in [AppearanceTraits.light, .dark, .increasedContrast] {
-            let drawn = statuses.map { Self.drawnComponents(DesignTokens.tint(for: $0), traits) }
+            let drawn = statuses.map { Self.drawnComponents(DesignTokens.tint(for: $0, traits: traits), traits) }
             #expect(
                 drawn.allSatisfy { $0 != nil },
                 "a status tint could not be resolved at all in \(traits.colorScheme)"

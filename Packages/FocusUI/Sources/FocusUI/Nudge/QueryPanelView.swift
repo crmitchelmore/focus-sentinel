@@ -165,7 +165,7 @@ public struct QueryPanelView: DecisionSurfaceContent {
                 // a person who cannot use colour loses nothing by this rule being absent. So it
                 // is hidden from the accessibility tree rather than labelled — a rule with a
                 // spoken name would be VoiceOver reading out a decoration.
-                if let tint = DesignTokens.decisionRuleTint(for: Self.decisionSurface) {
+                if let tint = DesignTokens.decisionRuleTint(for: Self.decisionSurface, traits: traits) {
                     Rectangle()
                         .fill(tint)
                         .frame(width: DesignTokens.decisionRuleWidth)

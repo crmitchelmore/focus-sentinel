@@ -93,12 +93,12 @@ public struct StatusBadge: View {
             ZStack {
                 StatusOutline(status.shape)
                     .stroke(
-                        DesignTokens.tint(for: status).opacity(emphasis.outlineOpacity),
+                        DesignTokens.tint(for: status, traits: traits).opacity(emphasis.outlineOpacity),
                         lineWidth: emphasis.borderWidth
                     )
                 Image(systemName: status.symbolName)
                     .symbolRenderingMode(.hierarchical)
-                    .foregroundStyle(DesignTokens.tint(for: status))
+                    .foregroundStyle(DesignTokens.tint(for: status, traits: traits))
                     .font(DesignTokens.font(.title3, scale: textScale))
             }
             .frame(

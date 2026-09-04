@@ -595,6 +595,16 @@ enum SelfCheck {
         root["keyEquivalentClaims"] = claims
         root["statusTokens"] = statusTokens()
         root["localizationCatalogsCompiled"] = LocalizationLane.catalogsAreCompiled
+        // **And the same question about the palette** (focus-w41). The six Color Sets are written
+        // twice — as `Palette.xcassets` and as `Palette.Role.value(for:)` — because SwiftPM copies
+        // an `.xcassets` verbatim while xcodebuild compiles it, exactly the split
+        // `localizationCatalogsCompiled` records above. The shipped app is supposed to draw from
+        // the compiled catalogue, so that the *system* picks the cell for the person's own
+        // appearance and contrast settings and follows them when they change mid-flight. A build
+        // that silently fell back to the table would look identical in every snapshot and be
+        // wrong in the one place nobody photographs, so the app says which one it used.
+        root["paletteCatalogCompiled"] = DesignTokens.Palette.catalogIsCompiled
+        root["paletteRoles"] = paletteRoles()
         // Recorded *and* asserted: everything the menu survey says is conditional on this.
         root["activation"] = activation.dictionary
 
@@ -5165,6 +5175,45 @@ enum SelfCheck {
     /// Resolved, not declared: the `label` here is what the running app would actually
     /// render, so the check can prove no label echoes its own key — the failure mode you
     /// get when a String Catalog is copied instead of compiled.
+    /// The resolved palette: the six roles, as the four numbers the running app would draw.
+    ///
+    /// Resolved rather than declared, for `statusTokens()`'s reason. The declared table is
+    /// already held to the committed catalogue by `PaletteTests`, in both directions and in every
+    /// lane; what no test in a package can say is whether the *app bundle* really carries a
+    /// compiled `Assets.car` for it. These rows are that reading, and the light and dark cells are
+    /// published side by side so a build whose appearance resolution had collapsed — every cell
+    /// answering the same colour, which is precisely the focus-pq8 failure — is visible as a
+    /// duplicate rather than invisible as a plausible hex.
+    @MainActor
+    static func paletteRoles() -> [[String: Any]] {
+        DesignTokens.Palette.Role.allCases.map { role in
+            [
+                "role": role.rawValue,
+                "asset": role.assetName,
+                "light": Self.hex(DesignTokens.Palette.nsColor(role, for: .light)),
+                "dark": Self.hex(DesignTokens.Palette.nsColor(role, for: .dark)),
+                "lightHighContrast": Self.hex(
+                    DesignTokens.Palette.nsColor(
+                        role,
+                        for: AppearanceTraits(colorScheme: .light, increasedContrast: true)
+                    )
+                ),
+                "darkHighContrast": Self.hex(
+                    DesignTokens.Palette.nsColor(
+                        role,
+                        for: AppearanceTraits(colorScheme: .dark, increasedContrast: true)
+                    )
+                )
+            ]
+        }
+    }
+
+    /// A resolved colour as `#RRGGBB`, so the report carries a value a person can read.
+    static func hex(_ color: NSColor) -> String {
+        let value = DesignTokens.PaletteValue(color)
+        return String(format: "#%02X%02X%02X", value.red, value.green, value.blue)
+    }
+
     static func statusTokens() -> [[String: Any]] {
         FocusStatus.allCases.map { status in
             [

@@ -165,15 +165,15 @@ struct QueryPanelTests {
     /// stops in the grammar.
     @Test("the question is marked uncertain, and its accessibility tree says nothing else")
     func theQuestionIsMarkedUncertain() {
-        let mark = DesignTokens.decisionRuleTint(for: QueryPanelView.decisionSurface)
+        let mark = DesignTokens.decisionRuleTint(for: QueryPanelView.decisionSurface, traits: .light)
         #expect(
             mark.flatMap { DesignTokenTests.drawnComponents($0, .light) }
-                == DesignTokenTests.drawnComponents(DesignTokens.tint(for: .uncertain), .light),
+                == DesignTokenTests.drawnComponents(DesignTokens.tint(for: .uncertain, traits: .light), .light),
             "the question is not wearing the app's own mark for \"I cannot tell\""
         )
         #expect(
             mark.flatMap { DesignTokenTests.drawnComponents($0, .light) }
-                != DesignTokenTests.drawnComponents(DesignTokens.tint(for: .unrelated), .light),
+                != DesignTokenTests.drawnComponents(DesignTokens.tint(for: .unrelated, traits: .light), .light),
             "the question is wearing the accusation's mark"
         )
     }
