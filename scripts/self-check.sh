@@ -110,10 +110,87 @@ fi
 OUT="${FOCUS_SELFCHECK_JSON:-$(mktemp -t focus-selfcheck).json}"
 rm -f -- "$OUT"
 
+# --- F-160, legs two and three: the app opens no socket, watched for the whole journey ---------
+#
+# Leg one is the dependency graph — `check-boundaries.sh` and its binary twin, which prove no
+# networking symbol reaches the classification package. A graph with no import is not a running
+# process with no socket: the two legs the offline gate was missing are the **journey** and the
+# **sampling**, and they are one reading here rather than two.
+#
+# **The journey is the self-check's own first launch**, which is where a network call would be
+# most tempting and where all three of the plan's named moments happen: the first open of a store,
+# the on-device model's availability read, and the data export. So the launch is backgrounded and
+# sampled rather than a second launch being invented for the purpose — a lane of its own would be
+# a lane that could drift from the one every other assertion is taken against.
+#
+# **Sampled, not sampled once.** *Hostile criterion H9.3: `lsof` is run once, at a moment when
+# nothing would have been open anyway.* So it runs every fifth of a second for as long as the
+# process lives, the sample count is asserted against a floor, and the process is asserted to have
+# been alive at each sample.
+#
+# **And the sampler is proved able to see a socket.** A clean reading from a tool that cannot read
+# is the "probe of the one input that cannot fail" defect, so before the app runs, `lsof` is
+# pointed at a process this script opens a listening socket in, and it has to find it.
+NETWORK_JSON="$(mktemp -t focus-network).json"
+NETWORK_SAMPLES="$(mktemp -t focus-network-samples).txt"
+
+print
+print "== the offline journey (F-160): lsof -i, sampled for the length of the run"
+
+python3 -c 'import socket, time
+s = socket.socket()
+s.bind(("127.0.0.1", 0))
+s.listen()
+time.sleep(4)' &
+control_pid=$!
+control_lines=0
+for _ in 1 2 3 4 5 6 7 8 9 10; do
+    control_lines=$(lsof -nP -i -a -p "$control_pid" 2>/dev/null | grep -c 'LISTEN')
+    (( control_lines > 0 )) && break
+    sleep 0.2
+done
+kill "$control_pid" 2>/dev/null
+wait "$control_pid" 2>/dev/null
+print "     control: lsof saw $control_lines listening socket(s) on a process that opened one"
+
 print "== $BINARY --focus-self-check $OUT"
-"$BINARY" --focus-self-check "$OUT"
+: > "$NETWORK_SAMPLES"
+"$BINARY" --focus-self-check "$OUT" &
+app_pid=$!
+network_samples=0
+network_alive=0
+network_sockets=0
+while kill -0 "$app_pid" 2>/dev/null; do
+    sample=$(lsof -nP -i -a -p "$app_pid" 2>/dev/null | tail -n +2)
+    network_samples=$(( network_samples + 1 ))
+    kill -0 "$app_pid" 2>/dev/null && network_alive=$(( network_alive + 1 ))
+    if [[ -n "$sample" ]]; then
+        network_sockets=$(( network_sockets + $(print -r -- "$sample" | wc -l | tr -d ' ') ))
+        print -r -- "$sample" >> "$NETWORK_SAMPLES"
+    fi
+    sleep 0.2
+done
+wait "$app_pid"
 run_rc=$?
 print "launch EXIT=$run_rc"
+print "     network: $network_samples sample(s), $network_alive with the process alive, $network_sockets socket(s)"
+
+python3 - "$NETWORK_JSON" "$network_samples" "$network_alive" "$network_sockets" "$control_lines" <<'PYTHON'
+import json
+import sys
+
+path, samples, alive, sockets, control = sys.argv[1:6]
+with open(path, "w") as handle:
+    json.dump(
+        {
+            "samples": int(samples),
+            "samplesWithTheProcessAlive": int(alive),
+            "socketLines": int(sockets),
+            "controlListeningSockets": int(control),
+        },
+        handle,
+    )
+PYTHON
 
 if (( run_rc != 0 )); then
     print -u2 "FAIL: the app exited $run_rc during its self-check"
@@ -260,7 +337,7 @@ python3 - "$OUT" "$SEED_JSON" "$RESTORE_JSON" "$COMMITTED_STAMP" "$COMMITTED_DIG
     "$COMMITTED_INTERVENTION_DIGEST" "$COCKPIT_JSON" \
     "$COMMITTED_DECODE_TABLE" "$COMMITTED_DECODE_CELLS" "$FIRSTRUN_JSON" \
     "$COMMITTED_EXECUTABLE_RUNGS" "$COMMITTED_DECLARED_RUNGS" "$KEYBOARD_JSON" \
-    "$COMMITTED_PANEL_ABSOLUTE_MAX" <<'PYTHON'
+    "$COMMITTED_PANEL_ABSOLUTE_MAX" "$NETWORK_JSON" <<'PYTHON'
 import json
 import os
 import sys
@@ -297,6 +374,10 @@ with open(sys.argv[13]) as handle:
     keyboard_launch = keyreads.record(json.load(handle))
 # focus-ocs. The panel's proportionality limit as the source declares it.
 committed_panel_absolute_max = sys.argv[14]
+# F-160 legs two and three: what `lsof -i -a -p <pid>` saw while the first launch ran.
+with open(sys.argv[15]) as handle:
+    network = json.load(handle)
+
 
 failures = []
 not_taken_readings = []
@@ -1977,6 +2058,45 @@ check(
     relaunched_cockpit.get("drewWhatTheAppKnows") is True,
     "the relaunched cockpit drew every value the composition root handed it",
     (relaunched_cockpit.get("reading") or {}).get("summary"),
+)
+
+# --- F-160, legs two and three: the app opened no socket, and something was watching ----------
+#
+# Leg one is the dependency graph (`boundaries` and `boundaries-binary`). A graph with no
+# networking import is not a running process with no socket, and the two legs that were missing
+# are the JOURNEY and the SAMPLING. Both are taken above, of the first launch — the one where a
+# network call would be most tempting, because it is where the store is first opened, the
+# on-device model's availability is read, and the data export is written.
+#
+# Four readings, and three of them exist to stop the fourth being green for the wrong reason.
+check(
+    network.get("controlListeningSockets", 0) >= 1,
+    "control: lsof can see a socket at all — it found one on a process that opened one",
+    network.get("controlListeningSockets"),
+)
+# **H9.3**: a single clean `lsof` is a probe of the one input that cannot fail. The floor is on
+# the number of samples, so a run that sampled once — or that raced the process and sampled none —
+# is a failure and not a pass.
+check(
+    network.get("samples", 0) >= 5,
+    "the run was sampled repeatedly rather than once, across the whole journey",
+    network.get("samples"),
+)
+check(
+    network.get("samples") == network.get("samplesWithTheProcessAlive"),
+    "every sample was taken while the application was still running",
+    (network.get("samples"), network.get("samplesWithTheProcessAlive")),
+)
+check(
+    network.get("socketLines") == 0,
+    "the application held no socket of any kind, at any sample, for the whole run",
+    network.get("socketLines"),
+)
+print(
+    "     offline: {} samples, {} socket(s); the sampler found {} on its control".format(
+        network.get("samples"), network.get("socketLines"),
+        network.get("controlListeningSockets"),
+    )
 )
 
 # --- opening at login, offered once and never on a first launch (D-12, focus-odz.4) ----------

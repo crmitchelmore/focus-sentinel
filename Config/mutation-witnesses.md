@@ -412,6 +412,29 @@ compile error and `NotchGeometrySeamTests` fails on any divergence between the t
 but "both readers wrong in the same way" is **P-e08-B's** to close and is listed as such in the
 README's e08 section.
 
+### `selfcheck-debug` / `selfcheck-release` — the offline journey (F-160)
+
+The reader is `scripts/self-check.sh`'s own python, and its harness is
+`/private/tmp/mw-f163/reader.zsh`. It extracts the python heredoc out of `scripts/self-check.sh`,
+sources that script's own literal preamble rather than re-spelling its paths, and runs the reader
+against the reports of a **pinned** run — a copy of `self-check.sh` with `SESSION_DIR` fixed and
+the `trap` removed, pointed at a built Debug app. The copy reads its committed literals and its
+budgets from the real repository, so a literal that moves moves for the harness too. The control
+(nothing doctored) is green: `SELF-CHECK OK`, 785 `ok` lines.
+
+**F-160 — legs two and three of the offline gate.** The sampler writes four numbers and each has
+its own row, because three of them exist to stop the fourth being green for the wrong reason.
+
+| # | reading | mutation (H-JSON) | control | status — the line it printed |
+|---|---|---|---|---|
+| OF-01 | no socket, ever | `socketLines = 1` | the unmutated copy is green | **PROVEN** — `FAIL: the application held no socket of any kind, at any sample, for the whole run` |
+| OF-02 | **H9.3** — sampled, not sampled once | `samples = 1` | OF-01 | **PROVEN** — `FAIL: the run was sampled repeatedly rather than once, across the whole journey` |
+| OF-03 | the samples were of a living process | `samplesWithTheProcessAlive = samples − 3` | OF-01 | **PROVEN** — `FAIL: every sample was taken while the application was still running` |
+| OF-04 | the sampler can see a socket at all | `controlListeningSockets = 0` | this row **is** the control for OF-01: a clean `lsof` from a tool that cannot read is the "probe of the one input that cannot fail" defect | **PROVEN** — `FAIL: control: lsof can see a socket at all — it found one on a process that opened one` |
+
+Measured on a Debug run at `c5cb2e4`: **68 samples, 68 with the process alive, 0 sockets**, and the
+sampler found **1** listening socket on the control process it opened one in.
+
 ### `grants` — `scripts/check-grants.sh` (invariant I-3, F-128)
 
 The stage folds `Config/tcc-families.txt` over two subjects at once: the build products of the run
