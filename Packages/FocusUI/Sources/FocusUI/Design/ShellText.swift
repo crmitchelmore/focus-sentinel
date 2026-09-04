@@ -275,20 +275,6 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case interventionExclusionAddHeading = "settings.intervention.exclusion.addHeading"
     case interventionExclusionNoneRunning = "settings.intervention.exclusion.noneRunning"
     case interventionExclusionRemove = "settings.intervention.exclusion.remove"
-    // The three App Intents (F-141, focus-mn7). Their titles, the one parameter, and the four
-    // refusals — which a person hears out of Shortcuts with the app nowhere on screen, so a
-    // refusal with no sentence is "the operation could not be completed".
-    case intentSetPriorityTitle = "shell.intent.setPriority.title"
-    case intentSetPriorityDescription = "shell.intent.setPriority.description"
-    case intentPriorityParameter = "shell.intent.setPriority.parameter"
-    case intentStartSessionTitle = "shell.intent.startSession.title"
-    case intentStartSessionDescription = "shell.intent.startSession.description"
-    case intentFinishSessionTitle = "shell.intent.finishSession.title"
-    case intentFinishSessionDescription = "shell.intent.finishSession.description"
-    case intentRefusalNotRunning = "shell.intent.refusal.notRunning"
-    case intentRefusalEmptyPriority = "shell.intent.refusal.emptyPriority"
-    case intentRefusalSessionRunning = "shell.intent.refusal.sessionRunning"
-    case intentRefusalNoSession = "shell.intent.refusal.noSession"
     case settingsPrivacyStatement = "settings.privacy.statement"
     // The two things this app does not do, said plainly where a person asks what it does
     // (F-122, F-137, focus-6n2). Both are linted true of the shipped binary rather than

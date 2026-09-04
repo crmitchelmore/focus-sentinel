@@ -290,27 +290,33 @@ would remove neither. The gate also presses the control itself: the pane's own s
 read back out of the store, the window the triggered sweep kept, and the person's own choice put
 back afterwards.
 
-## Three shortcuts
+## Three shortcuts, not shipped
 
-Set Focus Priority, Start Focus Session, Finish Focus Session (F-141). Each one performs through
-`FocusCommandCenter` — **the same command host the menu bar uses** — because the interesting half
-of a shortcut is when it refuses, and an intent that reached past the host into the session and
-priority hosts would be a second implementation of three verbs whose availability is the whole
-question. The menu and the cockpit disagreed exactly that way once (`focus-6uf`), and that is the
-defect this shape prevents.
+F-141 asks for three App Intents — set the priority, start a session, finish the session — each
+performing through the same command host the menu bar uses and refusing where the menu would draw
+its item disabled. All of that was built and works: `FocusIntentRunner` is the whole of it, driven
+in the unit lane over every session phase, and the two vocabularies agree.
 
-So each intent refuses in exactly the states the File menu would draw its item disabled in, and
-the fold that proves it is over every session phase there is: finishing with no session, starting
-with one already running, and a priority with nothing in it. A command nothing is listening to is
-a refusal too — `undeliverable` becomes a sentence a person hears — rather than a shortcut that
-reports success and does nothing, which is what six controls in this app used to do with a closed
-cockpit.
+**It does not ship, and the blocker is measured.** `appintentsmetadataprocessor` runs at build
+time and refuses a `title` or a `description` that is not a literal:
 
-`AppIntent.perform()` runs in a process the unit lane does not own, so what the tests drive is
-`FocusIntentRunner`: the whole of what the three intents do, minus three lines of framework
-shell. Every refusal has its own sentence in the catalog, because *"the operation could not be
-completed"* is what an intent says when nobody wrote it a reason, and a person hears these out of
-Shortcuts with the app nowhere on screen.
+    error: 'LocalizedStringResource' must be initialized with a call to its
+           initializer or a string literal
+    error: At least one halting error produced during export. No AppIntents
+           metadata have been exported and this target is not usable with
+           AppIntents until errors are resolved.
+
+Every word this app says comes out of `FocusUI`'s String Catalog through a typed key, and
+`FocusHost` — where the composition root and therefore the command host live — declares and
+references **no catalog keys at all**, enforced by `check-strings.sh`'s `EXPECTS_NO_STRINGS`
+(F-149). An intent whose title is `ShellStrings.resource(.intentSetPriorityTitle)` does not
+satisfy the processor, and one whose title is an English literal in `FocusHost` does not satisfy
+F-149.
+
+The way through is to move the three intent types into `FocusUI`, where a catalog-key literal is
+an ordinary declared key, and to give the composition root a registered priority writer in the
+shape `registerPrivacyPerformer` already has — `FocusCommandCenter` is already in `FocusUI`, so
+two of the runner's three closures are local there. That is a round of its own, not a rename.
 
 ## The list a person could not add to
 
