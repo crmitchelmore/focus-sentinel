@@ -3073,6 +3073,78 @@
         }
       }
     },
+    "settings.privacy.portability.explanation" : {
+      "comment" : "Sentence under the take-it-away heading.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your data leaves as one JSON file. Settings are a separate file you can carry to another Mac."
+          }
+        }
+      }
+    },
+    "settings.privacy.portability.exportData" : {
+      "comment" : "Button and File-menu item: write everything the app holds about the person to a JSON file.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Export My Data…"
+          }
+        }
+      }
+    },
+    "settings.privacy.portability.exportSettings" : {
+      "comment" : "Button and File-menu item: write the person's preferences to a JSON file.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Export Settings…"
+          }
+        }
+      }
+    },
+    "settings.privacy.portability.heading" : {
+      "comment" : "Heading over the Privacy pane's export and import controls.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Take it with you"
+          }
+        }
+      }
+    },
+    "settings.privacy.portability.importRefused" : {
+      "comment" : "Title of the alert shown when a settings file could not be imported.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus could not import that settings file"
+          }
+        }
+      }
+    },
+    "settings.privacy.portability.importSettings" : {
+      "comment" : "Button and File-menu item: read a settings file back in.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Import Settings…"
+          }
+        }
+      }
+    },
     "settings.privacy.retention.explanation" : {
       "comment" : "Sentence under the retention heading, saying what choosing a window does.",
       "extractionState" : "manual",
@@ -3080,7 +3152,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Anything older than the window you choose is deleted the next time Focus checks, which is once a day. Answers you have already given outlive it while the priority they were given for is still live, so Focus never asks you the same question twice."
+            "value" : "Anything older is deleted once a day."
           }
         }
       }

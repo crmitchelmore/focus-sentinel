@@ -80,6 +80,10 @@ public final class AppComposition {
     /// What the last sweep did, or `nil` before one has run. Read by the self-check, so "old
     /// rows are removed" is a number rather than a promise.
     private(set) var lastRetentionSweep: RetentionSweep.Result?
+    /// **What the last export or import did** (F-110, F-134, focus-ix9). Held so the gate can
+    /// read what the shipping verbs actually produced, and so a refusal is a value rather than a
+    /// line in a log nobody opens.
+    public internal(set) var lastPortabilityOutcome: DataPortabilityOutcome = .none
 
     /// Wall-clock time. Injected everywhere rather than called directly, so that every
     /// timestamp in the programme is reproducible in a test.
@@ -722,6 +726,13 @@ public final class AppComposition {
             self?.nudgeHost.perform(command)
         }
 
+        // **The three File-menu portability items reach the same sink the Privacy pane's buttons
+        // do** (F-110, F-134, focus-ix9). One vocabulary, two routes, one implementation: a menu
+        // item that carried its own copy of the export would be a second exporter to keep honest.
+        FocusCommandCenter.shared.registerPrivacyPerformer { [weak self] action in
+            self?.perform(action)
+        }
+
         // **And the menu bar asks whether a command would do anything before offering it**
         // (focus-6uf).
         //
@@ -1198,6 +1209,8 @@ public final class AppComposition {
             deleteEverythingAndRelaunch()
         case .setRetentionWindow(let window):
             setRetentionWindow(window)
+        case .exportData, .exportSettings, .importSettings:
+            performPortability(action)
         }
     }
 

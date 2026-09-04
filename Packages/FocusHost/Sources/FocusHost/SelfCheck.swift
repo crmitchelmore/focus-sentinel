@@ -636,6 +636,7 @@ enum SelfCheck {
         root["policyDigest"] = relevance["policyDigest"] ?? ""
 
         root["retention"] = retentionReport()
+        root["portability"] = portabilityReport()
 
         // --- e09a: the replay-fidelity measurement (focus-tee.4) --------------------------
         //
@@ -1909,6 +1910,124 @@ enum SelfCheck {
         report["tickFetches"] = tickFetchSurvey()
         report["menuBarInstalled"] = composition.menuBar.isInstalled
         report["decisionCount"] = host.decisionCount
+        return report
+    }
+
+    /// **That a person can take their data away, and that asking costs them no permission**
+    /// (F-110, F-134, focus-ix9).
+    ///
+    /// ## What is driven, and what cannot be
+    ///
+    /// The save panel is the one part of this no lane can press: it is a modal window and no
+    /// grant in this programme can click a button in one. Everything either side of it is a verb
+    /// on the composition root, and those are driven here against files this survey owns — the
+    /// same code the panel's OK button reaches, with the panel replaced by a URL.
+    ///
+    /// ## The authorisation reading, taken around the write
+    ///
+    /// PD-1 says this app asks for no permission of any kind, and an export is the place a
+    /// reader would most reasonably suspect one: writing a file somewhere the person chose is
+    /// exactly the shape a sandboxed app needs Powerbox for. This app is not sandboxed and needs
+    /// nothing, and the claim is **measured** rather than asserted: the same on-screen window
+    /// scan `authorisationSurfaceScan` uses is taken before and after the two writes and the
+    /// import, and both readings must name no authorisation dialog owner. The takenness fact
+    /// travels with it, for that reading's own reason — an empty scan is not a green one.
+    ///
+    /// ## Why the excluded names are looked for in the bytes here as well
+    ///
+    /// `StoreExportTests` plants a poison sentinel and reads the output in the unit lane. This is
+    /// the weaker reading the **shipping binary** can take over the person's own store: the four
+    /// excluded column names must not appear in the file it just wrote. It cannot prove absence
+    /// of a value it did not plant; it can prove the binary in the DMG emits no field called
+    /// `bootIdentity`, which is the half a unit test cannot say anything about.
+    @MainActor
+    static func portabilityReport() -> [String: Any] {
+        var report: [String: Any] = [:]
+        let composition = AppComposition.shared
+
+        let before = authorisationSurfaceReport()
+        report["authorisationWasTakenBefore"] = before["wasTaken"]
+        report["authorisationSuspectsBefore"] = before["suspects"]
+
+        let directory = FileManager.default.temporaryDirectory
+            .appending(path: "focus-portability-\(UUID().uuidString)", directoryHint: .isDirectory)
+        do {
+            try FileManager.default.createDirectory(
+                at: directory,
+                withIntermediateDirectories: true
+            )
+        } catch {
+            report["available"] = false
+            report["error"] = "\(error)"
+            return report
+        }
+        defer { try? FileManager.default.removeItem(at: directory) }
+        report["available"] = true
+
+        // --- the data document -------------------------------------------------------------
+        let dataURL = directory.appending(path: "data.json", directoryHint: .notDirectory)
+        let dataOutcome = composition.writeDataExport(to: dataURL)
+        report["dataOutcome"] = dataOutcome.summary
+        if case .exported(_, let bytes) = dataOutcome {
+            report["dataBytes"] = bytes
+        } else {
+            report["dataBytes"] = -1
+        }
+        let dataBytes = (try? Data(contentsOf: dataURL)) ?? Data()
+        report["dataFileBytes"] = dataBytes.count
+        let dataText = String(data: dataBytes, encoding: .utf8) ?? ""
+        report["dataNamesExcludedColumns"] = ["bootIdentity", "uptimeAnchorSeconds", "displayID", "bookmark"]
+            .filter { dataText.contains($0) }
+            .sorted()
+        if let object = try? JSONSerialization.jsonObject(with: dataBytes) as? [String: Any],
+            let manifest = object["manifest"] as? [String: Any] {
+            report["dataFormat"] = manifest["format"] as? String ?? ""
+            report["dataVersion"] = manifest["version"] as? Int ?? -1
+            report["dataSchemaVersion"] = manifest["schemaVersion"] as? Int ?? -1
+            report["dataCollections"] = object.keys.filter { $0 != "manifest" }.sorted()
+        } else {
+            report["dataFormat"] = ""
+            report["dataVersion"] = -1
+            report["dataSchemaVersion"] = -1
+            report["dataCollections"] = [String]()
+        }
+
+        // --- the settings document, out and back in ----------------------------------------
+        let settingsURL = directory.appending(path: "settings.json", directoryHint: .notDirectory)
+        report["settingsOutcome"] = composition.writeSettingsExport(to: settingsURL).summary
+        let settingsBytes = (try? Data(contentsOf: settingsURL)) ?? Data()
+        report["settingsFileBytes"] = settingsBytes.count
+        let settingsText = String(data: settingsBytes, encoding: .utf8) ?? ""
+        // A settings file is not a quieter export: it carries no history and no machine identity.
+        report["settingsNamesHistory"] = ["priorities", "sessions", "interventions", "questions"]
+            .filter { settingsText.contains($0) }
+            .sorted()
+        let reimport = composition.readSettingsImport(from: settingsURL)
+        report["settingsImportOutcome"] = reimport.summary
+        report["settingsImportAccepted"] = {
+            if case .imported = reimport { return true } else { return false }
+        }()
+
+        // --- and a document this build must refuse ------------------------------------------
+        //
+        // The control the two readings above need: an import path that accepted everything would
+        // publish exactly the same "accepted" as one that validates.
+        let badURL = directory.appending(path: "bad.json", directoryHint: .notDirectory)
+        var mutated = (try? JSONSerialization.jsonObject(with: settingsBytes) as? [String: Any])
+            ?? [:]
+        mutated["version"] = 9_999
+        if let bad = try? JSONSerialization.data(withJSONObject: mutated) {
+            try? bad.write(to: badURL)
+        }
+        let refusal = composition.readSettingsImport(from: badURL)
+        report["refusedOutcome"] = refusal.summary
+        report["refusedAnUnknownVersion"] = {
+            if case .refused(.unknownVersion(9_999)) = refusal { return true } else { return false }
+        }()
+
+        let after = authorisationSurfaceReport()
+        report["authorisationWasTakenAfter"] = after["wasTaken"]
+        report["authorisationSuspectsAfter"] = after["suspects"]
         return report
     }
 

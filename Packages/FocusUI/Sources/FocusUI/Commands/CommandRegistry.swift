@@ -113,6 +113,16 @@ public enum ShellActionEffect: Sendable, Equatable, Hashable {
     /// Ask the cockpit to do something. The cockpit window is brought forward first, so a
     /// command is never a key press that appears to do nothing because the window was closed.
     case priority(PriorityCommand)
+    /// **Ask the Privacy pane's own sink to do something** (F-110, F-134, focus-ix9).
+    ///
+    /// The three portability verbs are in the File menu because that is where a Mac user looks
+    /// for *export* and *import*, and in Settings ▸ Privacy because that is where the question
+    /// they answer is asked. One vocabulary, two routes, and no second implementation: both
+    /// reach `AppComposition.perform(_ :PrivacySettingsAction)`.
+    ///
+    /// `deleteEverything` is **not** reachable this way and never will be: a destructive verb one
+    /// keystroke from ⌘W is a verb somebody presses by mistake, and its own sheet is the point.
+    case privacy(PrivacySettingsAction)
 }
 
 /// A key equivalent, as a value the tests can compare and the help window can draw.
@@ -289,6 +299,10 @@ extension ShellActionEffect {
             true
         case .priority(let command):
             command.isAvailable(in: world)
+        // A person may take their own data away whatever the app is doing, and may restore
+        // their settings before they have committed to anything. Neither depends on the world.
+        case .privacy:
+            true
         }
     }
 }
@@ -436,6 +450,35 @@ public struct CommandRegistry: Sendable, Equatable {
             shortcut: Shortcut("e", modifiers: [.control, .command]),
             placement: .file,
             effect: .priority(.pauseSensing)
+        ),
+        // --- e09b: take it with you (F-110, F-134, focus-ix9) --------------------------------
+        //
+        // In the File menu because that is where a Mac user looks for export and import, and in
+        // Settings ▸ Privacy because that is where the question they answer is asked. The three
+        // base characters are `x`, `b` and `i`, none of them previously taken: the rule this
+        // registry keeps is that **no two actions share a base character whatever their
+        // modifiers**, which is what the ⇧⌘W defect above taught, so a mnemonic that collides
+        // loses to one that does not.
+        ShellAction(
+            id: "data.export",
+            titleKey: .settingsPrivacyExportData,
+            shortcut: Shortcut("x", modifiers: [.shift, .command]),
+            placement: .file,
+            effect: .privacy(.exportData)
+        ),
+        ShellAction(
+            id: "settings.export",
+            titleKey: .settingsPrivacyExportSettings,
+            shortcut: Shortcut("b", modifiers: [.shift, .command]),
+            placement: .file,
+            effect: .privacy(.exportSettings)
+        ),
+        ShellAction(
+            id: "settings.import",
+            titleKey: .settingsPrivacyImportSettings,
+            shortcut: Shortcut("i", modifiers: [.shift, .command]),
+            placement: .file,
+            effect: .privacy(.importSettings)
         ),
         ShellAction(
             id: "shell.closeWindow",

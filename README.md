@@ -290,6 +290,44 @@ would remove neither. The gate also presses the control itself: the pane's own s
 read back out of the store, the window the triggered sweep kept, and the person's own choice put
 back afterwards.
 
+## Taking it away
+
+Two documents, and they are deliberately not one scope of the same thing (F-110, F-134).
+**Export My Data…** writes one JSON file: the commitments, what was attached to them, the rules,
+the sessions, what was observed, what the app said and every question it asked. It is a file you
+keep. **Export Settings…** writes a second: preferences and the person's own exclusion rows, with
+a version stamp and no history in it at all. It is a file you carry to another Mac, and
+**Import Settings…** reads it back. Both are reachable from Settings ▸ Privacy and from the File
+menu (⇧⌘X, ⇧⌘B, ⇧⌘I).
+
+**There is no share sheet.** `NSSharingService` routes a private file to a network service in one
+click, at the exact surface whose job is to prove there are none. The only destination either
+export offers is a folder the person picked in a panel they opened themselves — and because the
+app is unsandboxed, that panel is an ordinary window rather than a Powerbox request. The gate
+does not take that on trust: it drives the same verbs the panel's OK button reaches and takes the
+on-screen authorisation-surface scan on both sides of the write.
+
+**What never leaves is four columns**, and every one of them is a fact about *this Mac* rather
+than about the person: the security-scoped bookmark, the boot identity and uptime anchor, and the
+display id. The list is short because the store cannot hold the things an export usually has to
+strip — a window title, a URL beyond a normalised origin, a document name, an observed file path
+have no column to sit in. `Config/export-field-classification.txt` says so column by column and
+`scripts/check-export-fields.sh` fails the build on a column nobody has classified; the exporter
+reads none of it, so the two can disagree and the disagreement is what fails
+(`ExportRegistryTests`). And the absence is **planted rather than assumed**: `StoreExportTests`
+writes a title-shaped sentinel into every string column of every entity, through the raw model
+classes and past every facade, and requires that no excluded column's poison reaches a byte —
+with a control asserting the poison the export *is* allowed to carry is in the file eight times
+over, because a test of an input that cannot fail is green for ever.
+
+**An import is untrusted input.** A document whose format is not this one, whose version this
+build does not know, whose voice is a deck it cannot read, whose retention window it does not
+offer, whose exclusion row is not an application identifier, or whose quick-capture combination
+the platform will not register is refused **whole**, with its own sentence, having changed
+nothing. There is no partial import: a partly-applied settings file is a configuration nobody has
+ever chosen. Every arm is driven in the unit lane, and each one is asserted to leave the store
+byte-identical.
+
 ## The relevance engine
 
 The app has a judgement, and it is **deterministic**. The heuristic layer is the *whole* engine

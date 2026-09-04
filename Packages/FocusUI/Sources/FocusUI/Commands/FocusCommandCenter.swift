@@ -267,7 +267,38 @@ public final class FocusCommandCenter {
         windowOpener = open
     }
 
+    /// **How a File-menu item reaches the Privacy pane's own sink** (F-110, F-134, focus-ix9).
+    ///
+    /// Root-owned and idempotent, in `registerWindowOpener`'s shape and for its reason: the
+    /// composition root is the only object that can perform a portability verb, and a menu item
+    /// that had its own copy of the work would be a second implementation of the export.
+    ///
+    /// `false` from `canPerformPrivacyAction` in a unit process, which is what lets the lane
+    /// drive "the menu asked and nothing was listening" as a real state rather than a crash.
+    public func registerPrivacyPerformer(_ perform: @escaping (PrivacySettingsAction) -> Void) {
+        privacyPerformer = perform
+    }
+
+    /// Take the route away again, for a test that installed one.
+    public func unregisterPrivacyPerformer() {
+        privacyPerformer = nil
+    }
+
+    /// Whether anything in this process can carry out a portability verb.
+    public var canPerformPrivacyAction: Bool { privacyPerformer != nil }
+
+    /// Perform one, and say whether anything could — returned rather than discarded for
+    /// `openWindow(id:)`'s reason: a caller has to be able to say what it means.
+    @discardableResult
+    public func perform(_ action: PrivacySettingsAction) -> Bool {
+        guard let privacyPerformer else { return false }
+        privacyPerformer(action)
+        return true
+    }
+
     /// Take the general route away again, for a test that installed one.
+    private var privacyPerformer: ((PrivacySettingsAction) -> Void)?
+
     public func unregisterWindowOpener() {
         windowOpener = nil
     }

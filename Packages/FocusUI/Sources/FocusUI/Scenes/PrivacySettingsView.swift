@@ -37,6 +37,15 @@ public enum PrivacySettingsAction: Sendable, Equatable, Hashable {
     /// lengthen it again — and the rows it takes go on the next daily sweep rather than under
     /// the click, which is the same promise the pane's sentence makes.
     case setRetentionWindow(RetentionWindow)
+    /// **Give me my data** (F-110, focus-ix9). One JSON file, through a save panel the person
+    /// opened themselves, carrying only fields `Config/export-field-classification.txt` allows.
+    case exportData
+    /// **Set my other Mac up like this one** (F-134). A second, separate document: preferences
+    /// and the person's own exclusion rows, with a version stamp and no history in it.
+    case exportSettings
+    /// The other direction, through an open panel. Validated whole and applied whole; a document
+    /// this build cannot read is refused with a stated reason and applies nothing.
+    case importSettings
 
     /// **The pane's vocabulary, as verbs.**
     ///
@@ -50,17 +59,36 @@ public enum PrivacySettingsAction: Sendable, Equatable, Hashable {
         switch self {
         case .deleteEverything: "deleteEverything"
         case .setRetentionWindow: "setRetentionWindow"
+        case .exportData: "exportData"
+        case .exportSettings: "exportSettings"
+        case .importSettings: "importSettings"
         }
     }
 
     /// Every action the pane can produce, one per value it can produce it with. The self-check
     /// folds this to `verb`; the unit lane folds it to check nothing here is unreachable.
     public static var allDeclared: [PrivacySettingsAction] {
-        [.deleteEverything] + RetentionWindow.ordered.map(PrivacySettingsAction.setRetentionWindow)
+        [.deleteEverything]
+            + RetentionWindow.ordered.map(PrivacySettingsAction.setRetentionWindow)
+            + [.exportData, .exportSettings, .importSettings]
     }
 
     /// The vocabulary the self-check publishes, in the order the pane draws it.
-    public static let vocabulary: [String] = ["deleteEverything", "setRetentionWindow"]
+    public static let vocabulary: [String] = [
+        "deleteEverything", "setRetentionWindow", "exportData", "exportSettings", "importSettings"
+    ]
+
+    /// **The title of the one alert this vocabulary can raise**, resolved here.
+    ///
+    /// The composition root runs the open panel and applies the document, so it is the object
+    /// that learns an import was refused — but every word a person reads belongs to `FocusUI`
+    /// and to its catalog (F-149: `FocusHost` declares and references no keys). So the sentence
+    /// is drawn from here and handed over already resolved, and the reason beside it comes from
+    /// `SettingsImportRefusal`, which is a closed vocabulary rather than a caught error's
+    /// description.
+    public static var importRefusedTitle: String {
+        ShellStrings.string(.settingsPrivacyImportRefused)
+    }
 }
 
 public struct PrivacySettingsView: View {
@@ -115,6 +143,11 @@ public struct PrivacySettingsView: View {
             .settingsPrivacyReveal,
             .settingsPrivacyRetentionHeading,
             .settingsPrivacyRetentionExplanation,
+            .settingsPrivacyPortabilityHeading,
+            .settingsPrivacyPortabilityExplanation,
+            .settingsPrivacyExportData,
+            .settingsPrivacyExportSettings,
+            .settingsPrivacyImportSettings,
             .settingsPrivacyDeleteHeading,
             .settingsPrivacyDeleteExplanation,
             .settingsPrivacyDeleteEverything,
@@ -239,6 +272,36 @@ public struct PrivacySettingsView: View {
                 }
                 .accessibilityElement(children: .contain)
                 .accessibilityLabel(ShellStrings.resource(.settingsPrivacyRetentionHeading))
+            }
+
+            Divider()
+
+            // **Take it and leave** (F-110, F-134, focus-ix9). Two documents and three verbs,
+            // drawn together because the question a person is answering here is one question:
+            // what of this is mine, and how do I get it out.
+            //
+            // No share sheet. `NSSharingService` routes a private file to a network service in
+            // one click, at the exact surface whose job is to prove there are none — so the only
+            // destination either verb offers is a folder the person picked in a panel they
+            // opened themselves.
+            VStack(alignment: .leading, spacing: spacing / 2) {
+                ShellText(.settingsPrivacyPortabilityHeading, role: .headline)
+                ShellText(.settingsPrivacyPortabilityExplanation, role: .footnote)
+                    .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
+                HStack(spacing: spacing / 2) {
+                    Button { onAction(.exportData) } label: {
+                        ShellText(.settingsPrivacyExportData)
+                    }
+                    Button { onAction(.exportSettings) } label: {
+                        ShellText(.settingsPrivacyExportSettings)
+                    }
+                    Button { onAction(.importSettings) } label: {
+                        ShellText(.settingsPrivacyImportSettings)
+                    }
+                    Spacer(minLength: 0)
+                }
             }
 
             Divider()

@@ -131,6 +131,10 @@ public struct ShellCommands: Commands {
             // always be carried out: every `ShellActionEffect.priority` command either opens the
             // cockpit or is one of the nudge verbs the loop observes for the life of the process.
             _ = commandCenter.send(command)
+        case .privacy(let action):
+            // Discarded for the reason above and with the same caveat: the composition root
+            // installs the performer at launch, and a process that has none is a unit process.
+            _ = commandCenter.perform(action)
         }
     }
 }

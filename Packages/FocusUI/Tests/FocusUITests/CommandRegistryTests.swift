@@ -30,7 +30,11 @@ struct CommandRegistryTests {
         // that draws them can never carry a keystroke (U-1, F-145).
         // Seventeen since e09a: History, which is a destination rather than a verb — the shell
         // has no split view, so a window opened from the View menu is the route that exists.
-        #expect(registry.actions.count == 17)
+        // Twenty since e09b: the three portability verbs, in the File menu because that is where
+        // a Mac user looks for export and import (F-110, F-134). `deleteEverything` is
+        // deliberately **not** among them: a destructive verb one keystroke from ⌘W is a verb
+        // somebody presses by mistake, and its confirmation sheet is the point.
+        #expect(registry.actions.count == 20)
         #expect(registry.actions.map(\.id) == [
             "priority.new",
             "context.addFiles",
@@ -39,6 +43,9 @@ struct CommandRegistryTests {
             "session.pause",
             "session.complete",
             "sensing.pause",
+            "data.export",
+            "settings.export",
+            "settings.import",
             "shell.closeWindow",
             "nudge.relevant",
             "nudge.snooze",
@@ -190,6 +197,9 @@ struct CommandRegistryTests {
             "session.pause",
             "session.complete",
             "sensing.pause",
+            "data.export",
+            "settings.export",
+            "settings.import",
             "shell.closeWindow"
         ])
         #expect(registry.actions(in: .help).map(\.id) == ["shell.help"])

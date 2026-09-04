@@ -591,6 +591,11 @@ def expected_availability(action_id, world):
         # refused to open on a quiet day would withhold exactly the page a person wants after a
         # day the app said nothing on.
         "shell.history": True,
+        # e09b. A person may take their own data away whatever the app is doing, and may restore
+        # their settings before they have committed to anything (F-110, F-134).
+        "data.export": True,
+        "settings.export": True,
+        "settings.import": True,
     }
     if action_id in always:
         return always[action_id]
@@ -636,6 +641,7 @@ KNOWN_COMMAND_IDS = {
     "session.complete", "sensing.pause", "shell.closeWindow", "nudge.relevant", "nudge.snooze",
     "nudge.hideOverlays", "nudge.menuBar", "nudge.answerYes", "nudge.answerNo",
     "nudge.answerNotNow", "shell.help", "shell.history",
+    "data.export", "settings.export", "settings.import",
 }
 check(
     set(reported_ids) == KNOWN_COMMAND_IDS,
@@ -643,8 +649,8 @@ check(
     sorted(set(reported_ids) ^ KNOWN_COMMAND_IDS),
 )
 check(
-    len(reported_ids) == len(set(reported_ids)) and len(reported_ids) == 17,
-    "all seventeen of the app's own actions were reported, once each",
+    len(reported_ids) == len(set(reported_ids)) and len(reported_ids) == 20,
+    "all twenty of the app's own actions were reported, once each",
     reported_ids,
 )
 
@@ -3098,6 +3104,106 @@ print(
     )
 )
 
+# --- portability: a person can take their data away, and asking costs no permission ----------
+#
+# F-110 and F-134 (focus-ix9). Two documents and three verbs. The save panel is the one part no
+# lane can press — it is a modal window, and no grant in this programme clicks a button in one —
+# so the binary drives the verbs either side of it against files it owns, which is the same code
+# the panel's OK button reaches with the panel replaced by a URL.
+#
+# THE PERMISSION CLAIM IS MEASURED, NOT ASSERTED. Writing a file somewhere a person chose is the
+# shape a sandboxed app needs Powerbox for; this app is not sandboxed and needs nothing, and the
+# on-screen window scan is taken on both sides of the two writes and the import. An empty scan is
+# not a green one, so the takenness fact is asserted beside the verdict (PD-1, R-33).
+portability = report.get("portability") or {}
+check(
+    portability.get("available") is True,
+    "the portability probe could write its own directory",
+    portability.get("error", portability.get("available")),
+)
+check(
+    portability.get("authorisationWasTakenBefore") is True
+    and portability.get("authorisationWasTakenAfter") is True,
+    "the authorisation scan enumerated somebody on both sides of the export",
+    (
+        portability.get("authorisationWasTakenBefore"),
+        portability.get("authorisationWasTakenAfter"),
+    ),
+)
+check(
+    portability.get("authorisationSuspectsBefore") == []
+    and portability.get("authorisationSuspectsAfter") == [],
+    "no authorisation dialog appeared while the app wrote a file the person asked for",
+    (
+        portability.get("authorisationSuspectsBefore"),
+        portability.get("authorisationSuspectsAfter"),
+    ),
+)
+check(
+    isinstance(portability.get("dataBytes"), int)
+    and portability["dataBytes"] > 0
+    and portability.get("dataFileBytes") == portability.get("dataBytes"),
+    "the data export wrote the bytes it says it wrote",
+    (portability.get("dataBytes"), portability.get("dataFileBytes")),
+)
+check(
+    portability.get("dataFormat") == "focus-sentinel.data"
+    and portability.get("dataVersion") == 1
+    and portability.get("dataSchemaVersion") == 8,
+    "the exported file documents itself: format, version and schema",
+    (
+        portability.get("dataFormat"),
+        portability.get("dataVersion"),
+        portability.get("dataSchemaVersion"),
+    ),
+)
+check(
+    portability.get("dataCollections") == [
+        "activityEvents", "contextItems", "interventions", "priorities", "questions",
+        "rules", "sessionTransitions", "sessions",
+    ],
+    "the export carries the eight collections it promises and no ninth",
+    portability.get("dataCollections"),
+)
+# The shipping binary's own half of the poison test. The unit lane plants a sentinel and reads it
+# back (`StoreExportTests`); what this can say is that the binary in the DMG emits no field NAMED
+# for a column the registry excludes.
+check(
+    portability.get("dataNamesExcludedColumns") == [],
+    "the export names no column the classification registry excludes",
+    portability.get("dataNamesExcludedColumns"),
+)
+check(
+    isinstance(portability.get("settingsFileBytes"), int)
+    and portability["settingsFileBytes"] > 0,
+    "the settings export wrote a file",
+    portability.get("settingsFileBytes"),
+)
+check(
+    portability.get("settingsNamesHistory") == [],
+    "the settings document carries nothing about what the person did",
+    portability.get("settingsNamesHistory"),
+)
+check(
+    portability.get("settingsImportAccepted") is True,
+    "a settings file this build wrote is a settings file this build reads back",
+    portability.get("settingsImportOutcome"),
+)
+# The control the reading above needs: an import that accepted everything would publish the same
+# "accepted". A version this build has never heard of is refused BY NUMBER.
+check(
+    portability.get("refusedAnUnknownVersion") is True,
+    "a settings document from a version this build does not know is refused by number",
+    portability.get("refusedOutcome"),
+)
+print(
+    "note portability: data {} bytes, settings {} bytes, {}".format(
+        portability.get("dataBytes"),
+        portability.get("settingsFileBytes"),
+        portability.get("refusedOutcome"),
+    )
+)
+
 # --- e09a: replay fidelity, PRINTED AND NEVER ASSERTED (focus-tee.4) -----------------------
 #
 # The measurement that decides whether a future epic may draw a replayed timeline. It is
@@ -4238,8 +4344,10 @@ check(
 # the test owns (`DeleteEverythingWitnessTests`): sentinels present in -wal while open, absent
 # from every byte of the directory afterwards.
 check(
-    rendering.get("privacyActionsDeclared") == ["deleteEverything", "setRetentionWindow"],
-    "the Privacy pane's action vocabulary is exactly delete-everything and the retention window",
+    rendering.get("privacyActionsDeclared") == [
+        "deleteEverything", "setRetentionWindow", "exportData", "exportSettings", "importSettings"
+    ],
+    "the Privacy pane's action vocabulary is exactly its five verbs",
     rendering.get("privacyActionsDeclared"),
 )
 check(

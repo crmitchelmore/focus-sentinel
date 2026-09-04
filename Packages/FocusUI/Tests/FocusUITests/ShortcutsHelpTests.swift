@@ -29,7 +29,12 @@ struct ShortcutsHelpTests {
         let rows = ShortcutsHelpView.groups(for: registry).flatMap(\.rows)
 
         #expect(rows.map(\.glyphs) == [
-            "⌘N", "⌘O", "⌃⌘↩", "⌃⌘S", "⌃⌘P", "⌃⌘F", "⌃⌘E", "⌘W",
+            "⌘N", "⌘O", "⌃⌘↩", "⌃⌘S", "⌃⌘P", "⌃⌘F", "⌃⌘E",
+            // e09b's three portability verbs. Their base characters are `x`, `b` and `i`
+            // because no other action had them: this registry's rule is that no two actions
+            // share a base character whatever their modifiers (F-110, F-134).
+            "⇧⌘X", "⇧⌘B", "⇧⌘I",
+            "⌘W",
             "⌃⌘R", "⌃⌘Z", "⌃⌘H", "⌃⌘M",
             "⌃⌘Y", "⌃⌘U", "⌃⌘L",
             // e09a's destination, in the same modifier family as every other View-menu verb.
@@ -44,6 +49,11 @@ struct ShortcutsHelpTests {
             .sessionActionPause,
             .sessionActionComplete,
             .commandPauseSensing,
+            // e09b: the same three titles the Privacy pane's buttons draw, so a person finds
+            // them in both places under one name.
+            .settingsPrivacyExportData,
+            .settingsPrivacyExportSettings,
+            .settingsPrivacyImportSettings,
             .commandCloseWindow,
             // e05's four View-menu verbs, so every action on a nudge surface is discoverable
             // here as well as reachable (F-145).
@@ -111,6 +121,9 @@ struct ShortcutsHelpTests {
             "session.pause",
             "session.complete",
             "sensing.pause",
+            "data.export",
+            "settings.export",
+            "settings.import",
             "shell.closeWindow",
             "shell.test.unbound",
             "nudge.relevant",

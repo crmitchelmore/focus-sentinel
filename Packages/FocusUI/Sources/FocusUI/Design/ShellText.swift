@@ -279,6 +279,16 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case settingsPrivacyRetentionThirtyDays = "settings.privacy.retention.thirtyDays"
     case settingsPrivacyRetentionNinetyDays = "settings.privacy.retention.ninetyDays"
     case settingsPrivacyRetentionForever = "settings.privacy.retention.forever"
+    // Taking it away (F-110, F-134, focus-ix9): one heading, one sentence, three verbs. The same
+    // three titles are the File menu's, so a person finds them in both places under one name.
+    case settingsPrivacyPortabilityHeading = "settings.privacy.portability.heading"
+    case settingsPrivacyPortabilityExplanation = "settings.privacy.portability.explanation"
+    case settingsPrivacyExportData = "settings.privacy.portability.exportData"
+    case settingsPrivacyExportSettings = "settings.privacy.portability.exportSettings"
+    case settingsPrivacyImportSettings = "settings.privacy.portability.importSettings"
+    /// The title of the one alert this pane can raise: an import the app refused, with the
+    /// reason beside it. A refusal that only reached the log is a refusal nobody saw.
+    case settingsPrivacyImportRefused = "settings.privacy.portability.importRefused"
     // Delete everything (e07a, focus-6pr.3): the pane's one destructive control and its sheet.
     case settingsPrivacyDeleteHeading = "settings.privacy.delete.heading"
     case settingsPrivacyDeleteExplanation = "settings.privacy.delete.explanation"
