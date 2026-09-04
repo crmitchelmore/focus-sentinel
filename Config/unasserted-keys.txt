@@ -28,4 +28,4 @@ sensing.media.audioListenerCount · how many audio devices this Mac has a listen
 sensing.media.microphoneRunning · whether somebody on this Mac was on a call while the gate ran · NONE-BY-DESIGN
 sensing.presentation.agreementCount · how many of the presentation signals agreed, which is a property of what was on the screen · NONE-BY-DESIGN
 sensing.wasRunningBeforeProbe · whether watching was on before the pause probe, which the probe itself then moves; asserting it would pin the probe's own ordering rather than the app · focus-psh
-rendering.driveExclusionList.addableCount · how many applications happen to be running on the machine the gate ran on · NONE-BY-DESIGN
+shellRendering.driveExclusionList.addableCount · how many applications happen to be running on the machine the gate ran on · NONE-BY-DESIGN

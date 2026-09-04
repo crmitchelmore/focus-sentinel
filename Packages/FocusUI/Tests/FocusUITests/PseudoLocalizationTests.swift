@@ -91,6 +91,14 @@ struct PseudoLocalizationTests {
             // fewer.
             let plainInk = PNGCompare.inkPixels(plain.pixels)
             let pseudoInk = PNGCompare.inkPixels(pseudo.pixels)
+            // **A render with no ink in it is a render CoreGraphics did not make**, not a view
+            // that drew nothing (focus-u3w). Past roughly sixteen thousand rows the pixel buffer
+            // comes back empty, and "more ink than the plain pass" would then be a comparison
+            // between a picture and a blank rectangle. Named here so the failure says which.
+            #expect(
+                plainInk > 0 && pseudoInk > 0,
+                "\(component.rawValue) at \(size.rawValue) rendered no ink: \(plain.height) and \(pseudo.height) rows"
+            )
             #expect(
                 pseudoInk > plainInk,
                 "\(component.rawValue) drew no extra text when pseudo-localised (\(plainInk) → \(pseudoInk)): the strings never reached the view"

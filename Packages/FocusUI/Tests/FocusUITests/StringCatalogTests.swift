@@ -104,8 +104,16 @@ struct StringCatalogTests {
         // item off the pack and an app off the presentation-exclusion list; that list could never
         // hold a row, because nothing in the application could add one, so its section went too
         // (focus-1qm) and only the context pack's verb is left.
+        //
+        // **"Remove" is a pair again** (focus-u3w). The exclusion list came back with the add
+        // affordance whose absence was the reason it went, so its Remove button exists and has a
+        // row to sit beside. It is the `priority.complete.action.cancel` case exactly: the same
+        // word for the same act in two places a person reaches it from — take this off a list —
+        // and giving one of them a different verb would be inventing a distinction to satisfy a
+        // test.
         #expect(
             duplicated == [
+                ["context.action.remove", "settings.intervention.exclusion.remove"],
                 ["priority.complete.action.cancel", "shell.menuBar.cancelSnooze"],
                 ["shell.cockpit.heading", "shell.window.cockpit.title"],
                 ["shell.help.heading", "shell.window.help.title"]

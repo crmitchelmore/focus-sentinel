@@ -643,17 +643,29 @@ struct InterventionSettingsSnapshotTests {
     @Test("turning interruption down changes the matrix a person is shown")
     func reducedInterruptionChangesTheMatrix() throws {
         let normal = try SnapshotHarness.render(
-            InterventionSettingsView(settings: InterventionSettingsFixture.fresh),
+            // `screens: []` for the reason every other render in this suite has it: with no
+            // display attached there is nothing to clamp to, so `BoundedSurface` draws the
+            // column whole. **Without it this render went blank** the moment focus-u3w's
+            // exclusion section pushed the pane past this Mac's ceiling — past it the container
+            // is a `ScrollView`, which `ImageRenderer` cannot rasterise at all — and two blank
+            // pictures compare equal, so the assertion below silently stopped meaning anything.
+            InterventionSettingsView(settings: InterventionSettingsFixture.fresh, screens: []),
             traits: SnapshotHarness.variantTraits(named: "light"),
             width: Self.paneWidth,
             name: "interventionSettings.distinctness.normal"
         )
         let reduced = try SnapshotHarness.render(
-            InterventionSettingsView(settings: InterventionSettingsFixture.reduced),
+            InterventionSettingsView(settings: InterventionSettingsFixture.reduced, screens: []),
             traits: SnapshotHarness.variantTraits(named: "light"),
             width: Self.paneWidth,
             name: "interventionSettings.distinctness.reduced"
         )
+        // Both must have ink in them, or "these two pictures differ" is a claim about two
+        // rectangles: a blank render and a blank baseline compared equal for a whole epic in
+        // this lane's history (focus-pq8), and that defect wearing different clothes is exactly
+        // what the `screens: []` note above is about.
+        #expect(PNGCompare.inkPixels(normal.pixels) > 0)
+        #expect(PNGCompare.inkPixels(reduced.pixels) > 0)
         #expect(PNGCompare.areDistinct(normal.pixels, reduced.pixels))
     }
 }

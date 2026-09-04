@@ -9,19 +9,17 @@ import Testing
 /// One render of one component under one set of conditions.
 struct Snapshot {
     let name: String
-    /// The PNG bytes, or `nil` for a render the encoder would not take.
+    /// The PNG bytes, or `nil` for a render CoreGraphics would not produce.
     ///
-    /// **Measured, and it is a fact about the encoder rather than about the picture**
-    /// (focus-6n2). `ImageRenderer` produces a `CGImage` for the Privacy pane at
-    /// `accessibilityLarge` under pseudo-localisation — 984 points wide and close to sixteen
-    /// thousand tall, because the lane renders that pane unclamped on purpose (see
-    /// `SnapshotComponent.privacySettings`) — and `CGImageDestination` then refuses to write it.
-    /// One render encoded at 15 950 rows and the next, 100 rows taller, did not.
+    /// **Measured** (focus-6n2, focus-u3w). `ImageRenderer` hands back a `CGImage` for a render
+    /// close to sixteen thousand rows tall, and then `CGImageDestination` refuses to encode it
+    /// **and** the pixel buffer decoded from it comes back empty. One render encoded at 984×15 950
+    /// and the next, a hundred rows taller, produced neither bytes nor ink.
     ///
-    /// It is optional rather than fatal because **the comparison that needs this render does not
-    /// need bytes.** `PseudoLocalizationTests` counts ink in `pixels`, which is decoded from the
-    /// `CGImage` directly. Nothing is loosened: `verify(_:)` refuses outright when the bytes are
-    /// missing, so no baseline can be recorded, compared, or quietly skipped without them.
+    /// So this is optional to make the failure *legible*, never to let it pass: `verify(_:)`
+    /// refuses outright when the bytes are missing, and every reading taken from `pixels` has to
+    /// require ink for itself — a zero-ink buffer is what this failure looks like from the other
+    /// side, and it compares equal to every other zero-ink buffer.
     let data: Data?
     let pixels: PixelBuffer
 

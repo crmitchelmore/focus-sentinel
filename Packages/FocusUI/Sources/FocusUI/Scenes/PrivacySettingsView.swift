@@ -106,6 +106,24 @@ public struct PrivacySettingsView: View {
     /// a control answering from its own memory would go on saying *90 days* after a
     /// delete-everything rebuilt the store.
     private let retention: RetentionWindow
+    /// **Which half of this pane to draw**, or `nil` for the whole of it, which is what the
+    /// application always asks for (focus-u3w).
+    ///
+    /// It exists for the snapshot lane and it is not a product state. The pane is photographed
+    /// unclamped — a bounded one is a `ScrollView`, which `ImageRenderer` cannot rasterise at
+    /// all — and unclamped it now runs to roughly sixteen thousand rows at the largest text size
+    /// under pseudo-localisation, which is past where CoreGraphics stops producing a picture:
+    /// measured, an encode succeeded at 984×15 950 and the next render, a hundred rows taller,
+    /// came back with neither bytes nor ink. Two halves are two pictures of the same pane, and
+    /// each of them is a picture.
+    private let half: Half?
+
+    /// The pane's two halves, in the order a person reads them: **what is mine and what happens
+    /// to it**, then **what the app can see and what it made of it**.
+    public enum Half: String, Sendable, CaseIterable, Hashable {
+        case ownership
+        case insight
+    }
     /// The displays this pane bounds itself against; `nil` for the live ones. Injectable for the
     /// reason `NudgePanelController.displays` is: the display this defect is worst on is a 13-inch
     /// laptop, and no lane can hand the pane one if it reads `NSScreen` for itself.
@@ -122,6 +140,7 @@ public struct PrivacySettingsView: View {
         capabilities: CapabilityMatrix = CapabilityMatrix(),
         verdict: VerdictSnapshot? = nil,
         retention: RetentionWindow = .committedDefault,
+        half: Half? = nil,
         screens: ShellScreens = nil,
         onAction: @escaping (PrivacySettingsAction) -> Void = { _ in }
     ) {
@@ -130,6 +149,7 @@ public struct PrivacySettingsView: View {
         self.capabilities = capabilities
         self.verdict = verdict
         self.retention = retention
+        self.half = half
         self.screens = screens
         self.onAction = onAction
     }
@@ -185,7 +205,46 @@ public struct PrivacySettingsView: View {
         .defaultFocus($focus, .privacyRevealStore)
     }
 
-    private var content: some View {
+    var content: some View {
+        VStack(alignment: .leading, spacing: spacing) {
+            if half != .insight { ownershipContent }
+            if half == nil { Divider() }
+            if half != .ownership { insightContent }
+            Spacer(minLength: 0)
+        }
+        .padding(spacing * 2)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        // **What this pane drew, reported by this pane** (focus-7ow).
+        //
+        // Every one of these used to be reported by the Settings *window*, from the argument it
+        // was about to pass in — so a defect between the argument and the screen was invisible,
+        // and the whole pane was invisible whenever somebody had a different tab selected. The
+        // window drives the selection from the composition root now, and these are stamps on the
+        // values this view is actually holding.
+        .shellRendered(.privacyStorePath, storePath)
+        // The number the sweep reads, not the label the button draws (F-115, focus-l7n).
+        .shellRendered(.retentionWindow, retention.storedDays)
+        .shellRendered(.privacyCapabilities, capabilities.renderedDescription)
+        .shellRendered(
+            .privacySummary,
+            SensingStatusView.renderedDescription(
+                summary: summary,
+                capabilities: capabilities,
+                showsReducedCapabilities: false
+            )
+        )
+        // The whole summary and the whole verdict, derived rather than enumerated: the sentence
+        // above is a projection of six facts, and the band is one field of a verdict that also
+        // carries its subject, its confidence and its explanation (focus-7ow).
+        .shellRendered(.sensingDetail, ShellValueDigest.describe(summary))
+        .shellRendered(.verdictBand, verdict?.band?.rawValue ?? "none")
+        .shellRendered(.verdictDetail, ShellValueDigest.describe(verdict))
+    }
+
+    /// **What is mine, and what happens to it**: where the data lives, the two things the app
+    /// does not do, how long it is kept, how to take it away, and how to destroy it.
+    @ViewBuilder
+    private var ownershipContent: some View {
         VStack(alignment: .leading, spacing: spacing) {
             ShellText(.settingsPrivacyStatement)
                 .lineLimit(nil)
@@ -352,9 +411,15 @@ public struct PrivacySettingsView: View {
                     cancel: { isConfirmingDeletion = false }
                 )
             }
+        }
+    }
 
-            Divider()
-
+    /// **What the app can see, and what it made of it**: the sensing summary, the capability
+    /// table, the cascade it decides through, and the verdict it reached. Nothing here offers
+    /// anything to press — F-126 asks for exactly that, and R-33 makes it structural.
+    @ViewBuilder
+    private var insightContent: some View {
+        VStack(alignment: .leading, spacing: spacing) {
             // What is being watched right now, with its working shown — including the lines
             // whose answer is "no". A surface that only reported the interesting half would be
             // showing half of it.
@@ -386,36 +451,7 @@ public struct PrivacySettingsView: View {
             // the capability table above says what the app can see, and this says what it made
             // of it. Neither offers anything to press.
             VerdictInspectorView(verdict: verdict)
-
-            Spacer(minLength: 0)
         }
-        .padding(spacing * 2)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        // **What this pane drew, reported by this pane** (focus-7ow).
-        //
-        // Every one of these used to be reported by the Settings *window*, from the argument it
-        // was about to pass in — so a defect between the argument and the screen was invisible,
-        // and the whole pane was invisible whenever somebody had a different tab selected. The
-        // window drives the selection from the composition root now, and these are stamps on the
-        // values this view is actually holding.
-        .shellRendered(.privacyStorePath, storePath)
-        // The number the sweep reads, not the label the button draws (F-115, focus-l7n).
-        .shellRendered(.retentionWindow, retention.storedDays)
-        .shellRendered(.privacyCapabilities, capabilities.renderedDescription)
-        .shellRendered(
-            .privacySummary,
-            SensingStatusView.renderedDescription(
-                summary: summary,
-                capabilities: capabilities,
-                showsReducedCapabilities: false
-            )
-        )
-        // The whole summary and the whole verdict, derived rather than enumerated: the sentence
-        // above is a projection of six facts, and the band is one field of a verdict that also
-        // carries its subject, its confidence and its explanation (focus-7ow).
-        .shellRendered(.sensingDetail, ShellValueDigest.describe(summary))
-        .shellRendered(.verdictBand, verdict?.band?.rawValue ?? "none")
-        .shellRendered(.verdictDetail, ShellValueDigest.describe(verdict))
     }
 
     /// The store's location, as one string: what the person reads, and what the receipt reports.
