@@ -47,8 +47,8 @@ it to be green: a red line means nothing if the clean run was red too.
 
 | stage | assertions witnessed | PROVEN | CANNOT-GO-RED |
 |---|---|---|---|
-| `selfcheck-debug` / `selfcheck-release` | 172 | 172 | — |
-| `notification-denied` (+ Release twin) | 17 | 17 | — |
+| `selfcheck-debug` / `selfcheck-release` | 176 | 176 | — |
+| `notification-denied` (+ Release twin) | 19 | 19 | — |
 | `focus-steal` (+ Release twin) | 14 | 14 | — |
 | `forbidden-binary` | 6 | 6 | — |
 | `boundaries-binary` | 9 | 9 | 1 (the row literal, superseded by B-14/B-15) |
@@ -59,7 +59,7 @@ it to be green: a red line means nothing if the clean run was red too.
 | `unit-counts` | 5 | 5 | — |
 | `evaluation` (B1–B5) | 9 | 9 | — |
 | `entitlements-debug` / `entitlements-release` | 6 | 6 | 2 (seven restatement lines; one unreachable branch) |
-| **total** | **239** | **237** | **5 findings** |
+| **total** | **245** | **243** | **5 findings** |
 
 The seven rows the gate audit named as unable to go red are all fallible now, and each was run:
 `self-check.sh`'s popover overflow (SC-37, SC-38) and its committed width (SC-39, SC-40),
@@ -498,6 +498,42 @@ And the four readings that stop the ten above being green for the wrong reason:
 | I3-12 | the running-app half | `capabilities[accessibilityWindowContext].state = "available"` (H-JSON) | the binary half stays green: this is the Mac where somebody granted it by hand | **PROVEN** — `FAIL [I-3] report-available.json: accessibility (accessibilityWindowContext) is in a state the table allows, not a held grant: 'available'` |
 | I3-13 | the counter | `requestAuthorizationCallCount = 1` (H-JSON) | as I3-12 | **PROVEN** — `FAIL [I-3] report-count.json: requestAuthorizationCallCount is zero — the app asked for nothing` |
 | I3-14 | the surface scan | `authorisationSurfaceScan.suspects = ["tccd"]` (H-JSON) | the scan's own `wasTaken` and `windowsOwnedByThisProcess` are asserted beside it | **PROVEN** — `FAIL [I-3] report-suspects.json: no authorisation surface was on screen while the app ran` |
+
+### focus-p3dl — the surface scan is a DELTA, not a photograph of the screen — `selfcheck-*`, `grants`, `notification-denied-*`
+
+I3-14 above proves the verdict goes red for a dialog on the screen. It could not distinguish a
+dialog **the app put there** from one that was already there, and on 2026-09-05 that difference
+reddened three stages: an unrelated tool had a `UserNotificationCenter` alert open asking for
+access to a removable volume, and `selfcheck-debug`, `selfcheck-release` and `grants` all failed
+with `got: ['UserNotificationCenter']`. The reading is now the delta against a baseline
+`scripts/authorisation-baseline.sh` takes with `Tools/windowid --window-owners` before the app is
+launched.
+
+H-JSON, run by `/private/tmp/mw-s12/run.zsh <label> <mutation>` against a pinned-`SESSION_DIR`,
+`trap`-free copy of `self-check.sh` run on the Debug product of `/private/tmp/focus-s12-dd`, whose
+reader is extracted from the script and re-run on a doctored copy of the report with the argv the
+stage passes.
+
+**The control is the round's own subject**: the unmutated report carries
+`preexistingAuthorisationSurfaceOwners == ["UserNotificationCenter"]`,
+`preexistingAuthorisationSurfaces == ["UserNotificationCenter #282862"]` and `suspects == []` —
+the pre-existing dialog alone, and the run is **GREEN, `EXIT=0`, 809 ok**, with the dialog still on
+the screen. That is the whole repair, stated as a witness: what was already there is excused by
+name, and nothing else is.
+
+| # | what it protects | mutation (H-JSON) | control | status — the line it printed |
+|---|---|---|---|---|
+| P3DL-01 | the delta | `suspects = ["UserNotificationCenter"]; suspectWindowsOnScreen = 2` — a **second** window number from the same process, which is exactly a dialog that arrived while the app ran | the control above: the same owner, one window, in the baseline, is green | **PROVEN** — `FAIL: no authorisation surface the APP put on screen while it runs; pre-existing and not the app's: UserNotificationCenter in 1 window(s)` |
+| P3DL-02 | the baseline | `baselineWasTaken = False; baselineNotTakenBecause = "doctored: no baseline file"` | P3DL-01 — the verdict holds while the subtraction it was computed from goes missing | **PROVEN** — `FAIL: a baseline of the screen was taken before the app launched, to subtract from` |
+| P3DL-03 | the arithmetic | `preexistingAuthorisationSurfaceWindows = 3` against one suspect window seen | P3DL-01 | **PROVEN** — `FAIL: the scan counted at least as many suspect windows as it excused` |
+| P3DL-04 | the two halves of the excuse | `preexistingAuthorisationSurfaceOwners = []` while the count still says one | P3DL-03 — the count holds while the owners it is supposed to name go missing | **PROVEN** — `FAIL: a pre-existing window is a pre-existing owner; the two halves agree` |
+| P3DL-05 | the `grants` twin | `suspects = ["UserNotificationCenter"]` (H-JSON, `check-grants.sh <copy>`) | the unmutated copy is green with the pre-existing dialog named in the pass line | **PROVEN** — `FAIL [I-3] report-p3dl-suspects.json: no authorisation surface appeared while the app ran; pre-existing, not this app's: UserNotificationCenter in 1 window(s)` |
+| P3DL-06 | the `grants` baseline control | `baselineWasTaken = False` | P3DL-05 | **PROVEN** — `FAIL [I-3] report-p3dl-baseline.json: control: a pre-launch baseline was taken to subtract — ''` |
+
+The Swift half is `SelfCheckAuthorisationScanTests`, whose fold gained three shapes:
+`aDialogThatWasAlreadyThere` (excused), `aSecondDialogFromTheSameProcess` (**not** excused — the
+reason the subtraction is by window number rather than by owner) and `aDialogAndNoBaselineAtAll`
+(no baseline, no subtraction, and it says so).
 
 The symbol-universe floor (`UNIVERSE_FLOOR = 2000`, judged per configuration rather than per file)
 was **found by a red run rather than reasoned into place**: the first draft judged it per file and

@@ -5,6 +5,9 @@
 //   windowid <owner name> --include-panels
 //                           the same, for windows at *every* layer — panels included
 //   windowid --grants       report whether this process can drive the live lane at all
+//   windowid --window-owners
+//                           print "<windowNumber>\t<ownerName>" for EVERY on-screen window, at
+//                           every layer. The authorisation-surface baseline (focus-p3dl)
 //
 // ## Why `--include-panels` exists
 //
@@ -122,6 +125,54 @@ func windows(
     return (loose.map(\.record), first.owner)
 }
 
+/// Every on-screen window there is, as `<number>\t<owner>`, at every layer.
+///
+/// **This is the authorisation-surface baseline** (focus-p3dl). The self-check's scan asks
+/// whether a permission dialog is on the screen *while the app runs*, and until this round it
+/// answered "yes" for a dialog that had been sitting there since before the app was launched and
+/// belonged to somebody else entirely. The reading is only about the app if it is a **delta**, so
+/// the launching script takes this list first and the app subtracts it.
+///
+/// Two decisions, both load-bearing:
+///
+/// * **Every layer.** A macOS permission dialog is not an ordinary layer-0 window — measured on
+///   this machine, `UserNotificationCenter`'s alert sits above it — so the layer filter the rest
+///   of this tool applies would hide exactly the windows the baseline exists to record.
+/// * **Every owner, not the six suspect names.** The suspect list lives in
+///   `SelfCheck.authorisationSurfaceOwners` and nowhere else. A copy of it here would be a second
+///   place to change, and a baseline filtered by a stale copy would silently stop covering a
+///   name the app had started watching for.
+///
+/// The window *number* is what makes the subtraction meaningful: an owner alone would let a
+/// second dialog from the same process hide behind the first one's row.
+func printEveryWindowOwner() -> Int32 {
+    let options: CGWindowListOption = [.optionOnScreenOnly, .excludeDesktopElements]
+    guard
+        let raw = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]]
+    else {
+        FileHandle.standardError.write(
+            Data("windowid: the window server named nobody at all\n".utf8)
+        )
+        return 1
+    }
+    let ownerKey = kCGWindowOwnerName as String
+    let numberKey = kCGWindowNumber as String
+    var printed = 0
+    for entry in raw {
+        guard
+            let owner = entry[ownerKey] as? String,
+            let number = entry[numberKey] as? Int
+        else {
+            continue
+        }
+        print("\(number)\t\(owner)")
+        printed += 1
+    }
+    // An empty list is NOT a baseline of "nothing was on screen": it is a reading nobody took,
+    // and the caller has to be able to tell the two apart.
+    return printed > 0 ? 0 : 1
+}
+
 /// Whether this process can drive the live lane.
 ///
 /// Both are *preflight* calls: neither prompts, and neither is ever followed by its
@@ -143,6 +194,7 @@ func usage() -> Never {
             """
             usage: windowid <owner name> [--include-panels]
                    windowid --grants
+                   windowid --window-owners
 
             Prints "<windowNumber> <x> <y> <w> <h>" for each on-screen window owned by the
             named application, front to back. Window *names* are never requested (standing
@@ -155,6 +207,11 @@ func usage() -> Never {
             The owner name is the application's display name — "Focus Sentinel". An exact
             match is tried first; failing that, whitespace and case are ignored, so
             "FocusSentinel" finds the same windows and says so on stderr.
+
+            --window-owners prints "<windowNumber>\t<ownerName>" for every on-screen window at
+            every layer, and exits 1 if there were none. That is the authorisation-surface
+            baseline the self-check subtracts, so a permission dialog that was already on the
+            screen before the app launched is not read as one the app put there.
 
             """.utf8
         )
@@ -172,6 +229,9 @@ switch first {
 case "--grants":
     guard arguments.count == 1 else { usage() }
     exit(reportGrants())
+case "--window-owners":
+    guard arguments.count == 1 else { usage() }
+    exit(printEveryWindowOwner())
 case "-h", "--help":
     usage()
 default:

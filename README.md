@@ -124,10 +124,10 @@ the stage logs are the evidence, and they are kilobytes. A pinned `FOCUS_DERIVED
 | 8 | `entitlement-check.sh` ×2 | no network entitlement, Debug **and** Release; and `get-task-allow` present in Debug, **absent** in Release |
 | 9 | `self-check.sh` ×2 | the app's own zero-grant report of its menu bar, window and key equivalents — and, from e02, its declared URL schemes, its hot-key registration status, the Edit menu's undo title after one scripted in-process mutation, the pre-built capture panel's show latency, and the priority hero's point size against every other type role. From e03 it is **three launches**: the shell report, plus a session seeded back-dated ninety minutes into a store of its own and a **separate** launch that restores it. See "What the self-check adds in e03" below. From F-160 the first launch is **backgrounded and sampled**: `lsof -nP -i -a -p <pid>` every fifth of a second for as long as the process lives, the sample count held to a floor, every sample taken while it was alive, and not one socket — with the sampler first pointed at a process that opens a listening socket, so a clean reading cannot be a tool that cannot read |
 | 9a | `check-focus-steal.sh` | **the panel takes nothing.** Launches the Debug app with `open -g -a` — a background application that has never been frontmost, which is the posture a nudge really fires in — shows the panel and asserts all four of R-89's grant-free readings. See "The nudge loop" below |
-| 9b | `check-notification-denied.sh` | **F-73's degraded path, and what discharges standing condition 5 for e05.** Zero grants, no prompt of any kind, and every rung of the ladder still reaches an in-app surface; `requestAuthorizationCallCount == 0` |
+| 9b | `check-notification-denied.sh` | **F-73's degraded path, and what discharges standing condition 5 for e05.** Zero grants, no prompt of any kind, and every rung of the ladder still reaches an in-app surface; `requestAuthorizationCallCount == 0` — and, from focus-p3dl, *measured* as well as counted: the launch takes an authorisation-surface baseline before it starts and asserts that no dialog **arrived** while the ladder was driven |
 | 9c | `check-focus-steal.sh` again | the same stage against the **Release** product — the artefact this programme ships. A whole-module-optimised binary is not the same binary, which is why the boundary and forbidden stages read both configurations; until this stage existed, every geometry reading in `check-focus-steal.sh` held of a build nobody installs |
 | 9d | `check-notification-denied.sh` again | the same, for the routing half: the 160-cell rung fold, the 80-cell question fold and `requestAuthorizationCallCount == 0`, read from the Release product |
-| 9e | `check-grants.sh` | **invariant I-3 — the app uses no grant it never asked for.** One fold over `Config/tcc-families.txt`, ten TCC-protected API families, and it reads both halves of the claim: no request selector in either configuration's Mach-O (`nm -u` ∪ `strings -a`), and, in this run's two self-check reports, no capability in a state the table does not allow, `requestAuthorizationCallCount == 0`, and no authorisation surface on screen. See "What it says it does not do" |
+| 9e | `check-grants.sh` | **invariant I-3 — the app uses no grant it never asked for.** One fold over `Config/tcc-families.txt`, ten TCC-protected API families, and it reads both halves of the claim: no request selector in either configuration's Mach-O (`nm -u` ∪ `strings -a`), and, in this run's two self-check reports, no capability in a state the table does not allow, `requestAuthorizationCallCount == 0`, and no authorisation surface having **arrived** on screen while the app ran (the delta against a pre-launch baseline — focus-p3dl). See "What it says it does not do" |
 | 10 | `verify-project.sh` again | the build did not rewrite the project |
 
 **Twenty-seven stages — twenty until `focus-steal-release` and `notification-denied-release`
@@ -209,10 +209,24 @@ they are part of the pass/fail contract rather than evidence:
 * **The camera path was never entered.** `cameraState` is `unavailable` unconditionally,
   `cameraRunning` is `false`, and `cameraListenersInstalled` is `0` — on every rig, camera or not.
   That is the assertion, rather than an assertion about this Mac happening to have no camera.
-* **No authorisation surface on screen.** The grant-free scan of every on-screen window owner
-  finds none of `UserNotificationCenter`, `SecurityAgent`, `universalAccessAuthWarn`, `tccd`,
-  `TCCAgent` or `CoreAuthUI` while the app runs. This is the gateable form of "the app never
-  triggers a permission prompt".
+* **No authorisation surface arrived on screen, and it is a *delta*.** The grant-free scan of
+  every on-screen window owner looks for `UserNotificationCenter`, `SecurityAgent`,
+  `universalAccessAuthWarn`, `tccd`, `TCCAgent` and `CoreAuthUI` while the app runs. This is the
+  gateable form of "the app never triggers a permission prompt" — and until focus-p3dl it was
+  written as the different sentence *"no such window is on this Mac's screen"*. The difference was
+  measured on 2026-09-05: an unrelated tool had a `UserNotificationCenter` alert open asking for
+  access to a removable volume, and `selfcheck-debug`, `selfcheck-release` and `grants` all went
+  red for a decision belonging to the person at the keyboard. A build gate does not get to dismiss
+  somebody's permission dialog to make itself green. So every script that launches the app takes a
+  **baseline** first — `Tools/windowid --window-owners`, every on-screen window as
+  `<number>\t<owner>`, from a process that is not the one under test and before it exists — and
+  names it in `FOCUS_AUTHORISATION_BASELINE`. A suspect window whose number is in the baseline is
+  reported as **pre-existing**, by owner and count, and named in the assertion line so a reader can
+  see what was excused; a suspect window that is not is a failure exactly as before. The
+  subtraction is by window *number* rather than by owner, so a **second** dialog from the same
+  process — one the app really did trigger — cannot hide behind the first one's row. The baseline
+  carries its own takenness fact and the gate asserts it: a delta computed against a baseline
+  nobody read is the whole suspect list under a kinder name.
 * **The relaunch-mid-session proof, across two processes.** `--focus-session-seed` writes a
   session back-dated ninety minutes into a temporary store and exits; `--focus-session-restore`
   opens it in a **separate** launch and reports. Asserted: `startedAt` byte-identical, elapsed

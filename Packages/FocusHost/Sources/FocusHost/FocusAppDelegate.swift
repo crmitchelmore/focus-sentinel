@@ -84,6 +84,13 @@ public final class FocusAppDelegate: NSObject, NSApplicationDelegate {
             SelfCheck.runModeAndTerminate(writingTo: path) {
                 var report = SelfCheck.nudgeReport()
                 report["mode"] = "nudge"
+                // **"No prompt of any kind", measured rather than counted** (focus-p3dl). This is
+                // the launch `check-notification-denied.sh` drives every rung of the ladder in,
+                // and the only thing that said no permission dialog appeared during it was a
+                // counter the app increments itself. The scan is a delta against the baseline the
+                // launching script took before this process existed, so a dialog belonging to
+                // somebody else's tool is excused by name and one that ARRIVED is not.
+                report["authorisationSurfaceScan"] = SelfCheck.authorisationSurfaceReport()
                 return report
             }
             return

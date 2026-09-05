@@ -74,6 +74,18 @@ print "app:    $APP"
 print "report: $OUT"
 print
 
+# --- the authorisation-surface baseline, taken before the app exists (focus-p3dl) --------------
+#
+# "No prompt of any kind" is this stage's own sentence, and until this round the only thing that
+# measured it was a counter the app increments itself. The launch below now also reports the
+# on-screen authorisation-surface scan, and that reading is only about the app if it is a delta:
+# what is on the screen while it runs, minus what was on the screen before it started. See the
+# header of `scripts/authorisation-baseline.sh` for the dialog that made the difference visible.
+source "$FOCUS_SCRIPTS_DIR/authorisation-baseline.sh"
+AUTHORISATION_BASELINE="$(mktemp -t focus-authorisation-baseline).txt"
+trap 'rm -f -- "$AUTHORISATION_BASELINE"' EXIT INT TERM
+focus_take_authorisation_baseline "$AUTHORISATION_BASELINE"
+
 print "== $BINARY --focus-self-check $OUT --focus-self-check-nudge"
 "$BINARY" --focus-self-check "$OUT" --focus-self-check-nudge
 run_rc=$?
@@ -162,6 +174,45 @@ check(
     "the application asked for no notification authorisation",
     report.get("requestAuthorizationCallCount"),
 )
+
+# --- and nothing appeared on the screen either (focus-p3dl) ------------------------------------
+#
+# The counter above is the app counting itself. This is the other side of the same claim, read off
+# the window server: while every rung of the ladder was driven, no authorisation dialog ARRIVED.
+#
+# A delta, not a photograph. `scripts/authorisation-baseline.sh` recorded every on-screen window
+# before this launch existed; a suspect window whose number is in that file was somebody else's
+# business before the app started and is named as pre-existing, and a suspect window that is not
+# in it is a failure. The baseline's own takenness is asserted beside the verdict, because a delta
+# computed against a baseline nobody read is the whole suspect list under a kinder name.
+scan = report.get("authorisationSurfaceScan") or {}
+if scan.get("wasTaken") is True:
+    preexisting = scan.get("preexistingAuthorisationSurfaceOwners") or []
+    excused = (
+        "; pre-existing, not this app's: {} in {} window(s)".format(
+            ", ".join(preexisting), scan.get("preexistingAuthorisationSurfaceWindows")
+        )
+        if preexisting
+        else ""
+    )
+    check(
+        scan.get("baselineWasTaken") is True,
+        "control: a pre-launch baseline was taken to subtract — {!r}".format(
+            scan.get("baselineNotTakenBecause")
+        ),
+        scan.get("baselineWindowCount"),
+    )
+    check(
+        (scan.get("suspects") or []) == [],
+        "no authorisation surface appeared while the ladder was driven" + excused,
+        scan.get("suspects"),
+    )
+else:
+    print(
+        "     the on-screen authorisation-surface scan was not taken — {}".format(
+            scan.get("notTakenBecause") or "no reason reported"
+        )
+    )
 
 # --- the authorisation reading, which used to be a statement about a type (focus-652) ----------
 #

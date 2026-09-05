@@ -360,10 +360,31 @@ for report_path in report_paths:
             f"{label}: control: the authorisation-surface scan could see this app's own window",
             scan.get("windowsOwnedByThisProcess"),
         )
+        # **A DELTA, not a photograph of the screen** (focus-p3dl). `suspects` is the set of
+        # authorisation-surface owners whose windows were NOT on the screen before the app
+        # launched: a dialog somebody else's tool had open is a property of this Mac, and I-3 is
+        # a claim about this application. The pre-existing set is named in the line so a reader
+        # can see what was excused and satisfy themselves it was not the app's.
+        preexisting = scan.get("preexistingAuthorisationSurfaceOwners") or []
+        excused = (
+            "; pre-existing, not this app's: {} in {} window(s)".format(
+                ", ".join(preexisting),
+                scan.get("preexistingAuthorisationSurfaceWindows"),
+            )
+            if preexisting
+            else ""
+        )
         check(
             (scan.get("suspects") or []) == [],
-            f"{label}: no authorisation surface was on screen while the app ran",
+            f"{label}: no authorisation surface appeared while the app ran{excused}",
             scan.get("suspects"),
+        )
+        # The baseline is the subtraction's own non-vacuity fact: a delta taken against a
+        # baseline nobody read is the whole suspect list with a kinder name.
+        check(
+            scan.get("baselineWasTaken") is True,
+            f"{label}: control: a pre-launch baseline was taken to subtract — {scan.get('baselineNotTakenBecause')!r}",
+            scan.get("baselineWindowCount"),
         )
         check(
             (scan.get("ownerCount") or 0) >= 1,

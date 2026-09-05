@@ -7,13 +7,17 @@ import Testing
 /// The process identifier the fixture calls "ours", and one that is somebody else's.
 private let ownPID: pid_t = 4_242
 private let otherPID: pid_t = 91
+/// The window number of a dialog that was on the screen before the app launched, and of one that
+/// arrived while it ran. Two numbers, one owner — which is the whole point of focus-p3dl.
+private let alreadyThereWindow = 282_862
+private let arrivedWindow = 282_999
 
-private func window(_ ownerName: String, pid: pid_t) -> WindowMetadataValue {
+private func window(_ ownerName: String, pid: pid_t, number: Int? = nil) -> WindowMetadataValue {
     WindowMetadataValue(
         ownerName: ownerName,
         ownerPID: pid,
         layer: 0,
-        number: Int(pid) * 10,
+        number: number ?? Int(pid) * 10,
         bounds: ScreenRect(x: 0, y: 0, width: 800, height: 600),
         isOnScreen: true,
         alpha: 1
@@ -32,6 +36,17 @@ enum AuthorisationScanShape: String, CaseIterable {
     case ourWindowAndNoDialog
     /// A dialog owner really is on screen. This is the defect the reading exists to catch.
     case ourWindowAndADialog
+    /// **focus-p3dl.** The dialog was on the screen BEFORE the app launched — somebody else's
+    /// tool asking somebody else's question — and the baseline says so. It is reported as
+    /// pre-existing and the verdict is clean.
+    case aDialogThatWasAlreadyThere
+    /// **focus-p3dl, and the reason the subtraction is by window NUMBER.** One dialog from
+    /// before, and a second one from the SAME process that arrived while the app ran. An
+    /// owner-level baseline would excuse both; this one excuses exactly the first.
+    case aSecondDialogFromTheSameProcess
+    /// A dialog arrived, and the baseline could not be read at all. Nothing is subtracted, which
+    /// is the behaviour this reading has always had — and `baselineWasTaken` says so.
+    case aDialogAndNoBaselineAtAll
 
     var rows: [WindowMetadataValue] {
         switch self {
@@ -48,17 +63,56 @@ enum AuthorisationScanShape: String, CaseIterable {
                 // substring list `authorisationSurfaceOwners` holds.
                 window("universalAccessAuthWarn", pid: otherPID)
             ]
+        case .aDialogThatWasAlreadyThere, .aDialogAndNoBaselineAtAll:
+            [
+                window("Focus Sentinel", pid: ownPID),
+                window("UserNotificationCenter", pid: otherPID, number: alreadyThereWindow)
+            ]
+        case .aSecondDialogFromTheSameProcess:
+            [
+                window("Focus Sentinel", pid: ownPID),
+                window("UserNotificationCenter", pid: otherPID, number: alreadyThereWindow),
+                window("UserNotificationCenter", pid: otherPID, number: arrivedWindow)
+            ]
+        }
+    }
+
+    /// The baseline this shape is scanned against — what was on the screen before the app
+    /// launched. NOT TAKEN for the shapes that predate focus-p3dl: no baseline, no subtraction,
+    /// which is exactly the reading the gate had before this round.
+    var baseline: SelfCheck.AuthorisationSurfaceBaseline {
+        switch self {
+        case .aDialogThatWasAlreadyThere, .aSecondDialogFromTheSameProcess:
+            SelfCheck.AuthorisationSurfaceBaseline.parse(
+                "\(alreadyThereWindow)\tUserNotificationCenter\n999\tDock\n",
+                from: "(fixture)"
+            )
+        default:
+            .notTaken("(fixture) no baseline was supplied")
         }
     }
 
     /// What the gate must conclude, spelled out here independently of the code under test:
     /// whether the reading was taken, whether the control passed, and whether the verdict is
-    var expectation: (wasTaken: Bool, sawItsOwnWindow: Bool, suspects: [String]) {
+    var expectation: (
+        wasTaken: Bool,
+        sawItsOwnWindow: Bool,
+        suspects: [String],
+        baselineWasTaken: Bool,
+        preexistingWindows: Int
+    ) {
         switch self {
-        case .nothingAtAll: (false, false, [])
-        case .blindToItsOwnProcess: (true, false, [])
-        case .ourWindowAndNoDialog: (true, true, [])
-        case .ourWindowAndADialog: (true, true, ["universalAccessAuthWarn"])
+        case .nothingAtAll: (false, false, [], false, 0)
+        case .blindToItsOwnProcess: (true, false, [], false, 0)
+        case .ourWindowAndNoDialog: (true, true, [], false, 0)
+        case .ourWindowAndADialog: (true, true, ["universalAccessAuthWarn"], false, 0)
+        // Already there before the app was: excused by name, and the verdict is clean.
+        case .aDialogThatWasAlreadyThere: (true, true, [], true, 1)
+        // One of the two was already there. The other arrived, and it is not excused by its
+        // twin's row in the baseline.
+        case .aSecondDialogFromTheSameProcess: (true, true, ["UserNotificationCenter"], true, 1)
+        // No baseline is no subtraction — the pre-round reading, and it fails.
+        case .aDialogAndNoBaselineAtAll: (true, true, ["UserNotificationCenter"], false, 0)
         }
     }
 }
@@ -96,7 +150,11 @@ struct SelfCheckAuthorisationScanTests {
     typealias ScanShape = AuthorisationScanShape
 
     static func scan(_ shape: ScanShape) -> [String: Any] {
-        SelfCheck.authorisationSurfaceReport(rows: shape.rows, ownProcessIdentifier: ownPID)
+        SelfCheck.authorisationSurfaceReport(
+            rows: shape.rows,
+            ownProcessIdentifier: ownPID,
+            baseline: shape.baseline
+        )
     }
 
     // MARK: - 1 · the fold, over the whole space
@@ -121,7 +179,87 @@ struct SelfCheckAuthorisationScanTests {
                 report["suspects"] as? [String] == expected.suspects,
                 "\(shape.rawValue): suspects"
             )
+            #expect(
+                report["baselineWasTaken"] as? Bool == expected.baselineWasTaken,
+                "\(shape.rawValue): baselineWasTaken"
+            )
+            #expect(
+                report["preexistingAuthorisationSurfaceWindows"] as? Int
+                    == expected.preexistingWindows,
+                "\(shape.rawValue): preexistingAuthorisationSurfaceWindows"
+            )
+            // The arithmetic, per shape: everything the scan saw is either excused or accused.
+            let seen = report["suspectWindowsOnScreen"] as? Int ?? -1
+            let excused = report["preexistingAuthorisationSurfaceWindows"] as? Int ?? -1
+            #expect(seen >= excused, "\(shape.rawValue): suspectWindowsOnScreen")
         }
+    }
+
+    // MARK: - 1a · the delta itself (focus-p3dl)
+
+    /// **The line this round turns on.** A dialog that was on the screen before the app launched
+    /// is reported as pre-existing — owner and count — and is not the app's fault.
+    @Test("a dialog that was already on screen is excused, by owner and by count")
+    func aPreexistingDialogIsNotTheApps() {
+        let report = Self.scan(.aDialogThatWasAlreadyThere)
+        #expect(report["suspects"] as? [String] == [])
+        #expect(
+            report["preexistingAuthorisationSurfaceOwners"] as? [String]
+                == ["UserNotificationCenter"]
+        )
+        #expect(report["preexistingAuthorisationSurfaceWindows"] as? Int == 1)
+        #expect(
+            report["preexistingAuthorisationSurfaces"] as? [String]
+                == ["UserNotificationCenter #\(alreadyThereWindow)"]
+        )
+        #expect(report["suspectWindowsOnScreen"] as? Int == 1)
+    }
+
+    /// **And the excuse does not generalise from the owner to the process.** A second dialog from
+    /// the same process, with a number the baseline never saw, is the app's to answer for. This
+    /// is why the subtraction is by window number: an owner-level baseline reports `[]` here.
+    @Test("a second dialog from the same process is not excused by the first")
+    func theExcuseIsPerWindowRatherThanPerOwner() {
+        let report = Self.scan(.aSecondDialogFromTheSameProcess)
+        #expect(report["suspects"] as? [String] == ["UserNotificationCenter"])
+        #expect(report["preexistingAuthorisationSurfaceWindows"] as? Int == 1)
+        #expect(report["suspectWindowsOnScreen"] as? Int == 2)
+    }
+
+    /// **No baseline is no subtraction**, and it says so rather than reporting a clean delta it
+    /// never computed. A run with the variable unset gets the reading the gate had before this
+    /// round: every dialog on screen is a finding.
+    @Test("a scan with no baseline subtracts nothing, and publishes that it took none")
+    func noBaselineSubtractsNothing() {
+        let report = Self.scan(.aDialogAndNoBaselineAtAll)
+        #expect(report["baselineWasTaken"] as? Bool == false)
+        #expect((report["baselineNotTakenBecause"] as? String ?? "").isEmpty == false)
+        #expect(report["suspects"] as? [String] == ["UserNotificationCenter"])
+        #expect(report["preexistingAuthorisationSurfaces"] as? [String] == [])
+    }
+
+    /// The baseline is parsed from what `Tools/windowid --window-owners` really writes, and a
+    /// file nobody could read is NOT TAKEN rather than an empty baseline.
+    @Test("the baseline reads windowid's own output, and an unreadable one is not taken")
+    func theBaselineParsesWhatTheToolWrites() {
+        let parsed = SelfCheck.AuthorisationSurfaceBaseline.parse(
+            "241272\tControl Centre\n282862\tUserNotificationCenter\n",
+            from: "(fixture)"
+        )
+        #expect(parsed.wasTaken)
+        #expect(parsed.windowCount == 2)
+        #expect(parsed.contains(windowNumber: 282_862))
+        #expect(parsed.contains(windowNumber: 1) == false)
+
+        let empty = SelfCheck.AuthorisationSurfaceBaseline.parse("", from: "(fixture)")
+        #expect(empty.wasTaken == false)
+        #expect(empty.notTakenBecause.isEmpty == false)
+        // A baseline nobody took excuses nothing — including a number it happens to hold.
+        #expect(empty.contains(windowNumber: 282_862) == false)
+
+        let missing = SelfCheck.AuthorisationSurfaceBaseline.fromEnvironment([:])
+        #expect(missing.wasTaken == false)
+        #expect(missing.notTakenBecause.contains("FOCUS_AUTHORISATION_BASELINE"))
     }
 
     /// **The line the repair turns on.** An empty scan is NOT TAKEN, and its `suspects` are empty
@@ -161,6 +299,10 @@ struct SelfCheckAuthorisationScanTests {
         #expect(Set(ScanShape.allCases.map { $0.expectation.wasTaken }) == [true, false])
         #expect(Set(ScanShape.allCases.map { $0.expectation.sawItsOwnWindow }) == [true, false])
         #expect(ScanShape.allCases.contains { !$0.expectation.suspects.isEmpty })
+        // And the baseline half discriminates too: a table that answered "not taken" everywhere
+        // would pass every row above while proving nothing about the subtraction.
+        #expect(Set(ScanShape.allCases.map { $0.expectation.baselineWasTaken }) == [true, false])
+        #expect(ScanShape.allCases.contains { $0.expectation.preexistingWindows > 0 })
     }
 
     /// The suspect list the verdict is computed against is not empty either. A ban whose needle

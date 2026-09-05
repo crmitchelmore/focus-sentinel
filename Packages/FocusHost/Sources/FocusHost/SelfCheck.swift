@@ -3898,6 +3898,33 @@ enum SelfCheck {
     ///   *display* name (measured: `Focus Sentinel`, with a space), which is a localisable string
     ///   and would make the control drift with the copy.
     ///
+    /// ## Why the verdict is a DELTA, and not the set of dialogs on the screen (focus-p3dl)
+    ///
+    /// The reading's purpose is to catch a prompt **the app** triggers. It was written as "no
+    /// authorisation-surface owner is on the screen at all", which is a different sentence, and
+    /// on 2026-09-05 the difference was measured: an unrelated tool had a `UserNotificationCenter`
+    /// alert open asking for access to a removable volume — a window that had been there before
+    /// the app was built, let alone launched — and `selfcheck-debug`, `selfcheck-release` and
+    /// `grants` all went red with `got: ['UserNotificationCenter']`. Dismissing somebody's
+    /// permission dialog to make a build gate green is not a repair; it is the gate asking to be
+    /// obeyed. The reading was wrong, so the reading changed.
+    ///
+    /// The launching script takes a **baseline** — every on-screen window as `<number>\t<owner>`,
+    /// from `Tools/windowid --window-owners`, before this process exists — and names the file in
+    /// `FOCUS_AUTHORISATION_BASELINE`. A suspect window whose number is in that file was on the
+    /// screen before the app was, and is reported as **pre-existing**. A suspect window that is
+    /// not is a failure exactly as it was before this round.
+    ///
+    /// **The window number, not the owner, is what is subtracted.** An owner-level baseline would
+    /// excuse a *second* `UserNotificationCenter` dialog — one the app really did trigger —
+    /// because the first one's owner was already spoken for. Window numbers are unique per window
+    /// and monotonic, so a new dialog is a new number and no old dialog can lend it cover.
+    ///
+    /// **No baseline means no subtraction.** A hand run with the variable unset reports
+    /// `baselineWasTaken == false` and a delta identical to the whole suspect list, which is the
+    /// behaviour this reading has always had. The gate asserts the baseline WAS taken, so the
+    /// generous path can never be the one the gate walks.
+    ///
     /// The two seams exist so the **witness suite** can drive every outcome of this reading
     /// without a window server: an empty scan, a scan that cannot see this process, and a scan
     /// that names a dialog owner. A repair whose failing state cannot be produced is the shape
@@ -3905,13 +3932,17 @@ enum SelfCheck {
     @MainActor
     static func authorisationSurfaceReport(
         rows: [WindowMetadataValue]? = nil,
-        ownProcessIdentifier: pid_t = ProcessInfo.processInfo.processIdentifier
+        ownProcessIdentifier: pid_t = ProcessInfo.processInfo.processIdentifier,
+        baseline: AuthorisationSurfaceBaseline? = nil
     ) -> [String: Any] {
         let rows = rows ?? WindowMetadataReader.decode(SystemWindowList().copyWindowInfo())
+        let baseline = baseline ?? AuthorisationSurfaceBaseline.fromEnvironment()
         let owners = Array(Set(rows.map(\.ownerName))).sorted()
-        let suspects = owners.filter { owner in
-            authorisationSurfaceOwners.contains { owner.localizedCaseInsensitiveContains($0) }
+        let suspectWindows = rows.filter { row in
+            authorisationSurfaceOwners.contains { row.ownerName.localizedCaseInsensitiveContains($0) }
         }
+        let preexisting = suspectWindows.filter { baseline.contains(windowNumber: $0.number) }
+        let arrived = suspectWindows.filter { !baseline.contains(windowNumber: $0.number) }
         let ownWindows = rows.count { $0.ownerPID == ownProcessIdentifier }
         return [
             "wasTaken": !owners.isEmpty,
@@ -3922,8 +3953,98 @@ enum SelfCheck {
             "owners": owners,
             "ownProcessIdentifier": Int(ownProcessIdentifier),
             "windowsOwnedByThisProcess": ownWindows,
-            "suspects": suspects
+            // The verdict: the owners of every suspect window that was NOT on the screen before
+            // this process was. Sorted and de-duplicated, so it reads the way it always has.
+            "suspects": Array(Set(arrived.map(\.ownerName))).sorted(),
+            // The baseline's own takenness pair. A run with no baseline subtracts nothing and
+            // says so, rather than reporting a delta it could not compute.
+            "baselineWasTaken": baseline.wasTaken,
+            "baselineNotTakenBecause": baseline.notTakenBecause,
+            "baselineWindowCount": baseline.windowCount,
+            // What was already there — owner and count, which is what an assertion line can say
+            // without spelling out a machine's window numbers…
+            "preexistingAuthorisationSurfaceOwners": Array(Set(preexisting.map(\.ownerName)))
+                .sorted(),
+            "preexistingAuthorisationSurfaceWindows": preexisting.count,
+            // …and the windows themselves, which are the machine's business and nobody's
+            // assertion. Listed in `Config/unasserted-keys.txt` for that reason.
+            "preexistingAuthorisationSurfaces": preexisting
+                .map { "\($0.ownerName) #\($0.number)" }
+                .sorted(),
+            // The control the delta needs: how many suspect windows there were in total. Without
+            // it, a subtraction that had swallowed everything and a screen with no dialog on it
+            // publish the same empty verdict.
+            "suspectWindowsOnScreen": suspectWindows.count
         ]
+    }
+
+    /// The windows that were on the screen **before this process was** (focus-p3dl).
+    ///
+    /// Written by `Tools/windowid --window-owners`, one window per line as
+    /// `<number>\t<ownerName>`, and named in `FOCUS_AUTHORISATION_BASELINE`. The owner column is
+    /// carried for the reader's benefit — the subtraction is on the number alone, because that is
+    /// the only column a second dialog from the same process cannot reuse.
+    ///
+    /// It is a value rather than a global so the witness suite can hand the scan a baseline
+    /// directly, including the empty one and the one that could not be read.
+    struct AuthorisationSurfaceBaseline: Sendable {
+        /// Whether a baseline was supplied and parsed at all. `false` means nothing is
+        /// subtracted, never that nothing was on the screen.
+        let wasTaken: Bool
+        /// Why not, when it was not. Empty when it was.
+        let notTakenBecause: String
+        /// Every window number the baseline named.
+        let windowNumbers: Set<Int>
+
+        var windowCount: Int { windowNumbers.count }
+
+        func contains(windowNumber: Int) -> Bool {
+            wasTaken && windowNumbers.contains(windowNumber)
+        }
+
+        /// The environment variable the launching script names the baseline file in.
+        static let environmentKey = "FOCUS_AUTHORISATION_BASELINE"
+
+        /// A baseline that subtracts nothing, and says why.
+        static func notTaken(_ reason: String) -> AuthorisationSurfaceBaseline {
+            AuthorisationSurfaceBaseline(
+                wasTaken: false,
+                notTakenBecause: reason,
+                windowNumbers: []
+            )
+        }
+
+        static func fromEnvironment(
+            _ environment: [String: String] = ProcessInfo.processInfo.environment
+        ) -> AuthorisationSurfaceBaseline {
+            guard let path = environment[environmentKey], !path.isEmpty else {
+                return .notTaken("\(environmentKey) named no baseline file")
+            }
+            guard let text = try? String(contentsOfFile: path, encoding: .utf8) else {
+                return .notTaken("the baseline file at \(path) could not be read")
+            }
+            return parse(text, from: path)
+        }
+
+        /// `<number>\t<owner>` per line. A file with no parsable row is NOT TAKEN: an empty
+        /// baseline and a baseline nobody could read subtract exactly the same nothing, and the
+        /// gate has to be able to tell them apart.
+        static func parse(_ text: String, from path: String) -> AuthorisationSurfaceBaseline {
+            var numbers: Set<Int> = []
+            for line in text.split(separator: "\n") {
+                let columns = line.split(separator: "\t", maxSplits: 1)
+                guard let number = Int(columns.first ?? "") else { continue }
+                numbers.insert(number)
+            }
+            guard !numbers.isEmpty else {
+                return .notTaken("the baseline file at \(path) named no window at all")
+            }
+            return AuthorisationSurfaceBaseline(
+                wasTaken: true,
+                notTakenBecause: "",
+                windowNumbers: numbers
+            )
+        }
     }
 
     /// The processes an authorisation dialog belongs to, named one by one.

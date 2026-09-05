@@ -134,6 +134,15 @@ rm -f -- "$OUT"
 NETWORK_JSON="$(mktemp -t focus-network).json"
 NETWORK_SAMPLES="$(mktemp -t focus-network-samples).txt"
 
+# --- the authorisation-surface baseline, taken before the app exists (focus-p3dl) --------------
+#
+# Every launch below inherits `FOCUS_AUTHORISATION_BASELINE`, so the app's on-screen
+# authorisation-surface scan is a delta — what is on the screen while it runs, minus what was on
+# the screen before it started. See the header of `scripts/authorisation-baseline.sh`.
+source "$FOCUS_SCRIPTS_DIR/authorisation-baseline.sh"
+AUTHORISATION_BASELINE="$(mktemp -t focus-authorisation-baseline).txt"
+focus_take_authorisation_baseline "$AUTHORISATION_BASELINE"
+
 print
 print "== the offline journey (F-160): lsof -i, sampled for the length of the run"
 
@@ -214,7 +223,7 @@ fi
 # can never stand in for one this run failed to write.
 
 SESSION_DIR="$(mktemp -d -t focus-session-proof)"
-trap 'rm -rf -- "$SESSION_DIR"' EXIT INT TERM
+trap 'rm -rf -- "$SESSION_DIR"; rm -f -- "$AUTHORISATION_BASELINE"' EXIT INT TERM
 SESSION_STORE="$SESSION_DIR/session.store"
 SEED_JSON="$SESSION_DIR/seed.json"
 RESTORE_JSON="$SESSION_DIR/restore.json"
@@ -3025,10 +3034,62 @@ if taken(
             "ownerCount": scan.get("ownerCount"),
         },
     )
+    # **The verdict, and it is a DELTA** (focus-p3dl). `suspects` is the set of owners of
+    # authorisation-surface windows that were NOT on the screen before this app launched. A
+    # permission dialog somebody else's tool put up an hour ago is a fact about this Mac; a
+    # permission dialog that appeared while the app ran is the defect this reading exists to
+    # catch, and only the second one is here.
+    #
+    # The baseline is its own reading, with its own takenness door: a run that subtracted nothing
+    # because it could not read the baseline would publish an empty pre-existing set and a delta
+    # identical to the whole suspect list, which looks exactly like a clean screen.
+    # Routed through the NOT-TAKEN door because it is a takenness fact and the sweep at the end
+    # of this file folds over every one of them — and asserted OUTSIDE that branch, because this
+    # is not a reading the machine may refuse. It is a step `scripts/self-check.sh` takes before
+    # it launches anything, and a run that skipped it publishes a delta that is the whole suspect
+    # list wearing the word. NOT TAKEN here is a failure, and it says which.
+    baseline_taken = taken(
+        "the pre-launch authorisation-surface baseline",
+        "authorisationSurfaceScan.baselineWasTaken",
+        "windows={!r}".format(scan.get("baselineWindowCount")),
+    )
+    check(
+        baseline_taken,
+        "a baseline of the screen was taken before the app launched, to subtract from",
+        scan.get("baselineNotTakenBecause"),
+    )
+    if baseline_taken:
+        check(
+            (scan.get("baselineWindowCount") or 0) > 0,
+            "the baseline named windows that were on the screen before the app launched",
+            scan.get("baselineWindowCount"),
+        )
+    preexisting_owners = scan.get("preexistingAuthorisationSurfaceOwners") or []
+    preexisting_windows = scan.get("preexistingAuthorisationSurfaceWindows") or 0
+    already_there = (
+        "; pre-existing and not the app's: {} in {} window(s)".format(
+            ", ".join(preexisting_owners), preexisting_windows
+        )
+        if preexisting_owners
+        else "; nothing was on screen before the launch"
+    )
     check(
         scan.get("suspects") == [],
-        "no authorisation surface is on screen while the app runs",
+        "no authorisation surface the APP put on screen while it runs" + already_there,
         scan.get("suspects"),
+    )
+    # The control the subtraction needs. Without it a delta that had swallowed every suspect and a
+    # screen with no dialog on it publish the same empty verdict — and the arithmetic is asserted
+    # rather than trusted: everything the scan saw is either pre-existing or in the delta.
+    check(
+        (scan.get("suspectWindowsOnScreen") or 0) >= preexisting_windows,
+        "the scan counted at least as many suspect windows as it excused",
+        (scan.get("suspectWindowsOnScreen"), preexisting_windows),
+    )
+    check(
+        preexisting_windows == 0 or bool(preexisting_owners),
+        "a pre-existing window is a pre-existing owner; the two halves agree",
+        (preexisting_windows, preexisting_owners),
     )
     # The two flat keys the evidence set names are the same two facts, and they are asserted to
     # be — a report whose root drifted away from the scan it summarises would be two answers.
@@ -5936,6 +5997,9 @@ EXPECTED_TAKENNESS_FACTS = {
     # The sixth (e07a): the keyboard answer writes to the store it runs against, so the ordinary
     # launch may not take it and says why; the owned-store launch is asserted separately.
     "nudge.keyboardAnswer.wasTaken",
+    # The seventh (focus-p3dl): the scan's verdict is a delta, and a delta computed against a
+    # baseline nobody took is the whole suspect list wearing the word "delta".
+    "authorisationSurfaceScan.baselineWasTaken",
 }
 check(
     EXPECTED_TAKENNESS_FACTS <= takenness_facts,
