@@ -279,23 +279,146 @@ public struct AccusationPanelView: DecisionSurfaceContent {
 
     // MARK: - The parts
 
-    private var header: some View {
-        HStack(alignment: .firstTextBaseline, spacing: DesignTokens.spacing(spacing, scale: textScale)) {
-            // The same token set every other surface draws, so the panel and the menu bar can
-            // never disagree about what the app believes (F-83, F-146).
-            StatusBadge(status: .unrelated, showsLabel: false)
-            NudgeText(
-                .accusationPanelTitle,
-                voice: presentation.voice,
-                arguments: [presentation.task],
-                role: .headline
+    /// **The row where it fits, and the glyph above the title where it does not** (focus-6pr.5,
+    /// on the rule focus-0q4 laid the popover's own rows out under).
+    ///
+    /// The header is `badge · title · spacer · dismiss`. Inside the 300-point popover at
+    /// `accessibilityLarge` the title column was narrower than its longest word and the committed
+    /// picture broke one: `propo / sal`, `waitin / g`. A column is never narrower than its
+    /// longest word — so it stacks.
+    ///
+    /// **`.frame(idealWidth:)` is the whole of the repair, and it is not a trick.** A plain
+    /// `ViewThatFits` measures the first candidate's *ideal* width, and a wrapping `Text`'s ideal
+    /// width is its whole single-line width — so on the 380-point panel the header would have
+    /// stacked at standard size for any task sentence longer than about thirty characters, moving
+    /// every accusation baseline for a row that fits perfectly well. That is the objection this
+    /// bead was deferred for. Setting the title's ideal width to the width of its **longest word**
+    /// makes the candidate's measurement ask the question the rule is about: *is there room for a
+    /// word?* — not *is there room for the sentence?* The real layout is untouched, because a
+    /// definite proposal overrides an ideal.
+    /// The row candidate alone, exposed so it can be measured (see `headerRowIdealWidth`). It is
+    /// the same value the `ViewThatFits` below offers first, not a copy of it.
+    var headerRowCandidate: some View {
+        headerRow
+    }
+
+    private var headerRow: some View {
+        HStack(
+            alignment: .firstTextBaseline,
+            spacing: DesignTokens.spacing(spacing, scale: textScale)
+        ) {
+            badge
+            // **No `Spacer` here, and that is the second half of the repair.** A `Spacer`'s ideal
+            // width is infinite, so a `ViewThatFits` measuring a row that contains one rejects it
+            // at every width and stacks always — which is the regression this bead was deferred
+            // over, arrived at from the other direction. The title takes the slack instead: its
+            // IDEAL width is its longest word, which is the question the rule asks, and its
+            // MAXIMUM is the whole row, which is what pushes the dismissal to the trailing edge.
+            title.frame(
+                idealWidth: Self.headerTitleLongestWordWidth(
+                    presentation: presentation,
+                    scale: textScale
+                ),
+                maxWidth: .infinity,
+                alignment: .leading
             )
-            .foregroundStyle(DesignTokens.Palette.primaryText)
-            .lineLimit(nil)
-            .fixedSize(horizontal: false, vertical: true)
-            Spacer(minLength: 0)
             dismissButton
         }
+    }
+
+    private var header: some View {
+        ViewThatFits(in: .horizontal) {
+            headerRow
+            VStack(alignment: .leading, spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
+                HStack(spacing: DesignTokens.spacing(spacing, scale: textScale)) {
+                    badge
+                    Spacer(minLength: 0)
+                    dismissButton
+                }
+                title
+            }
+        }
+    }
+
+    /// The same token set every other surface draws, so the panel and the menu bar can never
+    /// disagree about what the app believes (F-83, F-146).
+    private var badge: some View {
+        StatusBadge(status: .unrelated, showsLabel: false)
+    }
+
+    private var title: some View {
+        NudgeText(
+            .accusationPanelTitle,
+            voice: presentation.voice,
+            arguments: [presentation.task],
+            role: .headline
+        )
+        .foregroundStyle(DesignTokens.Palette.primaryText)
+        .lineLimit(nil)
+        .fixedSize(horizontal: false, vertical: true)
+    }
+
+    // MARK: - The header's arithmetic, published so a test can measure it (focus-6pr.5)
+
+    /// The role the header's title is set in. One place, read by the view and by the fold.
+    static let headerTitleRole: DesignTokens.FontRole = .headline
+
+    /// The header's title, resolved exactly as `NudgeText` resolves it.
+    static func headerTitle(presentation: AccusationPresentation) -> String {
+        NudgeCopy.string(
+            voice: presentation.voice,
+            .accusationPanelTitle,
+            arguments: [presentation.task]
+        )
+    }
+
+    /// The widest single word of that title, measured in the font it is drawn in.
+    ///
+    /// `NSFont` rather than `Text`: this is the number the layout is decided by, so it has to be
+    /// the same number the test measures, and a `Text` cannot be asked its width outside a
+    /// rendering pass.
+    static func headerTitleLongestWordWidth(
+        presentation: AccusationPresentation,
+        scale: ShellTextScale
+    ) -> CGFloat {
+        let font = NSFont.systemFont(ofSize: DesignTokens.pointSize(headerTitleRole, scale: scale))
+        return headerTitle(presentation: presentation)
+            .split(whereSeparator: \.isWhitespace)
+            .map { NSAttributedString(string: String($0), attributes: [.font: font]).size().width }
+            .max() ?? 0
+    }
+
+    /// **The ideal width of the header ROW, measured by SwiftUI's own layout** (focus-6pr.5).
+    ///
+    /// This is the number `ViewThatFits` decides on: the real badge, the real dismissal, the real
+    /// spacings, and a title whose ideal width is its longest word. `fittingSize` is the ideal
+    /// size — the unspecified proposal a `ViewThatFits` candidate is measured with —
+    /// and `sizeThatFits(in:)` with a large proposal would answer the maximum instead, which for
+    /// a row that can grow is a different number entirely.
+    ///
+    /// Measured rather than added up from tokens, because a first draft that added them up was
+    /// **56 points wrong** and the fold it fed was green over a picture reading `propo / sal`.
+    ///
+    /// It measures at the shell's standard scale: `@Environment` resolves inside a `body`, and a
+    /// view value built outside one reads the default. That is enough for what this is for — the
+    /// property being asserted is that the ideal tracks the longest WORD rather than the whole
+    /// sentence, which is scale-free. The largest-size half of the claim is the re-recorded
+    /// picture, read by eye, which is also where the defect was found.
+    @MainActor
+    static func headerRowIdealWidth(presentation: AccusationPresentation) -> CGFloat {
+        let controller = NSHostingController(
+            rootView: AccusationPanelView(presentation: presentation).headerRowCandidate
+        )
+        return controller.view.fittingSize.width
+    }
+
+    /// What the row asks for over and above the word it is drawn around: the badge chip, the
+    /// dismissal and the two gaps. A constant of the row, which is the whole point — it does not
+    /// depend on the sentence.
+    @MainActor
+    static func headerFurnitureWidth(presentation: AccusationPresentation) -> CGFloat {
+        headerRowIdealWidth(presentation: presentation)
+            - headerTitleLongestWordWidth(presentation: presentation, scale: .standard)
     }
 
     /// The close affordance. **Every surface is dismissible** (D-07), including this one and
