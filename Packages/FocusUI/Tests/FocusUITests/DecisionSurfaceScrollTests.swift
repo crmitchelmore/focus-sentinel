@@ -207,20 +207,15 @@ struct DecisionSurfaceScrollTests {
         }
     }
 
+    /// **The shipping rule, asked of the shipping value** (focus-6pr.4).
+    ///
+    /// This function used to *state* e07a's both-state ruling — in a both-state the accusation
+    /// offers nothing — while `MenuBarController.offeredIdentifiers(of:)`, the reading a charge
+    /// is actually taken on, did not have it. A test lane holding a ruling the shipping code does
+    /// not hold is a lane that cannot fail about it, and the ledger charged an accusation nobody
+    /// could answer for as long as the two disagreed. One spelling now, on the presentation.
     static func offered(_ nudge: MenuBarNudge, in presentation: MenuBarPresentation) -> [String] {
-        switch nudge {
-        case .query:
-            presentation.pendingQuery?.offeredAnswerIdentifiers ?? []
-        case .accusation:
-            // **In a both-state the accusation is not the decision** (e07a, focus-cxb): the
-            // question is pinned and the accusation scrolls with the context, so its actions are
-            // not in the shelf and this reading declares that rather than measuring them out of
-            // reach. The charge for an accusation drawn beside a question is the ledger's half of
-            // the ruling (`focus-6pr.4`).
-            presentation.pendingQuery == nil
-                ? presentation.pendingAccusation?.offeredActionIdentifiers ?? []
-                : []
-        }
+        presentation.offeredIdentifiers(of: nudge)
     }
 
     static func cells<Presentation, Surface: DecisionSurfaceContent>(
@@ -384,17 +379,27 @@ struct DecisionSurfaceScrollTests {
     /// That second clause is the whole repair, and it is what makes the answer work for a person
     /// who never scrolls as well as one who does: there is no scroll offset at which the reading
     /// differs, because the decision is not in the scroll view.
+    ///
+    /// **The claim is `unreadable`, not `reachable`** (focus-6pr.4). The space contains cells
+    /// that offer nothing — the accusation half of a both-state, where the question is pinned and
+    /// the corrections scroll with the context — and a reading of one of those stands at
+    /// `notOffered`: there is no action of it to be out of reach, and asserting `reachable` for it
+    /// would be asserting the vacuity this round removed. What every cell is held to is that
+    /// nothing it offers is out of reach; how many of them offer something is counted below, so a
+    /// space that had quietly stopped offering anything anywhere cannot satisfy this.
     @Test("a surface that gives way still puts every action in reach")
     func aSurfaceThatGivesWayKeepsItsActionsInReach() {
         // One test rather than one per cell because `DecisionSurfaceLayout` carries `AnyView` and
         // is therefore not `Sendable`; the space is still folded over in full, and every cell that
         // fails names itself.
+        var offeringSomething = 0
         for cell in Self.space {
             for screens in Self.displays {
                 let (reading, overflow) = Self.reading(cell, on: screens)
                 guard overflow != .everythingScrolls else { continue }
+                if reading.standing == .reachable { offeringSomething += 1 }
                 #expect(
-                    reading.everyActionIsReachable,
+                    reading.standing != .unreadable,
                     """
                     \(cell.testDescription) on a \(screens[0].visibleFrame.height)-point display \
                     gave way as \(overflow.rawValue) and left actions out of reach: \(reading.summary)
@@ -403,6 +408,13 @@ struct DecisionSurfaceScrollTests {
             }
         }
         #expect(Self.space.count > 40, "the space collapsed to \(Self.space.count) cells")
+        #expect(
+            offeringSomething > 40,
+            """
+            only \(offeringSomething) reading in the whole space offered anything at all, so this \
+            fold is holding a space of empty shelves to a claim about shelves
+            """
+        )
     }
 
     /// **The content space really does run from under the ceiling to past three times it.**

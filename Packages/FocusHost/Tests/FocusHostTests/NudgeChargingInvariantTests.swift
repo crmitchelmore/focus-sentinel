@@ -62,6 +62,14 @@ struct NudgeChargingInvariantTests {
         let panelShowsTheQuestion: Bool
         let popoverShowsTheAccusation: Bool
         let popoverShowsTheQuestion: Bool
+        /// **What the popover was offering for the accusation** (focus-6pr.4).
+        ///
+        /// `popoverShowsTheAccusation` is two booleans — the popover is open, it is carrying this
+        /// — and in a both-state both are true of a rung whose corrections are in the scrolling
+        /// context because the question beside it is the pinned decision. Read off
+        /// `MenuBarController.offeredIdentifiers(of:)`, the shipping table, so the conjunct below
+        /// says *a person could have pressed something* rather than *a picture was on the screen*.
+        let popoverOffersTheAccusation: Bool
 
         var charged: Int { chargedAccusations + chargedQueries }
 
@@ -77,7 +85,7 @@ struct NudgeChargingInvariantTests {
                     && markBefore != .noticing
                     && markAfter == .noticing
             case .panel: panelShowsTheAccusation
-            case .popoverBadge: popoverShowsTheAccusation
+            case .popoverBadge: popoverShowsTheAccusation && popoverOffersTheAccusation
             case .notification, nil: false
             }
         }
@@ -91,7 +99,8 @@ struct NudgeChargingInvariantTests {
             writes \(glyphWrites) announcements \(announcements) \
             mark \(markBefore.rawValue)->\(markAfter.rawValue) \
             panel a/q \(panelShowsTheAccusation)/\(panelShowsTheQuestion) \
-            popover a/q \(popoverShowsTheAccusation)/\(popoverShowsTheQuestion)
+            popover a/q \(popoverShowsTheAccusation)/\(popoverShowsTheQuestion) \
+            popover offers a \(popoverOffersTheAccusation)
             """
         }
     }
@@ -135,7 +144,9 @@ struct NudgeChargingInvariantTests {
             popoverShowsTheAccusation: fixture.menuBar.isPopoverShown
                 && fixture.menuBar.isDrawing(.accusation),
             popoverShowsTheQuestion: fixture.menuBar.isPopoverShown
-                && fixture.menuBar.isDrawing(.query)
+                && fixture.menuBar.isDrawing(.query),
+            popoverOffersTheAccusation:
+                !fixture.menuBar.offeredIdentifiers(of: .accusation).isEmpty
         )
     }
 
@@ -975,6 +986,156 @@ struct NudgeChargingInvariantTests {
         )
         #expect(unopened.allSatisfy { !$0.spendsBudget }, "an unopened row spent a cap")
         #expect(unopened.contains { $0.surface == .menuBar })
+        try Self.assertTheJoin(fixture)
+    }
+
+    /// **The both-nudges popover: an accusation nobody could answer, charged** (e07a, focus-cxb,
+    /// focus-6pr.4).
+    ///
+    /// ## The cell, and why the sixty above cannot reach it
+    ///
+    /// The grid never opens the popover — a badge nudge waits behind a click nobody in that fold
+    /// makes — so the one state where a rung is *looked at* and still unanswerable was outside
+    /// every fold in the repository. It is not an exotic state: it is Reduce Motion, or anybody
+    /// on a call, with a question already waiting behind the click when the ladder reaches its
+    /// top rung.
+    ///
+    /// e07a ruled on the layout half. A popover carrying both pins the **question**: U-1 licenses
+    /// the interruption for the question's cheap answer, U-2 makes the accusation wait behind one
+    /// rather than displace it, and pinning both needed over 815 points against a 911-point
+    /// ceiling at the largest text size. So the accusation scrolls with the context and its
+    /// corrections are not the shelf.
+    ///
+    /// ## Red before
+    ///
+    /// `MenuBarController.offeredIdentifiers(of:)` returned the accusation's six corrections
+    /// unconditionally, `DecisionSurfaceReading.everyActionIsReachable` was vacuously `true` over
+    /// an empty offer, and `NudgeHost` read the two nudges independently — so this cell charged.
+    /// The assertion that says so is the first one below:
+    ///
+    ///     "the popover charged an accusation nobody could answer: the question pinned beside it
+    ///      is the decision, and the corrections are in the scrolling context"
+    ///
+    /// with `accusationsToday == 1` and `interruptionsToday == 1` before the repair. The rung is
+    /// not lost by it: the row says `deferred`, `DeferralReason.questionPinned` names why, the
+    /// ladder is not advanced, and answering the question unpins the accusation so the next seam
+    /// can charge it for the first moment anybody could press one of its corrections.
+    @Test("an accusation drawn beside a pinned question is deferred, not charged")
+    func theBothNudgePopoverDefersTheAccusation() throws {
+        let fixture = try NudgeHostFixture()
+        defer { fixture.tearDown() }
+        defer { MenuBarStage.restoreActivationPolicy() }
+        try fixture.wireMenuBarToTheLoop()
+        Self.namedSubjects(fixture)
+
+        // A question waiting behind the click, and the rung climbing to the badge beside it —
+        // the same two moves the grid's `question` column and its `panel` row make, on the one
+        // machine state where they meet.
+        try Self.establish(.question, in: fixture)
+        for _ in 0..<TargetRung.panel.judgements {
+            fixture.host.consider(
+                NudgeHostFixture.unrelatedJudgement(subject: Self.subjects[0])
+            )
+            NudgeHostFixture.settle()
+            fixture.clock.advance(by: RelevancePolicy.mandateCooldown + .seconds(1))
+        }
+        try #require(
+            fixture.host.landedRungSurface == .popoverBadge,
+            "the rung did not reach the badge, so this cell drives nothing"
+        )
+        try #require(
+            fixture.host.pendingPopoverQuery != nil,
+            "the question left the badge, so this is not a both-state"
+        )
+        let chargedBefore = try Self.deliveredRows(fixture, kind: .accusation)
+        try #require(chargedBefore == 0, "the rung was charged before anybody opened the popover")
+
+        // The click.
+        let opened = try MenuBarStage.open(
+            fixture.menuBar,
+            showing: NudgeHostFixture.menuBarPresentation(of: fixture.host)
+        )
+        guard MenuBarStage.taken(opened) else { return }
+        NudgeHostFixture.settle()
+
+        // The state, read off the real popover: it is open, it is drawing both, and the decision
+        // in it is the question's.
+        try #require(fixture.menuBar.isDrawing(.accusation))
+        try #require(fixture.menuBar.isDrawing(.query))
+        #expect(
+            fixture.menuBar.offeredIdentifiers(of: .accusation).isEmpty,
+            "the popover claims a pinned decision for the accusation beside a question"
+        )
+        #expect(
+            !fixture.menuBar.offeredIdentifiers(of: .query).isEmpty,
+            "the popover offered nothing at all, so this cell is about no decision"
+        )
+        #expect(
+            fixture.menuBar.decisionSurfaceReading(of: .accusation).standing == .notOffered,
+            "an accusation offering nothing read as something other than notOffered"
+        )
+        #expect(fixture.menuBar.isDrawnBesideThePinnedDecision(.accusation))
+        #expect(!fixture.menuBar.isDrawnBesideThePinnedDecision(.query))
+
+        // The ledger. **The red-before assertion.**
+        let charged = try Self.deliveredRows(fixture, kind: .accusation)
+        #expect(
+            charged == 0,
+            """
+            the popover charged an accusation nobody could answer: the question pinned beside it \
+            is the decision, and the corrections are in the scrolling context
+            """
+        )
+        #expect(fixture.host.todaysUsage().accusationsToday == 0)
+        #expect(
+            fixture.host.deferralsByReason[.questionPinned] == 1,
+            """
+            the ledger says nothing about why the rung was not charged: \
+            \(fixture.host.deferralsByReason)
+            """
+        )
+
+        // **Idempotent across redraws.** The proof is offered again at every seam, and a second
+        // look at the same popover is not a second attempt.
+        fixture.host.popoverPresented()
+        fixture.host.popoverPresented()
+        fixture.menuBar.update(NudgeHostFixture.menuBarPresentation(of: fixture.host))
+        NudgeHostFixture.settle()
+        #expect(
+            fixture.host.deferralsByReason[.questionPinned] == 1,
+            "one rung nobody could answer wrote a deferral per redraw"
+        )
+
+        // The person takes their screen back. One attempt, one row: the rung that said *nobody
+        // could answer this* does not also say *nobody opened this*.
+        fixture.host.hideOverlays()
+        NudgeHostFixture.settle()
+        //
+        // The rows a deferral leaves carry no surface — a deferral is the app saying no surface
+        // showed this to anybody, and every other reason in the vocabulary means exactly that —
+        // so the two are told apart by disposition, which is what the counters read.
+        let accusationRows = try fixture.interventions().filter { $0.kind == .accusation }
+        let deferrals = accusationRows.filter {
+            $0.dispositionRaw == InterventionDisposition.deferred.rawValue
+        }
+        #expect(
+            deferrals.count == 1,
+            """
+            one rung nobody could answer, \(deferrals.count) deferral row(s): \
+            \(accusationRows.map { "\($0.dispositionRaw)/\($0.surfaceRaw)" })
+            """
+        )
+        #expect(
+            !accusationRows.contains {
+                $0.dispositionRaw == InterventionDisposition.unopened.rawValue
+                    && $0.surface == .popoverBadge
+            },
+            """
+            the badge rung was written down twice — deferred and unopened — for one attempt: \
+            \(accusationRows.map { "\($0.dispositionRaw)/\($0.surfaceRaw)" })
+            """
+        )
+        #expect(accusationRows.allSatisfy { !$0.spendsBudget })
         try Self.assertTheJoin(fixture)
     }
 }

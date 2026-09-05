@@ -36,6 +36,7 @@ import Testing
 /// | `menuBar` | installed | `delivered` — the item was written and the mark is the rung's |
 /// | `panel` | installed | `delivered` — the window is up with every correction in reach |
 /// | `popoverBadge` | installed | `unopened` — it reached a surface and waited behind a click |
+/// | `popoverBadge` | installed, **looked at beside a question** | `deferred`, and the reason is `questionPinned` |
 /// | `notification` | installed | nothing routes here at all (U-2, R-96s) |
 /// | any | not installed | `deferred`, and the decision names `menuBarHidden` |
 ///
@@ -331,6 +332,121 @@ struct NudgeUnseenAttemptTests {
             satisfy the conjunct
             """
         )
+    }
+
+    /// **The badge, looked at, with a question pinned beside it** (e07a, focus-cxb, focus-6pr.4).
+    ///
+    /// The one state `drive(surface:item:)` cannot reach: it never opens the popover, because a
+    /// badge nudge waits behind a click and the fold above is about attempts nobody looked at.
+    /// This one **is** looked at, and still could not be answered — the popover pins the question
+    /// when it carries both, so the accusation's corrections scroll with the context and there is
+    /// nothing in the shelf for anybody to press.
+    ///
+    /// The window opens **after the landing**, deliberately: a badge rung writes nothing when it
+    /// lands (that is what the `unopened` row in the fold above is for), so every row counted
+    /// here is a consequence of the look.
+    ///
+    /// - Returns: what the look wrote, or `nil` on a machine with no display, where the popover
+    ///   cannot be opened and no reading is taken.
+    static func lookAtTheBadgeBesideAQuestion() throws -> Attempt? {
+        let fixture = try NudgeHostFixture()
+        defer { fixture.tearDown() }
+        defer { MenuBarStage.restoreActivationPolicy() }
+        try fixture.wireMenuBarToTheLoop()
+        Self.named(fixture)
+        fixture.host.choose(reducedInterruption: true)
+
+        // The question, waiting behind the click.
+        fixture.host.consider(NudgeHostFixture.uncertainJudgement(subject: Self.subjects[0]))
+        NudgeHostFixture.settle()
+        try #require(
+            fixture.host.pendingPopoverQuery != nil,
+            "the question did not reach the badge, so this cell is not a both-state"
+        )
+
+        // …and the rung climbing to the badge beside it.
+        for _ in 0..<2 {
+            fixture.host.consider(NudgeHostFixture.unrelatedJudgement(subject: Self.subjects[1]))
+            NudgeHostFixture.settle()
+            fixture.clock.advance(by: RelevancePolicy.mandateCooldown + .seconds(1))
+        }
+        try #require(
+            fixture.host.landedRungSurface == .popoverBadge,
+            "the rung did not reach the badge, so this cell drives nothing"
+        )
+
+        // Read while the rung is still open: `hideOverlays()` below is one of the six doors that
+        // ends it, and a reading taken after the door has shut would describe no rung at all.
+        let landedOn = fixture.host.landedRungSurface
+        let before = try fixture.interventions().count
+        let opened = try MenuBarStage.open(
+            fixture.menuBar,
+            showing: NudgeHostFixture.menuBarPresentation(of: fixture.host)
+        )
+        guard MenuBarStage.taken(opened, "the badge beside a pinned question") else { return nil }
+        NudgeHostFixture.settle()
+        try #require(fixture.menuBar.isDrawing(.accusation))
+        try #require(fixture.menuBar.isDrawing(.query))
+
+        // The person takes their screen back, which is the moment an unopened invitation would
+        // otherwise be written — and must not be, beside a row that already says why.
+        fixture.host.hideOverlays()
+        NudgeHostFixture.settle()
+
+        let rows = try fixture.interventions()
+        #expect(
+            fixture.host.deferralsByReason[.questionPinned] == 1,
+            """
+            the loop deferred \(fixture.host.deferralsByReason[.questionPinned] ?? 0) time(s) \
+            for a pinned question: \(fixture.host.deferralsByReason)
+            """
+        )
+        return Attempt(
+            rows: rows.dropFirst(before).map {
+                Row(
+                    kind: $0.kindRaw,
+                    disposition: InterventionDisposition(rawValue: $0.dispositionRaw),
+                    surface: $0.surface,
+                    spendsBudget: $0.spendsBudget
+                )
+            },
+            landedOn: landedOn,
+            decision: fixture.host.lastDecision,
+            companionWrites: fixture.notchCompanion.writeCount,
+            companionVisible: fixture.notchCompanion.isVisible,
+            companionCouldHaveDrawn: fixture.notchCompanion.landing().collapsed != nil
+        )
+    }
+
+    /// **The ninth cell: an attempt the person looked at and nobody could answer** (focus-6pr.4).
+    ///
+    /// ## Red before
+    ///
+    /// The loop charged it. `MenuBarController.offeredIdentifiers(of:)` returned the accusation's
+    /// corrections while the popover was pinning the question over them, and
+    /// `everyActionIsReachable` was vacuously true over an empty offer — so this cell wrote
+    /// `delivered/popoverBadge` and spent one of the day's six accusations and one of its eight
+    /// interruptions. The ruling this suite exists for is that **every attempt nobody saw leaves
+    /// exactly one row that says so**, and this attempt is one nobody could *answer*: the row is
+    /// `deferred`, `DeferralReason.questionPinned` says why, and it spends nothing.
+    @Test("an attempt the person looked at and could not answer is one deferred row")
+    func lookingAtABadgeBesideAQuestionDefersIt() throws {
+        guard let attempt = try Self.lookAtTheBadgeBesideAQuestion() else { return }
+        let accusationRows = attempt.rows.filter { $0.kind == InterruptionKind.accusation.rawValue }
+        #expect(
+            accusationRows.compactMap(\.disposition) == [.deferred],
+            """
+            the look wrote \(accusationRows.count) row(s) about the rung rather than one \
+            deferral — \(attempt.summary)
+            """
+        )
+        #expect(
+            accusationRows.allSatisfy { !$0.spendsBudget },
+            "a rung nobody could answer spent a cap — \(attempt.summary)"
+        )
+        // …and the rung is still where it was: a deferral does not take the surface away, and
+        // R-81's clock has not started.
+        #expect(attempt.landedOn == .popoverBadge)
     }
 
     /// Drive one question at one surface and read back the row it wrote.

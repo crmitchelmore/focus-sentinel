@@ -187,19 +187,65 @@ struct DecisionSurfaceReachabilityTests {
         #expect(Self.evaluate(offering: withoutReturn).everyActionIsReachable)
     }
 
-    /// A surface offering nothing is not a decision surface, but it is not *unreachable* either —
-    /// the geometry terms still have to hold, so an empty offer cannot be used to wave a panel
-    /// through from off the edge of the world.
-    @Test("an empty offer still has to be a window on a screen")
-    func anEmptyOfferIsStillGeometry() {
-        #expect(Self.evaluate(targets: [], offering: []).everyActionIsReachable)
+    /// **A surface offering nothing is not a decision surface** (focus-6pr.4), and the two ways
+    /// of not being one are two readings.
+    ///
+    /// ## Red before
+    ///
+    /// This test asserted `everyActionIsReachable` — `true` — for the first line below, on the
+    /// argument that an empty offer is *"not unreachable either"*. That was the vacuity: every
+    /// conjunct of the predicate is satisfied by a surface offering nothing, so "every one of no
+    /// actions is reachable" answered yes, and `NudgeHost` charged a badge accusation on it in
+    /// the state e07a's popover ruling creates — an accusation drawn beside a question, which is
+    /// the pinned decision, with the accusation's corrections scrolling in the context. Nobody
+    /// could press one of them; the app spent one of the day's six accusations and one of its
+    /// eight interruptions for it.
+    ///
+    /// The half of the old ruling that was right is the second line, and it is why `standing`
+    /// asks the geometry first: an empty offer must not wave a panel through from off the edge of
+    /// the world, so a surface at y = −1186 offering nothing reads `unreadable` and not
+    /// `notOffered`.
+    @Test("an empty offer is not a decision surface, and is still held to the geometry")
+    func anEmptyOfferIsNotADecisionSurface() {
+        let offeringNothing = Self.evaluate(targets: [], offering: [])
+        #expect(offeringNothing.standing == .notOffered)
         #expect(
-            !Self.evaluate(
-                surfaceFrame: ScreenRect(x: 1516, y: -1186, width: 380, height: 262),
-                targets: [],
-                offering: []
-            ).everyActionIsReachable
+            !offeringNothing.everyActionIsReachable,
+            "a surface offering nothing was read as one every action of which is reachable"
         )
+        #expect(offeringNothing.summary == "the surface is offering nothing to decide on")
+
+        let offTheWorld = Self.evaluate(
+            surfaceFrame: ScreenRect(x: 1516, y: -1186, width: 380, height: 262),
+            targets: [],
+            offering: []
+        )
+        #expect(offTheWorld.standing == .unreadable)
+        #expect(!offTheWorld.everyActionIsReachable)
+    }
+
+    /// **The three answers are three, and each one is reached** (focus-6pr.4).
+    ///
+    /// The vocabulary folded rather than sampled: a case joining or leaving
+    /// `DecisionSurfaceStanding` fails here, and a fold that covered only two of the three would
+    /// prove nothing about the one this round added.
+    @Test("every standing a reading can have is produced by some reading")
+    func everyStandingIsReached() {
+        let readings: [DecisionSurfaceStanding: DecisionSurfaceReading] = [
+            .reachable: Self.evaluate(),
+            .notOffered: Self.evaluate(targets: [], offering: []),
+            .unreadable: Self.evaluate(isVisible: false)
+        ]
+        for standing in DecisionSurfaceStanding.allCases {
+            let reading = readings[standing]
+            #expect(reading != nil, "no reading in this fold stands at \(standing.rawValue)")
+            #expect(reading?.standing == standing)
+        }
+        #expect(DecisionSurfaceStanding.allCases.count == readings.count)
+        // And the `Bool` is exactly the `reachable` arm, in both directions.
+        for (standing, reading) in readings {
+            #expect(reading.everyActionIsReachable == (standing == .reachable))
+        }
     }
 
     /// **A content area of nothing contains nothing** — and the action inside it is a real one.

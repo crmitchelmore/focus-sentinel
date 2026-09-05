@@ -667,6 +667,24 @@ obvious default:
 | `uncertain` | **a question**: "Is *{subject}* part of *{task}*?", asked once and never again |
 | `unrelated` | **the ladder**: silent glyph → non-activating panel → recommitment |
 
+### An accusation drawn beside a question is not chargeable (focus-6pr.4)
+
+The menu-bar popover can carry both at once, and when it does the **question** is the decision:
+U-1 licenses the interruption because the question is cheaply answerable, U-2 makes an accusation
+wait behind an open question rather than displace it, and pinning both shelves together needed over
+815 points against a 911-point ceiling at the largest text size. So the accusation scrolls with the
+context, and `MenuBarPresentation.pins(_:)` is the one place that rule is written down — read by
+the layout, by the controller's `offeredIdentifiers(of:)` and by the test lane alike.
+
+The ledger follows the layout. A nudge that offers nothing is `DecisionSurfaceStanding.notOffered`,
+never *"every one of no actions is reachable"*, so `PerceptibleChange.proven(…)` cannot produce a
+receipt for it; and because that rung really is on screen in front of somebody,
+`NudgeHost.proveOpenRung(at:)` writes it down as `deferred` with the fifth deferral reason,
+`questionPinned` — once per rung, not once per redraw. It spends neither cap and does not advance
+the ladder, and the moment the question is answered the accusation is unpinned and chargeable
+again. The self-check's sixth launch drives the state and publishes the count, so the cell is
+seeded rather than hoped for.
+
 ### The two authorisations, and why a question can never become an accusation
 
 `InterventionMandate` and `QueryWarrant` are two types that share no protocol, no supertype and no

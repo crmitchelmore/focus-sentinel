@@ -4560,6 +4560,24 @@ check(
     nudge.get("ladderSilencesRetainingTheGlyph"),
 )
 
+# **And every way a rung can fail to be seen** (P-131, focus-6pr.4).
+#
+# Named and in both directions, for `rungExitsDeclared`'s reason. Four of these five are moments
+# nobody is looking at the app — the menu bar is hidden, a presentation is up, no surface can
+# carry it — and `notificationDeliveryFailed` is unreachable at HEAD and gated as such (U-2).
+# `questionPinned` is the one a person is looking at: the popover is open and drawing the rung,
+# and the decision on it belongs to the question pinned beside it, so nobody could answer it. It
+# is driven, in the sixth launch, and the count it moves is asserted there — a vocabulary is
+# complete, never reachable, and the reachability half is that block.
+check(
+    nudge.get("deferralReasonsDeclared") == [
+        "menuBarHidden", "noSurfaceAvailable", "notificationDeliveryFailed",
+        "presentationActive", "questionPinned"
+    ],
+    "every way a rung can fail to be seen is enumerated, and they are exactly these five",
+    nudge.get("deferralReasonsDeclared"),
+)
+
 # **The active priority is still one fact** (focus-zrs).
 #
 # The invariant above reads EMPTY throughout the defect this round is about, which is the whole
@@ -5101,6 +5119,144 @@ check(
     kb.get("receiptsAfterSecondPress") == 1 and kb.get("rulesAfterSecondPress") == 1,
     "a second ⌃⌘Y with no question open wrote nothing",
     (kb.get("receiptsAfterSecondPress"), kb.get("rulesAfterSecondPress")),
+)
+
+# --- both nudges in one popover: the accusation nobody could answer (e07a, focus-6pr.4) --------
+#
+# e07a ruled that a popover carrying an accusation AND a question pins the **question**: U-1
+# licenses the interruption for the question's cheap answer, U-2 makes the accusation wait behind
+# one rather than displace it, and pinning both needed over 815 points against a 911-point ceiling
+# at the largest text size. The accusation scrolls with the context, so its corrections are not in
+# the shelf and there is nothing there for anybody to press.
+#
+# The ledger did not have that ruling. `MenuBarController.offeredIdentifiers(of:)` returned the
+# accusation's corrections whatever else the popover was carrying,
+# `DecisionSurfaceReading.everyActionIsReachable` was VACUOUSLY TRUE over an empty offer, and
+# `NudgeHost` read the two nudges independently — so opening a popover on both charged the rung:
+# one of the day's six accusations and one of its eight interruptions, for a decision nobody was
+# being asked to make.
+#
+# THE SEED IS THE POINT. `deferralsByReason` is a counter, and four of its five reasons name
+# moments nobody is looking at the app at all, so an ordinary run publishes zeroes and would go on
+# publishing them with the repair deleted. The sixth launch drives the state instead: a question on
+# the badge, the ladder climbed to its top rung beside it under Reduce Motion, and the popover
+# really opened, through the status item's own action with the composition root's wire on it.
+pinned = keyboard_launch.get("pinnedQuestion") or {}
+check(
+    pinned.get("wasTaken") is True,
+    "the both-nudges popover drive was taken against the owned store",
+    (pinned.get("wasTaken"), pinned.get("notTakenBecause")),
+)
+# The state, first: without both nudges on one surface every reading below is about a popover
+# carrying one thing, which is not the cell this block exists for.
+check(
+    pinned.get("questionReachedTheBadge") is True
+    and pinned.get("rungLandedOn") == "popoverBadge"
+    and pinned.get("popoverIsShown") is True,
+    "the drive put a question and a rung on the badge and opened the popover on both",
+    (
+        pinned.get("questionReachedTheBadge"),
+        pinned.get("rungLandedOn"),
+        pinned.get("currentRung"),
+        pinned.get("popoverIsShown"),
+    ),
+)
+check(
+    pinned.get("popoverDrawsTheAccusation") is True
+    and pinned.get("popoverDrawsTheQuestion") is True,
+    "the open popover really is drawing both nudges at once",
+    (pinned.get("popoverDrawsTheAccusation"), pinned.get("popoverDrawsTheQuestion")),
+)
+# The ruling, on the shipping controller's own table. Both halves: the accusation offers nothing,
+# and the question standing beside it offers its answers — a popover offering nothing at all would
+# satisfy the first half while being a decision surface for nobody.
+check(
+    pinned.get("offeredForTheAccusation") == []
+    and len(pinned.get("offeredForTheQuestion") or []) > 0,
+    "the popover offers the pinned question's answers and nothing for the accusation",
+    (pinned.get("offeredForTheAccusation"), pinned.get("offeredForTheQuestion")),
+)
+check(
+    pinned.get("accusationIsBesideThePinnedDecision") is True
+    and pinned.get("questionIsBesideThePinnedDecision") is False,
+    "the decision in a both-state popover belongs to the question, and the loop can tell",
+    (
+        pinned.get("accusationIsBesideThePinnedDecision"),
+        pinned.get("questionIsBesideThePinnedDecision"),
+    ),
+)
+# **Not vacuously reachable.** The two standings are asserted together because they share one
+# geometry: where AppKit drops a popover is a property of the machine, so "the accusation is
+# notOffered" is pinned against the question's own reading rather than on its own. What is pinned
+# unconditionally is the half that was the defect — the accusation is NEVER `reachable`.
+check(
+    pinned.get("standingsDeclared") == ["notOffered", "reachable", "unreadable"],
+    "every standing a decision surface can have is enumerated, and they are exactly these three",
+    pinned.get("standingsDeclared"),
+)
+check(
+    pinned.get("accusationStanding") != "reachable",
+    "an accusation offering nothing was read as one every action of which is reachable",
+    (pinned.get("accusationStanding"), pinned.get("questionStanding")),
+)
+check(
+    (pinned.get("questionStanding"), pinned.get("accusationStanding"))
+    in {("reachable", "notOffered"), ("unreadable", "unreadable")},
+    "on the geometry the two nudges share, the pinned question is the reachable one",
+    (pinned.get("questionStanding"), pinned.get("accusationStanding")),
+)
+# The ledger, and the two halves have to be read together. The click charged **one** nudge — the
+# question, whose three answers are in the shelf — and that is the non-vacuity: a popover that
+# charged nothing at all would satisfy "the accusation was not charged" while proving that this
+# drive opened nothing anybody could see. What the accusation cost is the day's accusation cap,
+# and it is untouched.
+# Named `pinned_rows_*` rather than `before`/`after`: this reader is one module and those two
+# names belong to the focus-steal readings further down.
+pinned_rows_before = pinned.get("deliveredRowsBeforeTheClick")
+pinned_rows_after = pinned.get("deliveredRowsAfterTheClick")
+check(
+    isinstance(pinned_rows_before, int)
+    and isinstance(pinned_rows_after, int)
+    and pinned_rows_after - pinned_rows_before == 1,
+    "opening the popover on both nudges charged exactly one of them",
+    (pinned_rows_before, pinned_rows_after),
+)
+check(
+    pinned.get("accusationsToday") == 0,
+    "the rung nobody could answer spent none of the day's six accusations, so the one charge "
+    "above was the question's",
+    (pinned.get("accusationsToday"), pinned.get("interruptionsToday")),
+)
+check(
+    pinned.get("deferralsForAPinnedQuestion") == 1,
+    "the ledger says why the rung was not charged: one deferral naming the pinned question",
+    pinned.get("deferralsForAPinnedQuestion"),
+)
+# …once, and not once per redraw: the proof is offered again at every seam.
+check(
+    pinned.get("deferralsAfterASecondLook") == 1,
+    "a second look at the same popover wrote no second deferral",
+    pinned.get("deferralsAfterASecondLook"),
+)
+print(
+    "note pinned-question drive: subjects {} / {}".format(
+        pinned.get("questionSubject"), pinned.get("accusationSubject")
+    )
+)
+
+# The ordinary launch carries the same block as NOT TAKEN, for the keyboard answer's reason: the
+# drive raises a real nudge and writes its rows, and the ordinary launch opens the person's own
+# store.
+ordinary_pinned = (report.get("nudge") or {}).get("pinnedQuestion") or {}
+check(
+    ordinary_pinned.get("wasTaken") is False,
+    "the ordinary launch raised no nudge in the person's own store",
+    ordinary_pinned.get("wasTaken"),
+)
+taken(
+    "the both-nudges popover drive, in the ordinary launch",
+    "nudge.pinnedQuestion.wasTaken",
+    "asserted on the owned-store launch above instead",
 )
 
 # --- the sentence names the APP, not its bundle identifier (focus-ebv) -------------------------

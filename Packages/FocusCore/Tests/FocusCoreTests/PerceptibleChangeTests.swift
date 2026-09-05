@@ -44,7 +44,11 @@ struct PerceptibleChangeTests {
                 isVisible: true,
                 isWhollyOnAScreen: true,
                 unreportedActions: [],
-                unreachableActions: []
+                unreachableActions: [],
+                // A surface showing a nudge is offering the person something to press: with an
+                // empty offer this reading would stand at `notOffered` (focus-6pr.4) and the
+                // fixture would be describing a surface nobody could decide on.
+                offeredActions: ["snooze"]
             )
         )
     }

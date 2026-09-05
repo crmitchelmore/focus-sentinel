@@ -164,14 +164,19 @@ struct LadderVocabularyTests {
         #expect(RungDelivery.delivered(.panel) == RungDelivery.delivered(.panel))
     }
 
-    /// P-131's four ways a rung can fail to be seen, each named and each distinct.
+    /// P-131's ways a rung can fail to be seen, each named and each distinct.
     ///
     /// It asserted a `nudge.deferred.*` copy key per case until focus-pzl deleted the four
     /// sentences: a deferral is a moment defined by nobody being able to see the surface, so
     /// there was no screen on which any of them could be read.
+    ///
+    /// **Five since focus-6pr.4**, and the fifth is the one a person *can* see: an accusation
+    /// drawn in a popover that is also carrying a question is drawn beside the pinned decision
+    /// and offers nothing, so nobody could answer it. The count is exact rather than a floor for
+    /// `rungExitsDeclared`'s reason — a floor cannot see a reason being removed.
     @Test("every deferral reason is named and distinct")
     func deferralReasons() {
-        #expect(DeferralReason.allCases.count == 4)
+        #expect(DeferralReason.allCases.count == 5)
         var seen: Set<String> = []
         for reason in DeferralReason.allCases {
             #expect(seen.insert(reason.rawValue).inserted, "duplicate raw value")
@@ -181,6 +186,7 @@ struct LadderVocabularyTests {
         #expect(DeferralReason.allCases.contains(.presentationActive))
         #expect(DeferralReason.allCases.contains(.notificationDeliveryFailed))
         #expect(DeferralReason.allCases.contains(.noSurfaceAvailable))
+        #expect(DeferralReason.allCases.contains(.questionPinned))
     }
 
     @Test("every rung has its own copy key")

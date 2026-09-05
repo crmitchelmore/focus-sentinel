@@ -65,10 +65,13 @@ public struct MenuBarPopoverView: DecisionSurfaceContent {
         /// pinned and neither nudge was chargeable in that state. The accusation now scrolls with
         /// the context, and its charge in a both-state is the ledger's half of this ruling
         /// (`focus-6pr.4`): `NudgeHost` still reads the two nudges independently.
+        /// **The rule is `MenuBarPresentation.pins(_:)`'s** (focus-6pr.4), not a second copy of
+        /// it written here: the charge `NudgeHost` takes and the shelf this layout pins are the
+        /// same ruling, and while they were two spellings the ledger's copy was the missing one.
         func isDecision(in presentation: MenuBarPresentation) -> Bool {
             switch self {
-            case .question: presentation.pendingQuery != nil
-            case .accusation: presentation.pendingAccusation != nil && presentation.pendingQuery == nil
+            case .question: presentation.pins(.query)
+            case .accusation: presentation.pins(.accusation)
             default: false
             }
         }

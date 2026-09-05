@@ -32,6 +32,25 @@ public enum DeferralReason: String, Sendable, CaseIterable, Codable, Hashable {
     case notificationDeliveryFailed
     /// No surface exists that can carry this rung in the state the app is actually in.
     case noSurfaceAvailable
+    /// **The surface is on screen, carrying this rung, and the decision on it is somebody
+    /// else's** (e07a, focus-cxb, focus-6pr.4).
+    ///
+    /// The popover can carry an accusation and a question at once, and when it does the
+    /// **question** is the pinned decision: U-1 licenses the interruption because the question is
+    /// cheaply answerable and U-2 makes an accusation wait behind one rather than displace it.
+    /// Pinning both needed over 815 points against a 911-point ceiling at the largest text size,
+    /// so the accusation scrolls with the context and offers nothing while the question stands.
+    ///
+    /// It is a **deferral** and not an `unopened` invitation, and the difference is the person:
+    /// `unopened` is a nudge that reached a surface and waited behind a click nobody made, and
+    /// this one was *looked at* — the popover was open, the rung was drawn in it — and still
+    /// could not be answered. Nobody could have answered it, which is the definition of a
+    /// deferral and the reason it spends nothing and does not advance the ladder (R-81).
+    ///
+    /// It is not `noSurfaceAvailable` either: there is a surface, it is on a display, and the
+    /// rung is on it. What is unavailable is the **decision**, and a reason that said "no
+    /// surface" about a popover the person was reading would be false about the state it names.
+    case questionPinned
 
     // **It carried four sentences a person could never be in a position to read** (focus-pzl).
     //

@@ -870,12 +870,31 @@ public final class MenuBarController {
     /// Every action the popover is offering for one kind of nudge, by the identifier the layout
     /// reports it under. Empty when it is carrying no nudge of that kind — which is a true
     /// statement about a surface that is offering nothing, and never a reachable one, because
-    /// `isDrawing(_:)` is a conjunct of the reading above.
+    /// `DecisionSurfaceReading.standing` reads an empty offer as `notOffered`.
+    ///
+    /// **And empty in a both-state, for the nudge that is not the pinned decision** (e07a,
+    /// focus-cxb, focus-6pr.4). This arm read `presentation.pendingAccusation?
+    /// .offeredActionIdentifiers` unconditionally while `MenuBarPopoverView` had already stopped
+    /// pinning the accusation beside a question and `DecisionSurfaceScrollTests` had already
+    /// written the ruling down — so the shipping controller, the layout and the test lane were
+    /// three spellings of one table and the one at the till disagreed. `MenuBarPresentation.pins`
+    /// is the single spelling now.
     public func offeredIdentifiers(of nudge: MenuBarNudge) -> [String] {
-        switch nudge {
-        case .query: presentation.pendingQuery?.offeredAnswerIdentifiers ?? []
-        case .accusation: presentation.pendingAccusation?.offeredActionIdentifiers ?? []
-        }
+        presentation.offeredIdentifiers(of: nudge)
+    }
+
+    /// **Whether the popover is drawing this nudge with the OTHER one pinned over it**
+    /// (focus-6pr.4).
+    ///
+    /// The reading `NudgeHost` needs to tell the two silences apart. A rung whose proof fails
+    /// because the popover was never opened is an invitation nobody took up; a rung whose proof
+    /// fails because it is drawn, on screen, under a question that owns the shelf is a rung
+    /// **nobody could answer** — a deferral, with `DeferralReason.questionPinned` its name.
+    ///
+    /// Both conjuncts are load-bearing: `isDrawing(_:)` says the popover is really open and
+    /// really carrying this nudge, and `pins` says the decision on it belongs to the other one.
+    public func isDrawnBesideThePinnedDecision(_ nudge: MenuBarNudge) -> Bool {
+        isDrawing(nudge) && !presentation.pins(nudge)
     }
 
     /// The popover's own window, as AppKit placed it, or `.zero` when there is no popover on

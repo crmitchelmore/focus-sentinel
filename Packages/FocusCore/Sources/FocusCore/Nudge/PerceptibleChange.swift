@@ -97,7 +97,8 @@ public struct WindowSurfaceReading: Sendable, Equatable, Hashable {
             isVisible: false,
             isWhollyOnAScreen: false,
             unreportedActions: [],
-            unreachableActions: []
+            unreachableActions: [],
+            offeredActions: []
         )
     )
 }

@@ -198,6 +198,45 @@ public struct MenuBarPresentation: Sendable, Equatable {
         Set(MenuBarNudge.allCases.filter(isCarrying))
     }
 
+    /// **Which of the carried nudges is the popover's decision** (e07a, focus-cxb, focus-6pr.4).
+    ///
+    /// The popover can carry both at once and can pin only one: pinning an accusation's six
+    /// corrections beside a question's three answers needed over 815 points against a 911-point
+    /// ceiling at the largest text size, so neither was pinned and neither was chargeable. The
+    /// question wins, because U-1 licenses the interruption for the question's cheap answer and
+    /// U-2 makes an accusation wait behind one rather than displace it; the accusation scrolls
+    /// with the context and is the residual.
+    ///
+    /// **One spelling of the rule, here, on the value all three readers already hold.** It was
+    /// three: `MenuBarPopoverView.Section.isDecision(in:)` split the layout on it,
+    /// `DecisionSurfaceScrollTests.offered(_:in:)` declared it for the test lane, and
+    /// `MenuBarController.offeredIdentifiers(of:)` — the shipping reading a **charge** is taken
+    /// on — did not have it at all. Two spellings of one table is the shape this sequence keeps
+    /// finding; three, with the disagreeing one at the till, is `focus-6pr.4`.
+    public func pins(_ nudge: MenuBarNudge) -> Bool {
+        switch nudge {
+        case .query: pendingQuery != nil
+        case .accusation: pendingAccusation != nil && pendingQuery == nil
+        }
+    }
+
+    /// **Every action this presentation is offering for one kind of nudge**, by the identifier
+    /// the layout reports it under.
+    ///
+    /// Empty for a nudge this presentation is not carrying — a true statement about a surface
+    /// offering nothing — and empty for a carried nudge the popover does not `pins`, which is the
+    /// same statement about the same person: the corrections are in the scrolling context and not
+    /// in the shelf, so there is nothing there to press. `DecisionSurfaceReading.standing` reads
+    /// an empty offer as `notOffered` rather than as vacuously reachable, so this cannot be
+    /// mistaken for a decision surface.
+    public func offeredIdentifiers(of nudge: MenuBarNudge) -> [String] {
+        guard pins(nudge) else { return [] }
+        switch nudge {
+        case .query: return pendingQuery?.offeredAnswerIdentifiers ?? []
+        case .accusation: return pendingAccusation?.offeredActionIdentifiers ?? []
+        }
+    }
+
     /// **What the status item says about a nudge, over and above the status** (focus-mkk,
     /// focus-2xw).
     ///

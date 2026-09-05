@@ -58,6 +58,21 @@ struct NudgeHostOpenRecordTests {
         /// The question reaches the badge, the person opens the popover onto it, and the ladder
         /// climbs behind it.
         case questionThenRung
+
+        /// **Whether this order can reach two delivered rows at all** (e07a, focus-cxb,
+        /// focus-6pr.4).
+        ///
+        /// It used to be both, and the ruling that changed it is the popover's: a popover
+        /// carrying an accusation **and** a question pins the question, so a rung that arrives
+        /// behind an open question offers nothing a person could press and is deferred rather
+        /// than charged. That leaves this suite's own state — two delivered rows, open at the
+        /// same moment, in the same popover — reachable from one order only: the rung has to be
+        /// charged while it is the decision, and the question arrives beside it afterwards.
+        ///
+        /// The other order is not dropped. It is the ruling's own witness, asserted by
+        /// `assertTheRungWaitsBehindTheQuestion(_:)`: there is no second row for a click to be
+        /// written onto, which is a stronger form of the protection this suite exists for.
+        var deliversBothRows: Bool { self == .rungThenQuestion }
     }
 
     /// Get to the state the defect needs: a delivered badge accusation about the decoy **and** a
@@ -105,6 +120,33 @@ struct NudgeHostOpenRecordTests {
         )
     }
 
+    /// **The other order's whole content** (focus-6pr.4): the rung arrived behind a question that
+    /// owns the shelf, so it is a deferral and not a second open row.
+    ///
+    /// Asserted rather than skipped, because "this order reaches no second row" is exactly the
+    /// claim that has to keep being true: the day it stops, the tests above stop covering the
+    /// state they were written for and this one says so.
+    static func assertTheRungWaitsBehindTheQuestion(_ fixture: NudgeHostFixture) throws {
+        #expect(
+            fixture.menuBar.offeredIdentifiers(of: .accusation).isEmpty,
+            "the popover offered the accusation's corrections beside a pinned question"
+        )
+        #expect(
+            fixture.host.deferralsByReason[.questionPinned] == 1,
+            """
+            the rung behind the pinned question left no deferral: \
+            \(fixture.host.deferralsByReason)
+            """
+        )
+        let delivered = try fixture.interventions().filter {
+            $0.kind == .accusation && $0.dispositionRaw == InterventionDisposition.delivered.rawValue
+        }
+        #expect(
+            delivered.isEmpty,
+            "a rung nobody could answer left a delivered row for a click to be written onto"
+        )
+    }
+
     static func openThePopover(_ fixture: NudgeHostFixture) throws {
         let opened = try MenuBarStage.open(
             fixture.menuBar,
@@ -135,6 +177,10 @@ struct NudgeHostOpenRecordTests {
         let fixture = try NudgeHostFixture()
         defer { fixture.tearDown() }
         try Self.twoDeliveredBadgeNudges(fixture, order: order)
+        guard order.deliversBothRows else {
+            try Self.assertTheRungWaitsBehindTheQuestion(fixture)
+            return
+        }
 
         fixture.host.answer(.yesAddIt)
         NudgeHostFixture.settle()
@@ -170,6 +216,10 @@ struct NudgeHostOpenRecordTests {
         let fixture = try NudgeHostFixture()
         defer { fixture.tearDown() }
         try Self.twoDeliveredBadgeNudges(fixture, order: order)
+        guard order.deliversBothRows else {
+            try Self.assertTheRungWaitsBehindTheQuestion(fixture)
+            return
+        }
 
         fixture.host.resolve(.thisIsRelevant, snoozeDuration: nil)
         NudgeHostFixture.settle()
@@ -196,6 +246,10 @@ struct NudgeHostOpenRecordTests {
         let fixture = try NudgeHostFixture()
         defer { fixture.tearDown() }
         try Self.twoDeliveredBadgeNudges(fixture, order: order)
+        guard order.deliversBothRows else {
+            try Self.assertTheRungWaitsBehindTheQuestion(fixture)
+            return
+        }
 
         fixture.host.resolve(.thisIsRelevant, snoozeDuration: nil)
         NudgeHostFixture.settle()

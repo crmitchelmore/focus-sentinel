@@ -1318,6 +1318,260 @@ enum SelfCheck {
         return report
     }
 
+    /// **Both nudges in one popover, driven, and the accusation nobody could answer**
+    /// (e07a, focus-cxb, focus-6pr.4).
+    ///
+    /// ## What it seeds and why the seed is the whole point
+    ///
+    /// `deferralsByReason` is a counter, and a counter is not evidence until something has moved
+    /// it. Every reason in the vocabulary but this one names a moment nobody is looking at the
+    /// app — the menu bar is hidden, a presentation is up — so the ordinary run publishes zeroes
+    /// and would go on publishing them if the ledger's half of e07a's ruling were deleted.
+    /// This drives the state instead: a question waiting behind the click, the ladder climbing to
+    /// its top rung beside it under Reduce Motion, and then **the popover actually opened**, which
+    /// is the moment `NudgeHost.proveOpenRung(at:)` is offered a rung it cannot charge.
+    ///
+    /// The reading is the pair: the accusation offers nothing and is deferred once, and the
+    /// question standing beside it offers its answers. A drive where the popover carried one
+    /// nudge would satisfy the first half by carrying no accusation at all.
+    ///
+    /// ## The clock, and why the surroundings carry an offset
+    ///
+    /// `LadderMachine` measures `escalationDwell` (300 s) and `mandateCooldown` (600 s) against
+    /// the monotonic reading the **surroundings** hand it, and a self-check cannot wait ten
+    /// minutes. So the surroundings this probe installs advance their own monotonic between
+    /// judgements: the same clock the shipping loop reads, moved the way ten minutes of a real
+    /// day would move it. Nothing else is faked — the judgements go through `consider(_:)`, the
+    /// routing is the router's, and the popover is the real one, opened through the status item's
+    /// own action with the composition root's wire on it.
+    ///
+    /// **Taken only against a store named by `--focus-store`**, for `keyboardAnswerReport()`'s
+    /// reason: it writes rows to whatever store it runs against.
+    @MainActor
+    static func pinnedQuestionReport() -> [String: Any] {
+        var report: [String: Any] = [:]
+        guard case .temporary = requestedStoreKind else {
+            report["wasTaken"] = false
+            report["notTakenBecause"] =
+                "the drive raises a real nudge and writes its rows, so it runs only against a "
+                + "store named by --focus-store"
+            return report
+        }
+        let composition = AppComposition.shared
+        let host = composition.nudgeHost
+        let asking = "com.chrismitchelmore.FocusPinnedQuestionProbe"
+        let accused = "com.chrismitchelmore.FocusPinnedAccusationProbe"
+        report["questionSubject"] = asking
+        report["accusationSubject"] = accused
+
+        // **The commitment, which is also what clears the launch's earlier nudges.** A new
+        // priority is `worldMovedOn` for whatever the keyboard block left standing —
+        // `PriorityHost.onSnapshotInvalidated` reaches `NudgeHost.priorityChanged()` on this very
+        // turn — and that is deliberately not `hideOverlays()`: ⌃⌘H is a person dismissing a
+        // nudge, it advances the ignored runs, and a drive that armed a backoff before asking
+        // would be measuring its own tidying up.
+        composition.priorityHost.setPriority(intent: "Self-check pinned question", doneWhen: nil)
+        settle(forSeconds: 0.2)
+        guard let commitment = composition.priorityHost.activeCommitment else {
+            report["wasTaken"] = false
+            report["notTakenBecause"] = "the store refused the commitment the nudges need"
+            return report
+        }
+
+        // The surroundings, stated rather than read off this machine, with a monotonic this
+        // function advances. Put back on the way out, exactly as the keyboard block does.
+        let live = composition.nudgeSurroundings()
+        let originalSurroundings = host.surroundings
+        // **Two hours ahead before a word is said**, because this launch has already spoken: the
+        // keyboard block asked and answered a real question seconds ago, and `queryCooldown` is
+        // three minutes — so a drive on the wall clock would be refused by the app's own good
+        // manners rather than by anything this bead is about. Every span the loop measures
+        // (`queryCooldown`, `mandateCooldown`, `escalationDwell`, `backoffSpan`) is shorter than
+        // this, so the cell is entered with nothing held over from the launch's earlier work.
+        let clock = ProbeClock(base: live.monotonic + .seconds(7_200))
+        defer { host.surroundings = originalSurroundings }
+        host.surroundings = { [commitment] in
+            NudgeSurroundings(
+                commitment: commitment,
+                sensitivity: SensitivityGate().evaluate(
+                    FrontmostActivation(
+                        bundleIdentifier: accused,
+                        localizedName: accused,
+                        pid: 4243,
+                        at: live.now,
+                        dwellSeconds: 180
+                    )
+                ),
+                idleThresholdSeconds: 120,
+                now: live.now,
+                calendar: live.calendar,
+                monotonic: clock.elapsed
+            )
+        }
+
+        // Reduce Motion's own route: it is what sends **both** kinds to the badge, and it is the
+        // ordinary state of everybody on a call. Put back to what the person set — `chosen` is
+        // that value and `preferences` is what the Mac may be forcing on top of it, and writing
+        // the second one back is the "two writers, one field" defect focus-w7v kept out of it.
+        let chosenBefore = host.chosen.reducedInterruption
+        host.choose(reducedInterruption: true)
+        defer { host.choose(reducedInterruption: chosenBefore) }
+
+        host.consider(questionJudgement(subject: asking))
+        settle(forSeconds: 0.2)
+        report["questionReachedTheBadge"] = host.pendingPopoverQuery != nil
+        guard host.pendingPopoverQuery != nil else {
+            report["wasTaken"] = false
+            report["notTakenBecause"] = "the loop put no question on the badge in the stated cell"
+            // What it did instead, so a refusal names its own cause rather than an absence.
+            report["hasOpenQuestion"] = host.hasOpenQuestion
+            report["lastDecision"] = "\(String(describing: host.lastDecision))"
+            return report
+        }
+
+        // The ladder, climbed: the glyph first, then the rung above it, with the surroundings'
+        // clock carrying the dwell and the cooldown between them.
+        for _ in 0..<2 {
+            clock.advance(by: RelevancePolicy.mandateCooldown + .seconds(1))
+            host.consider(accusingJudgement(subject: accused))
+            settle(forSeconds: 0.2)
+        }
+        report["rungLandedOn"] = host.landedRungSurface?.rawValue ?? ""
+        report["currentRung"] = host.currentRung?.rawValue ?? ""
+        guard host.landedRungSurface == .popoverBadge else {
+            report["wasTaken"] = false
+            report["notTakenBecause"] =
+                "the rung reached \(host.landedRungSurface?.rawValue ?? "nothing") rather than "
+                + "the badge, so no popover ever carried two nudges"
+            return report
+        }
+
+        // **The click.** Through the status item's own action, with the composition root's
+        // `onPopoverDidShow` — `NudgeHost.popoverPresented()` — on it. Polled, because a popover
+        // is shown by the window server on its own schedule and a reading taken before it opened
+        // would be a reading of a shut popover.
+        let menuBar = composition.menuBar
+        let chargedBefore = (try? host.deliveredRowsToday()) ?? -1
+        for _ in 0..<6 where !menuBar.isPopoverShown {
+            menuBar.update(composition.menuBarPresentation())
+            menuBar.togglePopover()
+            settle(forSeconds: 0.3)
+        }
+        report["popoverIsShown"] = menuBar.isPopoverShown
+        guard menuBar.isPopoverShown else {
+            report["wasTaken"] = false
+            report["notTakenBecause"] = "the popover never opened, so nothing below is a reading"
+            return report
+        }
+
+        // What the popover is carrying, and which of the two the decision in it belongs to.
+        report["popoverDrawsTheAccusation"] = menuBar.isDrawing(.accusation)
+        report["popoverDrawsTheQuestion"] = menuBar.isDrawing(.query)
+        report["offeredForTheAccusation"] = menuBar.offeredIdentifiers(of: .accusation)
+        report["offeredForTheQuestion"] = menuBar.offeredIdentifiers(of: .query)
+        report["accusationStanding"] =
+            menuBar.decisionSurfaceReading(of: .accusation).standing.rawValue
+        // The question's, beside it, because the two share one geometry: where AppKit drops a
+        // popover is a property of the machine, and a reading of the accusation alone could not
+        // tell *"the decision is the question's"* from *"this popover is off the bottom of the
+        // screen"*.
+        report["questionStanding"] =
+            menuBar.decisionSurfaceReading(of: .query).standing.rawValue
+        report["accusationIsBesideThePinnedDecision"] =
+            menuBar.isDrawnBesideThePinnedDecision(.accusation)
+        report["questionIsBesideThePinnedDecision"] =
+            menuBar.isDrawnBesideThePinnedDecision(.query)
+        report["standingsDeclared"] = DecisionSurfaceStanding.allCases.map(\.rawValue).sorted()
+
+        // The ledger. The count for this reason is the seeded cell; the charge is what it stands
+        // in place of.
+        report["deferralsForAPinnedQuestion"] = host.deferralsByReason[.questionPinned] ?? 0
+        report["deliveredRowsBeforeTheClick"] = chargedBefore
+        report["deliveredRowsAfterTheClick"] = (try? host.deliveredRowsToday()) ?? -1
+        report["accusationsToday"] = host.todaysUsage().accusationsToday
+        report["interruptionsToday"] = host.todaysUsage().interruptionsToday
+
+        // **Looked at again.** The proof is offered at every seam, so the row that says nobody
+        // could answer this must be written once and not once per redraw.
+        host.popoverPresented()
+        menuBar.update(composition.menuBarPresentation())
+        settle(forSeconds: 0.2)
+        report["deferralsAfterASecondLook"] = host.deferralsByReason[.questionPinned] ?? 0
+
+        // The popover is put away; the nudges are left standing. `hideOverlays()` would be this
+        // process dismissing them on the person's behalf, and its ignored runs are not this
+        // drive's to arm — the launch is seconds from exiting, and `applicationWillTerminate()`
+        // is the door that ends a nudge nobody answered.
+        menuBar.closePopover()
+        settle(forSeconds: 0.2)
+        report["wasTaken"] = true
+        return report
+    }
+
+    /// **A monotonic reading this process moves on purpose.**
+    ///
+    /// The ladder's dwell and cooldown are minutes long and a self-check is seconds long, so a
+    /// drive that waited for them would either not run or not be a drive. It is the surroundings'
+    /// own reading — the value `NudgeHost.consider(_:)` hands `LadderMachine` — and nothing else
+    /// about the loop is stood in for.
+    @MainActor
+    final class ProbeClock {
+        private let base: Duration
+        private var offset: Duration = .zero
+
+        init(base: Duration) { self.base = base }
+
+        var elapsed: Duration { base + offset }
+
+        func advance(by amount: Duration) { offset += amount }
+    }
+
+    /// A judgement the engine calls plainly off task, sustained long enough to mandate a rung.
+    ///
+    /// `questionJudgement(subject:)`'s twin, and it exists for the reason that one does: the two
+    /// halves of the loop are driven by two judgements, and a probe that could raise only one of
+    /// them could never put both on one surface.
+    nonisolated static func accusingJudgement(subject: String) -> NudgeJudgement {
+        let outcome = ClassificationOutcome(
+            verdict: .unrelated, source: .heuristic, confidence: 1, band: .high
+        )
+        let explanation = Explanation.make(
+            stage: .heuristic,
+            band: .high,
+            clauses: [.sustainedDwell(seconds: 180)],
+            stamp: .current
+        )
+        let drift = DriftState.sustained(
+            subject: .single(subject), accumulated: .seconds(180), isMixed: false
+        )
+        let eligibility = InterventionEligibility.decide(
+            outcome: outcome,
+            drift: drift,
+            phase: .focus,
+            status: .unrelated,
+            isUserIdle: false,
+            hasActivePriority: true,
+            explanation: explanation,
+            stamp: .current
+        )
+        return NudgeJudgement(
+            outcome: outcome,
+            uncertainty: nil,
+            subject: subject,
+            dwelled: .seconds(180),
+            snapshot: VerdictSnapshot(
+                status: .unrelated,
+                stage: .heuristic,
+                band: .high,
+                drift: drift,
+                eligibility: eligibility,
+                explanation: explanation,
+                stampKey: EngineStamp.current.cacheKey
+            ),
+            stamp: .current
+        )
+    }
+
     /// Each answering item's live `isEnabled`, by registry id, after `update()`.
     @MainActor
     private static func answerItemStates(_ answers: [ShellAction]) -> [String: Bool] {
@@ -1661,6 +1915,10 @@ enum SelfCheck {
         // reading at all, which is this round's instance of the shape every bead in this sequence
         // has. Two of those doors told the ladder nothing, and one of them — ⌃⌘H — left it standing
         // at a rung `candidate(at:budgetPermits:)` answers `nil` from for ever.
+        // **Every way a rung can fail to be seen** (P-131, focus-6pr.4). Published as the
+        // vocabulary rather than as a count, for `rungExitsDeclared`'s reason: a reason being
+        // removed is as much a change as one being added, and a count sees only one of them.
+        report["deferralReasonsDeclared"] = DeferralReason.allCases.map(\.rawValue).sorted()
         report["rungExitsDeclared"] = RungExit.allCases.map(\.rawValue).sorted()
         // **Which of them are R-81 take-backs**, named rather than counted, for the reason
         // `questionExitsWritingAnExpiry` is named: an exit quietly joining or leaving the
@@ -1948,6 +2206,7 @@ enum SelfCheck {
         // **After the panel probe, which draws its own content on the same panel** — this block
         // opens a real question through the loop and answers it with a key (e07a).
         report["keyboardAnswer"] = keyboardAnswerReport()
+        report["pinnedQuestion"] = pinnedQuestionReport()
         report["tickFetches"] = tickFetchSurvey()
         // **F-67's cue, live and seeded** (focus-2w1). The live half is what the app is actually
         // saying about this session — on a gate machine, that there is no session — and it is a

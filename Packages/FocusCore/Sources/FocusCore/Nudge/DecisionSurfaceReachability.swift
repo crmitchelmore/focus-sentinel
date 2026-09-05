@@ -19,6 +19,26 @@ public struct ActionHitTarget: Sendable, Equatable, Hashable {
     }
 }
 
+/// **What a decision surface amounts to, in the three answers it has** (focus-6pr.4).
+///
+/// `everyActionIsReachable` was a `Bool` over four conjuncts that are all true of a surface
+/// offering nothing, so *"there is nothing here to reach"* and *"everything here is reachable"*
+/// were one answer. e07a's popover ruling makes that state ordinary rather than hypothetical: a
+/// popover carrying an accusation **and** a question pins the question, and the accusation's
+/// corrections scroll with the context, so the accusation offers nothing while it is drawn. It is
+/// a `String` enum for `DeferralReason`'s reason — a case is a value a report can carry — and
+/// `CaseIterable` so the vocabulary can be folded rather than listed.
+public enum DecisionSurfaceStanding: String, Sendable, CaseIterable, Codable, Hashable {
+    /// The surface is on a display and every action it offers is somewhere a person can click.
+    case reachable
+    /// The surface is on a display and offers **nothing**. Not a decision surface, and not a
+    /// defect either: it is what the popover's residual nudge is while the other one is pinned.
+    case notOffered
+    /// The surface is not on screen, is not wholly on a display, or an action it offers is not
+    /// where a person could press it. `DecisionSurfaceReading.summary` says which.
+    case unreadable
+}
+
 /// **Whether a decision surface is one a person could actually decide on** (focus-kby, U-1).
 ///
 /// A reading rather than a `Bool`, because the four ways it fails are four different defects and
@@ -30,6 +50,7 @@ public struct ActionHitTarget: Sendable, Equatable, Hashable {
 /// | `isWhollyOnAScreen` | the window is on screen and **off** every display — the y = −1186 case |
 /// | `unreportedActions` | an offered action drew nothing: it is not in the layout at any size |
 /// | `unreachableActions` | an action was laid out **below the fold**: clipped, or scrolled away |
+/// | `offeredActions` | **nothing was offered at all** — there is no decision here to reach |
 public struct DecisionSurfaceReading: Sendable, Equatable, Hashable {
     /// Whether the surface is on screen at all.
     public let isVisible: Bool
@@ -40,17 +61,25 @@ public struct DecisionSurfaceReading: Sendable, Equatable, Hashable {
     /// Offered actions whose frame is empty, or is not wholly inside the content the person
     /// can see.
     public let unreachableActions: [String]
+    /// **Every action the surface said it was offering** (focus-6pr.4).
+    ///
+    /// Carried rather than summed away, because *"none of the offered actions is out of reach"*
+    /// and *"there were no offered actions"* are two different readings and the three lists above
+    /// cannot tell them apart: both are three empty arrays. See `standing`.
+    public let offeredActions: [String]
 
     public init(
         isVisible: Bool,
         isWhollyOnAScreen: Bool,
         unreportedActions: [String],
-        unreachableActions: [String]
+        unreachableActions: [String],
+        offeredActions: [String]
     ) {
         self.isVisible = isVisible
         self.isWhollyOnAScreen = isWhollyOnAScreen
         self.unreportedActions = unreportedActions
         self.unreachableActions = unreachableActions
+        self.offeredActions = offeredActions
     }
 
     /// **The one honest predicate**, and the thing that replaced `isPresentedAtIntendedSize`.
@@ -61,11 +90,28 @@ public struct DecisionSurfaceReading: Sendable, Equatable, Hashable {
     /// decision surface whose Pause button a person cannot reach is not a decision surface, so
     /// this is the conjunction of on-screen, on-a-display, and **every** offered action laid out
     /// somewhere the person can see and click.
-    public var everyActionIsReachable: Bool {
-        isVisible
-            && isWhollyOnAScreen
-            && unreportedActions.isEmpty
-            && unreachableActions.isEmpty
+    /// **And that there was one to reach** (focus-6pr.4). The four conjuncts are all satisfied by
+    /// a surface offering *nothing*, so this answered `true` — "every one of no actions is
+    /// reachable" — for the one state e07a's popover ruling creates: an accusation drawn beside a
+    /// question, where the question is the pinned decision and the accusation's corrections
+    /// scroll with the context. `NudgeHost` charged that rung on this reading. `standing` is the
+    /// three-valued form and this is exactly its `reachable` arm, so a caller that asks only the
+    /// `Bool` cannot reach the vacuous answer either.
+    public var everyActionIsReachable: Bool { standing == .reachable }
+
+    /// **Whether this is a decision surface, and if not, which of the two ways it is not**
+    /// (focus-6pr.4).
+    ///
+    /// The geometry is asked first and the offer second, deliberately: a surface at y = −1186
+    /// offering nothing is *off the edge of the world*, and answering `notOffered` for it would
+    /// let an empty offer wave a runaway window past the reading that exists to catch one.
+    public var standing: DecisionSurfaceStanding {
+        guard isVisible,
+              isWhollyOnAScreen,
+              unreportedActions.isEmpty,
+              unreachableActions.isEmpty
+        else { return .unreadable }
+        return offeredActions.isEmpty ? .notOffered : .reachable
     }
 
     /// Why it is not, in one line, for a log or a gate report.
@@ -80,6 +126,7 @@ public struct DecisionSurfaceReading: Sendable, Equatable, Hashable {
         if !unreachableActions.isEmpty {
             parts.append("out of reach: \(unreachableActions.joined(separator: ", "))")
         }
+        if parts.isEmpty { parts.append("the surface is offering nothing to decide on") }
         return parts.joined(separator: "; ")
     }
 
@@ -90,6 +137,10 @@ public struct DecisionSurfaceReading: Sendable, Equatable, Hashable {
             "isWhollyOnAScreen": isWhollyOnAScreen,
             "unreportedActions": unreportedActions,
             "unreachableActions": unreachableActions,
+            // `standing` is deliberately not a key of its own: it is **derivable** from the ones
+            // that are — both geometry terms true, both lists empty and `everyActionIsReachable`
+            // false is `notOffered` and can be nothing else — so a reader loses nothing and the
+            // gate gains no unread key (R-168).
             "everyActionIsReachable": everyActionIsReachable,
             "summary": summary
         ]
@@ -176,7 +227,8 @@ public enum DecisionSurfaceReachability {
             isVisible: isVisible,
             isWhollyOnAScreen: onAScreen,
             unreportedActions: unreported,
-            unreachableActions: unreachable
+            unreachableActions: unreachable,
+            offeredActions: identifiers
         )
     }
 

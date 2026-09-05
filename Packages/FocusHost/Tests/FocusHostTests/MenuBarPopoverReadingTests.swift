@@ -140,10 +140,24 @@ struct MenuBarPopoverReadingTests {
         )
     }
 
-    /// **Both nudges at once, on the real popover**: each is a decision surface in its own right,
-    /// and the reading is taken per kind because the popover carries one of each.
-    @Test("a popover carrying an accusation and a question is a decision surface for both")
-    func bothNudgesAtOnceAreReachable() throws {
+    /// **Both nudges at once, on the real popover: the question is the decision** (e07a,
+    /// focus-cxb, focus-6pr.4).
+    ///
+    /// ## Red before
+    ///
+    /// This asserted that *each* is a decision surface in its own right — `!verdict.isBroken` and
+    /// `!offeredIdentifiers(of: nudge).isEmpty` for both kinds — and it was the shipping half of
+    /// the disagreement this round closed. e07a had already ruled the other way in the layout: a
+    /// popover carrying both pins the **question**, because U-1 licenses the interruption for the
+    /// question's cheap answer and U-2 makes the accusation wait behind one, and pinning both
+    /// needed over 815 points against a 911-point ceiling. So the accusation's corrections scroll
+    /// with the context and are not the shelf, while this suite went on asserting they were the
+    /// decision — which is how `NudgeHost` came to charge a rung nobody could answer.
+    ///
+    /// The reading is still taken per kind, and it is still a reading of the real popover. What
+    /// changed is which of the three standings each kind is held to.
+    @Test("a popover carrying an accusation and a question is a decision surface for the question")
+    func bothNudgesAtOnceArePinnedForTheQuestion() throws {
         let controller = MenuBarController()
         defer {
             controller.closePopover()
@@ -157,21 +171,44 @@ struct MenuBarPopoverReadingTests {
         guard MenuBarStage.taken(opened) else { return }
         NudgeHostFixture.settle()
 
-        for nudge in MenuBarNudge.allCases {
-            let reading = controller.decisionSurfaceReading(of: nudge)
-            let verdict = DecisionSurfaceReachability.verdict(
-                reading,
-                screens: NudgePanelController.currentScreens()
-            )
-            if let banner = verdict.banner { print(banner) }
+        // The question: the pinned decision, and a surface a person could answer on.
+        let question = controller.decisionSurfaceReading(of: .query)
+        let verdict = DecisionSurfaceReachability.verdict(
+            question,
+            screens: NudgePanelController.currentScreens()
+        )
+        if let banner = verdict.banner { print(banner) }
+        #expect(
+            !verdict.isBroken,
+            """
+            query: \(verdict.summary) — the popover is at \(controller.popoverFrame), \
+            laid out at \(controller.currentPopoverLayout)
+            """
+        )
+        #expect(!controller.offeredIdentifiers(of: .query).isEmpty)
+
+        // The accusation: drawn, in the same popover, offering nothing — and therefore
+        // `notOffered` rather than a decision surface that happens to be empty. The two are read
+        // off the same window, so this is not a claim about a different popover.
+        #expect(controller.isDrawing(.accusation))
+        #expect(
+            controller.offeredIdentifiers(of: .accusation).isEmpty,
+            "the accusation claims a pinned decision beside a question"
+        )
+        #expect(controller.isDrawnBesideThePinnedDecision(.accusation))
+        #expect(!controller.isDrawnBesideThePinnedDecision(.query))
+        let accusation = controller.decisionSurfaceReading(of: .accusation)
+        #expect(
+            accusation.standing != .reachable,
+            "an accusation offering nothing read as one every action of which is reachable"
+        )
+        // Guarded by the question's own reading, because the two share one geometry and where
+        // AppKit drops a popover is a property of the machine.
+        if question.standing == .reachable {
             #expect(
-                !verdict.isBroken,
-                """
-                \(nudge): \(verdict.summary) — the popover is at \(controller.popoverFrame), \
-                laid out at \(controller.currentPopoverLayout)
-                """
+                accusation.standing == .notOffered,
+                "the accusation beside a pinned question read as \(accusation.summary)"
             )
-            #expect(!controller.offeredIdentifiers(of: nudge).isEmpty)
         }
     }
 
@@ -194,12 +231,16 @@ struct MenuBarPopoverReadingTests {
         guard MenuBarStage.taken(opened) else { return }
         NudgeHostFixture.settle()
 
-        let reading = controller.decisionSurfaceReading(of: .accusation)
+        // **The question's reading, because this rig carries both** (focus-6pr.4). The
+        // accusation beside a pinned question offers nothing, so a reading of it would be
+        // `notOffered` whatever the priority did to the layout — which is a true statement about
+        // the ruling and no statement at all about the longest sentence a person can commit to.
+        let reading = controller.decisionSurfaceReading(of: .query)
         #expect(
             Double(controller.currentPopoverLayout.size.width)
                 == MenuBarController.popoverContentWidth
         )
-        #expect(reading.unreportedActions.isEmpty, "a correction was drawn nowhere at all")
+        #expect(reading.unreportedActions.isEmpty, "an answer was drawn nowhere at all")
         if !controller.currentPopoverLayout.scrolls {
             let verdict = DecisionSurfaceReachability.verdict(
                 reading,

@@ -260,7 +260,12 @@ struct SurfaceRouterTests {
                 #expect(!menuBar || presentation.suppressesOverlays)
             case .presentationActive:
                 #expect(presentation.suppressesOverlays)
-            case .notificationDeliveryFailed, .noSurfaceAvailable:
+            case .notificationDeliveryFailed, .noSurfaceAvailable, .questionPinned:
+                // **The three a ROUTE can never carry.** The first two belong to a delivery that
+                // failed and to a host with nothing left to try; `questionPinned` (focus-6pr.4)
+                // belongs to the moment a rung already on the badge is looked at beside a
+                // question that owns the shelf — a fact about a popover on screen, which the
+                // router is not told about and must not invent.
                 Issue.record("the router invented \(reason), which only a delivery can produce")
             }
         }

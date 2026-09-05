@@ -182,8 +182,8 @@ struct MenuBarPopoverLayoutTests {
         let frames = Self.actionFrames(of: cell, layout: layout)
 
         for nudge in MenuBarNudge.allCases where cell.presentation.isCarrying(nudge) {
-            let offered = Self.offeredIdentifiers(of: nudge, in: cell.presentation)
-            #expect(!offered.isEmpty, "\(cell.name) carries a \(nudge) that offers nothing")
+            let offered = Self.drawnIdentifiers(of: nudge, in: cell.presentation)
+            #expect(!offered.isEmpty, "\(cell.name) carries a \(nudge) that draws nothing")
             let reading = Self.reading(offering: offered, frames: frames, layout: layout)
             #expect(
                 reading.unreportedActions.isEmpty,
@@ -278,7 +278,7 @@ struct MenuBarPopoverLayoutTests {
         #expect(Double(layout.size.width) == MenuBarController.popoverContentWidth)
 
         let frames = Self.actionFrames(of: cell, layout: layout)
-        let offered = Self.offeredIdentifiers(of: .accusation, in: cell.presentation)
+        let offered = Self.drawnIdentifiers(of: .accusation, in: cell.presentation)
         let reading = Self.reading(offering: offered, frames: frames, layout: layout)
 
         #expect(
@@ -413,7 +413,16 @@ struct MenuBarPopoverLayoutTests {
         )
     }
 
-    static func offeredIdentifiers(
+    /// **What the popover DRAWS for one kind of nudge**, which is not what it *offers*
+    /// (focus-6pr.4).
+    ///
+    /// `MenuBarPresentation.offeredIdentifiers(of:)` answers the decision question — what is in
+    /// the shelf, and therefore what a charge may be taken on — and in a both-state it answers
+    /// `[]` for the accusation, because the question is pinned and the corrections scroll with
+    /// the context. This suite asks the **layout** question: every action the popover puts on
+    /// screen has a frame, at every size, in either appearance. An action in the scrolling
+    /// context is drawn and is not offered, so these are two tables and not two spellings of one.
+    static func drawnIdentifiers(
         of nudge: MenuBarNudge,
         in presentation: MenuBarPresentation
     ) -> [String] {

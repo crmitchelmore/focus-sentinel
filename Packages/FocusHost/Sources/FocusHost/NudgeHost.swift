@@ -245,6 +245,17 @@ final class NudgeHost {
     private(set) var deliveredCount = 0
     private(set) var deferredCount = 0
 
+    /// **The same deferrals, by the reason each one names** (focus-6pr.4).
+    ///
+    /// `deferredCount` is one number for five reasons, and a total cannot say whether the one
+    /// this round added ever happened: a self-check that published the sum would report the same
+    /// figure whether an accusation beside a pinned question was deferred or charged. Keyed by
+    /// the reason, so the gate can seed the state and read back the cell it seeded.
+    ///
+    /// Written in `record(deferral:…)` and in `undeliverRecord(…)`'s own take-back, which are the
+    /// two places `deferredCount` moves, so the two counters cannot part company.
+    private(set) var deferralsByReason: [DeferralReason: Int] = [:]
+
     /// **Every charge this loop has made, and the proof it was made on** (focus-1b5, focus-nrl).
     ///
     /// One `PerceptibleChange` per unit of the person's day that has been spent, in the order
@@ -443,6 +454,21 @@ final class NudgeHost {
         /// twin, and for the twin reason: the correction the person presses must complete the
         /// row for the rung they pressed it on.
         var recordID: UUID?
+        /// **Whether this rung has already been written down as unanswerable beside a pinned
+        /// question** (focus-6pr.4).
+        ///
+        /// `proveOpenRung(at:)` is offered again at **every** seam — a landing, a click, a write
+        /// to the status item, a redraw — so the deferral it records for a both-state popover
+        /// would otherwise be a row per redraw for one rung nobody could answer. `perceived` is
+        /// the same guard for the charge; this is its twin for the row, and the two are separate
+        /// because a deferred rung is not a charged one and must stay chargeable: answering the
+        /// question unpins the accusation, the popover redraws offering its corrections, and the
+        /// rung is charged then — for the first moment anybody could have pressed one.
+        ///
+        /// It is read by `recordUnopenedInvitation(_:)` as well, so a rung that has said *nobody
+        /// could answer this* does not also say *nobody opened this* when the person takes their
+        /// screen back. One attempt, one row.
+        var deferredBehindThePinnedQuestion = false
         /// **Whether this rung is occupying the thing the slot is about: an answerable screen.**
         ///
         /// R-84a's argument for a single slot is that *"two panels on screen at once is the
@@ -838,6 +864,7 @@ final class NudgeHost {
         priorityID: UUID?
     ) {
         deferredCount += 1
+        deferralsByReason[deferral, default: 0] += 1
         ladder.reduce(.delivery(.deferred(deferral)), now: monotonicClock.elapsed)
         write(
             InterventionEvent(
@@ -1463,10 +1490,43 @@ final class NudgeHost {
             on: open.landedOn,
             from: open.observedAtLanding,
             to: seam.settled(observation(of: .accusation, panelActions: open.panelActions))
-        ) else { return }
+        ) else {
+            deferBehindThePinnedQuestion(open)
+            return
+        }
 
         openRung?.perceived = change
         deliveredRung(rung: open.rung, provenBy: change, priorityID: open.priorityID)
+    }
+
+    /// **A rung the person is looking at and could not answer** (e07a, focus-cxb, focus-6pr.4).
+    ///
+    /// The one shape of *"the proof failed"* that is not silence. Every other way
+    /// `PerceptibleChange.proven(…)` answers `nil` is a nudge nobody has been shown — the popover
+    /// is shut, the item is already saying this, the panel is not up — and those stay open and
+    /// unpaid, because the next redraw may well show them. This one cannot: the popover **is**
+    /// open, it **is** drawing the accusation, and the decision on it belongs to the question
+    /// pinned beside it, so the corrections are in the scrolling context and there is nothing
+    /// there for anybody to press. That is a deferral in the word's own sense — nobody could see
+    /// the surface *as a surface for this rung* — and `record(deferral:…)` does the rest: the
+    /// ladder is told `.delivery(.deferred(_))`, which advances nothing and spends nothing, and
+    /// the row says `deferred/questionPinned` rather than nothing at all.
+    ///
+    /// **Once per rung**, because this is offered again at every seam and a redraw is not a
+    /// second attempt. The rung stays chargeable: answering the question unpins the accusation
+    /// and the next seam proves the change for real.
+    private func deferBehindThePinnedQuestion(_ open: OpenRung) {
+        guard !open.deferredBehindThePinnedQuestion,
+              open.landedOn == .popoverBadge,
+              menuBar.isDrawnBesideThePinnedDecision(.accusation)
+        else { return }
+        openRung?.deferredBehindThePinnedQuestion = true
+        record(
+            deferral: .questionPinned,
+            kind: .accusation,
+            subject: open.rung.subject,
+            priorityID: open.priorityID
+        )
     }
 
     /// **What a person could actually be shown of one kind of nudge, right now** (focus-1b5).
@@ -1594,7 +1654,14 @@ final class NudgeHost {
             // row at all, and focus-sq7's ruling is that a thing the app did gets a row. The
             // receipt is the whole condition now: a rung that was never perceived is `unopened`,
             // whichever surface it was standing on.
-            guard let open = openRung, open.perceived == nil else { return }
+            // **…and not one the ledger has already spoken for** (focus-6pr.4). A rung that was
+            // written down as `deferred(questionPinned)` was drawn to the person and could not be
+            // answered; adding `unopened` beside it when they take their screen back would count
+            // one attempt twice, which is exactly what `NudgeUnseenAttemptTests` forbids.
+            guard let open = openRung,
+                  open.perceived == nil,
+                  !open.deferredBehindThePinnedQuestion
+            else { return }
             write(
                 InterventionEvent(
                     kind: .accusation,
@@ -2029,6 +2096,7 @@ final class NudgeHost {
             return
         }
         deferredCount += 1
+        deferralsByReason[.noSurfaceAvailable, default: 0] += 1
         ladder.reduce(
             .delivery(.deferred(.noSurfaceAvailable)),
             now: monotonicClock.elapsed
