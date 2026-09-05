@@ -149,7 +149,15 @@ that notes what is asked of it — because a grep over the readers over-counts (
 section counts as read in every section that spells it) and under-counts (`self-check.sh` indexes
 dynamically, so the key is never a literal at the read site). Measured at the close of e10a: 772
 keys published, 758 read, 14 listed with a reason in `Config/unasserted-keys.txt`, twelve of
-which are properties of the machine the gate happens to run on.
+which are properties of the machine the gate happens to run on. **Two were not** — the two that
+named a bead rather than NONE-BY-DESIGN — and focus-psh closed both by *driving* the reading
+rather than asserting harder about a value the run was handed: `sensing.wasRunningBeforeProbe` is
+now one term of an asserted transition (`running → paused → running`, with `attachedForTheProbe`
+naming which of the two starting worlds this run was in), and `relevance.verdict.band` is
+asserted against the contract that gives it meaning (`band` is absent exactly when the verdict is
+`uncertain`) beside a **driven** band: two snapshots the probe builds itself, one input, a
+reverse-DNS subject no application on this Mac carries, and the band goes from absent to present
+because of a rule the probe wrote. The list is now fourteen rows, every one NONE-BY-DESIGN.
 
 `grants` (invariant I-3) exists because the zero-grant doctrine is cited by five epic plans and
 was proved, until this round, by four unrelated readings about three families: SC-1's one

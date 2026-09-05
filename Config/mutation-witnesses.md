@@ -47,7 +47,7 @@ it to be green: a red line means nothing if the clean run was red too.
 
 | stage | assertions witnessed | PROVEN | CANNOT-GO-RED |
 |---|---|---|---|
-| `selfcheck-debug` / `selfcheck-release` | 176 | 176 | — |
+| `selfcheck-debug` / `selfcheck-release` | 184 | 184 | — |
 | `notification-denied` (+ Release twin) | 19 | 19 | — |
 | `focus-steal` (+ Release twin) | 14 | 14 | — |
 | `forbidden-binary` | 6 | 6 | — |
@@ -59,7 +59,7 @@ it to be green: a red line means nothing if the clean run was red too.
 | `unit-counts` | 5 | 5 | — |
 | `evaluation` (B1–B5) | 9 | 9 | — |
 | `entitlements-debug` / `entitlements-release` | 6 | 6 | 2 (seven restatement lines; one unreachable branch) |
-| **total** | **245** | **243** | **5 findings** |
+| **total** | **253** | **251** | **5 findings** |
 
 The seven rows the gate audit named as unable to go red are all fallible now, and each was run:
 `self-check.sh`'s popover overflow (SC-37, SC-38) and its committed width (SC-39, SC-40),
@@ -498,6 +498,39 @@ And the four readings that stop the ten above being green for the wrong reason:
 | I3-12 | the running-app half | `capabilities[accessibilityWindowContext].state = "available"` (H-JSON) | the binary half stays green: this is the Mac where somebody granted it by hand | **PROVEN** — `FAIL [I-3] report-available.json: accessibility (accessibilityWindowContext) is in a state the table allows, not a held grant: 'available'` |
 | I3-13 | the counter | `requestAuthorizationCallCount = 1` (H-JSON) | as I3-12 | **PROVEN** — `FAIL [I-3] report-count.json: requestAuthorizationCallCount is zero — the app asked for nothing` |
 | I3-14 | the surface scan | `authorisationSurfaceScan.suspects = ["tccd"]` (H-JSON) | the scan's own `wasTaken` and `windowsOwnedByThisProcess` are asserted beside it | **PROVEN** — `FAIL [I-3] report-suspects.json: no authorisation surface was on screen while the app ran` |
+
+### focus-psh — the two readings that were listed rather than driven — `selfcheck-debug` / `selfcheck-release`
+
+R-168 measured 14 published-but-unasserted keys and marked twelve NONE-BY-DESIGN. These two were
+not: each named a bead, and each needed the reading **driven** rather than a harder assertion
+about a value the run was handed.
+
+* `sensing.wasRunningBeforeProbe` — published so the pause probe can say what world it found, and
+  the probe then moves it. The fix is the **transition**: whatever the person's stored switch is,
+  the probe attaches the graph if it has to and it is `running → paused → running` from there,
+  with `attachedForTheProbe` saying which of the two starting worlds this was and agreeing with
+  the reading by construction.
+* `relevance.verdict.band` — the band of a judgement made over the person's own store, so its
+  value is a fact about their day. The fix is focus-0gq's shape: the probe **moves the world** —
+  two snapshots it builds itself, one input, a reverse-DNS subject no application on this Mac
+  carries — and reads the band back. Told nothing, the engine declines and has no band; told one
+  rule about that subject, it decides and the decision is banded. The person's own band is
+  asserted separately against the type's contract (`band` is `nil` exactly when `uncertain`),
+  which holds whatever was on their screen.
+
+H-JSON on the same `/private/tmp/mw-s12/run.zsh` harness as the focus-p3dl rows. Control: the
+unmutated copy, `EXIT=0`, 818 ok.
+
+| # | what it protects | mutation (H-JSON) | control | status — the line it printed |
+|---|---|---|---|---|
+| PSH-01 | the transition | `sensing.isRunningAfterPause = True` | the observer-count triple stays green: the counts and the switch are two readings of one pause | **PROVEN** — `FAIL: watching went running -> paused -> running across the probe, whatever it started from` |
+| PSH-02 | the first term | `sensing.attachedForTheProbe = not attachedForTheProbe` | PSH-01 — the journey holds while the two halves of its starting world disagree | **PROVEN** — `FAIL: the probe attached the graph exactly when it found it detached` |
+| PSH-03 | the driven band | `drivenBand.toldOneRule.hasBand = False`, `band = ""` | the told-nothing half stays green, which is what makes this the *decision's* band and not the probe's | **PROVEN** — `FAIL: told one rule about the subject, the engine decides and the decision carries a band` (and the movement row with it) |
+| PSH-04 | the movement | `drivenBand.toldNothing.band = toldOneRule.band` | PSH-03 — both bands are legal values; what fails is that the rule changed nothing | **PROVEN** — `FAIL: the rule the probe wrote is what moved the band, and it moved it` |
+| PSH-05 | the vocabulary | `drivenBand.bandsDeclared = ["low","high"]` | the membership test above stays green, which is why the set is pinned as well as read | **PROVEN** — `FAIL: the evidence bands are exactly the three the vocabulary declares, in rank order` |
+| PSH-06 | the person's own band | flip `relevance.verdict.band` between present and absent | the stamp, stage, status and clauses stay green — this is the band alone | **PROVEN** — `FAIL: the running verdict carries a band exactly when it reached a decision` |
+| PSH-07 | the told-nothing half | `drivenBand.toldNothing.status = "unrelated"` | PSH-03 | **PROVEN** — `FAIL: told nothing at all, the engine declines to decide and has no band to draw` |
+| PSH-08 | the subject | `drivenBand.subject = "com.apple.Safari"` | the three band rows stay green: a judgement about a real application would be a reading of this Mac | **PROVEN** — `FAIL: the driven judgement is about a subject this probe owns, not an application on this Mac` |
 
 ### focus-p3dl — the surface scan is a DELTA, not a photograph of the screen — `selfcheck-*`, `grants`, `notification-denied-*`
 

@@ -21,12 +21,10 @@ nudge.tickFetches.commitmentPopoverOpen.firstTickNudgeFetches · same first-tick
 nudge.tickFetches.noCommitment.firstTickCockpitFetches · same first-tick timing, with no commitment · NONE-BY-DESIGN
 nudge.tickFetches.noCommitment.firstTickNudgeFetches · same first-tick timing, for the nudge path · NONE-BY-DESIGN
 authorisationSurfaceScan.preexistingAuthorisationSurfaces · the individual windows an authorisation dialog belonging to somebody else already had on this Mac's screen before the app launched, owner and window number; the owner and the count ARE asserted, and which windows they were is a property of the machine, never of the app · NONE-BY-DESIGN
-relevance.verdict.band · the confidence band of a verdict reached over the person's own store, which carries whatever they were doing · focus-psh
 retention.activityEventsRemoved · rows the retention sweep removed from the person's real store, which is their history and not this run's · NONE-BY-DESIGN
 retention.interventionRowsRemoved · the same sweep's intervention rows; the seeded twins (seededInterventionRowsRemoved) are asserted instead · NONE-BY-DESIGN
 retention.queryReceiptsRemoved · the same sweep's query receipts; the seeded twin is asserted instead · NONE-BY-DESIGN
 sensing.media.audioListenerCount · how many audio devices this Mac has a listener on · NONE-BY-DESIGN
 sensing.media.microphoneRunning · whether somebody on this Mac was on a call while the gate ran · NONE-BY-DESIGN
 sensing.presentation.agreementCount · how many of the presentation signals agreed, which is a property of what was on the screen · NONE-BY-DESIGN
-sensing.wasRunningBeforeProbe · whether watching was on before the pause probe, which the probe itself then moves; asserting it would pin the probe's own ordering rather than the app · focus-psh
 shellRendering.driveExclusionList.addableCount · how many applications happen to be running on the machine the gate ran on · NONE-BY-DESIGN

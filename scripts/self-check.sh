@@ -1648,6 +1648,34 @@ check(
     "resume() restores exactly the observers pause() removed",
     (sensing.get("liveObserverCount"), sensing.get("liveObserverCountAfterResume")),
 )
+# **And the switch itself, as a TRANSITION rather than as its first reading** (focus-psh).
+#
+# `wasRunningBeforeProbe` was published so the probe could say what world it found and was listed
+# in `Config/unasserted-keys.txt` on the argument that the probe then moves it — which is true of
+# that reading alone and false of the journey. The person's stored switch may be on or off and the
+# gate may not care which; what it can hold is that from wherever this run started, watching was
+# ON when the probe began, OFF after `pause()` and ON again after `resume()` — and that the probe
+# says which of the two starting worlds it was in, consistently with the reading it took.
+check(
+    sensing.get("attachedForTheProbe") == (sensing.get("wasRunningBeforeProbe") is False),
+    "the probe attached the graph exactly when it found it detached",
+    (sensing.get("wasRunningBeforeProbe"), sensing.get("attachedForTheProbe")),
+)
+check(
+    (
+        sensing.get("isRunningAtTheStartOfTheProbe"),
+        sensing.get("isRunningAfterPause"),
+        sensing.get("isRunningAfterResume"),
+    )
+    == (True, False, True),
+    "watching went running -> paused -> running across the probe, whatever it started from",
+    (
+        sensing.get("wasRunningBeforeProbe"),
+        sensing.get("isRunningAtTheStartOfTheProbe"),
+        sensing.get("isRunningAfterPause"),
+        sensing.get("isRunningAfterResume"),
+    ),
+)
 # **The reading before it, or the one after it proves nothing** (focus-jax's sweep).
 #
 # `audioListenerCountBeforePause` sat in the same dictionary as the assertion below, reported and
@@ -5465,6 +5493,58 @@ check(
     isinstance(verdict.get("clauses"), list) and len(verdict.get("clauses")) >= 1,
     "the verdict names at least one clause it rests on",
     verdict.get("clauses"),
+)
+# **The band, and it is the type's own contract rather than a fact about the person's day**
+# (focus-psh). `VerdictSnapshot.band` is documented `nil` when the verdict is `uncertain` —
+# declining to decide has no evidence to band, and drawing `.low` there would imply a weak
+# DECISION. That is a statement about this build that holds whatever was on screen, so it can be
+# asserted where the band's *value* could not be.
+check(
+    (verdict.get("band") != "") == (verdict.get("status") != "uncertain"),
+    "the running verdict carries a band exactly when it reached a decision",
+    (verdict.get("status"), verdict.get("band")),
+)
+
+# --- and the band DRIVEN, which is what the row in Config/unasserted-keys.txt asked for -------
+#
+# The reading above is about a judgement made over the person's own store. This one is about two
+# judgements the probe made itself, over snapshots it built, about a reverse-DNS subject no
+# application on this Mac carries: told nothing, the engine declines and there is no band; told
+# one rule about that subject, it decides and the decision is banded. One input, one difference —
+# a rule the probe wrote — and the band goes from absent to present.
+#
+# This is focus-0gq's shape applied to the second of R-168's two undriven rows: the probe moves
+# the world and reads the value back, rather than asserting harder about a value it was handed.
+driven = relevance.get("drivenBand") or {}
+told_nothing = driven.get("toldNothing") or {}
+told_one_rule = driven.get("toldOneRule") or {}
+check(
+    told_nothing.get("status") == "uncertain" and told_nothing.get("hasBand") is False,
+    "told nothing at all, the engine declines to decide and has no band to draw",
+    (told_nothing.get("status"), told_nothing.get("band")),
+)
+check(
+    told_one_rule.get("hasBand") is True
+    and told_one_rule.get("band") in (driven.get("bandsDeclared") or []),
+    "told one rule about the subject, the engine decides and the decision carries a band",
+    (told_one_rule.get("status"), told_one_rule.get("band")),
+)
+check(
+    told_nothing.get("band") != told_one_rule.get("band"),
+    "the rule the probe wrote is what moved the band, and it moved it",
+    (told_nothing.get("band"), told_one_rule.get("band")),
+)
+# The vocabulary, pinned both ways like every other enum this report publishes — a band drawn
+# from a set that had been emptied would satisfy the membership test above vacuously.
+check(
+    (driven.get("bandsDeclared") or []) == ["low", "medium", "high"],
+    "the evidence bands are exactly the three the vocabulary declares, in rank order",
+    driven.get("bandsDeclared"),
+)
+check(
+    isinstance(driven.get("subject"), str) and driven["subject"].startswith("com.focus.selfcheck"),
+    "the driven judgement is about a subject this probe owns, not an application on this Mac",
+    driven.get("subject"),
 )
 
 # --- the window list, and the cockpit's own entry in it -------------------------------------

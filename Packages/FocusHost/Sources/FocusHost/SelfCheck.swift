@@ -3702,19 +3702,37 @@ enum SelfCheck {
         // ends where it began — `paused(cause: .globalPause)` followed by
         // `resumed(cause: .globalPause)` nets to nothing, which is precisely the property the
         // cause mechanism exists to give.
+        // **The switch is a TRANSITION, and `wasRunningBeforeProbe` is one term of it**
+        // (focus-psh). The reading was published so the probe could say what it found and then
+        // asserted by nobody, on the argument that the probe itself moves the value — which is
+        // true of the first term alone and false of the triple. What the gate can hold is the
+        // whole journey: whatever the person had the switch set to, the probe attaches the graph
+        // if it has to, and from there it is `running → paused → running`, with
+        // `attachedForTheProbe` saying which of the two starting worlds this run was in and
+        // agreeing with `wasRunningBeforeProbe` by construction.
         let wasRunning = host.isRunning
         if !wasRunning { host.resume() }
+        let runningAtTheStartOfTheProbe = host.isRunning
 
         let before = host.liveObserverCount
         let audioBefore = host.audioListenerCount
         host.pause()
         let afterPause = host.liveObserverCount
+        let runningAfterPause = host.isRunning
         let audioAfterPause = host.audioListenerCount
         let cameraAfterPause = host.cameraListenersInstalled
         host.resume()
         let afterResume = host.liveObserverCount
+        let runningAfterResume = host.isRunning
 
         report["wasRunningBeforeProbe"] = wasRunning
+        // The other three terms of the transition. `attachedForTheProbe` is the fact that makes
+        // the first one assertable: it is `!wasRunningBeforeProbe` by construction, so a report
+        // whose two halves disagree is a report describing two different runs.
+        report["attachedForTheProbe"] = !wasRunning
+        report["isRunningAtTheStartOfTheProbe"] = runningAtTheStartOfTheProbe
+        report["isRunningAfterPause"] = runningAfterPause
+        report["isRunningAfterResume"] = runningAfterResume
         report["liveObserverCount"] = before
         report["liveObserverCountAfterPause"] = afterPause
         report["liveObserverCountAfterResume"] = afterResume
@@ -3818,6 +3836,28 @@ enum SelfCheck {
             report["verdict"] = [:]
         }
 
+        // **The band, DRIVEN rather than waited for** (focus-psh, on focus-0gq's shape).
+        //
+        // `verdict.band` above is the band of a judgement made over the PERSON'S store, so it is
+        // whatever they happened to be doing — which is why R-168 listed it as published and
+        // unasserted rather than asserting it. A harder assertion about that value would be a
+        // harder assertion about their day. So the probe MOVES THE WORLD instead: it builds two
+        // snapshots of its own, judges the same subject against both, and reports what came back.
+        //
+        // * Against `RuleSnapshot.empty()` — no priority, no rules, no context — the type's own
+        //   contract is that classifying can only ever produce `uncertain`, and `VerdictSnapshot`
+        //   declares `band` **nil when the verdict is uncertain**: declining to decide has no
+        //   evidence to band.
+        // * Against a snapshot carrying **a rule this probe wrote**, about a subject no
+        //   application on this Mac claims, the same subject is decided rather than declined, and
+        //   a decision has a band.
+        //
+        // The pair is the assertion: absent → present, over one input, with the only difference
+        // being a rule the probe put there. Nothing is written to any store — the snapshots are
+        // values, and the engine is one this probe constructs, so the app's own drift window is
+        // not touched either.
+        report["drivenBand"] = drivenBandReport()
+
         // R-72.2. e05 ships the one-click affordance that writes to the box, and a self-check
         // clicks nothing — so a launch that has judged things still finds it empty. That is now
         // an observation about a *reachable* mechanism rather than about an absent one, which
@@ -3828,6 +3868,68 @@ enum SelfCheck {
         report["modelTier"] = modelTierReading()
 
         return report
+    }
+
+    /// **Two judgements this probe owns, so the band is a fact about the app rather than about
+    /// the person's day** (focus-psh).
+    ///
+    /// The subject is a reverse-DNS identifier no application on this Mac carries, so nothing
+    /// here can be an accident of what happens to be installed. Both judgements use an engine
+    /// this function constructs — the app's own engine carries a drift window, and judging
+    /// through it would move a reading somebody else's assertion is taken from.
+    @MainActor
+    static func drivenBandReport() -> [String: Any] {
+        let subject = "com.focus.selfcheck.subject.that.no.application.claims"
+        let engine = DeterministicRelevanceEngine()
+        let input = ClassificationInput(bundleIdentifier: subject)
+
+        let told = RuleSnapshot(
+            priorityID: UUID(),
+            priorityRevision: 0,
+            priorityTokens: .empty,
+            prioritySentence: nil,
+            priorityLanguage: nil,
+            rules: [
+                ScopedRuleValue(
+                    authority: .session,
+                    subjectKind: .app,
+                    subject: subject,
+                    verdict: .unrelated,
+                    createdAt: Date(timeIntervalSince1970: 0)
+                )
+            ],
+            skippedRuleCount: 0,
+            contextPack: [],
+            policyDigest: RelevancePolicy.digest,
+            stamp: engine.stamp
+        )
+
+        func band(of snapshot: RuleSnapshot, at now: Duration) -> [String: Any] {
+            let judgement = engine.judge(
+                input: input,
+                snapshot: snapshot,
+                now: now,
+                dwell: .zero
+            )
+            let verdict = judgement.verdictSnapshot(stampKey: engine.stamp.cacheKey)
+            return [
+                "band": verdict.band?.rawValue ?? "",
+                "hasBand": verdict.band != nil,
+                "status": verdict.status.rawValue,
+                "stage": verdict.stage.rawValue
+            ]
+        }
+
+        return [
+            "subject": subject,
+            // Told nothing: `uncertain`, and no band to draw.
+            "toldNothing": band(of: .empty(stamp: engine.stamp), at: .zero),
+            // Told one rule about this very subject: a decision, and a decision is banded.
+            "toldOneRule": band(of: told, at: .seconds(1)),
+            // The vocabulary the band is drawn from, pinned in both directions like every other
+            // enum this report publishes.
+            "bandsDeclared": EvidenceBand.allCases.map(\.rawValue)
+        ]
     }
 
     /// **What the running application believes about the model tier** (e06).
