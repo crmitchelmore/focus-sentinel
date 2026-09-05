@@ -5534,6 +5534,21 @@ check(
     "the rule the probe wrote is what moved the band, and it moved it",
     (told_nothing.get("band"), told_one_rule.get("band")),
 )
+# **And the rung that decided says so by name.** The band moving is the reading; *which rung
+# produced it* is what makes the reading about the rule rather than about anything else the
+# cascade might have found. The probe wrote a SESSION rule, so the decided judgement has to have
+# been decided at `sessionRule` — and the declined one, which has no rule to find, cannot have
+# been. Without this pair the two bands could differ for a reason nobody named.
+check(
+    told_one_rule.get("stage") == "sessionRule",
+    "the decision was reached at the session rule the probe wrote, not somewhere else",
+    told_one_rule.get("stage"),
+)
+check(
+    told_nothing.get("stage") != "sessionRule" and bool(told_nothing.get("stage")),
+    "told nothing, no rule rung could have decided, and the stage says which one did not",
+    told_nothing.get("stage"),
+)
 # The vocabulary, pinned both ways like every other enum this report publishes — a band drawn
 # from a set that had been emptied would satisfy the membership test above vacuously.
 check(

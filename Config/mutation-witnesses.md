@@ -47,7 +47,7 @@ it to be green: a red line means nothing if the clean run was red too.
 
 | stage | assertions witnessed | PROVEN | CANNOT-GO-RED |
 |---|---|---|---|
-| `selfcheck-debug` / `selfcheck-release` | 184 | 184 | — |
+| `selfcheck-debug` / `selfcheck-release` | 186 | 186 | — |
 | `notification-denied` (+ Release twin) | 19 | 19 | — |
 | `focus-steal` (+ Release twin) | 14 | 14 | — |
 | `forbidden-binary` | 6 | 6 | — |
@@ -59,7 +59,7 @@ it to be green: a red line means nothing if the clean run was red too.
 | `unit-counts` | 5 | 5 | — |
 | `evaluation` (B1–B5) | 9 | 9 | — |
 | `entitlements-debug` / `entitlements-release` | 6 | 6 | 2 (seven restatement lines; one unreachable branch) |
-| **total** | **253** | **251** | **5 findings** |
+| **total** | **255** | **253** | **5 findings** |
 
 The seven rows the gate audit named as unable to go red are all fallible now, and each was run:
 `self-check.sh`'s popover overflow (SC-37, SC-38) and its committed width (SC-39, SC-40),
@@ -531,6 +531,8 @@ unmutated copy, `EXIT=0`, 818 ok.
 | PSH-06 | the person's own band | flip `relevance.verdict.band` between present and absent | the stamp, stage, status and clauses stay green — this is the band alone | **PROVEN** — `FAIL: the running verdict carries a band exactly when it reached a decision` |
 | PSH-07 | the told-nothing half | `drivenBand.toldNothing.status = "unrelated"` | PSH-03 | **PROVEN** — `FAIL: told nothing at all, the engine declines to decide and has no band to draw` |
 | PSH-08 | the subject | `drivenBand.subject = "com.apple.Safari"` | the three band rows stay green: a judgement about a real application would be a reading of this Mac | **PROVEN** — `FAIL: the driven judgement is about a subject this probe owns, not an application on this Mac` |
+| PSH-09 | the rung that decided | `drivenBand.toldOneRule.stage = "heuristic"` | the band rows stay green — which is the point: the band moving is the reading, and *which rung moved it* is what makes the reading about the rule | **PROVEN** — `FAIL: the decision was reached at the session rule the probe wrote, not somewhere else` |
+| PSH-10 | its twin | `drivenBand.toldNothing.stage = "sessionRule"` | PSH-09 — a snapshot with no rules cannot have been decided by one | **PROVEN** — `FAIL: told nothing, no rule rung could have decided, and the stage says which one did not` |
 
 ### focus-p3dl — the surface scan is a DELTA, not a photograph of the screen — `selfcheck-*`, `grants`, `notification-denied-*`
 
