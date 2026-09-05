@@ -1,11 +1,13 @@
 import FocusCore
 import SwiftUI
 
-/// The silhouette a `FocusStatus` is drawn inside.
+/// The silhouette `FocusStatus.shape` names, as a drawable path.
 ///
-/// This is the second of the status's three channels. It exists so that a user who cannot
-/// tell the SF Symbols apart — or a surface too small to draw one, like e08's notch — still
-/// has an outline that differs from every other status.
+/// **It is no longer drawn by `StatusBadge`** (focus-w41.6). It was the second of the status's
+/// three channels while the first was an SF Symbol; with e11b's drawn family the mark *is* the
+/// silhouette, and stroking an outline around it put a three-quarter arc inside a triangle. It
+/// stays for a surface with no room for a glyph — e08's notch — and as the geometry
+/// `StatusShape` names, which is what `DesignTokenTests` holds to being five distinct paths.
 public struct StatusOutline: Shape {
     public let shape: StatusShape
 
@@ -56,14 +58,18 @@ public struct StatusOutline: Shape {
 
 /// A status, drawn.
 ///
-/// Three independent channels, always: the SF Symbol, the silhouette it sits in, and the
-/// short label. Colour is a fourth, and it is never alone — which is what makes the badge
-/// legible to someone who cannot use colour, and what makes "differentiate without colour"
-/// a behaviour rather than a claim.
+/// Two independent channels, always: **the app's own mark**, whose silhouette is unalike every
+/// other by a measured distance rather than by assertion, and the short label. Colour is a third
+/// and it is never alone — which is what makes the badge legible to someone who cannot use
+/// colour, and what makes "differentiate without colour" a behaviour rather than a claim.
+///
+/// It was three (focus-w41.6): the glyph, an outline stroked *behind* it, and the label. That was
+/// coherent while the glyph was an SF Symbol and is two silhouettes for one state now that the
+/// glyph is the family's own mark.
 public struct StatusBadge: View {
     /// **How much furniture the badge draws around itself** (focus-w41, direction §5.1).
     ///
-    /// The two styles carry the same four channels — glyph, silhouette, label, tint — and differ
+    /// The two styles carry the same three channels — mark, label, tint — and differ
     /// only in whether the badge is a *thing* or a *line*. That is the whole of the cockpit
     /// density change at this control: a chip beside the priority reads as an object competing
     /// with the sentence, and the sentence is the one thing on the screen the person wrote.
@@ -82,10 +88,18 @@ public struct StatusBadge: View {
     /// How much furniture to draw. `chip` is what every surface but the cockpit header asks for.
     public let style: Style
 
+    /// The unscaled side of the chip's glyph box, published so a surface laying the badge out
+    /// beside something else can measure the row it is about to draw (focus-6pr.5).
+    public static let chipGlyphBox: CGFloat = 22
+
+    /// The chip's own horizontal padding around that box, each side. `@ScaledMetric` in the view
+    /// and therefore inert on macOS, which is why it is a constant here and not a scaled one.
+    public static let chipHorizontalPadding: CGFloat = 8
+
     @Environment(\.appearanceTraits) private var traits
     @Environment(\.shellTextScale) private var textScale
-    @ScaledMetric(relativeTo: .title2) private var glyphSize: CGFloat = 22
-    @ScaledMetric(relativeTo: .body) private var spacing: CGFloat = 8
+    @ScaledMetric(relativeTo: .title2) private var glyphSize: CGFloat = Self.chipGlyphBox
+    @ScaledMetric(relativeTo: .body) private var spacing: CGFloat = StatusBadge.chipHorizontalPadding
 
     public init(status: FocusStatus, showsLabel: Bool = true, style: Style = .chip) {
         self.status = status
@@ -104,31 +118,38 @@ public struct StatusBadge: View {
     }
 
     public var body: some View {
-        let emphasis = DesignTokens.emphasis(for: traits)
-
-        return HStack(spacing: spacing) {
-            ZStack {
-                StatusOutline(status.shape)
-                    .stroke(
-                        DesignTokens.tint(for: status, traits: traits).opacity(emphasis.outlineOpacity),
-                        lineWidth: emphasis.borderWidth
-                    )
-                // **The app's own mark, not an SF Symbol** (focus-w41). `resizable()` because
-                // it is a 16 pt asset and the badge's glyph box is a scaled metric — the
-                // silhouette is what carries the meaning and it survives being scaled; a fixed
-                // 16 pt picture in a growing box would shrink against its own label at
-                // accessibilityLarge.
-                StatusMark.image(for: status)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .foregroundStyle(DesignTokens.tint(for: status, traits: traits))
-                    .padding(DesignTokens.spacing(2, scale: textScale))
-            }
-            .frame(
-                width: DesignTokens.spacing(glyphSize * style.glyphScale, scale: textScale),
-                height: DesignTokens.spacing(glyphSize * style.glyphScale, scale: textScale)
-            )
-            .accessibilityHidden(true)
+        HStack(spacing: spacing) {
+            // **The app's own mark, not an SF Symbol, and it IS the silhouette** (focus-w41,
+            // focus-w41.6). `resizable()` because it is a 16 pt asset and the badge's glyph box
+            // is a scaled metric — the silhouette is what carries the meaning and it survives
+            // being scaled; a fixed 16 pt picture in a growing box would shrink against its own
+            // label at accessibilityLarge.
+            //
+            // **The outline is not drawn here, and that is a ruling** (focus-w41.6). This used to
+            // be a `ZStack` of `StatusOutline(status.shape)` and the mark, which was coherent
+            // while the glyph was an SF Symbol — a filled triangle inside a triangular outline.
+            // With the drawn family it is two different marks for one state: `statusUnrelated`
+            // rendered its three-quarter arc and dot *inside a triangle*, and the accusation
+            // panel's badge did the same. The direction's whole point is one ring, one family.
+            //
+            // `FocusStatus.shape`'s doctrine — "silhouettes are deliberately unalike, even in
+            // monochrome at small sizes" — is satisfied by the marks themselves and it is a
+            // number rather than a sentence: `scripts/glyph-distance.py` holds all ten images the
+            // menu bar can draw above `Config/glyph-distance-floor.txt`, and the tightest pair
+            // measures 10.75 against a floor of 9.0. So `shape` stays as the vocabulary that
+            // *describes* each mark's outline — the accessibility description and the distance
+            // gate's naming both read it — and `StatusOutline` stays for a surface with no room
+            // for a glyph. Neither is drawn on top of the mark.
+            StatusMark.image(for: status)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .foregroundStyle(DesignTokens.tint(for: status, traits: traits))
+                .padding(DesignTokens.spacing(2, scale: textScale))
+                .frame(
+                    width: DesignTokens.spacing(glyphSize * style.glyphScale, scale: textScale),
+                    height: DesignTokens.spacing(glyphSize * style.glyphScale, scale: textScale)
+                )
+                .accessibilityHidden(true)
 
             if Self.showsLabel(requested: labelRequested, traits: traits) {
                 ShellText(resource: status.shortLabelResource, role: style.labelRole)
