@@ -170,9 +170,21 @@ network_samples=0
 network_alive=0
 network_sockets=0
 while kill -0 "$app_pid" 2>/dev/null; do
+    # **Aliveness is recorded HERE, where the loop's own guard just established it** (focus-j5ef).
+    #
+    # It used to be re-checked *after* the sample, and a process that exited between the `lsof`
+    # and the re-check made `network_samples` one greater than `network_alive` — so
+    # "every sample was taken while the application was still running" failed for a race rather
+    # than for a defect. Measured across three gate runs of one tree: 67/67, 66/66 and 68/67, the
+    # last of which reddened `selfcheck-release` with nothing wrong.
+    #
+    # The line above is the fact the assertion is about: this sample is taken of a process that
+    # was alive an instant ago. The assertion keeps its teeth — it is still the reading that
+    # fails if a sample is ever taken outside this loop, which is the defect it names — and loses
+    # only the window in which it was measuring the scheduler.
+    network_alive=$(( network_alive + 1 ))
     sample=$(lsof -nP -i -a -p "$app_pid" 2>/dev/null | tail -n +2)
     network_samples=$(( network_samples + 1 ))
-    kill -0 "$app_pid" 2>/dev/null && network_alive=$(( network_alive + 1 ))
     if [[ -n "$sample" ]]; then
         network_sockets=$(( network_sockets + $(print -r -- "$sample" | wc -l | tr -d ' ') ))
         print -r -- "$sample" >> "$NETWORK_SAMPLES"
