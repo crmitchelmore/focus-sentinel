@@ -28,7 +28,24 @@ jobs:
         shell: zsh {0}
         env:
           FOCUS_LOG_DIR: ${{ runner.temp }}/focus-gate
-        run: scripts/build-gate.sh
+        run: |
+          mkdir -p "$FOCUS_LOG_DIR"
+          touch "$FOCUS_LOG_DIR/focus-gate.log"
+          tail -n +1 -F "$FOCUS_LOG_DIR/focus-gate.log" &
+          gate_log_pid=$!
+          trap 'kill "$gate_log_pid" 2>/dev/null || true' EXIT
+          scripts/build-gate.sh
+          gate_rc=$?
+          exit "$gate_rc"
+      - name: Preserve readable diagnostics in the job log
+        if: always()
+        shell: zsh {0}
+        run: |
+          for gate_log in "$RUNNER_TEMP/focus-gate"/*.log(N); do
+            echo "::group::${gate_log:t}"
+            tail -100 "$gate_log"
+            echo '::endgroup::'
+          done
       - name: Retain gate evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
