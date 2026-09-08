@@ -275,6 +275,10 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case interventionExclusionAddHeading = "settings.intervention.exclusion.addHeading"
     case interventionExclusionNoneRunning = "settings.intervention.exclusion.noneRunning"
     case interventionExclusionRemove = "settings.intervention.exclusion.remove"
+    case intentRefusalUnavailable = "shell.intent.refusal.unavailable"
+    case intentRefusalEmptyPriority = "shell.intent.refusal.emptyPriority"
+    case intentRefusalSessionRunning = "shell.intent.refusal.sessionRunning"
+    case intentRefusalNoSession = "shell.intent.refusal.noSession"
     case settingsPrivacyStatement = "settings.privacy.statement"
     // The two things this app does not do, said plainly where a person asks what it does
     // (F-122, F-137, focus-6n2). Both are linted true of the shipped binary rather than

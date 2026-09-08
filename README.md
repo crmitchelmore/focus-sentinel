@@ -15,7 +15,7 @@ and `tuist` is not used.
 |---|---|
 | `FocusSentinel.xcodeproj/` | the **hand-authored, committed** Xcode project (see "The project file" below) |
 | `Focus.xcworkspace/` | the workspace that owns the shared schemes; the unit lane lives here |
-| `App/` | the thin app target — `@main`, the scenes, the appearance observer, the entitlements, the icon, and a deliberately empty string catalog (see "Strings" below). It owns no host and no wiring: those are `Packages/FocusHost` |
+| `App/` | the thin app target — `@main`, the scenes, the appearance observer, the entitlements, the icon, and the seven main-bundle App Intents metadata strings (see "Strings" below). It owns no host and no wiring: those are `Packages/FocusHost` |
 | `Packages/FocusCore` | domain types, SwiftData schema, status tokens, clocks, appearance traits |
 | `Packages/FocusRules` | the deterministic rule model |
 | `Packages/FocusClassify` | the deterministic relevance engine and the classification seam — no networking, ever |
@@ -345,33 +345,22 @@ would remove neither. The gate also presses the control itself: the pane's own s
 read back out of the store, the window the triggered sweep kept, and the person's own choice put
 back afterwards.
 
-## Three shortcuts, not shipped
+## App Intents
 
-F-141 asks for three App Intents — set the priority, start a session, finish the session — each
-performing through the same command host the menu bar uses and refusing where the menu would draw
-its item disabled. All of that was built and works: `FocusIntentRunner` is the whole of it, driven
-in the unit lane over every session phase, and the two vocabularies agree.
+Set Focus Priority, Start Focus Session and Finish Focus Session are exposed to Shortcuts.
+Each launches the app and uses `FocusIntentRunner` through `FocusCommandCenter`. Session
+commands call the same persistent host as the cockpit controls, with the same availability
+rules as the File menu. They return success only after the write completes; a closed cockpit
+cannot turn a command into a deferred success. Empty priorities and unavailable operations
+return localised refusals.
 
-**It does not ship, and the blocker is measured.** `appintentsmetadataprocessor` runs at build
-time and refuses a `title` or a `description` that is not a literal:
-
-    error: 'LocalizedStringResource' must be initialized with a call to its
-           initializer or a string literal
-    error: At least one halting error produced during export. No AppIntents
-           metadata have been exported and this target is not usable with
-           AppIntents until errors are resolved.
-
-Every word this app says comes out of `FocusUI`'s String Catalog through a typed key, and
-`FocusHost` — where the composition root and therefore the command host live — declares and
-references **no catalog keys at all**, enforced by `check-strings.sh`'s `EXPECTS_NO_STRINGS`
-(F-149). An intent whose title is `ShellStrings.resource(.intentSetPriorityTitle)` does not
-satisfy the processor, and one whose title is an English literal in `FocusHost` does not satisfy
-F-149.
-
-The way through is to move the three intent types into `FocusUI`, where a catalog-key literal is
-an ordinary declared key, and to give the composition root a registered priority writer in the
-shape `registerPrivacyPerformer` already has — `FocusCommandCenter` is already in `FocusUI`, so
-two of the runner's three closures are local there. That is a round of its own, not a rename.
+Apple's metadata processor requires literal keys resolved against the main bundle. The
+package-bundle approach was tested and rejected by the processor on 8 September 2026.
+`App/FocusAppIntents.swift` therefore owns the framework declarations and seven metadata
+keys; `FocusUI` owns the runner and refusal copy; `FocusHost` registers the existing writers.
+The string lint permits exactly those seven app keys. The packaging gate reads the generated
+metadata and compiled main-bundle translations in both Debug and Release, requiring all three
+actions, shortcuts and the priority parameter. See `scripts/check-app-intents.py`.
 
 ## The list a person could not add to
 
@@ -881,8 +870,8 @@ take any of them.
 | **Any capture or sharing copy** | **P-e08-D**: `sharingType = .none` measured against ScreenCaptureKit. Runnable here now — nothing sets `sharingType` in `Packages/*/Sources`. Until it exists: no code and no copy. |
 | **Both display projections agreeing about a notched Mac** | **P-e08-B** again. `DisplayGeometry.NotchReadings` makes an *omitted* reading a compile error and `NotchGeometrySeamTests` fails on any *divergence* between `SystemScreenList.geometry(of:)` and `NudgePanelController.currentScreens()`, but on a Mac with no built-in display "both readers wrong in the same way" publishes the same four values as "both readers right". That residual is stated in the test's own doc and in `Config/mutation-witnesses.md`. |
 
-**The refusal strings are unapproved copy.** All five `settings.intervention.notch.*` entries ship
-marked `PENDING HUMAN APPROVAL (D-11)` in the catalog comment.
+**The notch wording was approved by the user on 8 September 2026 (D-11).** The six catalogue
+entries record that approval; the thirteen pending nudge entries were approved in the same review.
 
 ## History
 
@@ -1134,7 +1123,7 @@ committed.
 ## Strings
 
 Every string a person can read comes from a String Catalog and is reached through a generated
-typed symbol — never a bare literal, never `String(format:)`. `scripts/check-strings.sh` is a
+typed symbol, except for the literal catalogue keys required by App Intents metadata. `scripts/check-strings.sh` is a
 gate stage and checks both directions: no hardcoded user-visible literal, and no key that is
 in a catalog but unused or used but missing.
 
@@ -1145,19 +1134,15 @@ checked separately:
 |---|---|---|
 | `Packages/FocusUI/Sources/FocusUI/Resources/Localizable.xcstrings` | `shell.`, `settings.`, `priority.`, `capture.`, `context.`, `handoff.`, `session.`, `sensing.`, `capability.` | `FocusUI`, and the app target through `ShellStrings` |
 | `Packages/FocusCore/Sources/FocusCore/Resources/Localizable.xcstrings` | `status.` (the `FocusStatus` short labels), `undo.` (the action names the system Edit menu draws after "Undo"), and the relevance vocabulary — `cascade.`, `explanation.`, `suppression.`, `evidence.`, `rule.` | `FocusCore`, and `FocusUI` through the `…Resource` accessors each vocabulary exposes |
-| `App/Localizable.xcstrings` | **none, by design** | nothing yet |
+| `App/Localizable.xcstrings` | seven `shell.intent.*` metadata keys | App Intents and Shortcuts, which require the main bundle |
 | `Packages/FocusHost/Sources/FocusHost/Resources/Localizable.xcstrings` | **none, by design** | nothing yet |
 
-The app target's catalog is empty because the app target is a composition root: it declares
-scenes and wires concrete types to protocols, and even its window titles are `FocusUI` keys
-resolved from `FocusUI`'s bundle. The file is kept rather than deleted because it is the
-declared home for anything the app target ever does own, and because deleting it would remove
-the `App` row from the lint's table — the only check that would notice an app-target source
-starting to name a catalog key that its bundle cannot resolve. So the lint asserts the
-emptiness instead: `App` is listed in `EXPECTS_NO_STRINGS`, and a key appearing there fails
-the gate with instructions to move it to `FocusUI` or to change the list on purpose.
+The app target's catalogue contains only the seven keys Apple's App Intents metadata processor
+requires in the main bundle. `check-strings.sh` pins that exact set and checks every value and
+reference; the packaging stage verifies the compiled resources against the actual exported
+metadata. Scene and view strings remain in `FocusUI`.
 
-`FocusHost` carries the same empty catalog and the same row for the same reason: the hosts
+`FocusHost` keeps an empty catalogue and remains in `EXPECTS_NO_STRINGS`: the hosts
 moved out of the app target, and an assertion that quietly stopped applying because the code
 it was about changed address is not an assertion.
 

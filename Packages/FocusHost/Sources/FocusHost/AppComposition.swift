@@ -729,6 +729,8 @@ public final class AppComposition {
         // **The three File-menu portability items reach the same sink the Privacy pane's buttons
         // do** (F-110, F-134, focus-ix9). One vocabulary, two routes, one implementation: a menu
         // item that carried its own copy of the export would be a second exporter to keep honest.
+        registerIntentPerformers(on: .shared)
+
         FocusCommandCenter.shared.registerPrivacyPerformer { [weak self] action in
             self?.perform(action)
         }
@@ -758,6 +760,36 @@ public final class AppComposition {
                 hasOpenQuestion: nudgeHost.hasOpenQuestion
             )
         }
+    }
+
+    /// Register the existing hosts for synchronous Shortcuts execution. Kept separate
+    /// from surface installation so the wiring can be tested without a menu bar.
+    func registerIntentPerformers(on center: FocusCommandCenter) {
+        center.registerIntentSessionPerformer { [weak self] command in
+            guard let self else { return false }
+            switch command {
+            case .startSession:
+                let previous = self.sessionHost.snapshot?.sessionID
+                self.sessionHost.startSession()
+                return self.sessionHost.writeFailure == nil
+                    && self.sessionHost.snapshot?.phase == .focus
+                    && self.sessionHost.snapshot?.sessionID != previous
+            case .completeSession:
+                self.sessionHost.completeSession()
+                return self.sessionHost.writeFailure == nil
+                    && self.sessionHost.snapshot == nil
+            default:
+                return false
+            }
+        }
+
+        center.registerPriorityWriter { [weak self] text in
+            guard let self, !self.priorityHost.state.capturingIsRefused else { return false }
+            self.priorityHost.setPriority(intent: text, doneWhen: nil)
+            return !self.priorityHost.state.lastWriteFailed
+                && self.priorityHost.state.priority?.intent == text
+        }
+
     }
 
     /// **Tell the loop about anything that ended what it was speaking about** (focus-d0a).

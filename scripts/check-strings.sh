@@ -304,7 +304,16 @@ MODULES = {
 # Modules whose catalog is deliberately empty. See the header: the app target is a
 # composition root and owns no user-visible text, so its catalog is the guard rather than the
 # content, and this is the assertion that keeps it one.
-EXPECTS_NO_STRINGS = ("App", "FocusHost")
+# Apple's metadata processor requires main-bundle resources (focus-mn7, measured
+# 2026-09-08). Only these seven platform metadata keys may live in App; ordinary
+# UI copy remains in FocusUI and the composition host still owns no strings.
+EXPECTS_NO_STRINGS = ("FocusHost",)
+APP_INTENT_KEYS = {
+    "shell.intent.setPriority.title", "shell.intent.setPriority.description",
+    "shell.intent.setPriority.parameter", "shell.intent.startSession.title",
+    "shell.intent.startSession.description", "shell.intent.finishSession.title",
+    "shell.intent.finishSession.description",
+}
 
 LITERAL = re.compile(r'"([^"\\\n]+)"')
 COMMENT = re.compile(r'^\s*(//|///|\*|/\*)')
@@ -407,6 +416,11 @@ for module, (catalog_path, source_dir) in sorted(MODULES.items()):
     declared = set(entries)
 
     print(f"-- {module}: {len(declared)} catalog key(s), {len(referenced)} referenced in source")
+
+    if module == "App":
+        report(declared == APP_INTENT_KEYS and referenced == APP_INTENT_KEYS,
+               "App: only the seven main-bundle App Intents metadata keys",
+               [f"unexpected or absent: {key}" for key in sorted((declared ^ APP_INTENT_KEYS) | (referenced ^ APP_INTENT_KEYS))])
 
     if module in EXPECTS_NO_STRINGS:
         owned = sorted(declared | referenced)

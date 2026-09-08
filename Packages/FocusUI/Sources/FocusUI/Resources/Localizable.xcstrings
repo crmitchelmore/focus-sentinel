@@ -2558,7 +2558,7 @@
       }
     },
     "settings.intervention.notch.explanation" : {
-      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. The second sentence of the notch row, the same in every case: the ambient state is on the menu-bar glyph whatever the display can do.",
+      "comment" : "APPROVED BY USER (D-11, 2026-09-08): new copy, reviewed and approved by the user. The second sentence of the notch row, the same in every case: the ambient state is on the menu-bar glyph whatever the display can do.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -2570,7 +2570,7 @@
       }
     },
     "settings.intervention.notch.heading" : {
-      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Section heading for the notch companion's row.",
+      "comment" : "APPROVED BY USER (D-11, 2026-09-08): new copy, reviewed and approved by the user. Section heading for the notch companion's row.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -2582,7 +2582,7 @@
       }
     },
     "settings.intervention.notch.landed" : {
-      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. What the companion does when the built-in display has a notch.",
+      "comment" : "APPROVED BY USER (D-11, 2026-09-08): new copy, reviewed and approved by the user. What the companion does when the built-in display has a notch.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -2594,7 +2594,7 @@
       }
     },
     "settings.intervention.notch.noBuiltInDisplay" : {
-      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Why the companion is unavailable on a Mac with no built-in display at all — deliberately NOT the same sentence as the notchless one.",
+      "comment" : "APPROVED BY USER (D-11, 2026-09-08): new copy, reviewed and approved by the user. Why the companion is unavailable on a Mac with no built-in display at all — deliberately NOT the same sentence as the notchless one.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -2606,7 +2606,7 @@
       }
     },
     "settings.intervention.notch.noNotch" : {
-      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Why the companion is unavailable on a built-in display that has no notch.",
+      "comment" : "APPROVED BY USER (D-11, 2026-09-08): new copy, reviewed and approved by the user. Why the companion is unavailable on a built-in display that has no notch.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -2618,7 +2618,7 @@
       }
     },
     "settings.intervention.notch.unreadable" : {
-      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Why the companion is unavailable when the built-in display reported a notch shape the app could not place a line under.",
+      "comment" : "APPROVED BY USER (D-11, 2026-09-08): new copy, reviewed and approved by the user. Why the companion is unavailable when the built-in display reported a notch shape the app could not place a line under.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -3477,6 +3477,54 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Staying quiet because"
+          }
+        }
+      }
+    },
+    "shell.intent.refusal.emptyPriority" : {
+      "comment" : "Spoken when a shortcut passed no priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus needs something to work on."
+          }
+        }
+      }
+    },
+    "shell.intent.refusal.noSession" : {
+      "comment" : "Spoken when a shortcut asked to finish a session and there is none.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "There is no session to finish."
+          }
+        }
+      }
+    },
+    "shell.intent.refusal.unavailable" : {
+      "comment" : "Spoken when Focus is not running and cannot carry the shortcut out.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus could not complete that change. Open Focus to check its status."
+          }
+        }
+      }
+    },
+    "shell.intent.refusal.sessionRunning" : {
+      "comment" : "Spoken when a shortcut asked to start a session and one is already running.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A session is already running."
           }
         }
       }

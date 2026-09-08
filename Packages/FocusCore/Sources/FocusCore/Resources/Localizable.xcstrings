@@ -662,7 +662,7 @@
       }
     },
     "nudge.attention.waiting" : {
-      "comment" : "Read by VoiceOver off the menu-bar item when a question or an accusation is waiting in the popover. It is the invitation to open it. PENDING HUMAN APPROVAL (D-11): drafted by an agent in e11a because R-96t/R-96v fold over the whole deck space; the user has not signed this line off.",
+      "comment" : "Read by VoiceOver off the menu-bar item when a question or an accusation is waiting in the popover. It is the invitation to open it. APPROVED BY USER (D-11, 2026-09-08): drafted by an agent in e11a because R-96t/R-96v fold over the whole deck space; the user approved this line on 2026-09-08.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -758,7 +758,7 @@
       }
     },
     "nudge.direct.accusation.panel.title" : {
-      "comment" : "[direct] Accusation panel title. %@ is the priority's intent. PENDING HUMAN APPROVAL (D-11): drafted by an agent in e11a because R-96t/R-96v fold over the whole deck space; the user has not signed this line off.",
+      "comment" : "[direct] Accusation panel title. %@ is the priority's intent. APPROVED BY USER (D-11, 2026-09-08): drafted by an agent in e11a because R-96t/R-96v fold over the whole deck space; the user approved this line on 2026-09-08.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -830,7 +830,7 @@
       }
     },
     "nudge.neutral.accusation.action.notNow" : {
-      "comment" : "[neutral] Accusation action: a session-lived rule that dies with the session. PENDING HUMAN APPROVAL (D-11): drafted by an agent in e11a because R-96t/R-96v fold over the whole deck space; the user has not signed this line off.",
+      "comment" : "[neutral] Accusation action: a session-lived rule that dies with the session. APPROVED BY USER (D-11, 2026-09-08): drafted by an agent in e11a because R-96t/R-96v fold over the whole deck space; the user approved this line on 2026-09-08.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -866,7 +866,7 @@
       }
     },
     "nudge.neutral.accusation.action.relevant" : {
-      "comment" : "[neutral] Accusation action: write a task-authority rule marking this subject relevant. PENDING HUMAN APPROVAL (D-11): drafted by an agent in e11a because R-96t/R-96v fold over the whole deck space; the user has not signed this line off.",
+      "comment" : "[neutral] Accusation action: write a task-authority rule marking this subject relevant. APPROVED BY USER (D-11, 2026-09-08): drafted by an agent in e11a because R-96t/R-96v fold over the whole deck space; the user approved this line on 2026-09-08.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -890,7 +890,7 @@
       }
     },
     "nudge.neutral.accusation.action.snooze" : {
-      "comment" : "[neutral] Accusation action: snooze this subject for 5, 10 or 15 minutes. PENDING HUMAN APPROVAL (D-11): drafted by an agent in e11a because R-96t/R-96v fold over the whole deck space; the user has not signed this line off.",
+      "comment" : "[neutral] Accusation action: snooze this subject for 5, 10 or 15 minutes. APPROVED BY USER (D-11, 2026-09-08): drafted by an agent in e11a because R-96t/R-96v fold over the whole deck space; the user approved this line on 2026-09-08.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -902,7 +902,7 @@
       }
     },
     "nudge.neutral.accusation.panel.body" : {
-      "comment" : "[neutral] Accusation panel body. %1$@ is the application or origin, %2$@ a rendered duration. PENDING HUMAN APPROVAL (D-11): drafted by an agent in e11a because R-96t/R-96v fold over the whole deck space; the user has not signed this line off.",
+      "comment" : "[neutral] Accusation panel body. %1$@ is the application or origin, %2$@ a rendered duration. APPROVED BY USER (D-11, 2026-09-08): drafted by an agent in e11a because R-96t/R-96v fold over the whole deck space; the user approved this line on 2026-09-08.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -914,7 +914,7 @@
       }
     },
     "nudge.neutral.accusation.panel.title" : {
-      "comment" : "[neutral] Accusation panel title. %@ is the priority's intent. PENDING HUMAN APPROVAL (D-11): drafted by an agent in e11a because R-96t/R-96v fold over the whole deck space; the user has not signed this line off.",
+      "comment" : "[neutral] Accusation panel title. %@ is the priority's intent. APPROVED BY USER (D-11, 2026-09-08): drafted by an agent in e11a because R-96t/R-96v fold over the whole deck space; the user approved this line on 2026-09-08.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -926,7 +926,7 @@
       }
     },
     "nudge.neutral.query.action.no" : {
-      "comment" : "[neutral] Query action: no, this is not part of the task. PENDING HUMAN APPROVAL (D-11): drafted by an agent in e11a because R-96t/R-96v fold over the whole deck space; the user has not signed this line off.",
+      "comment" : "[neutral] Query action: no, this is not part of the task. APPROVED BY USER (D-11, 2026-09-08): drafted by an agent in e11a because R-96t/R-96v fold over the whole deck space; the user approved this line on 2026-09-08.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -938,7 +938,7 @@
       }
     },
     "nudge.neutral.query.action.notNow" : {
-      "comment" : "[neutral] Query action: decline to answer. Escape does the same. PENDING HUMAN APPROVAL (D-11): drafted by an agent in e11a because R-96t/R-96v fold over the whole deck space; the user has not signed this line off.",
+      "comment" : "[neutral] Query action: decline to answer. Escape does the same. APPROVED BY USER (D-11, 2026-09-08): drafted by an agent in e11a because R-96t/R-96v fold over the whole deck space; the user approved this line on 2026-09-08.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -962,7 +962,7 @@
       }
     },
     "nudge.neutral.query.panel.scope.app" : {
-      "comment" : "[neutral] Query panel: the scope the rule an answer writes will have. PENDING HUMAN APPROVAL (D-11): drafted by an agent in e11a because R-96t/R-96v fold over the whole deck space; the user has not signed this line off.",
+      "comment" : "[neutral] Query panel: the scope the rule an answer writes will have. APPROVED BY USER (D-11, 2026-09-08): drafted by an agent in e11a because R-96t/R-96v fold over the whole deck space; the user approved this line on 2026-09-08.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -1046,7 +1046,7 @@
       }
     },
     "nudge.restart.cue" : {
-      "comment" : "Read by VoiceOver off the menu-bar item, and shown as its tooltip, when a break ended and the person has not gone back to their commitment within the grace. States a fact and asks for nothing: no praise, no count, nothing to press. PENDING HUMAN APPROVAL (D-11): drafted by an agent; the user has not signed this line off.",
+      "comment" : "Read by VoiceOver off the menu-bar item, and shown as its tooltip, when a break ended and the person has not gone back to their commitment within the grace. States a fact and asks for nothing: no praise, no count, nothing to press. APPROVED BY USER (D-11, 2026-09-08): drafted by an agent; the user approved this line on 2026-09-08.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -1286,7 +1286,7 @@
       }
     },
     "nudge.warm.accusation.panel.body" : {
-      "comment" : "[warm] Accusation panel body. %1$@ is the application or origin, %2$@ a rendered duration. PENDING HUMAN APPROVAL (D-11): drafted by an agent in e11a because R-96t/R-96v fold over the whole deck space; the user has not signed this line off.",
+      "comment" : "[warm] Accusation panel body. %1$@ is the application or origin, %2$@ a rendered duration. APPROVED BY USER (D-11, 2026-09-08): drafted by an agent in e11a because R-96t/R-96v fold over the whole deck space; the user approved this line on 2026-09-08.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -1298,7 +1298,7 @@
       }
     },
     "nudge.warm.accusation.panel.title" : {
-      "comment" : "[warm] Accusation panel title. %@ is the priority's intent. PENDING HUMAN APPROVAL (D-11): drafted by an agent in e11a because R-96t/R-96v fold over the whole deck space; the user has not signed this line off.",
+      "comment" : "[warm] Accusation panel title. %@ is the priority's intent. APPROVED BY USER (D-11, 2026-09-08): drafted by an agent in e11a because R-96t/R-96v fold over the whole deck space; the user approved this line on 2026-09-08.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {

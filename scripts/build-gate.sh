@@ -347,6 +347,8 @@ check_packaging() {
             print -u2 "FAIL [$config] the merged Info.plist's FocusGitHash is '$baked', not '$expected'"
             rc=1
         fi
+        python3 scripts/check-app-intents.py "$app" || rc=1
+
     done
     return $rc
 }

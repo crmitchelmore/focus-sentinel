@@ -826,3 +826,15 @@ FOCUS_MW_LOGS=/private/tmp/logs FOCUS_MW_DD=/private/tmp/dd \
 
 Each prints one line per row: the red line it produced, or `MISS`. A `MISS` is the same verdict
 as a red gate — an assertion that cannot be shown to fail is a FAIL regardless of the run result.
+
+## App Intents packaging (focus-mn7, 2026-09-08)
+
+`check-app-intents.py` was run against the built Debug metadata and compiled main-bundle
+strings, then against isolated copies with each mutation below. All three were rejected:
+
+- Remove StartFocusSessionIntent from exported actions: packaging fails on the exact action set.
+- Disable openAppWhenRun for SetFocusPriorityIntent: packaging fails on foreground execution.
+- Replace SetFocusPriorityIntent's title key with a missing key: packaging fails on metadata/localisation agreement.
+
+The untouched artefact passed. These controls copy only metadata and compiled resources;
+they do not modify the application or another agent's build.
