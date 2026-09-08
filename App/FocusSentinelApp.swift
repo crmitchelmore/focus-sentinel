@@ -1,3 +1,4 @@
+import AppIntents
 import AppKit
 import FocusCore
 import FocusHost
@@ -61,6 +62,7 @@ struct FocusSentinelApp: App {
     /// the platform twice or attach the observer graph twice.
     init() {
         AppComposition.shared.start()
+        FocusAppShortcuts.updateAppShortcutParameters()
     }
 
     var body: some Scene {
