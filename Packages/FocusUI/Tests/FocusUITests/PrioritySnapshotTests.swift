@@ -280,6 +280,19 @@ enum PriorityComponent: String, CaseIterable, Sendable {
     /// opposite of what F-149 wants.
     var drawsLocalisedProse: Bool { self != .priorityHero }
 
+    /// Whether "more ink when pseudo-localised" is a measurement this component can carry.
+    ///
+    /// The two cockpit composites cannot, since e11c (focus-6uya). Ink is counted against the
+    /// top-left pixel, and the cockpit now stands two of its zones on a washed Inlay well: the
+    /// well is a solid block of ink to that measure, so the text it carries adds nothing, and
+    /// the plain cockpit measured *more* ink than the pseudo-localised one while visibly drawing
+    /// less text — the count was reading well geometry, not words. Every part the cockpit is
+    /// composed of is measured on its own in the same test, so nothing goes unproven; and the
+    /// composite's pseudo-localised picture is still held to its own baseline below.
+    var measuresPseudoLocalisedInk: Bool {
+        drawsLocalisedProse && self != .cockpitWithPriority && self != .cockpitWithPriorityNoDoneWhen
+    }
+
     /// Whether Increase Contrast has anything to change in this component.
     ///
     /// `DesignTokens.emphasis(for:)` is the whole of the shell's Increase Contrast response:
@@ -297,16 +310,7 @@ enum PriorityComponent: String, CaseIterable, Sendable {
     /// accessibility argument, and it would make the *empty* hero's real promotion (the prompt
     /// is supporting-coloured, so it does move, and `priorityHeroEmpty` asserts it) harder to
     /// see rather than easier. So the exemption is named here, for one case, with its reason.
-    ///
-    /// **The timebox joined it in e11c** (focus-6uya), for the same reason and with the same
-    /// measurement. Its heading was the one supporting-coloured run it had; promoted to
-    /// `.sectionHeading` it is drawn primary, the readout already was, and the presets are the
-    /// system's own buttons — so `timeboxRunning.light` and `timeboxRunning.increasedContrast`
-    /// are now pixel-identical too, and inventing a border to make them differ would be the
-    /// same style change wearing the same argument.
-    var respondsToIncreasedContrast: Bool {
-        ![.priorityHero, .timeboxRunning, .timeboxOvertime].contains(self)
-    }
+    var respondsToIncreasedContrast: Bool { self != .priorityHero }
 
     @MainActor
     var view: AnyView {
@@ -446,19 +450,17 @@ struct PrioritySnapshotTests {
     /// If a later change gives the committed hero a border, a supporting line or any other
     /// contrast-sensitive ornament, this test fails and the exemption has to be deleted —
     /// which is the point. An exemption nobody re-reads is an exemption that spreads.
-    @Test("the hero and the timebox are the only Increase Contrast exemptions")
-    func theHeroAndTheTimeboxAreTheOnlyIncreasedContrastExemptions() throws {
+    @Test("the committed priority hero is the only Increase Contrast exemption")
+    func theHeroIsTheOnlyIncreasedContrastExemption() throws {
         let exempt = PriorityComponent.allCases.filter { !$0.respondsToIncreasedContrast }
-        #expect(exempt == [.priorityHero, .timeboxRunning, .timeboxOvertime])
+        #expect(exempt == [.priorityHero])
 
-        for component in exempt {
-            let plain = try render(component, variant: "light")
-            let contrasted = try render(component, variant: "increasedContrast")
-            #expect(
-                !PNGCompare.areDistinct(plain.pixels, contrasted.pixels),
-                "\(component.rawValue) now responds to Increase Contrast — remove its exemption"
-            )
-        }
+        let plain = try render(.priorityHero, variant: "light")
+        let contrasted = try render(.priorityHero, variant: "increasedContrast")
+        #expect(
+            !PNGCompare.areDistinct(plain.pixels, contrasted.pixels),
+            "the priority hero now responds to Increase Contrast — remove its exemption"
+        )
     }
 
     /// Every context-item kind has to be told apart without colour.

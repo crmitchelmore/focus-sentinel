@@ -34,7 +34,7 @@ public struct RecentPrioritiesView: View {
             if !rows.isEmpty {
                 VStack(alignment: .leading, spacing: spacing) {
                     ShellText(.priorityRecentHeading, role: .sectionHeading)
-                        .foregroundStyle(DesignTokens.Palette.primaryText)
+                        .foregroundStyle(DesignTokens.Palette.role(.spruce, for: traits))
 
                     ForEach(rows) { row in
                         entry(row)
