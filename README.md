@@ -23,13 +23,20 @@ and `tuist` is not used.
 | `Packages/FocusSensing` | macOS observation adapters |
 | `Packages/FocusUI` | every SwiftUI view, scene, command and design token |
 | `Packages/FocusHost` | the composition layer — `AppComposition` and the five hosts. The only module that imports more than one sibling package, and the reason it is a package rather than the app target is that `App/` is not one: no test bundle could import it, so every claim about the wiring in it was a source scan (see "Why the composition layer is a package" below) |
-| `Config/` | build inputs that are neither app source nor scripts. Exactly one file: `FocusSentinel-Info.plist`, the partial plist carrying `CFBundleURLTypes`. It lives here and **not** in `App/` — see "The project file" below |
+| `Config/` | the partial app plist, test-count floors, performance budgets and verification contracts. The plist lives here rather than in `App/` — see "The project file" below |
 | `scripts/` | the build gate and its twenty-seven stages, plus the six live evidence lanes |
+| `script/build_and_run.sh` | the local build-and-launch entrypoint; refuses to stop a different checkout's running app |
 | `Tools/windowid` | a test driver: window ids for `screencapture -l`, read from the public window list without ever asking for a window *name*. Not part of the shipping app's package graph |
 
 ---
 
 ## Build
+
+For the local run loop, use `script/build_and_run.sh`. It supports `--debug`, `--logs`,
+`--telemetry` and `--verify`; the last confirms that the built executable stays running.
+`FOCUS_DERIVED_DATA` and `FOCUS_LOG_DIR` override its workspace-local build and log paths.
+Coordinate runtime and snapshot lanes with other agents before launching. The full release
+verification remains `scripts/build-gate.sh`.
 
 ```
 xcodebuild -workspace Focus.xcworkspace -scheme FocusSentinel -configuration Debug \
