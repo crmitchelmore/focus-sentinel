@@ -149,8 +149,14 @@ struct PseudoLocalizationTests {
                 name: "\(component.rawValue).pseudo.\(size.rawValue)"
             )
 
-            let plainInk = PNGCompare.inkPixels(plain.pixels)
-            let pseudoInk = PNGCompare.inkPixels(pseudo.pixels)
+            // The cockpit stands two of its zones on an Inlay well (focus-6uya), and a well is
+            // paper here, not ink: measured against Bench alone, the text a well carries is
+            // invisible to the count, and the pseudo-localised cockpit read *fewer* ink pixels
+            // than the plain one while drawing visibly more text. Naming the second ground
+            // is what makes this the same assertion it was for every other component.
+            let paper = [DesignTokens.Palette.Role.inlay.value(for: .light)]
+            let plainInk = PNGCompare.inkPixels(plain.pixels, paper: paper)
+            let pseudoInk = PNGCompare.inkPixels(pseudo.pixels, paper: paper)
             #expect(
                 pseudoInk > plainInk,
                 "\(component.rawValue) drew no extra text when pseudo-localised (\(plainInk) → \(pseudoInk)): the strings never reached the view"

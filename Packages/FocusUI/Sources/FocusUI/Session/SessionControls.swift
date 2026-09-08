@@ -67,8 +67,8 @@ public struct SessionControls: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: spacing) {
-            ShellText(.sessionHeading, role: .caption)
-                .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+            ShellText(.sessionHeading, role: .sectionHeading)
+                .foregroundStyle(DesignTokens.Palette.primaryText)
 
             if let session {
                 running(session)

@@ -139,6 +139,10 @@ public enum FocusTraversal {
                 .cockpitCaptureField,
                 .cockpitSetPriority,
                 .cockpitDoneWhen,
+                // The priority's own verbs sit directly under its definition of done (focus-6uya):
+                // they act on the commitment, so they are reached before the machinery that
+                // serves it rather than after the rules pane.
+                .cockpitComplete,
                 .cockpitTimebox,
                 // The session sits directly under the timebox: both are about how the time is
                 // being spent, and a person who has just chosen a box is one Tab from starting
@@ -147,7 +151,6 @@ public enum FocusTraversal {
                 .cockpitContextKeyword,
                 .cockpitContextAddFiles,
                 .cockpitRuleSubject,
-                .cockpitComplete,
                 // The footer, in the order it reads: what is being watched, then the way out to
                 // Settings.
                 .cockpitSensingPause,

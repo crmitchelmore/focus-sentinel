@@ -76,14 +76,20 @@ struct TypeHierarchyTests {
         )
     }
 
-    @Test("the hero forces a weight, and no system role does")
-    func onlyTheHeroForcesAWeight() {
+    @Test("the hero and the section heading force a weight, and no system role does")
+    func onlyTheHeroAndTheSectionHeadingForceAWeight() {
         // **Medium, not semibold** (focus-w41). The hero is set in New York from e11b, and New
         // York carries at a weight where SF would read thin. Nothing is lost: the hero's
         // prominence is guaranteed by `heroScale`, asserted three tests above, and never by its
         // weight — so the weight is free to be the one the face wants.
         #expect(DesignTokens.FontRole.priorityHero.weight == .medium)
-        for role in DesignTokens.FontRole.allCases where role != .priorityHero {
+        // **The section heading is the second, and the last** (focus-6uya). A heading that a
+        // call site could thin back to regular is not a heading, so its weight lives in the
+        // role — which is exactly what this test exists to notice, and why the exemption is
+        // named here rather than widened to "any role that wants one".
+        #expect(DesignTokens.FontRole.sectionHeading.weight == .semibold)
+        let forcing: Set<DesignTokens.FontRole> = [.priorityHero, .sectionHeading]
+        for role in DesignTokens.FontRole.allCases where !forcing.contains(role) {
             #expect(
                 role.weight == nil,
                 "\(role.rawValue) forces a weight, so a call site's own .fontWeight would be ignored"

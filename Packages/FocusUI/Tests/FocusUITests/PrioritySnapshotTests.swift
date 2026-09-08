@@ -297,7 +297,16 @@ enum PriorityComponent: String, CaseIterable, Sendable {
     /// accessibility argument, and it would make the *empty* hero's real promotion (the prompt
     /// is supporting-coloured, so it does move, and `priorityHeroEmpty` asserts it) harder to
     /// see rather than easier. So the exemption is named here, for one case, with its reason.
-    var respondsToIncreasedContrast: Bool { self != .priorityHero }
+    ///
+    /// **The timebox joined it in e11c** (focus-6uya), for the same reason and with the same
+    /// measurement. Its heading was the one supporting-coloured run it had; promoted to
+    /// `.sectionHeading` it is drawn primary, the readout already was, and the presets are the
+    /// system's own buttons — so `timeboxRunning.light` and `timeboxRunning.increasedContrast`
+    /// are now pixel-identical too, and inventing a border to make them differ would be the
+    /// same style change wearing the same argument.
+    var respondsToIncreasedContrast: Bool {
+        ![.priorityHero, .timeboxRunning, .timeboxOvertime].contains(self)
+    }
 
     @MainActor
     var view: AnyView {
@@ -437,17 +446,19 @@ struct PrioritySnapshotTests {
     /// If a later change gives the committed hero a border, a supporting line or any other
     /// contrast-sensitive ornament, this test fails and the exemption has to be deleted —
     /// which is the point. An exemption nobody re-reads is an exemption that spreads.
-    @Test("the committed priority hero is the only Increase Contrast exemption")
-    func theHeroIsTheOnlyIncreasedContrastExemption() throws {
+    @Test("the hero and the timebox are the only Increase Contrast exemptions")
+    func theHeroAndTheTimeboxAreTheOnlyIncreasedContrastExemptions() throws {
         let exempt = PriorityComponent.allCases.filter { !$0.respondsToIncreasedContrast }
-        #expect(exempt == [.priorityHero])
+        #expect(exempt == [.priorityHero, .timeboxRunning, .timeboxOvertime])
 
-        let plain = try render(.priorityHero, variant: "light")
-        let contrasted = try render(.priorityHero, variant: "increasedContrast")
-        #expect(
-            !PNGCompare.areDistinct(plain.pixels, contrasted.pixels),
-            "the priority hero now responds to Increase Contrast — remove its exemption"
-        )
+        for component in exempt {
+            let plain = try render(component, variant: "light")
+            let contrasted = try render(component, variant: "increasedContrast")
+            #expect(
+                !PNGCompare.areDistinct(plain.pixels, contrasted.pixels),
+                "\(component.rawValue) now responds to Increase Contrast — remove its exemption"
+            )
+        }
     }
 
     /// Every context-item kind has to be told apart without colour.

@@ -55,8 +55,8 @@ public struct ContextChipRow: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: spacing) {
-            ShellText(.contextHeading, role: .caption)
-                .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+            ShellText(.contextHeading, role: .sectionHeading)
+                .foregroundStyle(DesignTokens.Palette.primaryText)
 
             if items.isEmpty {
                 ShellText(.contextEmpty, role: .callout)
