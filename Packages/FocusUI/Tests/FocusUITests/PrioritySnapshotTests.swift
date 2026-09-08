@@ -287,8 +287,8 @@ enum PriorityComponent: String, CaseIterable, Sendable {
     /// well is a solid block of ink to that measure, so the text it carries adds nothing, and
     /// the plain cockpit measured *more* ink than the pseudo-localised one while visibly drawing
     /// less text — the count was reading well geometry, not words. Every part the cockpit is
-    /// composed of is measured on its own in the same test, so nothing goes unproven; and the
-    /// composite's pseudo-localised picture is still held to its own baseline below.
+    /// composed of is measured on its own in the same test. The composite keeps the width and
+    /// height growth assertions, and its pseudo-localised picture is held to its own baseline.
     var measuresPseudoLocalisedInk: Bool {
         drawsLocalisedProse && self != .cockpitWithPriority && self != .cockpitWithPriorityNoDoneWhen
     }
