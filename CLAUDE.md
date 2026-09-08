@@ -75,3 +75,10 @@ _Add a brief overview of your project architecture_
 ## Conventions & Patterns
 
 _Add your project-specific conventions here_
+
+## Learnings
+
+Driver learnings live in `AGENTS.md` under **Learnings** — read them before re-recording
+snapshot baselines, running the FocusUITests lane beside another agent's builds, or adding a
+type role or a palette hue. `AGENTS.md` and `CLAUDE.md` are independent files; mirror anything
+substantive across both.
