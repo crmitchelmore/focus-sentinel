@@ -789,7 +789,6 @@ public final class AppComposition {
             return !self.priorityHost.state.lastWriteFailed
                 && self.priorityHost.state.priority?.intent == text
         }
-
     }
 
     /// **Tell the loop about anything that ended what it was speaking about** (focus-d0a).

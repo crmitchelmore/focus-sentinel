@@ -296,8 +296,6 @@ public final class FocusCommandCenter {
         return true
     }
 
-    /// Take the general route away again, for a test that installed one.
-    /// The composition root supplies the priority host's existing write path.
     /// Shortcuts need an immediate result even when no cockpit window exists.
     /// The root registers the same session host used by the cockpit controls.
     private var intentSessionPerformer: ((PriorityCommand) -> Bool)?
@@ -314,6 +312,7 @@ public final class FocusCommandCenter {
         return intentSessionPerformer?(command) ?? false
     }
 
+    /// The composition root supplies the priority host's existing write path.
     private var priorityWriter: ((String) -> Bool)?
 
     public func registerPriorityWriter(_ write: @escaping (String) -> Bool) {
@@ -328,6 +327,7 @@ public final class FocusCommandCenter {
 
     private var privacyPerformer: ((PrivacySettingsAction) -> Void)?
 
+    /// Take the window route away again, for a test that installed one.
     public func unregisterWindowOpener() {
         windowOpener = nil
     }
