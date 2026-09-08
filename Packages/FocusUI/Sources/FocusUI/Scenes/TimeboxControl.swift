@@ -40,8 +40,8 @@ public struct TimeboxControl: View {
     public var body: some View {
         VStack(alignment: .leading, spacing: spacing / 2) {
             HStack(spacing: spacing) {
-                ShellText(.priorityTimeboxLabel, role: .caption)
-                    .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+                ShellText(.priorityTimeboxLabel, role: .sectionHeading)
+                    .foregroundStyle(DesignTokens.Palette.primaryText)
 
                 if let readoutKey, let duration = state.duration {
                     Label {

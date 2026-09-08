@@ -1,4 +1,5 @@
 import CoreGraphics
+import FocusUI
 import Foundation
 import ImageIO
 import UniformTypeIdentifiers
@@ -166,16 +167,28 @@ enum PNGCompare {
     /// text was not silently dropped" are measured on a layout that has slack in it: a
     /// component with room to spare keeps its frame when its strings grow, but it cannot
     /// keep the same amount of ink.
-    static func inkPixels(_ buffer: PixelBuffer) -> Int {
+    ///
+    /// **`paper` names any further ground that is not ink** (focus-6uya). The cockpit draws two
+    /// of its zones on an Inlay well, and against the top-left Bench pixel a well is a solid
+    /// block of "ink" — so text drawn *on* the well adds nothing the measure can see, and a
+    /// pseudo-localised cockpit measured fewer ink pixels than the plain one while visibly
+    /// drawing more text. A caller that knows the render stands on a second ground passes it
+    /// here, and a pixel near either ground is paper. The default is the old measure exactly.
+    static func inkPixels(_ buffer: PixelBuffer, paper: [DesignTokens.PaletteValue] = []) -> Int {
         guard !buffer.isEmpty else { return 0 }
-        let background = (buffer.bytes[0], buffer.bytes[1], buffer.bytes[2])
+        let threshold = Int(PixelComparison.channelThreshold)
+        var grounds = [(Int(buffer.bytes[0]), Int(buffer.bytes[1]), Int(buffer.bytes[2]))]
+        grounds += paper.map { ($0.red, $0.green, $0.blue) }
         var ink = 0
         for pixel in 0..<(buffer.width * buffer.height) {
             let index = pixel * 4
-            let dr = abs(Int(buffer.bytes[index]) - Int(background.0))
-            let dg = abs(Int(buffer.bytes[index + 1]) - Int(background.1))
-            let db = abs(Int(buffer.bytes[index + 2]) - Int(background.2))
-            if max(dr, max(dg, db)) > Int(PixelComparison.channelThreshold) { ink += 1 }
+            let r = Int(buffer.bytes[index])
+            let g = Int(buffer.bytes[index + 1])
+            let b = Int(buffer.bytes[index + 2])
+            let onPaper = grounds.contains { ground in
+                max(abs(r - ground.0), max(abs(g - ground.1), abs(b - ground.2))) <= threshold
+            }
+            if !onPaper { ink += 1 }
         }
         return ink
     }

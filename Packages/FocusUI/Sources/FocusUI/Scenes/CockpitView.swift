@@ -7,8 +7,10 @@ import SwiftUI
 /// destination; an empty "Insights" row today would be a surface with nothing behind it.
 ///
 /// The column reads top to bottom in the order the user thinks: what am I doing (the hero),
-/// how will I know it is finished (the definition of done), and then the one primary action.
-/// Everything below the hero is at `.body` or smaller, which is what makes F-02's "always
+/// how will I know it is finished (the definition of done), the verbs that act on it, and then
+/// the machinery — the time, on one well; what belongs, on another — with the history and the
+/// instrument strip under them (focus-6uya). Every section name is `.sectionHeading`, one step
+/// under `largeTitle`, and nothing else is above `.body`, which is what makes F-02's "always
 /// more prominent than any analytics" structural — see `DesignTokens.FontRole.priorityHero`
 /// and `TypeHierarchyTests`.
 ///
@@ -86,6 +88,9 @@ public struct CockpitView: View {
 
     @ScaledMetric(relativeTo: .body) private var rowSpacing: CGFloat = 12
     @ScaledMetric(relativeTo: .largeTitle) private var sectionSpacing: CGFloat = 20
+    /// The inset of a well's content from its edge, and the radius of that edge.
+    @ScaledMetric(relativeTo: .body) private var wellInset: CGFloat = 14
+    @ScaledMetric(relativeTo: .body) private var wellRadius: CGFloat = 8
 
     /// What the view reports when its body is evaluated.
     ///
@@ -198,18 +203,12 @@ public struct CockpitView: View {
                 .background(absentCommitmentReceipts)
 
             if let priority = state.priority {
-                // **A separator before a container** (focus-w41, direction §5.1). The sections
-                // below were told apart by whitespace alone, which at accessibilityLarge is not
-                // enough to say where the commitment stops and its machinery starts; and the
-                // alternative — putting each section in a box — is what the direction rejects,
-                // because five bordered boxes make the window a form. One hairline under the
-                // header does the work all five boxes would have done.
-                Divider()
+                // **The commitment zone** (focus-6uya): the definition of done and the verbs
+                // that act on the priority, directly under the hero. The verbs used to sit
+                // between the rules pane and the history, an orphan row a long way from the
+                // thing they finish, change or clear.
                 doneWhenSection(priority)
-                timeboxSection(priority)
-                sessionSection
-                contextSection(priority)
-                rulesSection(priority)
+                primaryActions(priority)
             }
 
             if showsCapture {
@@ -217,7 +216,21 @@ public struct CockpitView: View {
             }
 
             if let priority = state.priority {
-                primaryActions(priority)
+                // **Two wells, not five boxes** (focus-6uya). The direction's warning was that a
+                // box per section makes the window a form, and one hairline under the header was
+                // the answer. The owner read the result as a column with no organisation, so the
+                // machinery is grouped by what it answers — *how is the time being spent* and
+                // *what belongs* — and each group sits on the quiet Inlay ground the ritual strip
+                // already uses. The commitment stays on the window's own ground, which is what
+                // keeps it the figure and the wells the furniture.
+                well {
+                    timeboxSection(priority)
+                    sessionSection
+                }
+                well {
+                    contextSection(priority)
+                    rulesSection(priority)
+                }
             }
 
             RecentPrioritiesView(rows: state.recent, activate: wiring.activate)
@@ -227,7 +240,12 @@ public struct CockpitView: View {
                 .shellRendered(.recentCount, state.recent.count)
                 .shellRendered(.recentDigest, ShellValueDigest.describe(state.recent))
 
-            footer
+            // **The instrument strip** (focus-6uya): the store line, what is being watched, the
+            // switch and the way to Settings, on the same inset ground as the wells but tighter,
+            // so it reads as the window's status bar rather than as a sixth section.
+            well(spacing: rowSpacing / 2) {
+                footer
+            }
 
             Spacer(minLength: 0)
         }
@@ -581,8 +599,8 @@ public struct CockpitView: View {
                 // with no host draws no fields. Nothing at all when there is no value, heading
                 // included (focus-0ai).
                 if let doneWhen = CockpitWiring.doneWhenToDraw(priority.doneWhen) {
-                    ShellText(.priorityDoneWhenLabel, role: .caption)
-                        .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+                    ShellText(.priorityDoneWhenLabel, role: .sectionHeading)
+                        .foregroundStyle(DesignTokens.Palette.primaryText)
 
                     Text(verbatim: doneWhen)
                         .font(DesignTokens.font(.body, scale: textScale))
@@ -590,8 +608,8 @@ public struct CockpitView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
             } else {
-                ShellText(.priorityDoneWhenLabel, role: .caption)
-                    .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+                ShellText(.priorityDoneWhenLabel, role: .sectionHeading)
+                    .foregroundStyle(DesignTokens.Palette.primaryText)
 
                 TextField(
                     text: $doneWhenDraft,
@@ -972,6 +990,38 @@ public struct CockpitView: View {
                 } label: {
                     ShellText(.cockpitLaunchAtLoginDismiss, role: .footnote)
                 }
+            }
+        }
+    }
+
+    /// **A well: one zone of the column on the quiet inset ground** (focus-6uya).
+    ///
+    /// Inlay, never a material and never a shadow — the same rule `RitualBanner` follows, for
+    /// the same reason: the cockpit is summoned, and a raised card inside it would compete with
+    /// the hero for the eye. The border appears only under Increase Contrast, where a fill two
+    /// steps from the window ground is not a boundary a person can rely on.
+    private func well<Content: View>(
+        spacing: CGFloat? = nil,
+        @ViewBuilder _ content: () -> Content
+    ) -> some View {
+        let emphasis = DesignTokens.emphasis(for: traits)
+        return VStack(alignment: .leading, spacing: spacing ?? sectionSpacing) {
+            content()
+        }
+        .padding(wellInset)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: wellRadius, style: .continuous)
+                .fill(DesignTokens.Palette.role(.inlay, for: traits))
+        )
+        .overlay {
+            if emphasis.promotesSecondaryText {
+                RoundedRectangle(cornerRadius: wellRadius, style: .continuous)
+                    .strokeBorder(
+                        DesignTokens.Palette.role(.mist, for: traits)
+                            .opacity(emphasis.outlineOpacity),
+                        lineWidth: emphasis.borderWidth
+                    )
             }
         }
     }

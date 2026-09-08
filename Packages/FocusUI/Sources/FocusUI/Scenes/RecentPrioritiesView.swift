@@ -33,8 +33,8 @@ public struct RecentPrioritiesView: View {
         Group {
             if !rows.isEmpty {
                 VStack(alignment: .leading, spacing: spacing) {
-                    ShellText(.priorityRecentHeading, role: .caption)
-                        .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+                    ShellText(.priorityRecentHeading, role: .sectionHeading)
+                        .foregroundStyle(DesignTokens.Palette.primaryText)
 
                     ForEach(rows) { row in
                         entry(row)

@@ -187,6 +187,12 @@ public enum DesignTokens {
         case largeTitle
         case title2
         case title3
+        /// **A section's name in the cockpit** (focus-6uya): Done when, Timebox, This session,
+        /// Context, Rules, Recent. `title3` semibold — one step under `largeTitle`, so the
+        /// hierarchy test still holds, and visibly a heading rather than a caption: the owner's
+        /// reading of the shipped window was that ten-point grey labels gave the column no
+        /// organisation a person could see.
+        case sectionHeading
         case headline
         case body
         case callout
@@ -211,6 +217,7 @@ public enum DesignTokens {
             case .largeTitle: .largeTitle
             case .title2: .title2
             case .title3: .title3
+            case .sectionHeading: .title3.weight(.semibold)
             case .headline: .headline
             case .body: .body
             case .callout: .callout
@@ -225,7 +232,7 @@ public enum DesignTokens {
             switch self {
             case .priorityHero, .largeTitle: .largeTitle
             case .title2: .title2
-            case .title3: .title3
+            case .title3, .sectionHeading: .title3
             case .headline: .headline
             case .body: .body
             case .callout: .callout
@@ -248,6 +255,7 @@ public enum DesignTokens {
         var weight: Font.Weight? {
             switch self {
             case .priorityHero: .medium
+            case .sectionHeading: .semibold
             default: nil
             }
         }
