@@ -67,12 +67,13 @@ public enum FocusMigrationPlan: SchemaMigrationPlan {
     public static var schemas: [any VersionedSchema.Type] {
         [
             FocusSchemaV1.self, FocusSchemaV2.self, FocusSchemaV3.self, FocusSchemaV4.self,
-            FocusSchemaV5.self, FocusSchemaV6.self, FocusSchemaV7.self, FocusSchemaV8.self
+            FocusSchemaV5.self, FocusSchemaV6.self, FocusSchemaV7.self, FocusSchemaV8.self,
+            FocusSchemaV9.self
         ]
     }
 
     public static var stages: [MigrationStage] {
-        [v1ToV2, v2ToV3, v3ToV4, v4ToV5, v5ToV6, v6ToV7, v7ToV8]
+        [v1ToV2, v2ToV3, v3ToV4, v4ToV5, v5ToV6, v6ToV7, v7ToV8, v8ToV9]
     }
 
     /// **v7 → v8: lightweight, and additive in the strictest sense** (F-115, focus-l7n).
@@ -89,6 +90,15 @@ public enum FocusMigrationPlan: SchemaMigrationPlan {
         MigrationStage.lightweight(
             fromVersion: FocusSchemaV7.self,
             toVersion: FocusSchemaV8.self
+        )
+    }
+
+    /// v8 → v9 adds `PolicyTuningRecord` and re-declares nothing (focus-exdi), so it is
+    /// lightweight for the reason v7 → v8 was.
+    static var v8ToV9: MigrationStage {
+        MigrationStage.lightweight(
+            fromVersion: FocusSchemaV8.self,
+            toVersion: FocusSchemaV9.self
         )
     }
 

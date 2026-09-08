@@ -3505,6 +3505,882 @@
         }
       }
     },
+    "settings.tunings.heading" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. The Intervention pane section holding every dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Timings and thresholds"
+          }
+        }
+      }
+    },
+    "settings.tunings.explanation" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Explanation under the tunings heading.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Every number Focus decides with. The shipped value is shown beside each one; a dial you have turned is marked."
+          }
+        }
+      }
+    },
+    "settings.tunings.family.interventions" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Tunings subsection: questions, nudges, budgets.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Interruptions"
+          }
+        }
+      }
+    },
+    "settings.tunings.family.drift" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Tunings subsection: drift timing.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drift and return"
+          }
+        }
+      }
+    },
+    "settings.tunings.family.relevance" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Tunings subsection: text comparison thresholds.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Relevance"
+          }
+        }
+      }
+    },
+    "settings.tunings.shipped" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. The shipped value beside a dial, with the value substituted.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shipped: %@"
+          }
+        }
+      }
+    },
+    "settings.tunings.changed" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Badge on a dial the person has turned.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Changed"
+          }
+        }
+      }
+    },
+    "settings.tunings.resetAll" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Button that deletes every override.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reset All to Shipped Values"
+          }
+        }
+      }
+    },
+    "settings.tunings.resetOne" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Button beside one dial that returns it to the shipped value.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reset"
+          }
+        }
+      }
+    },
+    "settings.tunings.unit.seconds" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. A span in seconds, with the number substituted.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ s"
+          }
+        }
+      }
+    },
+    "settings.tunings.unit.minutes" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. A span in whole minutes, with the number substituted.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ min"
+          }
+        }
+      }
+    },
+    "settings.tuning.queryDwellThreshold" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the queryDwellThreshold dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Before a question"
+          }
+        }
+      }
+    },
+    "settings.tuning.queryDwellThreshold.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the queryDwellThreshold dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How long an app has to be in front before Focus may ask about it."
+          }
+        }
+      }
+    },
+    "settings.tuning.queryCooldown" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the queryCooldown dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Between questions"
+          }
+        }
+      }
+    },
+    "settings.tuning.queryCooldown.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the queryCooldown dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The shortest gap between two questions."
+          }
+        }
+      }
+    },
+    "settings.tuning.mandateCooldown" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the mandateCooldown dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Between nudges"
+          }
+        }
+      }
+    },
+    "settings.tuning.mandateCooldown.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the mandateCooldown dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The shortest gap between two nudges about the same app."
+          }
+        }
+      }
+    },
+    "settings.tuning.escalationDwell" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the escalationDwell dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Before the next step"
+          }
+        }
+      }
+    },
+    "settings.tuning.escalationDwell.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the escalationDwell dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How long a nudge stands before the next rung may follow it."
+          }
+        }
+      }
+    },
+    "settings.tuning.snoozeFirst" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the snoozeFirst dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "First snooze length"
+          }
+        }
+      }
+    },
+    "settings.tuning.snoozeFirst.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the snoozeFirst dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The shortest of the three snooze buttons."
+          }
+        }
+      }
+    },
+    "settings.tuning.snoozeSecond" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the snoozeSecond dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Second snooze length"
+          }
+        }
+      }
+    },
+    "settings.tuning.snoozeSecond.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the snoozeSecond dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The middle snooze button."
+          }
+        }
+      }
+    },
+    "settings.tuning.snoozeThird" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the snoozeThird dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Third snooze length"
+          }
+        }
+      }
+    },
+    "settings.tuning.snoozeThird.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the snoozeThird dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The longest snooze button."
+          }
+        }
+      }
+    },
+    "settings.tuning.dailyQueryCap" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the dailyQueryCap dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Questions about one task, per day"
+          }
+        }
+      }
+    },
+    "settings.tuning.dailyQueryCap.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the dailyQueryCap dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "After this many, Focus stops asking about that task until tomorrow."
+          }
+        }
+      }
+    },
+    "settings.tuning.dailyQueryCapAllPriorities" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the dailyQueryCapAllPriorities dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Questions per day"
+          }
+        }
+      }
+    },
+    "settings.tuning.dailyQueryCapAllPriorities.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the dailyQueryCapAllPriorities dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Across every task."
+          }
+        }
+      }
+    },
+    "settings.tuning.dailyAccusationCap" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the dailyAccusationCap dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nudges per day"
+          }
+        }
+      }
+    },
+    "settings.tuning.dailyAccusationCap.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the dailyAccusationCap dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "After this many, Focus stays quiet until tomorrow."
+          }
+        }
+      }
+    },
+    "settings.tuning.dailyInterruptionCap" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the dailyInterruptionCap dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Interruptions per day"
+          }
+        }
+      }
+    },
+    "settings.tuning.dailyInterruptionCap.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the dailyInterruptionCap dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Questions and nudges share this one budget."
+          }
+        }
+      }
+    },
+    "settings.tuning.reservedAccusationUnits" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the reservedAccusationUnits dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Budget kept back for a nudge"
+          }
+        }
+      }
+    },
+    "settings.tuning.reservedAccusationUnits.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the reservedAccusationUnits dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Interruptions a question may never spend, so the last one is always a nudge."
+          }
+        }
+      }
+    },
+    "settings.tuning.ignoredQueryBackoff" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the ignoredQueryBackoff dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unanswered questions before a pause"
+          }
+        }
+      }
+    },
+    "settings.tuning.ignoredQueryBackoff.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the ignoredQueryBackoff dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "After this many go unanswered, questions stop for a while."
+          }
+        }
+      }
+    },
+    "settings.tuning.ignoredAccusationBackoff" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the ignoredAccusationBackoff dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ignored nudges before a pause"
+          }
+        }
+      }
+    },
+    "settings.tuning.ignoredAccusationBackoff.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the ignoredAccusationBackoff dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "After this many are ignored, the ladder drops back to the menu bar."
+          }
+        }
+      }
+    },
+    "settings.tuning.backoffSpan" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the backoffSpan dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Length of that pause"
+          }
+        }
+      }
+    },
+    "settings.tuning.backoffSpan.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the backoffSpan dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How long questions or nudges stay off after being ignored."
+          }
+        }
+      }
+    },
+    "settings.tuning.pausePreset" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the pausePreset dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pause preset"
+          }
+        }
+      }
+    },
+    "settings.tuning.pausePreset.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the pausePreset dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The fixed span the Pause action offers."
+          }
+        }
+      }
+    },
+    "settings.tuning.sustainedDriftThreshold" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the sustainedDriftThreshold dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drift counts after"
+          }
+        }
+      }
+    },
+    "settings.tuning.sustainedDriftThreshold.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the sustainedDriftThreshold dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How long an unrelated app has to be in front before it counts as drift."
+          }
+        }
+      }
+    },
+    "settings.tuning.driftResetGrace" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the driftResetGrace dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Return counts after"
+          }
+        }
+      }
+    },
+    "settings.tuning.driftResetGrace.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the driftResetGrace dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How long you have to be back before a return counts."
+          }
+        }
+      }
+    },
+    "settings.tuning.lookBackSpan" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the lookBackSpan dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Look-back window"
+          }
+        }
+      }
+    },
+    "settings.tuning.lookBackSpan.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the lookBackSpan dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How far back Focus looks when it decides what you were doing."
+          }
+        }
+      }
+    },
+    "settings.tuning.maximumLookBackEvents" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the maximumLookBackEvents dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Events kept in the look-back"
+          }
+        }
+      }
+    },
+    "settings.tuning.maximumLookBackEvents.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the maximumLookBackEvents dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How many app switches the look-back window holds."
+          }
+        }
+      }
+    },
+    "settings.tuning.returnAnchorDwell" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the returnAnchorDwell dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "An app becomes an anchor after"
+          }
+        }
+      }
+    },
+    "settings.tuning.returnAnchorDwell.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the returnAnchorDwell dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Time in an app before a detour from it is measured against it."
+          }
+        }
+      }
+    },
+    "settings.tuning.detourExtension" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the detourExtension dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Extra grace on an anchored detour"
+          }
+        }
+      }
+    },
+    "settings.tuning.detourExtension.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the detourExtension dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Added to the drift threshold when you leave an anchor."
+          }
+        }
+      }
+    },
+    "settings.tuning.minimumTokenLength" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the minimumTokenLength dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shortest word Focus reads"
+          }
+        }
+      }
+    },
+    "settings.tuning.minimumTokenLength.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the minimumTokenLength dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Words shorter than this are ignored when comparing text."
+          }
+        }
+      }
+    },
+    "settings.tuning.minimumStrongTokenLength" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the minimumStrongTokenLength dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shortest strong word"
+          }
+        }
+      }
+    },
+    "settings.tuning.minimumStrongTokenLength.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the minimumStrongTokenLength dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A match on a word this long counts as a medium signal."
+          }
+        }
+      }
+    },
+    "settings.tuning.minimumOverlapTokens" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the minimumOverlapTokens dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Words that must overlap"
+          }
+        }
+      }
+    },
+    "settings.tuning.minimumOverlapTokens.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the minimumOverlapTokens dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How many words your priority and the app must share."
+          }
+        }
+      }
+    },
+    "settings.tuning.minimumPriorityContentTokens" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the minimumPriorityContentTokens dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Words a priority needs"
+          }
+        }
+      }
+    },
+    "settings.tuning.minimumPriorityContentTokens.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the minimumPriorityContentTokens dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A priority shorter than this is not judged at all."
+          }
+        }
+      }
+    },
+    "settings.tuning.minimumNegativeBasisItems" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the minimumNegativeBasisItems dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Context items before absence counts"
+          }
+        }
+      }
+    },
+    "settings.tuning.minimumNegativeBasisItems.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the minimumNegativeBasisItems dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How many apps or sites you must have named before not being on the list means anything."
+          }
+        }
+      }
+    },
+    "settings.tuning.maximumExplanationTokens" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the maximumExplanationTokens dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Words in an explanation"
+          }
+        }
+      }
+    },
+    "settings.tuning.maximumExplanationTokens.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the maximumExplanationTokens dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The most words a verdict explains itself with."
+          }
+        }
+      }
+    },
+    "settings.tuning.similarityRelevantCeiling" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the similarityRelevantCeiling dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Similarity that counts as related"
+          }
+        }
+      }
+    },
+    "settings.tuning.similarityRelevantCeiling.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the similarityRelevantCeiling dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Closer than this and the on-device comparison may back a related verdict."
+          }
+        }
+      }
+    },
+    "settings.tuning.languageConfidenceFloor" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the languageConfidenceFloor dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confidence the text is English"
+          }
+        }
+      }
+    },
+    "settings.tuning.languageConfidenceFloor.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the languageConfidenceFloor dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Below this, the similarity comparison does not run."
+          }
+        }
+      }
+    },
+    "settings.tuning.similarityCacheCapacity" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the similarityCacheCapacity dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Similarity cache size"
+          }
+        }
+      }
+    },
+    "settings.tuning.similarityCacheCapacity.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the similarityCacheCapacity dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How many comparisons are kept in memory."
+          }
+        }
+      }
+    },
     "shell.cockpit.openHistory" : {
       "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Button on the cockpit’s Recent tab that opens the History window (focus-1rj7).",
       "extractionState" : "manual",

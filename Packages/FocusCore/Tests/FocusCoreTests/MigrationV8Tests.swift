@@ -113,13 +113,13 @@ struct MigrationV8Tests {
     }
 
     /// **The plan's tip**, which the newest version's suite owns.
-    @Test("the plan's newest schema is v8, and it is the seventh stage")
+    @Test("v8 is the eighth schema and the seventh stage")
     func planShape() {
+        // The newest schema is v9 since focus-exdi; `MigrationV9Tests` pins the plan's tail.
         #expect(FocusSchemaV8.versionIdentifier == Schema.Version(8, 0, 0))
-        #expect(FocusMigrationPlan.schemas.count == 8)
+        #expect(FocusMigrationPlan.schemas.count >= 8)
         #expect(FocusMigrationPlan.schemas[7] is FocusSchemaV8.Type)
-        #expect(FocusMigrationPlan.stages.count == 7)
-        #expect(FocusStore.schema.version == Schema.Version(8, 0, 0))
+        #expect(FocusMigrationPlan.stages.count >= 7)
     }
 
     /// **One entity added, none re-declared, nothing removed.**
