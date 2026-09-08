@@ -1,6 +1,6 @@
 # Focus Sentinel — Handover, 8 September 2026
 
-The table below records the 5 September baseline at `c1a7f79`. Release closeout is now in progress on `codex/release-closeout`; the fresh gate and live drive must be verified after the concurrent cockpit redesign is integrated. The existing Notion Status page is the primary status hub; Beads retains the engineering issue records.
+The table below records the 5 September baseline at `c1a7f79`. Release closeout is in progress on `codex/release-closeout`, including cockpit redesign `efdebdc`. Its 454-test comparison passed, but took 440.495 seconds against the 420-second snapshot budget; the integrated gate must remeasure that limit. App Intents adds 12 runner and 2 host tests, so the combined expected minimum is 2,289. The fresh full gate and live drive remain required. The existing Notion Status page is the primary status hub; Beads retains the engineering issue records.
 
 ## Where it stands
 
