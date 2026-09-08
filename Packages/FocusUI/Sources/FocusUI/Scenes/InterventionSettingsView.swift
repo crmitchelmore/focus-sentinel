@@ -335,20 +335,31 @@ public struct InterventionSettingsView: View {
             }
 
             if let window = settings.quietHours {
-                HStack(spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
-                    // The two boundaries through the locale's own clock, joined by the catalog's
-                    // separator — not a `%02d:%02d` with an authored dash, which drew
-                    // `22:00 – 07:00` on a Mac set to a 12-hour clock (focus-43k).
-                    ShellText(
-                        .interventionQuietHoursRange,
-                        arguments: [
-                            Self.clock(window.startMinuteOfDay, locale: locale),
-                            Self.clock(window.endMinuteOfDay, locale: locale)
-                        ]
-                    )
-                    .monospacedDigit()
-                    Spacer(minLength: 0)
-                    boundaryButtons(window)
+                // The two boundaries through the locale's own clock, joined by the catalog's
+                // separator — not a `%02d:%02d` with an authored dash, which drew
+                // `22:00 – 07:00` on a Mac set to a 12-hour clock (focus-43k).
+                let range = ShellText(
+                    .interventionQuietHoursRange,
+                    arguments: [
+                        Self.clock(window.startMinuteOfDay, locale: locale),
+                        Self.clock(window.endMinuteOfDay, locale: locale)
+                    ]
+                )
+                .monospacedDigit()
+                // The range and its four buttons on one line where they fit, and the buttons
+                // under the range, two by two, where they do not (focus-exdi): four bordered
+                // buttons that may not compress were the widest thing on the pane, and at the
+                // window's committed width they ran off its right edge.
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
+                        range
+                        Spacer(minLength: 0)
+                        boundaryButtons(window)
+                    }
+                    VStack(alignment: .leading, spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
+                        range
+                        boundaryButtons(window, stacked: true)
+                    }
                 }
             } else {
                 ShellText(.interventionQuietHoursOff, role: .callout)
@@ -370,19 +381,34 @@ public struct InterventionSettingsView: View {
         }
     }
 
-    private func boundaryButtons(_ window: QuietHoursWindow) -> some View {
-        HStack(spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
+    @ViewBuilder
+    private func boundaryButtons(_ window: QuietHoursWindow, stacked: Bool = false) -> some View {
+        let gap = DesignTokens.spacing(spacing / 2, scale: textScale)
+        let start = HStack(spacing: gap) {
             adjust(.interventionQuietHoursStartEarlier) {
                 onAction(.setQuietHours(Self.moved(window, startBy: -Self.quietHoursStep)))
             }
             adjust(.interventionQuietHoursStartLater) {
                 onAction(.setQuietHours(Self.moved(window, startBy: Self.quietHoursStep)))
             }
+        }
+        let end = HStack(spacing: gap) {
             adjust(.interventionQuietHoursEndEarlier) {
                 onAction(.setQuietHours(Self.moved(window, endBy: -Self.quietHoursStep)))
             }
             adjust(.interventionQuietHoursEndLater) {
                 onAction(.setQuietHours(Self.moved(window, endBy: Self.quietHoursStep)))
+            }
+        }
+        if stacked {
+            VStack(alignment: .leading, spacing: gap) {
+                start
+                end
+            }
+        } else {
+            HStack(spacing: gap) {
+                start
+                end
             }
         }
     }
@@ -648,8 +674,10 @@ public struct InterventionSettingsView: View {
     }
 
     private func usageRow(_ key: ShellStringKey, used: Int, cap: Int) -> some View {
-        HStack(spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
+        HStack(alignment: .firstTextBaseline, spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
             ShellText(key, role: .callout)
+                .lineLimit(nil)
+                .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
             // Digits, monospaced, and no bar: a progress bar is a thing to fill, and a thing to
             // fill is a score to defend (D-01).
@@ -686,6 +714,8 @@ public struct InterventionSettingsView: View {
             )
             HStack(spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
                 ShellText(.interventionThresholdSnooze, role: .callout)
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 0)
                 Text(
                     verbatim: InterventionPolicy.snoozeDurations
@@ -699,8 +729,10 @@ public struct InterventionSettingsView: View {
     }
 
     private func thresholdRow(_ key: ShellStringKey, _ span: Duration) -> some View {
-        HStack(spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
+        HStack(alignment: .firstTextBaseline, spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
             ShellText(key, role: .callout)
+                .lineLimit(nil)
+                .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
             Text(verbatim: NudgeCopy.duration(span))
                 .font(DesignTokens.font(.callout, scale: textScale))

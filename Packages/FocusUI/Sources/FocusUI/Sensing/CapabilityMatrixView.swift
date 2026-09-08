@@ -114,6 +114,9 @@ public struct CapabilityMatrixView: View {
 
                 ShellText(Self.labelKey(for: state), role: .callout)
                     .foregroundStyle(DesignTokens.tint(for: state))
+                    .multilineTextAlignment(.trailing)
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             ForEach(Self.fallbacks(for: capability, in: capabilities), id: \.fallback.token) { row in

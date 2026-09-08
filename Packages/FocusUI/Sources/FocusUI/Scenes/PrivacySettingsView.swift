@@ -205,6 +205,22 @@ public struct PrivacySettingsView: View {
         .defaultFocus($focus, .privacyRevealStore)
     }
 
+    private func retentionButtons(_ windows: [RetentionWindow]) -> some View {
+        ForEach(windows, id: \.self) { window in
+            Button {
+                onAction(.setRetentionWindow(window))
+            } label: {
+                ShellText(window.titleKey)
+            }
+            .buttonStyle(.bordered)
+            // The same tint the timebox presets use for the same job — and, because a tint
+            // is a colour, the accessibility trait beside it carries the selection where
+            // colour cannot (F-146, F-144).
+            .tint(window == retention ? DesignTokens.Palette.accent(for: traits) : nil)
+            .accessibilityAddTraits(window == retention ? [.isSelected] : [])
+        }
+    }
+
     var content: some View {
         VStack(alignment: .leading, spacing: spacing) {
             if half != .insight { ownershipContent }
@@ -333,21 +349,21 @@ public struct PrivacySettingsView: View {
                     .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
                     .lineLimit(nil)
                     .fixedSize(horizontal: false, vertical: true)
-                HStack(spacing: spacing / 2) {
-                    ForEach(RetentionWindow.ordered, id: \.self) { window in
-                        Button {
-                            onAction(.setRetentionWindow(window))
-                        } label: {
-                            ShellText(window.titleKey)
-                        }
-                        .buttonStyle(.bordered)
-                        // The same tint the timebox presets use for the same job — and, because
-                        // a tint is a colour, the accessibility trait beside it carries the
-                        // selection where colour cannot (F-146, F-144).
-                        .tint(window == retention ? DesignTokens.Palette.accent(for: traits) : nil)
-                        .accessibilityAddTraits(window == retention ? [.isSelected] : [])
+                // Four buttons on one line where they fit, two by two where they do not
+                // (focus-exdi) — the same fallback `PortabilityRow` measured it needed.
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: spacing / 2) {
+                        retentionButtons(RetentionWindow.ordered)
+                        Spacer(minLength: 0)
                     }
-                    Spacer(minLength: 0)
+                    VStack(alignment: .leading, spacing: spacing / 2) {
+                        HStack(spacing: spacing / 2) {
+                            retentionButtons(Array(RetentionWindow.ordered.prefix(2)))
+                        }
+                        HStack(spacing: spacing / 2) {
+                            retentionButtons(Array(RetentionWindow.ordered.dropFirst(2)))
+                        }
+                    }
                 }
                 .accessibilityElement(children: .contain)
                 .accessibilityLabel(ShellStrings.resource(.settingsPrivacyRetentionHeading))
