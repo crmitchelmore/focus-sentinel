@@ -127,6 +127,9 @@ public enum ShellRenderedField: String, Sendable, CaseIterable, Codable, Hashabl
     case presentationExclusions
     /// Today's spend over the cap, as the pane drew it (D-01: information, never a score).
     case interruptionUsage
+    /// The Intervention pane's dials (focus-exdi): every policy tuning the person has turned,
+    /// digested, so a pane that dropped one reads as a different value.
+    case policyTunings
     /// **The notch companion's row, as the geometry decided it** (e08a). The named refusal, or
     /// `landed` — never the preference, because the row is a reading of the display and a row
     /// rendered from a switch would say a surface is real on a Mac that has no built-in panel.

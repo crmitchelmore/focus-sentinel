@@ -151,9 +151,10 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case settingsTuningsFamilyDrift = "settings.tunings.family.drift"
     case settingsTuningsFamilyRelevance = "settings.tunings.family.relevance"
     case settingsTuningsShipped = "settings.tunings.shipped"
-    case settingsTuningsChanged = "settings.tunings.changed"
     case settingsTuningsResetAll = "settings.tunings.resetAll"
     case settingsTuningsResetOne = "settings.tunings.resetOne"
+    case settingsTuningsLower = "settings.tunings.lower"
+    case settingsTuningsRaise = "settings.tunings.raise"
     case settingsTuningsUnitSeconds = "settings.tunings.unit.seconds"
     case settingsTuningsUnitMinutes = "settings.tunings.unit.minutes"
     case settingsTuningQueryDwellThreshold = "settings.tuning.queryDwellThreshold"
@@ -648,12 +649,6 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case interventionCapsAccusations = "settings.intervention.caps.accusations"
     case interventionCapsInterruptions = "settings.intervention.caps.interruptions"
     case interventionCapsExplanation = "settings.intervention.caps.explanation"
-    case interventionThresholdsHeading = "settings.intervention.thresholds.heading"
-    case interventionThresholdQueryDwell = "settings.intervention.thresholds.queryDwell"
-    case interventionThresholdQueryCooldown = "settings.intervention.thresholds.queryCooldown"
-    case interventionThresholdAccusationCooldown = "settings.intervention.thresholds.accusationCooldown"
-    case interventionThresholdEscalation = "settings.intervention.thresholds.escalation"
-    case interventionThresholdSnooze = "settings.intervention.thresholds.snooze"
 }
 
 /// A transform applied to a resolved string immediately before it is drawn.

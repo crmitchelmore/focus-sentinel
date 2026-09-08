@@ -2857,78 +2857,6 @@
         }
       }
     },
-    "settings.intervention.thresholds.accusationCooldown" : {
-      "comment" : "Threshold row label.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Between nudges"
-          }
-        }
-      }
-    },
-    "settings.intervention.thresholds.escalation" : {
-      "comment" : "Threshold row label.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Before the next step"
-          }
-        }
-      }
-    },
-    "settings.intervention.thresholds.heading" : {
-      "comment" : "Heading above the read-only threshold mirrors.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Timings"
-          }
-        }
-      }
-    },
-    "settings.intervention.thresholds.queryCooldown" : {
-      "comment" : "Threshold row label.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Between questions"
-          }
-        }
-      }
-    },
-    "settings.intervention.thresholds.queryDwell" : {
-      "comment" : "Threshold row label.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Before a question"
-          }
-        }
-      }
-    },
-    "settings.intervention.thresholds.snooze" : {
-      "comment" : "Threshold row label.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Snooze lengths"
-          }
-        }
-      }
-    },
     "settings.intervention.title" : {
       "comment" : "Title of the Intervention settings tab.",
       "extractionState" : "manual",
@@ -3577,18 +3505,6 @@
         }
       }
     },
-    "settings.tunings.changed" : {
-      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Badge on a dial the person has turned.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Changed"
-          }
-        }
-      }
-    },
     "settings.tunings.resetAll" : {
       "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Button that deletes every override.",
       "extractionState" : "manual",
@@ -3597,6 +3513,30 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Reset All to Shipped Values"
+          }
+        }
+      }
+    },
+    "settings.tunings.lower" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Accessibility label of the minus button beside a dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lower"
+          }
+        }
+      }
+    },
+    "settings.tunings.raise" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Accessibility label of the plus button beside a dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Raise"
           }
         }
       }

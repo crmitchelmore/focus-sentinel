@@ -71,10 +71,13 @@ public struct Judgement: Sendable, Equatable {
 /// are state that successive classifications share. There is **no timer, no queue and no task**
 /// in it (R-70e): the lock is held across a reduce and a record and nothing else.
 public final class DeterministicRelevanceEngine: RelevanceClassifier, @unchecked Sendable {
-    private let normalizer: TokenNormalizer
+    private var normalizer: TokenNormalizer
     private let scorer: SimilarityScorer
-    private let cascade: RuleCascade
-    private let explanations = ExplanationBuilder()
+    private var cascade: RuleCascade
+    private var explanations = ExplanationBuilder()
+    private let cascadeLadder: CascadeLadder
+    /// The dials the whole engine runs on (focus-exdi). `adopt(_:)` hands them to every part.
+    public private(set) var tunings: PolicyTunings = .shipped
 
     private let lock = NSLock()
     private var drift = DriftMachine()
@@ -106,8 +109,10 @@ public final class DeterministicRelevanceEngine: RelevanceClassifier, @unchecked
         scorer: SimilarityScorer = SimilarityScorer(),
         lookBackCapacity: Int = RelevancePolicy.maximumLookBackEvents,
         model: (any ModelRung)? = nil,
-        ladder: CascadeLadder = .deterministic
+        ladder: CascadeLadder = .deterministic,
+        tunings: PolicyTunings = .shipped
     ) {
+        self.cascadeLadder = ladder
         self.normalizer = normalizer
         self.scorer = scorer
         self.lookBackCapacity = lookBackCapacity
@@ -119,10 +124,32 @@ public final class DeterministicRelevanceEngine: RelevanceClassifier, @unchecked
             ladder: ladder,
             normalizer: normalizer
         )
+        adopt(tunings)
     }
 
     /// The ladder this engine composed, for the report and the self-check to read rather than
     /// infer. Eight rungs with no port, nine with one.
+    /// Take a person's dials, everywhere the engine reads one (focus-exdi): the window, the
+    /// drift machine, the normaliser, the scorer, the explanation builder, and the heuristic
+    /// rung — which is rebuilt, because it holds its dials by value and the cascade holds it.
+    /// State survives: the window keeps its observations and the drift machine its state.
+    public func adopt(_ tunings: PolicyTunings) {
+        lock.lock()
+        defer { lock.unlock() }
+        self.tunings = tunings
+        window.tunings = tunings
+        drift.tunings = tunings
+        normalizer.tunings = tunings
+        explanations.tunings = tunings
+        scorer.adopt(tunings)
+        cascade = RuleCascade(
+            heuristic: HeuristicClassifier(scorer: scorer, tunings: tunings),
+            model: model,
+            ladder: cascadeLadder,
+            normalizer: normalizer
+        )
+    }
+
     public var ladder: CascadeLadder { cascade.composedLadder }
 
     /// Pay every cold cost at construction, off the classification path. Idempotent.

@@ -250,7 +250,8 @@ public struct FatigueController: Sendable, Equatable {
         fatigue: FatigueState,
         snoozes: SnoozeBook = .none,
         correctedSubjects: Set<String> = [],
-        now: Duration
+        now: Duration,
+        tunings: PolicyTunings = .shipped
     ) -> FatigueDecision {
         // **Every refusal is asked the same two questions: does it apply, and is it about a rung
         // like this one?** (focus-uru).
@@ -279,7 +280,8 @@ public struct FatigueController: Sendable, Equatable {
             fatigue: fatigue,
             snoozes: snoozes,
             correctedSubjects: correctedSubjects,
-            now: now
+            now: now,
+            tunings: tunings
         ) where refusal.subject.silences(rung) {
             return .refused(refusal)
         }
@@ -303,7 +305,8 @@ public struct FatigueController: Sendable, Equatable {
         fatigue: FatigueState,
         snoozes: SnoozeBook,
         correctedSubjects: Set<String>,
-        now: Duration
+        now: Duration,
+        tunings: PolicyTunings = .shipped
     ) -> [FatigueRefusal] {
         var refusals: [FatigueRefusal] = []
 
@@ -345,8 +348,10 @@ public struct FatigueController: Sendable, Equatable {
         // cooldown is a minimum gap between *sentences*; the glyph makes none, spends neither
         // cap, and costs a person nothing to have been shown twice — so it is `.theAppSpeaking`
         // like the three around it, and the ruling above is what applies it.
-        if !fatigue.cooledDown(kind, now: now) {
-            refusals.append(.cooldown(remaining: remainingCooldown(kind, fatigue: fatigue, now: now)))
+        if !fatigue.cooledDown(kind, now: now, tunings: tunings) {
+            refusals.append(
+                .cooldown(remaining: remainingCooldown(kind, fatigue: fatigue, now: now, tunings: tunings))
+            )
         }
 
         // 5 — the caps, and the reserved unit inside them. **A rung is refused only by a cap it
@@ -359,7 +364,7 @@ public struct FatigueController: Sendable, Equatable {
         // `kind == .query || rung?.makesAnAccusation ?? true` — the predicate
         // `SilenceSubject.ruling(for:)` reads. The rule kept its single home and moved up a
         // level, where it now covers five gates instead of one.
-        if let limit = budget.bindingLimit(for: kind) {
+        if let limit = budget.bindingLimit(for: kind, tunings: tunings) {
             refusals.append(.cap(limit))
         }
 
@@ -379,7 +384,8 @@ public struct FatigueController: Sendable, Equatable {
         fatigue: FatigueState,
         snoozes: SnoozeBook = .none,
         correctedSubjects: Set<String> = [],
-        now: Duration
+        now: Duration,
+        tunings: PolicyTunings = .shipped
     ) -> Bool {
         decide(
             kind: kind,
@@ -389,7 +395,8 @@ public struct FatigueController: Sendable, Equatable {
             fatigue: fatigue,
             snoozes: snoozes,
             correctedSubjects: correctedSubjects,
-            now: now
+            now: now,
+            tunings: tunings
         ).isPermitted
     }
 
@@ -397,7 +404,8 @@ public struct FatigueController: Sendable, Equatable {
     static func remainingCooldown(
         _ kind: InterruptionKind,
         fatigue: FatigueState,
-        now: Duration
+        now: Duration,
+        tunings: PolicyTunings = .shipped
     ) -> Duration {
         let last: Duration?
         switch kind {
@@ -406,7 +414,7 @@ public struct FatigueController: Sendable, Equatable {
         }
         guard let last else { return .zero }
         let elapsed = now - last
-        let span = FatigueState.cooldown(for: kind)
+        let span = FatigueState.cooldown(for: kind, tunings: tunings)
         return elapsed >= span ? .zero : span - elapsed
     }
 
@@ -417,8 +425,12 @@ public struct FatigueController: Sendable, Equatable {
     /// Pure, on an injected monotonic reading, with no timer anywhere (R-96i) — which is what
     /// makes the backoff fixtures exact assertions rather than flaky ones.
     @discardableResult
-    public mutating func reduce(_ event: FatigueEvent, now: Duration) -> FatigueState {
-        state = Self.reduce(state, event: event, now: now)
+    public mutating func reduce(
+        _ event: FatigueEvent,
+        now: Duration,
+        tunings: PolicyTunings = .shipped
+    ) -> FatigueState {
+        state = Self.reduce(state, event: event, now: now, tunings: tunings)
         return state
     }
 
@@ -427,7 +439,8 @@ public struct FatigueController: Sendable, Equatable {
     public static func reduce(
         _ state: FatigueState,
         event: FatigueEvent,
-        now: Duration
+        now: Duration,
+        tunings: PolicyTunings = .shipped
     ) -> FatigueState {
         switch event {
         case .delivered(let charge):
@@ -456,10 +469,10 @@ public struct FatigueController: Sendable, Equatable {
             }
 
         case .queryResolved(let outcome):
-            return resolvingQuery(state, answered: outcome.isAnswer, now: now)
+            return resolvingQuery(state, answered: outcome.isAnswer, now: now, tunings: tunings)
 
         case .accusationResolved(let outcome):
-            return resolvingAccusation(state, unanswered: outcome.isUnanswered, now: now)
+            return resolvingAccusation(state, unanswered: outcome.isUnanswered, now: now, tunings: tunings)
 
         case .sessionEnded:
             // The hold is "for the rest of the session" and the runs are runs within one, so
@@ -479,7 +492,8 @@ public struct FatigueController: Sendable, Equatable {
     private static func resolvingQuery(
         _ state: FatigueState,
         answered: Bool,
-        now: Duration
+        now: Duration,
+        tunings: PolicyTunings
     ) -> FatigueState {
         guard !answered else {
             return FatigueState(
@@ -493,7 +507,7 @@ public struct FatigueController: Sendable, Equatable {
         }
 
         let run = state.consecutiveUnansweredQueries + 1
-        let trips = run >= InterventionPolicy.ignoredQueryBackoff
+        let trips = run >= tunings.count(.ignoredQueryBackoff)
 
         // Arming the backoff **closes the run**. The counter is a run of two unanswered
         // questions; once the hour has been imposed, the next hour must be earned by another
@@ -504,7 +518,7 @@ public struct FatigueController: Sendable, Equatable {
             consecutiveUnansweredQueries: trips ? 0 : run,
             consecutiveIgnoredAccusations: state.consecutiveIgnoredAccusations,
             queriesSuspendedUntil: trips
-                ? now + InterventionPolicy.backoffSpan
+                ? now + tunings.duration(.backoffSpan)
                 : state.queriesSuspendedUntil,
             accusationsHeldUntil: state.accusationsHeldUntil
         )
@@ -537,7 +551,8 @@ public struct FatigueController: Sendable, Equatable {
     private static func resolvingAccusation(
         _ state: FatigueState,
         unanswered: Bool,
-        now: Duration
+        now: Duration,
+        tunings: PolicyTunings
     ) -> FatigueState {
         guard unanswered else {
             return FatigueState(
@@ -551,7 +566,7 @@ public struct FatigueController: Sendable, Equatable {
         }
 
         let run = state.consecutiveIgnoredAccusations + 1
-        let trips = run >= InterventionPolicy.ignoredAccusationBackoff
+        let trips = run >= tunings.count(.ignoredAccusationBackoff)
 
         return FatigueState(
             lastQueryAt: state.lastQueryAt,
@@ -564,7 +579,7 @@ public struct FatigueController: Sendable, Equatable {
             // two more dismissals inside the hour are two more refusals to engage — the same
             // reading the query side gives its own `trips ? now + span` branch.
             accusationsHeldUntil: trips
-                ? now + InterventionPolicy.backoffSpan
+                ? now + tunings.duration(.backoffSpan)
                 : state.accusationsHeldUntil
         )
     }

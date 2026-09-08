@@ -232,6 +232,7 @@ enum ShellConnectionFactory {
         )
         root.expect(.quietHours, ShellValueDigest.describe(intervention.quietHours), for: .settings)
         root.expect(.interruptionUsage, ShellValueDigest.describe(intervention.usage), for: .settings)
+        root.expect(.policyTunings, ShellValueDigest.describe(intervention.tunings), for: .settings)
         // e08a. The refusal's own name, or `landed` — the same vocabulary the self-check
         // publishes, so the pane's receipt and the report cannot say two different words about
         // one display.

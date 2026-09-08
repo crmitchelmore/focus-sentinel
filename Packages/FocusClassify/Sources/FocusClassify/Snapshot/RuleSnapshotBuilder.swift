@@ -77,7 +77,7 @@ public struct RuleSnapshotBuilder: Sendable {
         // English gate is applied here as well as in the scorer — a French priority costs
         // nothing at all rather than costing a vector nobody may read.
         let sentence: SentenceVector? = {
-            guard let scorer, tokens.isJudgeableEnglish else { return nil }
+            guard let scorer, tokens.isJudgeableEnglish(tunings: normalizer.tunings) else { return nil }
             return scorer.vector(for: tokens.sentence)
         }()
 

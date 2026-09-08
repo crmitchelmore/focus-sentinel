@@ -226,12 +226,13 @@ public struct Explanation: Sendable, Equatable, Hashable, Codable {
         stage: CascadeStage,
         band: EvidenceBand,
         clauses: [ExplanationClause],
-        stamp: EngineStamp
+        stamp: EngineStamp,
+        tunings: PolicyTunings = .shipped
     ) -> Explanation {
         Explanation(
             stage: stage,
             band: band,
-            clauses: clauses.map { $0.capped(to: RelevancePolicy.maximumExplanationTokens) },
+            clauses: clauses.map { $0.capped(to: tunings.count(.maximumExplanationTokens)) },
             stamp: stamp
         )
     }

@@ -30,7 +30,12 @@ import NaturalLanguage
 /// P-118 using it produced two different values for identical data. Every digest in this epic
 /// is FNV-1a.
 public struct TokenNormalizer: Sendable {
-    public init() {}
+    /// The dials the normaliser reads (focus-exdi): today only the shortest word it keeps.
+    public var tunings: PolicyTunings
+
+    public init(tunings: PolicyTunings = .shipped) {
+        self.tunings = tunings
+    }
 
     // MARK: - (a) Prose
 
@@ -76,7 +81,7 @@ public struct TokenNormalizer: Sendable {
             let lemma = tagger.tag(at: range.lowerBound, unit: .word, scheme: .lemma).0?.rawValue
             let candidate = Self.preferredForm(lemma: lemma, surface: surface).lowercased()
 
-            guard candidate.count >= RelevancePolicy.minimumTokenLength else { return true }
+            guard candidate.count >= tunings.count(.minimumTokenLength) else { return true }
             guard !StopLists.genericStopTokens.contains(candidate) else { return true }
             guard let token = NormalisedToken.normalised(candidate) else { return true }
             if seen.insert(candidate).inserted { accepted.append(token) }
@@ -147,7 +152,7 @@ public struct TokenNormalizer: Sendable {
         for segment in segments {
             for piece in Self.splitCamelCase(String(segment)) {
                 let lowered = piece.lowercased()
-                guard lowered.count >= RelevancePolicy.minimumTokenLength else { continue }
+                guard lowered.count >= tunings.count(.minimumTokenLength) else { continue }
                 guard !StopLists.reverseDNSHeadTokens.contains(lowered) else { continue }
                 guard let token = NormalisedToken.normalised(lowered) else { continue }
                 if seen.insert(lowered).inserted { accepted.append(token) }
@@ -218,7 +223,7 @@ public struct TokenNormalizer: Sendable {
         var accepted: [NormalisedToken] = []
         var seen: Set<String> = []
         for label in labels {
-            guard label.count >= RelevancePolicy.minimumTokenLength else { continue }
+            guard label.count >= tunings.count(.minimumTokenLength) else { continue }
             guard let token = NormalisedToken.normalised(label) else { continue }
             if seen.insert(label).inserted { accepted.append(token) }
         }

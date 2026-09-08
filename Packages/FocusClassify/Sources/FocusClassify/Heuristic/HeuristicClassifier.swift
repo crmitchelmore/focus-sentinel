@@ -51,12 +51,17 @@ import Foundation
 /// themselves typed** — the same principle the seed table already obeys, applied one rung down.
 public struct HeuristicClassifier: HeuristicRung {
     private let scorer: SimilarityScorer?
+    /// The dials this rung reads (focus-exdi): the drift and escalation dwells, the overlap
+    /// and negative-basis floors. Stored at construction rather than passed per judgement, so
+    /// `HeuristicRung.judge(evidence:snapshot:)` keeps its shape.
+    private let tunings: PolicyTunings
 
     /// The scorer is optional because the similarity signal is a corroborator and never a
     /// decider: an engine built without one produces strictly fewer `relevant` verdicts and
     /// exactly the same `unrelated` ones.
-    public init(scorer: SimilarityScorer? = nil) {
+    public init(scorer: SimilarityScorer? = nil, tunings: PolicyTunings = .shipped) {
         self.scorer = scorer
+        self.tunings = tunings
     }
 
     public func judge(
@@ -71,7 +76,7 @@ public struct HeuristicClassifier: HeuristicRung {
 
         // 1 — overlap, the precision instrument (P-114).
         let shared = TokenOverlap.shared(snapshot.priorityTokens.tokens, evidence.comparableTokens)
-        if let band = TokenOverlap.band(for: shared) {
+        if let band = TokenOverlap.band(for: shared, tunings: tunings) {
             return RungAnswer(
                 verdict: .relevant,
                 source: .heuristic,
@@ -119,7 +124,7 @@ public struct HeuristicClassifier: HeuristicRung {
 
         // 3 — R-56.1's first condition. *"stuff"*, *"work"*, *"catch up"* and the empty
         // priority sit below this floor, and so does the absence of a priority altogether.
-        guard snapshot.hasJudgeablePriority else {
+        guard snapshot.hasJudgeablePriority(tunings: tunings) else {
             return declined(.insufficientPriorityEvidence)
         }
 
@@ -193,7 +198,7 @@ public struct HeuristicClassifier: HeuristicRung {
         // the engine saying it lacks the instrument, and one rung below it now has one. The
         // two declines above are what make that marking safe: by the time this line is
         // reached, the subject is not a mixed-use application and not one the person named.
-        guard snapshot.hasNegativeBasis else {
+        guard snapshot.hasNegativeBasis(tunings: tunings) else {
             return RungAnswer(
                 verdict: .uncertain,
                 source: .heuristic,
@@ -213,7 +218,7 @@ public struct HeuristicClassifier: HeuristicRung {
 
         // 7 — the absence is real but not yet sustained. Time is the evidence, and there has
         // not been enough of it.
-        guard evidence.dwell > RelevancePolicy.sustainedDriftThreshold else {
+        guard evidence.dwell > tunings.duration(.sustainedDriftThreshold) else {
             return declined(.noEvidence)
         }
 
@@ -222,7 +227,7 @@ public struct HeuristicClassifier: HeuristicRung {
         return RungAnswer(
             verdict: .unrelated,
             source: .heuristic,
-            band: evidence.dwell > RelevancePolicy.escalationDwell ? .high : .medium,
+            band: evidence.dwell > tunings.duration(.escalationDwell) ? .high : .medium,
             clauses: [.sustainedDwell(seconds: seconds)]
         )
     }

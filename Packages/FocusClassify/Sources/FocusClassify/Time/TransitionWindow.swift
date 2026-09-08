@@ -47,8 +47,16 @@ public struct TransitionWindow: Sendable, Equatable {
     /// benchmark that can only run the bounded version cannot say the bound changed nothing.
     public let capacity: Int
 
-    public init(capacity: Int = RelevancePolicy.maximumLookBackEvents) {
+    /// The dials the window reads (focus-exdi): the look-back span, the anchor dwell, the
+    /// drift threshold and the detour extension.
+    public var tunings: PolicyTunings
+
+    public init(
+        capacity: Int = RelevancePolicy.maximumLookBackEvents,
+        tunings: PolicyTunings = .shipped
+    ) {
         self.capacity = capacity
+        self.tunings = tunings
     }
 
     /// Add an observation and prune, in that order.
@@ -80,7 +88,7 @@ public struct TransitionWindow: Sendable, Equatable {
     /// which is still a constant, and truncating it is answer-preserving — which is the property
     /// R-74.4 asks `SequenceReplayTests` to demonstrate.
     mutating func prune(now: Duration) {
-        let horizon = now - RelevancePolicy.lookBackSpan
+        let horizon = now - tunings.duration(.lookBackSpan)
         observations.removeAll { $0.now < horizon }
         guard observations.count > capacity else { return }
 
@@ -119,7 +127,7 @@ public struct TransitionWindow: Sendable, Equatable {
         let next = observations.index(after: index)
         let until = next < observations.endIndex ? observations[next].now : now
         let held = until - observations[index].now
-        guard held >= RelevancePolicy.returnAnchorDwell else { return nil }
+        guard held >= tunings.duration(.returnAnchorDwell) else { return nil }
         return subject
     }
 
@@ -129,8 +137,8 @@ public struct TransitionWindow: Sendable, Equatable {
     /// a third, which is what makes "the window may only extend" structural.
     public func effectiveThreshold(at now: Duration) -> Duration {
         returnAnchor(at: now) == nil
-            ? RelevancePolicy.sustainedDriftThreshold
-            : RelevancePolicy.sustainedDriftThreshold + RelevancePolicy.detourExtension
+            ? tunings.duration(.sustainedDriftThreshold)
+            : tunings.duration(.sustainedDriftThreshold) + tunings.duration(.detourExtension)
     }
 
     /// Whether the person has just come back to the subject they were anchored in — the

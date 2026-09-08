@@ -246,6 +246,7 @@ extension ShellSettingsConnection: ShellDrawnConnection {
             "intervention.notchRefusal": .drawn([.notchCompanion]),
             "intervention.presentationExclusions": .drawn([.presentationExclusions]),
             "intervention.addableApplications": .drawn([.presentationExclusions]),
+            "intervention.tunings": .drawn([.policyTunings]),
 
             // --- one level down, and then to the leaves (focus-cxs) ------------------------
             //
@@ -324,7 +325,8 @@ extension ShellSettingsConnection: ShellDrawnConnection {
             // `ShellRenderedField.interruptionUsage`, which `ShellRenderFidelity` still compares,
             // and the two counters the fourth row is computed from are mapped immediately above
             // and below.
-            "intervention.usage.accusationsToday": .drawn([.interruptionUsage])
+            "intervention.usage.accusationsToday": .drawn([.interruptionUsage]),
+            "intervention.tunings.overrides": .drawn([.policyTunings])
         ]
     }
 }

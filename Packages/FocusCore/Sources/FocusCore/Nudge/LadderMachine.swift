@@ -166,8 +166,12 @@ public struct LadderMachine: Sendable, Equatable {
     ///     suppression stack, and conflating the two here would make the ladder the second
     ///     place a cap lives.
     /// - Returns: the rung to attempt, or `nil`.
-    public func candidate(at now: Duration, budgetPermits: Bool) -> LadderRung? {
-        step(at: now, budgetPermits: budgetPermits).rung
+    public func candidate(
+        at now: Duration,
+        budgetPermits: Bool,
+        tunings: PolicyTunings = .shipped
+    ) -> LadderRung? {
+        step(at: now, budgetPermits: budgetPermits, tunings: tunings).rung
     }
 
     /// **The same query, with the silence named** (focus-628, focus-50m).
@@ -183,12 +187,16 @@ public struct LadderMachine: Sendable, Equatable {
     ///   - now: a reading of the injected monotonic clock.
     ///   - budgetPermits: whether `FatigueController` allows one more accusation. Read **only**
     ///     for an escalation, as before.
-    public func step(at now: Duration, budgetPermits: Bool) -> LadderOffer {
+    public func step(
+        at now: Duration,
+        budgetPermits: Bool,
+        tunings: PolicyTunings = .shipped
+    ) -> LadderOffer {
         guard let mandate = liveMandate else { return .silent(.noLiveMandate) }
 
         // The hold's expiry, applied to the reading rather than to the stored state, because this
         // is a pure query and a query that mutated would be a timer wearing a `func`.
-        switch state.afterTheHoldExpires(at: now) {
+        switch state.afterTheHoldExpires(at: now, tunings: tunings) {
         case .idle:
             // Always the bottom of the ladder. `LadderRung.entry(for:)` has no other answer.
             return .rung(LadderRung.entry(for: mandate))
@@ -202,7 +210,7 @@ public struct LadderMachine: Sendable, Equatable {
             //
             // Fact 3. `escalationDwell` measured from the DELIVERY, which is the only reading a
             // `.deferred` rung never writes.
-            guard now - deliveredAt >= RelevancePolicy.escalationDwell else {
+            guard now - deliveredAt >= tunings.duration(.escalationDwell) else {
                 return .silent(.escalationDwell)
             }
             // Fact 4.
@@ -264,8 +272,12 @@ public struct LadderMachine: Sendable, Equatable {
     /// The one mutating step between the query and the delivery. A second `offer` before a
     /// `.delivery` replaces the first, because the app can only be attempting one thing.
     @discardableResult
-    public mutating func offer(at now: Duration, budgetPermits: Bool) -> LadderRung? {
-        offered = candidate(at: now, budgetPermits: budgetPermits)
+    public mutating func offer(
+        at now: Duration,
+        budgetPermits: Bool,
+        tunings: PolicyTunings = .shipped
+    ) -> LadderRung? {
+        offered = candidate(at: now, budgetPermits: budgetPermits, tunings: tunings)
         return offered
     }
 
@@ -290,14 +302,18 @@ public struct LadderMachine: Sendable, Equatable {
     ///   - now: a reading of the injected monotonic clock. Every reading the state stores comes
     ///     from here, so two replays of one transcript produce byte-identical states.
     @discardableResult
-    public mutating func reduce(_ event: LadderEvent, now: Duration) -> LadderState {
+    public mutating func reduce(
+        _ event: LadderEvent,
+        now: Duration,
+        tunings: PolicyTunings = .shipped
+    ) -> LadderState {
         // **The one thing time does on its own** (focus-50m). Applied here, above every event
         // including `.tick`, so that a hold which has outlived `InterventionPolicy.backoffSpan`
         // is gone before anything is decided against it — and so that the state a reader inspects
         // is the state the ladder is really in rather than an expiry nobody has got round to.
         // Still no timer (R-96i): the reading is injected, and two replays of one transcript
         // expire the hold at the same instant.
-        state = state.afterTheHoldExpires(at: now)
+        state = state.afterTheHoldExpires(at: now, tunings: tunings)
 
         switch event {
         case .mandate(let mandate):
@@ -307,7 +323,7 @@ public struct LadderMachine: Sendable, Equatable {
             resolve(delivery, now: now)
 
         case .rungIgnored:
-            ignore(now: now)
+            ignore(now: now, tunings: tunings)
 
         case .deEscalated:
             // Immediate and total. No partial climb-down, no remembered rung, no live mandate:
@@ -442,14 +458,14 @@ public struct LadderMachine: Sendable, Equatable {
     }
 
     /// A delivered rung went unanswered — no correction, no snooze, no pause, no return.
-    private mutating func ignore(now: Duration) {
+    private mutating func ignore(now: Duration, tunings: PolicyTunings) {
         // The delivery has been answered for. Whatever happens next, it is no longer a delivery
         // there is anything to take back.
         stateBeforeDelivery = nil
         guard case .engaged(let rung, let deliveredAt, let ignored) = state else { return }
 
         let count = ignored + 1
-        guard count >= InterventionPolicy.ignoredAccusationBackoff else {
+        guard count >= tunings.count(.ignoredAccusationBackoff) else {
             // **A rung with nothing above it has nothing to hold position for** (focus-f2a).
             //
             // This clause is the way down that the subject reset was quietly providing, and

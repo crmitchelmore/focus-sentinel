@@ -122,6 +122,10 @@ final class NudgeHost {
     /// full-screen presentation is. The composition root reads it here and puts it in the
     /// `NudgeSurroundings` it builds, so there is one statement of the window and the pane and
     /// the gate cannot hold two.
+    /// **Every policy dial the loop decides with** (focus-exdi). Handed in by the composition
+    /// root from the store at launch and on every change; the shipped constants until then.
+    var tunings: PolicyTunings = .shipped
+
     private var chosenQuietHours: QuietHoursWindow? = InterventionPolicy.quietHoursDefault
 
     /// What gate 8 is given. `QuietHours.off` until the person sets a window, which is R-85's
@@ -704,7 +708,8 @@ final class NudgeHost {
                 judgement,
                 surroundings: surroundings,
                 memory: memory,
-                preferences: preferences
+                preferences: preferences,
+                tunings: tunings
             )
             lastDecision = decision
             decisionCount += 1
@@ -760,9 +765,9 @@ final class NudgeHost {
             alignedSince = now
             return
         }
-        guard now - since >= RelevancePolicy.driftResetGrace else { return }
+        guard now - since >= tunings.duration(.driftResetGrace) else { return }
         alignedSince = nil
-        ladder.reduce(.deEscalated(.verdictRelevant), now: now)
+        ladder.reduce(.deEscalated(.verdictRelevant), now: now, tunings: tunings)
         // The rung on screen is over with the ladder that raised it, and it ended because the
         // world moved rather than because anybody answered — the same ending a phase change out
         // of `.focus` writes, and for the same reason (focus-qds: an expiry is not an answer).
@@ -865,7 +870,7 @@ final class NudgeHost {
     ) {
         deferredCount += 1
         deferralsByReason[deferral, default: 0] += 1
-        ladder.reduce(.delivery(.deferred(deferral)), now: monotonicClock.elapsed)
+        ladder.reduce(.delivery(.deferred(deferral)), now: monotonicClock.elapsed, tunings: tunings)
         write(
             InterventionEvent(
                 kind: kind,
@@ -926,7 +931,7 @@ final class NudgeHost {
         //
         // Folded here rather than in `consider(_:)` because this is the branch that has a mandate:
         // the decision carries the rung, and the rung carries the mandate it was built for.
-        ladder.reduce(.mandate(rung.mandate), now: surroundings.monotonic)
+        ladder.reduce(.mandate(rung.mandate), now: surroundings.monotonic, tunings: tunings)
         // **The rung the decision carries, not a second derivation of it** (focus-628). This line
         // used to re-run `candidate(at:budgetPermits:)` on the ladder that persists and trust the
         // two answers to agree. They agreed only for as long as they were the same expression, and
@@ -1357,7 +1362,7 @@ final class NudgeHost {
     ) {
         deliveredCount += 1
         chargesPaidFor.append(change)
-        fatigue.reduce(.delivered(InterruptionCharge(.query, priorityID: priorityID)), now: now)
+        fatigue.reduce(.delivered(InterruptionCharge(.query, priorityID: priorityID)), now: now, tunings: tunings)
         openQuestion?.recordID = write(
             InterventionEvent(
                 kind: .query,
@@ -1693,7 +1698,7 @@ final class NudgeHost {
     /// anything. What R-81 protects that *is* still at stake — the day's budget, the fatigue run
     /// and the ledger — is exactly what `deliveredRung(…)` holds back until somebody looks.
     private func landed(on surface: NudgeSurface) {
-        ladder.reduce(.delivery(.delivered(surface)), now: monotonicClock.elapsed)
+        ladder.reduce(.delivery(.delivered(surface)), now: monotonicClock.elapsed, tunings: tunings)
     }
 
     /// The bookkeeping of a rung that has actually reached somebody — `deliverQuestion(…)`'s twin,
@@ -1743,7 +1748,7 @@ final class NudgeHost {
         // delivery — the Intervention pane draws it, `deferredRungShare` counts it (focus-sq7) —
         // and it is not an interruption.
         if let charge = InterruptionCharge(event, priorityID: priorityID) {
-            fatigue.reduce(.delivered(charge), now: monotonicClock.elapsed)
+            fatigue.reduce(.delivered(charge), now: monotonicClock.elapsed, tunings: tunings)
         }
         openRung?.recordID = write(event, priorityID: priorityID)
     }
@@ -1830,17 +1835,17 @@ final class NudgeHost {
             // so by this line the loop has decided the click is one it will honour.
             if let interventionOutcome = Self.outcome(of: action) {
                 complete(interventionOutcome, recordID: recordID)
-                fatigue.reduce(.accusationResolved(interventionOutcome), now: now)
+                fatigue.reduce(.accusationResolved(interventionOutcome), now: now, tunings: tunings)
             }
 
             apply(outcome, action: action, now: now, priorityID: priorityID)
 
             if let deEscalation = action.deEscalation {
-                ladder.reduce(.deEscalated(deEscalation), now: now)
+                ladder.reduce(.deEscalated(deEscalation), now: now, tunings: tunings)
             } else {
                 // A dismissal is not an answer. It counts towards the backoff, which is what stops
                 // the app talking to itself (R-83).
-                ladder.reduce(.rungIgnored, now: now)
+                ladder.reduce(.rungIgnored, now: now, tunings: tunings)
             }
 
             // A rung is being answered, not a question. What comes down is **the rung's surface**,
@@ -1976,7 +1981,7 @@ final class NudgeHost {
             // The question's own row (focus-xix), read off the value that has carried every other
             // fact about this asking since `ask(…)` built it.
             complete(.answered, recordID: question.recordID)
-            fatigue.reduce(.queryResolved(answer.outcome), now: now)
+            fatigue.reduce(.queryResolved(answer.outcome), now: now, tunings: tunings)
         }
     }
 
@@ -2099,7 +2104,8 @@ final class NudgeHost {
         deferralsByReason[.noSurfaceAvailable, default: 0] += 1
         ladder.reduce(
             .delivery(.deferred(.noSurfaceAvailable)),
-            now: monotonicClock.elapsed
+            now: monotonicClock.elapsed,
+            tunings: tunings
         )
     }
 
@@ -2342,7 +2348,7 @@ final class NudgeHost {
         // makes that reachable on purpose: F-81 says the question is still unanswered and will be
         // offered again, and until this line nothing bounded how often.
         if exit.countsAsAnUnansweredQuestion {
-            fatigue.reduce(.queryResolved(.expired), now: monotonicClock.elapsed)
+            fatigue.reduce(.queryResolved(.expired), now: monotonicClock.elapsed, tunings: tunings)
         }
 
         let surface = question.surface
@@ -2459,8 +2465,8 @@ final class NudgeHost {
         if exit.countsAsAnIgnoredAccusation,
             leaving.rung.kind.makesAnAccusation,
             leaving.perceived != nil {
-            ladder.reduce(.rungIgnored, now: now)
-            fatigue.reduce(.accusationResolved(.ignored), now: now)
+            ladder.reduce(.rungIgnored, now: now, tunings: tunings)
+            fatigue.reduce(.accusationResolved(.ignored), now: now, tunings: tunings)
         }
 
         openRung = nil
@@ -2592,8 +2598,8 @@ final class NudgeHost {
     func sessionEnded() {
         proofs.run {
             let now = monotonicClock.elapsed
-            fatigue.reduce(.sessionEnded, now: now)
-            ladder.reduce(.deEscalated(.sessionEnded), now: now)
+            fatigue.reduce(.sessionEnded, now: now, tunings: tunings)
+            ladder.reduce(.deEscalated(.sessionEnded), now: now, tunings: tunings)
             clearSessionState()
         }
     }
@@ -2601,7 +2607,7 @@ final class NudgeHost {
     /// The session left `.focus` — a break, a detour, an interruption, completion.
     func phaseLeftFocus() {
         proofs.run {
-            ladder.reduce(.deEscalated(.phaseLeftFocus), now: monotonicClock.elapsed)
+            ladder.reduce(.deEscalated(.phaseLeftFocus), now: monotonicClock.elapsed, tunings: tunings)
             closeSurfaces(endingAnyQuestionAs: .worldMovedOn, andAnyRungAs: .worldMovedOn)
         }
     }
@@ -2633,7 +2639,7 @@ final class NudgeHost {
     /// and — because the ledger is keyed on the priority — every question legitimately re-opens.
     func priorityChanged() {
         proofs.run {
-            ladder.reduce(.deEscalated(.priorityChanged), now: monotonicClock.elapsed)
+            ladder.reduce(.deEscalated(.priorityChanged), now: monotonicClock.elapsed, tunings: tunings)
             clearSessionState()
         }
     }
@@ -2893,7 +2899,7 @@ final class NudgeHost {
             case .snoozeNudge:
                 // The shortest span, because a menu item cannot offer three without three items and
                 // the shortest is the least presumptuous of them.
-                resolve(.snooze, snoozeDuration: InterventionPolicy.snoozeDurations.first)
+                resolve(.snooze, snoozeDuration: tunings.snoozeDurations.first)
             case .hideOverlays:
                 hideOverlays()
             case .showMenuBar:
@@ -3050,6 +3056,7 @@ final class NudgeHost {
             workspace: workspace,
             snoozes: snoozes,
             monotonicClock: monotonicClock,
+            tunings: tunings,
             hasOpenSession: { [weak self] in self?.currentSessionID?() != nil }
         )
     }

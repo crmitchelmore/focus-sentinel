@@ -31,9 +31,13 @@ public struct LanguageReading: Sendable, Equatable, Hashable, Codable {
     /// **`false` while `languageConfidenceFloor` is unmeasured**, which is the conservative
     /// direction and the same answer the gate gives for a language this OS has no embedding
     /// for: an engine with no calibrated floor has no business consulting a distance.
-    public var isJudgeableEnglish: Bool {
-        guard let floor = RelevancePolicy.languageConfidenceFloor.value else { return false }
-        return englishConfidence >= floor
+    public var isJudgeableEnglish: Bool { isJudgeableEnglish(tunings: .shipped) }
+
+    /// The same reading under a person's dials (focus-exdi). The shipped floor may be
+    /// unmeasured, in which case the answer is `false` whatever the dial says.
+    public func isJudgeableEnglish(tunings: PolicyTunings) -> Bool {
+        guard RelevancePolicy.languageConfidenceFloor.value != nil else { return false }
+        return englishConfidence >= tunings.value(.languageConfidenceFloor)
     }
 }
 
@@ -78,7 +82,11 @@ public struct ProseTokenSet: Sendable, Equatable, Hashable, Codable {
     public var isEmpty: Bool { tokens.isEmpty && sentence.isEmpty }
 
     /// Whether the similarity signal may look at this side at all.
-    public var isJudgeableEnglish: Bool { language?.isJudgeableEnglish ?? false }
+    public var isJudgeableEnglish: Bool { isJudgeableEnglish(tunings: .shipped) }
+
+    public func isJudgeableEnglish(tunings: PolicyTunings) -> Bool {
+        language?.isJudgeableEnglish(tunings: tunings) ?? false
+    }
 
     /// The token values, for set arithmetic against the other kind of token set.
     public var values: Set<String> { Set(tokens.map(\.value)) }
@@ -133,13 +141,19 @@ public enum TokenOverlap {
     /// `sprint`, `ticket`, `board` — is five characters or more. A shorter overlap is real
     /// signal and bands `.low`, which is below `interventionBandFloor` and therefore cannot
     /// mandate anything on its own.
-    public static func isStrong(_ shared: [NormalisedToken]) -> Bool {
-        shared.contains { $0.value.count >= RelevancePolicy.minimumStrongTokenLength }
+    public static func isStrong(
+        _ shared: [NormalisedToken],
+        tunings: PolicyTunings = .shipped
+    ) -> Bool {
+        shared.contains { $0.value.count >= tunings.count(.minimumStrongTokenLength) }
     }
 
     /// The band a given overlap earns, or `nil` when there is not enough of one to decide.
-    public static func band(for shared: [NormalisedToken]) -> EvidenceBand? {
-        guard shared.count >= RelevancePolicy.minimumOverlapTokens else { return nil }
-        return isStrong(shared) ? .medium : .low
+    public static func band(
+        for shared: [NormalisedToken],
+        tunings: PolicyTunings = .shipped
+    ) -> EvidenceBand? {
+        guard shared.count >= tunings.count(.minimumOverlapTokens) else { return nil }
+        return isStrong(shared, tunings: tunings) ? .medium : .low
     }
 }

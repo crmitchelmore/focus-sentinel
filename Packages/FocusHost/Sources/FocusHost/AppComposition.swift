@@ -684,6 +684,7 @@ public final class AppComposition {
         nudgeHost.observe(reduceMotion: appearance.traits.reduceMotion)
         // **And what the person set, read at launch too** (focus-z7g). Same moment, same reason.
         applyStoredInterventionPreferences()
+        applyStoredPolicyTunings()
         nudgeHost.currentSessionID = { [weak self] in self?.sessionHost.snapshot?.sessionID }
         nudgeHost.onCorrection = { [weak self] outcome, priorityID in
             self?.perform(outcome, priorityID: priorityID)
@@ -2066,6 +2067,14 @@ public final class AppComposition {
     /// field is the shape that resets the other two to whatever that caller last saw, which is
     /// exactly why `setSensingPaused(_:in:now:)` exists as a named verb rather than as a
     /// read-modify-write at each call site.
+    /// **Every dial, read from the store and handed to both engines** (focus-exdi). At launch
+    /// and after every turn of a dial; the shipped constants when no row exists.
+    func applyStoredPolicyTunings() {
+        let tunings = FocusStore.policyTunings(in: modelContainer.mainContext)
+        relevanceHost.adopt(tunings)
+        nudgeHost.tunings = tunings
+    }
+
     private func persistInterventionPreferences() {
         do {
             try FocusStore.setInterventionPreferences(
@@ -2143,7 +2152,8 @@ public final class AppComposition {
             // row somebody had just removed, and a list of running applications is out of date
             // the moment an app quits.
             presentationExclusions: presentationExclusions(),
-            addableApplications: addablePresentationExclusions()
+            addableApplications: addablePresentationExclusions(),
+            tunings: nudgeHost.tunings
         )
     }
 
@@ -2214,6 +2224,25 @@ public final class AppComposition {
         // the store's own verbs, which are idempotent and tombstone-aware: adding twice is one
         // row, and removing a built-in leaves a tombstone rather than a gap the next launch
         // would re-seed. `SensitiveAppSeed.add` had **no shipping call site at all** before this.
+        case .setPolicyTuning(let tuning, let value):
+            do {
+                try FocusStore.setPolicyTuning(
+                    tuning,
+                    to: value,
+                    in: modelContainer.mainContext,
+                    now: dateProvider.now
+                )
+            } catch {
+                logger.error("a policy dial could not be stored: \(error, privacy: .public)")
+            }
+            applyStoredPolicyTunings()
+        case .resetPolicyTunings:
+            do {
+                try FocusStore.resetPolicyTunings(in: modelContainer.mainContext)
+            } catch {
+                logger.error("the policy dials could not be reset: \(error, privacy: .public)")
+            }
+            applyStoredPolicyTunings()
         case .addPresentationExclusion(let bundleID):
             writeExclusion { context, now in
                 _ = try SensitiveAppSeed.add(

@@ -187,6 +187,7 @@ struct AppCompositionSettingsTests {
             switch action {
             case .setVoice, .setReducedInterruption, .setQuietHours: true
             case .addPresentationExclusion, .removePresentationExclusion: true
+            case .setPolicyTuning, .resetPolicyTunings: true
             }
         }
         #expect(isPerformed(.setVoice(.warm)))
@@ -194,6 +195,8 @@ struct AppCompositionSettingsTests {
         #expect(isPerformed(.setQuietHours(nil)))
         #expect(isPerformed(.addPresentationExclusion("com.example.Keynote")))
         #expect(isPerformed(.removePresentationExclusion("com.example.Keynote")))
+        #expect(isPerformed(.setPolicyTuning(.dailyQueryCap, 6)))
+        #expect(isPerformed(.resetPolicyTunings))
     }
 
     // MARK: - The voice and "Interrupt me less" (focus-40i)

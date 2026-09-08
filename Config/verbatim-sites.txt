@@ -65,8 +65,8 @@ Packages/FocusUI/Sources/FocusUI/Nudge/AccusationPanelView.swift | NudgeCopy.dur
 Packages/FocusUI/Sources/FocusUI/Relevance/CascadePrecedenceView.swift | (rung.rank + 1).formatted(.number)) | NUMBER the rung's place in the cascade, from `rank` itself
 Packages/FocusUI/Sources/FocusUI/Relevance/VerdictInspectorView.swift | verdict.drift.accumulated.formatted( | NUMBER how long the drift clock has been running
 Packages/FocusUI/Sources/FocusUI/Scenes/InterventionSettingsView.swift | "\(used.formatted()) / \(cap.formatted())") | NUMBER today's spend over its cap. The " / " is authored punctuation
-Packages/FocusUI/Sources/FocusUI/Scenes/InterventionSettingsView.swift | NudgeCopy.duration(span)) | NUMBER one threshold from `InterventionPolicy`
-Packages/FocusUI/Sources/FocusUI/Scenes/InterventionSettingsView.swift | InterventionPolicy.snoozeDurations | NUMBER every snooze span on offer, joined
+Packages/FocusUI/Sources/FocusUI/Scenes/InterventionSettingsView.swift | Int(value.rounded()).formatted()) | NUMBER a count dial's value (focus-exdi)
+Packages/FocusUI/Sources/FocusUI/Scenes/InterventionSettingsView.swift | value.formatted(.number.precision(.fractionLength(2)))) | NUMBER a ratio dial's value, two places (focus-exdi)
 Packages/FocusUI/Sources/FocusUI/Scenes/RecentPrioritiesView.swift | row.contextItemCount.formatted()) | NUMBER how many context items a past priority had
 Packages/FocusUI/Sources/FocusUI/Sensing/SensingStatusView.swift | value.formatted()) | NUMBER one sensing reading
 Packages/FocusUI/Sources/FocusUI/Scenes/TimeboxControl.swift | Self.formatPreset(.seconds(seconds))) | NUMBER a timebox preset's length

@@ -83,8 +83,12 @@ public struct DriftMachine: Sendable, Equatable {
     /// The last observation, so the next one knows whose interval just elapsed.
     private var previous: DriftObservation?
 
-    public init(state: DriftState = .aligned) {
+    /// The dials the machine reads (focus-exdi): the return grace and the mandate cooldown.
+    public var tunings: PolicyTunings
+
+    public init(state: DriftState = .aligned, tunings: PolicyTunings = .shipped) {
         self.state = state
+        self.tunings = tunings
     }
 
     /// Fold one observation in and return the new state.
@@ -100,7 +104,7 @@ public struct DriftMachine: Sendable, Equatable {
         }
 
         if let previous {
-            state = Self.advance(state, from: previous, to: observation)
+            state = Self.advance(state, from: previous, to: observation, tunings: tunings)
         }
         state = Self.arrive(observation, into: state)
         return state
@@ -114,7 +118,7 @@ public struct DriftMachine: Sendable, Equatable {
     /// reducer with an opinion about when to interrupt somebody.
     public mutating func recordMandate(at now: Duration) {
         let subject = state.subject ?? .mixed
-        state = .cooldown(subject: subject, until: now + RelevancePolicy.mandateCooldown)
+        state = .cooldown(subject: subject, until: now + tunings.duration(.mandateCooldown))
     }
 
     // MARK: - The interval, under the previous observation
@@ -122,7 +126,8 @@ public struct DriftMachine: Sendable, Equatable {
     static func advance(
         _ state: DriftState,
         from previous: DriftObservation,
-        to observation: DriftObservation
+        to observation: DriftObservation,
+        tunings: PolicyTunings = .shipped
     ) -> DriftState {
         let delta = observation.now - previous.now
         guard delta > .zero else { return state }
@@ -140,7 +145,7 @@ public struct DriftMachine: Sendable, Equatable {
 
         case .relevant:
             // Ruling 1. A return counts only once it has been *held*.
-            return delta >= RelevancePolicy.driftResetGrace ? .aligned : state
+            return delta >= tunings.duration(.driftResetGrace) ? .aligned : state
 
         case .unrelated:
             return accumulate(state, delta: delta, previous: previous, observation: observation)
