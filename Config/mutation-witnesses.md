@@ -838,3 +838,33 @@ strings, then against isolated copies with each mutation below. All three were r
 
 The untouched artefact passed. These controls copy only metadata and compiled resources;
 they do not modify the application or another agent's build.
+
+## Self-check lifetimes and session states (focus-k453, 2026-09-08)
+
+The reader's actual assertion expressions were executed against positive and negative controls.
+The real popover delivery requires receipt and persisted-row deltas both equal to one. Empty
+drives, missing receipts/rows, duplicate receipts/rows and failed reads are rejected. Historical
+daily rows may exceed process-local receipts on an ordinary launch.
+
+All five surface statuses and nine cascade stages are accepted; unknown values are rejected.
+Paused and break statuses can mask either an uncertain or a decided classification. Four driven
+engine cells prove those combinations. Sixteen mutations (status, band, presence and stage in
+each cell) are rejected; the unchanged control passes. Runtime verification is in the ordinary
+Debug and Release self-check stages.
+
+## Model test executor starvation (focus-xyjd, 2026-09-08)
+
+Hosted CI stalled inside FocusModelTests. Running the unchanged model suite with
+`LIBDISPATCH_COOPERATIVE_POOL_STRICT=1` reproduced the hang; a process sample showed
+`FocusModelRungTests.declinesAreCachedToo` blocked in `primeSynchronously` at
+`DispatchSemaphore.wait`. After changing the tests to await the async priming path, all 13
+tests completed on the same one-worker pool. The standalone synchronous evaluation bridge
+remains available outside async contexts, with the compiler directing async callers to `prime`.
+
+The strict control was run on the built test bundle using the toolchain's
+`swiftpm-testing-helper`, with `DYLD_FRAMEWORK_PATH` pointing at Xcode's macOS Developer
+Library/Frameworks. Applying the strict flag to SwiftPM's incremental build driver itself
+can stall its build engine; that is separate from the sampled Focus test defect.
+
+This follows [Apple's cooperative-thread guidance](https://developer.apple.com/videos/play/wwdc2021/10254/):
+blocking a worker on a task that needs the same pool breaks forward progress.

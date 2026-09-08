@@ -126,7 +126,18 @@ public final class FocusModelRung: ModelRung, @unchecked Sendable {
         inFlight.removeAll()
     }
 
-    // MARK: - The test lane's synchronous door
+    // MARK: - Evaluation and test priming
+
+    /// Ask and cache without blocking a cooperative executor worker. Async test callers must
+    /// use this path: waiting on a semaphore can exhaust the pool needed to finish the request.
+    @discardableResult
+    public func prime(_ request: ModelRequest) async -> ModelAnswer {
+        if let known = cachedAnswer(for: request) { return known }
+        guard availability.isExecutable else { return .decline(.notAvailable) }
+        let answer = await judge.judge(request)
+        record(answer, for: request)
+        return answer
+    }
 
     /// Ask, wait, and write the cache — **for the evaluation lane and for nothing else.**
     ///
@@ -134,21 +145,18 @@ public final class FocusModelRung: ModelRung, @unchecked Sendable {
     /// arrive inside, so the harness pays the wait explicitly where production pays it in
     /// elapsed time. It is deliberately not on `ModelRung`, so no shipping caller can reach it:
     /// the port a cascade holds has exactly one synchronous member and it is a dictionary read.
+    /// Call only from the standalone evaluation entry point, outside Swift's task executor.
+    @available(*, noasync, message: "Use await prime(_:) from an async context")
     @discardableResult
     public func primeSynchronously(_ request: ModelRequest) -> ModelAnswer {
-        if let known = cachedAnswer(for: request) { return known }
-        guard availability.isExecutable else { return .decline(.notAvailable) }
-
         let box = AnswerBox()
         let semaphore = DispatchSemaphore(value: 0)
-        Task { [judge] in
-            box.value = await judge.judge(request)
+        Task {
+            box.value = await self.prime(request)
             semaphore.signal()
         }
         semaphore.wait()
-        let answer = box.value ?? .decline(.refused)
-        record(answer, for: request)
-        return answer
+        return box.value ?? .decline(.refused)
     }
 
     /// How many generations this rung has actually paid for. Counted separately from how often

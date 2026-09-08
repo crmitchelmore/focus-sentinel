@@ -105,29 +105,29 @@ struct FocusModelRungTests {
     }
 
     @Test("a primed answer is served, and a decline is cached as hard as a rescue")
-    func declinesAreCachedToo() {
+    func declinesAreCachedToo() async {
         let rescuer = FocusModelRung(
             judge: StubJudge(state: .available, answer: .relevant(.supporting))
         )
-        #expect(rescuer.primeSynchronously(Self.request()) == .relevant(.supporting))
+        #expect(await rescuer.prime(Self.request()) == .relevant(.supporting))
         #expect(rescuer.cachedAnswer(for: Self.request()) == .relevant(.supporting))
 
         let decliner = FocusModelRung(
             judge: StubJudge(state: .available, answer: .decline(.modelSaidUnrelated))
         )
-        #expect(decliner.primeSynchronously(Self.request()) == .decline(.modelSaidUnrelated))
+        #expect(await decliner.prime(Self.request()) == .decline(.modelSaidUnrelated))
         // The cache IS the rate limiter: a second ask is served, not re-generated.
-        #expect(decliner.primeSynchronously(Self.request()) == .decline(.modelSaidUnrelated))
+        #expect(await decliner.prime(Self.request()) == .decline(.modelSaidUnrelated))
         #expect(decliner.generationCount == 1)
     }
 
     @Test("an unavailable tier declines and generates nothing")
-    func unavailableTierAsksNobody() {
+    func unavailableTierAsksNobody() async {
         for state in ModelTierAvailability.allCases where state != .available {
             let rung = FocusModelRung(
                 judge: StubJudge(state: state, answer: .relevant(.direct))
             )
-            #expect(rung.primeSynchronously(Self.request()) == .decline(.notAvailable))
+            #expect(await rung.prime(Self.request()) == .decline(.notAvailable))
             #expect(rung.generationCount == 0)
             rung.request(Self.request())
             #expect(rung.cachedAnswer(for: Self.request()) == nil)
@@ -135,12 +135,12 @@ struct FocusModelRungTests {
     }
 
     @Test("a rule written about a subject drops what the model said about it")
-    func invalidateBySubject() {
+    func invalidateBySubject() async {
         let rung = FocusModelRung(
             judge: StubJudge(state: .available, answer: .relevant(.direct))
         )
-        rung.primeSynchronously(Self.request(key: "k1", subject: "com.acme.tool"))
-        rung.primeSynchronously(Self.request(key: "k2", subject: "com.other.app"))
+        await rung.prime(Self.request(key: "k1", subject: "com.acme.tool"))
+        await rung.prime(Self.request(key: "k2", subject: "com.other.app"))
 
         rung.invalidate(subject: "com.acme.tool")
         #expect(rung.cachedAnswer(for: Self.request(key: "k1")) == nil)
@@ -148,11 +148,11 @@ struct FocusModelRungTests {
     }
 
     @Test("a session ending forgets everything")
-    func resetForgets() {
+    func resetForgets() async {
         let rung = FocusModelRung(
             judge: StubJudge(state: .available, answer: .relevant(.direct))
         )
-        rung.primeSynchronously(Self.request())
+        await rung.prime(Self.request())
         rung.reset()
         #expect(rung.cachedAnswer(for: Self.request()) == nil)
     }
