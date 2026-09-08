@@ -2559,16 +2559,13 @@ if window_count_was_taken:
 # the other, so there was no ordering to assert, and asserting it turned three gate stages red
 # against a machine that was telling the truth.
 #
-# What is true, and what goes red for a swapped or broken source: FOR EVERY CONCRETE EVENT TYPE
-# THE TWO STATES ANSWER WITH THE SAME SECONDS. The divergence lives only at the `~0` sentinel.
-# One second is generous for two adjacent syscalls and far too small to hide a state that has
-# stopped meaning what it means, which shows up as minutes or hours.
-#
-# The floor is not decoration: "every row agrees" is satisfied by a report with no rows, so the
-# count of DISTINCT event types read is asserted first. Distinct, so four copies of one row
-# cannot stand in for four types.
+# The subsequent concrete-event equality assumption also failed on the hosted Mac: each
+# independent table differed by 6.176 seconds. Apple's CGEventSourceStateID contract describes
+# different event sources, not equal last-event times. Require complete finite nonnegative
+# readings and an honestly reported signed difference. The production max-counter decision
+# remains asserted below; the unit source seam detects swapped or aliased tables.
+import math
 idle = sensing.get("idle") or {}
-IDLE_AGREEMENT_TOLERANCE = 1.0
 IDLE_EVENT_TYPE_FLOOR = 4
 idle_rows = idle.get("perEventType")
 per_event_type = [r for r in idle_rows if isinstance(r, dict)] if isinstance(idle_rows, list) else []
@@ -2580,7 +2577,7 @@ check(
     f"both idle states were read for at least {IDLE_EVENT_TYPE_FLOOR} distinct concrete event types",
     idle_types_read,
 )
-idle_disagreements = [
+idle_invalid_readings = [
     (
         r.get("eventType"),
         r.get("hardwareSeconds"),
@@ -2588,15 +2585,17 @@ idle_disagreements = [
     )
     for r in per_event_type
     if not (
-        isinstance(r.get("hardwareSeconds"), (int, float))
-        and isinstance(r.get("sessionSeconds"), (int, float))
-        and abs(r["hardwareSeconds"] - r["sessionSeconds"]) <= IDLE_AGREEMENT_TOLERANCE
+        all(type(r.get(key)) in (int, float) and math.isfinite(r[key])
+            for key in ("hardwareSeconds", "sessionSeconds", "differenceSeconds"))
+        and r["hardwareSeconds"] >= 0
+        and r["sessionSeconds"] >= 0
+        and abs(r["differenceSeconds"] - (r["hardwareSeconds"] - r["sessionSeconds"])) < 1e-6
     )
 ]
 check(
-    not idle_disagreements,
-    f"per concrete event type the two idle states agree within {IDLE_AGREEMENT_TOLERANCE} s",
-    idle_disagreements,
+    not idle_invalid_readings,
+    "concrete idle readings are finite, nonnegative, and retain their signed difference",
+    idle_invalid_readings,
 )
 for r in per_event_type:
     print(

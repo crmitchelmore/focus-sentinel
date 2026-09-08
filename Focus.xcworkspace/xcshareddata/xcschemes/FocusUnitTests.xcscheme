@@ -8,6 +8,8 @@
    </BuildAction>
    <TestAction
       buildConfiguration = "Debug"
+      language = "en"
+      region = "GB"
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       shouldUseLaunchSchemeArgsEnv = "NO">
@@ -94,6 +96,11 @@
          </TestableReference>
       </Testables>
       <EnvironmentVariables>
+         <EnvironmentVariable
+            key = "TZ"
+            value = "Europe/London"
+            isEnabled = "YES">
+         </EnvironmentVariable>
          <EnvironmentVariable
             key = "FOCUS_GATE_LANE"
             value = "xcodebuild"

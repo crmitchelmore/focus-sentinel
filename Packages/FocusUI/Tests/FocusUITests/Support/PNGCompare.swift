@@ -138,24 +138,34 @@ enum PNGCompare {
             )
         }
 
-        var total = 0.0
+        var total = 0
         var beyond = 0
         let pixelCount = candidate.width * candidate.height
+        precondition(candidate.bytes.count == pixelCount * 4)
+        precondition(baseline.bytes.count == pixelCount * 4)
 
-        for pixel in 0..<pixelCount {
-            var exceeded = false
-            for channel in 0..<4 {
-                let index = pixel * 4 + channel
-                let delta = abs(Int(candidate.bytes[index]) - Int(baseline.bytes[index]))
-                total += Double(delta)
-                if Double(delta) > PixelComparison.channelThreshold { exceeded = true }
+        // Borrow each buffer once. Repeated Array subscripting and a nested channel iterator
+        // dominated the unoptimised hosted test lane; the pixel arithmetic is unchanged.
+        candidate.bytes.withUnsafeBufferPointer { left in
+            baseline.bytes.withUnsafeBufferPointer { right in
+                var index = 0
+                while index < left.count {
+                    let r = abs(Int(left[index]) - Int(right[index]))
+                    let g = abs(Int(left[index + 1]) - Int(right[index + 1]))
+                    let b = abs(Int(left[index + 2]) - Int(right[index + 2]))
+                    let a = abs(Int(left[index + 3]) - Int(right[index + 3]))
+                    total += r + g + b + a
+                    if Double(max(max(r, g), max(b, a))) > PixelComparison.channelThreshold {
+                        beyond += 1
+                    }
+                    index += 4
+                }
             }
-            if exceeded { beyond += 1 }
         }
 
         return PixelComparison(
             dimensionsMatch: true,
-            meanAbsoluteDifference: total / Double(pixelCount * 4),
+            meanAbsoluteDifference: Double(total) / Double(pixelCount * 4),
             proportionBeyondThreshold: Double(beyond) / Double(pixelCount)
         )
     }
@@ -179,17 +189,31 @@ enum PNGCompare {
         let threshold = Int(PixelComparison.channelThreshold)
         var grounds = [(Int(buffer.bytes[0]), Int(buffer.bytes[1]), Int(buffer.bytes[2]))]
         grounds += paper.map { ($0.red, $0.green, $0.blue) }
+        precondition(buffer.bytes.count == buffer.width * buffer.height * 4)
         var ink = 0
-        for pixel in 0..<(buffer.width * buffer.height) {
-            let index = pixel * 4
-            let r = Int(buffer.bytes[index])
-            let g = Int(buffer.bytes[index + 1])
-            let b = Int(buffer.bytes[index + 2])
-            let onPaper = grounds.contains { ground in
-                max(abs(r - ground.0), max(abs(g - ground.1), abs(b - ground.2))) <= threshold
+        buffer.bytes.withUnsafeBufferPointer { bytes in
+            var index = 0
+            while index < bytes.count {
+                let r = Int(bytes[index])
+                let g = Int(bytes[index + 1])
+                let b = Int(bytes[index + 2])
+                var onPaper = false
+                var groundIndex = 0
+                while groundIndex < grounds.count {
+                    let ground = grounds[groundIndex]
+                    if abs(r - ground.0) <= threshold
+                        && abs(g - ground.1) <= threshold
+                        && abs(b - ground.2) <= threshold {
+                        onPaper = true
+                        break
+                    }
+                    groundIndex += 1
+                }
+                if !onPaper { ink += 1 }
+                index += 4
             }
-            if !onPaper { ink += 1 }
         }
+
         return ink
     }
 

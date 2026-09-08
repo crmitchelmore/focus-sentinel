@@ -17,9 +17,9 @@ public protocol IdleSourceReading: Sendable {
 
 /// One concrete `CGEventType` read under **both** source states at nearly one instant.
 ///
-/// This is the invariant that is actually true of the two states, and the reason the old one
-/// (`hardware >= session`) was not: for a concrete event type the two states answer with the
-/// same number. See `CGEventIdleSource.secondsPerConcreteEventType()`.
+/// These are independent event-state tables. Agreement was observed on the development Mac,
+/// but is not an API guarantee: the hosted Mac reported a 6.176-second gap for all four types.
+/// Keep both readings and their difference; neither equality nor ordering is assumed.
 public struct IdleSourceAgreement: Sendable, Equatable, Hashable {
     /// The event type's own name, as the report and the gate print it.
     public let eventType: String
@@ -80,23 +80,22 @@ public struct CGEventIdleSource: IdleSourceReading {
         ("scrollWheel", .scrollWheel)
     ]
 
-    /// Both states, per concrete event type, session read first for the same reason `read()`
-    /// reads it first: whichever is read second is measured a hair later and comes back a hair
-    /// larger, and putting that on the hardware side keeps the difference one-signed.
-    ///
-    /// Measured 2026-09-03: every row's two figures agreed to the nanosecond-ish width of one
-    /// syscall while the `~0` sentinel disagreed by four hours. That is the true property of
-    /// the two states, and it is what the gate and the suite assert now.
+    /// Read both independent source tables for each concrete event type, session first.
+    /// Apple's CGEventSourceStateID documentation distinguishes hardware event sources from
+    /// all sources in the current login session; it does not promise matching last-event times.
     public static func secondsPerConcreteEventType() -> [IdleSourceAgreement] {
+        secondsPerConcreteEventType { state, eventType in
+            CGEventSource.secondsSinceLastEventType(state, eventType: eventType)
+        }
+    }
+
+    // The source seam lets tests distinguish the two tables without synthesising user input.
+    static func secondsPerConcreteEventType(
+        read: (CGEventSourceStateID, CGEventType) -> Double
+    ) -> [IdleSourceAgreement] {
         concreteEventTypes.map { entry in
-            let session = CGEventSource.secondsSinceLastEventType(
-                .combinedSessionState,
-                eventType: entry.type
-            )
-            let hardware = CGEventSource.secondsSinceLastEventType(
-                .hidSystemState,
-                eventType: entry.type
-            )
+            let session = read(.combinedSessionState, entry.type)
+            let hardware = read(.hidSystemState, entry.type)
             return IdleSourceAgreement(
                 eventType: entry.name,
                 hardwareSeconds: hardware,
@@ -249,9 +248,8 @@ public final class IdleReader: IdleObserving {
     /// that syscall's worth of elapsed time on one known side, so the published
     /// `hardwareMinusSessionSeconds` gap is a fact about the sources and not about read order.
     /// It no longer props up an ordering invariant, because there is no ordering invariant:
-    /// `hardware >= session` was never a property of these two states (focus-7az). What is
-    /// asserted instead is `CGEventIdleSource.secondsPerConcreteEventType()` — per concrete
-    /// event type, the two states agree.
+    /// `hardware >= session` was never a property of these two states (focus-7az). Per concrete
+    /// event type the two independent readings are retained as diagnostic evidence.
     public func read() -> IdleReading {
         let sessionSeconds = source.sessionSeconds
         return IdleReading(

@@ -868,3 +868,23 @@ can stall its build engine; that is separate from the sampled Focus test defect.
 
 This follows [Apple's cooperative-thread guidance](https://developer.apple.com/videos/play/wwdc2021/10254/):
 blocking a worker on a task that needs the same pool breaks forward progress.
+
+
+### Hosted idle-table correction (8 September 2026, focus-a9dm)
+
+SC-93 and SC-94 above are historical evidence of the retired equality assertion. Hosted run
+34257309511 reported a 6.176-second gap for all four concrete event types. Apple's
+[CGEventSourceStateID contract](https://developer.apple.com/documentation/coregraphics/cgeventsourcestateid)
+describes independent hardware and login-session tables, with no equality guarantee.
+The replacement reader retains the four-distinct-type floor and rejects non-finite or negative
+source values and a signed difference inconsistent with the two published readings. The unit
+source seam uses distinct values for both tables and every event type, detecting aliases,
+swaps, missing reads and event-type mismatches. The maximum-of-two-counters idle decision
+remains independently checked; no product idle threshold changed. The actual reader accepted
+a 6.176-second difference and rejected nine non-finite, negative, inconsistent, missing or
+duplicated reports (`focus-release-evidence/hosted-repair/idle-reader-controls.py` and `.log`).
+
+Snapshot pixel-loop equivalence uses the actual old and new functions under `-Onone`, covering
+48 random buffers, identical/distinct pairs and both paper modes. Evidence lives under
+`focus-release-evidence/hosted-repair/pixel-equivalence.swift` and `.log`. Mean/channel/proportion
+tolerances are unchanged; this removes per-pixel collection/iterator overhead only.
