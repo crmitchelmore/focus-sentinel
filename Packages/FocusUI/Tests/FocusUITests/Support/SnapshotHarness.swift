@@ -61,8 +61,15 @@ enum SnapshotHarness {
         if let path = ProcessInfo.processInfo.environment["FOCUS_SNAPSHOT_OUT"], !path.isEmpty {
             return URL(filePath: path, directoryHint: .isDirectory)
         }
+        // Different checkouts can render different source at once. Mirror the canonical
+        // checkout path below the staging root so neither can read the other's candidates.
+        // Six parents: Support, FocusUITests, Tests, FocusUI, Packages, checkout.
+        var checkout = URL(filePath: #filePath)
+        for _ in 0..<6 { checkout.deleteLastPathComponent() }
+        let relativeCheckout = String(checkout.resolvingSymlinksInPath().path.dropFirst())
         return URL(filePath: NSTemporaryDirectory(), directoryHint: .isDirectory)
             .appending(path: "focus-snapshots", directoryHint: .isDirectory)
+            .appending(path: relativeCheckout, directoryHint: .isDirectory)
     }()
 
     /// The committed baselines, found from this file's own source path.
