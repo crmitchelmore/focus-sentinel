@@ -1217,11 +1217,29 @@ from Appendix A of the epic plan, which carries the canonical bytes) and re-run
 
 ## Distribution posture
 
-This Mac holds exactly one code-signing identity (`Apple Development`) and zero
-`Developer ID Application` identities, and the product policy is a local app. The shipped
-artefact is an **ad-hoc-signed local `.app`**. There is no notarisation, no Developer ID
-signing, no App Store submission and no hardened runtime — not in this epic and not in a later
-one.
+The automated gate packages an **ad-hoc-signed local app**, without credentials. Shortcuts
+can discover its actions but macOS refuses execution because it has no validated Apple team
+identity. On 8 September 2026, signing the same Release code with this Mac's existing Apple
+Development identity allowed all three actions to execute in Shortcuts; both invalid session
+operations returned their intended refusals. The default local Run action also builds ad hoc.
+
+For local Shortcuts use, sign a separate copy of the verified Release app with an existing
+Apple Development identity, then explicitly select development packaging. Substitute the
+identity SHA from `security find-identity -v -p codesigning`; the packager never signs or
+selects credentials itself:
+
+```sh
+ditto "$RELEASE_APP" "$SIGNED_APP"
+codesign --force --sign "$EXISTING_APPLE_DEVELOPMENT_IDENTITY" \
+  --preserve-metadata=identifier,entitlements,flags "$SIGNED_APP"
+codesign --verify --deep --strict "$SIGNED_APP"
+scripts/package-release.sh "$SIGNED_APP" "$DEVELOPMENT_OUTPUT" --development
+```
+
+Use a separate output directory for this package. It requires an Apple Development authority
+and a team identifier, and its README describes that exact signature and Gatekeeper result.
+This is for the development Mac: it is not Developer ID distribution or notarisation. This
+Mac currently has no Developer ID Application identity; public distribution remains separate.
 
 Because the Release product *is* the shipped artefact, it does not carry
 `com.apple.security.get-task-allow`. Ad-hoc signing injects that entitlement into both
@@ -1233,7 +1251,7 @@ so a debugger can still attach, and `scripts/entitlement-check.sh` asserts both 
 
 `scripts/package-release.sh <app> <out>` makes `FocusSentinel-<version>-<commit>.dmg` from the
 Release product the gate already built. It **never builds, never signs, and never touches the
-keychain**: it `ditto`s the product (which preserves the ad-hoc signature), writes a `README.txt`
+keychain**: it `ditto`s the product (which preserves the supplied signature), writes a `README.txt`
 beside it, and seals both into a read-only compressed image. `codesign` appears in it only with
 `--verify` and `-dv`, which read.
 
@@ -1248,8 +1266,9 @@ build therefore renders no hash and no dash, and Settings shows `0.1.0 (1)` rath
 
 **Gatekeeper rejects it, and the README on the image says so in Gatekeeper's own words.** An
 ad-hoc-signed application is not notarised and has no Developer ID, so `spctl --assess` reads
-`rejected`; the README quotes that verbatim, gives the right-click → Open route and the
-`xattr -d com.apple.quarantine` fallback, and states the macOS 26.0 requirement. The gate's
+`rejected`; the README quotes that verbatim, describes the normal macOS opening/approval
+controls without promising they will accept every build, and states the macOS 26.0 requirement.
+The gate's
 `release-artefact` stage mounts the image read-only and asks six things of it: that it mounts;
 that it holds exactly the application and the README; that the application inside is
 **byte-identical** to the product every other stage read, by a digest of every file in both
