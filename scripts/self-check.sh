@@ -5214,12 +5214,22 @@ check(
 # names belong to the focus-steal readings further down.
 pinned_rows_before = pinned.get("deliveredRowsBeforeTheClick")
 pinned_rows_after = pinned.get("deliveredRowsAfterTheClick")
+pinned_receipts_before = pinned.get("perceptionReceiptsBeforeTheClick")
+pinned_receipts_after = pinned.get("perceptionReceiptsAfterTheClick")
 check(
     isinstance(pinned_rows_before, int)
     and isinstance(pinned_rows_after, int)
     and pinned_rows_after - pinned_rows_before == 1,
     "opening the popover on both nudges charged exactly one of them",
     (pinned_rows_before, pinned_rows_after),
+)
+check(
+    all(type(value) is int and value >= 0 for value in (
+        pinned_rows_before, pinned_rows_after, pinned_receipts_before, pinned_receipts_after
+    ))
+    and pinned_receipts_after - pinned_receipts_before == pinned_rows_after - pinned_rows_before == 1,
+    "the controlled popover delivery has exactly one perception receipt and one persisted charge",
+    (pinned_receipts_before, pinned_receipts_after, pinned_rows_before, pinned_rows_after),
 )
 check(
     pinned.get("accusationsToday") == 0,
@@ -5513,18 +5523,17 @@ check(
 
 # --- the charging invariant, read at last (focus-9o8) --------------------------------------
 #
-# `chargesPaidFor` counts the `PerceptibleChange` receipts the perception path issued;
-# `deliveredRowsToday` sums persisted `InterventionRecord` rows the completely separate way the
-# day's caps are. A delivered row with no receipt behind it is a charge that never went through
-# the door — three rounds of the same defect. The join is asserted here.
-#
-# On an ordinary launch both are zero, so the join alone would be vacuous. The non-vacuous half
-# is the seeded day below, where the same accounting is folded over eight landings.
+# Receipts belong to this process; daily persisted rows include previous launches and exclude
+# retracted deliveries. Validate each reading here, and join their non-zero deltas around the
+# controlled popover click above. Comparing these lifetime totals rejects an ordinary relaunch
+# after a delivery. The synthetic day below separately tests the budget fold, not persistence.
 charges_paid_for = nudge.get("chargesPaidFor")
 delivered_rows_today = nudge.get("deliveredRowsToday")
 check(
-    isinstance(charges_paid_for, int) and charges_paid_for == delivered_rows_today,
-    "every delivered intervention row was paid for by a perception receipt",
+    type(charges_paid_for) is int and charges_paid_for >= 0
+    and type(delivered_rows_today) is int and delivered_rows_today >= 0
+    and charges_paid_for == len(nudge.get("chargeChannels") or []),
+    "process receipts and daily persisted charges are valid readings with distinct lifetimes",
     (charges_paid_for, delivered_rows_today),
 )
 declared_channels = {
@@ -5648,13 +5657,16 @@ check(
     (verdict.get("stampKey"), report.get("engineStamp")),
 )
 check(
-    verdict.get("stage") in ("heuristic", "model"),
+    verdict.get("stage") in (
+        "sessionRule", "taskRule", "globalRule", "contextPack", "seedRule",
+        "heuristic", "onDeviceModel", "seedFallback", "unresolved",
+    ),
     "the verdict was reached at a stage that exists",
     verdict.get("stage"),
 )
 check(
-    verdict.get("status") in ("relevant", "uncertain", "unrelated"),
-    "the verdict's status is one of the three the vocabulary declares",
+    verdict.get("status") in ("relevant", "uncertain", "unrelated", "paused", "onBreak"),
+    "the verdict's status is one of the five the surface vocabulary declares",
     verdict.get("status"),
 )
 check(
@@ -5662,14 +5674,14 @@ check(
     "the verdict names at least one clause it rests on",
     verdict.get("clauses"),
 )
-# **The band, and it is the type's own contract rather than a fact about the person's day**
-# (focus-psh). `VerdictSnapshot.band` is documented `nil` when the verdict is `uncertain` —
-# declining to decide has no evidence to band, and drawing `.low` there would imply a weak
-# DECISION. That is a statement about this build that holds whatever was on screen, so it can be
-# asserted where the band's *value* could not be.
+# The band follows the classification verdict. Paused/onBreak are session overrides of the
+# surface status, so either can retain a banded decision or an unbanded uncertain outcome.
+# The driven classification cases below prove the decision/band relationship independently.
 check(
-    (verdict.get("band") != "") == (verdict.get("status") != "uncertain"),
-    "the running verdict carries a band exactly when it reached a decision",
+    verdict.get("band") in ("", "low", "medium", "high")
+    and (verdict.get("status") != "uncertain" or verdict.get("band") == "")
+    and (verdict.get("status") not in ("relevant", "unrelated") or verdict.get("band") != ""),
+    "the running verdict band respects classification while allowing a session status override",
     (verdict.get("status"), verdict.get("band")),
 )
 
@@ -5684,6 +5696,18 @@ check(
 # This is focus-0gq's shape applied to the second of R-168's two undriven rows: the probe moves
 # the world and reads the value back, rather than asserting harder about a value it was handed.
 driven = relevance.get("drivenBand") or {}
+for probe_key, expected_status, expected_band in (
+    ("pausedUndecided", "paused", ""), ("pausedDecided", "paused", "high"),
+    ("breakUndecided", "onBreak", ""), ("breakDecided", "onBreak", "high"),
+):
+    cell = driven.get(probe_key) or {}
+    check(
+        cell.get("status") == expected_status and cell.get("band") == expected_band
+        and cell.get("hasBand") == bool(expected_band)
+        and cell.get("stage") == ("sessionRule" if expected_band else "heuristic"),
+        "the driven " + probe_key + " preserves the classification band beneath its session status",
+        cell,
+    )
 told_nothing = driven.get("toldNothing") or {}
 told_one_rule = driven.get("toldOneRule") or {}
 check(

@@ -20,8 +20,9 @@ public struct VerdictSnapshot: Sendable, Equatable, Hashable {
     public let status: FocusStatus
     /// Which rung decided.
     public let stage: CascadeStage
-    /// How much it had to go on. `nil` when the verdict is `uncertain`: declining to decide
-    /// has no evidence to band, and drawing `.low` there would imply a weak *decision*.
+    /// How much it had to go on. `nil` when the classification verdict is `uncertain`:
+    /// declining to decide has no evidence to band. A paused/onBreak surface status overrides
+    /// the classification label, but preserves its band (or its absence).
     public let band: EvidenceBand?
     /// Where the drift accumulator has got to. Drawn as a counting clock.
     public let drift: DriftState
