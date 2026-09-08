@@ -129,3 +129,53 @@ bd prime                # Refresh Beads context
 
 **Architecture in one line:** issues live in a local Dolt DB; sync uses `refs/dolt/data` on your git remote; `.beads/issues.jsonl` is a passive export. See https://github.com/gastownhall/beads/blob/main/docs/SYNC_CONCEPTS.md for details and anti-patterns.
 <!-- END BEADS CODEX SETUP -->
+
+## Learnings
+
+Driver notes from the work itself, newest first. `CLAUDE.md` points here; keep the two files
+mirrored for anything substantive.
+
+### 2026-09-08 — e11c cockpit hierarchy and colour (focus-6uya)
+
+- **Re-recording snapshot baselines.** `FOCUS_SNAPSHOT_RECORD=1 swift test` is a dead route on
+  this rig: every snapshot suite is *skipped* under `swift test` (the catalogs are not compiled
+  there), so the README's "swift test only" recording flag records nothing. The route that
+  works is the gate's: delete the baselines you mean to re-record, run the lane under
+  `xcodebuild -scheme FocusUnitTests -only-testing:FocusUITests test`, and a missing baseline
+  is written and *failed*; run again to confirm green. Baselines recorded under SwiftPM carry
+  SF Symbol fallback glyphs; the xcodebuild lane renders the drawn marks, so expect accusation,
+  popover and verdict baselines to change the first time they are re-recorded this way.
+- **Fewer passes: take candidates from the result bundle.** A test that loops over variants
+  stops at its first missing baseline, so deleting many at once costs several passes. Instead
+  run one compare pass against the old baselines and export the candidates:
+  `xcrun xcresulttool export attachments --path <RB> --output-path <dir>`; `manifest.json`
+  maps `<name>.candidate…` to an exported file. Attachments survive only for failing tests.
+  The `$TMPDIR/focus-snapshots` directory is not a source for this: after a run it held files
+  byte-identical to the committed baselines, not the candidates.
+- **What the lane cannot see.** The comparator tolerates ±8 per channel and 0.2% of pixels
+  beyond that. A ground tint that moves a colour by ≤8 counts is invisible to it — an 8%
+  Spruce wash over Inlay was — and on accessibilityLarge pictures a heading colour change can
+  sit under the 0.2%. A deliberate colour change has to clear the tolerance or it is
+  unwitnessed; `DesignTokens.wellWashOpacity` is 12% for that reason.
+- **The ink heuristic reads geometry.** `PNGCompare.inkPixels` counts every pixel off the
+  top-left one, so a filled well is solid ink and text drawn on it adds nothing. A composite
+  can measure *fewer* ink pixels while visibly drawing more text. Measure parts, not
+  composites (`PriorityComponent.measuresPseudoLocalisedInk`).
+- **Memory.** The FocusUITests lane pins about 2.7 GB. With another agent's Xcode builds on
+  the machine, a backgrounded run is killed by the harness's low-memory guard; a foreground
+  run rolls to the background after 600 s and survives. Serialise with other agents, or wait
+  for a quiet machine (no other `xcodebuild`/`swift-frontend` processes, ≥45% free) before
+  starting the lane. Quiet, the lane takes ~366 s; under contention it measured 440 s, over
+  the 420 s budget in `Config/performance-budgets.txt`.
+- **Type roles.** A `FontRole` that forces a weight must be named in
+  `TypeHierarchyTests.onlyTheHeroAndTheSectionHeadingForceAWeight`; a role drawn in a
+  palette hue with a High Contrast pair needs no Increase Contrast exemption.
+- **A plain Debug build leaves `FocusGitHash` empty** — only the gate passes
+  `FOCUS_GIT_HASH`. Say so when reporting a locally built app's version.
+- **Capturing the cockpit window.** `CGWindowListCopyWindowInfo` lists the app's windows by
+  *owner PID* (the owner name is "Focus Sentinel", not the process name `FocusSentinel`), then
+  `screencapture -x -o -l <windowNumber>` captures it; `osascript … activate` first.
+- **Design rulings overridden by the owner.** The direction's "one hairline, never boxes" and
+  "at rest the app owns no hue" were both overruled for the cockpit on the owner's reading of
+  the shipped window (headings too small, no visible organisation, no colour). The cockpit is
+  summoned, so it may wear the question hue; uninvited surfaces keep the original rules.
