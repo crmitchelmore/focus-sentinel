@@ -48,7 +48,7 @@ public struct TaskRulesView: View {
     public var body: some View {
         VStack(alignment: .leading, spacing: spacing) {
             ShellText(.priorityRulesHeading, role: .sectionHeading)
-                .foregroundStyle(DesignTokens.Palette.primaryText)
+                .foregroundStyle(DesignTokens.Palette.role(.spruce, for: traits))
 
             if rules.isEmpty {
                 ShellText(.priorityRulesEmpty, role: .callout)

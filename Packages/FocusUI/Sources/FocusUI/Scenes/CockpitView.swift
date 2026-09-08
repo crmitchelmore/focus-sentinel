@@ -243,7 +243,7 @@ public struct CockpitView: View {
             // **The instrument strip** (focus-6uya): the store line, what is being watched, the
             // switch and the way to Settings, on the same inset ground as the wells but tighter,
             // so it reads as the window's status bar rather than as a sixth section.
-            well(spacing: rowSpacing / 2) {
+            well(spacing: rowSpacing / 2, washed: false) {
                 footer
             }
 
@@ -600,7 +600,7 @@ public struct CockpitView: View {
                 // included (focus-0ai).
                 if let doneWhen = CockpitWiring.doneWhenToDraw(priority.doneWhen) {
                     ShellText(.priorityDoneWhenLabel, role: .sectionHeading)
-                        .foregroundStyle(DesignTokens.Palette.primaryText)
+                        .foregroundStyle(DesignTokens.Palette.role(.spruce, for: traits))
 
                     Text(verbatim: doneWhen)
                         .font(DesignTokens.font(.body, scale: textScale))
@@ -609,7 +609,7 @@ public struct CockpitView: View {
                 }
             } else {
                 ShellText(.priorityDoneWhenLabel, role: .sectionHeading)
-                    .foregroundStyle(DesignTokens.Palette.primaryText)
+                    .foregroundStyle(DesignTokens.Palette.role(.spruce, for: traits))
 
                 TextField(
                     text: $doneWhenDraft,
@@ -1002,17 +1002,28 @@ public struct CockpitView: View {
     /// steps from the window ground is not a boundary a person can rely on.
     private func well<Content: View>(
         spacing: CGFloat? = nil,
+        washed: Bool = true,
         @ViewBuilder _ content: () -> Content
     ) -> some View {
         let emphasis = DesignTokens.emphasis(for: traits)
+        let shape = RoundedRectangle(cornerRadius: wellRadius, style: .continuous)
         return VStack(alignment: .leading, spacing: spacing ?? sectionSpacing) {
             content()
         }
         .padding(wellInset)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: wellRadius, style: .continuous)
-                .fill(DesignTokens.Palette.role(.inlay, for: traits))
+            shape.fill(DesignTokens.Palette.role(.inlay, for: traits))
+                .overlay {
+                    // The working wells carry the app's own hue; the instrument strip does
+                    // not. See `DesignTokens.wellWashOpacity` for why the cockpit may.
+                    if washed {
+                        shape.fill(
+                            DesignTokens.Palette.role(.spruce, for: traits)
+                                .opacity(DesignTokens.wellWashOpacity)
+                        )
+                    }
+                }
         )
         .overlay {
             if emphasis.promotesSecondaryText {

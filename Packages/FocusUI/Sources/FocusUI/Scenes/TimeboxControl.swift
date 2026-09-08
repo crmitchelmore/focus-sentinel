@@ -41,7 +41,7 @@ public struct TimeboxControl: View {
         VStack(alignment: .leading, spacing: spacing / 2) {
             HStack(spacing: spacing) {
                 ShellText(.priorityTimeboxLabel, role: .sectionHeading)
-                    .foregroundStyle(DesignTokens.Palette.primaryText)
+                    .foregroundStyle(DesignTokens.Palette.role(.spruce, for: traits))
 
                 if let readoutKey, let duration = state.duration {
                     Label {
@@ -49,10 +49,13 @@ public struct TimeboxControl: View {
                     } icon: {
                         Image(systemName: state.isOvertime ? "exclamationmark.circle" : "timer")
                     }
+                    // The remaining time in the app's own hue (focus-6uya): a reading, not a
+                    // warning, so it is Spruce and never Kiln. Overtime keeps the system's
+                    // orange, which is the one colour a person already reads as "past it".
                     .foregroundStyle(
                         state.isOvertime
                             ? Color(nsColor: .systemOrange)
-                            : DesignTokens.Palette.primaryText
+                            : DesignTokens.Palette.role(.spruce, for: traits)
                     )
                 }
 

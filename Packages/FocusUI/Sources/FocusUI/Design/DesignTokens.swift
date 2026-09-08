@@ -126,6 +126,25 @@ public enum DesignTokens {
     /// channels never occupy the same pixels.
     public static let decisionRuleInset: CGFloat = 12
 
+    // MARK: - The cockpit's wells (focus-6uya)
+
+    /// How much Spruce a working well carries over its Inlay ground.
+    ///
+    /// The owner asked for colour in the cockpit, and the direction's rule — colour is speech,
+    /// and at rest the app owns no hue — was written for the uninvited surfaces, where a hue
+    /// is a claim on attention. The cockpit is summoned; a person opened it on purpose. So its
+    /// two working wells take a wash of the app's own question hue, faint enough that Slate
+    /// text on it keeps its contrast and strong enough to read as the app's ground rather than
+    /// a neighbouring grey. The instrument strip stays plain Inlay: it is the machine, not the
+    /// work. A named token rather than a literal at the call site, so the two wells cannot
+    /// drift apart.
+    ///
+    /// **Twelve per cent, measured.** At eight the washed well sat within the snapshot lane's
+    /// ±8 channel tolerance of plain Inlay — a wash no baseline could see go missing — and read
+    /// as a neighbouring grey. At twelve the light well moves about 24 counts of red off Inlay
+    /// and the dark one about 15 of green, which the lane can see and a person can name.
+    public static let wellWashOpacity: Double = 0.12
+
     /// The tint of that rule, which is what tells the two surfaces apart.
     ///
     /// **The question and the accusation must not look alike.** U-1's whole shape is that "I

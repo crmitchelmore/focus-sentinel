@@ -129,7 +129,7 @@ struct PseudoLocalizationTests {
     /// of what the app does. Every other e02 surface draws catalog strings and is here.
     @Test(
         "the priority surfaces draw more ink when pseudo-localised",
-        arguments: PriorityComponent.allCases.filter(\.drawsLocalisedProse)
+        arguments: PriorityComponent.allCases.filter(\.measuresPseudoLocalisedInk)
     )
     func priorityComponentsExpand(component: PriorityComponent) throws {
         for size in SnapshotTypeSize.allCases {
