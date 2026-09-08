@@ -136,6 +136,14 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case cockpitStoreSheetConsequence = "shell.cockpit.store.sheet.consequence"
     case cockpitStoreSheetAcknowledge = "shell.cockpit.store.sheet.acknowledge"
     case cockpitOpenSettings = "shell.cockpit.openSettings"
+    /// The cockpit's three tabs (focus-1rj7).
+    case cockpitTabNow = "shell.cockpit.tab.now"
+    case cockpitTabDetails = "shell.cockpit.tab.details"
+    case cockpitTabRecent = "shell.cockpit.tab.recent"
+    /// The Recent tab's route to the day's history window (focus-1rj7).
+    case cockpitOpenHistory = "shell.cockpit.openHistory"
+    /// A new priority that keeps the current one's desk (focus-1rj7).
+    case priorityActionSameContext = "priority.action.sameContext"
 
     // The priority itself
     case priorityHeroEmpty = "priority.hero.empty"

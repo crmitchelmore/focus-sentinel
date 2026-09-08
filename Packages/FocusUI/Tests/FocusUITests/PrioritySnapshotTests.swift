@@ -256,6 +256,10 @@ enum PriorityComponent: String, CaseIterable, Sendable {
     /// always has a `doneWhen`, so no baseline covers the empty case"*. Without it the fix is
     /// unwitnessed and the next fixture change reintroduces the heading-over-nothing silently.
     case cockpitWithPriorityNoDoneWhen
+    /// **The other two tabs** (focus-1rj7). `cockpitWithPriority` photographs Now; these
+    /// photograph the session in full with the desk and the rules, and the recent priorities.
+    case cockpitDetails
+    case cockpitRecent
     case contextPack
     case taskRules
     case timeboxRunning
@@ -290,8 +294,13 @@ enum PriorityComponent: String, CaseIterable, Sendable {
     /// composed of is measured on its own in the same test, so nothing goes unproven; and the
     /// composite's pseudo-localised picture is still held to its own baseline below.
     var measuresPseudoLocalisedInk: Bool {
-        drawsLocalisedProse && self != .cockpitWithPriority && self != .cockpitWithPriorityNoDoneWhen
+        drawsLocalisedProse && !Self.cockpitComposites.contains(self)
     }
+
+    /// The whole-cockpit renders: one per tab (focus-1rj7), and the no-done-when variant.
+    static let cockpitComposites: Set<PriorityComponent> = [
+        .cockpitWithPriority, .cockpitWithPriorityNoDoneWhen, .cockpitDetails, .cockpitRecent
+    ]
 
     /// Whether Increase Contrast has anything to change in this component.
     ///
@@ -337,6 +346,22 @@ enum PriorityComponent: String, CaseIterable, Sendable {
                 CockpitView(
                     state: PriorityFixture.cockpit(doneWhen: nil),
                     sessionElapsedSeconds: SessionFixture.elapsedSeconds
+                )
+            )
+        case .cockpitDetails:
+            AnyView(
+                CockpitView(
+                    state: PriorityFixture.cockpit(),
+                    sessionElapsedSeconds: SessionFixture.elapsedSeconds,
+                    tab: .details
+                )
+            )
+        case .cockpitRecent:
+            AnyView(
+                CockpitView(
+                    state: PriorityFixture.cockpit(),
+                    sessionElapsedSeconds: SessionFixture.elapsedSeconds,
+                    tab: .recent
                 )
             )
         case .contextPack:

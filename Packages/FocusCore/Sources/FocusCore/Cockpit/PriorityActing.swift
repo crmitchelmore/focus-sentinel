@@ -95,6 +95,14 @@ public protocol PriorityActing: AnyObject {
     /// Capture a sentence and make it the one thing. The primary user action.
     func setPriority(intent: String, doneWhen: String?)
 
+    /// **A new priority on the same desk** (focus-1rj7). Sets `intent` as the new priority, as
+    /// `setPriority(intent:doneWhen:)` does, and then copies every context item and every
+    /// live rule of the task named by `taskID` onto it — the apps, sites, keywords, files and
+    /// verdicts a person built up for one job and now needs for the next one. The old task keeps
+    /// its own copies and stays in the history. Retired rule scopes are not copied: a rule
+    /// nothing reads any more is not worth carrying forward.
+    func setPriority(intent: String, doneWhen: String?, keepingContextOf taskID: UUID)
+
     /// Edit the intent in place. Bumps the task's revision.
     func editIntent(taskID: UUID, to intent: String)
 

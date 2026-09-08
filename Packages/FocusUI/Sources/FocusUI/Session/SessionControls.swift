@@ -43,6 +43,11 @@ public struct SessionControls: View {
     /// control is disabled while it is `nil`, so a button can never look live and do nothing.
     public let actions: (any SessionActing)?
 
+    /// **The Now tab's reading of the session** (focus-1rj7): the phase, the elapsed time, the
+    /// causes that explain a disabled Resume, and the verbs that change the phase. The notes
+    /// and the two endings belong to the Details tab, where the whole session is drawn.
+    public let compact: Bool
+
     @Environment(\.appearanceTraits) private var traits
     @FocusState.Binding private var focus: FocusField?
     @ScaledMetric(relativeTo: .body) private var spacing: CGFloat = 8
@@ -56,12 +61,14 @@ public struct SessionControls: View {
         elapsedSeconds: Double? = nil,
         lastActiveBundleID: String? = nil,
         actions: (any SessionActing)? = nil,
+        compact: Bool = false,
         focus: FocusState<FocusField?>.Binding
     ) {
         self.session = session
         self.elapsedSeconds = elapsedSeconds
         self.lastActiveBundleID = lastActiveBundleID
         self.actions = actions
+        self.compact = compact
         self._focus = focus
     }
 
@@ -133,7 +140,7 @@ public struct SessionControls: View {
             }
 
             causes(session)
-            notes(session)
+            if !compact { notes(session) }
             verbs(session)
         }
     }
@@ -221,14 +228,14 @@ public struct SessionControls: View {
             verbButtons(session)
             // The shelf between the reversible verbs and the terminal ones. It is the whole of
             // the grouping in the wide case: consequence reads as distance.
-            if session.phase.offersAnEnding {
+            if session.phase.offersAnEnding, !compact {
                 Spacer(minLength: spacing)
                 endings
             }
         }
         let column = VStack(alignment: .leading, spacing: spacing) {
             verbButtons(session)
-            if session.phase.offersAnEnding { endings }
+            if session.phase.offersAnEnding, !compact { endings }
         }
 
         // The same discipline the priority actions use: the row wraps to a column rather than

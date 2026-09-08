@@ -55,6 +55,7 @@ public struct CockpitView: View {
 
     @Environment(\.appearanceTraits) private var traits
     @Environment(\.openSettings) private var openSettings
+    @Environment(\.openWindow) private var openWindow
     @Environment(\.shellTextScale) private var textScale
     @FocusState private var focus: FocusField?
 
@@ -66,6 +67,12 @@ public struct CockpitView: View {
     /// mind" path. With no priority the field is always open, because it is the only thing
     /// the window is for.
     @State private var isCapturing: Bool = false
+    /// Whether the capture field, when it commits, keeps the current priority's desk
+    /// (focus-1rj7). Set by the "New Priority, Same Context…" verb and cleared with the field.
+    @State private var isKeepingContext: Bool = false
+    /// Which tab is open (focus-1rj7). The initial value is the view's argument, so the snapshot
+    /// lane can photograph each tab; the app always opens on Now.
+    @State private var tab: CockpitTab
 
     /// Whether the completion sheet is up. Completing is a deliberate act with two things
     /// worth recording, so it gets a sheet rather than happening under the pointer.
@@ -118,7 +125,8 @@ public struct CockpitView: View {
         lastActiveBundleID: String? = nil,
         onLaunchAtLoginOffer: @escaping (LaunchAtLoginOfferAction) -> Void = { _ in },
         onFirstRunExplanationDismissed: @escaping () -> Void = {},
-        commandCenter: FocusCommandCenter = .shared
+        commandCenter: FocusCommandCenter = .shared,
+        tab: CockpitTab = .now
     ) {
         self.state = state
         self.actions = actions
@@ -131,6 +139,7 @@ public struct CockpitView: View {
         self.didRender = nil
         self.generation = 0
         self.didDraw = nil
+        self._tab = State(initialValue: tab)
     }
 
     /// **The application scene's initialiser, and the only one it can reach** (focus-2er).
@@ -153,6 +162,7 @@ public struct CockpitView: View {
         self.didRender = connection.didRender
         self.generation = connection.generation
         self.didDraw = connection.didDraw
+        self._tab = State(initialValue: .now)
     }
 
     /// Every verb this window can perform, built from the host and the current priority.
@@ -172,17 +182,13 @@ public struct CockpitView: View {
         let _ = didRender?()
         VStack(alignment: .leading, spacing: sectionSpacing) {
             // **One derivation, two consumers** (focus-7ow). The banner is on the screen exactly
-            // when this is not `nil`, and that is exactly what the receipt reports — so a
-            // mutation that shows the start-of-day ritual when it should not, or never shows it
-            // when it should, changes the reported value with it. It was drawn from
-            // `state.showsRitualPrompt` and reported nowhere.
+            // when this is not `nil`, and that is exactly what the receipt reports.
             let ritualDismissal = state.showsRitualPrompt ? wiring.dismissRitual : nil
             if let dismissRitual = ritualDismissal {
                 RitualBanner(
                     answer: {
                         dismissRitual()
-                        isCapturing = true
-                        focus = .cockpitCaptureField
+                        beginCapturing(keepingContext: false)
                     },
                     dismiss: dismissRitual,
                     focus: $focus
@@ -190,65 +196,62 @@ public struct CockpitView: View {
             }
             header
                 .shellRendered(.ritualBanner, ritualDismissal == nil ? "hidden" : "shown")
-                // **The sections that only exist while there is a commitment still report**
-                // (focus-7ow). A field nobody reported is indistinguishable from a section
-                // somebody deleted, so a cockpit with nothing committed to says so in the same
-                // vocabulary the composition root expects it in.
-                //
                 // A **background** rather than a sibling in the column, and that is measured: a
                 // zero-height `Color.clear` is still a `VStack` child and still takes the stack's
-                // spacing, which moved every committed cockpit baseline by 20 points. A
-                // background proposes no size and is exactly how `shellRendered(_:_:)` itself
-                // reaches the preference channel.
+                // spacing, which moved every committed cockpit baseline by 20 points.
                 .background(absentCommitmentReceipts)
 
-            if let priority = state.priority {
-                // **The commitment zone** (focus-6uya): the definition of done and the verbs
-                // that act on the priority, directly under the hero. The verbs used to sit
-                // between the rules pane and the history, an orphan row a long way from the
-                // thing they finish, change or clear.
-                doneWhenSection(priority)
-                primaryActions(priority)
-            }
+            // **The tabs** (focus-1rj7). What needs doing and how long comes first; the
+            // session in full, the desk and the rules are a tab away; the history another.
+            // The hero above never moves.
+            tabBar
 
             if showsCapture {
                 capture
             }
 
-            if let priority = state.priority {
-                // **Two wells, not five boxes** (focus-6uya). The direction's warning was that a
-                // box per section makes the window a form, and one hairline under the header was
-                // the answer. The owner read the result as a column with no organisation, so the
-                // machinery is grouped by what it answers — *how is the time being spent* and
-                // *what belongs* — and each group sits on the quiet Inlay ground the ritual strip
-                // already uses. The commitment stays on the window's own ground, which is what
-                // keeps it the figure and the wells the furniture.
-                well {
-                    timeboxSection(priority)
-                    sessionSection
+            switch tab {
+            case .now:
+                if let priority = state.priority {
+                    doneWhenSection(priority)
+                    primaryActions(priority)
+                    well {
+                        timeboxSection(priority)
+                        sessionSection(compact: true)
+                    }
                 }
-                well {
-                    contextSection(priority)
-                    rulesSection(priority)
+            case .details:
+                if let priority = state.priority {
+                    well {
+                        sessionSection(compact: false)
+                    }
+                    well {
+                        contextSection(priority)
+                        rulesSection(priority)
+                    }
                 }
+            case .recent:
+                RecentPrioritiesView(rows: state.recent, activate: wiring.activate)
+                    // **What is in the rows, not only how many** (focus-7ow).
+                    .shellRendered(.recentCount, state.recent.count)
+                    .shellRendered(.recentDigest, ShellValueDigest.describe(state.recent))
+                openHistoryButton
             }
 
-            RecentPrioritiesView(rows: state.recent, activate: wiring.activate)
-                // **What is in the rows, not only how many** (focus-7ow). `recentCount` alone was
-                // satisfied by a list of the right length holding somebody else's history, and it
-                // was reported from the column rather than from the list that draws it.
-                .shellRendered(.recentCount, state.recent.count)
-                .shellRendered(.recentDigest, ShellValueDigest.describe(state.recent))
-
-            // **The instrument strip** (focus-6uya): the store line, what is being watched, the
-            // switch and the way to Settings, on the same inset ground as the wells but tighter,
-            // so it reads as the window's status bar rather than as a sixth section.
+            // **The instrument strip** (focus-6uya), on every tab: the store line, what is
+            // being watched, the switch and the way to Settings — the window's status bar.
             well(spacing: rowSpacing / 2, washed: false) {
                 footer
             }
 
             Spacer(minLength: 0)
         }
+        // **What the tabs that are not open would have reported** (focus-1rj7). A section on
+        // another tab is not on the screen, and a field nobody reported is indistinguishable
+        // from a section somebody deleted — so the values those sections would draw are reported
+        // here, from the same state, through a background that proposes no size. When a tab
+        // is open its own sections report, from where they are drawn.
+        .background(hiddenTabReceipts)
         .padding(sectionSpacing)
         .frame(minWidth: 420, minHeight: 260, alignment: .topLeading)
         .background(DesignTokens.Palette.windowBackground(for: traits))
@@ -668,12 +671,13 @@ public struct CockpitView: View {
     /// It is shown only where there is a priority, because a session is always about one: the
     /// store starts it on the active task, and offering to start one with nothing committed to
     /// would be offering to time nothing.
-    private var sessionSection: some View {
+    private func sessionSection(compact: Bool) -> some View {
         SessionControls(
             session: state.session,
             elapsedSeconds: sessionElapsedSeconds,
             lastActiveBundleID: lastActiveBundleID,
             actions: sessionActions,
+            compact: compact,
             focus: $focus
         )
         // **The figure the timer is reading, and the phase beside it** (focus-h7h).
@@ -743,8 +747,13 @@ public struct CockpitView: View {
     private var capture: some View {
         CaptureFieldView(
             commit: { intent, doneWhen in
-                wiring.setPriority?(intent, doneWhen)
+                if isKeepingContext, let keep = wiring.setPriorityKeepingContext {
+                    keep(intent, doneWhen)
+                } else {
+                    wiring.setPriority?(intent, doneWhen)
+                }
                 isCapturing = false
+                isKeepingContext = false
             },
             isEnabled: actions != nil,
             fieldFocus: .cockpitCaptureField,
@@ -768,6 +777,7 @@ public struct CockpitView: View {
             HStack(spacing: rowSpacing) {
                 completeButton
                 changeButton
+                sameContextButton
                 fixWordingButton(priority)
                 clearButton
             }
@@ -775,7 +785,19 @@ public struct CockpitView: View {
                 HStack(spacing: rowSpacing) {
                     completeButton
                     changeButton
+                    sameContextButton
                 }
+                HStack(spacing: rowSpacing) {
+                    fixWordingButton(priority)
+                    clearButton
+                }
+            }
+            VStack(alignment: .leading, spacing: rowSpacing) {
+                HStack(spacing: rowSpacing) {
+                    completeButton
+                    changeButton
+                }
+                sameContextButton
                 HStack(spacing: rowSpacing) {
                     fixWordingButton(priority)
                     clearButton
@@ -784,6 +806,7 @@ public struct CockpitView: View {
             VStack(alignment: .leading, spacing: rowSpacing) {
                 completeButton
                 changeButton
+                sameContextButton
                 fixWordingButton(priority)
                 clearButton
             }
@@ -823,13 +846,35 @@ public struct CockpitView: View {
     private var changeButton: some View {
         if !showsCapture {
             Button {
-                isCapturing = true
-                focus = .cockpitCaptureField
+                beginCapturing(keepingContext: false)
             } label: {
                 ShellText(.priorityActionChange)
             }
             .disabled(actions == nil)
         }
+    }
+
+    /// **A new priority on the same desk** (focus-1rj7): a different job, the same apps, sites,
+    /// keywords, files and verdicts. Opens the capture field with the desk marked to be kept;
+    /// the copy happens in the host, in one transaction, when the sentence is committed.
+    @ViewBuilder
+    private var sameContextButton: some View {
+        if !showsCapture {
+            Button {
+                beginCapturing(keepingContext: true)
+            } label: {
+                ShellText(.priorityActionSameContext)
+            }
+            .focused($focus, equals: .cockpitSameContext)
+            .disabled(wiring.setPriorityKeepingContext == nil)
+        }
+    }
+
+    private func beginCapturing(keepingContext: Bool) {
+        isKeepingContext = keepingContext
+        isCapturing = true
+        tab = .now
+        focus = .cockpitCaptureField
     }
 
     /// Correct the wording of the commitment that is already there.
@@ -990,6 +1035,101 @@ public struct CockpitView: View {
                 } label: {
                     ShellText(.cockpitLaunchAtLoginDismiss, role: .footnote)
                 }
+            }
+        }
+    }
+
+    // MARK: - The tabs (focus-1rj7)
+
+    /// Three plain buttons under a hairline, the open one in Spruce with a rule beneath it.
+    ///
+    /// Drawn by hand rather than as a `Picker` or a `TabView`, for two measured reasons: a
+    /// segmented `Picker` is AppKit-backed and rasterises under `ImageRenderer` as the yellow
+    /// "unrenderable view" placeholder, which would put a yellow bar in every cockpit baseline;
+    /// and a macOS `TabView` builds only the selected pane, which is exactly the shape that
+    /// loses receipts (see `ShellRenderedField.settingsTab`). Three buttons and a switch keep
+    /// the whole column one SwiftUI tree the lane can photograph and the audit can read.
+    private var tabBar: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: sectionSpacing) {
+                ForEach(CockpitTab.allCases) { candidate in
+                    tabButton(candidate)
+                }
+                Spacer(minLength: 0)
+            }
+            Divider()
+        }
+        .accessibilityElement(children: .contain)
+    }
+
+    @ViewBuilder
+    private func tabButton(_ candidate: CockpitTab) -> some View {
+        let isOpen = candidate == tab
+        let button = Button {
+            tab = candidate
+        } label: {
+            VStack(alignment: .leading, spacing: rowSpacing / 2) {
+                ShellText(candidate.titleKey, role: .headline)
+                    .foregroundStyle(
+                        isOpen
+                            ? DesignTokens.Palette.role(.spruce, for: traits)
+                            : DesignTokens.supportingTextColor(for: traits)
+                    )
+                Rectangle()
+                    .fill(
+                        isOpen
+                            ? DesignTokens.Palette.role(.spruce, for: traits)
+                            : Color.clear
+                    )
+                    .frame(height: DesignTokens.decisionRuleWidth)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isOpen ? [.isSelected] : [])
+        // One focus identity for the bar, carried by the open tab (see `FocusField.cockpitTabs`).
+        if isOpen {
+            button.focused($focus, equals: .cockpitTabs)
+        } else {
+            button
+        }
+    }
+
+    /// The Recent tab's route to the day's history: the window `HistoryView` draws.
+    private var openHistoryButton: some View {
+        Button {
+            openWindow(id: ShellWindow.history.id)
+        } label: {
+            ShellText(.cockpitOpenHistory, role: .callout)
+        }
+        .focused($focus, equals: .cockpitOpenHistory)
+    }
+
+    /// The receipts of the sections that are on the tabs that are not open (focus-1rj7).
+    ///
+    /// Only for a committed priority: with none, `absentCommitmentReceipts` already reports
+    /// the five commitment fields as `noCommitment`, on every tab.
+    @ViewBuilder
+    private var hiddenTabReceipts: some View {
+        if tab != .recent {
+            Color.clear
+                .shellRendered(.recentCount, state.recent.count)
+                .shellRendered(.recentDigest, ShellValueDigest.describe(state.recent))
+        }
+        if let priority = state.priority {
+            if tab != .now {
+                Color.clear
+                    .shellRendered(.priorityDoneWhen, priority.doneWhen ?? "")
+            }
+            if tab == .recent {
+                Color.clear
+                    .shellRendered(
+                        .sessionElapsedSeconds,
+                        sessionElapsedSeconds.map { String(Int($0)) } ?? "none"
+                    )
+                    .shellRendered(.sessionPhase, state.session?.phase.rawValue ?? "none")
+                    .shellRendered(.sessionDetail, ShellValueDigest.describe(state.session))
+                    .shellRendered(.lastActiveApp, lastActiveBundleID ?? "none")
             }
         }
     }

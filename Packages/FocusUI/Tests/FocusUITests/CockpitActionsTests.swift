@@ -23,6 +23,7 @@ final class RecordingPriorityActing: PriorityActing {
     /// One case per verb in `PriorityActing`.
     enum Verb: String, CaseIterable, Sendable {
         case setPriority
+        case setPriorityKeepingContext
         case editIntent
         case editDoneWhen
         case setTimebox
@@ -66,6 +67,11 @@ final class RecordingPriorityActing: PriorityActing {
         calls.append(Call(.setPriority, detail: "\(intent)|\(doneWhen ?? "-")"))
     }
 
+    func setPriority(intent: String, doneWhen: String?, keepingContextOf taskID: UUID) {
+        calls.append(
+            Call(.setPriorityKeepingContext, taskID: taskID, detail: "\(intent)|\(doneWhen ?? "-")")
+        )
+    }
     func editIntent(taskID: UUID, to intent: String) {
         calls.append(Call(.editIntent, taskID: taskID, detail: intent))
     }
@@ -192,6 +198,7 @@ struct CockpitActionsTests {
     /// generic "something was called".
     private static func driveEveryVerb(_ wiring: CockpitWiring) {
         wiring.setPriority?("Ship the migration note", "The note is merged")
+        wiring.setPriorityKeepingContext?("Draft the Q4 proposal", nil)
         wiring.editIntent?("Finish and submit the Q3 proposal today")
         wiring.editDoneWhen?("Legal has replied in writing")
         wiring.setTimebox?(25 * 60)
@@ -240,7 +247,7 @@ struct CockpitActionsTests {
         Self.driveEveryVerb(wiring)
 
         for verb in [RecordingPriorityActing.Verb.editIntent, .editDoneWhen, .setTimebox,
-                     .complete, .addContext, .addRule] {
+                     .complete, .addContext, .addRule, .setPriorityKeepingContext] {
             let call = host.calls(of: verb).first
             #expect(call?.taskID == Self.taskID, "\(verb.rawValue) named \(String(describing: call?.taskID))")
         }
@@ -296,6 +303,8 @@ struct CockpitActionsTests {
         #expect(wiring.addContext == nil)
         #expect(wiring.removeContext == nil)
         #expect(wiring.addRule == nil)
+        // No desk to keep without a priority (focus-1rj7); the plain set is the verb then.
+        #expect(wiring.setPriorityKeepingContext == nil)
         #expect(wiring.changeRule == nil)
         #expect(wiring.removeRule == nil)
         #expect(wiring.acceptHandoff == nil)
@@ -315,6 +324,8 @@ struct CockpitActionsTests {
         #expect(wiring.complete == nil)
         #expect(wiring.addContext == nil)
         #expect(wiring.addRule == nil)
+        // No desk to keep without a priority (focus-1rj7); the plain set is the verb then.
+        #expect(wiring.setPriorityKeepingContext == nil)
 
         // Still available: an empty cockpit's whole job is to take the first sentence, and a
         // previous commitment can always be picked back up.

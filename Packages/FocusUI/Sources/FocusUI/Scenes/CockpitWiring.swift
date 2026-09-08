@@ -53,6 +53,15 @@ struct CockpitWiring {
     /// starts a new one: this keeps the task, its context pack and its rules, and bumps its
     /// revision. An empty edit is not a verb — the caller drops it rather than erasing a
     /// commitment with an empty string.
+    /// A new priority that keeps this one's desk (focus-1rj7). `nil` without a priority: there
+    /// is no desk to keep, and the plain `setPriority` is the verb for that.
+    var setPriorityKeepingContext: ((String, String?) -> Void)? {
+        guard let actions, let priority else { return nil }
+        return { intent, doneWhen in
+            actions.setPriority(intent: intent, doneWhen: doneWhen, keepingContextOf: priority.id)
+        }
+    }
+
     var editIntent: ((String) -> Void)? {
         guard let actions, let priority else { return nil }
         return { intent in actions.editIntent(taskID: priority.id, to: intent) }

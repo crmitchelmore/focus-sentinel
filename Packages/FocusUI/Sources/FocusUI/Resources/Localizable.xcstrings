@@ -985,6 +985,18 @@
         }
       }
     },
+    "priority.action.sameContext" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Cockpit verb that captures a new priority and copies the current one’s context items and rules onto it (focus-1rj7).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New Priority, Same Context…"
+          }
+        }
+      }
+    },
     "priority.action.editIntent" : {
       "comment" : "Cockpit button that puts the current priority's own sentence into an editable field, in place, without starting a new commitment.",
       "extractionState" : "manual",
@@ -3493,6 +3505,18 @@
         }
       }
     },
+    "shell.cockpit.openHistory" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Button on the cockpit’s Recent tab that opens the History window (focus-1rj7).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show Today’s History…"
+          }
+        }
+      }
+    },
     "shell.cockpit.openSettings" : {
       "comment" : "Cockpit button that opens the Settings window.",
       "extractionState" : "manual",
@@ -3501,6 +3525,42 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Open Settings"
+          }
+        }
+      }
+    },
+    "shell.cockpit.tab.details" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. The cockpit’s second tab: the session in full, context and rules (focus-1rj7).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Details"
+          }
+        }
+      }
+    },
+    "shell.cockpit.tab.now" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. The cockpit’s first tab: what needs doing and how long (focus-1rj7).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Now"
+          }
+        }
+      }
+    },
+    "shell.cockpit.tab.recent" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. The cockpit’s third tab: recent priorities (focus-1rj7).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recent"
           }
         }
       }

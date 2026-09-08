@@ -249,6 +249,39 @@ final class PriorityHost: PriorityActing {
         }
     }
 
+    func setPriority(intent: String, doneWhen: String?, keepingContextOf taskID: UUID) {
+        guard !state.capturingIsRefused else { return }
+        // The desk to copy is read from the state the cockpit drew, not re-fetched: what the
+        // person saw is what they asked to keep. A `taskID` that is not the current priority
+        // has nothing on screen to keep, so it falls back to a plain set rather than copying
+        // somebody else's desk.
+        let desk = state.priority.flatMap { $0.id == taskID ? $0 : nil }
+        perform { store in
+            let newID = try store.setPriority(intent: intent, doneWhen: doneWhen, undo: self.undo)
+            guard let desk else { return }
+            // The copies carry no undo of their own: undoing the set re-points the pointer at
+            // the previous task, and the new task keeps its desk for the day it is activated
+            // again — the same shape as a task that was set, filled and then put down.
+            for item in desk.contextItems {
+                _ = try store.addContextItem(
+                    taskID: newID,
+                    kindRaw: item.kind.rawValue,
+                    value: item.value,
+                    displayName: item.displayName,
+                    bookmark: item.bookmark
+                )
+            }
+            for rule in desk.rules where !rule.scope.isRetired {
+                _ = try store.addRule(
+                    taskID: newID,
+                    scopeRaw: rule.scope.rawValue,
+                    subject: rule.subject,
+                    verdictRaw: rule.verdict.rawValue
+                )
+            }
+        }
+    }
+
     func editIntent(taskID: UUID, to intent: String) {
         perform { store in
             try store.editIntent(taskID: taskID, to: intent, undo: self.undo)
