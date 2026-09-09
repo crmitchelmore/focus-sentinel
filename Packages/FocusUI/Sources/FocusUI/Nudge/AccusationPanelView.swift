@@ -540,6 +540,22 @@ public struct AccusationPanelView: DecisionSurfaceContent {
                 snoozeLabel(wraps: false)
                 snoozeButtons(gap: gap)
             }
+            // Keep the four choices compact in the narrow popover before falling back
+            // to one per line for larger text. Each row reports its full intrinsic width.
+            VStack(alignment: .leading, spacing: gap) {
+                snoozeLabel(wraps: false)
+                HStack(spacing: gap) {
+                    ForEach(Array(presentation.snoozeDurations.prefix(2)), id: \.self) { span in
+                        snoozeButton(span, wraps: false)
+                    }
+                }
+                HStack(spacing: gap) {
+                    if let span = presentation.snoozeDurations.last {
+                        snoozeButton(span, wraps: false)
+                    }
+                    customSnoozeButton(wraps: false)
+                }
+            }
             // **The fallback, and it is the one arrangement that must not be honest about
             // overflowing** (focus-vpu). The first two candidates are `fixedSize` so that "this
             // does not fit" is a real answer rather than a silent truncation; this one is what is
@@ -555,7 +571,7 @@ public struct AccusationPanelView: DecisionSurfaceContent {
                     snoozeButton(span, wraps: true)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                customSnoozeButton
+                customSnoozeButton(wraps: true)
             }
         }
         .popover(isPresented: $showsCustomSnooze) {
@@ -575,16 +591,16 @@ public struct AccusationPanelView: DecisionSurfaceContent {
             ForEach(presentation.snoozeDurations, id: \.self) { span in
                 snoozeButton(span, wraps: false)
             }
-            customSnoozeButton
+            customSnoozeButton(wraps: false)
         }
     }
 
-    private var customSnoozeButton: some View {
+    private func customSnoozeButton(wraps: Bool) -> some View {
         Button {
             showsCustomSnooze = true
         } label: {
             ShellText(.nudgeSnoozeCustom, role: .callout)
-                .fixedSize(horizontal: true, vertical: false)
+                .fixedSize(horizontal: !wraps, vertical: wraps)
         }
         .buttonStyle(CompanionButtonStyle())
         .accessibilityIdentifier("nudge-snooze-custom")
@@ -608,15 +624,21 @@ public struct AccusationPanelView: DecisionSurfaceContent {
                 Button { showsCustomSnooze = false } label: {
                     ShellText(.priorityCompleteActionCancel, role: .callout)
                 }
+                .buttonStyle(CompanionButtonStyle())
+                .accessibilityIdentifier("nudge-snooze-custom-cancel")
                 Spacer()
                 Button { applyCustomSnooze() } label: {
-                    NudgeText(.accusationActionSnooze, voice: presentation.voice, role: .callout)
-                    if let span = customSnoozeDuration {
-                        Text(verbatim: NudgeCopy.duration(span))
+                    HStack(spacing: 4) {
+                        NudgeText(.accusationActionSnooze, voice: presentation.voice, role: .callout)
+                        if let span = customSnoozeDuration {
+                            Text(verbatim: NudgeCopy.duration(span))
+                        }
                     }
+                    .fixedSize(horizontal: true, vertical: false)
                 }
                 .buttonStyle(CompanionButtonStyle(prominent: true))
                 .disabled(customSnoozeDuration == nil)
+                .accessibilityIdentifier("nudge-snooze-custom-apply")
             }
         }
         .font(DesignTokens.font(.callout, scale: textScale))
@@ -634,7 +656,7 @@ public struct AccusationPanelView: DecisionSurfaceContent {
         Button {
             onAction(.snooze, span)
         } label: {
-            Text(verbatim: NudgeCopy.duration(span))
+            Text(verbatim: NudgeCopy.shortDuration(span))
                 .font(DesignTokens.font(.callout, scale: textScale))
                 // Never truncated: `ViewThatFits` can only choose a layout that fits if the
                 // arrangement that does not fit says so instead of shrinking its own text. The
@@ -643,6 +665,7 @@ public struct AccusationPanelView: DecisionSurfaceContent {
                 .fixedSize(horizontal: !wraps, vertical: wraps)
         }
         .buttonStyle(CompanionButtonStyle())
+        .accessibilityLabel(Text(verbatim: NudgeCopy.duration(span)))
     }
 
     @ViewBuilder

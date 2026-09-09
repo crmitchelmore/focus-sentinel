@@ -106,23 +106,18 @@ public struct PrivacySettingsView: View {
     /// a control answering from its own memory would go on saying *90 days* after a
     /// delete-everything rebuilt the store.
     private let retention: RetentionWindow
-    /// **Which half of this pane to draw**, or `nil` for the whole of it, which is what the
-    /// application always asks for (focus-u3w).
-    ///
-    /// It exists for the snapshot lane and it is not a product state. The pane is photographed
-    /// unclamped — a bounded one is a `ScrollView`, which `ImageRenderer` cannot rasterise at
-    /// all — and unclamped it now runs to roughly sixteen thousand rows at the largest text size
-    /// under pseudo-localisation, which is past where CoreGraphics stops producing a picture:
-    /// measured, an encode succeeded at 984×15 950 and the next render, a hundred rows taller,
-    /// came back with neither bytes nor ink. Two halves are two pictures of the same pane, and
-    /// each of them is a picture.
+    /// Snapshot section, or nil for the complete shipping pane. Unbounded expanded-text
+    /// renders can exceed CoreGraphics' roughly 16,000-row image limit. Ownership,
+    /// observation and reasoning are therefore photographed separately at the same width.
     private let half: Half?
 
-    /// The pane's two halves, in the order a person reads them: **what is mine and what happens
-    /// to it**, then **what the app can see and what it made of it**.
+    /// Snapshot sections in reading order: ownership, observation, then reasoning.
+    /// The shipping pane passes nil and draws every section.
     public enum Half: String, Sendable, CaseIterable, Hashable {
         case ownership
         case insight
+        /// A separate photograph keeps expanded large text below CoreGraphics' image limit.
+        case reasoning
     }
     /// The displays this pane bounds itself against; `nil` for the live ones. Injectable for the
     /// reason `NudgePanelController.displays` is: the display this defect is worst on is a 13-inch
@@ -208,7 +203,7 @@ public struct PrivacySettingsView: View {
     var content: some View {
         VStack(alignment: .leading, spacing: spacing) {
             CompanionHeader { ShellText(.settingsPrivacyTitle, role: .title2) }
-            if half != .insight { ownershipContent.companionSurface() }
+            if half == nil || half == .ownership { ownershipContent.companionSurface() }
             if half == nil { Divider() }
             if half != .ownership { insightContent.companionSurface() }
             Spacer(minLength: 0)
@@ -336,21 +331,9 @@ public struct PrivacySettingsView: View {
                     .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
                     .lineLimit(nil)
                     .fixedSize(horizontal: false, vertical: true)
-                HStack(spacing: spacing / 2) {
-                    ForEach(RetentionWindow.ordered, id: \.self) { window in
-                        Button {
-                            onAction(.setRetentionWindow(window))
-                        } label: {
-                            ShellText(window.titleKey)
-                        }
-                        .buttonStyle(.bordered)
-                        // The same tint the timebox presets use for the same job — and, because
-                        // a tint is a colour, the accessibility trait beside it carries the
-                        // selection where colour cannot (F-146, F-144).
-                        .tint(window == retention ? DesignTokens.Palette.accent(for: traits) : nil)
-                        .accessibilityAddTraits(window == retention ? [.isSelected] : [])
-                    }
-                    Spacer(minLength: 0)
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: spacing / 2) { retentionChoices(wraps: false) }
+                    VStack(alignment: .leading, spacing: spacing / 2) { retentionChoices(wraps: true) }
                 }
                 .accessibilityElement(children: .contain)
                 .accessibilityLabel(ShellStrings.resource(.settingsPrivacyRetentionHeading))
@@ -412,37 +395,52 @@ public struct PrivacySettingsView: View {
     @ViewBuilder
     private var insightContent: some View {
         VStack(alignment: .leading, spacing: spacing) {
-            // What is being watched right now, with its working shown — including the lines
-            // whose answer is "no". A surface that only reported the interesting half would be
-            // showing half of it.
-            VStack(alignment: .leading, spacing: spacing / 2) {
-                ShellText(.sensingHeading, role: .headline)
-                SensingStatusView(summary: summary, showsDetail: true)
+            if half != .reasoning {
+                // What is being watched right now, with its working shown — including the lines
+                // whose answer is "no". A surface that only reported the interesting half would be
+                // showing half of it.
+                VStack(alignment: .leading, spacing: spacing / 2) {
+                    ShellText(.sensingHeading, role: .headline)
+                    SensingStatusView(summary: summary, showsDetail: true)
 
-                ShellText(.sensingLimitationScreenSharing, role: .footnote)
-                    .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
-                    .lineLimit(nil)
-                    .fixedSize(horizontal: false, vertical: true)
+                    ShellText(.sensingLimitationScreenSharing, role: .footnote)
+                        .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+                        .lineLimit(nil)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Divider()
+
+                CapabilityMatrixView(capabilities: capabilities)
             }
 
-            Divider()
+            if half != .insight {
+                Divider()
 
-            CapabilityMatrixView(capabilities: capabilities)
+                // How the app decides, drawn from the one ordered list of rungs in the repository
+                // (R-54). It sits between *what the app can see* and *what it made of it*, which is
+                // the order a person reads them in. It offers nothing to press either.
+                CascadePrecedenceView()
 
-            Divider()
+                Divider()
 
-            // How the app decides, drawn from the one ordered list of rungs in the repository
-            // (R-54). It sits between *what the app can see* and *what it made of it*, which is
-            // the order a person reads them in. It offers nothing to press either.
-            CascadePrecedenceView()
+                // What the app concluded about the person, and why (R-71). It sits at the foot of
+                // this pane rather than behind a developer flag because it is a *trust* surface:
+                // the capability table above says what the app can see, and this says what it made
+                // of it. Neither offers anything to press.
+                VerdictInspectorView(verdict: verdict)
+            }
+        }
+    }
 
-            Divider()
-
-            // What the app concluded about the person, and why (R-71). It sits at the foot of
-            // this pane rather than behind a developer flag because it is a *trust* surface:
-            // the capability table above says what the app can see, and this says what it made
-            // of it. Neither offers anything to press.
-            VerdictInspectorView(verdict: verdict)
+    private func retentionChoices(wraps: Bool) -> some View {
+        ForEach(RetentionWindow.ordered, id: \.self) { window in
+            Button { onAction(.setRetentionWindow(window)) } label: {
+                ShellText(window.titleKey)
+                    .fixedSize(horizontal: !wraps, vertical: true)
+            }
+            .buttonStyle(CompanionButtonStyle(selected: window == retention))
+            .accessibilityAddTraits(window == retention ? [.isSelected] : [])
         }
     }
 

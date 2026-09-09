@@ -183,8 +183,7 @@ public struct CockpitView: View {
                 RitualBanner(
                     answer: {
                         dismissRitual()
-                        isCapturing = true
-                        focus = .cockpitCaptureField
+                        beginCapture()
                     },
                     dismiss: dismissRitual,
                     focus: $focus
@@ -261,7 +260,6 @@ public struct CockpitView: View {
         .frame(minWidth: 420, minHeight: 260, alignment: .topLeading)
         .background(DesignTokens.Palette.role(.inlay, for: traits))
         .buttonStyle(CompanionButtonStyle())
-        .animation(DesignTokens.animation(for: traits), value: showsCapture)
         .animation(DesignTokens.animation(for: traits), value: isEditingIntent)
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { contentWidth = $0 }
         .background {
@@ -283,7 +281,6 @@ public struct CockpitView: View {
         // `AppearanceTraits.systemDefault` fires the receipt and ignores dark mode and every
         // accessibility setting; this is the value that says which of the two happened.
         .shellRendered(.appearanceTraits, traits.renderedDescription)
-        .defaultFocus($focus, showsCapture ? .cockpitCaptureField : .cockpitDoneWhen)
         // The window is named for the app; the group is too, so VoiceOver announces what it
         // has landed in before reading the priority out of it.
         .accessibilityElement(children: .contain)
@@ -419,14 +416,12 @@ public struct CockpitView: View {
         guard command.isAvailable(in: commandWorld) else { return }
         switch command {
         case .newPriority:
-            isCapturing = true
-            focus = .cockpitCaptureField
+            beginCapture()
         case .completePriority:
             isCompleting = true
         case .addFilesToContext:
             guard state.priority != nil else {
-                isCapturing = true
-                focus = .cockpitCaptureField
+                beginCapture()
                 return
             }
             fileImportToken &+= 1
@@ -757,6 +752,19 @@ public struct CockpitView: View {
         actions != nil && (state.priority == nil || isCapturing)
     }
 
+    /// Focus the inserted field once its reveal transition has finished.
+    private func beginCapture() {
+        guard !showsCapture else {
+            focus = .cockpitCaptureField
+            return
+        }
+        withAnimation(DesignTokens.animation(for: traits), completionCriteria: .removed) {
+            isCapturing = true
+        } completion: {
+            focus = .cockpitCaptureField
+        }
+    }
+
     /// One sentence in, one priority out.
     ///
     /// Committing while a priority already exists **replaces** it: a second activation
@@ -845,8 +853,7 @@ public struct CockpitView: View {
     private var changeButton: some View {
         if !showsCapture {
             Button {
-                isCapturing = true
-                focus = .cockpitCaptureField
+                beginCapture()
             } label: {
                 ShellText(.priorityActionChange)
             }

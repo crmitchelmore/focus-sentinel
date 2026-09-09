@@ -69,6 +69,7 @@ struct FocusSentinelApp: App {
         Window(Text(ShellStrings.resource(ShellWindow.cockpit.titleKey)), id: ShellWindow.cockpit.id) {
             CockpitHost(composition: composition)
                 .appearanceTraits(composition.appearanceTraits(for: .cockpit))
+                .preferredColorScheme(composition.appearanceTraits(for: .cockpit).colorScheme.swiftUI)
         }
         .commands { ShellCommands() }
         // The measured size, read from the one place it is written down. Two literals in a
@@ -85,6 +86,7 @@ struct FocusSentinelApp: App {
             // titled empty one is that the view says it drew (focus-2er).
             ShortcutsHelpView(didRender: composition.helpWindowRendered)
                 .appearanceTraits(composition.appearanceTraits(for: .help))
+                .preferredColorScheme(composition.appearanceTraits(for: .help).colorScheme.swiftUI)
         }
         // The measured size, from the one place both windows' sizes are written down
         // (focus-odz.6). This window had none, so it opened at AppKit's guess for a
@@ -101,6 +103,7 @@ struct FocusSentinelApp: App {
         Window(Text(ShellStrings.resource(ShellWindow.history.titleKey)), id: ShellWindow.history.id) {
             HistoryHost(composition: composition)
                 .appearanceTraits(composition.appearanceTraits(for: .cockpit))
+                .preferredColorScheme(composition.appearanceTraits(for: .cockpit).colorScheme.swiftUI)
         }
         // The measured size, from the one place every window's size is written down.
         .defaultSize(
@@ -112,6 +115,7 @@ struct FocusSentinelApp: App {
         Settings {
             SettingsHost(composition: composition)
                 .appearanceTraits(composition.appearanceTraits(for: .settings))
+                .preferredColorScheme(composition.appearanceTraits(for: .settings).colorScheme.swiftUI)
         }
         .modelContainer(composition.modelContainer)
     }

@@ -78,14 +78,17 @@ public struct MenuBarPopoverView: DecisionSurfaceContent {
     }
 
     private var renderedSections: [Section]?
+    private enum AccusationPart { case context, decision }
+    private var accusationPart: AccusationPart?
 
     public var body: some View {
         column(renderedSections ?? Section.allCases)
     }
 
-    private func layoutView(_ sections: [Section]) -> Self {
+    private func layoutView(_ sections: [Section], accusationPart: AccusationPart? = nil) -> Self {
         var view = self
         view.renderedSections = sections
+        view.accusationPart = accusationPart
         return view
     }
 
@@ -109,8 +112,14 @@ public struct MenuBarPopoverView: DecisionSurfaceContent {
     public var surfaceLayout: DecisionSurfaceLayout {
         DecisionSurfaceLayout(
             whole: AnyView(layoutView(Section.allCases)),
-            context: AnyView(layoutView(Section.allCases.filter { !$0.isDecision(in: presentation) })),
-            decision: AnyView(layoutView(Section.allCases.filter { $0.isDecision(in: presentation) }))
+            context: AnyView(layoutView(
+                Section.allCases.filter { !$0.isDecision(in: presentation) || $0 == .accusation },
+                accusationPart: presentation.pins(.accusation) ? .context : nil
+            )),
+            decision: AnyView(layoutView(
+                Section.allCases.filter { $0.isDecision(in: presentation) },
+                accusationPart: .decision
+            ))
         )
     }
 
@@ -368,6 +377,7 @@ public struct MenuBarPopoverView: DecisionSurfaceContent {
     /// Routing these users to a panel instead was the alternative and is the wrong fix twice
     /// over: it overrides a setting the person chose, and the microphone case forbids it outright
     /// — a panel over a call is a panel everybody on the call can see.
+    @ViewBuilder
     private func pendingAccusation(_ accusation: AccusationPresentation) -> some View {
         // **`.summoned`, and it is the only caller that says so** (focus-0nm). The popover is
         // shown by `MenuBarController.togglePopover()` and by nothing else — the person clicked
@@ -375,8 +385,15 @@ public struct MenuBarPopoverView: DecisionSurfaceContent {
         // an ordinary Mac popover has. The nudge panel is the uninvited surface and takes the
         // opaque branch; a popover that went opaque would be a second, unasked-for departure
         // from the platform in a design whose floor is the HIG.
-        AccusationPanelView(presentation: accusation, provenance: .summoned) { action, span in
+        let panel = AccusationPanelView(presentation: accusation, provenance: .summoned) { action, span in
             onAction(.correct(action, snoozeDuration: span))
+        }
+        // When space runs out, the explanation scrolls and the controls stay in reach.
+        // The full popover and a two-nudge popover still draw the complete panel.
+        switch accusationPart {
+        case .context: panel.surfaceLayout.context
+        case .decision: panel.surfaceLayout.decision
+        case nil: panel
         }
     }
 

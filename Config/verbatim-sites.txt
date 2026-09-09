@@ -62,6 +62,8 @@ Packages/FocusUI/Sources/FocusUI/MenuBar/MenuBarPopoverView.swift | presentation
 Packages/FocusUI/Sources/FocusUI/MenuBar/MenuBarPopoverView.swift | NudgeCopy.countdown(snooze.remaining)) | NUMBER what is left of a snooze
 Packages/FocusUI/Sources/FocusUI/Nudge/AccusationPanelView.swift | NudgeCopy.countdown(remaining)) | NUMBER what is left of the snooze the panel is under
 Packages/FocusUI/Sources/FocusUI/Nudge/AccusationPanelView.swift | NudgeCopy.duration(span)) | NUMBER a snooze button's span
+Packages/FocusUI/Sources/FocusUI/Nudge/AccusationPanelView.swift | NudgeCopy.shortDuration(span)) | NUMBER a compact snooze button's span
+Packages/FocusUI/Sources/FocusUI/Nudge/AccusationPanelView.swift | NudgeCopy.duration(span))) | NUMBER the full spoken duration of a compact snooze button
 Packages/FocusUI/Sources/FocusUI/Relevance/CascadePrecedenceView.swift | (rung.rank + 1).formatted(.number)) | NUMBER the rung's place in the cascade, from `rank` itself
 Packages/FocusUI/Sources/FocusUI/Relevance/VerdictInspectorView.swift | verdict.drift.accumulated.formatted( | NUMBER how long the drift clock has been running
 Packages/FocusUI/Sources/FocusUI/Scenes/InterventionSettingsView.swift | "\(used.formatted()) / \(cap.formatted())") | NUMBER today's spend over its cap. The " / " is authored punctuation

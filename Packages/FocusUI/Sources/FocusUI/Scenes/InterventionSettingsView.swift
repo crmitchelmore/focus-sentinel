@@ -265,7 +265,7 @@ public struct InterventionSettingsView: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .buttonStyle(CompanionButtonStyle())
+                .buttonStyle(CompanionButtonStyle(selected: voice == settings.voice))
                 .accessibilityLabel(Text(ShellStrings.resource(Self.voiceKey(voice))))
                 .accessibilityAddTraits(voice == settings.voice ? [.isSelected] : [])
             }
@@ -303,7 +303,7 @@ public struct InterventionSettingsView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .buttonStyle(CompanionButtonStyle())
+            .buttonStyle(CompanionButtonStyle(selected: settings.reducedInterruption))
             .disabled(settings.reducedInterruptionIsForced)
             .accessibilityLabel(Text(ShellStrings.resource(.interventionReducedLabel)))
             .accessibilityAddTraits(settings.reducedInterruption ? [.isSelected] : [])

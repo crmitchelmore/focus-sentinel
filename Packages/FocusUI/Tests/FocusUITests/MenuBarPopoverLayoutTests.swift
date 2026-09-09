@@ -225,7 +225,17 @@ struct MenuBarPopoverLayoutTests {
     func aFullerPopoverIsTaller() throws {
         func height(_ name: String) throws -> CGFloat {
             let cell = try #require(PopoverSpace.space.first { $0.name == name })
-            return Self.layout(of: cell).size.height
+            // Measure growth before the display clamp. The revised controls make both
+            // fuller states reach the real display's ceiling; equal clamped heights are valid.
+            let tallDisplay = DisplayGeometry(
+                displayID: 3, screenIndex: 0, isPrimary: true,
+                frame: ScreenRect(x: 0, y: 0, width: 1920, height: 10_000),
+                visibleFrame: ScreenRect(x: 0, y: 0, width: 1920, height: 10_000),
+                backingScaleFactor: 2
+            )
+            return MenuBarController.popoverLayout(
+                measuring: Self.surface(of: cell), screens: [tallDisplay]
+            ).size.height
         }
         let empty = try height("empty.short.standard.light")
         let accusation = try height("accusation.short.standard.light")

@@ -1048,7 +1048,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Menu bar signal. No answer needed."
+            "value" : "Quiet signal. No answer needed."
           }
         }
       }

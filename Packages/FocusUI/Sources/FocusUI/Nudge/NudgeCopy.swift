@@ -55,6 +55,12 @@ public enum NudgeCopy {
         return clamped.formatted(.units(allowed: [.minutes], width: .wide))
     }
 
+    /// Compact units keep quiet shortcuts readable in the narrow menu-bar popover.
+    /// Their accessibility labels use `duration(_:)` so the full unit is still spoken.
+    public static func shortDuration(_ span: Duration) -> String {
+        max(span, .zero).formatted(.units(allowed: [.minutes], width: .abbreviated))
+    }
+
     /// A countdown, in the fixed `mm:ss` form the menu bar draws (P-133).
     ///
     /// Digits rather than words, because this one **ticks**: P-133 measured the proportional

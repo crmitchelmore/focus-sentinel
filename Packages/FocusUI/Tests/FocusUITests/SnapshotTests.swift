@@ -39,14 +39,10 @@ enum SnapshotComponent: String, CaseIterable, Sendable {
     /// machine that recorded it happened to have.
     case history
     case privacySettings
-    /// **The Privacy pane's second half** (focus-u3w). Two components rather than one, and the
-    /// reason is measured: the pane is photographed unclamped — a bounded one is a `ScrollView`,
-    /// which `ImageRenderer` cannot rasterise at all — and whole it now runs to roughly sixteen
-    /// thousand rows at the largest text size under pseudo-localisation, past where CoreGraphics
-    /// stops producing a picture. An encode succeeded at 984×15 950 and the next render, a
-    /// hundred rows taller, came back with neither bytes nor ink. Two halves are two pictures of
-    /// the same pane, and each of them is a picture.
+    /// Separate observation and reasoning renders keep expanded large-text images below
+    /// CoreGraphics' image-height limit. The shipping pane still draws both together.
     case privacySettingsInsight
+    case privacySettingsReasoning
     case statusRelevant
     case statusUncertain
     case statusUnrelated
@@ -66,7 +62,7 @@ enum SnapshotComponent: String, CaseIterable, Sendable {
         switch self {
         case .statusRelevant, .statusUncertain, .statusUnrelated, .statusPaused, .statusBreak:
             nil
-        case .privacySettings, .privacySettingsInsight:
+        case .privacySettings, .privacySettingsInsight, .privacySettingsReasoning:
             // **The width the pane commits to**, plus the harness's own 16-point padding on each
             // side, so the pane is proposed exactly `settingsWidth` and the picture has no dead
             // band beside it (focus-nu6). A surface that commits a width must be photographed at
@@ -167,6 +163,10 @@ enum SnapshotComponent: String, CaseIterable, Sendable {
         case .privacySettingsInsight:
             return AnyView(
                 PrivacySettingsView(storeURL: Self.storeURL, half: .insight, screens: [])
+            )
+        case .privacySettingsReasoning:
+            return AnyView(
+                PrivacySettingsView(storeURL: Self.storeURL, half: .reasoning, screens: [])
             )
         default:
             preconditionFailure("unhandled snapshot component \(rawValue)")
