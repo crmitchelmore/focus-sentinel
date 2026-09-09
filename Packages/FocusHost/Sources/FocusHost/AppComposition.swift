@@ -493,6 +493,12 @@ public final class AppComposition {
             // second is what lets the loop refuse a press on a rung that is over.
             notifications?.handle(actionIdentifier: identifier, requestIdentifier: request)
         }
+
+        // **The switches, read before anything can be drawn** (focus-exdi.4). Here rather than in
+        // `startNudgeLoop()`, because the capability table is read by the settings window and the
+        // popover, which a person can open before a loop is running — and a table that said
+        // "not asked for" about a grant they gave would be the app forgetting an answer.
+        applyStoredGrantOptIns()
     }
 
     /// Seed the sensitive-application list and read both lists back.
@@ -1258,6 +1264,7 @@ public final class AppComposition {
             logger.error("a grant switch could not be stored: \(error, privacy: .public)")
             return
         }
+        applyStoredGrantOptIns()
         if isEnabled {
             GrantGate.request(grant, optIns: grantOptIns, using: grantRequester)
         }
@@ -1724,10 +1731,17 @@ public final class AppComposition {
     /// `GrantGate`, which refuses unless the person switched that ask on.
     let grantRequester = SystemGrantRequester()
 
-    /// Which grants the person switched on. Read from the store, so a launch with no rows asks
-    /// for nothing — the shipped state, and what PD-1 promised.
-    public var grantOptIns: GrantOptIns {
-        FocusStore.grantOptIns(in: modelContainer.mainContext)
+    /// **Which grants the person switched on**, held rather than re-read.
+    ///
+    /// A stored property, not a computed one: `capabilities` is read by the cockpit, the popover
+    /// and the settings window, and a SwiftData fetch on every read is a fetch on every frame
+    /// those surfaces draw. Loaded at launch and rewritten by the switch, which are the only two
+    /// moments it can change — the same shape `applyStoredPolicyTunings()` uses.
+    public private(set) var grantOptIns: GrantOptIns = .none
+
+    /// Read the switches from the store. At launch, and after one is operated.
+    func applyStoredGrantOptIns() {
+        grantOptIns = FocusStore.grantOptIns(in: modelContainer.mainContext)
     }
 
     /// What this Mac lets the app do, as the probe read it — with the two opt-in capabilities
