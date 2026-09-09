@@ -294,9 +294,8 @@ if (( seed_rc != 0 )); then
     exit 1
 fi
 
-# No sleep between the launches, deliberately. The elapsed figure the restoring launch reports
-# is asserted to be within two seconds of 5 400, and every second spent waiting here is a second
-# of that budget spent on nothing.
+# No deliberate delay between launches. The elapsed figure must include the measured
+# wall-clock time spent exiting the seed process and starting the restoring one.
 print "== $BINARY --focus-session-restore $SESSION_STORE"
 run_self_check "$RESTORE_JSON" --focus-session-restore "$SESSION_STORE"
 restore_rc=$?
@@ -3204,10 +3203,18 @@ check(
 )
 
 elapsed = restore.get("elapsedWallSeconds")
+wall_delta = restore.get("wallSeconds", 0) - seed.get("wallSeconds", 0)
 check(
-    isinstance(elapsed, (int, float)) and abs(elapsed - 5400) <= 2.0,
-    "the restored session reports ninety minutes elapsed on the wall clock",
-    elapsed,
+    seed.get("backdatedSeconds") == 5400,
+    "the fixture was backdated by exactly ninety minutes",
+    seed.get("backdatedSeconds"),
+)
+check(
+    isinstance(elapsed, (int, float))
+    and math.isfinite(wall_delta) and wall_delta > 0
+    and abs(elapsed - (5400 + wall_delta)) <= 2.0,
+    "the restored session includes ninety minutes plus the measured time between launches",
+    (elapsed, wall_delta),
 )
 check(
     restore.get("phase") == "paused",
@@ -3247,7 +3254,6 @@ check(
 # rather than a per-process zero — which `MonotonicClock.elapsed` and `ContinuousClock.Instant`
 # both are, and either of which would sail through the whole unit lane and fail right here.
 uptime_delta = restore.get("uptimeSeconds", 0) - seed.get("uptimeSeconds", 0)
-wall_delta = restore.get("wallSeconds", 0) - seed.get("wallSeconds", 0)
 check(
     uptime_delta > 0,
     "the restoring launch reports a greater uptime than the seeding one",
