@@ -1,6 +1,26 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "nudge.direct.query.panel.heading" : {
+      "comment" : "Companion heading. Approved by Chris on 9 September 2026 (focus-gl3x, D-11).",
+      "extractionState" : "manual",
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "A small question." } } }
+    },
+    "nudge.neutral.query.panel.heading" : {
+      "comment" : "Companion heading. Approved by Chris on 9 September 2026 (focus-gl3x, D-11).",
+      "extractionState" : "manual",
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "A small question." } } }
+    },
+    "nudge.silentVisual.query.panel.heading" : {
+      "comment" : "Companion heading. Approved by Chris on 9 September 2026 (focus-gl3x, D-11).",
+      "extractionState" : "manual",
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "A small question." } } }
+    },
+    "nudge.warm.query.panel.heading" : {
+      "comment" : "Companion heading. Approved by Chris on 9 September 2026 (focus-gl3x, D-11).",
+      "extractionState" : "manual",
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "A small question." } } }
+    },
     "cascade.precedence.footnote" : {
       "comment" : "Footnote under the precedence ladder.",
       "extractionState" : "manual",

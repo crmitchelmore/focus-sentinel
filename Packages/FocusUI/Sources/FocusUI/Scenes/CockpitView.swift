@@ -171,6 +171,7 @@ public struct CockpitView: View {
         // disturb.
         let _ = didRender?()
         VStack(alignment: .leading, spacing: sectionSpacing) {
+            CompanionHeader { ShellText(.cockpitWindowTitle, role: .title2) }
             // **One derivation, two consumers** (focus-7ow). The banner is on the screen exactly
             // when this is not `nil`, and that is exactly what the receipt reports — so a
             // mutation that shows the start-of-day ritual when it should not, or never shows it

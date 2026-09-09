@@ -280,6 +280,9 @@ public struct AccusationPanelView: DecisionSurfaceContent {
 
     @ViewBuilder
     private var context: some View {
+        if provenance == .uninvited && textScale == .standard {
+            CompanionHeader { ShellText(.cockpitWindowTitle, role: .title2) }
+        }
         header
         if let subject = presentation.subject {
             NudgeText(

@@ -96,6 +96,7 @@ struct NudgeActionTarget: ViewModifier {
 /// a space declared at one level and read at another is a bug that reports plausible-looking
 /// frames measured from the wrong origin.
 struct NudgePanelContent: View {
+    @Environment(\.appearanceTraits) private var traits
     /// The name every action frame is measured against.
     static let coordinateSpace = "focus.nudge.panel"
 
@@ -145,6 +146,7 @@ struct NudgePanelContent: View {
         // `greatestFiniteMagnitude`, which is the fitting-size defect wearing a new hat. The
         // panel's own fill frame is applied outside, where it governs the live layout only.
         .frame(maxWidth: .infinity, alignment: .topLeading)
+        .background(DesignTokens.Palette.role(.bench, for: traits))
         .coordinateSpace(name: Self.coordinateSpace)
         .onPreferenceChange(NudgeActionFramesKey.self) { frames in
             // SwiftUI delivers preference changes on the main actor; the assumption is stated

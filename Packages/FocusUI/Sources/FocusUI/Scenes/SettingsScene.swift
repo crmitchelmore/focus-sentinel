@@ -492,7 +492,10 @@ public struct ShellSettingsView: View {
         // fail the same assertion as one that never asked.
         let _ = didRender?()
         TabView(selection: $selectedTab) {
-            GeneralSettingsView(
+            VStack(spacing: 0) {
+                CompanionHeader { ShellText(.cockpitWindowTitle, role: .title2) }
+                    .padding(.horizontal, 16)
+                GeneralSettingsView(
                 preference: $preference,
                 appVersion: appVersion,
                 launchAtLogin: launchAtLogin,
@@ -500,7 +503,8 @@ public struct ShellSettingsView: View {
                 ritualEnabled: ritualEnabled,
                 quickCaptureShortcut: quickCaptureShortcut,
                 onCaptureAction: onCaptureAction
-            )
+                )
+            }
                 .tabItem { tabLabel(.general) }
                 .tag(SettingsTab.general)
 

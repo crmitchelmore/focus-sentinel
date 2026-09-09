@@ -39,9 +39,9 @@ struct NudgeVoiceTests {
             Set(NudgeVoice.allCases) == [.neutral, .warm, .direct, .silentVisual],
             "`playful` is retired by the ruling on focus-0nm; a fifth deck is a new ruling"
         )
-        #expect(NudgeCopyKey.allCases.count == 13)
-        #expect(NudgeVoice.matrix.count == 52)
-        #expect(Set(NudgeVoice.matrix).count == 52, "two decks composed the same key")
+        #expect(NudgeCopyKey.allCases.count == 14)
+        #expect(NudgeVoice.matrix.count == 56)
+        #expect(Set(NudgeVoice.matrix).count == 56, "two decks composed the same key")
         #expect(NudgeVoice.standard == .neutral, "the Court's adopted default deck moved")
     }
 
@@ -194,7 +194,7 @@ struct NudgeVoiceTests {
         ]
 
         let queryLines = NudgeCopyKey.allCases.filter(\.isQueryLine)
-        #expect(queryLines.count == 5, "the question grew or lost a line")
+        #expect(queryLines.count == 6, "the question grew or lost a line")
 
         for voice in NudgeVoice.allCases {
             for line in queryLines {

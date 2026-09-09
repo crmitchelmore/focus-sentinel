@@ -162,6 +162,9 @@ public struct MenuBarPopoverView: DecisionSurfaceContent {
     /// The popover's column, over whichever sections it is being asked to draw.
     private func column(_ sections: [Section]) -> some View {
         VStack(alignment: .leading, spacing: DesignTokens.spacing(spacing, scale: textScale)) {
+            if sections.contains(.priority) {
+                CompanionHeader { ShellText(.cockpitWindowTitle, role: .title2) }
+            }
             ForEach(sections, id: \.self) { section in
                 view(of: section)
             }
