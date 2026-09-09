@@ -186,6 +186,8 @@ public struct MenuBarPopoverView: DecisionSurfaceContent {
             priority
         case .status:
             statusRow
+                .padding(12)
+                .background(DesignTokens.Palette.role(.inlay, for: traits), in: RoundedRectangle(cornerRadius: 14))
         case .belief:
             belief
         case .accusation:
@@ -210,10 +212,12 @@ public struct MenuBarPopoverView: DecisionSurfaceContent {
             sensingSwitch
         case .openCockpit:
             Button { onAction(.openCockpit) } label: {
-                ShellText(.menuBarOpenCockpit, role: .callout)
+                Label {
+                    ShellText(.menuBarOpenCockpit, role: .callout)
+                } icon: { Image(systemName: "arrow.up.forward.app") }
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(CompanionButtonStyle())
         }
     }
 
@@ -265,7 +269,7 @@ public struct MenuBarPopoverView: DecisionSurfaceContent {
             // person watching both does not see two different numbers of the same fact
             // drawn two different widths.
             Text(verbatim: presentation.timerText)
-                .font(DesignTokens.font(.body, scale: textScale).monospacedDigit())
+                .font(DesignTokens.font(.title2, scale: textScale).monospacedDigit())
                 .foregroundStyle(DesignTokens.Palette.primaryText)
         }
     }
@@ -450,7 +454,7 @@ public struct MenuBarPopoverView: DecisionSurfaceContent {
             ShellText(key, role: .callout)
                 .fixedSize(horizontal: true, vertical: false)
         }
-        .buttonStyle(.bordered)
+        .buttonStyle(CompanionButtonStyle())
     }
 
     /// F-119's one global switch, reachable without opening a window.
@@ -488,7 +492,7 @@ public struct MenuBarPopoverView: DecisionSurfaceContent {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .buttonStyle(.bordered)
+        .buttonStyle(CompanionButtonStyle())
         .accessibilityLabel(Text(ShellStrings.resource(.sensingPauseLabel)))
         .accessibilityAddTraits(isWatching ? [.isSelected] : [])
     }

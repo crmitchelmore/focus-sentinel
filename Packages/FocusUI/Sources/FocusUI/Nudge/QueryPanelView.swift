@@ -291,12 +291,12 @@ public struct QueryPanelView: DecisionSurfaceContent {
         // counting a question as asked that nobody could answer.
         if answer == presentation.primaryAnswer {
             plainAnswerButton(answer, wraps: wraps)
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(CompanionButtonStyle(prominent: true))
                 .tint(DesignTokens.Palette.role(.spruce, for: traits))
                 .nudgeActionTarget(answer.rawValue)
         } else {
             plainAnswerButton(answer, wraps: wraps)
-                .buttonStyle(.bordered)
+                .buttonStyle(CompanionButtonStyle())
                 .nudgeActionTarget(answer.rawValue)
         }
     }

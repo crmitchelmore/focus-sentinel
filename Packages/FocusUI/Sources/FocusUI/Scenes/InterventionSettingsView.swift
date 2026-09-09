@@ -176,6 +176,7 @@ public struct InterventionSettingsView: View {
 
     private var content: some View {
         VStack(alignment: .leading, spacing: DesignTokens.spacing(spacing, scale: textScale)) {
+            CompanionHeader { ShellText(.interventionTitle, role: .title2) }
             // **All five fields of `InterventionSettings`, each reported beside the section that
             // draws it** (focus-7ow).
             //
@@ -190,9 +191,11 @@ public struct InterventionSettingsView: View {
             // the person to add an app the application offered no way to add (focus-1qm) — and
             // came back at focus-u3w with the add affordance that was the reason it went.
             voiceSection
+                .companionSurface()
                 .shellRendered(.interventionVoice, settings.voice.rawValue)
             Divider()
             reducedInterruptionSection
+                .companionSurface()
                 .shellRendered(
                     .reducedInterruption, settings.reducedInterruption ? "on" : "off"
                 )
@@ -202,9 +205,11 @@ public struct InterventionSettingsView: View {
                 )
             Divider()
             quietHoursSection
+                .companionSurface()
                 .shellRendered(.quietHours, ShellValueDigest.describe(settings.quietHours))
             Divider()
             notchSection
+                .companionSurface()
                 .shellRendered(.notchCompanion, Self.notchReceipt(settings.notchRefusal))
             Divider()
             // **The section that was deleted, with the half that was missing** (focus-62o,
@@ -233,6 +238,8 @@ public struct InterventionSettingsView: View {
             thresholdsSection
         }
         .padding(DesignTokens.spacing(spacing, scale: textScale))
+        .background(DesignTokens.Palette.role(.inlay, for: traits))
+        .buttonStyle(CompanionButtonStyle())
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
@@ -258,7 +265,7 @@ public struct InterventionSettingsView: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(CompanionButtonStyle())
                 .accessibilityLabel(Text(ShellStrings.resource(Self.voiceKey(voice))))
                 .accessibilityAddTraits(voice == settings.voice ? [.isSelected] : [])
             }
@@ -296,7 +303,7 @@ public struct InterventionSettingsView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(CompanionButtonStyle())
             .disabled(settings.reducedInterruptionIsForced)
             .accessibilityLabel(Text(ShellStrings.resource(.interventionReducedLabel)))
             .accessibilityAddTraits(settings.reducedInterruption ? [.isSelected] : [])
@@ -331,7 +338,7 @@ public struct InterventionSettingsView: View {
                     )
                     .fixedSize(horizontal: true, vertical: false)
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(CompanionButtonStyle())
             }
 
             if let window = settings.quietHours {
@@ -395,7 +402,7 @@ public struct InterventionSettingsView: View {
             ShellText(key, role: .footnote)
                 .fixedSize(horizontal: true, vertical: false)
         }
-        .buttonStyle(.bordered)
+        .buttonStyle(CompanionButtonStyle())
     }
 
     /// The window a person gets when they first switch quiet hours on.

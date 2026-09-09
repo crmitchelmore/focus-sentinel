@@ -207,12 +207,15 @@ public struct PrivacySettingsView: View {
 
     var content: some View {
         VStack(alignment: .leading, spacing: spacing) {
-            if half != .insight { ownershipContent }
+            CompanionHeader { ShellText(.settingsPrivacyTitle, role: .title2) }
+            if half != .insight { ownershipContent.companionSurface() }
             if half == nil { Divider() }
-            if half != .ownership { insightContent }
+            if half != .ownership { insightContent.companionSurface() }
             Spacer(minLength: 0)
         }
         .padding(spacing * 2)
+        .background(DesignTokens.Palette.role(.inlay, for: traits))
+        .buttonStyle(CompanionButtonStyle())
         .frame(maxWidth: .infinity, alignment: .leading)
         // **What this pane drew, reported by this pane** (focus-7ow).
         //

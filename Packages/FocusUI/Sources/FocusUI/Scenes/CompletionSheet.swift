@@ -43,8 +43,7 @@ public struct CompletionSheet: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: spacing) {
-            ShellText(.priorityCompleteHeading, role: .title3)
-                .fontWeight(.semibold)
+            CompanionSectionHeading(key: .priorityCompleteHeading, symbol: "checkmark.seal")
                 .lineLimit(nil)
                 .fixedSize(horizontal: false, vertical: true)
 
@@ -87,6 +86,7 @@ public struct CompletionSheet: View {
                 } label: {
                     ShellText(.priorityCompleteActionConfirm)
                 }
+                .buttonStyle(CompanionButtonStyle(prominent: true))
                 .keyboardShortcut(.defaultAction)
                 .focused($focus, equals: .completionConfirm)
                 // The promise, made structural. The button consults one function, that
@@ -97,6 +97,7 @@ public struct CompletionSheet: View {
             }
         }
         .padding(spacing * 2)
+        .buttonStyle(CompanionButtonStyle())
         .boundedSheet(width: ShellSurfaceBounds.completionSheetWidth, screens: screens)
         .background(DesignTokens.Palette.windowBackground(for: traits))
         .defaultFocus($focus, .completionShipped)
@@ -117,6 +118,9 @@ public struct CompletionSheet: View {
             }
             .labelsHidden()
             .font(DesignTokens.font(.body, scale: textScale))
+            .textFieldStyle(.plain)
+            .padding(10)
+            .background(DesignTokens.Palette.role(.inlay, for: traits), in: RoundedRectangle(cornerRadius: 10))
             .focused($focus, equals: identity)
             .accessibilityLabel(Text(ShellStrings.resource(label)))
         }

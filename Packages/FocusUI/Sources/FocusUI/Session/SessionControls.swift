@@ -44,6 +44,7 @@ public struct SessionControls: View {
     public let actions: (any SessionActing)?
 
     @Environment(\.appearanceTraits) private var traits
+    @Environment(\.shellTextScale) private var textScale
     @FocusState.Binding private var focus: FocusField?
     @ScaledMetric(relativeTo: .body) private var spacing: CGFloat = 8
 
@@ -67,7 +68,7 @@ public struct SessionControls: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: spacing) {
-            ShellText(.sessionHeading, role: .sectionHeading)
+            CompanionSectionHeading(key: .sessionHeading, symbol: "waveform.path")
                 .foregroundStyle(DesignTokens.Palette.role(.spruce, for: traits))
 
             if let session {
@@ -121,16 +122,15 @@ public struct SessionControls: View {
                 SessionPhaseBadge(phase: session.phase)
 
                 if let elapsedSeconds {
-                    ShellText(
-                        .sessionElapsed,
-                        role: .callout,
-                        argument: Self.format(elapsedSeconds)
-                    )
-                    .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+                    Text(verbatim: Self.format(elapsedSeconds))
+                        .font(DesignTokens.font(.largeTitle, scale: textScale).monospacedDigit())
+                        .foregroundStyle(DesignTokens.Palette.role(.spruce, for: traits))
+                        .accessibilityLabel(Text(ShellStrings.string(.sessionElapsed, argument: Self.format(elapsedSeconds))))
                 }
 
                 Spacer(minLength: 0)
             }
+            .padding(.vertical, spacing)
 
             causes(session)
             notes(session)
@@ -305,7 +305,7 @@ public struct SessionControls: View {
         // verb as the same object as the four beside it in a slightly different colour, which is
         // the flattening `D02` shows. `.borderedProminent` is the platform's own way of saying
         // "this one", and the fill is the person's accent rather than a hue the app chose.
-        .buttonStyle(.borderedProminent)
+        .buttonStyle(CompanionButtonStyle(prominent: true))
         .tint(DesignTokens.Palette.accent(for: traits))
         .focused($focus, equals: .cockpitSessionPrimary)
         .disabled(actions == nil || !isEnabled)
@@ -318,7 +318,7 @@ public struct SessionControls: View {
         Button(action: perform) {
             ShellText(key, role: .callout)
         }
-        .buttonStyle(.bordered)
+        .buttonStyle(CompanionButtonStyle())
         .disabled(actions == nil)
     }
 
@@ -335,7 +335,7 @@ public struct SessionControls: View {
         Button(action: perform) {
             ShellText(key, role: .callout)
         }
-        .buttonStyle(.link)
+        .buttonStyle(CompanionButtonStyle())
         .tint(DesignTokens.Palette.accent(for: traits))
         .disabled(actions == nil)
     }

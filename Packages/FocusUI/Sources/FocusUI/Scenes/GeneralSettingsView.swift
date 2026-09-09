@@ -71,35 +71,31 @@ public struct GeneralSettingsView: View {
     nonisolated public static var options: [AppearancePreference] { AppearancePreference.allCases }
 
     public var body: some View {
-        Form {
-            Picker(selection: $preference) {
-                ForEach(Self.options, id: \.self) { option in
-                    ShellText(option.settingsTitleKey)
-                        .tag(option)
+        VStack(alignment: .leading, spacing: spacing) {
+            VStack(alignment: .leading, spacing: spacing) {
+                CompanionSectionHeading(key: .settingsAppearanceLabel, symbol: "paintpalette")
+                ViewThatFits(in: .horizontal) {
+                    HStack { appearanceButtons }
+                    VStack(alignment: .leading) { appearanceButtons }
                 }
-            } label: {
-                ShellText(.settingsAppearanceLabel)
+                ShellText(.settingsAppearanceNote, role: .footnote)
+                    .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            .pickerStyle(.inline)
-            .focused($focus, equals: .generalAppearancePicker)
+            .companionSurface()
 
-            ShellText(.settingsAppearanceNote, role: .footnote)
-                .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
-                .lineLimit(nil)
-                .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: spacing) {
+                launchAtLoginRow
+                Divider()
+                ritualRow
+            }
+            .companionSurface()
 
-            launchAtLoginRow
+            VStack(alignment: .leading, spacing: spacing) {
+                quickCaptureRow
+            }
+            .companionSurface()
 
-            // **The two facts the launch read and nothing could write** (focus-d3g).
-            ritualRow
-            quickCaptureRow
-
-            // **The build a person can quote in a defect report** (focus-odz.3).
-            //
-            // `LabeledContent` rather than two `Text`s in an `HStack`: it is the Settings idiom,
-            // it aligns with the picker above it, and it gives VoiceOver a label for the number.
-            // The number itself is `verbatim` because it is data, not prose — the same reason the
-            // Privacy pane's store path is (registered in `Config/verbatim-sites.txt`).
             LabeledContent {
                 Text(verbatim: appVersion)
                     .font(DesignTokens.font(.footnote, scale: textScale))
@@ -109,12 +105,9 @@ public struct GeneralSettingsView: View {
                     .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
             }
         }
-        // The *columns* form style — SwiftUI's default on macOS — rather than `.grouped`.
-        // Measured: a grouped form is List-backed and rasterises to a solid rectangle under
-        // `ImageRenderer`, so a grouped pane could never be snapshot-verified at all. The
-        // columns style is equally standard Settings chrome and is drawn by SwiftUI itself.
         .padding(spacing)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .buttonStyle(CompanionButtonStyle())
         .defaultFocus($focus, .generalAppearancePicker)
         // What this pane drew, reported by this pane rather than by the window that built it
         // (focus-7ow). The picker's selection *is* the binding, so this is the value on screen.
@@ -138,14 +131,56 @@ public struct GeneralSettingsView: View {
     /// until now nothing in the application could set it — so the banner could not be turned off
     /// by anybody who did not want it. A different fact from `lastRitualLocalDay`, which records
     /// that today's ritual has been answered: one is a preference, the other is a diary entry.
+    private var appearanceButtons: some View {
+        ForEach(Self.options, id: \.self) { option in
+            let button = Button { preference = option } label: {
+                Label {
+                    ShellText(option.settingsTitleKey, role: .callout)
+                } icon: {
+                    Image(systemName: option == .matchSystem ? "circle.lefthalf.filled" : (option == .light ? "sun.max" : "moon"))
+                }
+            }
+            .buttonStyle(CompanionButtonStyle(selected: preference == option))
+            .accessibilityAddTraits(preference == option ? .isSelected : [])
+            if option == Self.options.first {
+                button.focused($focus, equals: .generalAppearancePicker)
+            } else { button }
+        }
+    }
+
+    private var shortcutButtons: some View {
+        ForEach(HotKeySpec.quickCaptureChoices, id: \.self) { option in
+            let button = Button { onCaptureAction(.setQuickCaptureShortcut(option)) } label: {
+                Text(verbatim: option.glyphs)
+                    .monospaced()
+            }
+            .buttonStyle(CompanionButtonStyle(selected: quickCaptureShortcut == option))
+            .accessibilityAddTraits(quickCaptureShortcut == option ? .isSelected : [])
+            if option == HotKeySpec.quickCaptureChoices.first {
+                button.focused($focus, equals: .generalQuickCaptureShortcut)
+            } else { button }
+        }
+    }
+
+    private func settingToggleLabel(_ key: ShellStringKey, isOn: Bool, symbol: String) -> some View {
+        HStack(spacing: spacing) {
+            Image(systemName: symbol).accessibilityHidden(true)
+            ShellText(key, role: .callout)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 8)
+            Image(systemName: isOn ? "checkmark.circle.fill" : "circle")
+                .accessibilityHidden(true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
     @ViewBuilder
     private var ritualRow: some View {
-        Toggle(isOn: Binding(
-            get: { ritualEnabled },
-            set: { onCaptureAction(.setRitualEnabled($0)) }
-        )) {
-            ShellText(.settingsRitualEnabled)
+        Button { onCaptureAction(.setRitualEnabled(!ritualEnabled)) } label: {
+            settingToggleLabel(.settingsRitualEnabled, isOn: ritualEnabled, symbol: "sun.max")
         }
+        .buttonStyle(CompanionButtonStyle(selected: ritualEnabled))
+        .accessibilityAddTraits(ritualEnabled ? .isSelected : [])
         .focused($focus, equals: .generalRitualEnabled)
 
         ShellText(.settingsRitualEnabledNote, role: .footnote)
@@ -165,21 +200,12 @@ public struct GeneralSettingsView: View {
     /// so the picker cannot offer a combination the platform would take and not bind.
     @ViewBuilder
     private var quickCaptureRow: some View {
-        Picker(selection: Binding(
-            get: { quickCaptureShortcut },
-            set: { onCaptureAction(.setQuickCaptureShortcut($0)) }
-        )) {
-            ForEach(HotKeySpec.quickCaptureChoices, id: \.self) { option in
-                // The glyphs are the shortcut itself, not prose: `verbatim` because a catalog
-                // must never see them, and monospaced so ⌃⌥⌘ line up down the menu.
-                Text(verbatim: option.glyphs)
-                    .monospaced()
-                    .tag(option)
-            }
-        } label: {
-            ShellText(.settingsQuickCaptureShortcut)
+        CompanionSectionHeading(key: .settingsQuickCaptureShortcut, symbol: "keyboard")
+        ViewThatFits(in: .horizontal) {
+            HStack { shortcutButtons }
+            VStack(alignment: .leading) { shortcutButtons }
         }
-        .focused($focus, equals: .generalQuickCaptureShortcut)
+
 
         ShellText(.settingsQuickCaptureShortcutNote, role: .footnote)
             .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
@@ -202,12 +228,11 @@ public struct GeneralSettingsView: View {
     ///   grant itself: it opens the one place the person can.
     @ViewBuilder
     private var launchAtLoginRow: some View {
-        Toggle(isOn: Binding(
-            get: { launchAtLogin.isOn },
-            set: { onLaunchAtLogin(.setEnabled($0)) }
-        )) {
-            ShellText(.settingsLaunchAtLogin)
+        Button { onLaunchAtLogin(.setEnabled(!launchAtLogin.isOn)) } label: {
+            settingToggleLabel(.settingsLaunchAtLogin, isOn: launchAtLogin.isOn, symbol: "power")
         }
+        .buttonStyle(CompanionButtonStyle(selected: launchAtLogin.isOn))
+        .accessibilityAddTraits(launchAtLogin.isOn ? .isSelected : [])
         .disabled(!launchAtLogin.isAdjustable)
         .focused($focus, equals: .generalLaunchAtLogin)
 

@@ -88,3 +88,5 @@ Packages/FocusUI/Sources/FocusUI/Scenes/GeneralSettingsView.swift | option.glyph
 Packages/FocusUI/Sources/FocusUI/Scenes/PresentationExclusionSection.swift | entry.displayName) | NAME — one excluded application, in the row that removes it
 Packages/FocusUI/Sources/FocusUI/Scenes/PresentationExclusionSection.swift | entry.displayName)) | NAME — the same name, as that row's accessibility label
 Packages/FocusUI/Sources/FocusUI/Scenes/PresentationExclusionSection.swift | candidate.displayName) | NAME — one running application the add row offers
+
+Packages/FocusUI/Sources/FocusUI/Session/SessionControls.swift | Self.format(elapsedSeconds)) | NUMBER elapsed session duration formatted with locale-aware units; the full sentence remains the accessibility label

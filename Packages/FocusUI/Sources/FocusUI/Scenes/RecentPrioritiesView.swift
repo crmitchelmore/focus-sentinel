@@ -33,11 +33,13 @@ public struct RecentPrioritiesView: View {
         Group {
             if !rows.isEmpty {
                 VStack(alignment: .leading, spacing: spacing) {
-                    ShellText(.priorityRecentHeading, role: .sectionHeading)
+                    CompanionSectionHeading(key: .priorityRecentHeading, symbol: "clock.arrow.circlepath")
                         .foregroundStyle(DesignTokens.Palette.role(.spruce, for: traits))
 
                     ForEach(rows) { row in
                         entry(row)
+                            .padding(.vertical, spacing)
+                        if row.id != rows.last?.id { Divider() }
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -47,6 +49,9 @@ public struct RecentPrioritiesView: View {
 
     private func entry(_ row: RecentPriority) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: spacing) {
+            Image(systemName: row.isActive ? "scope" : (row.completedAt != nil ? "checkmark.circle" : "clock"))
+                .foregroundStyle(DesignTokens.Palette.role(.spruce, for: traits))
+                .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: spacing / 4) {
                 // The user's own sentence, verbatim and free to wrap. A previous commitment is
                 // no more abbreviable than the current one.

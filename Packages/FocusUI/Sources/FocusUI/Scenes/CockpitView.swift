@@ -61,6 +61,7 @@ public struct CockpitView: View {
     /// The definition of done, while it is being edited. Committed on Return and on losing
     /// focus; re-seeded whenever the priority underneath it changes.
     @State private var doneWhenDraft: String = ""
+    @State private var contentWidth: CGFloat = 0
 
     /// Whether the capture field is open while a priority already exists — the "change my
     /// mind" path. With no priority the field is always open, because it is the only thing
@@ -189,6 +190,7 @@ public struct CockpitView: View {
                     focus: $focus
                 )
             }
+            VStack(alignment: .leading, spacing: rowSpacing) {
             header
                 .shellRendered(.ritualBanner, ritualDismissal == nil ? "hidden" : "shown")
                 // **The sections that only exist while there is a commitment still report**
@@ -212,26 +214,30 @@ public struct CockpitView: View {
                 primaryActions(priority)
             }
 
+            }
+            .companionSurface(accent: state.priority != nil)
+
             if showsCapture {
                 capture
             }
 
             if let priority = state.priority {
-                // **Two wells, not five boxes** (focus-6uya). The direction's warning was that a
-                // box per section makes the window a form, and one hairline under the header was
-                // the answer. The owner read the result as a column with no organisation, so the
-                // machinery is grouped by what it answers — *how is the time being spent* and
-                // *what belongs* — and each group sits on the quiet Inlay ground the ritual strip
-                // already uses. The commitment stays on the window's own ground, which is what
-                // keeps it the figure and the wells the furniture.
-                well {
-                    timeboxSection(priority)
-                    sessionSection
+                let columns = contentWidth >= 800 && textScale == .standard
+                    ? AnyLayout(HStackLayout(alignment: .top, spacing: sectionSpacing))
+                    : AnyLayout(VStackLayout(alignment: .leading, spacing: sectionSpacing))
+                columns {
+                    well {
+                        timeboxSection(priority)
+                        Divider()
+                        sessionSection
+                    }
+                    well {
+                        contextSection(priority)
+                        Divider()
+                        rulesSection(priority)
+                    }
                 }
-                well {
-                    contextSection(priority)
-                    rulesSection(priority)
-                }
+
             }
 
             RecentPrioritiesView(rows: state.recent, activate: wiring.activate)
@@ -252,7 +258,9 @@ public struct CockpitView: View {
         }
         .padding(sectionSpacing)
         .frame(minWidth: 420, minHeight: 260, alignment: .topLeading)
-        .background(DesignTokens.Palette.windowBackground(for: traits))
+        .background(DesignTokens.Palette.role(.inlay, for: traits))
+        .buttonStyle(CompanionButtonStyle())
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { contentWidth = $0 }
         .background {
             // Empty history deliberately draws no section, so its EmptyView cannot
             // publish preferences. Record that absence without adding a layout child;
@@ -610,7 +618,7 @@ public struct CockpitView: View {
                 // with no host draws no fields. Nothing at all when there is no value, heading
                 // included (focus-0ai).
                 if let doneWhen = CockpitWiring.doneWhenToDraw(priority.doneWhen) {
-                    ShellText(.priorityDoneWhenLabel, role: .sectionHeading)
+                    CompanionSectionHeading(key: .priorityDoneWhenLabel, symbol: "checkmark.seal")
                         .foregroundStyle(DesignTokens.Palette.role(.spruce, for: traits))
 
                     Text(verbatim: doneWhen)
@@ -619,7 +627,7 @@ public struct CockpitView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
             } else {
-                ShellText(.priorityDoneWhenLabel, role: .sectionHeading)
+                CompanionSectionHeading(key: .priorityDoneWhenLabel, symbol: "checkmark.seal")
                     .foregroundStyle(DesignTokens.Palette.role(.spruce, for: traits))
 
                 TextField(
@@ -1005,47 +1013,16 @@ public struct CockpitView: View {
         }
     }
 
-    /// **A well: one zone of the column on the quiet inset ground** (focus-6uya).
-    ///
-    /// Inlay, never a material and never a shadow — the same rule `RitualBanner` follows, for
-    /// the same reason: the cockpit is summoned, and a raised card inside it would compete with
-    /// the hero for the eye. The border appears only under Increase Contrast, where a fill two
-    /// steps from the window ground is not a boundary a person can rely on.
+    /// Working groups share the same furniture as settings and the popover.
     private func well<Content: View>(
         spacing: CGFloat? = nil,
         washed: Bool = true,
         @ViewBuilder _ content: () -> Content
     ) -> some View {
-        let emphasis = DesignTokens.emphasis(for: traits)
-        let shape = RoundedRectangle(cornerRadius: wellRadius, style: .continuous)
-        return VStack(alignment: .leading, spacing: spacing ?? sectionSpacing) {
+        VStack(alignment: .leading, spacing: spacing ?? sectionSpacing) {
             content()
         }
-        .padding(wellInset)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            shape.fill(DesignTokens.Palette.role(.inlay, for: traits))
-                .overlay {
-                    // The working wells carry the app's own hue; the instrument strip does
-                    // not. See `DesignTokens.wellWashOpacity` for why the cockpit may.
-                    if washed {
-                        shape.fill(
-                            DesignTokens.Palette.role(.spruce, for: traits)
-                                .opacity(DesignTokens.wellWashOpacity)
-                        )
-                    }
-                }
-        )
-        .overlay {
-            if emphasis.promotesSecondaryText {
-                RoundedRectangle(cornerRadius: wellRadius, style: .continuous)
-                    .strokeBorder(
-                        DesignTokens.Palette.role(.mist, for: traits)
-                            .opacity(emphasis.outlineOpacity),
-                        lineWidth: emphasis.borderWidth
-                    )
-            }
-        }
+        .companionSurface()
     }
 
     /// One supporting line: a glyph, then text that is free to wrap as far as it needs to.

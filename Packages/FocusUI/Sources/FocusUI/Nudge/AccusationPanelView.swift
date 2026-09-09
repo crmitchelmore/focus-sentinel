@@ -512,9 +512,9 @@ public struct AccusationPanelView: DecisionSurfaceContent {
             // every Return no focused field claimed — so the moment a person clicked this panel
             // and made it key, a bare Return would perform "Back to …". The panel exists to take
             // nothing; emphasis is a colour, not a key equivalent.
-            plainActionButton(action).buttonStyle(.borderedProminent)
+            plainActionButton(action).buttonStyle(CompanionButtonStyle(prominent: true))
         } else {
-            plainActionButton(action).buttonStyle(.bordered)
+            plainActionButton(action).buttonStyle(CompanionButtonStyle())
         }
     }
 
@@ -585,7 +585,7 @@ public struct AccusationPanelView: DecisionSurfaceContent {
             ShellText(.nudgeSnoozeCustom, role: .callout)
                 .fixedSize(horizontal: true, vertical: false)
         }
-        .buttonStyle(.bordered)
+        .buttonStyle(CompanionButtonStyle())
         .accessibilityIdentifier("nudge-snooze-custom")
     }
 
@@ -614,7 +614,7 @@ public struct AccusationPanelView: DecisionSurfaceContent {
                         Text(verbatim: NudgeCopy.duration(span))
                     }
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(CompanionButtonStyle(prominent: true))
                 .disabled(customSnoozeDuration == nil)
             }
         }
@@ -641,7 +641,7 @@ public struct AccusationPanelView: DecisionSurfaceContent {
                 .lineLimit(wraps ? nil : 1)
                 .fixedSize(horizontal: !wraps, vertical: wraps)
         }
-        .buttonStyle(.bordered)
+        .buttonStyle(CompanionButtonStyle())
     }
 
     @ViewBuilder

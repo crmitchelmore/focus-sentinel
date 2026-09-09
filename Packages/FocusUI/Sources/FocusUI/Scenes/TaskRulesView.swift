@@ -47,7 +47,7 @@ public struct TaskRulesView: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: spacing) {
-            ShellText(.priorityRulesHeading, role: .sectionHeading)
+            CompanionSectionHeading(key: .priorityRulesHeading, symbol: "line.3.horizontal.decrease")
                 .foregroundStyle(DesignTokens.Palette.role(.spruce, for: traits))
 
             if rules.isEmpty {

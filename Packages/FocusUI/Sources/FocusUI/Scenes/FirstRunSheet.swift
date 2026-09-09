@@ -65,18 +65,11 @@ public struct FirstRunSheet: View {
 
     private var content: some View {
         VStack(alignment: .leading, spacing: spacing) {
-            Label {
-                ShellText(.firstRunTitle, role: .title3)
-                    .fontWeight(.semibold)
-                    .lineLimit(nil)
-                    .fixedSize(horizontal: false, vertical: true)
-            } icon: {
-                Image(systemName: "eye")
-            }
+            CompanionHeader { ShellText(.firstRunTitle, role: .title2) }
 
-            paragraph(.firstRunObserves)
-            paragraph(.firstRunNever)
-            paragraph(.firstRunPermissions)
+            paragraph(.firstRunObserves, symbol: "eye")
+            paragraph(.firstRunNever, symbol: "lock.shield")
+            paragraph(.firstRunPermissions, symbol: "hand.raised")
 
             ShellText(.firstRunStoreLabel, role: .callout)
                 .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
@@ -99,7 +92,7 @@ public struct FirstRunSheet: View {
                 Button(action: dismiss) {
                     ShellText(.firstRunDismiss)
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(CompanionButtonStyle(prominent: true))
                 .keyboardShortcut(.defaultAction)
             }
         }
@@ -112,9 +105,16 @@ public struct FirstRunSheet: View {
         .accessibilityLabel(Text(ShellStrings.resource(.firstRunTitle)))
     }
 
-    private func paragraph(_ key: ShellStringKey) -> some View {
-        ShellText(key, role: .callout)
-            .lineLimit(nil)
-            .fixedSize(horizontal: false, vertical: true)
+    private func paragraph(_ key: ShellStringKey, symbol: String) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: symbol)
+                .foregroundStyle(DesignTokens.Palette.role(.spruce, for: traits))
+                .frame(width: 24)
+                .accessibilityHidden(true)
+            ShellText(key, role: .callout)
+                .lineLimit(nil)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.vertical, 6)
     }
 }

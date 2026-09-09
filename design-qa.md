@@ -33,4 +33,12 @@ After the identity validation at 7201dc1, the owner requested 1, 5 and 20-minute
 
 Debug build, string checks and forbidden-symbol checks pass. This refinement has not run UI or snapshot checks: the owner’s standing confirmation rule applies to the new batch. Existing snapshot evidence above covers 7201dc1, not this refinement. Refreshed picker snapshots and native custom-entry validation remain required before merging.
 
-final result: identity passed at 7201dc1; picker refinement awaiting UI validation
+## Owner refinement: integrated personality
+
+The previous 7201dc1 screenshots were inspected alongside Design/Reference.png. They show small, inconsistent controls, an oversized vertical column and form-style settings under the illustration. The owner's new direction is to carry the existing personality into the functional layout.
+
+The implementation now includes a distinct current-priority surface, responsive cockpit columns, a larger session readout, shared rounded controls, section markers, separated recent rows, a status instrument in the popover, grouped General settings, illustrated introductions inside settings scroll boundaries, and matching first-run/completion controls. Existing action closures, storage contracts and copy are retained. General's former columns Form is replaced, so the old form-clipping exclusion no longer describes the proposed layout; its replacement still needs native verification.
+
+The app and test targets compile; full string and forbidden-symbol checks pass. No new UI or snapshot test has run. The owner must confirm the pending local validation batch before native captures, interactions and baseline updates. Existing screenshots and the 495-test result cover the earlier commit only. No runtime, visual-pass, installed-app or release claim is made for this refinement.
+
+final result: blocked — awaiting owner confirmation for UI validation of both refinements
