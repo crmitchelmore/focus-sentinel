@@ -166,6 +166,19 @@ observe_frontmost() {
     print -r -- "$value"
 }
 
+# Keep process identity beside the bundle reading: two application instances can share
+# a bundle identifier. These diagnostics never replace or relax the four assertions.
+observe_process_identity() {
+    local asn pid
+    asn="$("$LSAPPINFO" front 2>/dev/null)"
+    print "observer identity: ${asn:-<none>}"
+    [[ -n "$asn" ]] && "$LSAPPINFO" info -only bundleid,pid "$asn" 2>/dev/null
+    for pid in ${(f)"$(pgrep -x "$PROCESS_NAME" 2>/dev/null)"}; do
+        [[ -n "$pid" ]] && ps -ww -p "$pid" -o pid=,lstart=,comm=
+    done
+    return 0
+}
+
 print "FOCUS-STEAL — the panel takes nothing (§4.5, R-89, P-139)"
 print "app:      $APP"
 print "report:   $OUT"
@@ -179,6 +192,7 @@ fi
 
 FRONT_BEFORE="$(observe_frontmost)"
 print "observer: frontmost before = ${FRONT_BEFORE:-<none>}"
+observe_process_identity
 
 if [[ -z "$FRONT_BEFORE" ]]; then
     print -u2 "FAIL: the observer could not read a frontmost application"
@@ -214,10 +228,13 @@ while (( waited < SETTLE_TIMEOUT )); do
     [[ -s "$OUT" ]] && break
     sleep 1
     (( waited += 1 ))
+    print "observer at ${waited}s: $(observe_frontmost)"
+    observe_process_identity
 done
 print "settled after ${waited}s"
 
 FRONT_AFTER="$(observe_frontmost)"
+observe_process_identity
 print "observer: frontmost after  = ${FRONT_AFTER:-<none>}"
 
 # **The second half of the same repair.** An observer that goes unreadable *after* the show used to

@@ -187,9 +187,30 @@ enum PNGCompare {
     static func inkPixels(_ buffer: PixelBuffer, paper: [DesignTokens.PaletteValue] = []) -> Int {
         guard !buffer.isEmpty else { return 0 }
         let threshold = Int(PixelComparison.channelThreshold)
+        precondition(buffer.bytes.count == buffer.width * buffer.height * 4)
+        // Most renders have one ground. Keep it in local values rather than walking
+        // an Array of grounds for every pixel in the unoptimised test lane.
+        if paper.isEmpty {
+            let red = Int(buffer.bytes[0])
+            let green = Int(buffer.bytes[1])
+            let blue = Int(buffer.bytes[2])
+            return buffer.bytes.withUnsafeBufferPointer { buffer in
+                let bytes = buffer.baseAddress!
+                var index = 0
+                var ink = 0
+                while index < buffer.count {
+                    if abs(Int(bytes[index]) - red) > threshold
+                        || abs(Int(bytes[index + 1]) - green) > threshold
+                        || abs(Int(bytes[index + 2]) - blue) > threshold {
+                        ink += 1
+                    }
+                    index += 4
+                }
+                return ink
+            }
+        }
         var grounds = [(Int(buffer.bytes[0]), Int(buffer.bytes[1]), Int(buffer.bytes[2]))]
         grounds += paper.map { ($0.red, $0.green, $0.blue) }
-        precondition(buffer.bytes.count == buffer.width * buffer.height * 4)
         var ink = 0
         buffer.bytes.withUnsafeBufferPointer { bytes in
             var index = 0
