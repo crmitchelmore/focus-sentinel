@@ -143,6 +143,72 @@ source "$FOCUS_SCRIPTS_DIR/authorisation-baseline.sh"
 AUTHORISATION_BASELINE="$(mktemp -t focus-authorisation-baseline).txt"
 focus_take_authorisation_baseline "$AUTHORISATION_BASELINE"
 
+# Bound every launch, including fixture and keyboard modes. A completed JSON report
+# never substitutes for process completion, and timeouts remain failures.
+wait_for_self_check() {
+    local checked_pid="$1" checked_report="$2" sample_network="${3:-0}"
+    local journey_started=$SECONDS
+    local report_written_at=-1
+    local journey_timed_out=0
+    while kill -0 "$checked_pid" 2>/dev/null; do
+        # A written report is not a successful exit. Preserve the hung process's stack,
+        # then fail this stage so the remaining gate diagnostics can still be collected.
+        # Only this script's child is signalled; other agents' apps and tests are untouched.
+        if (( report_written_at < 0 )) && [[ -s "$checked_report" ]]; then
+            report_written_at=$SECONDS
+        fi
+        if (( SECONDS - journey_started >= 300 ||
+              (report_written_at >= 0 && SECONDS - report_written_at >= 30) )); then
+            journey_timed_out=1
+            print -u2 "FAIL: self-check did not exit within its deadline (300s total, 30s after report)"
+            sample "$checked_pid" 2 -file "$checked_report.sample.txt" >/dev/null 2>&1 || true
+            kill -TERM "$checked_pid" 2>/dev/null || true
+            for _ in {1..10}; do
+                kill -0 "$checked_pid" 2>/dev/null || break
+                sleep 0.2
+            done
+            if kill -0 "$checked_pid" 2>/dev/null; then
+                kill -KILL "$checked_pid" 2>/dev/null || true
+            fi
+            break
+        fi
+        if (( sample_network )); then
+            # **Aliveness is recorded HERE, where the loop's own guard just established it** (focus-j5ef).
+            #
+            # It used to be re-checked *after* the sample, and a process that exited between the `lsof`
+            # and the re-check made `network_samples` one greater than `network_alive` — so
+            # "every sample was taken while the application was still running" failed for a race rather
+            # than for a defect. Measured across three gate runs of one tree: 67/67, 66/66 and 68/67, the
+            # last of which reddened `selfcheck-release` with nothing wrong.
+            #
+            # The line above is the fact the assertion is about: this sample is taken of a process that
+            # was alive an instant ago. The assertion keeps its teeth — it is still the reading that
+            # fails if a sample is ever taken outside this loop, which is the defect it names — and loses
+            # only the window in which it was measuring the scheduler.
+            network_alive=$(( network_alive + 1 ))
+            sample=$(lsof -nP -i -a -p "$checked_pid" 2>/dev/null | tail -n +2)
+            network_samples=$(( network_samples + 1 ))
+            if [[ -n "$sample" ]]; then
+                network_sockets=$(( network_sockets + $(print -r -- "$sample" | wc -l | tr -d ' ') ))
+                print -r -- "$sample" >> "$NETWORK_SAMPLES"
+            fi
+        fi
+        sleep 0.2
+    done
+    wait "$checked_pid"
+    local child_rc=$?
+    (( journey_timed_out )) && child_rc=124
+    return "$child_rc"
+}
+
+run_self_check() {
+    local report_path="$1"
+    shift
+    "$BINARY" --focus-self-check "$report_path" "$@" &
+    local child_pid=$!
+    wait_for_self_check "$child_pid" "$report_path"
+}
+
 print
 print "== the offline journey (F-160): lsof -i, sampled for the length of the run"
 
@@ -169,29 +235,7 @@ app_pid=$!
 network_samples=0
 network_alive=0
 network_sockets=0
-while kill -0 "$app_pid" 2>/dev/null; do
-    # **Aliveness is recorded HERE, where the loop's own guard just established it** (focus-j5ef).
-    #
-    # It used to be re-checked *after* the sample, and a process that exited between the `lsof`
-    # and the re-check made `network_samples` one greater than `network_alive` — so
-    # "every sample was taken while the application was still running" failed for a race rather
-    # than for a defect. Measured across three gate runs of one tree: 67/67, 66/66 and 68/67, the
-    # last of which reddened `selfcheck-release` with nothing wrong.
-    #
-    # The line above is the fact the assertion is about: this sample is taken of a process that
-    # was alive an instant ago. The assertion keeps its teeth — it is still the reading that
-    # fails if a sample is ever taken outside this loop, which is the defect it names — and loses
-    # only the window in which it was measuring the scheduler.
-    network_alive=$(( network_alive + 1 ))
-    sample=$(lsof -nP -i -a -p "$app_pid" 2>/dev/null | tail -n +2)
-    network_samples=$(( network_samples + 1 ))
-    if [[ -n "$sample" ]]; then
-        network_sockets=$(( network_sockets + $(print -r -- "$sample" | wc -l | tr -d ' ') ))
-        print -r -- "$sample" >> "$NETWORK_SAMPLES"
-    fi
-    sleep 0.2
-done
-wait "$app_pid"
+wait_for_self_check "$app_pid" "$OUT" 1
 run_rc=$?
 print "launch EXIT=$run_rc"
 print "     network: $network_samples sample(s), $network_alive with the process alive, $network_sockets socket(s)"
@@ -242,7 +286,7 @@ RESTORE_JSON="$SESSION_DIR/restore.json"
 
 print
 print "== $BINARY --focus-session-seed $SESSION_STORE"
-"$BINARY" --focus-self-check "$SEED_JSON" --focus-session-seed "$SESSION_STORE"
+run_self_check "$SEED_JSON" --focus-session-seed "$SESSION_STORE"
 seed_rc=$?
 print "seed EXIT=$seed_rc"
 if (( seed_rc != 0 )); then
@@ -254,7 +298,7 @@ fi
 # is asserted to be within two seconds of 5 400, and every second spent waiting here is a second
 # of that budget spent on nothing.
 print "== $BINARY --focus-session-restore $SESSION_STORE"
-"$BINARY" --focus-self-check "$RESTORE_JSON" --focus-session-restore "$SESSION_STORE"
+run_self_check "$RESTORE_JSON" --focus-session-restore "$SESSION_STORE"
 restore_rc=$?
 print "restore EXIT=$restore_rc"
 if (( restore_rc != 0 )); then
@@ -280,7 +324,7 @@ COCKPIT_JSON="$SESSION_DIR/cockpit.json"
 
 print
 print "== $BINARY --focus-session-seed $COCKPIT_STORE"
-"$BINARY" --focus-self-check "$COCKPIT_SEED_JSON" --focus-session-seed "$COCKPIT_STORE"
+run_self_check "$COCKPIT_SEED_JSON" --focus-session-seed "$COCKPIT_STORE"
 cockpit_seed_rc=$?
 print "cockpit seed EXIT=$cockpit_seed_rc"
 if (( cockpit_seed_rc != 0 )); then
@@ -289,7 +333,7 @@ if (( cockpit_seed_rc != 0 )); then
 fi
 
 print "== $BINARY --focus-self-check-cockpit --focus-store $COCKPIT_STORE"
-"$BINARY" --focus-self-check "$COCKPIT_JSON" --focus-self-check-cockpit --focus-store "$COCKPIT_STORE"
+run_self_check "$COCKPIT_JSON" --focus-self-check-cockpit --focus-store "$COCKPIT_STORE"
 cockpit_rc=$?
 print "cockpit EXIT=$cockpit_rc"
 if (( cockpit_rc != 0 )); then
@@ -308,7 +352,7 @@ fi
 FIRSTRUN_JSON="$SESSION_DIR/cockpit-relaunch.json"
 
 print "== $BINARY --focus-self-check-cockpit --focus-store $COCKPIT_STORE (relaunch)"
-"$BINARY" --focus-self-check "$FIRSTRUN_JSON" --focus-self-check-cockpit --focus-store "$COCKPIT_STORE"
+run_self_check "$FIRSTRUN_JSON" --focus-self-check-cockpit --focus-store "$COCKPIT_STORE"
 relaunch_rc=$?
 print "relaunch EXIT=$relaunch_rc"
 if (( relaunch_rc != 0 )); then
@@ -330,7 +374,7 @@ KEYBOARD_STORE="$SESSION_DIR/keyboard.store"
 KEYBOARD_JSON="$SESSION_DIR/keyboard.json"
 
 print "== $BINARY --focus-self-check-nudge --focus-store $KEYBOARD_STORE"
-"$BINARY" --focus-self-check "$KEYBOARD_JSON" --focus-self-check-nudge --focus-store "$KEYBOARD_STORE"
+run_self_check "$KEYBOARD_JSON" --focus-self-check-nudge --focus-store "$KEYBOARD_STORE"
 keyboard_rc=$?
 print "keyboard EXIT=$keyboard_rc"
 if (( keyboard_rc != 0 )); then

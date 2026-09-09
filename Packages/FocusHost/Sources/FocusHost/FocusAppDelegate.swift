@@ -130,6 +130,10 @@ public final class FocusAppDelegate: NSObject, NSApplicationDelegate {
         // Waiting for the activation to *land* is the load-bearing half. A fixed delay after
         // requesting it made the report a race against whatever else the machine was doing,
         // and the race was lost often enough to fail the gate on a green tree.
+        // The general shell probe needs the cockpit's responder chain. A fresh isolated
+        // store presents its first-run sheet, which correctly owns the key window instead.
+        // First-run presentation is measured separately by the owned-store cockpit mode.
+        if AppComposition.isRunning { AppComposition.shared.dismissFirstRunScreen() }
         SelfCheck.comeForward { activation in
             // One more turn of the run loop, then read the shell. Reading it inside
             // `applicationDidFinishLaunching` reports empty submenus and no windows.

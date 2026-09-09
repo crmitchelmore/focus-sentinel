@@ -252,6 +252,16 @@ public struct CockpitView: View {
         .padding(sectionSpacing)
         .frame(minWidth: 420, minHeight: 260, alignment: .topLeading)
         .background(DesignTokens.Palette.windowBackground(for: traits))
+        .background {
+            // Empty history deliberately draws no section, so its EmptyView cannot
+            // publish preferences. Record that absence without adding a layout child;
+            // populated history still reports from the list that actually draws it.
+            if state.recent.isEmpty {
+                Color.clear
+                    .shellRendered(.recentCount, 0)
+                    .shellRendered(.recentDigest, ShellValueDigest.describe(state.recent))
+            }
+        }
         // **The traits this window resolved out of its own environment** (focus-h7h).
         //
         // Read here rather than taken from the connection, and that is the whole point: this is

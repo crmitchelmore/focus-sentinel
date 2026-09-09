@@ -5932,7 +5932,7 @@ enum SelfCheck {
             try data.write(to: URL(fileURLWithPath: path), options: .atomic)
             print("SELF-CHECK WROTE \(path)")
             fflush(stdout)
-            NSApp.terminate(nil)
+            terminateAfterReport()
         } catch {
             FileHandle.standardError.write(Data("SELF-CHECK FAILED: \(error)\n".utf8))
             exit(70)
@@ -5961,12 +5961,30 @@ enum SelfCheck {
             try data.write(to: URL(fileURLWithPath: path), options: .atomic)
             print("SELF-CHECK WROTE \(path)")
             fflush(stdout)
-            NSApp.terminate(nil)
+            terminateAfterReport()
         } catch {
             FileHandle.standardError.write(
                 Data("SELF-CHECK FAILED: \(error)\n".utf8)
             )
             exit(70)
+        }
+    }
+
+    /// Finish launch and withdraw probe-owned sheet bindings before asking AppKit to quit.
+    /// Reduced modes write their report inside applicationDidFinishLaunching; terminating
+    /// there leaves the newly created first-run sheet able to cancel the request.
+    @MainActor
+    private static func terminateAfterReport() {
+        DispatchQueue.main.async {
+            if AppComposition.isRunning {
+                AppComposition.shared.dismissFirstRunScreen()
+                AppComposition.shared.priorityHost.cancelHandoff()
+            }
+            dismissEverySheet()
+            DispatchQueue.main.asyncAfter(deadline: .now() + renderSettleSeconds) {
+                dismissEverySheet()
+                NSApp.terminate(nil)
+            }
         }
     }
 }
