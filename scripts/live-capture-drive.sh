@@ -587,7 +587,7 @@ SELFCHECK_JSON="$LOG_DIR/focus-live-untrusted.json"
 rm -f -- "$SELFCHECK_JSON"
 
 note "launching as its own responsible process for the untrusted reading"
-open -n -a "$APP" --args --focus-self-check "$SELFCHECK_JSON" \
+open -n -a "$APP" --args --focus-self-check "$SELFCHECK_JSON" --focus-self-check-live-store \
     > "$LOG_DIR/focus-live-untrusted.log" 2>&1
 for attempt in {1..40}; do
     [[ -s "$SELFCHECK_JSON" ]] && break
@@ -656,7 +656,7 @@ fi
     print "    EXIT=$tcc_rc $tcc_out"
     print
     print "2 · launched as its own responsible process, NOT exec'd from this shell"
-    print "    open -n -a \"$APP\" --args --focus-self-check <json>"
+    print "    open -n -a \"$APP\" --args --focus-self-check <json> --focus-self-check-live-store"
     print "    AXIsProcessTrusted() = $untrusted_ax        (expected: False)"
     print "    RegisterEventHotKey  = $untrusted_status    (expected: 0 — noErr)"
     print "    second registration  = $untrusted_duplicate (expected: -9878 — eventHotKeyExistsErr)"

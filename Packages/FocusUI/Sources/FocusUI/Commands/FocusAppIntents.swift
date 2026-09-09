@@ -78,7 +78,7 @@ public struct FocusIntentRunner {
     }
 
     /// **Set the priority.** Refuses an empty one: a commitment nobody wrote is not a commitment,
-    /// and `IntentValidator` already refuses one typed into the capture field.
+    /// checked here before asking the priority writer to commit it.
     public func setPriority(_ text: String) throws {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw FocusIntentRefusal.emptyPriority }

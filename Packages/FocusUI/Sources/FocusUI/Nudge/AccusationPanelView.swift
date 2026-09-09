@@ -202,7 +202,20 @@ public struct AccusationPanelView: DecisionSurfaceContent {
         self.onAction = onAction
     }
 
+    private enum LayoutPart { case whole, context, decision }
+    private var layoutPart: LayoutPart?
+
+    @ViewBuilder
     public var body: some View {
+        switch layoutPart {
+        case .whole: column { context; actions }
+        case .context: column { context }
+        case .decision: column { actions }
+        case nil: styledContent
+        }
+    }
+
+    private var styledContent: some View {
         column { context; actions }
             // The rule lives in this inset, never on top of the words (see `decisionRuleInset`).
             .padding(.leading, DesignTokens.decisionRuleInset)
@@ -241,10 +254,17 @@ public struct AccusationPanelView: DecisionSurfaceContent {
     /// describe two different panels.
     public var surfaceLayout: DecisionSurfaceLayout {
         DecisionSurfaceLayout(
-            whole: AnyView(column { context; actions }),
-            context: AnyView(column { context }),
-            decision: AnyView(column { actions })
+            whole: AnyView(layoutView(.whole)),
+            context: AnyView(layoutView(.context)),
+            decision: AnyView(layoutView(.decision))
         )
+    }
+
+    // Return a View value; read its Environment only after SwiftUI installs it.
+    private func layoutView(_ part: LayoutPart) -> Self {
+        var view = self
+        view.layoutPart = part
+        return view
     }
 
     /// The one column every rendering of this panel is built in, so the spacing, the width and

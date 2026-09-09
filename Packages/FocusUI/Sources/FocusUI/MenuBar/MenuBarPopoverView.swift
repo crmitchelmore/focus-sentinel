@@ -77,8 +77,16 @@ public struct MenuBarPopoverView: DecisionSurfaceContent {
         }
     }
 
+    private var renderedSections: [Section]?
+
     public var body: some View {
-        column(Section.allCases)
+        column(renderedSections ?? Section.allCases)
+    }
+
+    private func layoutView(_ sections: [Section]) -> Self {
+        var view = self
+        view.renderedSections = sections
+        return view
     }
 
     public static let decisionSurface: DecisionSurface = .menuBarPopover
@@ -100,9 +108,9 @@ public struct MenuBarPopoverView: DecisionSurfaceContent {
     /// pinned, the thing the app interrupted for is the thing that cannot be scrolled away from.
     public var surfaceLayout: DecisionSurfaceLayout {
         DecisionSurfaceLayout(
-            whole: AnyView(column(Section.allCases)),
-            context: AnyView(column(Section.allCases.filter { !$0.isDecision(in: presentation) })),
-            decision: AnyView(column(Section.allCases.filter { $0.isDecision(in: presentation) }))
+            whole: AnyView(layoutView(Section.allCases)),
+            context: AnyView(layoutView(Section.allCases.filter { !$0.isDecision(in: presentation) })),
+            decision: AnyView(layoutView(Section.allCases.filter { $0.isDecision(in: presentation) }))
         )
     }
 

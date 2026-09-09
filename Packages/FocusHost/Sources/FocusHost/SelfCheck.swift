@@ -123,16 +123,28 @@ enum SelfCheck {
     /// the alternative was starting a session in the real store, which would write a fact about
     /// their day that never happened.
     static let storeArgument = "--focus-store"
+    /// Attended evidence readers explicitly inspect the same store as the app being driven.
+    /// Automatic checks never pass this flag.
+    static let liveStoreArgument = "--focus-self-check-live-store"
 
     /// Which store `AppComposition.shared` opens.
     ///
     /// Read from the command line at static-initialisation time, which is before any scene exists
-    /// — the composition root is first touched by `FocusSentinelApp.init()`. The ordinary launch
-    /// passes nothing and gets `.applicationSupport`, which is the only behaviour the shipping app
-    /// has ever had.
+    /// — the composition root is first touched by `FocusSentinelApp.init()`. Ordinary launches
+    /// use Application Support. A self-check gets an in-memory store unless it explicitly names
+    /// a fixture or opts into the attended live-store reader. This also isolates the root built
+    /// before a headless seed/restore mode runs.
+    /// In-memory checks do not enable the interactive probes gated on a temporary fixture.
     public static var requestedStoreKind: FocusStore.Kind {
-        guard let path = value(after: storeArgument) else { return .applicationSupport }
-        return .temporary(URL(fileURLWithPath: path))
+        storeKind(arguments: CommandLine.arguments)
+    }
+
+    static func storeKind(arguments: [String]) -> FocusStore.Kind {
+        if let path = value(after: storeArgument, in: arguments) {
+            return .temporary(URL(fileURLWithPath: path))
+        }
+        if arguments.contains(liveStoreArgument) { return .applicationSupport }
+        return value(after: argument, in: arguments) == nil ? .applicationSupport : .inMemory
     }
 
     /// **The cockpit-rendering block alone, against a seeded store** (focus-h7h).
@@ -369,8 +381,7 @@ enum SelfCheck {
 
     /// The value that follows a flag on the command line, or `nil` when the flag is absent or
     /// carries nothing after it.
-    static func value(after flag: String) -> String? {
-        let arguments = CommandLine.arguments
+    static func value(after flag: String, in arguments: [String] = CommandLine.arguments) -> String? {
         guard let index = arguments.firstIndex(of: flag) else { return nil }
         let next = arguments.index(after: index)
         guard next < arguments.endIndex else { return nil }

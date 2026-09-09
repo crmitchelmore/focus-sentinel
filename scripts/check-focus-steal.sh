@@ -277,6 +277,17 @@ def check(condition, message, detail=None):
 
 check(report.get("mode") == "nudge", "the app ran its nudge-only self-check", report.get("mode"))
 
+# A focus-steal run must not execute the probes that intentionally activate the app.
+# Check their receipts as well as the final frontmost reading: quitting can restore the
+# original frontmost app and otherwise conceal that an interactive probe took focus.
+for probe in ("keyboardAnswer", "pinnedQuestion"):
+    reading = report.get(probe) or {}
+    check(
+        reading.get("wasTaken") is False,
+        f"the background check did not run the activating {probe} probe",
+        reading,
+    )
+
 panel = report.get("panel") or {}
 before = panel.get("readingsBeforeShow") or {}
 after = panel.get("readingsAfterShow") or {}

@@ -149,7 +149,20 @@ public struct QueryPanelView: DecisionSurfaceContent {
         self.onAnswer = onAnswer
     }
 
+    private enum LayoutPart { case whole, context, decision }
+    private var layoutPart: LayoutPart?
+
+    @ViewBuilder
     public var body: some View {
+        switch layoutPart {
+        case .whole: column { question; answers }
+        case .context: column { question }
+        case .decision: column { answers }
+        case nil: styledContent
+        }
+    }
+
+    private var styledContent: some View {
         column { question; answers }
             // The rule lives in this inset, never on top of the words (see `decisionRuleInset`).
             .padding(.leading, DesignTokens.decisionRuleInset)
@@ -185,10 +198,17 @@ public struct QueryPanelView: DecisionSurfaceContent {
     /// interrupt rests on the answer being one click away.
     public var surfaceLayout: DecisionSurfaceLayout {
         DecisionSurfaceLayout(
-            whole: AnyView(column { question; answers }),
-            context: AnyView(column { question }),
-            decision: AnyView(column { answers })
+            whole: AnyView(layoutView(.whole)),
+            context: AnyView(layoutView(.context)),
+            decision: AnyView(layoutView(.decision))
         )
+    }
+
+    // Return a View value; read its Environment only after SwiftUI installs it.
+    private func layoutView(_ part: LayoutPart) -> Self {
+        var view = self
+        view.layoutPart = part
+        return view
     }
 
     /// The one column every rendering of this panel is built in.

@@ -258,7 +258,7 @@ capture_cockpit() {
 # second reader.
 export_events() {
     local destination="$1" report="$LOG_DIR/focus-live-export.json"
-    "$BINARY" --focus-self-check "$report" --focus-export-events "$destination" \
+    "$BINARY" --focus-self-check "$report" --focus-self-check-live-store --focus-export-events "$destination" \
         > "$LOG_DIR/focus-live-export.log" 2>&1 || return 1
     [[ -s "$destination" ]] || return 1
     return 0
@@ -285,7 +285,7 @@ fi
 # zero-grant self-check makes; recording it here puts it beside the frames a human reads.
 note "recording the app's own grant-free report of what it is watching"
 SURFACE_REPORT="$LOG_DIR/focus-live-surfaces.json"
-if "$BINARY" --focus-self-check "$SURFACE_REPORT" > "$LOG_DIR/focus-live-surfaces.log" 2>&1 \
+if "$BINARY" --focus-self-check "$SURFACE_REPORT" --focus-self-check-live-store > "$LOG_DIR/focus-live-surfaces.log" 2>&1 \
     && [[ -s "$SURFACE_REPORT" ]]; then
     python3 - "$SURFACE_REPORT" > "$EVIDENCE_DIR/sensing-report.txt" <<'PYTHON'
 import json, sys

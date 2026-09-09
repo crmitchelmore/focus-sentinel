@@ -149,6 +149,7 @@ public final class FocusModelRung: ModelRung, @unchecked Sendable {
     @available(*, noasync, message: "Use await prime(_:) from an async context")
     @discardableResult
     public func primeSynchronously(_ request: ModelRequest) -> ModelAnswer {
+        if let known = cachedAnswer(for: request) { return known }
         let box = AnswerBox()
         let semaphore = DispatchSemaphore(value: 0)
         Task {

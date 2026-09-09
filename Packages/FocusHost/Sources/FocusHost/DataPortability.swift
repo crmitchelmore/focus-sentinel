@@ -39,6 +39,8 @@ public enum DataPortabilityOutcome: Sendable, Equatable {
     case imported(name: String)
     /// A settings file was refused, whole, with its reason.
     case refused(SettingsImportRefusal)
+    /// A requested export failed. Keep the system error for its localised recovery advice.
+    case failed(NSError)
 
     /// One line, for the log and for the self-check. Never the *path*: where somebody keeps their
     /// own files is theirs, and a receipt carrying it would put it in a gate log.
@@ -48,6 +50,7 @@ public enum DataPortabilityOutcome: Sendable, Equatable {
         case .exported(let name, let bytes): "exported \(name) (\(bytes) bytes)"
         case .imported(let name): "imported \(name)"
         case .refused(let refusal): "refused: \(refusal.reason)"
+        case .failed(let error): "export failed (\(error.domain), \(error.code))"
         }
     }
 }
@@ -74,6 +77,7 @@ extension AppComposition {
     @MainActor
     @discardableResult
     public func writeDataExport(to url: URL) -> DataPortabilityOutcome {
+        guard !hasDeletedEverything else { return .none }
         do {
             let data = try StoreExport.json(
                 in: modelContainer.mainContext,
@@ -85,7 +89,7 @@ extension AppComposition {
             portabilityLogger.error(
                 "the data export could not be written: \(error.localizedDescription, privacy: .public)"
             )
-            return .none
+            return .failed(error as NSError)
         }
     }
 
@@ -93,6 +97,7 @@ extension AppComposition {
     @MainActor
     @discardableResult
     public func writeSettingsExport(to url: URL) -> DataPortabilityOutcome {
+        guard !hasDeletedEverything else { return .none }
         do {
             let data = try SettingsDocument.json(
                 from: modelContainer.mainContext,
@@ -104,7 +109,7 @@ extension AppComposition {
             portabilityLogger.error(
                 "the settings export could not be written: \(error.localizedDescription, privacy: .public)"
             )
-            return .none
+            return .failed(error as NSError)
         }
     }
 
@@ -116,6 +121,7 @@ extension AppComposition {
     @MainActor
     @discardableResult
     public func readSettingsImport(from url: URL) -> DataPortabilityOutcome {
+        guard !hasDeletedEverything else { return .none }
         guard let data = try? Data(contentsOf: url) else {
             return .refused(.malformed)
         }
@@ -167,6 +173,7 @@ extension AppComposition {
     /// here: everything either side of it is a verb above, driven directly by the self-check.
     @MainActor
     public func performPortability(_ action: PrivacySettingsAction) {
+        guard !hasDeletedEverything else { return }
         let today = LocalDay.today(calendar: calendar, dateProvider: dateProvider)
         let outcome: DataPortabilityOutcome
         switch action {
@@ -195,6 +202,8 @@ extension AppComposition {
             alert.informativeText = refusal.reason
             alert.alertStyle = .warning
             alert.runModal()
+        } else if case .failed(let error) = outcome {
+            NSAlert(error: error).runModal()
         }
     }
 }

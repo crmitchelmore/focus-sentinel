@@ -32,6 +32,9 @@ public final class FocusAppDelegate: NSObject, NSApplicationDelegate {
         // termination hook is, so a reduced self-check mode never builds a composition root to
         // hand it a closure it will not use.
         if AppComposition.isRunning {
+            AppComposition.shared.prepareForStoreDeletion = {
+                Self.prepareForStoreDeletion(windows: NSApp.windows, commands: .shared)
+            }
             AppComposition.shared.relaunch = {
                 let configuration = NSWorkspace.OpenConfiguration()
                 configuration.createsNewApplicationInstance = true
@@ -139,7 +142,21 @@ public final class FocusAppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    /// A single-window cockpit has nothing to keep running once its window is gone.
+    /// Close scene graphs before destroying the store, while preserving auxiliary windows.
+    @MainActor
+    static func prepareForStoreDeletion(windows: [NSWindow], commands: FocusCommandCenter) {
+        commands.shutDown()
+        // Main scene windows, including Settings. Auxiliary AppKit windows are not ours
+        // to dismantle; the root has already hidden its own capture and nudge panels.
+        for window in windows where window.canBecomeMain && window.styleMask.contains(.titled)
+            && !(window is NSPanel) {
+            if let sheet = window.attachedSheet { window.endSheet(sheet) }
+            window.contentView = nil
+            window.close()
+        }
+    }
+
+    /// Closing a scene does not quit the menu-bar application.
     public func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         false
     }

@@ -177,6 +177,7 @@ public final class FocusCommandCenter {
     /// Idempotent and root-owned, in the shape `registerCockpitOpener` already established:
     /// there is one composition root and it is the only object that can see all three facts.
     public func provideWorld(_ read: @escaping () -> ShellCommandWorld) {
+        guard !isShutDown else { return }
         worldProvider = read
     }
 
@@ -203,12 +204,30 @@ public final class FocusCommandCenter {
 
     public init() {}
 
+    private var isShutDown = false
+
+    /// Permanently disconnect this process before its store is destroyed. A late scene
+    /// evaluation must not reinstall a handler while the replacement app is launching.
+    public func shutDown() {
+        isShutDown = true
+        handler = nil
+        pending = nil
+        observers.removeAll()
+        worldProvider = nil
+        privacyPerformer = nil
+        priorityWriter = nil
+        intentSessionPerformer = nil
+        cockpitOpener = nil
+        windowOpener = nil
+    }
+
     /// Whether a surface is currently listening.
     public var isConnected: Bool { handler != nil }
 
     /// Start answering commands. Any command that arrived while nothing was listening is
     /// delivered immediately.
     public func register(_ handler: @escaping (PriorityCommand) -> Void) {
+        guard !isShutDown else { return }
         self.handler = handler
         if let pending {
             self.pending = nil
@@ -225,6 +244,7 @@ public final class FocusCommandCenter {
     /// An observer never receives a *pending* command: the buffer exists so a key equivalent can
     /// outlive a closed window, and an observer that is always present has nothing to wait for.
     public func observe(_ observer: @escaping (PriorityCommand) -> Void) {
+        guard !isShutDown else { return }
         observers.append(observer)
     }
 
@@ -233,6 +253,7 @@ public final class FocusCommandCenter {
     /// Idempotent: `ShellCommands` installs it every time its `body` is evaluated, and the
     /// closure it installs is the same closure over the same scene.
     public func registerCockpitOpener(_ open: @escaping () -> Void) {
+        guard !isShutDown else { return }
         cockpitOpener = open
     }
 
@@ -264,6 +285,7 @@ public final class FocusCommandCenter {
     /// `Commands` body is the one place in the application that holds SwiftUI's `openWindow`, and
     /// it is evaluated at launch whether any window is open or not.
     public func registerWindowOpener(_ open: @escaping (String) -> Void) {
+        guard !isShutDown else { return }
         windowOpener = open
     }
 
@@ -276,6 +298,7 @@ public final class FocusCommandCenter {
     /// `false` from `canPerformPrivacyAction` in a unit process, which is what lets the lane
     /// drive "the menu asked and nothing was listening" as a real state rather than a crash.
     public func registerPrivacyPerformer(_ perform: @escaping (PrivacySettingsAction) -> Void) {
+        guard !isShutDown else { return }
         privacyPerformer = perform
     }
 
@@ -301,6 +324,7 @@ public final class FocusCommandCenter {
     private var intentSessionPerformer: ((PriorityCommand) -> Bool)?
 
     public func registerIntentSessionPerformer(_ perform: @escaping (PriorityCommand) -> Bool) {
+        guard !isShutDown else { return }
         intentSessionPerformer = perform
     }
 
@@ -316,6 +340,7 @@ public final class FocusCommandCenter {
     private var priorityWriter: ((String) -> Bool)?
 
     public func registerPriorityWriter(_ write: @escaping (String) -> Bool) {
+        guard !isShutDown else { return }
         priorityWriter = write
     }
 

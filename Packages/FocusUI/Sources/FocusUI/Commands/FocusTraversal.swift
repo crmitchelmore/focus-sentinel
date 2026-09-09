@@ -134,15 +134,16 @@ public enum FocusTraversal {
             order: [
                 .cockpitRitualDismiss,
                 // The hero is the top of the column, so editing it in place is the first
-                // field under the banner and above the capture field.
+                // field under the banner and above the definition of done.
                 .cockpitEditIntent,
-                .cockpitCaptureField,
-                .cockpitSetPriority,
                 .cockpitDoneWhen,
                 // The priority's own verbs sit directly under its definition of done (focus-6uya):
                 // they act on the commitment, so they are reached before the machinery that
                 // serves it rather than after the rules pane.
                 .cockpitComplete,
+                // Change Priority opens capture below the current commitment's verbs.
+                .cockpitCaptureField,
+                .cockpitSetPriority,
                 .cockpitTimebox,
                 // The session sits directly under the timebox: both are about how the time is
                 // being spent, and a person who has just chosen a box is one Tab from starting

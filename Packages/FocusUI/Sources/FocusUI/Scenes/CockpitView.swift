@@ -261,7 +261,7 @@ public struct CockpitView: View {
         // `AppearanceTraits.systemDefault` fires the receipt and ignores dark mode and every
         // accessibility setting; this is the value that says which of the two happened.
         .shellRendered(.appearanceTraits, traits.renderedDescription)
-        .defaultFocus($focus, .cockpitOpenSettings)
+        .defaultFocus($focus, showsCapture ? .cockpitCaptureField : .cockpitDoneWhen)
         // The window is named for the app; the group is too, so VoiceOver announces what it
         // has landed in before reading the priority out of it.
         .accessibilityElement(children: .contain)
