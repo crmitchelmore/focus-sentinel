@@ -105,7 +105,7 @@ APP="$DD/Build/Products/Debug/FocusSentinel.app"
 # The window titles the surfaces present. Read from the String Catalog by the app; written
 # here because AppleScript addresses windows by title and has no other handle on them.
 COCKPIT_TITLE='Focus Sentinel'
-PANEL_TITLE='Quick Capture'
+PANEL_TITLE='Quick capture'
 
 # The quick-capture default, ⌃⌥⌘Space (`HotKeySpec.quickCaptureDefault`, key code 49).
 HOTKEY_APPLESCRIPT='key code 49 using {control down, option down, command down}'
@@ -130,11 +130,11 @@ QUICKLOOK_TITLE='Quick Look'
 #
 # `Set Priority` is the action name `PriorityStore.setPriority` registers (`undo.priority.set`),
 # and ⌘N-then-a-sentence is the verb this script can actually drive. The plan's §4.6 names
-# `Undo Change Priority`, which is `activate`'s name (`undo.priority.change`) and is reachable
+# `Undo Change priority`, which is `activate`'s name (`undo.priority.change`) and is reachable
 # only through *Work on This Again* in the recent list — a button that, measured here, exposes
 # no accessible title and so cannot be addressed by name. Naming the verb the drive performs is
 # the honest form of the same assertion: the journal's action name reaches the system Edit menu.
-UNDO_EXPECTED_TITLE='Undo Set Priority'
+UNDO_EXPECTED_TITLE='Undo Set priority'
 
 mkdir -p -- "$EVIDENCE_DIR" "$LOG_DIR" || exit 1
 
@@ -786,7 +786,7 @@ fi
 
 # --- 7 · a file attachment and Quick Look ---------------------------------------------------------
 #
-# ⌘O is the File menu's "Add Files to Context…". The open panel is AppKit's own, and ⌘⇧G is the
+# ⌘O is the File menu's "Add files to context…". The open panel is AppKit's own, and ⌘⇧G is the
 # standard way to hand it a path, so this drives the real importer rather than reaching around it.
 
 note "context pack — a file, then Quick Look"
@@ -940,7 +940,7 @@ print
 print "Capturing is not the gate and not the point. READ the frames:"
 print "  hotkey-untrusted.txt  AXIsProcessTrusted() == False, registration status 0, and the"
 print "                        panel arriving anyway with Finder frontmost"
-print "  capture-panel.png     the quick-capture PANEL — 560x121, titled 'Quick Capture', not"
+print "  capture-panel.png     the quick-capture PANEL — 560x121, titled 'Quick capture', not"
 print "                        the 900x704 cockpit — focused and ready to type, summoned by the"
 print "                        real hot key while another application was frontmost"
 print "  capture-vague.png     'proposal' answered with an explanation, one suggested rewrite"

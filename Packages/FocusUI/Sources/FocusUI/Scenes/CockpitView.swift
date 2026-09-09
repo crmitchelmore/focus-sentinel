@@ -219,6 +219,7 @@ public struct CockpitView: View {
 
             if showsCapture {
                 capture
+                    .transition(traits.reduceMotion ? .identity : .opacity.combined(with: .move(edge: .top)))
             }
 
             if let priority = state.priority {
@@ -260,6 +261,8 @@ public struct CockpitView: View {
         .frame(minWidth: 420, minHeight: 260, alignment: .topLeading)
         .background(DesignTokens.Palette.role(.inlay, for: traits))
         .buttonStyle(CompanionButtonStyle())
+        .animation(DesignTokens.animation(for: traits), value: showsCapture)
+        .animation(DesignTokens.animation(for: traits), value: isEditingIntent)
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { contentWidth = $0 }
         .background {
             // Empty history deliberately draws no section, so its EmptyView cannot

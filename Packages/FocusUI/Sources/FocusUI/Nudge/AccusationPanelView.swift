@@ -49,7 +49,8 @@ public struct AccusationPresentation: Sendable, Equatable {
     /// what would let the next surface inherit the wrong half of the answer in silence.
     public let hasOpenSession: Bool
     /// Owner-selected shortcuts; custom durations use the same snooze action.
-    public var snoozeDurations: [Duration] { [.seconds(60), .seconds(300), .seconds(1_200)] }
+    public static let snoozeShortcuts: [Duration] = [.seconds(60), .seconds(300), .seconds(1_200)]
+    public var snoozeDurations: [Duration] { Self.snoozeShortcuts }
 
     public init(
         rung: LadderRung.Kind,

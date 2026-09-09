@@ -14,11 +14,11 @@ import Testing
 /// reported FAIL at `selfcheck-debug` and `selfcheck-release` while every other stage was
 /// `EXIT=0`:
 ///
-///     FAIL: the Edit menu reads 'Undo Change Priority' after one scripted mutation   got: 'Undo'
+///     FAIL: the Edit menu reads 'Undo Change priority' after one scripted mutation   got: 'Undo'
 ///     FAIL: the Edit menu's Undo item is disabled again after taking it              got: True
 ///
 /// and one run read `Undo Typing`, which is the word that gives it away. The report insisted the
-/// journal's own manager was correct — `undoManagerTitle` was `Undo Change Priority` — so the menu
+/// journal's own manager was correct — `undoManagerTitle` was `Undo Change priority` — so the menu
 /// and the journal were reading two different objects.
 ///
 /// Instrumented in the running application, they were: `journalUndoManager === keyWindow.undoManager`
@@ -103,7 +103,7 @@ struct UndoResponderChainTests {
     /// installed field editor's undo manager **forwards**, so the menu reads the journal's title
     /// and nothing looks wrong; the moment there is a keystroke to take back it answers for
     /// itself, and the title becomes `Undo Typing` — which is the exact string one gate run
-    /// reported while `undoManagerTitle` stayed `Undo Change Priority`. The other runs read a bare
+    /// reported while `undoManagerTitle` stayed `Undo Change priority`. The other runs read a bare
     /// `Undo`, the same object at a different point in its own history.
     ///
     /// The titles are compared against each other rather than against English literals, because
@@ -130,8 +130,8 @@ struct UndoResponderChainTests {
         // the inner loop it has not and `undo.priority.change` resolves to its own key — a fact
         // about the lane rather than about the journal, so it is gated rather than fudged.
         if LocalizationLane.catalogsAreCompiled {
-            #expect(manager.undoActionName == "Change Priority")
-            #expect(journalTitle == "Undo Change Priority")
+            #expect(manager.undoActionName == "Change priority")
+            #expect(journalTitle == "Undo Change priority")
         }
 
         // The person is in the middle of typing a priority. The field editor now has something of

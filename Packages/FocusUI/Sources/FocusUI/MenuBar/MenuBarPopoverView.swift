@@ -270,6 +270,8 @@ public struct MenuBarPopoverView: DecisionSurfaceContent {
             // drawn two different widths.
             Text(verbatim: presentation.timerText)
                 .font(DesignTokens.font(.title2, scale: textScale).monospacedDigit())
+                .contentTransition(traits.reduceMotion ? .identity : .numericText())
+                .animation(DesignTokens.animation(for: traits), value: presentation.timerText)
                 .foregroundStyle(DesignTokens.Palette.primaryText)
         }
     }

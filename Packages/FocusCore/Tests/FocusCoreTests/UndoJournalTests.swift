@@ -366,7 +366,7 @@ struct UndoJournalTests {
             #expect(!name.localizedName.isEmpty)
         }
         // The one the self-check reads out of the live Edit menu (probe P-50).
-        #expect(UndoActionName.changePriority.localizedName == "Change Priority")
+        #expect(UndoActionName.changePriority.localizedName == "Change priority")
     }
 
     @Test("the Edit menu reads the action name of the operation just performed")

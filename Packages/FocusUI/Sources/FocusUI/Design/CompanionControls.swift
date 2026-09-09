@@ -4,6 +4,7 @@ import SwiftUI
 struct CompanionButtonStyle: ButtonStyle {
     var prominent = false
     var selected = false
+    @State private var isHovered = false
     @Environment(\.appearanceTraits) private var traits
     @Environment(\.isEnabled) private var isEnabled
     @Environment(\.shellTextScale) private var textScale
@@ -20,12 +21,17 @@ struct CompanionButtonStyle: ButtonStyle {
                 : DesignTokens.Palette.role(filled ? .bench : .slate, for: traits))
             .background(shape.fill(DesignTokens.Palette.role(filled ? .spruce : .inlay, for: traits)))
             .overlay(shape.strokeBorder(
-                DesignTokens.Palette.role(.mist, for: traits)
-                    .opacity(DesignTokens.emphasis(for: traits).promotesSecondaryText ? 1 : 0.25),
+                DesignTokens.Palette.role(isHovered && isEnabled ? .spruce : .mist, for: traits)
+                    .opacity(DesignTokens.emphasis(for: traits).promotesSecondaryText ? 1 : (isHovered && isEnabled ? 0.7 : 0.25)),
                 lineWidth: DesignTokens.emphasis(for: traits).promotesSecondaryText ? 2 : 1
             ))
             .opacity(isEnabled ? (configuration.isPressed ? 0.8 : 1) : 0.45)
             .contentShape(shape)
+            .scaleEffect(configuration.isPressed && isEnabled && !traits.reduceMotion ? 0.985 : 1)
+            .animation(DesignTokens.animation(for: traits), value: configuration.isPressed)
+            .animation(DesignTokens.animation(for: traits), value: isHovered)
+            .animation(DesignTokens.animation(for: traits), value: selected)
+            .onHover { isHovered = $0 }
     }
 }
 

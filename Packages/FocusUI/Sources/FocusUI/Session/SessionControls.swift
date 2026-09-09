@@ -120,10 +120,14 @@ public struct SessionControls: View {
         VStack(alignment: .leading, spacing: spacing) {
             HStack(alignment: .firstTextBaseline, spacing: spacing) {
                 SessionPhaseBadge(phase: session.phase)
+                    .id(session.phase)
+                    .transition(traits.reduceMotion ? .identity : .opacity)
 
                 if let elapsedSeconds {
                     Text(verbatim: Self.format(elapsedSeconds))
                         .font(DesignTokens.font(.largeTitle, scale: textScale).monospacedDigit())
+                        .contentTransition(traits.reduceMotion ? .identity : .numericText())
+                        .animation(DesignTokens.animation(for: traits), value: Self.format(elapsedSeconds))
                         .foregroundStyle(DesignTokens.Palette.role(.spruce, for: traits))
                         .accessibilityLabel(Text(ShellStrings.string(.sessionElapsed, argument: Self.format(elapsedSeconds))))
                 }
@@ -131,6 +135,7 @@ public struct SessionControls: View {
                 Spacer(minLength: 0)
             }
             .padding(.vertical, spacing)
+            .animation(DesignTokens.animation(for: traits), value: session.phase)
 
             causes(session)
             notes(session)

@@ -695,7 +695,7 @@ public struct InterventionSettingsView: View {
                 ShellText(.interventionThresholdSnooze, role: .callout)
                 Spacer(minLength: 0)
                 Text(
-                    verbatim: InterventionPolicy.snoozeDurations
+                    verbatim: AccusationPresentation.snoozeShortcuts
                         .map(NudgeCopy.duration)
                         .joined(separator: ", ")
                 )

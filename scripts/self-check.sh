@@ -597,19 +597,19 @@ check(
 # File: the registry's actions in registry order, then AppKit's own two. AppKit's
 # un-shortcutted `Close` is a system-injected sibling, not a duplicate to delete.
 expected_file = [
-    "New Priority",
-    "Add Files to Context…",
-    "Complete Priority",
-    "Start Session",
-    "Pause Session",
-    "Finish Session",
-    "Pause Watching",
+    "New priority",
+    "Add files to context…",
+    "Complete priority",
+    "Start session",
+    "Pause session",
+    "Finish session",
+    "Pause watching",
     # e09b: the three portability verbs, between the last session verb and Close Window, which is
     # where the registry puts them (F-110, F-134).
-    "Export My Data…",
-    "Export Settings…",
-    "Import Settings…",
-    "Close Window",
+    "Export my data…",
+    "Export settings…",
+    "Import settings…",
+    "Close window",
     "<separator>",
     "Close",
     "Close All",
@@ -643,20 +643,20 @@ def check_shortcut(menu_title, item_title, key, mask):
 # The three e02 priority commands, each with the key equivalent the registry declares.
 # `\r` is Return: Complete Priority is Ctrl-Cmd-Return, deliberately not the plain Return that
 # belongs to whichever field the user is actually typing in.
-check_shortcut("File", "New Priority", "n", CMD)
-check_shortcut("File", "Add Files to Context…", "o", CMD)
-check_shortcut("File", "Complete Priority", "\r", CMD | CONTROL)
+check_shortcut("File", "New priority", "n", CMD)
+check_shortcut("File", "Add files to context…", "o", CMD)
+check_shortcut("File", "Complete priority", "\r", CMD | CONTROL)
 
 # The four e03 verbs, every one of them a Control-Command combination. `Pause Watching` was
 # Shift-Command-W and is not: the key-equivalent probe below measured a plain Cmd-W reaching it
 # and flipping the stored watching switch, which would have been the app taking Cmd-W away from
 # the person.
-check_shortcut("File", "Start Session", "s", CMD | CONTROL)
-check_shortcut("File", "Pause Session", "p", CMD | CONTROL)
-check_shortcut("File", "Finish Session", "f", CMD | CONTROL)
-check_shortcut("File", "Pause Watching", "e", CMD | CONTROL)
+check_shortcut("File", "Start session", "s", CMD | CONTROL)
+check_shortcut("File", "Pause session", "p", CMD | CONTROL)
+check_shortcut("File", "Finish session", "f", CMD | CONTROL)
+check_shortcut("File", "Pause watching", "e", CMD | CONTROL)
 
-close_window = find("File", "Close Window")
+close_window = find("File", "Close window")
 check(close_window is not None, "File has a Close Window item")
 if close_window:
     check(
@@ -897,7 +897,7 @@ for expected in ("Minimize", "Zoom", "Bring All to Front"):
         f"the Window menu contains {expected!r}",
         item_titles("Window"),
     )
-for scene_title in ("Focus Sentinel", "Keyboard Shortcuts"):
+for scene_title in ("Focus Sentinel", "Keyboard shortcuts"):
     check(
         find("Window", scene_title) is not None,
         f"the Window menu lists the {scene_title!r} scene",
@@ -1144,7 +1144,7 @@ print(f"note axIsProcessTrusted = {report.get('axIsProcessTrusted')!r} (recorded
 #
 # Five gate runs on one tree: 1, 4 and 5 green, 2 and 3 red on the SAME SIX assertions in
 # different configurations. Identical test counts, identical digests, and `undoManagerTitle`
-# reading `Undo Change Priority` in ALL TEN readings — the wiring was correct every time. The one
+# reading `Undo Change priority` in ALL TEN readings — the wiring was correct every time. The one
 # fact that differed: `applicationIsActive` and `hasKeyWindow` were false in exactly those two
 # readings. The probe reported both; this script asserted NEITHER, so the gate named six failures
 # of the Edit-menu integration when the only fact was that another application had taken the
@@ -1174,8 +1174,8 @@ check(
     undo.get("cockpitUndoManagerIsJournal"),
 )
 check(
-    undo.get("undoManagerTitle") == "Undo Change Priority",
-    "the journal's own manager names the operation 'Undo Change Priority' (P-50, front-free)",
+    undo.get("undoManagerTitle") == "Undo Change priority",
+    "the journal's own manager names the operation 'Undo Change priority' (P-50, front-free)",
     undo.get("undoManagerTitle"),
 )
 check(
@@ -1236,8 +1236,8 @@ if taken(
         "`responderUndoManagerIsJournal` above cannot pass vacuously without a responder)"
     )
     check(
-        undo.get("menuItemTitle") == "Undo Change Priority",
-        "the Edit menu reads 'Undo Change Priority' after one scripted mutation",
+        undo.get("menuItemTitle") == "Undo Change priority",
+        "the Edit menu reads 'Undo Change priority' after one scripted mutation",
         undo.get("menuItemTitle"),
     )
     check(
@@ -1523,13 +1523,13 @@ check(
 )
 check(
     status_menu.get("titlesWhileWatching")
-    == ["Open Focus Sentinel", "Pause Watching", "Settings\u2026", "Quit Focus Sentinel"],
+    == ["Open Focus Sentinel", "Pause watching", "Settings\u2026", "Quit Focus Sentinel"],
     "the secondary menu reads Open / Pause Watching / Settings / Quit while watching",
     status_menu.get("titlesWhileWatching"),
 )
 check(
     status_menu.get("titlesWhilePaused")
-    == ["Open Focus Sentinel", "Resume Watching", "Settings\u2026", "Quit Focus Sentinel"],
+    == ["Open Focus Sentinel", "Resume watching", "Settings\u2026", "Quit Focus Sentinel"],
     "the same menu offers Resume Watching once watching is paused",
     status_menu.get("titlesWhilePaused"),
 )
@@ -1813,7 +1813,7 @@ check(
 # that fired is a wire a window actually ran.
 titles = after.get("windowTitles") or []
 check(
-    any("Keyboard Shortcuts" in t for t in titles),
+    any("Keyboard shortcuts" in t for t in titles),
     "the Keyboard Shortcuts window was open when the wire reading was taken",
     titles,
 )
@@ -2101,7 +2101,7 @@ check(
     "Interrupt me less reaches the store, so a person who asked for quiet keeps it",
     (intervention_drive.get("reducedProbe"), intervention_drive.get("reducedStored")),
 )
-# **Quiet hours, at all three depths** (focus-z7g). The pane's "Set a window" button emitted an
+# **Quiet hours, at all three depths** (focus-z7g). The pane's "Set quiet hours" button emitted an
 # action the composition root discarded with `break`, so the control redrew "Off" for ever and
 # gate 8 of the twelve-gate suppression stack was dead code in the shipping app. Three readings
 # because two of them were separately capable of being green over a dead control: the loop's own
@@ -2478,7 +2478,7 @@ check(
     seeded_cockpit.get("visibleSceneIdentifiers"),
 )
 check(
-    "Keyboard Shortcuts" in (seeded_cockpit.get("windowTitles") or []),
+    "Keyboard shortcuts" in (seeded_cockpit.get("windowTitles") or []),
     "the window that came back is the reference, by its title",
     seeded_cockpit.get("windowTitles"),
 )

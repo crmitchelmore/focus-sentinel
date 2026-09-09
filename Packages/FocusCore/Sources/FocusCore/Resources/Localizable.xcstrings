@@ -28,7 +28,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Your own rules always win. Focus never overrules something you told it."
+            "value" : "Focus follows your rules before using its own assessment."
           }
         }
       }
@@ -52,7 +52,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Context you attached"
+            "value" : "Attached context"
           }
         }
       }
@@ -64,7 +64,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Rule for everything"
+            "value" : "Rule for all priorities"
           }
         }
       }
@@ -76,7 +76,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "What the words have in common"
+            "value" : "Shared words"
           }
         }
       }
@@ -100,7 +100,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Built-in ‘ask each time’"
+            "value" : "Default to asking"
           }
         }
       }
@@ -232,7 +232,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "not enough to go on"
+            "value" : "not enough evidence"
           }
         }
       }
@@ -292,7 +292,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tell Focus one app or site you expect to be in, and it can tell this apart from your work."
+            "value" : "Add an app or site to this priority so Focus can recognise your work."
           }
         }
       }
@@ -316,7 +316,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "a default Focus ships"
+            "value" : "a built-in default"
           }
         }
       }
@@ -328,7 +328,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "this app is used for all sorts of things"
+            "value" : "this app has several uses"
           }
         }
       }
@@ -340,7 +340,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "the wording lines up"
+            "value" : "similar wording"
           }
         }
       }
@@ -352,7 +352,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "you have been here a while"
+            "value" : "time spent in this app"
           }
         }
       }
@@ -424,7 +424,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nothing — it went away"
+            "value" : "No answer before it closed"
           }
         }
       }
@@ -436,7 +436,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Held back — nothing could carry it"
+            "value" : "No available place to show it"
           }
         }
       }
@@ -448,7 +448,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "You saw it"
+            "value" : "Displayed"
           }
         }
       }
@@ -460,7 +460,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kept quiet on purpose"
+            "value" : "Suppressed by settings or context"
           }
         }
       }
@@ -472,7 +472,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Shown, but never opened"
+            "value" : "Displayed but not opened"
           }
         }
       }
@@ -484,7 +484,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Answered it"
+            "value" : "Answered"
           }
         }
       }
@@ -508,7 +508,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Closed it"
+            "value" : "Dismissed"
           }
         }
       }
@@ -520,7 +520,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Left it"
+            "value" : "No response"
           }
         }
       }
@@ -580,7 +580,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "On the menu-bar glyph"
+            "value" : "Menu bar icon"
           }
         }
       }
@@ -592,7 +592,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "As a notification"
+            "value" : "Notification"
           }
         }
       }
@@ -604,7 +604,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "On a panel"
+            "value" : "Panel"
           }
         }
       }
@@ -616,7 +616,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "On the menu-bar popover"
+            "value" : "Menu bar popover"
           }
         }
       }
@@ -628,7 +628,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nothing was set as the priority at the time."
+            "value" : "No priority was set at the time."
           }
         }
       }
@@ -640,7 +640,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "This was not about anything in particular."
+            "value" : "No specific app or site was recorded."
           }
         }
       }
@@ -652,7 +652,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "This is a site, and Focus cannot yet correct what it decided about one."
+            "value" : "Focus cannot yet change a site assessment from history."
           }
         }
       }
@@ -664,7 +664,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "That priority has been deleted, so a rule has nowhere to go."
+            "value" : "This priority was deleted, so you cannot add a rule to it."
           }
         }
       }
@@ -676,19 +676,19 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Focus Sentinel has noticed. Nothing to answer."
+            "value" : "Focus has a nudge. No answer needed."
           }
         }
       }
     },
     "nudge.attention.waiting" : {
-      "comment" : "Read by VoiceOver off the menu-bar item when a question or an accusation is waiting in the popover. It is the invitation to open it. APPROVED BY USER (D-11, 2026-09-08): drafted by an agent in e11a because R-96t/R-96v fold over the whole deck space; the user approved this line on 2026-09-08.",
+      "comment" : "Read by VoiceOver off the menu-bar item when a question or an accusation is waiting in the popover. It is the invitation to open it. Revised at the owner's request on 2026-09-09 using the Unslop guidance. Earlier D-11 approval covered the previous wording.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "A question is waiting. Open this to see it."
+            "value" : "Open Focus to answer a question."
           }
         }
       }
@@ -700,7 +700,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Allow once"
+            "value" : "Allow for this session"
           }
         }
       }
@@ -724,7 +724,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Switch task"
+            "value" : "Change priority"
           }
         }
       }
@@ -754,7 +754,7 @@
       }
     },
     "nudge.direct.accusation.action.snooze" : {
-      "comment" : "[direct] Accusation action: snooze this subject for 5, 10 or 15 minutes.",
+      "comment" : "[direct] Accusation action: snooze this subject for the selected duration.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -772,19 +772,19 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@, %@."
+            "value" : "%@ has been active for %@."
           }
         }
       }
     },
     "nudge.direct.accusation.panel.title" : {
-      "comment" : "[direct] Accusation panel title. %@ is the priority's intent. APPROVED BY USER (D-11, 2026-09-08): drafted by an agent in e11a because R-96t/R-96v fold over the whole deck space; the user approved this line on 2026-09-08.",
+      "comment" : "[direct] Accusation panel title. %@ is the priority's intent. Revised at the owner's request on 2026-09-09 using the Unslop guidance. Earlier D-11 approval covered the previous wording.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ — still waiting."
+            "value" : "The current priority is %@."
           }
         }
       }
@@ -832,7 +832,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Applies to the whole app."
+            "value" : "Applies to this app for this priority."
           }
         }
       }
@@ -844,19 +844,19 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ — part of %@?"
+            "value" : "Is %@ part of %@?"
           }
         }
       }
     },
     "nudge.neutral.accusation.action.notNow" : {
-      "comment" : "[neutral] Accusation action: a session-lived rule that dies with the session. APPROVED BY USER (D-11, 2026-09-08): drafted by an agent in e11a because R-96t/R-96v fold over the whole deck space; the user approved this line on 2026-09-08.",
+      "comment" : "[neutral] Accusation action: a session-lived rule that dies with the session. Revised at the owner's request on 2026-09-09 using the Unslop guidance. Earlier D-11 approval covered the previous wording.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Allow this once"
+            "value" : "Allow for this session"
           }
         }
       }
@@ -910,7 +910,7 @@
       }
     },
     "nudge.neutral.accusation.action.snooze" : {
-      "comment" : "[neutral] Accusation action: snooze this subject for 5, 10 or 15 minutes. APPROVED BY USER (D-11, 2026-09-08): drafted by an agent in e11a because R-96t/R-96v fold over the whole deck space; the user approved this line on 2026-09-08.",
+      "comment" : "[neutral] Accusation action: snooze this subject for the selected duration. APPROVED BY USER (D-11, 2026-09-08): drafted by an agent in e11a because R-96t/R-96v fold over the whole deck space; the user approved this line on 2026-09-08.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -922,37 +922,37 @@
       }
     },
     "nudge.neutral.accusation.panel.body" : {
-      "comment" : "[neutral] Accusation panel body. %1$@ is the application or origin, %2$@ a rendered duration. APPROVED BY USER (D-11, 2026-09-08): drafted by an agent in e11a because R-96t/R-96v fold over the whole deck space; the user approved this line on 2026-09-08.",
+      "comment" : "[neutral] Accusation panel body. %1$@ is the application or origin, %2$@ a rendered duration. Revised at the owner's request on 2026-09-09 using the Unslop guidance. Earlier D-11 approval covered the previous wording.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ isn’t on this task’s list — %@ so far."
+            "value" : "%@ has been active for %@."
           }
         }
       }
     },
     "nudge.neutral.accusation.panel.title" : {
-      "comment" : "[neutral] Accusation panel title. %@ is the priority's intent. APPROVED BY USER (D-11, 2026-09-08): drafted by an agent in e11a because R-96t/R-96v fold over the whole deck space; the user approved this line on 2026-09-08.",
+      "comment" : "[neutral] Accusation panel title. %@ is the priority's intent. Revised at the owner's request on 2026-09-09 using the Unslop guidance. Earlier D-11 approval covered the previous wording.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "\u201c%@\u201d is waiting."
+            "value" : "\"%@\" is the current priority."
           }
         }
       }
     },
     "nudge.neutral.query.action.no" : {
-      "comment" : "[neutral] Query action: no, this is not part of the task. APPROVED BY USER (D-11, 2026-09-08): drafted by an agent in e11a because R-96t/R-96v fold over the whole deck space; the user approved this line on 2026-09-08.",
+      "comment" : "[neutral] Query action: no, this is not part of the task. Revised at the owner's request on 2026-09-09 using the Unslop guidance. Earlier D-11 approval covered the previous wording.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "No, it isn’t"
+            "value" : "No, it isn't"
           }
         }
       }
@@ -982,13 +982,13 @@
       }
     },
     "nudge.neutral.query.panel.scope.app" : {
-      "comment" : "[neutral] Query panel: the scope the rule an answer writes will have. APPROVED BY USER (D-11, 2026-09-08): drafted by an agent in e11a because R-96t/R-96v fold over the whole deck space; the user approved this line on 2026-09-08.",
+      "comment" : "[neutral] Query panel: the scope the rule an answer writes will have. Revised at the owner's request on 2026-09-09 using the Unslop guidance. Earlier D-11 approval covered the previous wording.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "One answer covers this whole app, for this priority."
+            "value" : "Applies to this whole app for this priority."
           }
         }
       }
@@ -1012,7 +1012,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Focus can’t read this wording well enough to judge it."
+            "value" : "Focus cannot assess this wording."
           }
         }
       }
@@ -1024,7 +1024,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "This app gets used for all sorts of things."
+            "value" : "This app has several uses."
           }
         }
       }
@@ -1036,7 +1036,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Focus hasn’t been told which apps this task lives in."
+            "value" : "No apps have been added to this priority yet."
           }
         }
       }
@@ -1048,7 +1048,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "A quiet signal, with nothing to answer"
+            "value" : "Menu bar signal. No answer needed."
           }
         }
       }
@@ -1060,19 +1060,19 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Something you can answer"
+            "value" : "Nudge with actions"
           }
         }
       }
     },
     "nudge.restart.cue" : {
-      "comment" : "Read by VoiceOver off the menu-bar item, and shown as its tooltip, when a break ended and the person has not gone back to their commitment within the grace. States a fact and asks for nothing: no praise, no count, nothing to press. APPROVED BY USER (D-11, 2026-09-08): drafted by an agent; the user approved this line on 2026-09-08.",
+      "comment" : "Read by VoiceOver off the menu-bar item, and shown as its tooltip, when a break ended and the person has not gone back to their commitment within the grace. States a fact and asks for nothing: no praise, no count, nothing to press. Revised at the owner's request on 2026-09-09 using the Unslop guidance. Earlier D-11 approval covered the previous wording.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Your break ended a while ago. Nothing to answer."
+            "value" : "Your break ended. No answer needed."
           }
         }
       }
@@ -1084,7 +1084,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Allow once"
+            "value" : "Allow for this session"
           }
         }
       }
@@ -1138,7 +1138,7 @@
       }
     },
     "nudge.silentVisual.accusation.action.snooze" : {
-      "comment" : "[silentVisual] Accusation action: snooze this subject for 5, 10 or 15 minutes.",
+      "comment" : "[silentVisual] Accusation action: snooze this subject for the selected duration.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -1156,7 +1156,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ · %@"
+            "value" : "%@ for %@"
           }
         }
       }
@@ -1216,7 +1216,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Whole app."
+            "value" : "This app, for this priority."
           }
         }
       }
@@ -1228,7 +1228,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ · %@?"
+            "value" : "Is %@ part of %@?"
           }
         }
       }
@@ -1240,7 +1240,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Just this once"
+            "value" : "Allow for this session"
           }
         }
       }
@@ -1252,7 +1252,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Take a break"
+            "value" : "Pause for now"
           }
         }
       }
@@ -1276,7 +1276,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "This helps, actually"
+            "value" : "This helps with my task"
           }
         }
       }
@@ -1294,37 +1294,37 @@
       }
     },
     "nudge.warm.accusation.action.snooze" : {
-      "comment" : "[warm] Accusation action: snooze this subject for 5, 10 or 15 minutes.",
+      "comment" : "[warm] Accusation action: snooze this subject for the selected duration.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Remind me later"
+            "value" : "Quiet for"
           }
         }
       }
     },
     "nudge.warm.accusation.panel.body" : {
-      "comment" : "[warm] Accusation panel body. %1$@ is the application or origin, %2$@ a rendered duration. APPROVED BY USER (D-11, 2026-09-08): drafted by an agent in e11a because R-96t/R-96v fold over the whole deck space; the user approved this line on 2026-09-08.",
+      "comment" : "[warm] Accusation panel body. %1$@ is the application or origin, %2$@ a rendered duration. Revised at the owner's request on 2026-09-09 using the Unslop guidance. Earlier D-11 approval covered the previous wording.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ has been in front for %@."
+            "value" : "%@ has been active for %@."
           }
         }
       }
     },
     "nudge.warm.accusation.panel.title" : {
-      "comment" : "[warm] Accusation panel title. %@ is the priority's intent. APPROVED BY USER (D-11, 2026-09-08): drafted by an agent in e11a because R-96t/R-96v fold over the whole deck space; the user approved this line on 2026-09-08.",
+      "comment" : "[warm] Accusation panel title. %@ is the priority's intent. Revised at the owner's request on 2026-09-09 using the Unslop guidance. Earlier D-11 approval covered the previous wording.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "\u201c%@\u201d is still open."
+            "value" : "\"%@\" is still the priority."
           }
         }
       }
@@ -1372,7 +1372,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Answering saves it for this whole app."
+            "value" : "Applies to the whole app for this priority."
           }
         }
       }
@@ -1444,7 +1444,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "On Break"
+            "value" : "On break"
           }
         }
       }
@@ -1564,7 +1564,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "There isn’t enough to go on."
+            "value" : "There is not enough evidence."
           }
         }
       }
@@ -1576,7 +1576,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "There’s no priority to be away from."
+            "value" : "No priority is set."
           }
         }
       }
@@ -1588,7 +1588,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "You’re on a break."
+            "value" : "Nudges are only shown during focus time."
           }
         }
       }
@@ -1600,7 +1600,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nothing is off track."
+            "value" : "Your current status does not call for a nudge."
           }
         }
       }
@@ -1612,7 +1612,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "You’re away from the keyboard."
+            "value" : "You're away from the keyboard."
           }
         }
       }
@@ -1624,7 +1624,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "This looks like the work."
+            "value" : "This activity appears relevant."
           }
         }
       }
@@ -1636,7 +1636,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Focus isn’t sure, so it says nothing."
+            "value" : "Focus is unsure whether this activity is relevant."
           }
         }
       }
@@ -1648,7 +1648,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "A short detour isn’t drift."
+            "value" : "This activity is still within the grace period."
           }
         }
       }
@@ -1672,7 +1672,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Add Context"
+            "value" : "Add context"
           }
         }
       }
@@ -1684,7 +1684,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Remove Context"
+            "value" : "Remove context"
           }
         }
       }
@@ -1696,7 +1696,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Edit Definition of Done"
+            "value" : "Edit completion goal"
           }
         }
       }
@@ -1708,7 +1708,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Edit Intent"
+            "value" : "Edit priority wording"
           }
         }
       }
@@ -1720,7 +1720,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Change Priority"
+            "value" : "Change priority"
           }
         }
       }
@@ -1732,7 +1732,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Clear Priority"
+            "value" : "Clear priority"
           }
         }
       }
@@ -1744,7 +1744,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Complete Priority"
+            "value" : "Complete priority"
           }
         }
       }
@@ -1756,7 +1756,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Add Priority"
+            "value" : "Add priority"
           }
         }
       }
@@ -1768,7 +1768,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Delete Priority"
+            "value" : "Delete priority"
           }
         }
       }
@@ -1780,7 +1780,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Set Priority"
+            "value" : "Set priority"
           }
         }
       }
@@ -1792,7 +1792,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Add Rule"
+            "value" : "Add rule"
           }
         }
       }
@@ -1804,7 +1804,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Change Rule"
+            "value" : "Change rule"
           }
         }
       }
@@ -1816,7 +1816,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Remove Rule"
+            "value" : "Remove rule"
           }
         }
       }
@@ -1828,7 +1828,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Set Timebox"
+            "value" : "Set timebox"
           }
         }
       }
