@@ -48,8 +48,8 @@ public struct AccusationPresentation: Sendable, Equatable {
     /// It has **no default**. Every construction of this value states it, because a default is
     /// what would let the next surface inherit the wrong half of the answer in silence.
     public let hasOpenSession: Bool
-    /// The snooze spans on offer. `InterventionPolicy.snoozeDurations` in the shipping app.
-    public let snoozeDurations: [Duration]
+    /// Owner-selected shortcuts; custom durations use the same snooze action.
+    public var snoozeDurations: [Duration] { [.seconds(60), .seconds(300), .seconds(1_200)] }
 
     public init(
         rung: LadderRung.Kind,
@@ -59,8 +59,7 @@ public struct AccusationPresentation: Sendable, Equatable {
         dwelled: Duration,
         returnTarget: String? = nil,
         snoozeRemaining: Duration? = nil,
-        hasOpenSession: Bool,
-        snoozeDurations: [Duration] = InterventionPolicy.snoozeDurations
+        hasOpenSession: Bool
     ) {
         self.rung = rung
         self.voice = voice
@@ -70,7 +69,6 @@ public struct AccusationPresentation: Sendable, Equatable {
         self.returnTarget = returnTarget
         self.snoozeRemaining = snoozeRemaining
         self.hasOpenSession = hasOpenSession
-        self.snoozeDurations = snoozeDurations
     }
 
     /// Whether a rule-writing action has a subject to be about.
@@ -191,6 +189,8 @@ public struct AccusationPanelView: DecisionSurfaceContent {
     @Environment(\.appearanceTraits) private var traits
     @Environment(\.shellTextScale) private var textScale
     @ScaledMetric(relativeTo: .body) private var spacing: CGFloat = 12
+    @State private var showsCustomSnooze = false
+    @State private var customMinutes = "5"
 
     public init(
         presentation: AccusationPresentation,
@@ -527,17 +527,7 @@ public struct AccusationPanelView: DecisionSurfaceContent {
         }
     }
 
-    /// The snooze row: one button per span, so the choice is one click rather than two.
-    ///
-    /// F-61's own three figures, read from `InterventionPolicy.snoozeDurations` rather than
-    /// written here — the panel offers what the policy declares, and a fourth span would appear
-    /// without an edit to this file.
-    ///
-    /// **Three layouts, and the reason is a measured defect.** At the accessibility text size
-    /// the one-line arrangement rendered "5 mi…", "10 mi…", "15 mi…" — and an action whose span
-    /// a person cannot read is an action they cannot choose, which is the same defect as not
-    /// offering it. Every span label is `fixedSize`, so overflow is real rather than silently
-    /// truncated, and `ViewThatFits` takes the widest arrangement that actually fits.
+    /// Three one-click shortcuts and a custom editor, with a stacked fallback at large text sizes.
     private var snoozeRow: some View {
         let gap = DesignTokens.spacing(spacing / 2, scale: textScale)
         return ViewThatFits(in: .horizontal) {
@@ -564,7 +554,11 @@ public struct AccusationPanelView: DecisionSurfaceContent {
                     snoozeButton(span, wraps: true)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
+                customSnoozeButton
             }
+        }
+        .popover(isPresented: $showsCustomSnooze) {
+            customSnoozeEditor
         }
     }
 
@@ -580,7 +574,59 @@ public struct AccusationPanelView: DecisionSurfaceContent {
             ForEach(presentation.snoozeDurations, id: \.self) { span in
                 snoozeButton(span, wraps: false)
             }
+            customSnoozeButton
         }
+    }
+
+    private var customSnoozeButton: some View {
+        Button {
+            showsCustomSnooze = true
+        } label: {
+            ShellText(.nudgeSnoozeCustom, role: .callout)
+                .fixedSize(horizontal: true, vertical: false)
+        }
+        .buttonStyle(.bordered)
+        .accessibilityIdentifier("nudge-snooze-custom")
+    }
+
+    /// Limit the editor to a positive whole number of minutes, up to one day.
+    private var customSnoozeDuration: Duration? {
+        guard let minutes = Int(customMinutes.trimmingCharacters(in: .whitespacesAndNewlines)),
+              (1...1_440).contains(minutes) else { return nil }
+        return .seconds(minutes * 60)
+    }
+
+    private var customSnoozeEditor: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            ShellText(.nudgeSnoozeCustomMinutes, role: .callout)
+            TextField(ShellStrings.string(.nudgeSnoozeCustomMinutes), text: $customMinutes)
+                .textFieldStyle(.roundedBorder)
+                .accessibilityIdentifier("nudge-snooze-custom-minutes")
+                .onSubmit { applyCustomSnooze() }
+            HStack {
+                Button { showsCustomSnooze = false } label: {
+                    ShellText(.priorityCompleteActionCancel, role: .callout)
+                }
+                Spacer()
+                Button { applyCustomSnooze() } label: {
+                    NudgeText(.accusationActionSnooze, voice: presentation.voice, role: .callout)
+                    if let span = customSnoozeDuration {
+                        Text(verbatim: NudgeCopy.duration(span))
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(customSnoozeDuration == nil)
+            }
+        }
+        .font(DesignTokens.font(.callout, scale: textScale))
+        .padding(16)
+        .frame(minWidth: 260)
+    }
+
+    private func applyCustomSnooze() {
+        guard let span = customSnoozeDuration else { return }
+        showsCustomSnooze = false
+        onAction(.snooze, span)
     }
 
     private func snoozeButton(_ span: Duration, wraps: Bool) -> some View {

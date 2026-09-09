@@ -4309,6 +4309,28 @@
         }
       }
     },
+    "shell.nudge.snoozeCustom" : {
+      "comment": "Custom quiet duration control, requested by the owner on 9 September 2026.",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Custom…"
+          }
+        }
+      }
+    },
+    "shell.nudge.snoozeCustomMinutes" : {
+      "comment": "Custom quiet duration control, requested by the owner on 9 September 2026.",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Minutes (1–1440)"
+          }
+        }
+      }
+    },
     "shell.nudge.snoozeCountdown" : {
       "comment" : "Spoken form of the nudge panel's snooze countdown. %@ is a rendered duration.",
       "extractionState" : "manual",

@@ -27,4 +27,10 @@ The release base’s General form still clips some existing labels. Another agen
 
 No actionable P0/P1/P2 finding remains in this change’s identity scope. The full UI comparison and source checks are recorded in the PR validation evidence; recording passes alone do not count as comparison proof.
 
-final result: passed
+## Owner refinement: Quiet for shortcuts
+
+After the identity validation at 7201dc1, the owner requested 1, 5 and 20-minute shortcuts plus Custom. The picker now opens a custom minute field on demand, with a 1–1440 range, explicit confirmation and cancellation. The former twenty-duration overflow fixture now applies synthetic vertical pressure instead of displaying twenty buttons. The underlying snooze action and policy defaults are unchanged.
+
+Debug build, string checks and forbidden-symbol checks pass. This refinement has not run UI or snapshot checks: the owner’s standing confirmation rule applies to the new batch. Existing snapshot evidence above covers 7201dc1, not this refinement. Refreshed picker snapshots and native custom-entry validation remain required before merging.
+
+final result: identity passed at 7201dc1; picker refinement awaiting UI validation
