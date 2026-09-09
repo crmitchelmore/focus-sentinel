@@ -97,24 +97,31 @@ struct ReleaseReviewRegressionTests {
         #expect(root.hotKeyRegistrar.registeredSpec == nil)
     }
 
-    @Test("the delegate closes main scene graphs and leaves auxiliary panels intact")
+    @Test("the delegate clears hidden scene graphs and leaves auxiliary windows intact")
     func delegateShutdownIsScoped() {
         let scene = NSWindow(contentRect: .zero, styleMask: [.titled, .closable], backing: .buffered, defer: true)
         scene.isReleasedWhenClosed = false
         let sceneContent = NSView()
         scene.contentView = sceneContent
+        #expect(!scene.isVisible)
+        #expect(!scene.canBecomeMain)
         let auxiliary = NSPanel(contentRect: .zero, styleMask: [.titled], backing: .buffered, defer: true)
         auxiliary.isReleasedWhenClosed = false
         let auxiliaryContent = NSView()
         auxiliary.contentView = auxiliaryContent
-        defer { auxiliary.close() }
+        let borderless = NSWindow(contentRect: .zero, styleMask: [.borderless], backing: .buffered, defer: true)
+        borderless.isReleasedWhenClosed = false
+        let borderlessContent = NSView()
+        borderless.contentView = borderlessContent
+        defer { auxiliary.close(); borderless.close() }
         let commands = FocusCommandCenter()
         commands.register { _ in }
 
-        FocusAppDelegate.prepareForStoreDeletion(windows: [scene, auxiliary], commands: commands)
+        FocusAppDelegate.prepareForStoreDeletion(windows: [scene, auxiliary, borderless], commands: commands)
 
         #expect(scene.contentView == nil)
         #expect(auxiliary.contentView === auxiliaryContent)
+        #expect(borderless.contentView === borderlessContent)
         #expect(commands.send(.newPriority) == .undeliverable)
     }
 }

@@ -146,9 +146,11 @@ public final class FocusAppDelegate: NSObject, NSApplicationDelegate {
     @MainActor
     static func prepareForStoreDeletion(windows: [NSWindow], commands: FocusCommandCenter) {
         commands.shutDown()
-        // Main scene windows, including Settings. Auxiliary AppKit windows are not ours
-        // to dismantle; the root has already hidden its own capture and nudge panels.
-        for window in windows where window.canBecomeMain && window.styleMask.contains(.titled)
+        // Titled scene windows, including hidden Settings. canBecomeMain is false while
+        // a window is hidden, even though its scene graph still holds the old store.
+        // Panels and borderless auxiliary windows are not ours to dismantle; the root
+        // has already hidden its own capture and nudge panels.
+        for window in windows where window.styleMask.contains(.titled)
             && !(window is NSPanel) {
             if let sheet = window.attachedSheet { window.endSheet(sheet) }
             window.contentView = nil
