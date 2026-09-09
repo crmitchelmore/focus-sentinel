@@ -156,9 +156,11 @@ struct InterventionSettingsTests {
         // not the list. It is back with the affordance that was missing, and it is still not an
         // authorisation: `NSWorkspace.runningApplications` names applications, reads no window,
         // and asks nobody for anything.
+        // focus-exdi adds `tunings`: every policy dial, rows in the store, read by both engines —
+        // a setting, and still not an authorisation.
         #expect(fields == [
             "addableApplications", "notchRefusal", "presentationExclusions", "quietHours",
-            "reducedInterruption", "reducedInterruptionIsForced", "usage", "voice"
+            "reducedInterruption", "reducedInterruptionIsForced", "tunings", "usage", "voice"
         ])
         // …and the only requests it can make are the ones that change a setting.
         #expect(!InterventionSettingsView(settings: .init()).drawnRows.isEmpty)
@@ -443,6 +445,9 @@ struct InterventionSettingsTests {
             // nobody for anything.
             case .addPresentationExclusion, .removePresentationExclusion:
                 true
+            // focus-exdi: the dials. Rows in the store, read by both engines; not a permission.
+            case .setPolicyTuning, .resetPolicyTunings:
+                true
             }
         }
         #expect(changesASetting(.setVoice(.warm)))
@@ -533,12 +538,15 @@ struct InterventionSettingsTests {
             case .setQuietHours: "setQuietHours"
             case .addPresentationExclusion: "addPresentationExclusion"
             case .removePresentationExclusion: "removePresentationExclusion"
+            case .setPolicyTuning: "setPolicyTuning"
+            case .resetPolicyTunings: "resetPolicyTunings"
             }
         }
         let actions: [InterventionSettingsAction] = [
             .setVoice(.neutral), .setReducedInterruption(true), .setQuietHours(nil),
             .addPresentationExclusion("com.example.Keynote"),
-            .removePresentationExclusion("com.example.Keynote")
+            .removePresentationExclusion("com.example.Keynote"),
+            .setPolicyTuning(.dailyQueryCap, 6), .resetPolicyTunings
         ]
         #expect(actions.map(name).allSatisfy { !$0.lowercased().contains("notch") })
     }

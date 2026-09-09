@@ -100,6 +100,9 @@ public enum ShellRenderedField: String, Sendable, CaseIterable, Codable, Hashabl
     /// tells somebody their history is being kept for a week when it is being kept for a
     /// quarter. Reported by the pane for `privacyStorePath`'s reason.
     case retentionWindow
+    /// The Privacy pane's observer switches (focus-exdi.3): the pause, the away threshold, the
+    /// microphone rule and the launch-context switch, digested whole.
+    case sensingSettings
     /// The band the verdict inspector drew, or `"none"`.
     case verdictBand
     /// The whole verdict, as `ShellValueDigest`. The band is one field: a verdict about a

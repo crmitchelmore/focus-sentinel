@@ -111,6 +111,8 @@ public struct ShellSettingsConnection {
     /// control answering from its own memory would go on saying *90 days* after a
     /// delete-everything, and this is a promise rather than a decoration.
     public let retention: RetentionWindow
+    /// The observer switches the Privacy pane draws (focus-exdi.3).
+    public let sensing: SensingSettingsValue
     /// What the Privacy pane's one destructive control reaches (e07a, focus-6pr.3). A sink like
     /// the two above, and unlike them **never driven by a lane**: it deletes the person's store.
     ///
@@ -167,6 +169,7 @@ public struct ShellSettingsConnection {
         onLaunchAtLogin: @escaping @MainActor (LaunchAtLoginAction) -> Void = { _ in },
         onCaptureAction: @escaping @MainActor (CaptureSettingsAction) -> Void = { _ in },
         retention: RetentionWindow = .committedDefault,
+        sensing: SensingSettingsValue = .defaults,
         onPrivacyAction: @escaping @MainActor (PrivacySettingsAction) -> Void = { _ in },
         selectedTab: SettingsTab = .general,
         selectTab: @escaping @MainActor (SettingsTab) -> Void = { _ in },
@@ -189,6 +192,7 @@ public struct ShellSettingsConnection {
         self.onLaunchAtLogin = onLaunchAtLogin
         self.onCaptureAction = onCaptureAction
         self.retention = retention
+        self.sensing = sensing
         self.onPrivacyAction = onPrivacyAction
         self.selectedTab = selectedTab
         self.selectTab = selectTab
@@ -224,6 +228,12 @@ extension ShellSettingsConnection: ShellDrawnConnection {
             "quickCaptureShortcut.modifierFlags": .drawn([.quickCaptureShortcut]),
             "onCaptureAction": .undrawn(.sink),
             "retention": .drawn([.retentionWindow]),
+            "sensing": .drawn([.sensingSettings]),
+            "sensing.sensingPaused": .drawn([.sensingSettings]),
+            "sensing.idleThresholdSeconds": .drawn([.sensingSettings]),
+            "sensing.corroborationTickSeconds": .drawn([.sensingSettings]),
+            "sensing.launchContextOnSessionStart": .drawn([.sensingSettings]),
+            "sensing.mediaSuppressionEnabled": .drawn([.sensingSettings]),
             "onPrivacyAction": .undrawn(.sink),
             "summary": .drawn([.privacySummary, .sensingDetail]),
             "capabilities": .drawn([.privacyCapabilities]),
@@ -402,6 +412,7 @@ public struct ShellSettingsView: View {
     private let onInterventionAction: (InterventionSettingsAction) -> Void
     /// How long the app keeps what it wrote down, as the store holds it (F-115, focus-l7n).
     private let retention: RetentionWindow
+    private let sensing: SensingSettingsValue
     private let onPrivacyAction: (PrivacySettingsAction) -> Void
     /// Which pane is on screen. A `Binding` over the composition root's own value, never a
     /// `@State`: the root drives it so each pane can be made to draw and report (focus-7ow).
@@ -430,6 +441,7 @@ public struct ShellSettingsView: View {
         intervention: InterventionSettings = InterventionSettings(),
         onInterventionAction: @escaping (InterventionSettingsAction) -> Void = { _ in },
         retention: RetentionWindow = .committedDefault,
+        sensing: SensingSettingsValue = .defaults,
         onPrivacyAction: @escaping (PrivacySettingsAction) -> Void = { _ in },
         selectedTab: Binding<SettingsTab> = .constant(.general)
     ) {
@@ -447,6 +459,7 @@ public struct ShellSettingsView: View {
         self.intervention = intervention
         self.onInterventionAction = onInterventionAction
         self.retention = retention
+        self.sensing = sensing
         self.onPrivacyAction = onPrivacyAction
         self._selectedTab = selectedTab
         self.didRender = nil
@@ -478,6 +491,7 @@ public struct ShellSettingsView: View {
         self.intervention = connection.intervention
         self.onInterventionAction = connection.onInterventionAction
         self.retention = connection.retention
+        self.sensing = connection.sensing
         self.onPrivacyAction = connection.onPrivacyAction
         self._selectedTab = Binding(
             get: { connection.selectedTab },
@@ -519,6 +533,7 @@ public struct ShellSettingsView: View {
                 capabilities: capabilities,
                 verdict: verdict,
                 retention: retention,
+                sensing: sensing,
                 onAction: onPrivacyAction
             )
             .tabItem { tabLabel(.privacy) }

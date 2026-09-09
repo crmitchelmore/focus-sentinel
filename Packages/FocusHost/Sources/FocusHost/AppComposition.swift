@@ -829,7 +829,7 @@ public final class AppComposition {
             idle: sensingHost.idleReading,
             idleThresholdSeconds: sensingHost.settings.idleThresholdInterval,
             media: sensingHost.mediaActivity,
-            mediaSuppressionEnabled: true,
+            mediaSuppressionEnabled: sensingHost.settings.mediaSuppressionEnabled,
             presentation: sensingHost.presentationState,
             // **Two facts, and the second one had no reading at all** (focus-zeq, P-131).
             //
@@ -1227,7 +1227,30 @@ public final class AppComposition {
             setRetentionWindow(window)
         case .exportData, .exportSettings, .importSettings:
             performPortability(action)
+        case .setSensingPaused(let paused):
+            sessionHost.setSensingPaused(paused)
+        case .setIdleThreshold(let seconds):
+            updateSensingSettings { $0.idleThresholdSeconds = seconds }
+        case .setMediaSuppression(let enabled):
+            updateSensingSettings { $0.mediaSuppressionEnabled = enabled }
+        case .setLaunchContextOnSessionStart(let enabled):
+            updateSensingSettings { $0.launchContextOnSessionStart = enabled }
         }
+    }
+
+    /// **One observer setting changed** (focus-exdi.3): the row first, then the running host,
+    /// so a write that fails leaves the host on what the store still says.
+    private func updateSensingSettings(_ change: (inout SensingSettingsValue) -> Void) {
+        var settings = sensingHost.settings
+        change(&settings)
+        do {
+            try FocusStore.setSensingSettings(settings, in: modelContainer.mainContext, now: dateProvider.now)
+        } catch {
+            logger.error("an observer setting could not be stored: \(error, privacy: .public)")
+            return
+        }
+        sensingHost.update(settings: settings)
+        refreshCockpit()
     }
 
     /// **Write the window, and sweep to it now** (F-115, focus-l7n).

@@ -46,6 +46,13 @@ public enum PrivacySettingsAction: Sendable, Equatable, Hashable {
     /// The other direction, through an open panel. Validated whole and applied whole; a document
     /// this build cannot read is refused with a stated reason and applies nothing.
     case importSettings
+    /// **The observers, switchable** (focus-exdi.3). Stored on `AppSettingsRecord` since v3 and
+    /// never given a control until now: pause every observer, the away threshold, whether a
+    /// running microphone keeps the app quiet, and whether a session opens the context pack.
+    case setSensingPaused(Bool)
+    case setIdleThreshold(seconds: Int)
+    case setMediaSuppression(Bool)
+    case setLaunchContextOnSessionStart(Bool)
 
     /// **The pane's vocabulary, as verbs.**
     ///
@@ -62,6 +69,10 @@ public enum PrivacySettingsAction: Sendable, Equatable, Hashable {
         case .exportData: "exportData"
         case .exportSettings: "exportSettings"
         case .importSettings: "importSettings"
+        case .setSensingPaused: "setSensingPaused"
+        case .setIdleThreshold: "setIdleThreshold"
+        case .setMediaSuppression: "setMediaSuppression"
+        case .setLaunchContextOnSessionStart: "setLaunchContextOnSessionStart"
         }
     }
 
@@ -71,11 +82,16 @@ public enum PrivacySettingsAction: Sendable, Equatable, Hashable {
         [.deleteEverything]
             + RetentionWindow.ordered.map(PrivacySettingsAction.setRetentionWindow)
             + [.exportData, .exportSettings, .importSettings]
+            + [
+                .setSensingPaused(true), .setIdleThreshold(seconds: PrivacySettingsView.awayStep),
+                .setMediaSuppression(false), .setLaunchContextOnSessionStart(true)
+            ]
     }
 
     /// The vocabulary the self-check publishes, in the order the pane draws it.
     public static let vocabulary: [String] = [
-        "deleteEverything", "setRetentionWindow", "exportData", "exportSettings", "importSettings"
+        "deleteEverything", "setRetentionWindow", "exportData", "exportSettings", "importSettings",
+        "setSensingPaused", "setIdleThreshold", "setMediaSuppression", "setLaunchContextOnSessionStart"
     ]
 
     /// **The title of the one alert this vocabulary can raise**, resolved here.
@@ -106,6 +122,7 @@ public struct PrivacySettingsView: View {
     /// a control answering from its own memory would go on saying *90 days* after a
     /// delete-everything rebuilt the store.
     private let retention: RetentionWindow
+    private let sensing: SensingSettingsValue
     /// **Which half of this pane to draw**, or `nil` for the whole of it, which is what the
     /// application always asks for (focus-u3w).
     ///
@@ -140,6 +157,7 @@ public struct PrivacySettingsView: View {
         capabilities: CapabilityMatrix = CapabilityMatrix(),
         verdict: VerdictSnapshot? = nil,
         retention: RetentionWindow = .committedDefault,
+        sensing: SensingSettingsValue = .defaults,
         half: Half? = nil,
         screens: ShellScreens = nil,
         onAction: @escaping (PrivacySettingsAction) -> Void = { _ in }
@@ -149,6 +167,7 @@ public struct PrivacySettingsView: View {
         self.capabilities = capabilities
         self.verdict = verdict
         self.retention = retention
+        self.sensing = sensing
         self.half = half
         self.screens = screens
         self.onAction = onAction
@@ -204,6 +223,110 @@ public struct PrivacySettingsView: View {
         }
         .defaultFocus($focus, .privacyRevealStore)
     }
+
+    /// **The observers, switchable** (focus-exdi.3). Each row is a setting the store has kept
+    /// since v3; the pane is the first place a person can reach it. Bordered buttons for the away
+    /// dial rather than a `Stepper`, for the reason every control on this pane is.
+    private var observerSwitches: some View {
+        VStack(alignment: .leading, spacing: spacing / 2) {
+            // The switch reads the summary, the same reading the cockpit's switch and the
+            // status line draw: `SensingSummary.isPausedByUser` is what the running host says,
+            // where the stored flag is what it was told at launch.
+            switchRow(
+                .sensingPauseLabel, note: .sensingPauseExplanation, isOn: !summary.isPausedByUser
+            ) { onAction(.setSensingPaused(!$0)) }
+            HStack(alignment: .firstTextBaseline, spacing: spacing / 2) {
+                ShellText(.settingsPrivacyAwayAfter, role: .callout)
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: spacing / 2)
+                HStack(spacing: spacing / 4) {
+                    Button {
+                        onAction(.setIdleThreshold(seconds: sensing.idleThresholdSeconds - Self.awayStep))
+                    } label: {
+                        Image(systemName: "minus")
+                    }
+                    .buttonStyle(.bordered)
+                    .accessibilityLabel(Text(ShellStrings.resource(.settingsTuningsLower)))
+                    .disabled(sensing.idleThresholdSeconds <= Self.awayFloor)
+                    ShellText(
+                        .settingsTuningsUnitMinutes,
+                        role: .callout,
+                        argument: (sensing.idleThresholdSeconds / Self.awayStep).formatted()
+                    )
+                    .monospacedDigit()
+                    .frame(minWidth: Self.awayColumnWidth, alignment: .trailing)
+                    Button {
+                        onAction(.setIdleThreshold(seconds: sensing.idleThresholdSeconds + Self.awayStep))
+                    } label: {
+                        Image(systemName: "plus")
+                    }
+                    .buttonStyle(.bordered)
+                    .accessibilityLabel(Text(ShellStrings.resource(.settingsTuningsRaise)))
+                    .disabled(sensing.idleThresholdSeconds >= Self.awayCeiling)
+                }
+            }
+            ShellText(.settingsPrivacyAwayAfterNote, role: .footnote)
+                .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+                .lineLimit(nil)
+                .fixedSize(horizontal: false, vertical: true)
+            switchRow(
+                .settingsPrivacyMicrophoneSuppression,
+                note: .settingsPrivacyMicrophoneSuppressionNote,
+                isOn: sensing.mediaSuppressionEnabled
+            ) { onAction(.setMediaSuppression($0)) }
+            switchRow(
+                .settingsPrivacyLaunchContext,
+                note: .settingsPrivacyLaunchContextNote,
+                isOn: sensing.launchContextOnSessionStart
+            ) { onAction(.setLaunchContextOnSessionStart($0)) }
+        }
+        .shellRendered(.sensingSettings, ShellValueDigest.describe(sensing))
+    }
+
+    /// One switch: its name beside a check glyph, its note under it.
+    ///
+    /// A bordered button carrying its own state rather than a `Toggle`: a switch is AppKit-backed
+    /// and rasterises under `ImageRenderer` as the yellow "unrenderable view" placeholder — this
+    /// pane has baselines, and the first render of these rows was three yellow bars. The same
+    /// shape the Intervention pane's "Interrupt me less" already uses.
+    private func switchRow(
+        _ label: ShellStringKey,
+        note: ShellStringKey,
+        isOn: Bool,
+        set: @escaping (Bool) -> Void
+    ) -> some View {
+        VStack(alignment: .leading, spacing: spacing / 4) {
+            Button {
+                set(!isOn)
+            } label: {
+                HStack(spacing: spacing / 2) {
+                    Image(systemName: isOn ? "checkmark.circle.fill" : "circle")
+                        .foregroundStyle(
+                            isOn ? DesignTokens.Palette.accent(for: traits) : DesignTokens.supportingTextColor(for: traits)
+                        )
+                        .accessibilityHidden(true)
+                    ShellText(label, role: .callout)
+                        .lineLimit(nil)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 0)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.bordered)
+            .accessibilityAddTraits(isOn ? [.isSelected] : [])
+            ShellText(note, role: .footnote)
+                .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+                .lineLimit(nil)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    /// The away dial moves in whole minutes, from one to thirty.
+    static let awayStep = 60
+    static let awayFloor = 60
+    static let awayCeiling = 30 * 60
+    private static let awayColumnWidth: CGFloat = 56
 
     private func retentionButtons(_ windows: [RetentionWindow]) -> some View {
         ForEach(windows, id: \.self) { window in
@@ -431,6 +554,7 @@ public struct PrivacySettingsView: View {
             VStack(alignment: .leading, spacing: spacing / 2) {
                 ShellText(.sensingHeading, role: .headline)
                 SensingStatusView(summary: summary, showsDetail: true)
+                observerSwitches
 
                 ShellText(.sensingLimitationScreenSharing, role: .footnote)
                     .foregroundStyle(DesignTokens.supportingTextColor(for: traits))

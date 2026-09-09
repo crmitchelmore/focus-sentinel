@@ -154,6 +154,13 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case settingsTuningsResetAll = "settings.tunings.resetAll"
     case settingsTuningsResetOne = "settings.tunings.resetOne"
     case settingsTuningsLower = "settings.tunings.lower"
+    /// The Privacy pane's observer switches (focus-exdi.3).
+    case settingsPrivacyAwayAfter = "settings.privacy.watching.awayAfter"
+    case settingsPrivacyAwayAfterNote = "settings.privacy.watching.awayAfter.note"
+    case settingsPrivacyMicrophoneSuppression = "settings.privacy.watching.microphone"
+    case settingsPrivacyMicrophoneSuppressionNote = "settings.privacy.watching.microphone.note"
+    case settingsPrivacyLaunchContext = "settings.privacy.watching.launchContext"
+    case settingsPrivacyLaunchContextNote = "settings.privacy.watching.launchContext.note"
     case settingsTuningsRaise = "settings.tunings.raise"
     case settingsTuningsUnitSeconds = "settings.tunings.unit.seconds"
     case settingsTuningsUnitMinutes = "settings.tunings.unit.minutes"

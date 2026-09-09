@@ -3517,6 +3517,78 @@
         }
       }
     },
+    "settings.privacy.watching.awayAfter" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Privacy pane dial: the idle threshold (focus-exdi.3).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Treat me as away after"
+          }
+        }
+      }
+    },
+    "settings.privacy.watching.awayAfter.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the away dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No keyboard or mouse for this long, and Focus stops counting time and stays quiet until you are back."
+          }
+        }
+      }
+    },
+    "settings.privacy.watching.microphone" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Privacy pane switch: microphone suppression.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A running microphone keeps Focus quiet"
+          }
+        }
+      }
+    },
+    "settings.privacy.watching.microphone.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the microphone switch.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A call is not a distraction. Switch this off and a nudge may arrive mid-call."
+          }
+        }
+      }
+    },
+    "settings.privacy.watching.launchContext" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Privacy pane switch: open the context pack on session start.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open the context pack when a session starts"
+          }
+        }
+      }
+    },
+    "settings.privacy.watching.launchContext.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the launch-context switch.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The apps, sites and files on the priority’s list open with the session."
+          }
+        }
+      }
+    },
     "settings.tunings.lower" : {
       "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Accessibility label of the minus button beside a dial.",
       "extractionState" : "manual",

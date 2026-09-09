@@ -55,7 +55,7 @@ struct RetentionControlTests {
     ///
     /// The pane's reach is a closed set, and the published vocabulary is the set its cases
     /// actually produce rather than a literal somebody remembered to update. Both directions.
-    @Test("the pane's action vocabulary is exactly its five verbs")
+    @Test("the pane's action vocabulary is exactly its nine verbs")
     func theVocabularyIsWhatTheCasesProduce() {
         var produced: [String] = []
         for action in PrivacySettingsAction.allDeclared where !produced.contains(action.verb) {
@@ -64,12 +64,14 @@ struct RetentionControlTests {
         #expect(produced == PrivacySettingsAction.vocabulary)
         #expect(produced == [
             "deleteEverything", "setRetentionWindow",
-            "exportData", "exportSettings", "importSettings"
+            "exportData", "exportSettings", "importSettings",
+            "setSensingPaused", "setIdleThreshold", "setMediaSuppression",
+            "setLaunchContextOnSessionStart"
         ])
         // One action per offered window, plus the destructive one and the three portability
         // verbs — so a window that could be stored but never asked for is a count that does not
         // add up.
-        #expect(PrivacySettingsAction.allDeclared.count == RetentionWindow.ordered.count + 4)
+        #expect(PrivacySettingsAction.allDeclared.count == RetentionWindow.ordered.count + 8)
         #expect(Set(PrivacySettingsAction.allDeclared).count
             == PrivacySettingsAction.allDeclared.count)
     }
