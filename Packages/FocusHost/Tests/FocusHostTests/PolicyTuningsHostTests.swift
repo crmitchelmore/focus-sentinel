@@ -39,7 +39,7 @@ struct PolicyTuningsHostTests {
     func storedDialsAreReadAtLaunch() throws {
         let root = CompositionRootTests.root()
         defer { root.stop() }
-        try FocusStore.setPolicyTuning(.mandateCooldown, to: 900, in: root.modelContainer.mainContext, now: Date())
+        try FocusStore.setPolicyTuning(.mandateCooldown, to: 900, in: root.modelContainer.mainContext, now: NudgeHostFixture.reference)
         root.startNudgeLoop()
         #expect(root.nudgeHost.tunings.duration(.mandateCooldown) == .seconds(900))
         #expect(root.relevanceHost.tunings.duration(.mandateCooldown) == .seconds(900))

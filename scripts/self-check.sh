@@ -3641,7 +3641,7 @@ check(
 check(
     portability.get("dataFormat") == "focus-sentinel.data"
     and portability.get("dataVersion") == 1
-    and portability.get("dataSchemaVersion") == 8,
+    and portability.get("dataSchemaVersion") == 10,
     "the exported file documents itself: format, version and schema",
     (
         portability.get("dataFormat"),
@@ -4872,9 +4872,11 @@ check(
 # from every byte of the directory afterwards.
 check(
     rendering.get("privacyActionsDeclared") == [
-        "deleteEverything", "setRetentionWindow", "exportData", "exportSettings", "importSettings"
+        "deleteEverything", "setRetentionWindow", "exportData", "exportSettings", "importSettings",
+        "setSensingPaused", "setIdleThreshold", "setMediaSuppression",
+        "setLaunchContextOnSessionStart", "setGrantOptIn"
     ],
-    "the Privacy pane's action vocabulary is exactly its five verbs",
+    "the Privacy pane's action vocabulary is exactly its ten verbs",
     rendering.get("privacyActionsDeclared"),
 )
 check(

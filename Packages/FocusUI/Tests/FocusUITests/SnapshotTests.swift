@@ -47,6 +47,8 @@ enum SnapshotComponent: String, CaseIterable, Sendable {
     /// hundred rows taller, came back with neither bytes nor ink. Two halves are two pictures of
     /// the same pane, and each of them is a picture.
     case privacySettingsInsight
+    /// The third part of the Privacy pane (focus-exdi.4): what the app made of what it saw.
+    case privacySettingsJudgement
     case statusRelevant
     case statusUncertain
     case statusUnrelated
@@ -66,7 +68,7 @@ enum SnapshotComponent: String, CaseIterable, Sendable {
         switch self {
         case .statusRelevant, .statusUncertain, .statusUnrelated, .statusPaused, .statusBreak:
             nil
-        case .privacySettings, .privacySettingsInsight:
+        case .privacySettings, .privacySettingsInsight, .privacySettingsJudgement:
             // **The width the pane commits to**, plus the harness's own 16-point padding on each
             // side, so the pane is proposed exactly `settingsWidth` and the picture has no dead
             // band beside it (focus-nu6). A surface that commits a width must be photographed at
@@ -163,6 +165,10 @@ enum SnapshotComponent: String, CaseIterable, Sendable {
             // the product.
             return AnyView(
                 PrivacySettingsView(storeURL: Self.storeURL, half: .ownership, screens: [])
+            )
+        case .privacySettingsJudgement:
+            return AnyView(
+                PrivacySettingsView(storeURL: Self.storeURL, half: .judgement, screens: [])
             )
         case .privacySettingsInsight:
             return AnyView(

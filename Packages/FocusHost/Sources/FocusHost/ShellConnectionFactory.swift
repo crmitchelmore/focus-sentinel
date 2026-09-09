@@ -234,6 +234,7 @@ enum ShellConnectionFactory {
         root.expect(.interruptionUsage, ShellValueDigest.describe(intervention.usage), for: .settings)
         root.expect(.policyTunings, ShellValueDigest.describe(intervention.tunings), for: .settings)
         root.expect(.sensingSettings, ShellValueDigest.describe(root.sensingHost.settings), for: .settings)
+        root.expect(.grantOptIns, ShellValueDigest.describe(root.grantOptIns), for: .settings)
         // e08a. The refusal's own name, or `landed` — the same vocabulary the self-check
         // publishes, so the pane's receipt and the report cannot say two different words about
         // one display.
@@ -288,6 +289,7 @@ enum ShellConnectionFactory {
             onCaptureAction: { [weak root] action in root?.perform(action) },
             retention: retention,
             sensing: root.sensingHost.settings,
+            grants: root.grantOptIns,
             onPrivacyAction: { [weak root] action in root?.perform(action) },
             selectedTab: root.settingsTab,
             selectTab: { [weak root] tab in root?.selectSettingsTab(tab) },

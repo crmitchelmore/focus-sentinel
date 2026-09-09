@@ -131,6 +131,31 @@ bd prime                # Refresh Beads context
 Driver notes from the work itself, newest first. `CLAUDE.md` points here; keep the two files
 mirrored for anything substantive.
 
+### 2026-09-09 — settings, dials and the conditional grant doctrine (focus-exdi)
+
+- **A `Toggle`, a `Picker` and a columns-style `Form` all rasterise wrong.** Under
+  `ImageRenderer` a switch draws SwiftUI's yellow "unrenderable view" placeholder, so a new
+  switch on a snapshot-covered pane turns every baseline into yellow bars; and a columns `Form`
+  at a committed width pushes its label gutter off the left edge. Draw a switch as a bordered
+  button carrying its own glyph, and a settings pane as a column of sections.
+- **Adding a case to a settings action enum touches six places**, and the compiler finds only
+  four: the pane's `verb`/`vocabulary`/`allDeclared`, `AppComposition.perform`,
+  `DataPortability.performPortability`'s exhaustive switch, the two total switches in
+  `InterventionSettingsTests`, `RetentionControlTests`' vocabulary list, **and**
+  `scripts/self-check.sh`'s `privacyActionsDeclared` — that last one only fails at gate time.
+- **A new stored preference costs a schema version**, and the count is pinned in four places:
+  `StoreTests` (entities, twice), `MigrationV<n>Tests`, `StoreExportTests`' manifest version,
+  and `Config/export-field-classification.txt`'s `SCHEMA`/`ENTITIES` header plus a row per
+  column. Prefer a new entity in a new version that re-declares nothing.
+- **The zero-grant doctrine is now conditional** (owner's ruling): the app may ask for
+  Accessibility and Screen Recording, and only where the person switched that ask on. The ban
+  was replaced rather than lifted — use selectors still banned, request selectors confined to
+  one registered file, runtime reading unchanged. See README under `grants`, and never add a
+  second request site: two lints fail on it, from opposite directions.
+- **A lint that greps source must strip comments first.** Three files explain in prose why the
+  app does not call the request APIs; a confinement check that could not tell prose from code
+  made the honest explanation the violation.
+
 ### 2026-09-08 — e11c cockpit hierarchy and colour (focus-6uya)
 
 - **Re-recording snapshot baselines.** `FOCUS_SNAPSHOT_RECORD=1 swift test` is a dead route on

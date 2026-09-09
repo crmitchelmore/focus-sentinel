@@ -3517,6 +3517,90 @@
         }
       }
     },
+    "settings.privacy.grant.accessibility" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Switch that lets the app ask macOS for Accessibility (focus-exdi.4).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let Focus ask for Accessibility"
+          }
+        }
+      }
+    },
+    "settings.privacy.grant.accessibility.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the Accessibility switch.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Accessibility would let Focus read window titles and the address of the page you are on. Switching this on asks macOS; macOS asks you."
+          }
+        }
+      }
+    },
+    "settings.privacy.grant.screenCapture" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Switch that lets the app ask macOS for Screen Recording.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let Focus ask for Screen Recording"
+          }
+        }
+      }
+    },
+    "settings.privacy.grant.screenCapture.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the Screen Recording switch.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Screen Recording would let Focus read the pixels of what is in front of you. Switching this on asks macOS; macOS asks you."
+          }
+        }
+      }
+    },
+    "settings.privacy.grant.unused" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Warning beside a switch whose grant nothing in this build reads.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing in this version reads what this would unlock."
+          }
+        }
+      }
+    },
+    "settings.privacy.grants.explanation" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Explanation under the grants heading.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus asks macOS for nothing unless you switch it on here. Everything above works without any of these, and switching one off stops Focus using it."
+          }
+        }
+      }
+    },
+    "settings.privacy.grants.heading" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Heading of the opt-in grants section on the Privacy pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permissions you can give Focus"
+          }
+        }
+      }
+    },
     "settings.privacy.watching.awayAfter" : {
       "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Privacy pane dial: the idle threshold (focus-exdi.3).",
       "extractionState" : "manual",

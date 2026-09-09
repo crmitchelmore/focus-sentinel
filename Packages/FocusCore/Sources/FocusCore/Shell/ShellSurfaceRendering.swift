@@ -103,6 +103,8 @@ public enum ShellRenderedField: String, Sendable, CaseIterable, Codable, Hashabl
     /// The Privacy pane's observer switches (focus-exdi.3): the pause, the away threshold, the
     /// microphone rule and the launch-context switch, digested whole.
     case sensingSettings
+    /// Which grants the person switched on (focus-exdi.4). "none" on a default install.
+    case grantOptIns
     /// The band the verdict inspector drew, or `"none"`.
     case verdictBand
     /// The whole verdict, as `ShellValueDigest`. The band is one field: a verdict about a

@@ -53,6 +53,10 @@ public enum PrivacySettingsAction: Sendable, Equatable, Hashable {
     case setIdleThreshold(seconds: Int)
     case setMediaSuppression(Bool)
     case setLaunchContextOnSessionStart(Bool)
+    /// **Switch one macOS grant's ask on or off** (focus-exdi.4). Switching on is what permits
+    /// the app to ask at all; macOS then asks the person. Switching off withdraws the
+    /// permission to ask and returns the capability to `notRequested`.
+    case setGrantOptIn(GrantOptIn, Bool)
 
     /// **The pane's vocabulary, as verbs.**
     ///
@@ -73,6 +77,7 @@ public enum PrivacySettingsAction: Sendable, Equatable, Hashable {
         case .setIdleThreshold: "setIdleThreshold"
         case .setMediaSuppression: "setMediaSuppression"
         case .setLaunchContextOnSessionStart: "setLaunchContextOnSessionStart"
+        case .setGrantOptIn: "setGrantOptIn"
         }
     }
 
@@ -86,12 +91,14 @@ public enum PrivacySettingsAction: Sendable, Equatable, Hashable {
                 .setSensingPaused(true), .setIdleThreshold(seconds: PrivacySettingsView.awayStep),
                 .setMediaSuppression(false), .setLaunchContextOnSessionStart(true)
             ]
+            + GrantOptIn.allCases.map { PrivacySettingsAction.setGrantOptIn($0, true) }
     }
 
     /// The vocabulary the self-check publishes, in the order the pane draws it.
     public static let vocabulary: [String] = [
         "deleteEverything", "setRetentionWindow", "exportData", "exportSettings", "importSettings",
-        "setSensingPaused", "setIdleThreshold", "setMediaSuppression", "setLaunchContextOnSessionStart"
+        "setSensingPaused", "setIdleThreshold", "setMediaSuppression", "setLaunchContextOnSessionStart",
+        "setGrantOptIn"
     ]
 
     /// **The title of the one alert this vocabulary can raise**, resolved here.
@@ -123,6 +130,7 @@ public struct PrivacySettingsView: View {
     /// delete-everything rebuilt the store.
     private let retention: RetentionWindow
     private let sensing: SensingSettingsValue
+    private let grants: GrantOptIns
     /// **Which half of this pane to draw**, or `nil` for the whole of it, which is what the
     /// application always asks for (focus-u3w).
     ///
@@ -135,11 +143,19 @@ public struct PrivacySettingsView: View {
     /// each of them is a picture.
     private let half: Half?
 
-    /// The pane's two halves, in the order a person reads them: **what is mine and what happens
-    /// to it**, then **what the app can see and what it made of it**.
+    /// The pane's three parts, in the order a person reads them: **what is mine and what
+    /// happens to it**, **what the app can see**, then **what it made of it**.
+    ///
+    /// Three since focus-exdi.4, and the reason is a measurement rather than a taste. These
+    /// exist so the snapshot lane can photograph the pane at all: `ImageRenderer` degrades on a
+    /// very tall render and hands back a picture with no ink in it. The grants section pushed
+    /// the insight part to 6 603 rows pseudo-localised — where the text roughly doubles — and
+    /// that render came back blank. Splitting the judgement out puts every piece back inside the
+    /// renderer's range. The live window is unaffected: it draws `nil`, which is all three.
     public enum Half: String, Sendable, CaseIterable, Hashable {
         case ownership
         case insight
+        case judgement
     }
     /// The displays this pane bounds itself against; `nil` for the live ones. Injectable for the
     /// reason `NudgePanelController.displays` is: the display this defect is worst on is a 13-inch
@@ -158,6 +174,7 @@ public struct PrivacySettingsView: View {
         verdict: VerdictSnapshot? = nil,
         retention: RetentionWindow = .committedDefault,
         sensing: SensingSettingsValue = .defaults,
+        grants: GrantOptIns = .none,
         half: Half? = nil,
         screens: ShellScreens = nil,
         onAction: @escaping (PrivacySettingsAction) -> Void = { _ in }
@@ -168,6 +185,7 @@ public struct PrivacySettingsView: View {
         self.verdict = verdict
         self.retention = retention
         self.sensing = sensing
+        self.grants = grants
         self.half = half
         self.screens = screens
         self.onAction = onAction
@@ -284,6 +302,53 @@ public struct PrivacySettingsView: View {
         .shellRendered(.sensingSettings, ShellValueDigest.describe(sensing))
     }
 
+    /// **The grants a person may give** (focus-exdi.4, owner's ruling 2026-09-08).
+    ///
+    /// The programme shipped asking macOS for nothing. This is the only route it has to a grant,
+    /// and it is a switch that is off: switching one on is the permission to *ask*, and macOS
+    /// then asks the person. Each row says plainly that nothing in this version reads what the
+    /// grant would unlock, because a switch that takes a permission and spends it on nothing is
+    /// the worst version of this change.
+    private var grantSwitches: some View {
+        VStack(alignment: .leading, spacing: spacing / 2) {
+            ShellText(.settingsPrivacyGrantsHeading, role: .headline)
+            ShellText(.settingsPrivacyGrantsExplanation, role: .footnote)
+                .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+                .lineLimit(nil)
+                .fixedSize(horizontal: false, vertical: true)
+            ForEach(GrantOptIn.allCases) { grant in
+                VStack(alignment: .leading, spacing: spacing / 4) {
+                    switchRow(
+                        Self.labelKey(grant),
+                        note: Self.noteKey(grant),
+                        isOn: grants.isEnabled(grant)
+                    ) { onAction(.setGrantOptIn(grant, $0)) }
+                    if !grant.isConsumedByThisBuild {
+                        ShellText(.settingsPrivacyGrantUnused, role: .footnote)
+                            .foregroundStyle(DesignTokens.Palette.role(.kiln, for: traits))
+                            .lineLimit(nil)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
+        }
+        .shellRendered(.grantOptIns, ShellValueDigest.describe(grants))
+    }
+
+    static func labelKey(_ grant: GrantOptIn) -> ShellStringKey {
+        switch grant {
+        case .accessibilityWindowContext: .settingsPrivacyGrantAccessibility
+        case .screenCapture: .settingsPrivacyGrantScreenCapture
+        }
+    }
+
+    static func noteKey(_ grant: GrantOptIn) -> ShellStringKey {
+        switch grant {
+        case .accessibilityWindowContext: .settingsPrivacyGrantAccessibilityNote
+        case .screenCapture: .settingsPrivacyGrantScreenCaptureNote
+        }
+    }
+
     /// One switch: its name beside a check glyph, its note under it.
     ///
     /// A bordered button carrying its own state rather than a `Toggle`: a switch is AppKit-backed
@@ -346,9 +411,11 @@ public struct PrivacySettingsView: View {
 
     var content: some View {
         VStack(alignment: .leading, spacing: spacing) {
-            if half != .insight { ownershipContent }
+            if half == nil || half == .ownership { ownershipContent }
             if half == nil { Divider() }
-            if half != .ownership { insightContent }
+            if half == nil || half == .insight { insightContent }
+            if half == nil { Divider() }
+            if half == nil || half == .judgement { judgementContent }
             Spacer(minLength: 0)
         }
         .padding(spacing * 2)
@@ -567,6 +634,18 @@ public struct PrivacySettingsView: View {
             CapabilityMatrixView(capabilities: capabilities)
 
             Divider()
+
+            grantSwitches
+
+        }
+    }
+
+    /// **What the app made of what it can see** (focus-exdi.4): the cascade's order of
+    /// precedence and the verdict it reached. Its own part, so that no single render grows past
+    /// what `ImageRenderer` will draw — see `Half`.
+    @ViewBuilder
+    private var judgementContent: some View {
+        VStack(alignment: .leading, spacing: spacing) {
 
             // How the app decides, drawn from the one ordered list of rungs in the repository
             // (R-54). It sits between *what the app can see* and *what it made of it*, which is

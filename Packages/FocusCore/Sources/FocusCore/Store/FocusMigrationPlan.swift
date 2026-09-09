@@ -68,12 +68,12 @@ public enum FocusMigrationPlan: SchemaMigrationPlan {
         [
             FocusSchemaV1.self, FocusSchemaV2.self, FocusSchemaV3.self, FocusSchemaV4.self,
             FocusSchemaV5.self, FocusSchemaV6.self, FocusSchemaV7.self, FocusSchemaV8.self,
-            FocusSchemaV9.self
+            FocusSchemaV9.self, FocusSchemaV10.self
         ]
     }
 
     public static var stages: [MigrationStage] {
-        [v1ToV2, v2ToV3, v3ToV4, v4ToV5, v5ToV6, v6ToV7, v7ToV8, v8ToV9]
+        [v1ToV2, v2ToV3, v3ToV4, v4ToV5, v5ToV6, v6ToV7, v7ToV8, v8ToV9, v9ToV10]
     }
 
     /// **v7 → v8: lightweight, and additive in the strictest sense** (F-115, focus-l7n).
@@ -99,6 +99,14 @@ public enum FocusMigrationPlan: SchemaMigrationPlan {
         MigrationStage.lightweight(
             fromVersion: FocusSchemaV8.self,
             toVersion: FocusSchemaV9.self
+        )
+    }
+
+    /// v9 → v10 adds `GrantOptInRecord` and re-declares nothing (focus-exdi.4).
+    static var v9ToV10: MigrationStage {
+        MigrationStage.lightweight(
+            fromVersion: FocusSchemaV9.self,
+            toVersion: FocusSchemaV10.self
         )
     }
 

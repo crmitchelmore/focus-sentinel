@@ -1,0 +1,26 @@
+# Where this application is allowed to ask macOS for a grant (focus-exdi.4, invariant I-3 as
+# amended by the owner's ruling of 2026-09-08).
+#
+# WHY THIS FILE EXISTS. The programme shipped under PD-1: the app asked for nothing, and
+# `check-grants.sh` proved it by banning every request selector from the built artefact. The
+# owner overruled the absolute form of that doctrine — the app may ask for two grants, where the
+# person has switched the ask on. A ban that simply lifted would prove nothing, so it is replaced
+# rather than removed:
+#
+#   the artefact    a requestable selector may appear in the binary, but the *use* selectors of
+#                   the same family stay banned, because nothing in this build reads what the
+#                   grant unlocks.
+#   the source      every requestable selector appears in exactly one source file, and it is the
+#                   file named here. A second site is a second door, and a door nobody named is
+#                   a door nobody checks.
+#   the running app the self-check's reading is unchanged and still says what it always said: on
+#                   a default install nothing was asked and no consent dialog arrived.
+#
+# ROW SHAPE — two columns, separated by ` · `:
+#
+#     <file> · <selector>[,<selector>…]
+#
+# The file is repository-relative. Every selector named here must appear in that file and in no
+# other source file under Packages/ or App/.
+
+Packages/FocusHost/Sources/FocusHost/SystemGrantRequester.swift · AXIsProcessTrustedWithOptions,CGRequestScreenCaptureAccess,CGPreflightScreenCaptureAccess

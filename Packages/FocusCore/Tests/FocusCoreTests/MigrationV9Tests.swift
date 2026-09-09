@@ -9,13 +9,13 @@ import Testing
 struct MigrationV9Tests {
     static let timestamp = Date(timeIntervalSince1970: 1_767_225_600)
 
-    @Test("the plan's newest schema is v9, and it is the eighth stage")
+    @Test("v9 is the ninth schema and the eighth stage")
     func planShape() {
+        // The newest schema is v10 since focus-exdi.4; `MigrationV10Tests` pins the plan's tail.
         #expect(FocusSchemaV9.versionIdentifier == Schema.Version(9, 0, 0))
-        #expect(FocusMigrationPlan.schemas.count == 9)
+        #expect(FocusMigrationPlan.schemas.count >= 9)
         #expect(FocusMigrationPlan.schemas[8] is FocusSchemaV9.Type)
-        #expect(FocusMigrationPlan.stages.count == 8)
-        #expect(FocusStore.schema.version == Schema.Version(9, 0, 0))
+        #expect(FocusMigrationPlan.stages.count >= 8)
     }
 
     @Test("v9 adds exactly one entity and re-declares none")

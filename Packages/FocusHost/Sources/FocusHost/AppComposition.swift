@@ -1235,7 +1235,33 @@ public final class AppComposition {
             updateSensingSettings { $0.mediaSuppressionEnabled = enabled }
         case .setLaunchContextOnSessionStart(let enabled):
             updateSensingSettings { $0.launchContextOnSessionStart = enabled }
+        case .setGrantOptIn(let grant, let isEnabled):
+            setGrantOptIn(grant, to: isEnabled)
         }
+    }
+
+    /// **Switch one grant's ask on or off** (focus-exdi.4).
+    ///
+    /// The row first, then the ask: a switch that failed to store must not leave a Mac holding a
+    /// grant the app has no record of having been given permission to want. Switching on asks
+    /// once, here, so the person sees macOS's dialog as the answer to the switch they just
+    /// operated rather than at some later moment they cannot connect to anything.
+    private func setGrantOptIn(_ grant: GrantOptIn, to isEnabled: Bool) {
+        do {
+            try FocusStore.setGrantOptIn(
+                grant,
+                to: isEnabled,
+                in: modelContainer.mainContext,
+                now: dateProvider.now
+            )
+        } catch {
+            logger.error("a grant switch could not be stored: \(error, privacy: .public)")
+            return
+        }
+        if isEnabled {
+            GrantGate.request(grant, optIns: grantOptIns, using: grantRequester)
+        }
+        refreshCockpit()
     }
 
     /// **One observer setting changed** (focus-exdi.3): the row first, then the running host,
@@ -1694,8 +1720,34 @@ public final class AppComposition {
         return disagreements
     }
 
-    /// What this Mac lets the app do, as the probe read it.
-    public var capabilities: CapabilityMatrix { sensingHost.capabilities }
+    /// **The one object allowed to ask macOS for a grant** (focus-exdi.4). Reached only through
+    /// `GrantGate`, which refuses unless the person switched that ask on.
+    let grantRequester = SystemGrantRequester()
+
+    /// Which grants the person switched on. Read from the store, so a launch with no rows asks
+    /// for nothing — the shipped state, and what PD-1 promised.
+    public var grantOptIns: GrantOptIns {
+        FocusStore.grantOptIns(in: modelContainer.mainContext)
+    }
+
+    /// What this Mac lets the app do, as the probe read it — with the two opt-in capabilities
+    /// answered by the gate rather than by the probe (focus-exdi.4). With nothing switched on
+    /// they read `notRequested`, which is exactly what the probe said before this existed.
+    public var capabilities: CapabilityMatrix {
+        let probed = sensingHost.capabilities
+        let optIns = grantOptIns
+        guard !optIns.asksForNothing else { return probed }
+        var matrix = probed
+        let now = dateProvider.now
+        for grant in GrantOptIn.allCases where optIns.isEnabled(grant) {
+            matrix = matrix.recording(
+                grant.capability,
+                as: GrantGate.state(of: grant, optIns: optIns, using: grantRequester),
+                at: now
+            )
+        }
+        return matrix
+    }
 
     /// What the engine actually concluded, for the verdict inspector (R-71).
     public var verdict: VerdictSnapshot? { relevanceHost.verdict }

@@ -408,8 +408,14 @@ check "R-22" "startAccessingSecurityScopedResource only in SecurityScopedBookmar
 # number whose being zero is what §3.F.37 and the `notification-denied` stage actually assert.
 # A lint that made the app unable to *report* it had never asked would be a lint working against
 # the thing it exists to prove.
-check "R-33" "no API that can raise a TCC prompt" \
-    'AXIsProcessTrustedWithOptions|kAXTrustedCheckOptionPrompt|CGRequestScreenCaptureAccess|SCShareableContent|AVCaptureDevice\.requestAccess|requestAccess\(for:|CGRequestPostEventAccess|CGRequestListenEventAccess|IOHIDRequestAccess'
+# AMENDED 2026-09-09 (focus-exdi.4, the owner's ruling). Two of these may now appear, in the one
+# file `Config/grant-request-sites.txt` names — and only there. The exemption is this file path
+# and nothing wider, so a second site anywhere in the repository still fails here; `check-grants.sh`
+# folds over the registry as well, and proves the same confinement from the other direction.
+GRANT_REQUEST_FILE="Packages/FocusHost/Sources/FocusHost/SystemGrantRequester.swift"
+check "R-33" "no API that can raise a TCC prompt, outside the one confined requester" \
+    'AXIsProcessTrustedWithOptions|kAXTrustedCheckOptionPrompt|CGRequestScreenCaptureAccess|SCShareableContent|AVCaptureDevice\.requestAccess|requestAccess\(for:|CGRequestPostEventAccess|CGRequestListenEventAccess|IOHIDRequestAccess' \
+    "$GRANT_REQUEST_FILE"
 
 # R-45: `SessionPhase(rawValue:)` would silently turn a legacy "running" row into a phase this
 # build does not recognise. Every decode goes through SessionPhase.decode(_:), which carries

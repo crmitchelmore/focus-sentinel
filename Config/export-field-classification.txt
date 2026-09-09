@@ -43,8 +43,8 @@
 # text, image data of any kind, keystroke or input content, security-scoped bookmark blobs,
 # machine identifiers, Keychain material, and any similarity number.
 
-SCHEMA 8
-ENTITIES 15
+SCHEMA 10
+ENTITIES 17
 
 # ---------------------------------------------------------------- the commitment
 
@@ -180,6 +180,13 @@ NudgePreferencesRecord | quietHoursStartMinuteOfDay | MEASURE | Minutes past loc
 NudgePreferencesRecord | quietHoursEndMinuteOfDay | MEASURE | Minutes past local midnight
 NudgePreferencesRecord | touchedAt | MEASURE | When they last changed any of it
 
+PolicyTuningRecord | id | KEY | The row's identifier
+PolicyTuningRecord | key | TOKEN | Which dial was turned: a PolicyTuning raw value, re-derived on the way out
+PolicyTuningRecord | value | MEASURE | What they turned it to, clamped to the dial's own range
+PolicyTuningRecord | touchedAt | MEASURE | When they last turned it
+GrantOptInRecord | id | KEY | The row's identifier
+GrantOptInRecord | key | TOKEN | Which macOS grant they allowed the app to ask for: a GrantOptIn raw value, re-derived on the way out
+GrantOptInRecord | touchedAt | MEASURE | When they switched it on
 PrivacyPreferencesRecord | id | KEY | The row's identifier
 PrivacyPreferencesRecord | retentionDays | MEASURE | How long they asked the app to keep things: 7, 30, 90, or 0 for forever
 PrivacyPreferencesRecord | touchedAt | MEASURE | When they last chose a window

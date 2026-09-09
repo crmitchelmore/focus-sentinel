@@ -47,6 +47,7 @@ REPO_ROOT="${0:A:h}/.."
 cd "$REPO_ROOT" || exit 1
 
 TABLE="Config/tcc-families.txt"
+SITES="Config/grant-request-sites.txt"
 DERIVED_DATA="${FOCUS_DERIVED_DATA:-$HOME/Library/Developer/Xcode/DerivedData/Focus-default}"
 
 if (( $# < 1 )); then
@@ -100,12 +101,14 @@ done
 
 print "== I-3: the ten TCC families, in the artefact and in the running application"
 print "table:        $TABLE"
+print "request sites: $SITES"
 print "derived data: $DERIVED_DATA"
 print
 
-python3 - "$TABLE" "$MANIFEST" "$@" <<'PYTHON'
+python3 - "$TABLE" "$SITES" "$MANIFEST" "$@" <<'PYTHON'
 import json
 import os
+import re
 import sys
 
 # R-168. The report dictionaries are recording ones, so the `published-keys` stage can fail on a
@@ -113,8 +116,8 @@ import sys
 sys.path.insert(0, os.environ["FOCUS_SCRIPTS_DIR"])
 import keyreads
 
-table_path, manifest_path = sys.argv[1], sys.argv[2]
-report_paths = sys.argv[3:]
+table_path, sites_path, manifest_path = sys.argv[1], sys.argv[2], sys.argv[3]
+report_paths = sys.argv[4:]
 
 # The vocabulary, carried here as well as in the file. A table that names a different set is a
 # table somebody edited rather than a family that stopped existing.
@@ -197,10 +200,14 @@ check(
 )
 # `available` is the state that would mean the app holds the grant. Exactly one family may report
 # it, and that family owes a sentence saying what grant-free mechanism produces it.
-available_rows = [name for name, row in rows.items() if "available" in row["states"]]
+# AMENDED 2026-09-09 (focus-exdi.4). Two more families may read it, and for a different reason:
+# the person switched the ask on and macOS agreed. That is still not the app taking a grant it
+# never asked for — it is the only route this application has to a grant at all — and each row
+# owes the same sentence saying so.
+available_rows = sorted(name for name, row in rows.items() if "available" in row["states"])
 check(
-    available_rows == ["microphone"],
-    "exactly one family may read 'available', and it is the microphone property read",
+    available_rows == ["accessibility", "microphone", "screenRecording"],
+    "only the microphone property read and the two opt-in families may read 'available'",
     available_rows,
 )
 for name in available_rows:
@@ -216,6 +223,98 @@ for name in sorted(rows):
         f"the {name} row bans at least three ways of asking",
         rows[name]["banned"],
     )
+
+# ------------------------------------------------------------------- the confinement half
+#
+# focus-exdi.4. The two opt-in families' REQUEST selectors are no longer banned from the
+# artefact; they are confined to one named source file instead. A ban that simply lifted would
+# prove nothing, so this is what replaces it: the selector exists in exactly one file, and that
+# file is the one the registry names. A second site is a second door.
+
+BLOCK_COMMENT = re.compile(r"/\*.*?\*/", re.DOTALL)
+MULTILINE_STRING = re.compile(r'"""(?:.|\n)*?"""')
+STRING = re.compile(r'"(?:\\.|[^"\\\n])*"')
+LINE_COMMENT = re.compile(r"//[^\n]*")
+
+
+def code_only(text):
+    """The file with its comments and string literals removed.
+
+    A selector NAMED in a doc comment is not a door — three files explain in prose why the app
+    does not call these, and a search that could not tell prose from code would make the honest
+    explanation the violation. Same treatment `scripts/find-numeric-literals.py` gives R-70f.
+    """
+    text = BLOCK_COMMENT.sub(" ", text)
+    text = MULTILINE_STRING.sub(" ", text)
+    text = STRING.sub(" ", text)
+    return LINE_COMMENT.sub(" ", text)
+
+
+sites = {}
+sites_malformed = []
+with open(sites_path) as handle:
+    for number, raw in enumerate(handle, start=1):
+        line = raw.rstrip("\n")
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        parts = [part.strip() for part in line.split("·")]
+        if len(parts) != 2 or not all(parts):
+            sites_malformed.append((number, line))
+            continue
+        path, selectors = parts
+        sites[path] = [s.strip() for s in selectors.split(",") if s.strip()]
+
+check(not sites_malformed, "every row of the request-site registry has two non-empty columns", sites_malformed)
+check(sites, "the registry names at least one request site", sorted(sites))
+
+confined_selectors = sorted({selector for selectors in sites.values() for selector in selectors})
+check(
+    len(confined_selectors) >= 2,
+    "control: the registry confines at least two request selectors",
+    confined_selectors,
+)
+# A selector may not be both confined and banned: that would be a family claiming two answers.
+banned_everywhere = {selector for row in rows.values() for selector in row["banned"]}
+check(
+    not (set(confined_selectors) & banned_everywhere),
+    "no selector is both confined and banned",
+    sorted(set(confined_selectors) & banned_everywhere),
+)
+
+source_files = []
+for root, directories, names in os.walk("."):
+    directories[:] = [d for d in directories if d not in {".build", ".git", "DerivedData"}]
+    if not (root.startswith("./Packages") or root.startswith("./App")):
+        continue
+    for name in names:
+        if name.endswith(".swift"):
+            source_files.append(os.path.join(root, name))
+check(
+    len(source_files) >= 200,
+    "control: the source tree searched for a second door is a real one",
+    len(source_files),
+)
+
+for path, selectors in sorted(sites.items()):
+    check(os.path.exists(path), f"the registry's site {path} exists", path)
+    try:
+        with open(path, errors="replace") as handle:
+            body = code_only(handle.read())
+    except OSError:
+        body = ""
+    for selector in selectors:
+        check(selector in body, f"{path} names {selector}, as the registry says", selector)
+        elsewhere = sorted(
+            other
+            for other in source_files
+            if os.path.abspath(other) != os.path.abspath(path)
+            and selector in code_only(open(other, errors="replace").read())
+        )
+        check(
+            not elsewhere,
+            f"{selector} is asked for in one file only, and it is the one the registry names",
+            elsewhere,
+        )
 
 # ---------------------------------------------------------------------- the artefact half
 
