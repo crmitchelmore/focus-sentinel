@@ -1,8 +1,13 @@
 name: Build and verify
 
 on:
-  pull_request:
   workflow_dispatch:
+    inputs:
+      confirm_ui_tests:
+        description: I approve this full UI and runtime test batch
+        type: boolean
+        required: true
+        default: false
 
 permissions:
   contents: read
@@ -14,11 +19,15 @@ concurrency:
 jobs:
   gate:
     name: macOS gate
-    runs-on: macos-26
+    runs-on: [bravo-mini-local, macOS, ARM64]
     timeout-minutes: 90
     env:
-      DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
+      DEVELOPER_DIR: /Applications/Xcode.app/Contents/Developer
     steps:
+      - name: Require approval for UI tests
+        env:
+          CONFIRMED: ${{ inputs.confirm_ui_tests }}
+        run: test "$CONFIRMED" = true
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -46,11 +55,3 @@ jobs:
             tail -100 "$gate_log"
             echo '::endgroup::'
           done
-      - name: Retain gate evidence
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: focus-gate-${{ github.event.pull_request.head.sha || github.sha }}
-          path: ${{ runner.temp }}/focus-gate
-          if-no-files-found: error
-          retention-days: 14
