@@ -1408,3 +1408,8 @@ rejects whitespace, control characters and every ASCII punctuation mark but `.`,
 so a window title, a full URL, a document name or an absolute path is *unrepresentable* in an
 explanation rather than forbidden. `ClassificationInput.origin` and `.titleTokens` exist, are
 exercised by the golden corpus, and are **empty in every shipping code path in this version**.
+
+## License
+
+MIT. See [LICENSE](LICENSE). Sparkle, the one third-party framework the app ships, is
+distributed under its own MIT licence by the Sparkle Project.
