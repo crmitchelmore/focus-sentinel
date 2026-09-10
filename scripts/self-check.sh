@@ -1496,8 +1496,16 @@ check(
 )
 # It says the thing the product is about. A credits paragraph that stopped naming the boundary
 # would be a panel drawn for its own sake.
+#
+# **It used to require the words "no permissions"** (focus-exdi.4). That was the right sentence
+# to insist on while PD-1 held; the doctrine is conditional now — the app may ask for
+# Accessibility and Screen Recording, and only where the person switched that ask on — so a
+# panel promising "no permissions" would be making a claim the build no longer keeps. The two
+# claims that survive the amendment are the ones a person is actually owed: that the app says
+# what it does **not** read, and that it says where what it records stays. The wording is the
+# identity round's; what is asserted is the boundary, not the phrasing.
 check(
-    "no permissions" in credits and "stays on this Mac" in credits,
+    "does not read" in credits and "stays on this Mac" in credits,
     "the About panel says what the app does not look at and where what it records stays",
     credits,
 )
@@ -3102,6 +3110,33 @@ check(
 #      windows and this goes red rather than quiet.
 #   3. and only then, the verdict: not one owner is a process macOS puts a dialog up through.
 scan = report.get("authorisationSurfaceScan") or {}
+# **The baseline is routed before the scan, and outside it** (focus-oqsx). It used to be routed
+# inside the `if taken(...)` below, which is a place the routing can be skipped: when the window
+# server declines, the outer reading goes NOT TAKEN, the inner `taken(...)` never runs, and the
+# sweep at the foot of this file — which folds over the REPORT rather than over anything this
+# script remembers — finds `baselineWasTaken` published with nobody having routed it. That is the
+# one door standing open, reported as an unrouted reading, and it took a machine whose window
+# server says no to show it.
+#
+# Reading it here is also the more honest order. The baseline is a step this script takes BEFORE
+# it launches anything; whether the app's own scan succeeded afterwards has no bearing on whether
+# the baseline was taken.
+baseline_taken = taken(
+    "the pre-launch authorisation-surface baseline",
+    "authorisationSurfaceScan.baselineWasTaken",
+    "windows={!r}".format(scan.get("baselineWindowCount")),
+)
+check(
+    baseline_taken,
+    "a baseline of the screen was taken before the app launched, to subtract from",
+    scan.get("baselineNotTakenBecause"),
+)
+if baseline_taken:
+    check(
+        (scan.get("baselineWindowCount") or 0) > 0,
+        "the baseline named windows that were on the screen before the app launched",
+        scan.get("baselineWindowCount"),
+    )
 if taken(
     "the on-screen authorisation-surface scan",
     "authorisationSurfaceScan.wasTaken",
@@ -3125,27 +3160,7 @@ if taken(
     # The baseline is its own reading, with its own takenness door: a run that subtracted nothing
     # because it could not read the baseline would publish an empty pre-existing set and a delta
     # identical to the whole suspect list, which looks exactly like a clean screen.
-    # Routed through the NOT-TAKEN door because it is a takenness fact and the sweep at the end
-    # of this file folds over every one of them — and asserted OUTSIDE that branch, because this
-    # is not a reading the machine may refuse. It is a step `scripts/self-check.sh` takes before
-    # it launches anything, and a run that skipped it publishes a delta that is the whole suspect
-    # list wearing the word. NOT TAKEN here is a failure, and it says which.
-    baseline_taken = taken(
-        "the pre-launch authorisation-surface baseline",
-        "authorisationSurfaceScan.baselineWasTaken",
-        "windows={!r}".format(scan.get("baselineWindowCount")),
-    )
-    check(
-        baseline_taken,
-        "a baseline of the screen was taken before the app launched, to subtract from",
-        scan.get("baselineNotTakenBecause"),
-    )
-    if baseline_taken:
-        check(
-            (scan.get("baselineWindowCount") or 0) > 0,
-            "the baseline named windows that were on the screen before the app launched",
-            scan.get("baselineWindowCount"),
-        )
+    # Its takenness and the two assertions about it are above, before this branch.
     preexisting_owners = scan.get("preexistingAuthorisationSurfaceOwners") or []
     preexisting_windows = scan.get("preexistingAuthorisationSurfaceWindows") or 0
     already_there = (
