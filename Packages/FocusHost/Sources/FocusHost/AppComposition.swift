@@ -4,6 +4,7 @@ import FocusModel
 import FocusRules
 import FocusSensing
 import FocusUI
+import FocusUpdates
 import Foundation
 import SwiftData
 import os
@@ -259,6 +260,12 @@ public final class AppComposition {
     /// ever holds the real one, because registering writes into the person's Login Items.
     let loginItem: any LoginItemControlling
 
+    /// **The updater, as something that can be doubled** (focus-h8jf). The shipping value is
+    /// `SparkleUpdater`, built inert; the unit lane's is `NoSoftwareUpdater`, because a started
+    /// updater opens a socket and no test may. Read by the self-check, which publishes whether it
+    /// was ever started on a default store.
+    public let softwareUpdater: any SoftwareUpdating
+
     /// - Parameter storeKind: where the data lives. `applicationSupport` is the application's
     ///   own store and is the default; the unit lane passes `inMemory`, because a test that
     ///   opened the real store would be a test that could change what the person sees. It is a
@@ -274,7 +281,8 @@ public final class AppComposition {
         storeKind: FocusStore.Kind = .applicationSupport,
         notificationCentre: (any NotificationCentring)? = nil,
         ruleStoreOverride: (any RuleStore)? = nil,
-        loginItem: (any LoginItemControlling)? = nil
+        loginItem: (any LoginItemControlling)? = nil,
+        softwareUpdater: (any SoftwareUpdating)? = nil
     ) {
         // **Injectable, and every lane in this programme injects** (D-12, focus-odz.4).
         //
@@ -320,6 +328,24 @@ public final class AppComposition {
 
         let context = container.mainContext
         self.ruleStore = ruleStoreOverride ?? SwiftDataRuleStore(context: context)
+
+        // **The updater, inert unless the store says otherwise** (focus-h8jf).
+        //
+        // An in-memory store is a unit process, and a unit process gets the updater that never
+        // starts: the shipping one is `SparkleUpdater`, whose only two routes to a socket are the
+        // two verbs on `SoftwareUpdating`, and the only caller that starts it here is a stored
+        // choice the person made on an earlier launch. A default store holds no such row, so a
+        // default install builds the framework and opens nothing.
+        if let softwareUpdater {
+            self.softwareUpdater = softwareUpdater
+        } else if case .inMemory = storeKind {
+            self.softwareUpdater = NoSoftwareUpdater()
+        } else {
+            self.softwareUpdater = SparkleUpdater(
+                train: .current,
+                checksAutomatically: FocusStore.softwareUpdateChecksEnabled(in: context)
+            )
+        }
 
         // The seed runs before the gate is built, and it is idempotent across launches: a
         // built-in the person removed is a tombstone row, and the seed refuses to insert a
@@ -1399,6 +1425,46 @@ public final class AppComposition {
         case .setQuickCaptureShortcut(let spec):
             setQuickCaptureShortcut(spec)
         }
+    }
+
+    /// **What the General pane's two update controls perform** (focus-h8jf).
+    ///
+    /// The row first, then the updater: a switch that failed to store must not leave an updater
+    /// running that the next launch will read as off. `checkNow` stores nothing, because pressing
+    /// a button once is not a choice about every day after it.
+    public func perform(_ action: SoftwareUpdateSettingsAction) {
+        guard !hasDeletedEverything else { return }
+        switch action {
+        case .setAutomaticChecks(let enabled):
+            // The state they asked **for**, not a toggle, for the rule every other switch states.
+            do {
+                try FocusStore.setSoftwareUpdateChecksEnabled(
+                    enabled,
+                    in: modelContainer.mainContext,
+                    now: dateProvider.now
+                )
+            } catch {
+                logger.error("the update-check choice could not be stored: \(error, privacy: .public)")
+                return
+            }
+            softwareUpdater.setAutomaticChecks(enabled)
+        case .checkNow:
+            softwareUpdater.checkForUpdates()
+        }
+        refreshCockpit()
+    }
+
+    /// **What the General pane draws about software updates**, read from the store and the
+    /// updater every time it is asked (focus-h8jf).
+    public var softwareUpdateStatus: SoftwareUpdateStatus {
+        SoftwareUpdateStatus(
+            train: .current,
+            checksAutomatically: hasDeletedEverything
+                ? false
+                : FocusStore.softwareUpdateChecksEnabled(in: modelContainer.mainContext),
+            canCheckNow: softwareUpdater.canCheckForUpdates,
+            lastCheckAt: softwareUpdater.lastCheckDate
+        )
     }
 
     public func perform(_ action: LaunchAtLoginAction) {

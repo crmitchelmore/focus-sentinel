@@ -403,6 +403,12 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case settingsRitualEnabledNote = "settings.general.ritualEnabledNote"
     case settingsQuickCaptureShortcut = "settings.general.quickCaptureShortcut"
     case settingsQuickCaptureShortcutNote = "settings.general.quickCaptureShortcutNote"
+    // Software updates (focus-h8jf): the General pane's opt-in, its button, and what on costs.
+    case settingsUpdatesHeading = "settings.general.updates.heading"
+    case settingsUpdatesAutomatic = "settings.general.updates.automatic"
+    case settingsUpdatesCheckNow = "settings.general.updates.checkNow"
+    case settingsUpdatesNote = "settings.general.updates.note"
+    case settingsUpdatesAlpha = "settings.general.updates.alpha"
     case settingsLaunchAtLoginApproval = "settings.general.launchAtLoginApproval"
     case settingsLaunchAtLoginOpenSettings = "settings.general.launchAtLoginOpenSettings"
     case settingsLaunchAtLoginUnavailable = "settings.general.launchAtLoginUnavailable"
@@ -424,7 +430,9 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     // (F-122, F-137, focus-6n2). Both are linted true of the shipped binary rather than
     // promised: `boundaries-binary` for the network, `nm -u` for the updater.
     case settingsPrivacyNoNetwork = "settings.privacy.noNetwork"
-    case settingsPrivacyNoUpdateCheck = "settings.privacy.noUpdateCheck"
+    /// Since focus-h8jf the app can check for updates, and only when switched on: this is the
+    /// sentence that says so, replacing the one that said it never would.
+    case settingsPrivacyUpdateChecks = "settings.privacy.updateChecks"
     case settingsPrivacyStoreLabel = "settings.privacy.storeLabel"
     case settingsPrivacyReveal = "settings.privacy.reveal"
     // The retention window (F-115, focus-l7n): a heading, the sentence that says what choosing

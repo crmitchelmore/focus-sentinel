@@ -197,7 +197,7 @@ public struct PrivacySettingsView: View {
         [
             .settingsPrivacyStatement,
             .settingsPrivacyNoNetwork,
-            .settingsPrivacyNoUpdateCheck,
+            .settingsPrivacyUpdateChecks,
             .settingsPrivacyStoreLabel,
             .settingsPrivacyReveal,
             .settingsPrivacyRetentionHeading,
@@ -457,19 +457,21 @@ public struct PrivacySettingsView: View {
                 .lineLimit(nil)
                 .fixedSize(horizontal: false, vertical: true)
 
-            // **The two things this app does not do** (F-122, F-137, focus-6n2). Directly under
-            // the statement, because they are the same claim narrowed twice, and with no heading
-            // of their own: a section for *"what we do not do"* invites the list to grow, and a
-            // list of denials is a surface that reads as defensive rather than plain.
+            // **The two things this app does not do unless asked** (F-122, F-137, focus-6n2,
+            // focus-h8jf). Directly under the statement, because they are the same claim
+            // narrowed twice, and with no heading of their own: a section for *"what we do not
+            // do"* invites the list to grow, and a list of denials reads as defensive.
             //
             // Neither is a promise. The first is linted of the shipped binary by the gate's
             // `boundaries` and `boundaries-binary` stages — no networking symbol in any package
-            // source, and none in `FocusClassify.o`. The second is linted the same way: no
-            // Sparkle symbol, no `SUFeedURL` in the merged Info.plist, and `nm -u` over the
-            // product naming neither. D-09 parked Sparkle for the reason this sentence states.
+            // source but `FocusUpdates`, and none in `FocusClassify.o`. The second is linted the
+            // same way: the merged Info.plist carries `SUEnableAutomaticChecks = false` and no
+            // `SUFeedURL`, and the self-check reads the updater unstarted on a default store.
+            // D-09 parked Sparkle while there was no feed for it to point at; focus-h8jf gives it
+            // one and keeps the ask behind the switch in General settings.
             VStack(alignment: .leading, spacing: spacing / 4) {
                 ShellText(.settingsPrivacyNoNetwork, role: .footnote)
-                ShellText(.settingsPrivacyNoUpdateCheck, role: .footnote)
+                ShellText(.settingsPrivacyUpdateChecks, role: .footnote)
             }
             .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
             .lineLimit(nil)

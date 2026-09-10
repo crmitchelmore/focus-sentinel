@@ -157,6 +157,11 @@ public enum ShellRenderedField: String, Sendable, CaseIterable, Codable, Hashabl
     /// (focus-d3g). The glyphs rather than the two integers, because the glyphs are what the
     /// person reads and a receipt should carry what was on the screen.
     case quickCaptureShortcut
+    /// **What the General pane drew about software updates**, as the whole status's digest
+    /// (focus-h8jf): the train, the stored choice, whether a manual check is available, and when
+    /// the feed was last asked. The digest rather than the switch position, because a pane handed
+    /// the other train's status draws the same switch.
+    case softwareUpdates
     /// **The build a person is looking at**, as the General pane drew it (focus-odz.3).
     ///
     /// Nothing in the programme read `CFBundleShortVersionString` before this, so a defect report

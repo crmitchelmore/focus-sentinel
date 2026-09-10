@@ -86,3 +86,37 @@ Driver learnings live in `AGENTS.md` under **Learnings** — read them before re
 snapshot baselines, running the FocusUITests lane beside another agent's builds, or adding a
 type role or a palette hue. `AGENTS.md` and `CLAUDE.md` are independent files; mirror anything
 substantive across both.
+
+### 2026-09-10 — the walkthrough and the release trains (focus-u6de, focus-h8jf)
+
+- **A shared SwiftPM repository cache is a shared lock, and Xcode.app holds it.** Every
+  `swift package resolve` and every `xcodebuild` that resolves a remote package takes
+  `~/Library/Caches/org.swift.swiftpm/repositories/<pkg>.lock`. With Xcode.app open on another
+  project that also depends on Sparkle, and two other sessions' `swift-package resolve` runs
+  waiting on the same lock, this repository's first resolve of Sparkle hung for forty minutes
+  with no child process and nothing in `-v`. Plain `git ls-remote` of the same URL answered at
+  once, which is how the network was ruled out. The fix is a private cache:
+  `swift package resolve --cache-path /Volumes/Memory/cache/swiftpm-cache-focus` and
+  `xcodebuild … -packageCachePath /Volumes/Memory/cache/swiftpm-cache-focus`; `release-mac.yml`
+  passes it. `lsof <lockfile>` names the holders; `sample` on the waiter shows nothing useful.
+- **Sparkle is the one third-party package, and the gate reads it the opposite way round.**
+  `check-boundaries.sh` used to prove *no* updater (no Sparkle symbol, no `SUFeedURL`); it now
+  proves the updater is *opt-in*: the Release binary names `SPUStandardUpdaterController` (the
+  control — a claim about a framework that is really there), the merged plist carries
+  `SUEnableAutomaticChecks = false` and `SUPublicEDKey` and no `SUFeedURL`, and the self-check
+  publishes `softwareUpdaterStarted = false` and `softwareUpdateChecksStored = false` on a default
+  store. `FocusUpdates` is the only package allowed a remote dependency, and it must declare
+  exactly `sparkle`. Adding a second remote dependency anywhere fails the gate by name.
+- **R-96q gained a second allowed caller, for the rule's own reason.** The General pane's
+  *Show walkthrough* button sends `.showWalkthrough`, whose `opensCockpit` is `true`, so the
+  centre raises the window and buffers the command — the exact property the six silent controls
+  the rule was written about lacked. `CommandRegistryTests.theWalkthroughIsAHelpCommand` pins
+  `opensCockpit`; if that flips, the allowance in `check-forbidden.sh` loses its argument.
+- **`-only-testing:FocusUITests/<Suite>` matched nothing for Swift Testing suites in that
+  bundle under `xcodebuild test`**, while the same shape matched `FocusHostTests/FirstRunExplanationTests`.
+  Not diagnosed; the walkthrough's lane-gated string assertions were checked by compiling the
+  catalog with `xcrun xcstringstool compile` and reading the entries instead. Do not read an
+  "Executed 0 tests" FocusUITests run as green.
+- **The snapshot lane records a missing baseline and then fails.** The seven walkthrough pages
+  replace `firstRunSheet`, so their eleven-variant baselines do not exist until somebody runs
+  the snapshot lane, which is a UI-test lane and needs the owner's confirmation first.

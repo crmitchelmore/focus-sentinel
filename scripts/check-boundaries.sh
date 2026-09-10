@@ -17,7 +17,9 @@
 #                  UniformTypeIdentifiers, FocusCore
 #   FocusHost      Foundation, AppKit, SwiftData, Observation,   SwiftUI, networking
 #                  ApplicationServices, CoreGraphics, os,
-#                  ALL FIVE siblings
+#                  ALL SIBLINGS, FocusUpdates included
+#   FocusUpdates   Foundation, AppKit, Sparkle, FocusCore        SwiftUI, SwiftData, networking of its own,
+#                                                                every other sibling
 #
 # The sixth row is the composition layer, and it is the one row that may import every sibling
 # at once — because that is the whole of its job. It used to be the app target, where the same
@@ -168,7 +170,10 @@ ALLOWED_PRODUCTS[FocusEvaluate]="FocusCore FocusRules FocusClassify FocusModel"
 ALLOWED_PRODUCTS[FocusSensing]="FocusCore"
 ALLOWED_PRODUCTS[FocusUI]="FocusCore"
 ALLOWED_PRODUCTS[FocusModel]="FocusClassify FocusCore"
-ALLOWED_PRODUCTS[FocusHost]="FocusClassify FocusCore FocusModel FocusRules FocusSensing FocusUI"
+ALLOWED_PRODUCTS[FocusHost]="FocusClassify FocusCore FocusModel FocusRules FocusSensing FocusUI FocusUpdates"
+# focus-h8jf. The updater may reach the domain beneath it, the one third-party product this
+# repository ships, and nothing beside them.
+ALLOWED_PRODUCTS[FocusUpdates]="FocusCore Sparkle"
 
 typeset -A FORBIDDEN_IMPORTS
 FORBIDDEN_IMPORTS[FocusCore]="AppKit SwiftUI Cocoa Network CFNetwork NetworkExtension FocusRules FocusClassify FocusSensing FocusUI"
@@ -194,6 +199,10 @@ FORBIDDEN_IMPORTS[FocusUI]="SwiftData Network CFNetwork NetworkExtension FocusSe
 # is the layer that assembles the others; SwiftUI is not, because a view here would be a view
 # outside FocusUI.
 FORBIDDEN_IMPORTS[FocusHost]="SwiftUI Cocoa Network CFNetwork NetworkExtension"
+# The updater (focus-h8jf). It may import the one third-party framework this repository ships
+# and nothing that would let it draw, store or observe: no view, no SwiftData, no sensing, and
+# no networking of its own — Sparkle's socket is Sparkle's, opened only when the person asked.
+FORBIDDEN_IMPORTS[FocusUpdates]="SwiftUI SwiftData Network CFNetwork NetworkExtension FocusRules FocusClassify FocusSensing FocusUI FocusModel"
 
 # The positive half of the matrix: every platform framework each package is permitted to
 # import. Sibling packages are handled by ALLOWED_PRODUCTS above and are added to this set per
@@ -207,8 +216,15 @@ ALLOWED_FRAMEWORKS[FocusModel]="Foundation FoundationModels os"
 ALLOWED_FRAMEWORKS[FocusSensing]="Foundation AppKit CoreGraphics IOKit Carbon.HIToolbox CoreAudio CoreMediaIO ServiceManagement os"
 ALLOWED_FRAMEWORKS[FocusUI]="Foundation SwiftUI AppKit Observation QuickLook UniformTypeIdentifiers UserNotifications os"
 ALLOWED_FRAMEWORKS[FocusHost]="Foundation AppKit SwiftData Observation ApplicationServices CoreGraphics os"
+ALLOWED_FRAMEWORKS[FocusUpdates]="Foundation AppKit Sparkle os"
 
-PACKAGES=(FocusCore FocusRules FocusClassify FocusEvaluate FocusModel FocusSensing FocusUI FocusHost)
+PACKAGES=(FocusCore FocusRules FocusClassify FocusEvaluate FocusModel FocusSensing FocusUI FocusHost FocusUpdates)
+
+# **The one remote dependency, by package and by identity** (focus-h8jf). Every other package
+# must declare local siblings only; this one must declare exactly Sparkle, so that the exemption
+# cannot widen by accident and cannot be satisfied by a package that dropped the framework.
+REMOTE_DEPENDENCY_PACKAGE="FocusUpdates"
+REMOTE_DEPENDENCY_IDENTITY="sparkle"
 
 # Foundation networking types that are the usual accidental route onto the network.
 NETWORK_SYMBOL_PATTERN='URLSession|URLRequest|URLConnection|NWConnection|NWListener|NWBrowser|CFStream|CFSocket'
@@ -238,8 +254,15 @@ bad = [d for d in doc.get("dependencies", []) if d.get("type") != "fileSystem"]
 for d in bad:
     print(d.get("identity", "?"), d.get("type", "?"), d.get("url", d.get("path", "")))
 ')
-    if [[ -n "$remote" ]]; then
-        fail "$package declares a non-local dependency (zero third-party code is a product tenet):"
+    if [[ "$package" == "$REMOTE_DEPENDENCY_PACKAGE" ]]; then
+        remote_identities=$(print -r -- "$remote" | awk '{print $1}' | sort -u | tr '\n' ' ')
+        if [[ "$remote_identities" != "$REMOTE_DEPENDENCY_IDENTITY " ]]; then
+            fail "$package must declare exactly one remote dependency, $REMOTE_DEPENDENCY_IDENTITY; it declares: ${remote_identities:-none}"
+        else
+            print "  $package: the one permitted remote dependency is $REMOTE_DEPENDENCY_IDENTITY"
+        fi
+    elif [[ -n "$remote" ]]; then
+        fail "$package declares a non-local dependency (Sparkle in $REMOTE_DEPENDENCY_PACKAGE is the one exception, focus-h8jf):"
         print -u2 "$remote"
     fi
 
@@ -252,7 +275,7 @@ for d in doc.get("dependencies", []):
     if not path.startswith(os.path.join(root, "Packages") + os.sep):
         print(d.get("identity", "?"), path)
 ' "$REPO_ROOT")
-    if [[ -n "$outside" ]]; then
+    if [[ -n "$outside" && "$package" != "$REMOTE_DEPENDENCY_PACKAGE" ]]; then
         fail "$package depends on a package outside Packages/:"
         print -u2 "$outside"
     fi
@@ -407,18 +430,23 @@ for config in Debug Release; do
     check_classify_object "$config"
 done
 
-# --- no updater, proven on the product (F-137, D-09, focus-6n2) --------------------------
+# --- the updater is opt-in, proven on the product (F-137, D-09, focus-6n2, focus-h8jf) ------
 #
-# The Privacy pane says *"It never checks for updates."* D-09 parked Sparkle because this
-# programme has no server, no remote and no deployment lane — the feed would point at nothing —
-# and a sentence a person reads has to be true of the thing they are running, not of the plan.
+# D-09 parked Sparkle because this programme had no feed for it to point at, and the Privacy
+# pane said *"It never checks for updates."* focus-h8jf gives it a feed per train and changes the
+# sentence to *"Update checks are off until you turn them on."* This is what makes the new
+# sentence true of the product rather than of the plan, in the same two readings the old one had:
 #
-# Two readings, and both are needed. `nm -u` over the app's own binary must name no Sparkle
-# symbol; and the **merged** Info.plist must carry no `SUFeedURL`, because a feed URL with no
-# framework behind it is still an app announcing where it would phone. The control problem is the
-# same one the networking check has — an absence over an empty table is satisfied by nothing at
-# all — so the binary must still be seen naming its own symbols.
-check_no_updater() {
+#   * the Release binary NAMES the updater — a control, because "opt-in" is a claim about a
+#     framework that is really there, and a binary that dropped it would satisfy any absence;
+#   * the merged Info.plist carries `SUEnableAutomaticChecks = false`, so Sparkle neither asks
+#     nor schedules on its own, carries `SUPublicEDKey`, so nothing unsigned can ever be
+#     installed, and carries NO `SUFeedURL`, because the feed is the train's and is answered by
+#     the delegate — a plist feed would let an Alpha build be offered a Stable update.
+#
+# The running-app half — the store holds no choice and the updater was never started on a
+# default store — is the self-check's (`softwareUpdateChecksStored`, `softwareUpdaterStarted`).
+check_updater_opt_in() {
     local config="$1"
     local app="$DERIVED_DATA/Build/Products/$config/FocusSentinel.app"
     local binary="$app/Contents/MacOS/FocusSentinel"
@@ -434,32 +462,58 @@ check_no_updater() {
     local symbols sparkle total
     symbols=$(nm -u "$binary" 2>/dev/null)
     total=$(print -r -- "$symbols" | grep -c .)
-    sparkle=$(print -r -- "$symbols" | grep -E 'SPUUpdater|SUUpdater|SPUStandardUpdater|Sparkle')
-    if [[ -n "$sparkle" ]]; then
-        fail "$config FocusSentinel names an updater symbol:"
-        print -u2 "$sparkle"
-    elif (( total < 100 )); then
-        # The control. A binary whose undefined-symbol table is empty or tiny is not the app, and
-        # "names no Sparkle symbol" would then be true of something other than the product.
+    sparkle=$(print -r -- "$symbols" | grep -cE 'SPUStandardUpdaterController|SPUUpdater')
+    if (( total < 100 )); then
         fail "$config FocusSentinel names only $total undefined symbol(s) — that is not the app"
+    elif (( sparkle == 0 )); then
+        fail "$config FocusSentinel names no Sparkle symbol, so 'opt-in' is a claim about a framework that is not there"
     else
-        print "updater: nm -u $binary — 0 Sparkle symbols out of $total undefined"
+        print "updater: nm -u $binary — $sparkle Sparkle symbol(s) out of $total undefined (the control)"
     fi
 
-    local feed
-    feed=$(/usr/libexec/PlistBuddy -c 'Print :SUFeedURL' "$app/Contents/Info.plist" 2>/dev/null)
+    local plist="$app/Contents/Info.plist"
+    local feed automatic key
+    feed=$(/usr/libexec/PlistBuddy -c 'Print :SUFeedURL' "$plist" 2>/dev/null)
     if [[ -n "$feed" ]]; then
-        fail "$config Info.plist declares SUFeedURL=$feed, and the Privacy pane says there is none"
+        fail "$config Info.plist declares SUFeedURL=$feed; the feed is the train's and must come from the delegate"
     else
         print "updater: $config Info.plist declares no SUFeedURL"
+    fi
+    automatic=$(/usr/libexec/PlistBuddy -c 'Print :SUEnableAutomaticChecks' "$plist" 2>/dev/null)
+    if [[ "$automatic" != "false" ]]; then
+        fail "$config Info.plist SUEnableAutomaticChecks is '${automatic:-absent}', not false: Sparkle would ask or schedule on its own"
+    else
+        print "updater: $config Info.plist SUEnableAutomaticChecks = false"
+    fi
+    key=$(/usr/libexec/PlistBuddy -c 'Print :SUPublicEDKey' "$plist" 2>/dev/null)
+    if [[ ${#key} -ne 44 ]]; then
+        fail "$config Info.plist carries no 44-character SUPublicEDKey, so an update could not be verified"
+    else
+        print "updater: $config Info.plist carries SUPublicEDKey"
+    fi
+    if [[ ! -d "$app/Contents/Frameworks/Sparkle.framework" ]]; then
+        fail "$config product embeds no Sparkle.framework"
+    else
+        print "updater: $config product embeds Sparkle.framework"
     fi
 }
 
 # **Release only, and the reason is measured.** The Debug product is a preview shim: its
-# `nm -u` table holds 31 entries, so "names no Sparkle symbol" would be true of a binary that is
-# not the app and the control below could never be satisfied. Release is what ships, is what the
-# `release-artefact` stage packages, and is what a person reading the Privacy pane is running.
-check_no_updater Release
+# `nm -u` table holds 31 entries, so the control below could never be satisfied. Release is what
+# ships, is what the `release-artefact` stage packages, and is what a person reading the Privacy
+# pane is running. The train worker builds one configuration per run and names it in
+# FOCUS_UPDATER_CONFIG (`Alpha` has Release's settings under the other identity), so the same
+# reading is taken of whichever product is about to be signed.
+check_updater_opt_in "${FOCUS_UPDATER_CONFIG:-Release}"
+
+# --- the train catalogue is what the JSON renders (focus-h8jf) -----------------------------
+print
+print "== release trains"
+if python3 scripts/generate-release-train-config.py --check; then
+    :
+else
+    fail "Packages/FocusCore/Sources/FocusCore/Shell/ReleaseTrainCatalogue.swift has drifted from Config/ReleaseTrains.json"
+fi
 
 # --- FocusClassify probes no privacy boundary, proven on the object (e04 R-70i) -----------
 #

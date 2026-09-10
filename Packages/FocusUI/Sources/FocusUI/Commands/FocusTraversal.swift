@@ -78,6 +78,11 @@ public enum FocusField: String, Sendable, CaseIterable, Hashable, Identifiable {
     case generalQuickCaptureShortcut
     /// The button in General settings that opens the walkthrough again (focus-u6de).
     case generalShowWalkthrough
+    /// The automatic-update-checks switch in General settings (focus-h8jf). A switch a person
+    /// cannot reach from the keyboard is a switch somebody cannot turn off.
+    case generalSoftwareUpdates
+    /// The check-now button beside it.
+    case generalCheckForUpdates
     /// The "Reveal Data Store in Finder" button in Privacy settings.
     case privacyRevealStore
     /// The quick-capture panel's field and its Set Priority button. Separate cases from the
@@ -223,7 +228,7 @@ public enum FocusTraversal {
             order: [
                 .generalAppearancePicker, .generalLaunchAtLogin,
                 .generalRitualEnabled, .generalQuickCaptureShortcut,
-                .generalShowWalkthrough
+                .generalShowWalkthrough, .generalSoftwareUpdates, .generalCheckForUpdates
             ],
             defaultField: nil,
             cancel: .dismissWindow

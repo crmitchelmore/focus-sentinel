@@ -1,0 +1,23 @@
+{
+  "enabled": false,
+  "version": "0.1.0",
+  "minimumSystemVersion": "26.0",
+  "repository": "crmitchelmore/focus-sentinel",
+  "trains": {
+    "alpha": {
+      "buildTagPrefix": "alpha-build-",
+      "pointerTag": "alpha-latest",
+      "prerelease": true
+    },
+    "stable": {
+      "candidateTagPrefix": "stable-candidate-",
+      "releaseTagPrefix": "v",
+      "prerelease": false
+    }
+  },
+  "signing": {
+    "identity": "Developer ID Application",
+    "notarytoolKeychainProfile": "focus-notary",
+    "sparkleKeychainAccount": "Focus Sentinel"
+  }
+}

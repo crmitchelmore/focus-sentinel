@@ -1,0 +1,52 @@
+name: Prepare Stable
+run-name: Stable candidate from ${{ inputs.alpha }} as ${{ inputs.version }}
+
+# Freezes a tested Alpha build as `stable-candidate-N` and rebuilds it under the Stable identity
+# into a DRAFT release (focus-h8jf). Nothing is published here: the candidate is for the owner to
+# test and review, and Publish Stable needs the SHA-256 of this candidate's manifest, which this
+# job prints.
+
+on:
+  workflow_dispatch:
+    inputs:
+      alpha:
+        description: A delivered alpha-build-N to promote
+        required: true
+        type: string
+      version:
+        description: The Stable version to publish it as (X.Y.Z)
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: focus-release-allocation
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: Freeze stable-candidate-N
+    if: github.actor == github.repository_owner
+    runs-on: [bravo-mini-local, macOS, ARM64]
+    timeout-minutes: 15
+    outputs:
+      tag: ${{ steps.prepare.outputs.tag }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+      - id: prepare
+        shell: zsh {0}
+        run: python3 scripts/release-train.py prepare --alpha "${{ inputs.alpha }}" --version "${{ inputs.version }}"
+
+  mac-direct:
+    needs: prepare
+    uses: ./.github/workflows/release-mac.yml
+    with:
+      manifest: ${{ needs.prepare.outputs.tag }}
+    secrets: inherit

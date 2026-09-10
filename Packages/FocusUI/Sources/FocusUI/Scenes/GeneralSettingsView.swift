@@ -43,6 +43,10 @@ public struct GeneralSettingsView: View {
     /// Where the walkthrough button's command goes (focus-u6de). The shared centre in the app;
     /// injectable so a test can watch the command arrive without a menu bar.
     private let commandCenter: FocusCommandCenter
+    /// **What the pane draws about software updates** (focus-h8jf). Handed in, never read from
+    /// an updater here: the pane renders a value and the composition root owns the updater.
+    private let softwareUpdates: SoftwareUpdateStatus
+    private let onSoftwareUpdateAction: (SoftwareUpdateSettingsAction) -> Void
 
     @Environment(\.appearanceTraits) private var traits
     @Environment(\.shellTextScale) private var textScale
@@ -57,7 +61,9 @@ public struct GeneralSettingsView: View {
         ritualEnabled: Bool = true,
         quickCaptureShortcut: HotKeySpec = .quickCaptureDefault,
         onCaptureAction: @escaping (CaptureSettingsAction) -> Void = { _ in },
-        commandCenter: FocusCommandCenter = .shared
+        commandCenter: FocusCommandCenter = .shared,
+        softwareUpdates: SoftwareUpdateStatus = .off,
+        onSoftwareUpdateAction: @escaping (SoftwareUpdateSettingsAction) -> Void = { _ in }
     ) {
         self._preference = preference
         self.appVersion = appVersion
@@ -67,6 +73,8 @@ public struct GeneralSettingsView: View {
         self.quickCaptureShortcut = quickCaptureShortcut
         self.onCaptureAction = onCaptureAction
         self.commandCenter = commandCenter
+        self.softwareUpdates = softwareUpdates
+        self.onSoftwareUpdateAction = onSoftwareUpdateAction
     }
 
     /// Every option the picker offers, in the order it offers them.
@@ -106,6 +114,11 @@ public struct GeneralSettingsView: View {
             }
             .companionSurface()
 
+            VStack(alignment: .leading, spacing: spacing) {
+                softwareUpdatesSection
+            }
+            .companionSurface()
+
             LabeledContent {
                 Text(verbatim: appVersion)
                     .font(DesignTokens.font(.footnote, scale: textScale))
@@ -133,6 +146,50 @@ public struct GeneralSettingsView: View {
         // constant (focus-7ow, focus-d3g).
         .shellRendered(.ritualEnabled, ritualEnabled ? "on" : "off")
         .shellRendered(.quickCaptureShortcut, quickCaptureShortcut.glyphs)
+        // **The whole update status, as the pane drew it** (focus-h8jf). The digest rather than
+        // the switch position: the train and the manual-check availability are drawn too, and a
+        // pane handed the other train's status draws the same switch.
+        .shellRendered(.softwareUpdates, ShellValueDigest.describe(softwareUpdates))
+    }
+
+    /// **Software updates, opt-in** (focus-h8jf).
+    ///
+    /// The switch is the only route by which the updater is ever started on a schedule, and the
+    /// button is the only other route by which it is started at all. Off is the shipped state,
+    /// and the footnote says what on costs: one request a day carrying the app's name and
+    /// version. The Privacy pane's two disclosure sentences point here.
+    @ViewBuilder
+    private var softwareUpdatesSection: some View {
+        CompanionSectionHeading(key: .settingsUpdatesHeading, symbol: "arrow.down.circle")
+
+        Button { onSoftwareUpdateAction(.setAutomaticChecks(!softwareUpdates.checksAutomatically)) } label: {
+            settingToggleLabel(
+                .settingsUpdatesAutomatic,
+                isOn: softwareUpdates.checksAutomatically,
+                symbol: "clock.arrow.2.circlepath"
+            )
+        }
+        .buttonStyle(CompanionButtonStyle(selected: softwareUpdates.checksAutomatically))
+        .accessibilityAddTraits(softwareUpdates.checksAutomatically ? .isSelected : [])
+        .focused($focus, equals: .generalSoftwareUpdates)
+
+        Button { onSoftwareUpdateAction(.checkNow) } label: {
+            ShellText(.settingsUpdatesCheckNow, role: .callout)
+        }
+        .disabled(!softwareUpdates.canCheckNow)
+        .focused($focus, equals: .generalCheckForUpdates)
+
+        ShellText(.settingsUpdatesNote, role: .footnote)
+            .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+            .lineLimit(nil)
+            .fixedSize(horizontal: false, vertical: true)
+
+        if softwareUpdates.train == .alpha {
+            ShellText(.settingsUpdatesAlpha, role: .footnote)
+                .foregroundStyle(DesignTokens.Palette.role(.kiln, for: traits))
+                .lineLimit(nil)
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 
     /// **The daily ritual banner's switch** (focus-d3g).

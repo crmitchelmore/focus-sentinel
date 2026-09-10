@@ -28,4 +28,7 @@
    <FileRef
       location = "group:Packages/FocusHost">
    </FileRef>
+   <FileRef
+      location = "group:Packages/FocusUpdates">
+   </FileRef>
 </Workspace>

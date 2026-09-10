@@ -2449,6 +2449,66 @@
         }
       }
     },
+    "settings.general.updates.heading" : {
+      "comment" : "General settings: the heading over the software-update controls (focus-h8jf).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Software updates"
+          }
+        }
+      }
+    },
+    "settings.general.updates.automatic" : {
+      "comment" : "General settings: the switch that turns automatic update checks on. Off is the shipped state.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check for updates automatically"
+          }
+        }
+      }
+    },
+    "settings.general.updates.checkNow" : {
+      "comment" : "General settings: the button that asks the update feed once, now.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check for updates now"
+          }
+        }
+      }
+    },
+    "settings.general.updates.note" : {
+      "comment" : "Footnote under the update controls: what turning checks on costs, and what off means. The claim about the request is the whole of what Sparkle sends without system profiling, which is off.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "When this is on, Focus asks its update feed once a day whether a newer build exists. The request carries the app's name and version and nothing about you. When it is off, Focus never connects to the internet."
+          }
+        }
+      }
+    },
+    "settings.general.updates.alpha" : {
+      "comment" : "Footnote drawn only in an Alpha build: which feed it follows.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This is an Alpha build. It updates from the Alpha feed, ahead of Stable."
+          }
+        }
+      }
+    },
     "settings.general.launchAtLoginOpenSettings" : {
       "comment" : "General settings: the button beside that footnote, which opens Login Items in System Settings.",
       "extractionState" : "manual",
@@ -3086,25 +3146,25 @@
       }
     },
     "settings.privacy.noNetwork" : {
-      "comment" : "Privacy pane disclosure: this app opens no network connection, ever.",
+      "comment" : "Privacy pane disclosure: the app reaches the network for one thing only, and only when the person switched it on in General settings (F-122, focus-h8jf). Linted of the product by the boundaries stage.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Focus never connects to the internet."
+            "value" : "Focus never connects to the internet unless you turn on update checks in General settings."
           }
         }
       }
     },
-    "settings.privacy.noUpdateCheck" : {
-      "comment" : "Privacy pane disclosure: this app has no updater and phones nobody to ask about versions.",
+    "settings.privacy.updateChecks" : {
+      "comment" : "Privacy pane disclosure: update checks are opt-in, and what a check sends (F-137, focus-h8jf). Replaces the sentence that said the app never checks; the gate reads the updater unstarted on a default store.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "It never checks for updates."
+            "value" : "Update checks are off until you turn them on. When Focus checks, it sends its name and version and nothing about you."
           }
         }
       }

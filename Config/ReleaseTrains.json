@@ -1,0 +1,20 @@
+{
+  "stable": {
+    "bundleIdentifier": "com.chrismitchelmore.FocusSentinel",
+    "displayName": "Focus Sentinel",
+    "applicationSupportDirectory": "com.chrismitchelmore.FocusSentinel",
+    "urlScheme": "focus",
+    "productName": "FocusSentinel",
+    "feedURL": "https://github.com/crmitchelmore/focus-sentinel/releases/latest/download/appcast.xml",
+    "latestReleaseTag": "latest"
+  },
+  "alpha": {
+    "bundleIdentifier": "com.chrismitchelmore.FocusSentinel.alpha",
+    "displayName": "Focus Sentinel Alpha",
+    "applicationSupportDirectory": "com.chrismitchelmore.FocusSentinel.alpha",
+    "urlScheme": "focus-alpha",
+    "productName": "FocusSentinel",
+    "feedURL": "https://github.com/crmitchelmore/focus-sentinel/releases/download/alpha-latest/appcast.xml",
+    "latestReleaseTag": "alpha-latest"
+  }
+}

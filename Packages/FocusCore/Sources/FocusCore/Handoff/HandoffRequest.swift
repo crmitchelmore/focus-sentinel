@@ -96,8 +96,10 @@ public struct HandoffRequest: Sendable, Equatable, Hashable {
 
     // MARK: - Bounds
 
-    /// The scheme, exactly. Registry F-142 standardised it as `focus://`.
-    public static let scheme = "focus"
+    /// The scheme, exactly. Registry F-142 standardised it as `focus://`; since focus-h8jf it
+    /// is the train's, so an Alpha build answers `focus-alpha://` and macOS routes a link to the
+    /// train that made it. A process with no train metadata answers `focus`, as before.
+    public static var scheme: String { ReleaseTrain.current.urlScheme }
     /// The whole URL, before anything is decoded.
     public static let maximumURLLength = 4_096
     /// Each field, after decoding.

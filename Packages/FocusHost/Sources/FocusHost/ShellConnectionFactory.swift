@@ -204,6 +204,11 @@ enum ShellConnectionFactory {
         let shortcut = root.storedHotKeySpec()
         root.expect(.ritualEnabled, ritualEnabled ? "on" : "off", for: .settings)
         root.expect(.quickCaptureShortcut, shortcut.glyphs, for: .settings)
+        // **The update status, read once and expected whole** (focus-h8jf). Once, because the
+        // updater's manual-check availability can move between two reads, and the receipt has to
+        // be about the value the pane was handed.
+        let softwareUpdates = root.softwareUpdateStatus
+        root.expect(.softwareUpdates, ShellValueDigest.describe(softwareUpdates), for: .settings)
         root.expect(.privacyCapabilities, matrix.renderedDescription, for: .settings)
         // Where the Privacy pane tells the person their data lives, and what its Reveal in Finder
         // button opens. A mutation printed `/` and nothing anywhere noticed (focus-7ow).
@@ -304,7 +309,9 @@ enum ShellConnectionFactory {
                 // click a picker, which is exactly why `{ _ in }` in their place survived two
                 // rounds of gates.
                 root.noteSettingsRendering(rendering)
-            }
+            },
+            softwareUpdates: softwareUpdates,
+            onSoftwareUpdateAction: { [weak root] action in root?.perform(action) }
         )
         root.audit(connection, for: .settings)
         return connection

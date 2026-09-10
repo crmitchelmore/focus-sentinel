@@ -4748,11 +4748,17 @@ enum SelfCheck {
         // the `boundaries` stage, not asserted here.
         report["privacyDeclaresNoNetwork"] = PrivacySettingsView.contentKeys
             .contains(.settingsPrivacyNoNetwork)
-        report["privacyDeclaresNoUpdateCheck"] = PrivacySettingsView.contentKeys
-            .contains(.settingsPrivacyNoUpdateCheck)
+        report["privacyDeclaresUpdateChecks"] = PrivacySettingsView.contentKeys
+            .contains(.settingsPrivacyUpdateChecks)
         report["privacyNoNetworkSentence"] = ShellStrings.string(.settingsPrivacyNoNetwork)
-        report["privacyNoUpdateCheckSentence"] = ShellStrings
-            .string(.settingsPrivacyNoUpdateCheck)
+        report["privacyUpdateChecksSentence"] = ShellStrings
+            .string(.settingsPrivacyUpdateChecks)
+        // **The updater on a default store: built, and never started** (focus-h8jf). The two
+        // halves of the disclosure above, read off the running process rather than promised: the
+        // store holds no choice, and the framework was never asked to open a socket. The lint half
+        // — `SUEnableAutomaticChecks = false`, no `SUFeedURL` — is `check-boundaries.sh`'s.
+        report["softwareUpdateChecksStored"] = composition.softwareUpdateStatus.checksAutomatically
+        report["softwareUpdaterStarted"] = composition.softwareUpdater.isStarted
         report["privacySinkHeld"] = composition.settingsSinks != nil
         report["drivePrivacyRetention"] = drivePrivacyRetentionSink()
         report["driveExclusionList"] = driveExclusionSink()

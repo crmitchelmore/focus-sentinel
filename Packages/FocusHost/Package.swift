@@ -30,8 +30,8 @@ import PackageDescription
 // SwiftUI: views belong to FocusUI, and a composition root that could declare one would be a
 // second place surfaces are written.
 //
-// `dependencies` contains only local paths to siblings in this repository; there are zero
-// external/third-party dependencies.
+// `dependencies` contains only local paths to siblings in this repository. The one third-party
+// framework the app ships, Sparkle, is reached through `FocusUpdates` and nowhere else.
 let package = Package(
     name: "FocusHost",
     defaultLocalization: "en",
@@ -48,7 +48,11 @@ let package = Package(
         // module permitted every sibling is the one that plugs the two together.
         .package(path: "../FocusModel"),
         .package(path: "../FocusSensing"),
-        .package(path: "../FocusUI")
+        .package(path: "../FocusUI"),
+        // focus-h8jf. The one package that may reach the network, for one purpose, behind a
+        // switch. The composition layer holds the updater for the same reason it holds the
+        // login item: it is the only object that reads the person's stored choice.
+        .package(path: "../FocusUpdates")
     ],
     targets: [
         .target(
@@ -59,7 +63,8 @@ let package = Package(
                 .product(name: "FocusClassify", package: "FocusClassify"),
                 .product(name: "FocusModel", package: "FocusModel"),
                 .product(name: "FocusSensing", package: "FocusSensing"),
-                .product(name: "FocusUI", package: "FocusUI")
+                .product(name: "FocusUI", package: "FocusUI"),
+                .product(name: "FocusUpdates", package: "FocusUpdates")
             ],
             // The composition layer owns no user-visible text — `check-strings.sh` asserts the
             // catalog is empty — but it must still be a localised bundle, because the app's

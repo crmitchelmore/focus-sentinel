@@ -83,9 +83,9 @@ struct RetentionControlTests {
     func theContentKeysCarryTheDisclosures() {
         let keys = Set(PrivacySettingsView.contentKeys)
         #expect(keys.contains(.settingsPrivacyNoNetwork))
-        #expect(keys.contains(.settingsPrivacyNoUpdateCheck))
+        #expect(keys.contains(.settingsPrivacyUpdateChecks))
         // And they are two sentences, not one said twice.
-        #expect(ShellStringKey.settingsPrivacyNoNetwork != .settingsPrivacyNoUpdateCheck)
+        #expect(ShellStringKey.settingsPrivacyNoNetwork != .settingsPrivacyUpdateChecks)
     }
 
     /// The order the pane draws is the order the type commits to, shortest first.
