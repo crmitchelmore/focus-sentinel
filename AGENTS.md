@@ -149,6 +149,17 @@ mirrored for anything substantive.
   covers.** The snooze spans arrived spelled in the panel and spelled in the policy; the policy
   wins, because that file is where a reader looks for a threshold and where `PolicyTuning`
   offers it as a dial.
+- **A self-hosted macOS runner installed as a service cannot see the screen.** `svc.sh install`
+  writes `SessionCreate` into the LaunchAgent, which puts every job in its own security session
+  with no window server: `CGWindowListCopyWindowInfo` answers zero rows where an ordinary shell
+  in the desktop session answers dozens. Five self-check assertions depend on real windows —
+  the grant-free window list, the authorisation-surface scan and its export, and the sensing
+  cascade — so the gate cannot pass as a service. Removing that one key and reloading the agent
+  fixes it, at the cost of CI jobs sharing the logged-in desktop; Chris approved that on
+  10 September 2026, and the original plist is backed up at
+  `/Volumes/Memory/archive/focus-runner-plist.backup`. Reloading needs `svc.sh stop`/`start`,
+  not `launchctl bootstrap`, and the server holds the old session for a minute or two afterwards
+  — "a session for this runner already exists" is that, and it clears on its own.
 - **The snapshot lane needs gigabytes of scratch and fails quietly without them.** Every render
   is written to `$TMPDIR/focus-snapshots/<checkout path>` as well as compared, so one pass leaves
   around a gigabyte per checkout. On a full disk the writes fail with `NSCocoaErrorDomain
