@@ -14,25 +14,31 @@ concurrency:
 jobs:
   gate:
     name: macOS gate
-    runs-on: macos-26
-    timeout-minutes: 90
+    # **The persistent Mac, not a hosted image** (focus-oqsx). The hosted macOS lane stopped
+    # starting at all — "the job was not started because recent account payments have failed" —
+    # so every gate on both open pull requests was red for a reason no commit could fix. This is
+    # the same machine the gate is developed on, registered as a repository runner, and the
+    # repository is private, so a pull request cannot bring code from a stranger onto it.
+    runs-on: [bravo-mini-local, macOS, ARM64]
+    timeout-minutes: 120
     env:
-      DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
+      DEVELOPER_DIR: /Applications/Xcode.app/Contents/Developer
+      HOMEBREW_NO_AUTO_UPDATE: '1'
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
-      - name: Set and verify the standard accessibility baseline
+      - name: Verify the standard accessibility baseline
         shell: zsh {0}
         run: |
-          # Runner images enable both settings to disable graphic effects. The standard
-          # panel lane requires them off; dedicated injected-trait tests cover them on.
-          # https://github.com/actions/runner-images/blob/main/images/macos/scripts/build/configure-system.sh
-          defaults write com.apple.universalaccess reduceMotion -bool false
-          defaults write com.apple.universalaccess reduceTransparency -bool false
-          swift -e 'import AppKit; let workspace = NSWorkspace.shared; precondition(!workspace.accessibilityDisplayShouldReduceMotion, "Reduce Motion is still enabled"); precondition(!workspace.accessibilityDisplayShouldReduceTransparency, "Reduce Transparency is still enabled"); print("Standard accessibility baseline verified through AppKit")'
+          # The standard panel lane requires Reduce Motion and Reduce Transparency off;
+          # dedicated injected-trait tests cover them on. A hosted image enables both and the
+          # step used to write them off — but this runs on somebody's own Mac now, and a gate
+          # that reaches into a person's accessibility settings to make its pictures match is
+          # doing the one thing this app exists to argue against. So it reads and says so.
+          swift -e 'import AppKit; let workspace = NSWorkspace.shared; precondition(!workspace.accessibilityDisplayShouldReduceMotion, "Reduce Motion is on for this account. The snapshot lane photographs the standard baseline, so turn it off in System Settings > Accessibility > Display before running the gate."); precondition(!workspace.accessibilityDisplayShouldReduceTransparency, "Reduce Transparency is on for this account. Turn it off in System Settings > Accessibility > Display before running the gate."); print("Standard accessibility baseline verified through AppKit")'
       - name: Verify build, tests, runtime and release artefact
         shell: zsh {0}
         env:
