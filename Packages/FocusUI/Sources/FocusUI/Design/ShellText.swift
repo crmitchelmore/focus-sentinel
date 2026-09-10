@@ -120,12 +120,54 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     /// The About panel's credits paragraph (focus-odz.3).
     case aboutCredits = "shell.about.credits"
     // The first-run explanation, shown once on a store the app has never opened (focus-odz.7).
+    // Since focus-u6de it is the first page of the walkthrough, and the keys keep their names
+    // because the sentences are the same sentences.
     case firstRunTitle = "shell.firstRun.title"
     case firstRunObserves = "shell.firstRun.observes"
     case firstRunNever = "shell.firstRun.never"
     case firstRunPermissions = "shell.firstRun.permissions"
     case firstRunStoreLabel = "shell.firstRun.storeLabel"
-    case firstRunDismiss = "shell.firstRun.dismiss"
+    // The walkthrough (focus-u6de): the Help-menu verb that replays it, its chrome, and the six
+    // pages after the privacy statement. One title and one key per paragraph, and
+    // `WalkthroughPage` is the only place that says which page a paragraph is on;
+    // `WalkthroughTests` holds that mapping as a bijection over the `shell.walkthrough.` prefix.
+    case commandShowWalkthrough = "shell.command.showWalkthrough"
+    case settingsShowWalkthroughNote = "settings.general.showWalkthroughNote"
+    case walkthroughBack = "shell.walkthrough.back"
+    case walkthroughNext = "shell.walkthrough.next"
+    case walkthroughDone = "shell.walkthrough.done"
+    /// `%1$@ of %2$@`: the page's ordinal and the page count, each already formatted for the
+    /// person's locale. Only the word between them is authored here.
+    case walkthroughPosition = "shell.walkthrough.position"
+    case walkthroughPriorityTitle = "shell.walkthrough.priority.title"
+    case walkthroughPriorityOne = "shell.walkthrough.priority.one"
+    case walkthroughPriorityDoneWhen = "shell.walkthrough.priority.doneWhen"
+    case walkthroughPriorityRefine = "shell.walkthrough.priority.refine"
+    case walkthroughPriorityRitual = "shell.walkthrough.priority.ritual"
+    case walkthroughTimeTitle = "shell.walkthrough.time.title"
+    case walkthroughTimeTimebox = "shell.walkthrough.time.timebox"
+    case walkthroughTimeSession = "shell.walkthrough.time.session"
+    case walkthroughTimeStop = "shell.walkthrough.time.stop"
+    case walkthroughTimeRecent = "shell.walkthrough.time.recent"
+    case walkthroughDeskTitle = "shell.walkthrough.desk.title"
+    case walkthroughDeskPack = "shell.walkthrough.desk.pack"
+    case walkthroughDeskJudgement = "shell.walkthrough.desk.judgement"
+    case walkthroughDeskRules = "shell.walkthrough.desk.rules"
+    case walkthroughNudgesTitle = "shell.walkthrough.nudges.title"
+    case walkthroughNudgesGlyph = "shell.walkthrough.nudges.glyph"
+    case walkthroughNudgesPanel = "shell.walkthrough.nudges.panel"
+    case walkthroughNudgesQuestion = "shell.walkthrough.nudges.question"
+    case walkthroughNudgesAnswers = "shell.walkthrough.nudges.answers"
+    case walkthroughNudgesLimits = "shell.walkthrough.nudges.limits"
+    case walkthroughMenuBarTitle = "shell.walkthrough.menuBar.title"
+    case walkthroughMenuBarMark = "shell.walkthrough.menuBar.mark"
+    case walkthroughMenuBarCapture = "shell.walkthrough.menuBar.capture"
+    case walkthroughMenuBarShortcuts = "shell.walkthrough.menuBar.shortcuts"
+    case walkthroughSettingsTitle = "shell.walkthrough.settings.title"
+    case walkthroughSettingsIntervention = "shell.walkthrough.settings.intervention"
+    case walkthroughSettingsPrivacy = "shell.walkthrough.settings.privacy"
+    case walkthroughSettingsData = "shell.walkthrough.settings.data"
+    case walkthroughSettingsReplay = "shell.walkthrough.settings.replay"
     // The cockpit's one-time launch-at-login offer (D-12, focus-odz.4).
     case cockpitLaunchAtLoginOffer = "shell.cockpit.launchAtLogin.offer"
     case cockpitLaunchAtLoginAccept = "shell.cockpit.launchAtLogin.accept"

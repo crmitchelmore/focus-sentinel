@@ -94,6 +94,14 @@ public struct CockpitView: View {
     /// belongs to a subview.
     @State private var fileImportToken: Int = 0
 
+    /// **Whether the walkthrough was asked for** (focus-u6de).
+    ///
+    /// Local rather than a host fact, and that is the difference between the two showings. The
+    /// first one is owed by the store and written into it; this one is a person pressing a
+    /// button, changes nothing, and is forgotten with the window. The sheet is the same view
+    /// either way, presented from `walkthroughPresentation`, which reads both.
+    @State private var isReplayingWalkthrough: Bool = false
+
     @ScaledMetric(relativeTo: .body) private var rowSpacing: CGFloat = 12
     @ScaledMetric(relativeTo: .largeTitle) private var sectionSpacing: CGFloat = 20
     /// The inset of a well's content from its edge, and the radius of that edge.
@@ -338,17 +346,20 @@ public struct CockpitView: View {
                 acknowledge: { wiring.acknowledgeStoreFailure?() }
             )
         }
-        // **The one screen that says what this app looks at** (focus-odz.7).
+        // **The one screen that says what this app looks at, and then what it does**
+        // (focus-odz.7, focus-u6de).
         //
-        // Presented from the state rather than from a local `@State`, for `storeFailurePresentation`'s
-        // reason: whether it is owed is the host's fact, written into the store, and a local mirror
-        // could disagree with it. It is a sheet on the cockpit, so it can only ever appear over a
-        // window somebody opened — nothing on the nudge path can raise it, which is what keeps an
-        // explanation from becoming an interruption.
-        .sheet(isPresented: firstRunPresentation) {
-            FirstRunSheet(
+        // The first showing is presented from the state rather than from a local `@State`, for
+        // `storeFailurePresentation`'s reason: whether it is owed is the host's fact, written into
+        // the store, and a local mirror could disagree with it. A replay is the local flag, because
+        // a replay is owed by nobody. It is a sheet on the cockpit either way, so it can only ever
+        // appear over a window somebody opened or asked for — nothing on the nudge path can raise
+        // it, which is what keeps an explanation from becoming an interruption.
+        .sheet(isPresented: walkthroughPresentation) {
+            WalkthroughSheet(
                 storeLocation: state.storeLocation,
-                dismiss: onFirstRunExplanationDismissed
+                dismiss: dismissWalkthrough,
+                escapeDismisses: !state.showsFirstRunExplanation
             )
         }
         .sheet(isPresented: $isCompleting) {
@@ -453,6 +464,11 @@ public struct CockpitView: View {
         case .pauseSensing:
             sessionActions?.setSensingPaused(!state.sensing.isPausedByUser)
 
+        // The walkthrough, asked for (focus-u6de). The centre has already brought this window
+        // forward; the sheet goes up over it, on its first page, and writes nothing.
+        case .showWalkthrough:
+            isReplayingWalkthrough = true
+
         // The four e05 verbs are not the cockpit's. They act on whatever nudge surface is on
         // screen, which the cockpit knows nothing about and should not: `FocusCommandCenter`
         // delivers every command to the nudge loop as well, and that is where they land.
@@ -486,18 +502,26 @@ public struct CockpitView: View {
         )
     }
 
-    /// **The first-run explanation's presentation** (focus-odz.7).
+    /// **The walkthrough's presentation** (focus-odz.7, focus-u6de).
     ///
     /// The same shape as the store-failure sheet's, and for the same reason: every route out of
     /// the sheet — the button, a click outside, a system dismissal — goes through the one verb, so
-    /// the app cannot end up believing it has explained itself when nobody saw the screen.
-    private var firstRunPresentation: Binding<Bool> {
+    /// the app cannot end up believing it has explained itself when nobody saw the screen. Up
+    /// while either showing is owed; a way out settles both.
+    private var walkthroughPresentation: Binding<Bool> {
         Binding(
-            get: { state.showsFirstRunExplanation },
+            get: { state.showsFirstRunExplanation || isReplayingWalkthrough },
             set: { presented in
-                if !presented { onFirstRunExplanationDismissed() }
+                if !presented { dismissWalkthrough() }
             }
         )
+    }
+
+    /// Every route out of the walkthrough. The first showing's dismissal is the host's verb; a
+    /// replay's is this window's own flag. Both, when both are up, so nothing is left owing.
+    private func dismissWalkthrough() {
+        isReplayingWalkthrough = false
+        if state.showsFirstRunExplanation { onFirstRunExplanationDismissed() }
     }
 
     private var handoffPresentation: Binding<Bool> {

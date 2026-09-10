@@ -27,11 +27,18 @@ enum SnapshotComponent: String, CaseIterable, Sendable {
     /// because `ImageRenderer` cannot rasterise a `.sheet` presentation — what is photographed
     /// is the sheet's own content, which is what the presentation shows.
     case cockpitStoreUnavailableSheet
-    /// **The one screen that says what this app looks at** (focus-odz.7). Rendered on its own for
-    /// `cockpitStoreUnavailableSheet`'s reason: `ImageRenderer` cannot rasterise a `.sheet`
+    /// **The walkthrough, one picture per page** (focus-odz.7, focus-u6de). Rendered on its own
+    /// for `cockpitStoreUnavailableSheet`'s reason: `ImageRenderer` cannot rasterise a `.sheet`
     /// presentation, so what is photographed is the sheet's own content, which is what the
-    /// presentation shows.
-    case firstRunSheet
+    /// presentation shows. Every page, because every page is different text and the lane's
+    /// whole question is whether that text grows rather than clips.
+    case walkthroughWatches
+    case walkthroughPriority
+    case walkthroughTime
+    case walkthroughDesk
+    case walkthroughNudges
+    case walkthroughMenuBar
+    case walkthroughSettings
     case shortcutsHelp
     /// **The day's ledger** (e09a). Rendered from a fixed value with one of every row type —
     /// an accusation, a question, a session, a correctable silent interval and a withdrawn one —
@@ -82,6 +89,21 @@ enum SnapshotComponent: String, CaseIterable, Sendable {
         }
     }
 
+    /// The page a walkthrough component photographs. One component per page, so the mapping is
+    /// exhaustive in both directions: `WalkthroughTests` holds that every page has a component.
+    var walkthroughPage: WalkthroughPage {
+        switch self {
+        case .walkthroughWatches: .watches
+        case .walkthroughPriority: .priority
+        case .walkthroughTime: .time
+        case .walkthroughDesk: .desk
+        case .walkthroughNudges: .nudges
+        case .walkthroughMenuBar: .menuBar
+        case .walkthroughSettings: .settings
+        default: preconditionFailure("\(rawValue) is not a walkthrough page")
+        }
+    }
+
     var status: FocusStatus? {
         switch self {
         case .statusRelevant: .relevant
@@ -116,15 +138,17 @@ enum SnapshotComponent: String, CaseIterable, Sendable {
                     screens: []
                 )
             )
-        case .firstRunSheet:
+        case .walkthroughWatches, .walkthroughPriority, .walkthroughTime, .walkthroughDesk,
+             .walkthroughNudges, .walkthroughMenuBar, .walkthroughSettings:
             // `screens: []` for the store-failure sheet's reason: the bounded sheet derives its
             // ceiling from the live display, and a baseline whose dimensions depend on the monitor
             // that recorded it is not a baseline.
             return AnyView(
-                FirstRunSheet(
+                WalkthroughSheet(
                     storeLocation: Self.storeURL.path(percentEncoded: false),
                     dismiss: {},
-                    screens: []
+                    screens: [],
+                    page: walkthroughPage
                 )
             )
         case .shortcutsHelp:

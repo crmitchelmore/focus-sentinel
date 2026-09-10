@@ -4693,18 +4693,6 @@
         }
       }
     },
-    "shell.firstRun.dismiss" : {
-      "comment" : "First-run sheet: the one button, which puts it away for good.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Continue"
-          }
-        }
-      }
-    },
     "shell.firstRun.storeLabel" : {
       "comment" : "First-run sheet: the label above the path where the local store lives. The same path Settings > Privacy shows.",
       "extractionState" : "manual",
@@ -4713,6 +4701,426 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Focus stores your data on this Mac:"
+          }
+        }
+      }
+    },
+    "settings.general.showWalkthroughNote" : {
+      "comment" : "Footnote under the Show walkthrough button in General settings.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A few short pages on what Focus watches and what it does."
+          }
+        }
+      }
+    },
+    "shell.command.showWalkthrough" : {
+      "comment" : "Help menu item and Settings > General button: open the walkthrough again. It is the same sheet the first launch shows, from its first page.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show walkthrough"
+          }
+        }
+      }
+    },
+    "shell.walkthrough.back" : {
+      "comment" : "Walkthrough sheet: the button that goes to the previous page. Disabled on the first page.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Back"
+          }
+        }
+      }
+    },
+    "shell.walkthrough.desk.judgement" : {
+      "comment" : "Walkthrough page 4: what the relevance engine compares. It reads the app in front and, where a browser offers it, the site's host name; nothing else.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus compares the app in front with the context pack to decide whether it is part of the work."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.desk.pack" : {
+      "comment" : "Walkthrough page 4: the context pack (F-09), added on the Details tab or by drag and drop onto the cockpit.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The context pack is what belongs to the priority: apps, sites, keywords and files. Add them on the Details tab, or drop files and links onto the window."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.desk.rules" : {
+      "comment" : "Walkthrough page 4: per-task rules (F-11). Task-scoped rules last with the priority; session-scoped ones end with the session.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A rule settles a case for good. Mark an app or a site as related or unrelated, for this priority or for this session only."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.desk.title" : {
+      "comment" : "Walkthrough page 4: the heading. The context pack and the rules.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The desk and the rules"
+          }
+        }
+      }
+    },
+    "shell.walkthrough.done" : {
+      "comment" : "Walkthrough sheet: the button on the last page that closes it. Return presses it.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Done"
+          }
+        }
+      }
+    },
+    "shell.walkthrough.menuBar.capture" : {
+      "comment" : "Walkthrough page 6: the quick-capture hot key. The combination is not spelled here because General settings lets the person change it.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A global shortcut sets a new priority from inside any app. Choose the combination in Settings, General."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.menuBar.mark" : {
+      "comment" : "Walkthrough page 6: the status item and its popover (F-82). The popover shows facts about right now and no score.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The mark in the menu bar shows what Focus currently believes. Click it for the priority, the timer, any open question and the session controls."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.menuBar.shortcuts" : {
+      "comment" : "Walkthrough page 6: the Keyboard Shortcuts window (F-145). Shortcuts are not spelled here because the registry is their one source.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Every command has a menu item. The Help menu lists each one with its shortcut."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.menuBar.title" : {
+      "comment" : "Walkthrough page 6: the heading. The status item and the keyboard.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The menu bar and the keyboard"
+          }
+        }
+      }
+    },
+    "shell.walkthrough.next" : {
+      "comment" : "Walkthrough sheet: the button that goes to the next page. Return presses it.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next"
+          }
+        }
+      }
+    },
+    "shell.walkthrough.nudges.answers" : {
+      "comment" : "Walkthrough page 5: the correction economy on a panel, and F-81's Hide all overlays, which writes nothing.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Every panel can be answered, snoozed or closed. Hide all overlays, in the View menu, clears the screen without answering."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.nudges.glyph" : {
+      "comment" : "Walkthrough page 5: the ambient rung. The status-item mark changes and nothing else happens (U-2).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "When you drift for a while, the mark in the menu bar changes. Nothing else happens."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.nudges.limits" : {
+      "comment" : "Walkthrough page 5: the daily caps, the presentation and microphone suppression, and quiet hours.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus caps how often it interrupts each day and stays quiet while you present, while a microphone is in use, and during quiet hours."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.nudges.panel" : {
+      "comment" : "Walkthrough page 5: the panel rung. A non-activating panel that never takes key focus from the person's work.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "If the drift continues, a small panel names the app and offers a way back. It never takes the keyboard from your work."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.nudges.question" : {
+      "comment" : "Walkthrough page 5: the query (U-1). An uncertain verdict asks instead of accusing; the three answers are yes, no and not now.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "When Focus cannot tell, it asks whether the app is part of the work instead of accusing. Answer yes, no or not now."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.nudges.title" : {
+      "comment" : "Walkthrough page 5: the heading. The two rungs and the question.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How Focus speaks"
+          }
+        }
+      }
+    },
+    "shell.walkthrough.position" : {
+      "comment" : "Walkthrough sheet: where the person is. %1$@ is the page number and %2$@ the page count, both already formatted for the locale; only the word between them is authored here.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ of %2$@"
+          }
+        }
+      }
+    },
+    "shell.walkthrough.priority.doneWhen" : {
+      "comment" : "Walkthrough page 2: the definition of done (F-08). Optional at capture and optional forever.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add a Done when line so you know what finished looks like. You can edit both lines later."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.priority.one" : {
+      "comment" : "Walkthrough page 2: capture. A new priority replaces the current one and the old one stays in Recent (F-02, F-15).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Type what you are working on as one sentence. Focus keeps one priority. Setting a new one replaces it and moves the old one to Recent."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.priority.refine" : {
+      "comment" : "Walkthrough page 2: the deterministic refinement strip (F-18). The suggestion is offered, never applied.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "If the sentence has no verb or no outcome, Focus suggests a rewrite. You can keep your own wording."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.priority.ritual" : {
+      "comment" : "Walkthrough page 2: the daily ritual banner (F-19), which asks once per local day and can be switched off in General settings.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Once a day, the window asks what today's priority is. Turn that prompt off in Settings, General."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.priority.title" : {
+      "comment" : "Walkthrough page 2: the heading. The one priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "One priority at a time"
+          }
+        }
+      }
+    },
+    "shell.walkthrough.settings.data" : {
+      "comment" : "Walkthrough page 7: portability (F-110, F-134) and Delete everything.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Export your data or your settings from the File menu. Delete everything from Privacy settings."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.settings.intervention" : {
+      "comment" : "Walkthrough page 7: the Intervention pane (voice, quiet hours, caps, routing).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Intervention settings choose the voice, quiet hours, the daily caps and where each nudge appears."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.settings.privacy" : {
+      "comment" : "Walkthrough page 7: the Privacy pane (capability table, retention, the two opt-in grants). The last sentence is the conditional zero-grant rule of focus-exdi.4.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Privacy settings list every signal Focus reads, how long it keeps activity, and two permissions you can switch on. Focus asks for nothing unless you switch it on."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.settings.replay" : {
+      "comment" : "Walkthrough page 7: how to read the walkthrough again. Names the Help menu item by its title.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Read this again any time from Help, Show walkthrough."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.settings.title" : {
+      "comment" : "Walkthrough page 7: the heading. Settings and the data.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Settings and your data"
+          }
+        }
+      }
+    },
+    "shell.walkthrough.time.recent" : {
+      "comment" : "Walkthrough page 3: the Recent tab (F-15). Re-activating a task brings its context pack and rules back.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recent lists earlier priorities. Choose one to make it current again, with its files and rules."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.time.session" : {
+      "comment" : "Walkthrough page 3: the session (F-98). Start, pause, detour, break and finish are the cockpit's own verbs.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start a session when you begin. You can pause it, log a detour or a break, and finish it when you stop."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.time.stop" : {
+      "comment" : "Walkthrough page 3: the interruption sheet (F-101). Every field on it is optional.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stopping a session early asks why. Every field on that form is optional."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.time.timebox" : {
+      "comment" : "Walkthrough page 3: the timebox (F-12). Time remaining, then time over; never a deadline the app enforces.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Give the priority a timebox. Focus shows the time left and, after it ends, the time over."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.time.title" : {
+      "comment" : "Walkthrough page 3: the heading. The timebox and the session.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Time and sessions"
           }
         }
       }
@@ -5288,7 +5696,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Settings\u2026"
+            "value" : "Settings…"
           }
         }
       }
@@ -5342,23 +5750,23 @@
       }
     },
     "shell.nudge.snoozeCustom" : {
-      "comment": "Custom quiet duration control, requested by the owner on 9 September 2026.",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Custom…"
+      "comment" : "Custom quiet duration control, requested by the owner on 9 September 2026.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Custom…"
           }
         }
       }
     },
     "shell.nudge.snoozeCustomMinutes" : {
-      "comment": "Custom quiet duration control, requested by the owner on 9 September 2026.",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Minutes, 1 to 1,440"
+      "comment" : "Custom quiet duration control, requested by the owner on 9 September 2026.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Minutes, 1 to 1,440"
           }
         }
       }

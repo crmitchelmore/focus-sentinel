@@ -76,6 +76,8 @@ public enum FocusField: String, Sendable, CaseIterable, Hashable, Identifiable {
     case generalRitualEnabled
     /// The quick-capture shortcut picker in General settings (focus-d3g).
     case generalQuickCaptureShortcut
+    /// The button in General settings that opens the walkthrough again (focus-u6de).
+    case generalShowWalkthrough
     /// The "Reveal Data Store in Finder" button in Privacy settings.
     case privacyRevealStore
     /// The quick-capture panel's field and its Set Priority button. Separate cases from the
@@ -220,7 +222,8 @@ public enum FocusTraversal {
             surface: .settingsGeneral,
             order: [
                 .generalAppearancePicker, .generalLaunchAtLogin,
-                .generalRitualEnabled, .generalQuickCaptureShortcut
+                .generalRitualEnabled, .generalQuickCaptureShortcut,
+                .generalShowWalkthrough
             ],
             defaultField: nil,
             cancel: .dismissWindow

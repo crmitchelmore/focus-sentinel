@@ -40,6 +40,9 @@ public struct GeneralSettingsView: View {
     /// **The combination quick capture is bound to** (focus-d3g).
     private let quickCaptureShortcut: HotKeySpec
     private let onCaptureAction: (CaptureSettingsAction) -> Void
+    /// Where the walkthrough button's command goes (focus-u6de). The shared centre in the app;
+    /// injectable so a test can watch the command arrive without a menu bar.
+    private let commandCenter: FocusCommandCenter
 
     @Environment(\.appearanceTraits) private var traits
     @Environment(\.shellTextScale) private var textScale
@@ -53,7 +56,8 @@ public struct GeneralSettingsView: View {
         onLaunchAtLogin: @escaping (LaunchAtLoginAction) -> Void = { _ in },
         ritualEnabled: Bool = true,
         quickCaptureShortcut: HotKeySpec = .quickCaptureDefault,
-        onCaptureAction: @escaping (CaptureSettingsAction) -> Void = { _ in }
+        onCaptureAction: @escaping (CaptureSettingsAction) -> Void = { _ in },
+        commandCenter: FocusCommandCenter = .shared
     ) {
         self._preference = preference
         self.appVersion = appVersion
@@ -62,6 +66,7 @@ public struct GeneralSettingsView: View {
         self.ritualEnabled = ritualEnabled
         self.quickCaptureShortcut = quickCaptureShortcut
         self.onCaptureAction = onCaptureAction
+        self.commandCenter = commandCenter
     }
 
     /// Every option the picker offers, in the order it offers them.
@@ -93,6 +98,11 @@ public struct GeneralSettingsView: View {
 
             VStack(alignment: .leading, spacing: spacing) {
                 quickCaptureRow
+            }
+            .companionSurface()
+
+            VStack(alignment: .leading, spacing: spacing) {
+                walkthroughRow
             }
             .companionSurface()
 
@@ -208,6 +218,32 @@ public struct GeneralSettingsView: View {
 
 
         ShellText(.settingsQuickCaptureShortcutNote, role: .footnote)
+            .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+            .lineLimit(nil)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    /// **The walkthrough, on demand** (focus-u6de).
+    ///
+    /// The same command the Help menu sends, so the button and the menu item are one act with
+    /// one title key. The centre brings the cockpit forward and the cockpit presents the sheet;
+    /// this pane holds no state about it. The delivery result is discarded for the reason
+    /// `ShellCommands.perform` discards it: `showWalkthrough` opens the cockpit, and a process
+    /// with nothing able to open one is a unit process.
+    @ViewBuilder
+    private var walkthroughRow: some View {
+        Button {
+            _ = commandCenter.send(.showWalkthrough)
+        } label: {
+            Label {
+                ShellText(.commandShowWalkthrough, role: .callout)
+            } icon: {
+                Image(systemName: "book")
+            }
+        }
+        .focused($focus, equals: .generalShowWalkthrough)
+
+        ShellText(.settingsShowWalkthroughNote, role: .footnote)
             .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
             .lineLimit(nil)
             .fixedSize(horizontal: false, vertical: true)

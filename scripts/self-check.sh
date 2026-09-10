@@ -751,6 +751,9 @@ def expected_availability(action_id, world):
         # The popover exists for the life of the process.
         "nudge.menuBar": True,
         "shell.help": True,
+        # focus-u6de. The walkthrough reads nothing and writes nothing, so there is no state
+        # in which it could be refused.
+        "help.walkthrough": True,
         # e09a. The ledger draws whatever the day holds, including nothing — a window that
         # refused to open on a quiet day would withhold exactly the page a person wants after a
         # day the app said nothing on.
@@ -806,6 +809,7 @@ KNOWN_COMMAND_IDS = {
     "nudge.hideOverlays", "nudge.menuBar", "nudge.answerYes", "nudge.answerNo",
     "nudge.answerNotNow", "shell.help", "shell.history",
     "data.export", "settings.export", "settings.import",
+    "help.walkthrough",
 }
 check(
     set(reported_ids) == KNOWN_COMMAND_IDS,
@@ -813,8 +817,8 @@ check(
     sorted(set(reported_ids) ^ KNOWN_COMMAND_IDS),
 )
 check(
-    len(reported_ids) == len(set(reported_ids)) and len(reported_ids) == 20,
-    "all twenty of the app's own actions were reported, once each",
+    len(reported_ids) == len(set(reported_ids)) and len(reported_ids) == 21,
+    "all twenty-one of the app's own actions were reported, once each",
     reported_ids,
 )
 

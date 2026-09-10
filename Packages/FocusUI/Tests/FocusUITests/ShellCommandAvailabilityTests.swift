@@ -45,7 +45,9 @@ struct ShellCommandAvailabilityTests {
     /// with this literal, so a command that gains a precondition, loses one, or arrives with none
     /// changes the derived set and fails here rather than shipping enabled and silent.
     static let alwaysAvailable: Set<PriorityCommand> = [
-        .newPriority, .addFilesToContext, .pauseSensing, .hideOverlays, .showMenuBar
+        .newPriority, .addFilesToContext, .pauseSensing, .hideOverlays, .showMenuBar,
+        // focus-u6de: a sheet that reads nothing and writes nothing has no state to refuse in.
+        .showWalkthrough
     ]
 
     @Test("the set of unconditional commands is the set that was committed")
@@ -88,7 +90,7 @@ struct ShellCommandAvailabilityTests {
     @Test("the fold covers every command in every world the world can be in")
     func theFoldCoversTheWholeSpace() {
         #expect(Self.everyWorld.count == 2 * (SessionPhase.allCases.count + 1) * 2 * 2)
-        #expect(PriorityCommand.allCases.count == 14)
+        #expect(PriorityCommand.allCases.count == 15)
         let cells = PriorityCommand.allCases.flatMap { command in
             Self.everyWorld.map { command.isAvailable(in: $0) }
         }
@@ -148,7 +150,7 @@ struct ShellCommandAvailabilityTests {
                 }
             }
         }
-        #expect(CommandRegistry.shell.actions.count == 20)
+        #expect(CommandRegistry.shell.actions.count == 21)
     }
 
     /// **What this proof would still be green for** (repair doctrine, clause 3).

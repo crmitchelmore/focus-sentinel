@@ -39,7 +39,9 @@ struct ShortcutsHelpTests {
             "⌃⌘Y", "⌃⌘U", "⌃⌘L",
             // e09a's destination, in the same modifier family as every other View-menu verb.
             "⌃⌘D",
-            "⌘?"
+            "⌘?",
+            // focus-u6de: the walkthrough, on the one free base character that names it.
+            "⇧⌘T"
         ])
         #expect(rows.map(\.titleKey) == [
             .commandNewPriority,
@@ -69,7 +71,8 @@ struct ShortcutsHelpTests {
             // e09a's History, which is a destination rather than a verb but is bound and
             // therefore listed like everything else that is.
             .commandShowHistory,
-            .commandHelp
+            .commandHelp,
+            .commandShowWalkthrough
         ])
     }
 
@@ -134,7 +137,8 @@ struct ShortcutsHelpTests {
             "nudge.answerNo",
             "nudge.answerNotNow",
             "shell.history",
-            "shell.help"
+            "shell.help",
+            "help.walkthrough"
         ])
         #expect(rows.first { $0.id == "shell.test.unbound" }?.glyphs == nil)
     }
