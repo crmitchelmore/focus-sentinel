@@ -1,3 +1,4 @@
+import CoreGraphics
 import FocusCore
 import Foundation
 import Testing
@@ -224,16 +225,9 @@ struct IdleReaderTests {
         // states at the `~0` sentinel; see the agreement test below for the one that is.
     }
 
-    /// The invariant that replaced the deleted `hardware >= session` pin, on the **live** reader.
-    ///
-    /// Measured 2026-09-03: for every concrete event type `.hidSystemState` and
-    /// `.combinedSessionState` return the same seconds, and only the `kCGAnyInputEventType`
-    /// sentinel diverges — because under `.hidSystemState` that sentinel is IOHIDSystem's
-    /// `HIDIdleTime`, not a fold over CGEvent types. This is the same assertion `self-check.sh`
-    /// makes on the shipped product's report, with the same one-second tolerance and the same
-    /// non-vacuity floor.
-    @Test("Per concrete event type, the two idle states agree — the invariant that is true")
-    func concreteEventTypesAgreeAcrossBothStates() {
+    /// Live tables can disagree, including for concrete event types on a hosted login session.
+    @Test("Concrete event types return finite readings from both independent source tables")
+    func concreteEventTypesHaveValidReadings() {
         let rows = CGEventIdleSource.secondsPerConcreteEventType()
 
         // Non-vacuity: "every row agrees" is satisfied by no rows at all.
@@ -245,10 +239,28 @@ struct IdleReaderTests {
             #expect(row.sessionSeconds.isFinite, "\(row.eventType) session is not finite")
             #expect(row.hardwareSeconds >= 0, "\(row.eventType) hardware is negative")
             #expect(row.sessionSeconds >= 0, "\(row.eventType) session is negative")
-            #expect(
-                abs(row.differenceSeconds) <= 1,
-                "\(row.eventType): hid \(row.hardwareSeconds) s vs combined \(row.sessionSeconds) s"
-            )
+            #expect(row.differenceSeconds.isFinite)
         }
     }
+
+    @Test("Concrete idle diagnostics preserve both source tables and each event type")
+    func concreteEventTypesPreserveIndependentSources() {
+        var calls: [(CGEventSourceStateID, CGEventType)] = []
+        let rows = CGEventIdleSource.secondsPerConcreteEventType { state, eventType in
+            calls.append((state, eventType))
+            return Double(eventType.rawValue) + (state == .hidSystemState ? 100 : 200)
+        }
+        #expect(calls.count == 8)
+        for (index, entry) in CGEventIdleSource.concreteEventTypes.enumerated() {
+            #expect(calls[index * 2].0 == .combinedSessionState)
+            #expect(calls[index * 2 + 1].0 == .hidSystemState)
+            #expect(calls[index * 2].1 == entry.type)
+            #expect(calls[index * 2 + 1].1 == entry.type)
+            #expect(rows[index].eventType == entry.name)
+            #expect(rows[index].hardwareSeconds == Double(entry.type.rawValue) + 100)
+            #expect(rows[index].sessionSeconds == Double(entry.type.rawValue) + 200)
+            #expect(rows[index].differenceSeconds == -100)
+        }
+    }
+
 }

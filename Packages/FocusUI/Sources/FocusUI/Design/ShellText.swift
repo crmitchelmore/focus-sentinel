@@ -373,6 +373,10 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case interventionExclusionAddHeading = "settings.intervention.exclusion.addHeading"
     case interventionExclusionNoneRunning = "settings.intervention.exclusion.noneRunning"
     case interventionExclusionRemove = "settings.intervention.exclusion.remove"
+    case intentRefusalUnavailable = "shell.intent.refusal.unavailable"
+    case intentRefusalEmptyPriority = "shell.intent.refusal.emptyPriority"
+    case intentRefusalSessionRunning = "shell.intent.refusal.sessionRunning"
+    case intentRefusalNoSession = "shell.intent.refusal.noSession"
     case settingsPrivacyStatement = "settings.privacy.statement"
     // The two things this app does not do, said plainly where a person asks what it does
     // (F-122, F-137, focus-6n2). Both are linted true of the shipped binary rather than
@@ -578,6 +582,8 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     // the top rung wants an answer.
     case nudgeDismiss = "shell.nudge.dismiss"
     case nudgeSnoozeCountdown = "shell.nudge.snoozeCountdown"
+    case nudgeSnoozeCustom = "shell.nudge.snoozeCustom"
+    case nudgeSnoozeCustomMinutes = "shell.nudge.snoozeCustomMinutes"
 
     // The menu-bar command centre (F-82, F-83, R-91).
     //
@@ -743,7 +749,9 @@ extension View {
 /// force, and draws the result — which is what makes the pseudo-localisation and
 /// large-text passes properties of the real views rather than of a test-only copy of them.
 public struct ShellText: View {
-    private let resource: LocalizedStringResource
+    // Resolve once for this view value. Repeated size measurements must not reload
+    // the bundle's string table; transforms and user arguments still apply in body.
+    private let resolvedFormat: String
     private let role: DesignTokens.FontRole
     /// The substitutions, for the format-string entries. Empty for every plain entry.
     private let arguments: [String]
@@ -756,7 +764,7 @@ public struct ShellText: View {
 
     /// A string from `FocusUI`'s own catalog.
     public init(_ key: ShellStringKey, role: DesignTokens.FontRole = .body) {
-        self.resource = ShellStrings.resource(key)
+        self.resolvedFormat = ShellStrings.string(key)
         self.role = role
         self.arguments = []
     }
@@ -767,7 +775,7 @@ public struct ShellText: View {
     /// pseudo-localisation lane expands the authored half and leaves the user's words alone —
     /// which is exactly what a real translation does.
     public init(_ key: ShellStringKey, role: DesignTokens.FontRole = .body, argument: String) {
-        self.resource = ShellStrings.resource(key)
+        self.resolvedFormat = ShellStrings.string(key)
         self.role = role
         self.arguments = [argument]
     }
@@ -784,7 +792,7 @@ public struct ShellText: View {
         role: DesignTokens.FontRole = .body,
         arguments: [String]
     ) {
-        self.resource = ShellStrings.resource(key)
+        self.resolvedFormat = ShellStrings.string(key)
         self.role = role
         self.arguments = arguments
     }
@@ -798,7 +806,7 @@ public struct ShellText: View {
     /// the key one — under `xcodebuild` only, where those symbols exist. The label is what
     /// keeps the two lanes compiling the same source.
     public init(resource: LocalizedStringResource, role: DesignTokens.FontRole = .body) {
-        self.resource = resource
+        self.resolvedFormat = String(localized: resource)
         self.role = role
         self.arguments = []
     }
@@ -812,7 +820,7 @@ public struct ShellText: View {
     }
 
     public var body: some View {
-        let format = transform(String(localized: resource))
+        let format = transform(resolvedFormat)
         let drawn = arguments.isEmpty ? format : String(format: format, arguments: arguments)
         let text = Text(verbatim: drawn)
             .font(DesignTokens.font(role, scale: scale))

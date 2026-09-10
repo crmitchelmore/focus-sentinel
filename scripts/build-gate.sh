@@ -121,13 +121,12 @@ export FOCUS_KEYS_READ="$KEYS_READ"
 # passing `FOCUS_SNAPSHOT_OUT=<dir>` as a command-line build setting. Both runs wrote to the
 # harness's own default instead.
 #
-# What the gate does therefore is copy *out* of that shared staging directory into a per-run
-# directory of its own, immediately after the unit stage, and treat the copy as this run's
-# renders. The staging directory stays shared between concurrent runs; the renders are a
-# deterministic function of the committed code, so two runs of the same tree write identical
-# bytes there, and the evidence each run collects is its own snapshot of it.
+# SnapshotHarness mirrors its canonical checkout path below focus-snapshots. A second
+# worktree can contain different source and must never replace this checkout's candidate
+# images. Runs within one checkout still need to be serialised; each completed unit lane is
+# copied into its own evidence directory here. Keep this default in step with the harness.
 TMP_ROOT="${TMPDIR:-/tmp}"
-SNAPSHOT_STAGING="${FOCUS_SNAPSHOT_OUT:-${TMP_ROOT%/}/focus-snapshots}"
+SNAPSHOT_STAGING="${FOCUS_SNAPSHOT_OUT:-${TMP_ROOT%/}/focus-snapshots${REPO_ROOT:A}}"
 SNAPSHOT_STAGING="${SNAPSHOT_STAGING%/}"
 SNAPSHOT_OUT="$LOG_DIR/snapshots"
 
@@ -347,6 +346,8 @@ check_packaging() {
             print -u2 "FAIL [$config] the merged Info.plist's FocusGitHash is '$baked', not '$expected'"
             rc=1
         fi
+        python3 scripts/check-app-intents.py "$app" || rc=1
+
     done
     return $rc
 }

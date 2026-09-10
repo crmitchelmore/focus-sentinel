@@ -826,3 +826,65 @@ FOCUS_MW_LOGS=/private/tmp/logs FOCUS_MW_DD=/private/tmp/dd \
 
 Each prints one line per row: the red line it produced, or `MISS`. A `MISS` is the same verdict
 as a red gate — an assertion that cannot be shown to fail is a FAIL regardless of the run result.
+
+## App Intents packaging (focus-mn7, 2026-09-08)
+
+`check-app-intents.py` was run against the built Debug metadata and compiled main-bundle
+strings, then against isolated copies with each mutation below. All three were rejected:
+
+- Remove StartFocusSessionIntent from exported actions: packaging fails on the exact action set.
+- Disable openAppWhenRun for SetFocusPriorityIntent: packaging fails on foreground execution.
+- Replace SetFocusPriorityIntent's title key with a missing key: packaging fails on metadata/localisation agreement.
+
+The untouched artefact passed. These controls copy only metadata and compiled resources;
+they do not modify the application or another agent's build.
+
+## Self-check lifetimes and session states (focus-k453, 2026-09-08)
+
+The reader's actual assertion expressions were executed against positive and negative controls.
+The real popover delivery requires receipt and persisted-row deltas both equal to one. Empty
+drives, missing receipts/rows, duplicate receipts/rows and failed reads are rejected. Historical
+daily rows may exceed process-local receipts on an ordinary launch.
+
+All five surface statuses and nine cascade stages are accepted; unknown values are rejected.
+Paused and break statuses can mask either an uncertain or a decided classification. Four driven
+engine cells prove those combinations. Sixteen mutations (status, band, presence and stage in
+each cell) are rejected; the unchanged control passes. Runtime verification is in the ordinary
+Debug and Release self-check stages.
+
+## Model test executor starvation (focus-xyjd, 2026-09-08)
+
+Hosted CI stalled inside FocusModelTests. Running the unchanged model suite with
+`LIBDISPATCH_COOPERATIVE_POOL_STRICT=1` reproduced the hang; a process sample showed
+`FocusModelRungTests.declinesAreCachedToo` blocked in `primeSynchronously` at
+`DispatchSemaphore.wait`. After changing the tests to await the async priming path, all 13
+tests completed on the same one-worker pool. The standalone synchronous evaluation bridge
+remains available outside async contexts, with the compiler directing async callers to `prime`.
+
+The strict control was run on the built test bundle using the toolchain's
+`swiftpm-testing-helper`, with `DYLD_FRAMEWORK_PATH` pointing at Xcode's macOS Developer
+Library/Frameworks. Applying the strict flag to SwiftPM's incremental build driver itself
+can stall its build engine; that is separate from the sampled Focus test defect.
+
+This follows [Apple's cooperative-thread guidance](https://developer.apple.com/videos/play/wwdc2021/10254/):
+blocking a worker on a task that needs the same pool breaks forward progress.
+
+
+### Hosted idle-table correction (8 September 2026, focus-a9dm)
+
+SC-93 and SC-94 above are historical evidence of the retired equality assertion. Hosted run
+34257309511 reported a 6.176-second gap for all four concrete event types. Apple's
+[CGEventSourceStateID contract](https://developer.apple.com/documentation/coregraphics/cgeventsourcestateid)
+describes independent hardware and login-session tables, with no equality guarantee.
+The replacement reader retains the four-distinct-type floor and rejects non-finite or negative
+source values and a signed difference inconsistent with the two published readings. The unit
+source seam uses distinct values for both tables and every event type, detecting aliases,
+swaps, missing reads and event-type mismatches. The maximum-of-two-counters idle decision
+remains independently checked; no product idle threshold changed. The actual reader accepted
+a 6.176-second difference and rejected nine non-finite, negative, inconsistent, missing or
+duplicated reports (`focus-release-evidence/hosted-repair/idle-reader-controls.py` and `.log`).
+
+Snapshot pixel-loop equivalence uses the actual old and new functions under `-Onone`, covering
+48 random buffers, identical/distinct pairs and both paper modes. Evidence lives under
+`focus-release-evidence/hosted-repair/pixel-equivalence.swift` and `.log`. Mean/channel/proportion
+tolerances are unchanged; this removes per-pixel collection/iterator overhead only.

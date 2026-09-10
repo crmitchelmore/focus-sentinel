@@ -28,6 +28,7 @@ DerivedData/
 # `.build/` matches a directory only, so the symlink was invisible to it and eight of them
 # were committed by a `git add -A` before this line existed (focus-0nm).
 .build
+__pycache__/
 *.xcresult
 *.xcuserstate
 xcuserdata/

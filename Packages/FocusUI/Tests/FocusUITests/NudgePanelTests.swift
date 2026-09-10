@@ -818,25 +818,26 @@ struct NudgePanelTests {
     /// question was asked.
     @Test("content taller than the ceiling scrolls to its actions rather than clipping them")
     func overflowScrollsRatherThanClipping() {
-        // A policy nobody would write, which is the point: the panel must behave when the
-        // content is pathological, not only when it is the fixture. The snooze spans are read
-        // from `InterventionPolicy` by the shipping app and are injectable here, so twenty of
-        // them at the largest text size is a real layout rather than a contrived view.
+        // Artificial vertical pressure tests the controller's overflow contract without
+        // exposing a twenty-button duration picker, which is not part of the product.
         let enormous = AccusationPresentation(
             rung: .panel,
             task: "Write the Q3 proposal for Acme",
             subject: Self.decoy,
             dwelled: .seconds(600),
             returnTarget: "TextEdit",
-            hasOpenSession: true,
-            snoozeDurations: (1...20).map { Duration.seconds($0 * 60) }
+            hasOpenSession: true
         )
         let controller = Self.controller()
         controller.update(
             showing: .accusation,
-            layout: AccusationPanelView(presentation: enormous)
-                .surfaceLayout
-                .modified { $0.shellTextScale(.accessibilityLarge) }
+            layout: AccusationPanelView(presentation: enormous).surfaceLayout.modified { content in
+                VStack(alignment: .leading, spacing: 0) {
+                    Color.clear.frame(height: 1_200)
+                    content
+                }
+                .shellTextScale(.accessibilityLarge)
+            }
         )
         controller.show(presentationIsClear: true, announcement: "")
         defer { controller.hide() }

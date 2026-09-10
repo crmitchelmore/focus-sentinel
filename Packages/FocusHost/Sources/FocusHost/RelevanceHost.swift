@@ -278,12 +278,22 @@ final class RelevanceHost {
 
     // MARK: - The snapshot
 
+    private var storeWasDeleted = false
+
+    /// A queued rebuild must not read the old context while the app awaits relaunch.
+    func stopForStoreDeletion() {
+        storeWasDeleted = true
+        rebuildRequested = false
+        onJudgement = nil
+    }
+
     /// One of the four invalidations happened. Rebuild, once, soon.
     ///
     /// Synchronous and cheap on purpose: it is called from `refreshCockpit`, which runs on every
     /// mutation and every corroboration tick, and a rebuild per tick would be a store read per
     /// tick — exactly what R-65 exists to prevent.
     func invalidateSnapshot() {
+        guard !storeWasDeleted else { return }
         guard !rebuildInFlight else {
             rebuildRequested = true
             return
@@ -308,6 +318,7 @@ final class RelevanceHost {
     /// the result in-process, which is the only way to prove the four-invalidation contract
     /// without an `osascript` grant.
     func rebuildSnapshot() async {
+        guard !storeWasDeleted else { return }
         let task = activeTask()
         let priority = task.map {
             PriorityInput(
@@ -328,6 +339,8 @@ final class RelevanceHost {
                 "the rule store refused a read: \(error.localizedDescription, privacy: .public)"
             )
         }
+
+        guard !storeWasDeleted else { return }
 
         // A different priority makes every earlier observation evidence about a different
         // question, so the drift accumulator and the last verdict go with it. Detected here
@@ -358,12 +371,14 @@ final class RelevanceHost {
     /// association at all, so inferring one from the shape of a subject string would be exactly
     /// the guess R-72.3 forbids.
     private func storedRuleRows(priorityID: UUID?) async throws -> [StoredRuleRow] {
+        guard !storeWasDeleted else { return [] }
         guard let scoped = ruleStore as? SwiftDataRuleStore else {
             return try await ruleStore.allRules()
                 .map { StoredRuleRow(rule: $0, isTaskScoped: false) }
         }
         var rows = try await scoped.globalRules()
             .map { StoredRuleRow(rule: $0, isTaskScoped: false) }
+        guard !storeWasDeleted else { return [] }
         if let priorityID {
             rows += try await scoped.rules(forTask: priorityID)
                 .map { StoredRuleRow(rule: $0, isTaskScoped: true) }

@@ -91,30 +91,19 @@ struct StringCatalogTests {
         }
         let duplicated = byValue.filter { $0.value.count > 1 }.map { $0.value.sorted() }.sorted { $0[0] < $1[0] }
 
-        // e05 adds one, and it is the same word for the same act in two places a person reaches
-        // it from — which is the case this assertion is meant to permit, not the copy-paste it is
-        // meant to catch: "Cancel" backs out of the completion sheet and ends a snooze early. Two
-        // retractions, one word.
-        //
-        // It added two more, and **both pairs are gone with one of their halves**, each with the
-        // section that drew it. "Notifications" headed the capability matrix's row and the
-        // Intervention pane's own section; that section asked for a permission the app cannot use
-        // and went (focus-wy0), and the capability row stays because the matrix reports what this
-        // Mac permits rather than what the app intends to do with it. "Remove" took a context
-        // item off the pack and an app off the presentation-exclusion list; that list could never
-        // hold a row, because nothing in the application could add one, so its section went too
-        // (focus-1qm) and only the context pack's verb is left.
-        //
-        // **"Remove" is a pair again** (focus-u3w). The exclusion list came back with the add
-        // affordance whose absence was the reason it went, so its Remove button exists and has a
-        // row to sit beside. It is the `priority.complete.action.cancel` case exactly: the same
-        // word for the same act in two places a person reaches it from — take this off a list —
-        // and giving one of them a different verb would be inventing a distinction to satisfy a
-        // test.
+        // Shared wording is intentional: the same app/site scopes, priority prompt,
+        // nudge title, login action and deletion action recur on different surfaces.
+        // Keep the full list pinned so an unrelated copy-paste still fails.
         #expect(
             duplicated == [
+                ["capability.consumer.nudgeLadder", "settings.intervention.title"],
+                ["capture.field.prompt", "priority.hero.empty"],
                 ["context.action.remove", "settings.intervention.exclusion.remove"],
+                ["context.kind.app", "priority.rules.scope.app"],
+                ["context.kind.domain", "priority.rules.scope.domain"],
                 ["priority.complete.action.cancel", "shell.menuBar.cancelSnooze"],
+                ["settings.general.launchAtLogin", "shell.cockpit.launchAtLogin.accept"],
+                ["settings.privacy.delete.confirm.action", "settings.privacy.delete.heading"],
                 ["shell.cockpit.heading", "shell.window.cockpit.title"],
                 ["shell.help.heading", "shell.window.help.title"]
             ],

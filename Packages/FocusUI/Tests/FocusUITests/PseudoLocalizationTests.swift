@@ -128,8 +128,8 @@ struct PseudoLocalizationTests {
     /// that the hero is translated, which is the opposite of what F-149 wants and the opposite
     /// of what the app does. Every other e02 surface draws catalog strings and is here.
     @Test(
-        "the priority surfaces draw more ink when pseudo-localised",
-        arguments: PriorityComponent.allCases.filter(\.measuresPseudoLocalisedInk)
+        "the priority surfaces preserve text and geometry when pseudo-localised",
+        arguments: PriorityComponent.allCases.filter(\.drawsLocalisedProse)
     )
     func priorityComponentsExpand(component: PriorityComponent) throws {
         for size in SnapshotTypeSize.allCases {
@@ -149,18 +149,18 @@ struct PseudoLocalizationTests {
                 name: "\(component.rawValue).pseudo.\(size.rawValue)"
             )
 
-            // The cockpit stands two of its zones on an Inlay well (focus-6uya), and a well is
-            // paper here, not ink: measured against Bench alone, the text a well carries is
-            // invisible to the count, and the pseudo-localised cockpit read *fewer* ink pixels
-            // than the plain one while drawing visibly more text. Naming the second ground
-            // is what makes this the same assertion it was for every other component.
-            let paper = [DesignTokens.Palette.Role.inlay.value(for: .light)]
-            let plainInk = PNGCompare.inkPixels(plain.pixels, paper: paper)
-            let pseudoInk = PNGCompare.inkPixels(pseudo.pixels, paper: paper)
-            #expect(
-                pseudoInk > plainInk,
-                "\(component.rawValue) drew no extra text when pseudo-localised (\(plainInk) → \(pseudoInk)): the strings never reached the view"
-            )
+            // A washed composite has several paper colours, so its ink count would read
+            // well geometry as text. Its parts keep the ink assertion; every composite still
+            // carries the non-shrinking geometry assertions below and its pseudo baseline.
+            if component.measuresPseudoLocalisedInk {
+                let paper = [DesignTokens.Palette.Role.inlay.value(for: .light)]
+                let plainInk = PNGCompare.inkPixels(plain.pixels, paper: paper)
+                let pseudoInk = PNGCompare.inkPixels(pseudo.pixels, paper: paper)
+                #expect(
+                    pseudoInk > plainInk,
+                    "\(component.rawValue) drew no extra text when pseudo-localised (\(plainInk) → \(pseudoInk)): the strings never reached the view"
+                )
+            }
             #expect(pseudo.height >= plain.height)
             #expect(pseudo.width >= plain.width)
         }

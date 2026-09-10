@@ -115,7 +115,10 @@ struct ExportRegistryTests {
     /// entity because every column of each is in the same position.
     static let settingsEntities: Set<String> = [
         "AppSettingsRecord", "NudgePreferencesRecord", "PrivacyPreferencesRecord",
-        "ShellStateRecord"
+        "ShellStateRecord",
+        // focus-exdi: the dials a person turned, and the grants they switched on. Settings, and
+        // they ride out through the settings document rather than the data export.
+        "PolicyTuningRecord", "GrantOptInRecord"
     ]
 
     /// Every column the exporter reaches, entity-qualified.

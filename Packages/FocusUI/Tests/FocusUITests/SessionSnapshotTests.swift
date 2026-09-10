@@ -264,22 +264,23 @@ struct SessionSnapshotTests {
 
     /// **No copy anywhere claims exact screen-lock detection** (goal criterion 13).
     ///
-    /// The three lock-and-sleep causes and the four lock-and-sleep lifecycle lines all end with
-    /// the same hedge, and they end with it because the Feasibility Court required it: a
+    /// Lock-and-sleep copy attributes the reading to macOS rather than asserting independent
+    /// certainty. The exact wording changed in the owner-requested copy edit: a
     /// `pmset displaysleepnow` produced no `screensDidSleepNotification` at all on this macOS
     /// (probe P-88), so the app knows what macOS told it and no more than that.
     @Test("no lock or sleep string claims certainty")
     func lockCopyNeverClaimsCertainty() {
-        let hedge = "as far as macOS tells us"
+        let pastAttribution = "macOS reported that "
+        let currentAttribution = "macOS reports that "
 
         for cause in [PauseReason.screenLocked, .displaysAsleep, .systemAsleep] {
             let text = ShellStrings.string(SessionPhaseBadge.labelKey(for: cause))
-            #expect(text.contains(hedge), "\(cause.rawValue) claims certainty: \(text)")
+            #expect(text.hasPrefix(pastAttribution), "\(cause.rawValue) claims certainty: \(text)")
         }
 
         for lifecycle in [SystemLifecycle.active, .screenLocked, .displaysAsleep, .systemAsleep] {
             let text = ShellStrings.string(SensingStatusView.lifecycleKey(for: lifecycle))
-            #expect(text.contains(hedge), "\(lifecycle.rawValue) claims certainty: \(text)")
+            #expect(text.hasPrefix(currentAttribution), "\(lifecycle.rawValue) claims certainty: \(text)")
         }
     }
 

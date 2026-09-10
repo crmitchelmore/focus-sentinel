@@ -47,7 +47,7 @@ public struct TaskRulesView: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: spacing) {
-            ShellText(.priorityRulesHeading, role: .sectionHeading)
+            CompanionSectionHeading(key: .priorityRulesHeading, symbol: "line.3.horizontal.decrease")
                 .foregroundStyle(DesignTokens.Palette.role(.spruce, for: traits))
 
             if rules.isEmpty {
@@ -131,6 +131,10 @@ public struct TaskRulesView: View {
                 // retired row's controls are dimmed as well as withdrawn.
                 .opacity(rule.scope.isRetired ? 0.35 : 1)
                 .accessibilityLabel(Text(ShellStrings.resource(Self.verdictKey(verdict))))
+                // The checkmark symbol supplies a selected trait even when its rule is not
+                // related. Override that inferred state before announcing the actual verdict.
+                .accessibilityRemoveTraits(rule.verdict == verdict ? [] : [.isSelected])
+                .accessibilityAddTraits(rule.verdict == verdict ? [.isSelected] : [])
                 // The disposition's own name, from `FocusCore`'s catalog. The glyph and the
                 // short verdict word are what the row has room for; this is where the four
                 // dispositions are named in full, without costing the row a pixel.

@@ -16,7 +16,7 @@ struct InterventionPolicyTests {
     /// The committed digest. **Re-record this only together with a row appended to
     /// `InterventionPolicy.revisions`**, and only after the constant that moved has a boundary
     /// triple and a witness that would notice.
-    static let committedDigest: UInt64 = 0x4b15_b93f_f3a0_e36b
+    static let committedDigest: UInt64 = 0x7d5b_dfde_c879_8b65
 
     @Test("the intervention digest equals its committed literal")
     func digestIsCommitted() {
@@ -194,8 +194,10 @@ struct InterventionPolicyTests {
 
     @Test("the snooze durations are F-61's three, shortest first")
     func snoozeDurationsAreOrdered() {
+        // One minute, five and twenty since focus-oqsx: the identity round's spans, moved into
+        // the policy so the panel and the dials cannot disagree about what a snooze is.
         #expect(
-            InterventionPolicy.snoozeDurations == [.seconds(300), .seconds(600), .seconds(900)]
+            InterventionPolicy.snoozeDurations == [.seconds(60), .seconds(300), .seconds(1_200)]
         )
         #expect(InterventionPolicy.snoozeDurations == InterventionPolicy.snoozeDurations.sorted())
         #expect(Set(InterventionPolicy.snoozeDurations).count == 3)
@@ -260,7 +262,7 @@ struct InterventionPolicyTests {
     @Test("the version is the count of revisions, and every revision says what moved")
     func versionTracksTheRevisions() {
         #expect(InterventionPolicy.version == InterventionPolicy.revisions.count)
-        #expect(InterventionPolicy.version == 4)
+        #expect(InterventionPolicy.version == 5)
         for revision in InterventionPolicy.revisions {
             #expect(!revision.isEmpty, "a policy revision with no reason is a version churning")
         }

@@ -82,17 +82,49 @@ COMMITTED_PANEL_ABSOLUTE_MAX=$(committed_literal \
 
 BUNDLE_ID='com.chrismitchelmore.FocusSentinel'
 PROCESS_NAME='FocusSentinel'
+APP="${APP:A}"
+BINARY="$APP/Contents/MacOS/$PROCESS_NAME"
 LSAPPINFO='/usr/bin/lsappinfo'
 SETTLE_TIMEOUT="${FOCUS_FOCUS_STEAL_TIMEOUT:-45}"
 
 OUT="${FOCUS_FOCUS_STEAL_JSON:-$(mktemp -t focus-focus-steal).json}"
-rm -f -- "$OUT"
+OUT="${OUT:A}"
+LAUNCH_STARTED=0
 
-cleanup() {
-    pkill -x "$PROCESS_NAME" 2>/dev/null
+# LaunchServices does not make the application a shell child. Identify our instance by both
+# its exact executable and this run's report arguments; a sibling checkout or the user's app
+# must never be stopped merely because it has the same process name.
+owned_app_pids() {
+    local pid executable arguments
+    for pid in ${(f)"$(pgrep -x "$PROCESS_NAME" 2>/dev/null)"}; do
+        [[ -n "$pid" ]] || continue
+        executable="$(ps -p "$pid" -o comm= 2>/dev/null)"
+        arguments="$(ps -ww -p "$pid" -o args= 2>/dev/null)"
+        [[ "${executable:A}" == "$BINARY" ]] || continue
+        [[ "$arguments" == "$executable --focus-self-check $OUT --focus-self-check-nudge" ]] || continue
+        print -r -- "$pid"
+    done
     return 0
 }
-trap 'cleanup' EXIT INT TERM
+
+cleanup() {
+    (( LAUNCH_STARTED )) || return 0
+    local pid
+    for pid in ${(f)"$(owned_app_pids)"}; do
+        [[ -n "$pid" ]] && kill -TERM "$pid" 2>/dev/null
+    done
+    return 0
+}
+trap 'cleanup' EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+if [[ -n "$(owned_app_pids)" ]]; then
+    print -u2 "FAIL: an existing instance is already writing this report: $OUT"
+    print -u2 "      Leave it running and choose a distinct report path."
+    exit 1
+fi
+rm -f -- "$OUT"
 
 # The independent observer. `lsappinfo front` prints the front application's ASN and
 # `lsappinfo info -only bundleid` turns it into a bundle identifier; neither call is
@@ -134,6 +166,19 @@ observe_frontmost() {
     print -r -- "$value"
 }
 
+# Keep process identity beside the bundle reading: two application instances can share
+# a bundle identifier. These diagnostics never replace or relax the four assertions.
+observe_process_identity() {
+    local asn pid
+    asn="$("$LSAPPINFO" front 2>/dev/null)"
+    print "observer identity: ${asn:-<none>}"
+    [[ -n "$asn" ]] && "$LSAPPINFO" info -only bundleid,pid "$asn" 2>/dev/null
+    for pid in ${(f)"$(pgrep -x "$PROCESS_NAME" 2>/dev/null)"}; do
+        [[ -n "$pid" ]] && ps -ww -p "$pid" -o pid=,lstart=,comm=
+    done
+    return 0
+}
+
 print "FOCUS-STEAL — the panel takes nothing (§4.5, R-89, P-139)"
 print "app:      $APP"
 print "report:   $OUT"
@@ -145,13 +190,9 @@ if [[ ! -x "$LSAPPINFO" ]]; then
     exit 1
 fi
 
-# Nothing of ours may already be running: `open` hands arguments to a *new* instance only, and an
-# instance left over from an earlier stage would be activated instead of launched.
-cleanup
-sleep 1
-
 FRONT_BEFORE="$(observe_frontmost)"
 print "observer: frontmost before = ${FRONT_BEFORE:-<none>}"
+observe_process_identity
 
 if [[ -z "$FRONT_BEFORE" ]]; then
     print -u2 "FAIL: the observer could not read a frontmost application"
@@ -169,9 +210,10 @@ fi
 
 # `open -g -a` — the launch that reproduces the posture a nudge fires in. **Not** `open -a`, which
 # brings the application forward and would make this stage assert something about `open` rather
-# than about the panel.
-print "launching with: open -g -a"
-open -g -a "$APP" --args --focus-self-check "$OUT" --focus-self-check-nudge
+# than about the panel. `-n` guarantees fresh arguments without stopping another running copy.
+print "launching with: open -g -n -a (a separate background instance)"
+LAUNCH_STARTED=1
+open -g -n -a "$APP" --args --focus-self-check "$OUT" --focus-self-check-nudge
 launch_rc=$?
 print "open EXIT=$launch_rc"
 if (( launch_rc != 0 )); then
@@ -186,10 +228,13 @@ while (( waited < SETTLE_TIMEOUT )); do
     [[ -s "$OUT" ]] && break
     sleep 1
     (( waited += 1 ))
+    print "observer at ${waited}s: $(observe_frontmost)"
+    observe_process_identity
 done
 print "settled after ${waited}s"
 
 FRONT_AFTER="$(observe_frontmost)"
+observe_process_identity
 print "observer: frontmost after  = ${FRONT_AFTER:-<none>}"
 
 # **The second half of the same repair.** An observer that goes unreadable *after* the show used to
@@ -248,6 +293,17 @@ def check(condition, message, detail=None):
 
 
 check(report.get("mode") == "nudge", "the app ran its nudge-only self-check", report.get("mode"))
+
+# A focus-steal run must not execute the probes that intentionally activate the app.
+# Check their receipts as well as the final frontmost reading: quitting can restore the
+# original frontmost app and otherwise conceal that an interactive probe took focus.
+for probe in ("keyboardAnswer", "pinnedQuestion"):
+    reading = report.get(probe) or {}
+    check(
+        reading.get("wasTaken") is False,
+        f"the background check did not run the activating {probe} probe",
+        reading,
+    )
 
 panel = report.get("panel") or {}
 before = panel.get("readingsBeforeShow") or {}

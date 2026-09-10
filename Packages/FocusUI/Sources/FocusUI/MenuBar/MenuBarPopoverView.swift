@@ -77,8 +77,19 @@ public struct MenuBarPopoverView: DecisionSurfaceContent {
         }
     }
 
+    private var renderedSections: [Section]?
+    private enum AccusationPart { case context, decision }
+    private var accusationPart: AccusationPart?
+
     public var body: some View {
-        column(Section.allCases)
+        column(renderedSections ?? Section.allCases)
+    }
+
+    private func layoutView(_ sections: [Section], accusationPart: AccusationPart? = nil) -> Self {
+        var view = self
+        view.renderedSections = sections
+        view.accusationPart = accusationPart
+        return view
     }
 
     public static let decisionSurface: DecisionSurface = .menuBarPopover
@@ -100,9 +111,15 @@ public struct MenuBarPopoverView: DecisionSurfaceContent {
     /// pinned, the thing the app interrupted for is the thing that cannot be scrolled away from.
     public var surfaceLayout: DecisionSurfaceLayout {
         DecisionSurfaceLayout(
-            whole: AnyView(column(Section.allCases)),
-            context: AnyView(column(Section.allCases.filter { !$0.isDecision(in: presentation) })),
-            decision: AnyView(column(Section.allCases.filter { $0.isDecision(in: presentation) }))
+            whole: AnyView(layoutView(Section.allCases)),
+            context: AnyView(layoutView(
+                Section.allCases.filter { !$0.isDecision(in: presentation) || $0 == .accusation },
+                accusationPart: presentation.pins(.accusation) ? .context : nil
+            )),
+            decision: AnyView(layoutView(
+                Section.allCases.filter { $0.isDecision(in: presentation) },
+                accusationPart: .decision
+            ))
         )
     }
 
@@ -154,6 +171,9 @@ public struct MenuBarPopoverView: DecisionSurfaceContent {
     /// The popover's column, over whichever sections it is being asked to draw.
     private func column(_ sections: [Section]) -> some View {
         VStack(alignment: .leading, spacing: DesignTokens.spacing(spacing, scale: textScale)) {
+            if sections.contains(.priority) {
+                CompanionHeader { ShellText(.cockpitWindowTitle, role: .title2) }
+            }
             ForEach(sections, id: \.self) { section in
                 view(of: section)
             }
@@ -175,6 +195,8 @@ public struct MenuBarPopoverView: DecisionSurfaceContent {
             priority
         case .status:
             statusRow
+                .padding(12)
+                .background(DesignTokens.Palette.role(.inlay, for: traits), in: RoundedRectangle(cornerRadius: 14))
         case .belief:
             belief
         case .accusation:
@@ -199,10 +221,12 @@ public struct MenuBarPopoverView: DecisionSurfaceContent {
             sensingSwitch
         case .openCockpit:
             Button { onAction(.openCockpit) } label: {
-                ShellText(.menuBarOpenCockpit, role: .callout)
+                Label {
+                    ShellText(.menuBarOpenCockpit, role: .callout)
+                } icon: { Image(systemName: "arrow.up.forward.app") }
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(CompanionButtonStyle())
         }
     }
 
@@ -254,7 +278,9 @@ public struct MenuBarPopoverView: DecisionSurfaceContent {
             // person watching both does not see two different numbers of the same fact
             // drawn two different widths.
             Text(verbatim: presentation.timerText)
-                .font(DesignTokens.font(.body, scale: textScale).monospacedDigit())
+                .font(DesignTokens.font(.title2, scale: textScale).monospacedDigit())
+                .contentTransition(traits.reduceMotion ? .identity : .numericText())
+                .animation(DesignTokens.animation(for: traits), value: presentation.timerText)
                 .foregroundStyle(DesignTokens.Palette.primaryText)
         }
     }
@@ -351,6 +377,7 @@ public struct MenuBarPopoverView: DecisionSurfaceContent {
     /// Routing these users to a panel instead was the alternative and is the wrong fix twice
     /// over: it overrides a setting the person chose, and the microphone case forbids it outright
     /// — a panel over a call is a panel everybody on the call can see.
+    @ViewBuilder
     private func pendingAccusation(_ accusation: AccusationPresentation) -> some View {
         // **`.summoned`, and it is the only caller that says so** (focus-0nm). The popover is
         // shown by `MenuBarController.togglePopover()` and by nothing else — the person clicked
@@ -358,8 +385,15 @@ public struct MenuBarPopoverView: DecisionSurfaceContent {
         // an ordinary Mac popover has. The nudge panel is the uninvited surface and takes the
         // opaque branch; a popover that went opaque would be a second, unasked-for departure
         // from the platform in a design whose floor is the HIG.
-        AccusationPanelView(presentation: accusation, provenance: .summoned) { action, span in
+        let panel = AccusationPanelView(presentation: accusation, provenance: .summoned) { action, span in
             onAction(.correct(action, snoozeDuration: span))
+        }
+        // When space runs out, the explanation scrolls and the controls stay in reach.
+        // The full popover and a two-nudge popover still draw the complete panel.
+        switch accusationPart {
+        case .context: panel.surfaceLayout.context
+        case .decision: panel.surfaceLayout.decision
+        case nil: panel
         }
     }
 
@@ -439,7 +473,7 @@ public struct MenuBarPopoverView: DecisionSurfaceContent {
             ShellText(key, role: .callout)
                 .fixedSize(horizontal: true, vertical: false)
         }
-        .buttonStyle(.bordered)
+        .buttonStyle(CompanionButtonStyle())
     }
 
     /// F-119's one global switch, reachable without opening a window.
@@ -477,7 +511,7 @@ public struct MenuBarPopoverView: DecisionSurfaceContent {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .buttonStyle(.bordered)
+        .buttonStyle(CompanionButtonStyle())
         .accessibilityLabel(Text(ShellStrings.resource(.sensingPauseLabel)))
         .accessibilityAddTraits(isWatching ? [.isSelected] : [])
     }

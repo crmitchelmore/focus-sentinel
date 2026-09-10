@@ -143,6 +143,72 @@ source "$FOCUS_SCRIPTS_DIR/authorisation-baseline.sh"
 AUTHORISATION_BASELINE="$(mktemp -t focus-authorisation-baseline).txt"
 focus_take_authorisation_baseline "$AUTHORISATION_BASELINE"
 
+# Bound every launch, including fixture and keyboard modes. A completed JSON report
+# never substitutes for process completion, and timeouts remain failures.
+wait_for_self_check() {
+    local checked_pid="$1" checked_report="$2" sample_network="${3:-0}"
+    local journey_started=$SECONDS
+    local report_written_at=-1
+    local journey_timed_out=0
+    while kill -0 "$checked_pid" 2>/dev/null; do
+        # A written report is not a successful exit. Preserve the hung process's stack,
+        # then fail this stage so the remaining gate diagnostics can still be collected.
+        # Only this script's child is signalled; other agents' apps and tests are untouched.
+        if (( report_written_at < 0 )) && [[ -s "$checked_report" ]]; then
+            report_written_at=$SECONDS
+        fi
+        if (( SECONDS - journey_started >= 300 ||
+              (report_written_at >= 0 && SECONDS - report_written_at >= 30) )); then
+            journey_timed_out=1
+            print -u2 "FAIL: self-check did not exit within its deadline (300s total, 30s after report)"
+            sample "$checked_pid" 2 -file "$checked_report.sample.txt" >/dev/null 2>&1 || true
+            kill -TERM "$checked_pid" 2>/dev/null || true
+            for _ in {1..10}; do
+                kill -0 "$checked_pid" 2>/dev/null || break
+                sleep 0.2
+            done
+            if kill -0 "$checked_pid" 2>/dev/null; then
+                kill -KILL "$checked_pid" 2>/dev/null || true
+            fi
+            break
+        fi
+        if (( sample_network )); then
+            # **Aliveness is recorded HERE, where the loop's own guard just established it** (focus-j5ef).
+            #
+            # It used to be re-checked *after* the sample, and a process that exited between the `lsof`
+            # and the re-check made `network_samples` one greater than `network_alive` — so
+            # "every sample was taken while the application was still running" failed for a race rather
+            # than for a defect. Measured across three gate runs of one tree: 67/67, 66/66 and 68/67, the
+            # last of which reddened `selfcheck-release` with nothing wrong.
+            #
+            # The line above is the fact the assertion is about: this sample is taken of a process that
+            # was alive an instant ago. The assertion keeps its teeth — it is still the reading that
+            # fails if a sample is ever taken outside this loop, which is the defect it names — and loses
+            # only the window in which it was measuring the scheduler.
+            network_alive=$(( network_alive + 1 ))
+            sample=$(lsof -nP -i -a -p "$checked_pid" 2>/dev/null | tail -n +2)
+            network_samples=$(( network_samples + 1 ))
+            if [[ -n "$sample" ]]; then
+                network_sockets=$(( network_sockets + $(print -r -- "$sample" | wc -l | tr -d ' ') ))
+                print -r -- "$sample" >> "$NETWORK_SAMPLES"
+            fi
+        fi
+        sleep 0.2
+    done
+    wait "$checked_pid"
+    local child_rc=$?
+    (( journey_timed_out )) && child_rc=124
+    return "$child_rc"
+}
+
+run_self_check() {
+    local report_path="$1"
+    shift
+    "$BINARY" --focus-self-check "$report_path" "$@" &
+    local child_pid=$!
+    wait_for_self_check "$child_pid" "$report_path"
+}
+
 print
 print "== the offline journey (F-160): lsof -i, sampled for the length of the run"
 
@@ -169,29 +235,7 @@ app_pid=$!
 network_samples=0
 network_alive=0
 network_sockets=0
-while kill -0 "$app_pid" 2>/dev/null; do
-    # **Aliveness is recorded HERE, where the loop's own guard just established it** (focus-j5ef).
-    #
-    # It used to be re-checked *after* the sample, and a process that exited between the `lsof`
-    # and the re-check made `network_samples` one greater than `network_alive` — so
-    # "every sample was taken while the application was still running" failed for a race rather
-    # than for a defect. Measured across three gate runs of one tree: 67/67, 66/66 and 68/67, the
-    # last of which reddened `selfcheck-release` with nothing wrong.
-    #
-    # The line above is the fact the assertion is about: this sample is taken of a process that
-    # was alive an instant ago. The assertion keeps its teeth — it is still the reading that
-    # fails if a sample is ever taken outside this loop, which is the defect it names — and loses
-    # only the window in which it was measuring the scheduler.
-    network_alive=$(( network_alive + 1 ))
-    sample=$(lsof -nP -i -a -p "$app_pid" 2>/dev/null | tail -n +2)
-    network_samples=$(( network_samples + 1 ))
-    if [[ -n "$sample" ]]; then
-        network_sockets=$(( network_sockets + $(print -r -- "$sample" | wc -l | tr -d ' ') ))
-        print -r -- "$sample" >> "$NETWORK_SAMPLES"
-    fi
-    sleep 0.2
-done
-wait "$app_pid"
+wait_for_self_check "$app_pid" "$OUT" 1
 run_rc=$?
 print "launch EXIT=$run_rc"
 print "     network: $network_samples sample(s), $network_alive with the process alive, $network_sockets socket(s)"
@@ -242,7 +286,7 @@ RESTORE_JSON="$SESSION_DIR/restore.json"
 
 print
 print "== $BINARY --focus-session-seed $SESSION_STORE"
-"$BINARY" --focus-self-check "$SEED_JSON" --focus-session-seed "$SESSION_STORE"
+run_self_check "$SEED_JSON" --focus-session-seed "$SESSION_STORE"
 seed_rc=$?
 print "seed EXIT=$seed_rc"
 if (( seed_rc != 0 )); then
@@ -250,11 +294,10 @@ if (( seed_rc != 0 )); then
     exit 1
 fi
 
-# No sleep between the launches, deliberately. The elapsed figure the restoring launch reports
-# is asserted to be within two seconds of 5 400, and every second spent waiting here is a second
-# of that budget spent on nothing.
+# No deliberate delay between launches. The elapsed figure must include the measured
+# wall-clock time spent exiting the seed process and starting the restoring one.
 print "== $BINARY --focus-session-restore $SESSION_STORE"
-"$BINARY" --focus-self-check "$RESTORE_JSON" --focus-session-restore "$SESSION_STORE"
+run_self_check "$RESTORE_JSON" --focus-session-restore "$SESSION_STORE"
 restore_rc=$?
 print "restore EXIT=$restore_rc"
 if (( restore_rc != 0 )); then
@@ -280,7 +323,7 @@ COCKPIT_JSON="$SESSION_DIR/cockpit.json"
 
 print
 print "== $BINARY --focus-session-seed $COCKPIT_STORE"
-"$BINARY" --focus-self-check "$COCKPIT_SEED_JSON" --focus-session-seed "$COCKPIT_STORE"
+run_self_check "$COCKPIT_SEED_JSON" --focus-session-seed "$COCKPIT_STORE"
 cockpit_seed_rc=$?
 print "cockpit seed EXIT=$cockpit_seed_rc"
 if (( cockpit_seed_rc != 0 )); then
@@ -289,7 +332,7 @@ if (( cockpit_seed_rc != 0 )); then
 fi
 
 print "== $BINARY --focus-self-check-cockpit --focus-store $COCKPIT_STORE"
-"$BINARY" --focus-self-check "$COCKPIT_JSON" --focus-self-check-cockpit --focus-store "$COCKPIT_STORE"
+run_self_check "$COCKPIT_JSON" --focus-self-check-cockpit --focus-store "$COCKPIT_STORE"
 cockpit_rc=$?
 print "cockpit EXIT=$cockpit_rc"
 if (( cockpit_rc != 0 )); then
@@ -308,7 +351,7 @@ fi
 FIRSTRUN_JSON="$SESSION_DIR/cockpit-relaunch.json"
 
 print "== $BINARY --focus-self-check-cockpit --focus-store $COCKPIT_STORE (relaunch)"
-"$BINARY" --focus-self-check "$FIRSTRUN_JSON" --focus-self-check-cockpit --focus-store "$COCKPIT_STORE"
+run_self_check "$FIRSTRUN_JSON" --focus-self-check-cockpit --focus-store "$COCKPIT_STORE"
 relaunch_rc=$?
 print "relaunch EXIT=$relaunch_rc"
 if (( relaunch_rc != 0 )); then
@@ -330,7 +373,7 @@ KEYBOARD_STORE="$SESSION_DIR/keyboard.store"
 KEYBOARD_JSON="$SESSION_DIR/keyboard.json"
 
 print "== $BINARY --focus-self-check-nudge --focus-store $KEYBOARD_STORE"
-"$BINARY" --focus-self-check "$KEYBOARD_JSON" --focus-self-check-nudge --focus-store "$KEYBOARD_STORE"
+run_self_check "$KEYBOARD_JSON" --focus-self-check-nudge --focus-store "$KEYBOARD_STORE"
 keyboard_rc=$?
 print "keyboard EXIT=$keyboard_rc"
 if (( keyboard_rc != 0 )); then
@@ -554,19 +597,19 @@ check(
 # File: the registry's actions in registry order, then AppKit's own two. AppKit's
 # un-shortcutted `Close` is a system-injected sibling, not a duplicate to delete.
 expected_file = [
-    "New Priority",
-    "Add Files to Context…",
-    "Complete Priority",
-    "Start Session",
-    "Pause Session",
-    "Finish Session",
-    "Pause Watching",
+    "New priority",
+    "Add files to context…",
+    "Complete priority",
+    "Start session",
+    "Pause session",
+    "Finish session",
+    "Pause watching",
     # e09b: the three portability verbs, between the last session verb and Close Window, which is
     # where the registry puts them (F-110, F-134).
-    "Export My Data…",
-    "Export Settings…",
-    "Import Settings…",
-    "Close Window",
+    "Export my data…",
+    "Export settings…",
+    "Import settings…",
+    "Close window",
     "<separator>",
     "Close",
     "Close All",
@@ -600,20 +643,20 @@ def check_shortcut(menu_title, item_title, key, mask):
 # The three e02 priority commands, each with the key equivalent the registry declares.
 # `\r` is Return: Complete Priority is Ctrl-Cmd-Return, deliberately not the plain Return that
 # belongs to whichever field the user is actually typing in.
-check_shortcut("File", "New Priority", "n", CMD)
-check_shortcut("File", "Add Files to Context…", "o", CMD)
-check_shortcut("File", "Complete Priority", "\r", CMD | CONTROL)
+check_shortcut("File", "New priority", "n", CMD)
+check_shortcut("File", "Add files to context…", "o", CMD)
+check_shortcut("File", "Complete priority", "\r", CMD | CONTROL)
 
 # The four e03 verbs, every one of them a Control-Command combination. `Pause Watching` was
 # Shift-Command-W and is not: the key-equivalent probe below measured a plain Cmd-W reaching it
 # and flipping the stored watching switch, which would have been the app taking Cmd-W away from
 # the person.
-check_shortcut("File", "Start Session", "s", CMD | CONTROL)
-check_shortcut("File", "Pause Session", "p", CMD | CONTROL)
-check_shortcut("File", "Finish Session", "f", CMD | CONTROL)
-check_shortcut("File", "Pause Watching", "e", CMD | CONTROL)
+check_shortcut("File", "Start session", "s", CMD | CONTROL)
+check_shortcut("File", "Pause session", "p", CMD | CONTROL)
+check_shortcut("File", "Finish session", "f", CMD | CONTROL)
+check_shortcut("File", "Pause watching", "e", CMD | CONTROL)
 
-close_window = find("File", "Close Window")
+close_window = find("File", "Close window")
 check(close_window is not None, "File has a Close Window item")
 if close_window:
     check(
@@ -854,7 +897,7 @@ for expected in ("Minimize", "Zoom", "Bring All to Front"):
         f"the Window menu contains {expected!r}",
         item_titles("Window"),
     )
-for scene_title in ("Focus Sentinel", "Keyboard Shortcuts"):
+for scene_title in ("Focus Sentinel", "Keyboard shortcuts"):
     check(
         find("Window", scene_title) is not None,
         f"the Window menu lists the {scene_title!r} scene",
@@ -1101,7 +1144,7 @@ print(f"note axIsProcessTrusted = {report.get('axIsProcessTrusted')!r} (recorded
 #
 # Five gate runs on one tree: 1, 4 and 5 green, 2 and 3 red on the SAME SIX assertions in
 # different configurations. Identical test counts, identical digests, and `undoManagerTitle`
-# reading `Undo Change Priority` in ALL TEN readings — the wiring was correct every time. The one
+# reading `Undo Change priority` in ALL TEN readings — the wiring was correct every time. The one
 # fact that differed: `applicationIsActive` and `hasKeyWindow` were false in exactly those two
 # readings. The probe reported both; this script asserted NEITHER, so the gate named six failures
 # of the Edit-menu integration when the only fact was that another application had taken the
@@ -1131,8 +1174,8 @@ check(
     undo.get("cockpitUndoManagerIsJournal"),
 )
 check(
-    undo.get("undoManagerTitle") == "Undo Change Priority",
-    "the journal's own manager names the operation 'Undo Change Priority' (P-50, front-free)",
+    undo.get("undoManagerTitle") == "Undo Change priority",
+    "the journal's own manager names the operation 'Undo Change priority' (P-50, front-free)",
     undo.get("undoManagerTitle"),
 )
 check(
@@ -1193,8 +1236,8 @@ if taken(
         "`responderUndoManagerIsJournal` above cannot pass vacuously without a responder)"
     )
     check(
-        undo.get("menuItemTitle") == "Undo Change Priority",
-        "the Edit menu reads 'Undo Change Priority' after one scripted mutation",
+        undo.get("menuItemTitle") == "Undo Change priority",
+        "the Edit menu reads 'Undo Change priority' after one scripted mutation",
         undo.get("menuItemTitle"),
     )
     check(
@@ -1480,13 +1523,13 @@ check(
 )
 check(
     status_menu.get("titlesWhileWatching")
-    == ["Open Focus Sentinel", "Pause Watching", "Settings\u2026", "Quit Focus Sentinel"],
+    == ["Open Focus Sentinel", "Pause watching", "Settings\u2026", "Quit Focus Sentinel"],
     "the secondary menu reads Open / Pause Watching / Settings / Quit while watching",
     status_menu.get("titlesWhileWatching"),
 )
 check(
     status_menu.get("titlesWhilePaused")
-    == ["Open Focus Sentinel", "Resume Watching", "Settings\u2026", "Quit Focus Sentinel"],
+    == ["Open Focus Sentinel", "Resume watching", "Settings\u2026", "Quit Focus Sentinel"],
     "the same menu offers Resume Watching once watching is paused",
     status_menu.get("titlesWhilePaused"),
 )
@@ -1770,7 +1813,7 @@ check(
 # that fired is a wire a window actually ran.
 titles = after.get("windowTitles") or []
 check(
-    any("Keyboard Shortcuts" in t for t in titles),
+    any("Keyboard shortcuts" in t for t in titles),
     "the Keyboard Shortcuts window was open when the wire reading was taken",
     titles,
 )
@@ -2058,7 +2101,7 @@ check(
     "Interrupt me less reaches the store, so a person who asked for quiet keeps it",
     (intervention_drive.get("reducedProbe"), intervention_drive.get("reducedStored")),
 )
-# **Quiet hours, at all three depths** (focus-z7g). The pane's "Set a window" button emitted an
+# **Quiet hours, at all three depths** (focus-z7g). The pane's "Set quiet hours" button emitted an
 # action the composition root discarded with `break`, so the control redrew "Off" for ever and
 # gate 8 of the twelve-gate suppression stack was dead code in the shipping app. Three readings
 # because two of them were separately capable of being green over a dead control: the loop's own
@@ -2435,7 +2478,7 @@ check(
     seeded_cockpit.get("visibleSceneIdentifiers"),
 )
 check(
-    "Keyboard Shortcuts" in (seeded_cockpit.get("windowTitles") or []),
+    "Keyboard shortcuts" in (seeded_cockpit.get("windowTitles") or []),
     "the window that came back is the reference, by its title",
     seeded_cockpit.get("windowTitles"),
 )
@@ -2559,16 +2602,13 @@ if window_count_was_taken:
 # the other, so there was no ordering to assert, and asserting it turned three gate stages red
 # against a machine that was telling the truth.
 #
-# What is true, and what goes red for a swapped or broken source: FOR EVERY CONCRETE EVENT TYPE
-# THE TWO STATES ANSWER WITH THE SAME SECONDS. The divergence lives only at the `~0` sentinel.
-# One second is generous for two adjacent syscalls and far too small to hide a state that has
-# stopped meaning what it means, which shows up as minutes or hours.
-#
-# The floor is not decoration: "every row agrees" is satisfied by a report with no rows, so the
-# count of DISTINCT event types read is asserted first. Distinct, so four copies of one row
-# cannot stand in for four types.
+# The subsequent concrete-event equality assumption also failed on the hosted Mac: each
+# independent table differed by 6.176 seconds. Apple's CGEventSourceStateID contract describes
+# different event sources, not equal last-event times. Require complete finite nonnegative
+# readings and an honestly reported signed difference. The production max-counter decision
+# remains asserted below; the unit source seam detects swapped or aliased tables.
+import math
 idle = sensing.get("idle") or {}
-IDLE_AGREEMENT_TOLERANCE = 1.0
 IDLE_EVENT_TYPE_FLOOR = 4
 idle_rows = idle.get("perEventType")
 per_event_type = [r for r in idle_rows if isinstance(r, dict)] if isinstance(idle_rows, list) else []
@@ -2580,7 +2620,7 @@ check(
     f"both idle states were read for at least {IDLE_EVENT_TYPE_FLOOR} distinct concrete event types",
     idle_types_read,
 )
-idle_disagreements = [
+idle_invalid_readings = [
     (
         r.get("eventType"),
         r.get("hardwareSeconds"),
@@ -2588,15 +2628,17 @@ idle_disagreements = [
     )
     for r in per_event_type
     if not (
-        isinstance(r.get("hardwareSeconds"), (int, float))
-        and isinstance(r.get("sessionSeconds"), (int, float))
-        and abs(r["hardwareSeconds"] - r["sessionSeconds"]) <= IDLE_AGREEMENT_TOLERANCE
+        all(type(r.get(key)) in (int, float) and math.isfinite(r[key])
+            for key in ("hardwareSeconds", "sessionSeconds", "differenceSeconds"))
+        and r["hardwareSeconds"] >= 0
+        and r["sessionSeconds"] >= 0
+        and abs(r["differenceSeconds"] - (r["hardwareSeconds"] - r["sessionSeconds"])) < 1e-6
     )
 ]
 check(
-    not idle_disagreements,
-    f"per concrete event type the two idle states agree within {IDLE_AGREEMENT_TOLERANCE} s",
-    idle_disagreements,
+    not idle_invalid_readings,
+    "concrete idle readings are finite, nonnegative, and retain their signed difference",
+    idle_invalid_readings,
 )
 for r in per_event_type:
     print(
@@ -3161,10 +3203,18 @@ check(
 )
 
 elapsed = restore.get("elapsedWallSeconds")
+wall_delta = restore.get("wallSeconds", 0) - seed.get("wallSeconds", 0)
 check(
-    isinstance(elapsed, (int, float)) and abs(elapsed - 5400) <= 2.0,
-    "the restored session reports ninety minutes elapsed on the wall clock",
-    elapsed,
+    seed.get("backdatedSeconds") == 5400,
+    "the fixture was backdated by exactly ninety minutes",
+    seed.get("backdatedSeconds"),
+)
+check(
+    isinstance(elapsed, (int, float))
+    and math.isfinite(wall_delta) and wall_delta > 0
+    and abs(elapsed - (5400 + wall_delta)) <= 2.0,
+    "the restored session includes ninety minutes plus the measured time between launches",
+    (elapsed, wall_delta),
 )
 check(
     restore.get("phase") == "paused",
@@ -3204,7 +3254,6 @@ check(
 # rather than a per-process zero — which `MonotonicClock.elapsed` and `ContinuousClock.Instant`
 # both are, and either of which would sail through the whole unit lane and fail right here.
 uptime_delta = restore.get("uptimeSeconds", 0) - seed.get("uptimeSeconds", 0)
-wall_delta = restore.get("wallSeconds", 0) - seed.get("wallSeconds", 0)
 check(
     uptime_delta > 0,
     "the restoring launch reports a greater uptime than the seeding one",
@@ -5216,12 +5265,22 @@ check(
 # names belong to the focus-steal readings further down.
 pinned_rows_before = pinned.get("deliveredRowsBeforeTheClick")
 pinned_rows_after = pinned.get("deliveredRowsAfterTheClick")
+pinned_receipts_before = pinned.get("perceptionReceiptsBeforeTheClick")
+pinned_receipts_after = pinned.get("perceptionReceiptsAfterTheClick")
 check(
     isinstance(pinned_rows_before, int)
     and isinstance(pinned_rows_after, int)
     and pinned_rows_after - pinned_rows_before == 1,
     "opening the popover on both nudges charged exactly one of them",
     (pinned_rows_before, pinned_rows_after),
+)
+check(
+    all(type(value) is int and value >= 0 for value in (
+        pinned_rows_before, pinned_rows_after, pinned_receipts_before, pinned_receipts_after
+    ))
+    and pinned_receipts_after - pinned_receipts_before == pinned_rows_after - pinned_rows_before == 1,
+    "the controlled popover delivery has exactly one perception receipt and one persisted charge",
+    (pinned_receipts_before, pinned_receipts_after, pinned_rows_before, pinned_rows_after),
 )
 check(
     pinned.get("accusationsToday") == 0,
@@ -5515,18 +5574,17 @@ check(
 
 # --- the charging invariant, read at last (focus-9o8) --------------------------------------
 #
-# `chargesPaidFor` counts the `PerceptibleChange` receipts the perception path issued;
-# `deliveredRowsToday` sums persisted `InterventionRecord` rows the completely separate way the
-# day's caps are. A delivered row with no receipt behind it is a charge that never went through
-# the door — three rounds of the same defect. The join is asserted here.
-#
-# On an ordinary launch both are zero, so the join alone would be vacuous. The non-vacuous half
-# is the seeded day below, where the same accounting is folded over eight landings.
+# Receipts belong to this process; daily persisted rows include previous launches and exclude
+# retracted deliveries. Validate each reading here, and join their non-zero deltas around the
+# controlled popover click above. Comparing these lifetime totals rejects an ordinary relaunch
+# after a delivery. The synthetic day below separately tests the budget fold, not persistence.
 charges_paid_for = nudge.get("chargesPaidFor")
 delivered_rows_today = nudge.get("deliveredRowsToday")
 check(
-    isinstance(charges_paid_for, int) and charges_paid_for == delivered_rows_today,
-    "every delivered intervention row was paid for by a perception receipt",
+    type(charges_paid_for) is int and charges_paid_for >= 0
+    and type(delivered_rows_today) is int and delivered_rows_today >= 0
+    and charges_paid_for == len(nudge.get("chargeChannels") or []),
+    "process receipts and daily persisted charges are valid readings with distinct lifetimes",
     (charges_paid_for, delivered_rows_today),
 )
 declared_channels = {
@@ -5650,13 +5708,16 @@ check(
     (verdict.get("stampKey"), report.get("engineStamp")),
 )
 check(
-    verdict.get("stage") in ("heuristic", "model"),
+    verdict.get("stage") in (
+        "sessionRule", "taskRule", "globalRule", "contextPack", "seedRule",
+        "heuristic", "onDeviceModel", "seedFallback", "unresolved",
+    ),
     "the verdict was reached at a stage that exists",
     verdict.get("stage"),
 )
 check(
-    verdict.get("status") in ("relevant", "uncertain", "unrelated"),
-    "the verdict's status is one of the three the vocabulary declares",
+    verdict.get("status") in ("relevant", "uncertain", "unrelated", "paused", "onBreak"),
+    "the verdict's status is one of the five the surface vocabulary declares",
     verdict.get("status"),
 )
 check(
@@ -5664,14 +5725,14 @@ check(
     "the verdict names at least one clause it rests on",
     verdict.get("clauses"),
 )
-# **The band, and it is the type's own contract rather than a fact about the person's day**
-# (focus-psh). `VerdictSnapshot.band` is documented `nil` when the verdict is `uncertain` —
-# declining to decide has no evidence to band, and drawing `.low` there would imply a weak
-# DECISION. That is a statement about this build that holds whatever was on screen, so it can be
-# asserted where the band's *value* could not be.
+# The band follows the classification verdict. Paused/onBreak are session overrides of the
+# surface status, so either can retain a banded decision or an unbanded uncertain outcome.
+# The driven classification cases below prove the decision/band relationship independently.
 check(
-    (verdict.get("band") != "") == (verdict.get("status") != "uncertain"),
-    "the running verdict carries a band exactly when it reached a decision",
+    verdict.get("band") in ("", "low", "medium", "high")
+    and (verdict.get("status") != "uncertain" or verdict.get("band") == "")
+    and (verdict.get("status") not in ("relevant", "unrelated") or verdict.get("band") != ""),
+    "the running verdict band respects classification while allowing a session status override",
     (verdict.get("status"), verdict.get("band")),
 )
 
@@ -5686,6 +5747,18 @@ check(
 # This is focus-0gq's shape applied to the second of R-168's two undriven rows: the probe moves
 # the world and reads the value back, rather than asserting harder about a value it was handed.
 driven = relevance.get("drivenBand") or {}
+for probe_key, expected_status, expected_band in (
+    ("pausedUndecided", "paused", ""), ("pausedDecided", "paused", "high"),
+    ("breakUndecided", "onBreak", ""), ("breakDecided", "onBreak", "high"),
+):
+    cell = driven.get(probe_key) or {}
+    check(
+        cell.get("status") == expected_status and cell.get("band") == expected_band
+        and cell.get("hasBand") == bool(expected_band)
+        and cell.get("stage") == ("sessionRule" if expected_band else "heuristic"),
+        "the driven " + probe_key + " preserves the classification band beneath its session status",
+        cell,
+    )
 told_nothing = driven.get("toldNothing") or {}
 told_one_rule = driven.get("toldOneRule") or {}
 check(

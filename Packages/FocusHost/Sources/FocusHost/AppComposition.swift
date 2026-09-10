@@ -36,8 +36,9 @@ public final class AppComposition {
     /// *live* hot-key registration rather than on a second set built for the occasion, or the
     /// report would describe something the user never gets.
     ///
-    /// `storeKind` is `.applicationSupport` in every ordinary launch — `--focus-store` is the
-    /// only thing that changes it, and nothing but the self-check lane passes it. It exists
+    /// `storeKind` is `.applicationSupport` in every ordinary launch. Self-checks use an in-memory
+    /// store unless a fixture or the attended live-store reader is explicitly requested.
+    /// The `--focus-store` fixture override exists
     /// because one boundary value, the session's elapsed figure, cannot be observed in a launch
     /// with no session: the mutation that guts it writes `nil`, a Mac with no session hands the
     /// window `nil` too, and the two programs are then identical. Running the check against a
@@ -733,6 +734,8 @@ public final class AppComposition {
             self?.nudgeHost.perform(command)
         }
 
+        registerIntentPerformers(on: .shared)
+
         // **The three File-menu portability items reach the same sink the Privacy pane's buttons
         // do** (F-110, F-134, focus-ix9). One vocabulary, two routes, one implementation: a menu
         // item that carried its own copy of the export would be a second exporter to keep honest.
@@ -764,6 +767,35 @@ public final class AppComposition {
                 // two nudges apart, and so does the menu.
                 hasOpenQuestion: nudgeHost.hasOpenQuestion
             )
+        }
+    }
+
+    /// Register the existing hosts for synchronous Shortcuts execution. Kept separate
+    /// from surface installation so the wiring can be tested without a menu bar.
+    func registerIntentPerformers(on center: FocusCommandCenter) {
+        center.registerIntentSessionPerformer { [weak self] command in
+            guard let self else { return false }
+            switch command {
+            case .startSession:
+                let previous = self.sessionHost.snapshot?.sessionID
+                self.sessionHost.startSession()
+                return self.sessionHost.writeFailure == nil
+                    && self.sessionHost.snapshot?.phase == .focus
+                    && self.sessionHost.snapshot?.sessionID != previous
+            case .completeSession:
+                self.sessionHost.completeSession()
+                return self.sessionHost.writeFailure == nil
+                    && self.sessionHost.snapshot == nil
+            default:
+                return false
+            }
+        }
+
+        center.registerPriorityWriter { [weak self] text in
+            guard let self, !self.priorityHost.state.capturingIsRefused else { return false }
+            self.priorityHost.setPriority(intent: text, doneWhen: nil)
+            return !self.priorityHost.state.lastWriteFailed
+                && self.priorityHost.state.priority?.intent == text
         }
     }
 
@@ -1226,6 +1258,7 @@ public final class AppComposition {
     /// rebuilt, empty store, and nothing in this one touches a context again. The termination
     /// hooks read `hasDeletedEverything` and write nothing.
     public func perform(_ action: PrivacySettingsAction) {
+        guard !hasDeletedEverything else { return }
         switch action {
         case .deleteEverything:
             deleteEverythingAndRelaunch()
@@ -1317,8 +1350,24 @@ public final class AppComposition {
     public private(set) var hasDeletedEverything = false
 
     private func deleteEverythingAndRelaunch() {
-        stop()
+        guard !hasDeletedEverything else { return }
         hasDeletedEverything = true
+        stop()
+        relevanceHost.stopForStoreDeletion()
+        nudgeHost.stopForStoreDeletion()
+        sessionHost.onChange = nil
+        priorityHost.onSnapshotInvalidated = nil
+        menuBar.onAction = nil
+        menuBar.onPopoverDidShow = nil
+        menuBar.onGlyphWritten = nil
+        menuBar.remove()
+        quickCapturePanel.onCommit = nil
+        quickCapturePanel.hide()
+        hotKeyRegistrar.unregister()
+        hotKeyRegistration = nil
+        // The delegate disconnects the scene/command routes synchronously, while the old
+        // context is still valid. Relaunch itself is asynchronous.
+        prepareForStoreDeletion()
         do {
             _ = try FocusStore.deleteEverything(modelContainer, kind: storeKind)
         } catch {
@@ -1333,6 +1382,7 @@ public final class AppComposition {
     /// imports AppKit; a unit process has none and a call to delete everything there ends with
     /// the rebuilt store and no relaunch — which is also what the witness measures.
     public var relaunch: () -> Void = {}
+    public var prepareForStoreDeletion: () -> Void = {}
 
     /// **The General pane's two capture controls** (focus-d3g, focus-tee.6).
     ///
@@ -1340,6 +1390,7 @@ public final class AppComposition {
     /// the closure the self-check drives — and a `{ _ in }` in its place reaches nothing that
     /// moves this object's graph.
     public func perform(_ action: CaptureSettingsAction) {
+        guard !hasDeletedEverything else { return }
         switch action {
         case .setRitualEnabled(let isEnabled):
             // The state they asked **for**, not a toggle: a pane built a moment ago cannot invert
@@ -1351,6 +1402,7 @@ public final class AppComposition {
     }
 
     public func perform(_ action: LaunchAtLoginAction) {
+        guard !hasDeletedEverything else { return }
         switch action {
         case .setEnabled(let enabled):
             // The state they asked **for**, not a toggle: a pane built a moment ago cannot invert
@@ -1371,6 +1423,7 @@ public final class AppComposition {
     /// Both arms record the asking, which is the whole of D-12's *"offered once"*: the app asks,
     /// it does not nag, and *"not now"* is an answer rather than a postponement.
     public func perform(_ action: LaunchAtLoginOfferAction) {
+        guard !hasDeletedEverything else { return }
         switch action {
         case .accept: loginItem.setEnabled(true)
         case .dismiss: break
@@ -1387,6 +1440,7 @@ public final class AppComposition {
     /// this one — a person who pressed *Not Now* must see it go, not see it go at the next store
     /// read.
     func noteLaunchAtLoginOffered() {
+        guard !hasDeletedEverything else { return }
         hasOfferedLaunchAtLogin = true
         try? FocusStore.recordLaunchAtLoginOffered(
             in: modelContainer.mainContext,
@@ -1539,6 +1593,7 @@ public final class AppComposition {
     /// when `PriorityHost` builds its state and nothing else would ask it again: a switch that
     /// took effect on the next launch is a switch that looks broken.
     public func setRitualEnabled(_ isEnabled: Bool) {
+        guard !hasDeletedEverything else { return }
         do {
             try FocusStore.setRitualEnabled(
                 isEnabled,
@@ -1570,6 +1625,7 @@ public final class AppComposition {
     ///   the person which of the two happened.
     @discardableResult
     public func setQuickCaptureShortcut(_ spec: HotKeySpec) -> HotKeyRegistration? {
+        guard !hasDeletedEverything else { return nil }
         do {
             try FocusStore.setHotKeySpec(
                 spec,
@@ -1855,7 +1911,13 @@ public final class AppComposition {
     /// `AppCompositionConnectionTests` asserts every one of them against the live host, and the
     /// call itself is recorded — so a scene that stops asking fails the gate by name.
     public func cockpitConnection() -> CockpitConnection {
-        ShellConnectionFactory.cockpit(for: self)
+        guard !hasDeletedEverything else {
+            return CockpitConnection(
+                state: .ready, actions: nil, sessionActions: nil,
+                sessionElapsedSeconds: nil, lastActiveBundleID: nil
+            )
+        }
+        return ShellConnectionFactory.cockpit(for: self)
     }
 
     /// **Everything the Settings window draws and every verb it can perform**, in the same shape
@@ -1866,7 +1928,15 @@ public final class AppComposition {
     /// app may speak, and the appearance store write deleted from a `Binding`'s setter written
     /// by hand in a scene body. Both are verbs on this object now.
     public func settingsConnection() -> ShellSettingsConnection {
-        ShellConnectionFactory.settings(for: self)
+        guard !hasDeletedEverything else {
+            return ShellSettingsConnection(
+                preference: .matchSystem, setPreference: { _ in },
+                storeURL: FocusStore.applicationSupportURL,
+                summary: .inactive, capabilities: CapabilityMatrix(), verdict: nil,
+                intervention: InterventionSettings(), onInterventionAction: { _ in }
+            )
+        }
+        return ShellConnectionFactory.settings(for: self)
     }
 
     /// **Which Settings pane is on screen** (focus-7ow).
@@ -1887,6 +1957,7 @@ public final class AppComposition {
 
     /// A tab was chosen — by a person clicking it, or by the self-check walking the panes.
     public func selectSettingsTab(_ tab: SettingsTab) {
+        guard !hasDeletedEverything else { return }
         settingsTabSelection.tab = tab
         expect(.settingsTab, tab.rawValue, for: .settings)
     }
@@ -1932,6 +2003,12 @@ public final class AppComposition {
     /// failed is worse than one that says nothing happened, and the failure is logged where the
     /// other store refusals in this object are.
     public func todaysHistory() -> DayHistory {
+        guard !hasDeletedEverything else {
+            return DayHistory(
+                day: LocalDay.today(calendar: calendar, dateProvider: dateProvider),
+                entries: [], priorityWording: [:]
+            )
+        }
         let context = modelContainer.mainContext
         do {
             return try DayHistory.build(
@@ -1971,6 +2048,7 @@ public final class AppComposition {
     /// — a priority deleted while the window was open — is logged and drawn as nothing, because
     /// the affordance the person clicked is withdrawn on the next read with its reason.
     public func correctHistorySilence(_ silence: HistorySilence, undo: UndoManager? = nil) {
+        guard !hasDeletedEverything else { return }
         let context = modelContainer.mainContext
         do {
             _ = try HistoryCorrection.markAsDistraction(
@@ -2035,6 +2113,7 @@ public final class AppComposition {
     /// are here: the scene's `.task` used to perform the assignment itself, which is a statement
     /// in `App/` that nothing could observe.
     public func settingsWindowAppeared() {
+        guard !hasDeletedEverything else { return }
         shellWires.insert(.settingsAppeared)
         appearance.preference = storedAppearancePreference()
     }
@@ -2046,6 +2125,7 @@ public final class AppComposition {
     /// just chose. Both halves are here rather than in a `Binding` setter in `App/`, which is
     /// where the write was when deleting it left the whole gate green (focus-cp2 M4).
     public func applyAppearancePreference(_ preference: AppearancePreference) {
+        guard !hasDeletedEverything else { return }
         appearance.preference = preference
         setAppearancePreference(preference)
     }
@@ -2105,6 +2185,7 @@ public final class AppComposition {
     /// guessing right would be a handoff that silently stopped working. Arriving twice costs
     /// nothing: the parse is pure and the result is the same value assigned to the same field.
     public func receive(_ url: URL) {
+        guard !hasDeletedEverything else { return }
         shellWires.insert(.handoffReceived)
         priorityHost.receive(url)
     }
@@ -2131,6 +2212,7 @@ public final class AppComposition {
     /// this write fails: a store that cannot be written is a reason to tell the user, never a
     /// reason to ignore what they just chose.
     public func setAppearancePreference(_ preference: AppearancePreference) {
+        guard !hasDeletedEverything else { return }
         do {
             try FocusStore.setAppearancePreference(
                 preference,
@@ -2286,6 +2368,7 @@ public final class AppComposition {
     /// notifications, so there is no permission for a person to grant it here and nothing to
     /// re-read when they do.
     public func perform(_ action: InterventionSettingsAction) {
+        guard !hasDeletedEverything else { return }
         switch action {
         case .setVoice(let voice):
             // **The loop and the row, for the reason the window below gets both** (focus-40i).
@@ -2425,6 +2508,7 @@ public final class AppComposition {
     }
 
     public func refreshCockpit() {
+        guard !hasDeletedEverything else { return }
         // The day boundary the budget already computes, read for the other thing that happens
         // once a day (focus-tzj.3). It is a comparison against a stored `LocalDay` and nothing
         // else on the overwhelming majority of ticks.

@@ -306,7 +306,7 @@ capture_windows() {
 # from the frames**, which is the charter's tmux-verify doctrine and the point of the lane.
 export_verdict() {
     local destination="$1"
-    "$BINARY" --focus-self-check "$destination" \
+    "$BINARY" --focus-self-check "$destination" --focus-self-check-live-store \
         > "$LOG_DIR/focus-live-verdict-report.log" 2>&1 || return 1
     [[ -s "$destination" ]] || return 1
     return 0

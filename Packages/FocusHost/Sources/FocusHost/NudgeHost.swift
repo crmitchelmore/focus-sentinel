@@ -636,6 +636,15 @@ final class NudgeHost {
 
     // MARK: - The one entry point
 
+    func stopForStoreDeletion() {
+        hideOverlays()
+        notifications.onAction = nil
+        panel.onDismiss = nil
+        panel.onDisplaysChanged = nil
+        onCorrection = nil
+        onQuestionSurfacesChanged = nil
+    }
+
     /// One judgement, considered.
     ///
     /// Called from the verdict stream `RelevanceHost` publishes — every accepted activation and

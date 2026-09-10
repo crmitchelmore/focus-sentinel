@@ -741,11 +741,25 @@ struct NudgeFloorTests {
     /// them could tell the ladder's dwell from a cooldown a glyph had armed, and that is why this
     /// went four rounds. `DeliveryCostSeamTests` folds the same seam over every rung; this is the
     /// host lane's own half, through the shipping composition root.
-    @Test("a glyph landing leaves the panel rung reachable at the ladder's own dwell")
-    func aGlyphLandingDoesNotDelayTheRungThatSpeaks() throws {
+    @Test(
+        "a glyph landing leaves the panel rung reachable at the ladder's own dwell",
+        arguments: [Optional<Double>.none, 768, 600]
+    )
+    func aGlyphLandingDoesNotDelayTheRungThatSpeaks(displayHeight: Double?) throws {
         let clock = FixedMonotonicClock()
         let (root, priorityID) = try Self.joinedRoot(clock: clock)
         defer { Self.tearDown(root) }
+        if let displayHeight {
+            // Exercise real window layout on smaller injected displays as well as this Mac.
+            // No system display configuration or fabricated visibility result is involved.
+            let display = DisplayGeometry(
+                displayID: 1, screenIndex: 0, isPrimary: true,
+                frame: ScreenRect(x: 0, y: 0, width: 1024, height: displayHeight),
+                visibleFrame: ScreenRect(x: 0, y: 0, width: 1024, height: displayHeight - 25),
+                backingScaleFactor: 1
+            )
+            root.nudgePanel.displays = { [display] }
+        }
 
         let subject = Self.subjects[0]
         let landing = try Self.drift(root, clock: clock, into: subject, thenBreak: false)
@@ -774,7 +788,11 @@ struct NudgeFloorTests {
         )
         #expect(
             root.nudgePanel.isVisible && root.nudgePanel.showing == .accusation,
-            "the panel rung was reached and no window carrying it appeared"
+            """
+            the panel rung was reached and no window carrying it appeared;
+            frame=\(root.nudgePanel.frame), content=\(root.nudgePanel.contentSize),
+            displays=\(NudgePanelController.currentScreens().map(\.visibleFrame))
+            """
         )
 
         // And the day's account of itself says what it should: one sentence, not two.

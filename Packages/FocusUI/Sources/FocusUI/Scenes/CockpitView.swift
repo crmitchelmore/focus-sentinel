@@ -62,6 +62,7 @@ public struct CockpitView: View {
     /// The definition of done, while it is being edited. Committed on Return and on losing
     /// focus; re-seeded whenever the priority underneath it changes.
     @State private var doneWhenDraft: String = ""
+    @State private var contentWidth: CGFloat = 0
 
     /// Whether the capture field is open while a priority already exists — the "change my
     /// mind" path. With no priority the field is always open, because it is the only thing
@@ -98,6 +99,8 @@ public struct CockpitView: View {
     /// The inset of a well's content from its edge, and the radius of that edge.
     @ScaledMetric(relativeTo: .body) private var wellInset: CGFloat = 14
     @ScaledMetric(relativeTo: .body) private var wellRadius: CGFloat = 8
+    /// The width at which the Details tab reads as two columns rather than one.
+    private static let twoColumnWidth: CGFloat = 800
 
     /// What the view reports when its body is evaluated.
     ///
@@ -181,6 +184,7 @@ public struct CockpitView: View {
         // disturb.
         let _ = didRender?()
         VStack(alignment: .leading, spacing: sectionSpacing) {
+            CompanionHeader { ShellText(.cockpitWindowTitle, role: .title2) }
             // **One derivation, two consumers** (focus-7ow). The banner is on the screen exactly
             // when this is not `nil`, and that is exactly what the receipt reports.
             let ritualDismissal = state.showsRitualPrompt ? wiring.dismissRitual : nil
@@ -194,6 +198,7 @@ public struct CockpitView: View {
                     focus: $focus
                 )
             }
+            VStack(alignment: .leading, spacing: rowSpacing) {
             header
                 .shellRendered(.ritualBanner, ritualDismissal == nil ? "hidden" : "shown")
                 // A **background** rather than a sibling in the column, and that is measured: a
@@ -206,8 +211,12 @@ public struct CockpitView: View {
             // The hero above never moves.
             tabBar
 
+            }
+            .companionSurface(accent: state.priority != nil)
+
             if showsCapture {
                 capture
+                    .transition(traits.reduceMotion ? .identity : .opacity.combined(with: .move(edge: .top)))
             }
 
             switch tab {
@@ -222,12 +231,21 @@ public struct CockpitView: View {
                 }
             case .details:
                 if let priority = state.priority {
-                    well {
-                        sessionSection(compact: false)
-                    }
-                    well {
-                        contextSection(priority)
-                        rulesSection(priority)
+                    // **The companion round's responsive pair** (focus-oqsx): side by side where
+                    // the window is wide enough to read two columns, stacked where it is not.
+                    // It lives on this tab because this is where both wells are drawn together.
+                    let columns = contentWidth >= Self.twoColumnWidth && textScale == .standard
+                        ? AnyLayout(HStackLayout(alignment: .top, spacing: sectionSpacing))
+                        : AnyLayout(VStackLayout(alignment: .leading, spacing: sectionSpacing))
+                    columns {
+                        well {
+                            sessionSection(compact: false)
+                        }
+                        well {
+                            contextSection(priority)
+                            Divider()
+                            rulesSection(priority)
+                        }
                     }
                 }
             case .recent:
@@ -254,7 +272,20 @@ public struct CockpitView: View {
         .background(hiddenTabReceipts)
         .padding(sectionSpacing)
         .frame(minWidth: 420, minHeight: 260, alignment: .topLeading)
-        .background(DesignTokens.Palette.windowBackground(for: traits))
+        .background(DesignTokens.Palette.role(.inlay, for: traits))
+        .buttonStyle(CompanionButtonStyle())
+        .animation(DesignTokens.animation(for: traits), value: isEditingIntent)
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { contentWidth = $0 }
+        .background {
+            // Empty history deliberately draws no section, so its EmptyView cannot
+            // publish preferences. Record that absence without adding a layout child;
+            // populated history still reports from the list that actually draws it.
+            if state.recent.isEmpty {
+                Color.clear
+                    .shellRendered(.recentCount, 0)
+                    .shellRendered(.recentDigest, ShellValueDigest.describe(state.recent))
+            }
+        }
         // **The traits this window resolved out of its own environment** (focus-h7h).
         //
         // Read here rather than taken from the connection, and that is the whole point: this is
@@ -264,7 +295,6 @@ public struct CockpitView: View {
         // `AppearanceTraits.systemDefault` fires the receipt and ignores dark mode and every
         // accessibility setting; this is the value that says which of the two happened.
         .shellRendered(.appearanceTraits, traits.renderedDescription)
-        .defaultFocus($focus, .cockpitOpenSettings)
         // The window is named for the app; the group is too, so VoiceOver announces what it
         // has landed in before reading the priority out of it.
         .accessibilityElement(children: .contain)
@@ -400,14 +430,12 @@ public struct CockpitView: View {
         guard command.isAvailable(in: commandWorld) else { return }
         switch command {
         case .newPriority:
-            isCapturing = true
-            focus = .cockpitCaptureField
+            beginCapture()
         case .completePriority:
             isCompleting = true
         case .addFilesToContext:
             guard state.priority != nil else {
-                isCapturing = true
-                focus = .cockpitCaptureField
+                beginCapture()
                 return
             }
             fileImportToken &+= 1
@@ -602,7 +630,7 @@ public struct CockpitView: View {
                 // with no host draws no fields. Nothing at all when there is no value, heading
                 // included (focus-0ai).
                 if let doneWhen = CockpitWiring.doneWhenToDraw(priority.doneWhen) {
-                    ShellText(.priorityDoneWhenLabel, role: .sectionHeading)
+                    CompanionSectionHeading(key: .priorityDoneWhenLabel, symbol: "checkmark.seal")
                         .foregroundStyle(DesignTokens.Palette.role(.spruce, for: traits))
 
                     Text(verbatim: doneWhen)
@@ -611,7 +639,7 @@ public struct CockpitView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
             } else {
-                ShellText(.priorityDoneWhenLabel, role: .sectionHeading)
+                CompanionSectionHeading(key: .priorityDoneWhenLabel, symbol: "checkmark.seal")
                     .foregroundStyle(DesignTokens.Palette.role(.spruce, for: traits))
 
                 TextField(
@@ -737,6 +765,19 @@ public struct CockpitView: View {
     /// cockpit rather than a picture of a broken control.
     private var showsCapture: Bool {
         actions != nil && (state.priority == nil || isCapturing)
+    }
+
+    /// Focus the inserted field once its reveal transition has finished.
+    private func beginCapture() {
+        guard !showsCapture else {
+            focus = .cockpitCaptureField
+            return
+        }
+        withAnimation(DesignTokens.animation(for: traits), completionCriteria: .removed) {
+            isCapturing = true
+        } completion: {
+            focus = .cockpitCaptureField
+        }
     }
 
     /// One sentence in, one priority out.
@@ -870,11 +911,22 @@ public struct CockpitView: View {
         }
     }
 
+    /// Open the capture field, and put the caret in it once its reveal has finished.
+    ///
+    /// `keepingContext` is what the "New Priority, Same Context…" verb sets (focus-1rj7); the
+    /// animated reveal and completion-timed focus are the companion round's (focus-oqsx).
     private func beginCapturing(keepingContext: Bool) {
         isKeepingContext = keepingContext
-        isCapturing = true
         tab = .now
-        focus = .cockpitCaptureField
+        guard !showsCapture else {
+            focus = .cockpitCaptureField
+            return
+        }
+        withAnimation(DesignTokens.animation(for: traits), completionCriteria: .removed) {
+            isCapturing = true
+        } completion: {
+            focus = .cockpitCaptureField
+        }
     }
 
     /// Correct the wording of the commitment that is already there.
@@ -1140,41 +1192,17 @@ public struct CockpitView: View {
     /// the same reason: the cockpit is summoned, and a raised card inside it would compete with
     /// the hero for the eye. The border appears only under Increase Contrast, where a fill two
     /// steps from the window ground is not a boundary a person can rely on.
+
+    /// Working groups share the same furniture as settings and the popover.
     private func well<Content: View>(
         spacing: CGFloat? = nil,
         washed: Bool = true,
         @ViewBuilder _ content: () -> Content
     ) -> some View {
-        let emphasis = DesignTokens.emphasis(for: traits)
-        let shape = RoundedRectangle(cornerRadius: wellRadius, style: .continuous)
-        return VStack(alignment: .leading, spacing: spacing ?? sectionSpacing) {
+        VStack(alignment: .leading, spacing: spacing ?? sectionSpacing) {
             content()
         }
-        .padding(wellInset)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            shape.fill(DesignTokens.Palette.role(.inlay, for: traits))
-                .overlay {
-                    // The working wells carry the app's own hue; the instrument strip does
-                    // not. See `DesignTokens.wellWashOpacity` for why the cockpit may.
-                    if washed {
-                        shape.fill(
-                            DesignTokens.Palette.role(.spruce, for: traits)
-                                .opacity(DesignTokens.wellWashOpacity)
-                        )
-                    }
-                }
-        )
-        .overlay {
-            if emphasis.promotesSecondaryText {
-                RoundedRectangle(cornerRadius: wellRadius, style: .continuous)
-                    .strokeBorder(
-                        DesignTokens.Palette.role(.mist, for: traits)
-                            .opacity(emphasis.outlineOpacity),
-                        lineWidth: emphasis.borderWidth
-                    )
-            }
-        }
+        .companionSurface()
     }
 
     /// One supporting line: a glyph, then text that is free to wrap as far as it needs to.

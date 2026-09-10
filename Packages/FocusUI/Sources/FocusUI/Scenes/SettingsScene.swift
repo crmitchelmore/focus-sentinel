@@ -518,7 +518,14 @@ public struct ShellSettingsView: View {
         // fail the same assertion as one that never asked.
         let _ = didRender?()
         TabView(selection: $selectedTab) {
-            GeneralSettingsView(
+            BoundedSurface(
+                width: ShellSurfaceBounds.settingsWidth,
+                ceiling: ShellSurfaceBounds.settingsCeiling()
+            ) {
+              VStack(spacing: 0) {
+                CompanionHeader { ShellText(.cockpitWindowTitle, role: .title2) }
+                    .padding(.horizontal, 16)
+                GeneralSettingsView(
                 preference: $preference,
                 appVersion: appVersion,
                 launchAtLogin: launchAtLogin,
@@ -526,7 +533,10 @@ public struct ShellSettingsView: View {
                 ritualEnabled: ritualEnabled,
                 quickCaptureShortcut: quickCaptureShortcut,
                 onCaptureAction: onCaptureAction
-            )
+                )
+              }
+              .padding(.top, 12)
+            }
                 .tabItem { tabLabel(.general) }
                 .tag(SettingsTab.general)
 
@@ -558,6 +568,8 @@ public struct ShellSettingsView: View {
         // panes bound themselves now — each is a `BoundedSurface` at the same width and the same
         // display-derived ceiling — and what is left here is the window agreeing to those
         // numbers rather than contradicting them.
+        .background(DesignTokens.Palette.role(.inlay, for: traits))
+        .buttonStyle(CompanionButtonStyle())
         .frame(width: ShellSurfaceBounds.settingsWidth)
         .frame(maxHeight: ShellSurfaceBounds.settingsCeiling().map { CGFloat($0) })
         // The same `fixedSize` the panes use, and for the same measured reason: a `maxHeight`

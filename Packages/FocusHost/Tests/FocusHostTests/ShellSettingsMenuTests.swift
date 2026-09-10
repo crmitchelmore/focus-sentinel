@@ -53,7 +53,7 @@ struct ShellSettingsMenuTests {
         // it saw" and "found the Settings item" are two different answers.
         let fileItem = NSMenuItem(title: "File", action: nil, keyEquivalent: "")
         let fileMenu = NSMenu(title: "File")
-        let close = NSMenuItem(title: "Close Window", action: nil, keyEquivalent: "w")
+        let close = NSMenuItem(title: "Close window", action: nil, keyEquivalent: "w")
         close.keyEquivalentModifierMask = .command
         fileMenu.addItem(close)
         fileItem.submenu = fileMenu

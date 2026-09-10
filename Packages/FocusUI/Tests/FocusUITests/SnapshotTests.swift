@@ -39,16 +39,16 @@ enum SnapshotComponent: String, CaseIterable, Sendable {
     /// machine that recorded it happened to have.
     case history
     case privacySettings
-    /// **The Privacy pane's second half** (focus-u3w). Two components rather than one, and the
-    /// reason is measured: the pane is photographed unclamped — a bounded one is a `ScrollView`,
-    /// which `ImageRenderer` cannot rasterise at all — and whole it now runs to roughly sixteen
-    /// thousand rows at the largest text size under pseudo-localisation, past where CoreGraphics
-    /// stops producing a picture. An encode succeeded at 984×15 950 and the next render, a
-    /// hundred rows taller, came back with neither bytes nor ink. Two halves are two pictures of
-    /// the same pane, and each of them is a picture.
+    /// Separate observation and reasoning renders keep expanded large-text images below
+    /// CoreGraphics' image-height limit. The shipping pane still draws both together.
     case privacySettingsInsight
-    /// The third part of the Privacy pane (focus-exdi.4): what the app made of what it saw.
-    case privacySettingsJudgement
+    /// The third part of the Privacy pane: what the app is allowed to look at, and the two
+    /// switches that decide it. Photographed apart from the observation part since focus-oqsx —
+    /// together they passed eighteen thousand rows under the pseudo-locale at the largest text
+    /// size, which is a height `ImageRenderer` answers with an empty buffer rather than a picture.
+    case privacySettingsCapability
+    /// The fourth part of the Privacy pane: what the app made of what it saw.
+    case privacySettingsReasoning
     case statusRelevant
     case statusUncertain
     case statusUnrelated
@@ -68,7 +68,8 @@ enum SnapshotComponent: String, CaseIterable, Sendable {
         switch self {
         case .statusRelevant, .statusUncertain, .statusUnrelated, .statusPaused, .statusBreak:
             nil
-        case .privacySettings, .privacySettingsInsight, .privacySettingsJudgement:
+        case .privacySettings, .privacySettingsInsight, .privacySettingsCapability,
+            .privacySettingsReasoning:
             // **The width the pane commits to**, plus the harness's own 16-point padding on each
             // side, so the pane is proposed exactly `settingsWidth` and the picture has no dead
             // band beside it (focus-nu6). A surface that commits a width must be photographed at
@@ -166,13 +167,17 @@ enum SnapshotComponent: String, CaseIterable, Sendable {
             return AnyView(
                 PrivacySettingsView(storeURL: Self.storeURL, half: .ownership, screens: [])
             )
-        case .privacySettingsJudgement:
-            return AnyView(
-                PrivacySettingsView(storeURL: Self.storeURL, half: .judgement, screens: [])
-            )
         case .privacySettingsInsight:
             return AnyView(
                 PrivacySettingsView(storeURL: Self.storeURL, half: .insight, screens: [])
+            )
+        case .privacySettingsCapability:
+            return AnyView(
+                PrivacySettingsView(storeURL: Self.storeURL, half: .capability, screens: [])
+            )
+        case .privacySettingsReasoning:
+            return AnyView(
+                PrivacySettingsView(storeURL: Self.storeURL, half: .reasoning, screens: [])
             )
         default:
             preconditionFailure("unhandled snapshot component \(rawValue)")

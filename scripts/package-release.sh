@@ -10,8 +10,9 @@
 #   * **It never builds.** It copies the product `build-release` produced. A packaging script
 #     that builds is a script that can ship a different binary from the one every other stage
 #     read.
-#   * **It never signs, and never touches the keychain.** The app is ad-hoc signed by the build
-#     (`CODE_SIGN_IDENTITY = "-"`), `ditto` preserves that signature, and `hdiutil` is not asked
+#   * **It never signs, and never touches the keychain.** The default app is ad-hoc signed by the build;
+#     --development accepts an already Apple Development-signed copy. `ditto` preserves the
+#     supplied signature, and `hdiutil` is not asked
 #     to sign the image. `codesign` appears below only with `--verify` and `-dv`, which read.
 #   * **It never claims the artefact is notarised, and never pretends Gatekeeper will like it.**
 #     `spctl --assess` is RECORDED, and the reading on an ad-hoc-signed app is `rejected`. The
@@ -23,7 +24,7 @@
 # artefact whose bundle says `741449c`, and the gate's `release-artefact` stage checks that the
 # bundle's hash is this tree's HEAD.
 #
-# usage: package-release.sh <path to Release FocusSentinel.app> <output directory>
+# usage: package-release.sh <path to Release FocusSentinel.app> <output directory> [--development]
 
 set -u
 
@@ -32,9 +33,14 @@ cd "$REPO_ROOT" || exit 1
 
 APP="${1:-}"
 OUT_DIR="${2:-}"
+SIGNING_MODE="${3:---ad-hoc}"
 
 if [[ -z "$APP" || -z "$OUT_DIR" ]]; then
-    print -u2 "usage: ${0:t} <path to FocusSentinel.app> <output directory>"
+    print -u2 "usage: ${0:t} <path to FocusSentinel.app> <output directory> [--ad-hoc|--development]"
+    exit 2
+fi
+if [[ "$SIGNING_MODE" != --ad-hoc && "$SIGNING_MODE" != --development ]]; then
+    print -u2 "FAIL: unknown signing mode $SIGNING_MODE"
     exit 2
 fi
 if [[ ! -d "$APP" ]]; then
@@ -89,11 +95,30 @@ fi
 
 print
 print "== codesign -dv"
-signature=$(codesign -dv "$STAGE/FocusSentinel.app" 2>&1)
+signature=$(codesign -dvv "$STAGE/FocusSentinel.app" 2>&1)
 print -r -- "$signature"
-if ! print -r -- "$signature" | grep -q 'Signature=adhoc'; then
+if [[ "$SIGNING_MODE" == --development ]]; then
+    if ! print -r -- "$signature" | grep -q '^Authority=Apple Development:' ||
+       ! print -r -- "$signature" | grep -Eq '^TeamIdentifier=[A-Z0-9]{10}$'; then
+        print -u2 "FAIL: development packaging requires an Apple Development signature and team identity"
+        exit 1
+    fi
+elif ! print -r -- "$signature" | grep -q 'Signature=adhoc'; then
     print -u2 "FAIL: the product is not ad-hoc signed, which is the posture this artefact documents"
     exit 1
+fi
+
+if [[ "$SIGNING_MODE" == --development ]]; then
+    signing_explanation="This is an Apple Development-signed local build for the development Mac. It is not
+Developer ID distribution and has not been notarised. Other Macs may refuse to open it."
+    shortcuts_explanation="This build carries the Apple team identity required for Shortcuts execution. Verify Set
+Focus Priority, Start Focus Session and Finish Focus Session on the development Mac."
+else
+    signing_explanation="This build is signed AD HOC, with no Apple identity, and has not been notarised.
+macOS may refuse a downloaded copy. The signature verification below proves bundle integrity."
+    shortcuts_explanation="Shortcuts can discover the three Focus actions, but cannot execute this ad-hoc build:
+macOS requires a validated Apple team identity. Use the documented development-signed route
+for local Shortcuts verification."
 fi
 
 print
@@ -122,11 +147,11 @@ Requires macOS 26.0 or later.
 
 WHAT WILL HAPPEN WHEN YOU OPEN IT
 
-macOS will refuse to open it on the first try, and will say something like "Focus Sentinel is
-damaged and can't be opened" or "cannot be opened because the developer cannot be verified".
-It is not damaged. This build is signed AD HOC — signed with no identity at all, which is what
-a locally built Mac application is — rather than with a paid Apple Developer ID, and it has
-not been through Apple's notary service.
+$signing_explanation
+
+SHORTCUTS
+
+$shortcuts_explanation
 
 This is what Gatekeeper says about it, verbatim, taken from the build that made this disk
 image:
@@ -139,23 +164,18 @@ And this is the signature it does carry, which verifies:
 
 $signature
 
-TO OPEN IT ANYWAY
+OPENING THE LOCAL BUILD
 
-Drag Focus Sentinel to your Applications folder, then RIGHT-CLICK it (or Control-click) and
-choose Open. The dialog you get from that route has an Open button; the one you get from
-double-clicking does not. You will be asked once. After that it opens normally.
-
-If macOS still refuses, the file carries a quarantine flag from having been downloaded, and
-this removes it:
-
-  xattr -d com.apple.quarantine /Applications/Focus\\ Sentinel.app
+Copy FocusSentinel.app to your Applications folder. Use the normal macOS approval controls
+if opening it is refused. A right-click (Control-click) and Open may still require approval
+in System Settings, Privacy & Security. Preserve any refusal when reporting a problem;
+this package does not change macOS security settings or remove quarantine attributes.
 
 WHY IT IS NOT NOTARISED
 
-Notarisation needs a paid Apple Developer ID, and this application is distributed as a local
-build rather than through a store. Nothing here is hidden from you: the source, the build gate
-and every assertion it makes are the artefact. If you would rather build it yourself, that is
-the supported route and the one this project is set up for.
+Developer ID distribution and notarisation require a separate signing workflow. Apple
+Development signing is not notarisation. This package preserves the supplied signature
+and records the actual Gatekeeper assessment above.
 
 WHAT IT ASKS OF THE SYSTEM
 

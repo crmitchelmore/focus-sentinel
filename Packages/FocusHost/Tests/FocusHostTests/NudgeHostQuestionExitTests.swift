@@ -145,7 +145,8 @@ struct NudgeHostQuestionExitTests {
         case .surfaceWentOutOfReach:
             // A display the question cannot fit on, and the notification AppKit really posts —
             // the wiring under test rather than a direct call to the handler.
-            fixture.panel.displays = { NudgeHostDisplayChangeTests.displayTooSmall(for: 4_000) }
+            let stranding = NudgeHostDisplayChangeTests.displayTooSmall(for: fixture.panel)
+            fixture.panel.displays = { stranding }
             NudgeHostDisplayChangeTests.theDisplayConfigurationChanges()
 
         case .screenReclaimed:
@@ -338,7 +339,8 @@ struct NudgeHostQuestionExitTests {
             fixture.host.sessionEnded()
 
         case .surfaceWentOutOfReach:
-            fixture.panel.displays = { NudgeHostDisplayChangeTests.displayTooSmall(for: 4_000) }
+            let stranding = NudgeHostDisplayChangeTests.displayTooSmall(for: fixture.panel)
+            fixture.panel.displays = { stranding }
             NudgeHostDisplayChangeTests.theDisplayConfigurationChanges()
 
         case .screenReclaimed:

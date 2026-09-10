@@ -3,7 +3,7 @@ import Testing
 
 @testable import FocusCore
 
-/// Five static decks, thirteen lines each, and no way to generate a sixth (R-90, F-65, F-66,
+/// Four static decks, fourteen lines each, and no generated copy (R-90, F-65, F-66,
 /// D-11, SC-4).
 @Suite("Nudge voices")
 struct NudgeVoiceTests {
@@ -39,14 +39,14 @@ struct NudgeVoiceTests {
             Set(NudgeVoice.allCases) == [.neutral, .warm, .direct, .silentVisual],
             "`playful` is retired by the ruling on focus-0nm; a fifth deck is a new ruling"
         )
-        #expect(NudgeCopyKey.allCases.count == 13)
-        #expect(NudgeVoice.matrix.count == 52)
-        #expect(Set(NudgeVoice.matrix).count == 52, "two decks composed the same key")
+        #expect(NudgeCopyKey.allCases.count == 14)
+        #expect(NudgeVoice.matrix.count == 56)
+        #expect(Set(NudgeVoice.matrix).count == 56, "two decks composed the same key")
         #expect(NudgeVoice.standard == .neutral, "the Court's adopted default deck moved")
     }
 
     /// **Completeness.** A missing deck entry is an untranslated nudge shipped to somebody at
-    /// their most sensitive moment, so every one of the sixty-five is asserted present, with a
+    /// their most sensitive moment, so every one of the fifty-six is asserted present, with a
     /// non-empty English value, in the committed catalog.
     @Test("every deck has every line, in the committed catalog")
     func everyDeckHasEveryLine() throws {
@@ -104,20 +104,20 @@ struct NudgeVoiceTests {
     /// (focus-0nm). "Still working on %@?" was an accusation wearing a question mark: the app
     /// protects one question mark, the real question, and a person who has learned that it
     /// means "Focus needs a rule" must never be shown one that means "you have drifted". R-96v
-    /// now fails the gate on it. The **question's** title is untouched — it was already right,
-    /// and a voice that rewrites a correct line to sound distinctive has the wrong priorities.
-    @Test("the default voice says what the ruling adopted")
-    func theDefaultVoiceIsTheCourts() throws {
+    /// now fails the gate on it. The question still asks about app membership; the owner-requested
+    /// plain-language edit keeps that distinction.
+    @Test("the default voice retains the owner requested plain wording")
+    func theDefaultVoiceUsesPlainWording() throws {
         let values = try Self.catalogValues()
         let title = values[NudgeVoice.neutral.key(.accusationPanelTitle)]
-        #expect(title == "\u{201C}%@\u{201D} is waiting.")
+        #expect(title == "\"%@\" is the current priority.")
         #expect(
             title?.hasSuffix("?") == false,
             "the accusation is a statement; only the question asks (R-96v)"
         )
         #expect(values[NudgeVoice.neutral.key(.queryPanelTitle)] == "Is %@ part of %@?")
         #expect(values[NudgeVoice.neutral.key(.queryActionYes)] == "Yes, add it")
-        #expect(values[NudgeVoice.neutral.key(.queryActionNo)] == "No, it isn\u{2019}t")
+        #expect(values[NudgeVoice.neutral.key(.queryActionNo)] == "No, it isn't")
         #expect(values[NudgeVoice.neutral.key(.queryActionNotNow)] == "Ask later")
     }
 
@@ -194,7 +194,7 @@ struct NudgeVoiceTests {
         ]
 
         let queryLines = NudgeCopyKey.allCases.filter(\.isQueryLine)
-        #expect(queryLines.count == 5, "the question grew or lost a line")
+        #expect(queryLines.count == 6, "the question grew or lost a line")
 
         for voice in NudgeVoice.allCases {
             for line in queryLines {

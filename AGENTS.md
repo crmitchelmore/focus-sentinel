@@ -1,5 +1,9 @@
 # Agent Instructions
 
+## UI tests require explicit confirmation
+
+Chris instructed on 8 September 2026: stop running UI tests and always confirm with him before running them in future. Obtain fresh explicit confirmation before starting UI tests, including FocusUI snapshots, native FocusHost UI tests, live UI test drives, full gates containing them, or CI triggers/retries that run them. General authorisation to complete work does not waive this requirement. Non-UI work may continue.
+
 This project uses **bd** (beads) for issue tracking. Run `bd prime` for full workflow context.
 
 > **Architecture in one line:** Issues live in a local Dolt database
@@ -130,6 +134,31 @@ bd prime                # Refresh Beads context
 
 Driver notes from the work itself, newest first. `CLAUDE.md` points here; keep the two files
 mirrored for anything substantive.
+
+### 2026-09-09 — merging the companion identity into the settings branch (focus-oqsx)
+
+- **A size-derived test fixture rots silently when the surface it measures changes shape.**
+  `NudgeHostDisplayChangeTests.displayTooSmall` built "a display too small" by taking one panel
+  margin off the panel's measured height. That was a stranded display when an overflowing
+  surface scrolled whole; under focus-din's three-way overflow the middle answer keeps the
+  actions in the viewport, so the identity round's taller context moved the boundary and the
+  suite began asserting a withdrawal that correctly no longer happens. Derive such a fixture
+  from the production arithmetic — `NudgePanelController.overflowIfPlaced(on:)` — rather than
+  from a number that was once one margin.
+- **When a merge brings two spellings of one product decision, put it in the file the digest
+  covers.** The snooze spans arrived spelled in the panel and spelled in the policy; the policy
+  wins, because that file is where a reader looks for a threshold and where `PolicyTuning`
+  offers it as a dial.
+- **The snapshot lane needs gigabytes of scratch and fails quietly without them.** Every render
+  is written to `$TMPDIR/focus-snapshots/<checkout path>` as well as compared, so one pass leaves
+  around a gigabyte per checkout. On a full disk the writes fail with `NSCocoaErrorDomain
+  Code=640` and the run reports them as test issues — 99 of them in one pass here — which reads
+  like a hundred broken pictures rather than a full volume. Run `~/bin/disk-cleanup.sh` before a
+  recording pass, and check `df -h /` when a lane fails in a way that makes no sense.
+- **A red suite after a merge is not automatically a regression.** Prove which side moved
+  before changing either: this one passed at the pre-merge commit, reproduced alone, and the
+  other branch had touched neither file — the shape of the surface had changed, not its
+  behaviour.
 
 ### 2026-09-09 — settings, dials and the conditional grant doctrine (focus-exdi)
 

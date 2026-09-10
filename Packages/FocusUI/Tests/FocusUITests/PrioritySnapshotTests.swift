@@ -291,8 +291,8 @@ enum PriorityComponent: String, CaseIterable, Sendable {
     /// well is a solid block of ink to that measure, so the text it carries adds nothing, and
     /// the plain cockpit measured *more* ink than the pseudo-localised one while visibly drawing
     /// less text — the count was reading well geometry, not words. Every part the cockpit is
-    /// composed of is measured on its own in the same test, so nothing goes unproven; and the
-    /// composite's pseudo-localised picture is still held to its own baseline below.
+    /// composed of is measured on its own in the same test. The composite keeps the width and
+    /// height growth assertions, and its pseudo-localised picture is held to its own baseline.
     var measuresPseudoLocalisedInk: Bool {
         drawsLocalisedProse && !Self.cockpitComposites.contains(self)
     }
@@ -309,17 +309,8 @@ enum PriorityComponent: String, CaseIterable, Sendable {
     /// the primary label colour. A component with a border or a supporting line therefore has
     /// to render differently, and every one of them does — asserted below.
     ///
-    /// A committed priority is the one surface with neither. It is a single run of
-    /// `Palette.primaryText` at the hero role: no outline to thicken and no secondary colour
-    /// to promote, because it is already drawn in the strongest colour the palette has.
-    /// Measured: `priorityHero.light` and `priorityHero.increasedContrast` are pixel-identical.
-    ///
-    /// The alternative would be to invent a difference — a heavier weight, a rule underneath —
-    /// so that an assertion could find one. That would be a style change wearing an
-    /// accessibility argument, and it would make the *empty* hero's real promotion (the prompt
-    /// is supporting-coloured, so it does move, and `priorityHeroEmpty` asserts it) harder to
-    /// see rather than easier. So the exemption is named here, for one case, with its reason.
-    var respondsToIncreasedContrast: Bool { self != .priorityHero }
+    /// The companion palette also promotes the ground, so even the committed hero
+    /// now responds to Increase Contrast. No component needs an exemption.
 
     @MainActor
     var view: AnyView {
@@ -461,31 +452,13 @@ struct PrioritySnapshotTests {
 
     @Test(
         "increased contrast changes the picture",
-        arguments: PriorityComponent.allCases.filter(\.respondsToIncreasedContrast)
+        arguments: PriorityComponent.allCases
     )
     func increasedContrastDiffers(component: PriorityComponent) throws {
         let plain = try render(component, variant: "light")
         let contrasted = try render(component, variant: "increasedContrast")
         let differs = PNGCompare.areDistinct(plain.pixels, contrasted.pixels)
         #expect(differs, "\(component.rawValue) ignores Increase Contrast")
-    }
-
-    /// The one exemption above, pinned so it cannot quietly widen.
-    ///
-    /// If a later change gives the committed hero a border, a supporting line or any other
-    /// contrast-sensitive ornament, this test fails and the exemption has to be deleted —
-    /// which is the point. An exemption nobody re-reads is an exemption that spreads.
-    @Test("the committed priority hero is the only Increase Contrast exemption")
-    func theHeroIsTheOnlyIncreasedContrastExemption() throws {
-        let exempt = PriorityComponent.allCases.filter { !$0.respondsToIncreasedContrast }
-        #expect(exempt == [.priorityHero])
-
-        let plain = try render(.priorityHero, variant: "light")
-        let contrasted = try render(.priorityHero, variant: "increasedContrast")
-        #expect(
-            !PNGCompare.areDistinct(plain.pixels, contrasted.pixels),
-            "the priority hero now responds to Increase Contrast — remove its exemption"
-        )
     }
 
     /// Every context-item kind has to be told apart without colour.

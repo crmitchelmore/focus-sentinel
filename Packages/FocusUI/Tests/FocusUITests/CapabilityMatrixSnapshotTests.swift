@@ -347,7 +347,15 @@ struct CapabilityMatrixSnapshotTests {
         // Words an ask is made of. A surface that says "allow", "grant", "enable" or "open
         // System Settings" is asking, whatever the button is called.
         let asking = ["allow", "grant", "enable", "turn on", "system settings", "permission", "request"]
+        // These exact descriptions report a state or explicitly say this is read-only.
+        // Their permission/request nouns are not invitations. All other wording still
+        // passes the conservative ask-word guard, so a new request cannot slip through.
+        let readOnlyDescriptions: Set<String> = [
+            "Permission denied", "Not requested",
+            "This page shows what Focus can read. It does not request permissions."
+        ]
         for text in strings {
+            if readOnlyDescriptions.contains(text) { continue }
             let lowered = text.lowercased()
             for word in asking {
                 #expect(!lowered.contains(word), "\(text) reads as a call to action (\(word))")

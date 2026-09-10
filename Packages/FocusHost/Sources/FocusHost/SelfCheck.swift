@@ -123,16 +123,28 @@ enum SelfCheck {
     /// the alternative was starting a session in the real store, which would write a fact about
     /// their day that never happened.
     static let storeArgument = "--focus-store"
+    /// Attended evidence readers explicitly inspect the same store as the app being driven.
+    /// Automatic checks never pass this flag.
+    static let liveStoreArgument = "--focus-self-check-live-store"
 
     /// Which store `AppComposition.shared` opens.
     ///
     /// Read from the command line at static-initialisation time, which is before any scene exists
-    /// — the composition root is first touched by `FocusSentinelApp.init()`. The ordinary launch
-    /// passes nothing and gets `.applicationSupport`, which is the only behaviour the shipping app
-    /// has ever had.
+    /// — the composition root is first touched by `FocusSentinelApp.init()`. Ordinary launches
+    /// use Application Support. A self-check gets an in-memory store unless it explicitly names
+    /// a fixture or opts into the attended live-store reader. This also isolates the root built
+    /// before a headless seed/restore mode runs.
+    /// In-memory checks do not enable the interactive probes gated on a temporary fixture.
     public static var requestedStoreKind: FocusStore.Kind {
-        guard let path = value(after: storeArgument) else { return .applicationSupport }
-        return .temporary(URL(fileURLWithPath: path))
+        storeKind(arguments: CommandLine.arguments)
+    }
+
+    static func storeKind(arguments: [String]) -> FocusStore.Kind {
+        if let path = value(after: storeArgument, in: arguments) {
+            return .temporary(URL(fileURLWithPath: path))
+        }
+        if arguments.contains(liveStoreArgument) { return .applicationSupport }
+        return value(after: argument, in: arguments) == nil ? .applicationSupport : .inMemory
     }
 
     /// **The cockpit-rendering block alone, against a seeded store** (focus-h7h).
@@ -369,8 +381,7 @@ enum SelfCheck {
 
     /// The value that follows a flag on the command line, or `nil` when the flag is absent or
     /// carries nothing after it.
-    static func value(after flag: String) -> String? {
-        let arguments = CommandLine.arguments
+    static func value(after flag: String, in arguments: [String] = CommandLine.arguments) -> String? {
         guard let index = arguments.firstIndex(of: flag) else { return nil }
         let next = arguments.index(after: index)
         guard next < arguments.endIndex else { return nil }
@@ -1452,6 +1463,7 @@ enum SelfCheck {
         // would be a reading of a shut popover.
         let menuBar = composition.menuBar
         let chargedBefore = (try? host.deliveredRowsToday()) ?? -1
+        report["perceptionReceiptsBeforeTheClick"] = host.chargesPaidFor.count
         for _ in 0..<6 where !menuBar.isPopoverShown {
             menuBar.update(composition.menuBarPresentation())
             menuBar.togglePopover()
@@ -1488,6 +1500,7 @@ enum SelfCheck {
         report["deferralsForAPinnedQuestion"] = host.deferralsByReason[.questionPinned] ?? 0
         report["deliveredRowsBeforeTheClick"] = chargedBefore
         report["deliveredRowsAfterTheClick"] = (try? host.deliveredRowsToday()) ?? -1
+        report["perceptionReceiptsAfterTheClick"] = host.chargesPaidFor.count
         report["accusationsToday"] = host.todaysUsage().accusationsToday
         report["interruptionsToday"] = host.todaysUsage().interruptionsToday
 
@@ -2164,14 +2177,10 @@ enum SelfCheck {
         // disagreeing is the whole of focus-nrl: a glyph rung asking for `noticing` under a
         // pending badge nudge while the item goes on drawing `waiting`.
         report["markOnTheMenuBarItem"] = composition.menuBar.markOnTheItem.rawValue
-        // **The charging invariant, as a join rather than as a counter** (focus-1b5, focus-nrl).
-        //
-        // `chargesPaidFor` is the list of `PerceptibleChange` receipts the perception path has
-        // issued; `deliveredRowsToday` is summed from persisted `InterventionRecord` rows the
-        // completely separate way the day's caps are. A delivered row with no receipt behind it
-        // is a charge that did not go through the door, which is what three rounds of this defect
-        // were. The two published side by side rather than as a single `Bool`, because a `Bool`
-        // computed here would be this file marking its own homework.
+        // These readings have different horizons: receipts belong to this process, while daily
+        // persisted rows survive a relaunch and can be retracted. Their totals cannot be joined.
+        // pinnedQuestionReport measures both sides around one controlled, real popover delivery
+        // on an owned store, where the reader asserts the non-zero receipt/row join.
         //
         // The channels are published with them so the evidence says *what* was perceived: a
         // charge on `menuBarItem` is an assignment to an `NSStatusBarButton`, and one on
@@ -4163,12 +4172,15 @@ enum SelfCheck {
             stamp: engine.stamp
         )
 
-        func band(of snapshot: RuleSnapshot, at now: Duration) -> [String: Any] {
+        func band(
+            of snapshot: RuleSnapshot, at now: Duration, phase: SessionPhase = .focus
+        ) -> [String: Any] {
             let judgement = engine.judge(
                 input: input,
                 snapshot: snapshot,
                 now: now,
-                dwell: .zero
+                dwell: .zero,
+                phase: phase
             )
             let verdict = judgement.verdictSnapshot(stampKey: engine.stamp.cacheKey)
             return [
@@ -4185,6 +4197,10 @@ enum SelfCheck {
             "toldNothing": band(of: .empty(stamp: engine.stamp), at: .zero),
             // Told one rule about this very subject: a decision, and a decision is banded.
             "toldOneRule": band(of: told, at: .seconds(1)),
+            "pausedUndecided": band(of: .empty(stamp: engine.stamp), at: .seconds(2), phase: .paused),
+            "pausedDecided": band(of: told, at: .seconds(3), phase: .paused),
+            "breakUndecided": band(of: .empty(stamp: engine.stamp), at: .seconds(4), phase: .onBreak),
+            "breakDecided": band(of: told, at: .seconds(5), phase: .onBreak),
             // The vocabulary the band is drawn from, pinned in both directions like every other
             // enum this report publishes.
             "bandsDeclared": EvidenceBand.allCases.map(\.rawValue)
@@ -5916,7 +5932,7 @@ enum SelfCheck {
             try data.write(to: URL(fileURLWithPath: path), options: .atomic)
             print("SELF-CHECK WROTE \(path)")
             fflush(stdout)
-            NSApp.terminate(nil)
+            terminateAfterReport()
         } catch {
             FileHandle.standardError.write(Data("SELF-CHECK FAILED: \(error)\n".utf8))
             exit(70)
@@ -5945,12 +5961,30 @@ enum SelfCheck {
             try data.write(to: URL(fileURLWithPath: path), options: .atomic)
             print("SELF-CHECK WROTE \(path)")
             fflush(stdout)
-            NSApp.terminate(nil)
+            terminateAfterReport()
         } catch {
             FileHandle.standardError.write(
                 Data("SELF-CHECK FAILED: \(error)\n".utf8)
             )
             exit(70)
+        }
+    }
+
+    /// Finish launch and withdraw probe-owned sheet bindings before asking AppKit to quit.
+    /// Reduced modes write their report inside applicationDidFinishLaunching; terminating
+    /// there leaves the newly created first-run sheet able to cancel the request.
+    @MainActor
+    private static func terminateAfterReport() {
+        DispatchQueue.main.async {
+            if AppComposition.isRunning {
+                AppComposition.shared.dismissFirstRunScreen()
+                AppComposition.shared.priorityHost.cancelHandoff()
+            }
+            dismissEverySheet()
+            DispatchQueue.main.asyncAfter(deadline: .now() + renderSettleSeconds) {
+                dismissEverySheet()
+                NSApp.terminate(nil)
+            }
         }
     }
 }

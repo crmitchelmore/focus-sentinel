@@ -699,7 +699,7 @@ capture_menu_bar() {
 # day's interruption counts. Those are exactly the facts `require_state` needs.
 read_state() {
     local destination="$1"
-    "$BINARY" --focus-self-check "$destination" --focus-self-check-nudge \
+    "$BINARY" --focus-self-check "$destination" --focus-self-check-live-store --focus-self-check-nudge \
         > "$LOG_DIR/focus-live-nudge-state.log" 2>&1 || return 1
     [[ -s "$destination" ]] || return 1
     return 0

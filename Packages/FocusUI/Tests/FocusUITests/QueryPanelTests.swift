@@ -99,9 +99,9 @@ struct QueryPanelTests {
         #expect(NudgeCopyKey.queryPanelScopeApp.isQueryLine)
 
         // And the converse, so this test cannot pass by the panel drawing nothing: the keys it
-        // draws are exactly the five `query.*` lines the deck declares.
+        // draws are exactly the six `query.*` lines the deck declares.
         let drawn: Set<NudgeCopyKey> = Set(QueryAnswer.allCases.map(\.copyKey))
-            .union([.queryPanelTitle, .queryPanelScopeApp])
+            .union([.queryPanelHeading, .queryPanelTitle, .queryPanelScopeApp])
         #expect(drawn == Set(NudgeCopyKey.allCases.filter(\.isQueryLine)))
     }
 

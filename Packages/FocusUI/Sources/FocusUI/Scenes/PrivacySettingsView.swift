@@ -131,32 +131,32 @@ public struct PrivacySettingsView: View {
     private let retention: RetentionWindow
     private let sensing: SensingSettingsValue
     private let grants: GrantOptIns
-    /// **Which half of this pane to draw**, or `nil` for the whole of it, which is what the
-    /// application always asks for (focus-u3w).
-    ///
-    /// It exists for the snapshot lane and it is not a product state. The pane is photographed
-    /// unclamped — a bounded one is a `ScrollView`, which `ImageRenderer` cannot rasterise at
-    /// all — and unclamped it now runs to roughly sixteen thousand rows at the largest text size
-    /// under pseudo-localisation, which is past where CoreGraphics stops producing a picture:
-    /// measured, an encode succeeded at 984×15 950 and the next render, a hundred rows taller,
-    /// came back with neither bytes nor ink. Two halves are two pictures of the same pane, and
-    /// each of them is a picture.
+
+    /// Snapshot section, or nil for the complete shipping pane. Unbounded expanded-text
+    /// renders can exceed CoreGraphics' roughly 16,000-row image limit. Ownership,
+    /// observation and reasoning are therefore photographed separately at the same width.
     private let half: Half?
 
-    /// The pane's three parts, in the order a person reads them: **what is mine and what
-    /// happens to it**, **what the app can see**, then **what it made of it**.
+    /// Snapshot sections in reading order: ownership, observation, capability, then reasoning.
+    /// The shipping pane passes nil and draws every section.
     ///
-    /// Three since focus-exdi.4, and the reason is a measurement rather than a taste. These
-    /// exist so the snapshot lane can photograph the pane at all: `ImageRenderer` degrades on a
-    /// very tall render and hands back a picture with no ink in it. The grants section pushed
-    /// the insight part to 6 603 rows pseudo-localised — where the text roughly doubles — and
-    /// that render came back blank. Splitting the judgement out puts every piece back inside the
-    /// renderer's range. The live window is unaffected: it draws `nil`, which is all three.
+    /// **Four parts rather than three since focus-oqsx.** Past roughly sixteen thousand rows
+    /// `ImageRenderer` hands back an empty pixel buffer, so a part that grows past that stops
+    /// being photographable at all — and the identity round's larger controls carried the
+    /// observation part to 18,742 rows once the pseudo-locale doubled every string. The cut is
+    /// where the pane already draws a rule: what the app can see, then what it is allowed to.
     public enum Half: String, Sendable, CaseIterable, Hashable {
         case ownership
         case insight
-        case judgement
+        /// The capability table and the two grant switches, photographed on their own.
+        case capability
+        /// A separate photograph keeps expanded large text below CoreGraphics' image limit.
+        case reasoning
     }
+
+    /// Whether a part belongs in this rendering: every part when the shipping pane draws itself,
+    /// and one part when a lane is photographing one.
+    private func draws(_ part: Half) -> Bool { half == nil || half == part }
     /// The displays this pane bounds itself against; `nil` for the live ones. Injectable for the
     /// reason `NudgePanelController.displays` is: the display this defect is worst on is a 13-inch
     /// laptop, and no lane can hand the pane one if it reads `NSScreen` for itself.
@@ -411,14 +411,15 @@ public struct PrivacySettingsView: View {
 
     var content: some View {
         VStack(alignment: .leading, spacing: spacing) {
-            if half == nil || half == .ownership { ownershipContent }
+            CompanionHeader { ShellText(.settingsPrivacyTitle, role: .title2) }
+            if half == nil || half == .ownership { ownershipContent.companionSurface() }
             if half == nil { Divider() }
-            if half == nil || half == .insight { insightContent }
-            if half == nil { Divider() }
-            if half == nil || half == .judgement { judgementContent }
+            if half != .ownership { insightContent.companionSurface() }
             Spacer(minLength: 0)
         }
         .padding(spacing * 2)
+        .background(DesignTokens.Palette.role(.inlay, for: traits))
+        .buttonStyle(CompanionButtonStyle())
         .frame(maxWidth: .infinity, alignment: .leading)
         // **What this pane drew, reported by this pane** (focus-7ow).
         //
@@ -539,21 +540,9 @@ public struct PrivacySettingsView: View {
                     .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
                     .lineLimit(nil)
                     .fixedSize(horizontal: false, vertical: true)
-                // Four buttons on one line where they fit, two by two where they do not
-                // (focus-exdi) — the same fallback `PortabilityRow` measured it needed.
                 ViewThatFits(in: .horizontal) {
-                    HStack(spacing: spacing / 2) {
-                        retentionButtons(RetentionWindow.ordered)
-                        Spacer(minLength: 0)
-                    }
-                    VStack(alignment: .leading, spacing: spacing / 2) {
-                        HStack(spacing: spacing / 2) {
-                            retentionButtons(Array(RetentionWindow.ordered.prefix(2)))
-                        }
-                        HStack(spacing: spacing / 2) {
-                            retentionButtons(Array(RetentionWindow.ordered.dropFirst(2)))
-                        }
-                    }
+                    HStack(spacing: spacing / 2) { retentionChoices(wraps: false) }
+                    VStack(alignment: .leading, spacing: spacing / 2) { retentionChoices(wraps: true) }
                 }
                 .accessibilityElement(children: .contain)
                 .accessibilityLabel(ShellStrings.resource(.settingsPrivacyRetentionHeading))
@@ -615,50 +604,57 @@ public struct PrivacySettingsView: View {
     @ViewBuilder
     private var insightContent: some View {
         VStack(alignment: .leading, spacing: spacing) {
-            // What is being watched right now, with its working shown — including the lines
-            // whose answer is "no". A surface that only reported the interesting half would be
-            // showing half of it.
-            VStack(alignment: .leading, spacing: spacing / 2) {
-                ShellText(.sensingHeading, role: .headline)
-                SensingStatusView(summary: summary, showsDetail: true)
-                observerSwitches
+            if draws(.insight) {
+                // What is being watched right now, with its working shown — including the lines
+                // whose answer is "no". A surface that only reported the interesting half would be
+                // showing half of it.
+                VStack(alignment: .leading, spacing: spacing / 2) {
+                    ShellText(.sensingHeading, role: .headline)
+                    SensingStatusView(summary: summary, showsDetail: true)
+                    observerSwitches
 
-                ShellText(.sensingLimitationScreenSharing, role: .footnote)
-                    .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
-                    .lineLimit(nil)
-                    .fixedSize(horizontal: false, vertical: true)
+                    ShellText(.sensingLimitationScreenSharing, role: .footnote)
+                        .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+                        .lineLimit(nil)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
 
-            Divider()
+            if draws(.capability) {
+                Divider()
 
-            CapabilityMatrixView(capabilities: capabilities)
+                CapabilityMatrixView(capabilities: capabilities)
+                Divider()
+                grantSwitches
+            }
 
-            Divider()
+            if draws(.reasoning) {
+                Divider()
 
-            grantSwitches
+                // How the app decides, drawn from the one ordered list of rungs in the repository
+                // (R-54). It sits between *what the app can see* and *what it made of it*, which is
+                // the order a person reads them in. It offers nothing to press either.
+                CascadePrecedenceView()
 
+                Divider()
+
+                // What the app concluded about the person, and why (R-71). It sits at the foot of
+                // this pane rather than behind a developer flag because it is a *trust* surface:
+                // the capability table above says what the app can see, and this says what it made
+                // of it. Neither offers anything to press.
+                VerdictInspectorView(verdict: verdict)
+            }
         }
     }
 
-    /// **What the app made of what it can see** (focus-exdi.4): the cascade's order of
-    /// precedence and the verdict it reached. Its own part, so that no single render grows past
-    /// what `ImageRenderer` will draw — see `Half`.
-    @ViewBuilder
-    private var judgementContent: some View {
-        VStack(alignment: .leading, spacing: spacing) {
-
-            // How the app decides, drawn from the one ordered list of rungs in the repository
-            // (R-54). It sits between *what the app can see* and *what it made of it*, which is
-            // the order a person reads them in. It offers nothing to press either.
-            CascadePrecedenceView()
-
-            Divider()
-
-            // What the app concluded about the person, and why (R-71). It sits at the foot of
-            // this pane rather than behind a developer flag because it is a *trust* surface:
-            // the capability table above says what the app can see, and this says what it made
-            // of it. Neither offers anything to press.
-            VerdictInspectorView(verdict: verdict)
+    private func retentionChoices(wraps: Bool) -> some View {
+        ForEach(RetentionWindow.ordered, id: \.self) { window in
+            Button { onAction(.setRetentionWindow(window)) } label: {
+                ShellText(window.titleKey)
+                    .fixedSize(horizontal: !wraps, vertical: true)
+            }
+            .buttonStyle(CompanionButtonStyle(selected: window == retention))
+            .accessibilityAddTraits(window == retention ? [.isSelected] : [])
         }
     }
 

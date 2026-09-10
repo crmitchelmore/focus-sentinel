@@ -32,6 +32,9 @@ public final class FocusAppDelegate: NSObject, NSApplicationDelegate {
         // termination hook is, so a reduced self-check mode never builds a composition root to
         // hand it a closure it will not use.
         if AppComposition.isRunning {
+            AppComposition.shared.prepareForStoreDeletion = {
+                Self.prepareForStoreDeletion(windows: NSApp.windows, commands: .shared)
+            }
             AppComposition.shared.relaunch = {
                 let configuration = NSWorkspace.OpenConfiguration()
                 configuration.createsNewApplicationInstance = true
@@ -127,6 +130,10 @@ public final class FocusAppDelegate: NSObject, NSApplicationDelegate {
         // Waiting for the activation to *land* is the load-bearing half. A fixed delay after
         // requesting it made the report a race against whatever else the machine was doing,
         // and the race was lost often enough to fail the gate on a green tree.
+        // The general shell probe needs the cockpit's responder chain. A fresh isolated
+        // store presents its first-run sheet, which correctly owns the key window instead.
+        // First-run presentation is measured separately by the owned-store cockpit mode.
+        if AppComposition.isRunning { AppComposition.shared.dismissFirstRunScreen() }
         SelfCheck.comeForward { activation in
             // One more turn of the run loop, then read the shell. Reading it inside
             // `applicationDidFinishLaunching` reports empty submenus and no windows.
@@ -139,7 +146,23 @@ public final class FocusAppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    /// A single-window cockpit has nothing to keep running once its window is gone.
+    /// Close scene graphs before destroying the store, while preserving auxiliary windows.
+    @MainActor
+    static func prepareForStoreDeletion(windows: [NSWindow], commands: FocusCommandCenter) {
+        commands.shutDown()
+        // Titled scene windows, including hidden Settings. canBecomeMain is false while
+        // a window is hidden, even though its scene graph still holds the old store.
+        // Panels and borderless auxiliary windows are not ours to dismantle; the root
+        // has already hidden its own capture and nudge panels.
+        for window in windows where window.styleMask.contains(.titled)
+            && !(window is NSPanel) {
+            if let sheet = window.attachedSheet { window.endSheet(sheet) }
+            window.contentView = nil
+            window.close()
+        }
+    }
+
+    /// Closing a scene does not quit the menu-bar application.
     public func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         false
     }
