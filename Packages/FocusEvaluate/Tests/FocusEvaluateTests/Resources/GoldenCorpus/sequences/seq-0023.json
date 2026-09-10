@@ -1,0 +1,90 @@
+{
+  "id": "seq-0023",
+  "note": "ignoredAccusationBackoff, and the whole two-rung ladder on its way there (U-2). The glyph and the panel are delivered in order, each one ignored, and after the second the ladder drops back to the ambient rung and holds there for the rest of the session - F-63's 'back off when ignored', with the quietest channel RETAINED, because going fully silent would lose the one channel the person has not objected to. The third mandate is live, the engine still says unrelated, and the app has nothing NEW to say - but it still marks the person: the hold retains the ambient rung (focus-628, focus-50m), so the glyph is re-delivered for the application they are in now rather than going quiet. This fixture certified the defect for a round: LadderMachine.candidate answered nil from the hold and NudgeDecider.accuse turned that into silent:budgetExhausted, which is the one thing LadderState.heldAtAmbient's own doc says it does not do. The hold also expires at InterventionPolicy.backoffSpan now, so 'for the rest of the session' above means 'for an hour'. Re-based from three rungs to two: the recommitment rung is deferred to epic focus-5ab, and ignoredAccusationBackoff moved 3 -> 2 with it so that the hold is still reachable.",
+  "snapshot": {
+    "priority": {
+      "intent": "Write the Q3 proposal for Acme",
+      "doneWhen": "sent to Dana",
+      "revision": 1
+    },
+    "rules": [
+      {
+        "authority": "global",
+        "subjectKind": "app",
+        "subject": "com.valvesoftware.steam",
+        "verdict": "unrelated"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "advanceSeconds": 0,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "nudge": "silent:verdictDoesNotAuthorise",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 92,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "sustained",
+        "nudge": "accuse:ambient",
+        "accumulatedSeconds": 92
+      },
+      "then": {
+        "accusationOutcome": "ignored"
+      }
+    },
+    {
+      "advanceSeconds": 601,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "nudge": "silent:verdictDoesNotAuthorise",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 92,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "sustained",
+        "nudge": "accuse:panel",
+        "accumulatedSeconds": 92
+      },
+      "then": {
+        "accusationOutcome": "ignored"
+      }
+    },
+    {
+      "advanceSeconds": 601,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "grace",
+        "nudge": "silent:verdictDoesNotAuthorise",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 92,
+      "bundleID": "com.valvesoftware.steam",
+      "expect": {
+        "verdict": "unrelated",
+        "drift": "sustained",
+        "nudge": "accuse:ambient",
+        "accumulatedSeconds": 92
+      }
+    }
+  ],
+  "expectMandates": 3,
+  "expectQueries": 0,
+  "expectAccusations": 3
+}

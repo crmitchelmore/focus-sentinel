@@ -1,0 +1,28 @@
+# The per-bundle test-count floors the `unit-counts` gate stage holds the unit lane to.
+#
+# WHY THIS FILE EXISTS. On 2026-09-02 the `FocusHost` bundle died after its first suite — a
+# CoreAudio listener trapped the process (focus-068) — and reported `Test run with 5 tests …
+# passed`. Every test that ran, passed. `xcodebuild` printed `** TEST FAILED **` with no
+# failing-test summary, and the run's total was 1729 against the 1863 of the last clean gate.
+# Nothing in the gate compared those two numbers or complained. A harness that can silently skip
+# 177 tests while reporting green is the same disease this programme has spent twenty rounds
+# removing from the app: a proof that cannot fail.
+#
+# THE ORDER IS THE SCHEME'S, POSITIONALLY. `xcodebuild` prints one `Test run with N tests in M
+# suites` line per testable, in the order they appear in
+# `Focus.xcworkspace/xcshareddata/xcschemes/FocusUnitTests.xcscheme`. The stage pairs the lines
+# with these names by position, so a testable added to the scheme without a line added here
+# fails the gate — which is the review moment a new test bundle deserves.
+#
+# FLOORS, NOT EQUALITIES. `>=`, always. Adding a test must never redden the gate; losing one
+# must. Raise a floor when a run has legitimately produced more, in the same commit as the
+# tests that produced them, and never lower one without saying in the commit message which
+# tests went and why.
+FocusCoreTests 1055
+FocusRulesTests 28
+FocusClassifyTests 185
+FocusEvaluateTests 116
+FocusModelTests 13
+FocusSensingTests 141
+FocusUITests 468
+FocusHostTests 290

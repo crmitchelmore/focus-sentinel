@@ -1,0 +1,933 @@
+import FocusCore
+import SwiftUI
+
+/// **What the person has set, and what the app has spent** (R-98).
+///
+/// A value, so the pane renders with no store, no clock and no notification centre — which is
+/// what lets the routing matrix be snapshot-tested against `SurfaceRouter`'s own table rather
+/// than against a description of it.
+public struct InterventionSettings: Sendable, Equatable {
+    /// One of the four static decks.
+    public var voice: NudgeVoice
+    /// F-148's flag. Forced on by `accessibilityDisplayShouldReduceMotion`, and the pane says so.
+    public var reducedInterruption: Bool
+    /// Whether Reduce Motion is what turned it on, in which case the switch is shown as forced
+    /// rather than as a preference the person could change here.
+    public var reducedInterruptionIsForced: Bool
+    /// The person's own window, or `nil` for off — which is what ships (R-85).
+    public var quietHours: QuietHoursWindow?
+    /// Today's spend, from `InterventionLog.budget(on:priorityID:)`. Shown as usage over the
+    /// cap — **information, never a score** (D-01).
+    public var usage: InterruptionBudget
+    /// **Why the notch companion is not drawing, or `nil` because it is** (e08a).
+    ///
+    /// The landing's own answer, minus the two rectangles — which the row has no business
+    /// drawing. `nil` is not an absent reading here: it is *the geometry landed*, the one state
+    /// in which there is a strip under the housing to describe.
+    ///
+    /// It is `NotchLanding.Refusal?` rather than `NotchLanding` for a reason the shell's own
+    /// totality lane enforces: the connection walk is `Mirror` to the leaves, and an enum with an
+    /// associated value publishes different paths in different cases — so a pane field whose shape
+    /// changed with its value would make `strandedPaths` a function of the display this Mac
+    /// happens to have. `Refusal` has no payload, so this is one path on every Mac.
+    public var notchRefusal: NotchLanding.Refusal?
+    /// **The applications this person has said are not presentations** (F-121, focus-62o,
+    /// focus-u3w). The list as the store holds it, resolved to names the person recognises.
+    public var presentationExclusions: [PresentationExclusion]
+    /// **What is running right now that could be added**, by the name its own menus use.
+    ///
+    /// A reading of the machine, so it is passed in rather than taken here: a pane that scanned
+    /// `NSWorkspace` for itself would draw a different list in every lane that looks at it, and
+    /// the gate would be pinning the machine rather than the product.
+    public var addableApplications: [PresentationExclusion]
+    /// Every policy dial, with the person's overrides on top (focus-exdi).
+    public var tunings: PolicyTunings
+
+    public init(
+        voice: NudgeVoice = .standard,
+        reducedInterruption: Bool = false,
+        reducedInterruptionIsForced: Bool = false,
+        quietHours: QuietHoursWindow? = InterventionPolicy.quietHoursDefault,
+        usage: InterruptionBudget = .empty,
+        notchRefusal: NotchLanding.Refusal? = .noBuiltInDisplay,
+        presentationExclusions: [PresentationExclusion] = [],
+        addableApplications: [PresentationExclusion] = [],
+        tunings: PolicyTunings = .shipped
+    ) {
+        self.voice = voice
+        self.reducedInterruption = reducedInterruption
+        self.reducedInterruptionIsForced = reducedInterruptionIsForced
+        self.quietHours = quietHours
+        self.usage = usage
+        self.notchRefusal = notchRefusal
+        self.presentationExclusions = presentationExclusions
+        self.addableApplications = addableApplications
+        self.tunings = tunings
+    }
+}
+
+/// What the pane asks the composition root to do.
+///
+/// **There is no `notificationAuthorisationChanged`** (focus-wy0). It was the report that the
+/// pane's own `requestAuthorization` had returned, and both are gone: this app posts no
+/// notifications, so there is no permission for a person to grant it and nothing to re-read when
+/// they do.
+public enum InterventionSettingsAction: Sendable, Equatable {
+    case setVoice(NudgeVoice)
+    case setReducedInterruption(Bool)
+    case setQuietHours(QuietHoursWindow?)
+    /// **Put one application on the presentation-exclusion list** (F-121, focus-62o, focus-u3w).
+    ///
+    /// The bundle identifier and nothing else. The pane draws the name the person recognises and
+    /// sends the identifier, because the list is keyed on the identifier and a localised name is
+    /// a different string on a different Mac.
+    case addPresentationExclusion(String)
+    /// Take one off again. This half shipped and was unreachable: nothing could ever put a row
+    /// on the list, so the Remove button beside a row was a button no row existed to carry.
+    case removePresentationExclusion(String)
+    /// Turn one dial (focus-exdi). The value is clamped by the table before it is stored.
+    case setPolicyTuning(PolicyTuning, Double)
+    /// Every dial back to its shipped value.
+    case resetPolicyTunings
+}
+
+/// **The Intervention settings pane** (R-98, R-92, F-132, F-148).
+///
+/// Four sections, and one of them is the honest answer to a question a person is entitled to ask:
+///
+/// * the **voice**, four static decks and no fifth;
+/// * **reduced interruption**, which is a routing flag inside the existing router rather than a
+///   second surface stack (R-92) — and which Reduce Motion forces on, as the pane says;
+/// * **quiet hours**, off by default and explicitly *not* the system Focus (R-85, P-137);
+/// * **where a nudge appears** — `SurfaceRouter.table(…)` rendered as a plain matrix, so the
+///   copy cannot drift from the behaviour, because it *is* the behaviour;
+/// * the **caps and thresholds**, as read-only mirrors of `InterventionPolicy` with today's
+///   usage beside them.
+///
+/// **There was a sixth, and it asked for a system permission this app cannot use** (focus-wy0).
+/// It drew the notification authorisation, and a "Turn on notifications" button whenever nobody
+/// had been asked — which is every fresh install — under copy promising that *"the last step of a
+/// nudge appears in the app instead"*. That last step was the recommitment rung, deferred to
+/// focus-5ab by U-2; since then no rung has routed to a notification and the three routing tables
+/// the Release binary reports at `authorised`, `denied` and `notRequested` have been identical.
+/// The button therefore raised a real `UNUserNotificationCenter` prompt to buy nothing. Under
+/// this product's privacy tenets that is worse than a dead control, so the section, its copy, its
+/// action and the one `requestAuthorization` call site in the repository were deleted rather than
+/// disabled.
+///
+/// **There was a seventh, and it instructed the person to do something the app offered no way
+/// to do** (focus-1qm). *"Not presentations"* drew a heading and, under it, *"Nothing yet. Add an
+/// app here when Focus mistakes its full-screen window for a presentation."* There was no add
+/// affordance in that section and none anywhere else in the application: `SensitiveAppSeed.add`
+/// had no shipping call site at all, and the presentation-exclusion list is not seeded, so the
+/// list was empty for every person for ever and the section could never draw a row — which made
+/// its Remove button unreachable too. A section whose only user-reachable half is an instruction
+/// nobody can follow is worse than a dead control, so the section, its copy, its action and the
+/// `presentationExclusions` field that fed it were deleted rather than reworded. The capability
+/// itself — the store list, its tombstones and `SensingHost`'s `isUserExcluded` — is untouched
+/// and unreachable, which is a fact recorded in focus-62o rather than left in a comment.
+///
+/// The usage rows are **information, never a score** (D-01): "2 / 4 questions today" is a fact
+/// about what the app did, and there is no streak, no total and no trend anywhere on this pane
+/// for a person to feel they are failing.
+public struct InterventionSettingsView: View {
+    private let settings: InterventionSettings
+    /// What was clicked. **Internal, so the unit lane can invoke it directly.**
+    let onAction: (InterventionSettingsAction) -> Void
+    /// The displays this pane bounds itself against; `nil` for the live ones. See
+    /// `PrivacySettingsView.screens`.
+    private let screens: ShellScreens
+
+    @Environment(\.appearanceTraits) private var traits
+    @Environment(\.shellTextScale) private var textScale
+    /// The person's own clock — 12-hour or 24-hour is theirs to decide, not this pane's
+    /// (focus-43k). Read from the environment so a test can hand the pane a locale by name and
+    /// photograph what a person on that locale sees.
+    @Environment(\.locale) private var locale
+    @ScaledMetric(relativeTo: .body) private var spacing: CGFloat = 12
+
+    public init(
+        settings: InterventionSettings,
+        screens: ShellScreens = nil,
+        onAction: @escaping (InterventionSettingsAction) -> Void = { _ in }
+    ) {
+        self.settings = settings
+        self.screens = screens
+        self.onAction = onAction
+    }
+
+    /// How far one press moves a quiet-hours boundary.
+    ///
+    /// Half an hour, and buttons rather than a `DatePicker`: the AppKit date picker does not
+    /// rasterise under `ImageRenderer`, so a picker here would ship a baseline nobody could
+    /// read — and a snapshot nobody can read is a snapshot that proves nothing.
+    nonisolated public static let quietHoursStep = 30
+    /// Minutes in a day, for the wrap. The window itself wraps midnight by construction
+    /// (`end` may be less than `start`), so this is arithmetic rather than a rule.
+    nonisolated public static let minutesPerDay = 1_440
+
+    /// **The pane, bounded** (focus-nu6). Its column runs to five sections, a routing matrix and
+    /// a table of caps, and it had no height commitment of any kind — the same defect
+    /// `PrivacySettingsView` had, recorded in the same words, for the same reason: the scroll view
+    /// was deleted so the snapshot lane would render something. The scroll is back and the lane
+    /// renders `content` instead.
+    public var body: some View {
+        BoundedSurface(
+            width: ShellSurfaceBounds.settingsWidth,
+            ceiling: ShellSurfaceBounds.settingsCeiling(
+                screens: screens ?? NudgePanelController.currentScreens()
+            )
+        ) {
+            content
+        }
+    }
+
+    private var content: some View {
+        VStack(alignment: .leading, spacing: DesignTokens.spacing(spacing, scale: textScale)) {
+            CompanionHeader { ShellText(.interventionTitle, role: .title2) }
+            // **All five fields of `InterventionSettings`, each reported beside the section that
+            // draws it** (focus-7ow).
+            //
+            // Two of them were reported before, from the Settings *window*, and the other three —
+            // quiet hours, today's spend, and whether Reduce Motion forced the switch — could be
+            // replaced with anything at all while the whole nineteen-stage gate stayed green.
+            // They are what the person is shown when they ask "what will this app do, and when
+            // will it leave me alone".
+            //
+            // There were seven. The notification authorisation went with the section that drew it
+            // (focus-wy0), and the presentation-exclusion list with the section that instructed
+            // the person to add an app the application offered no way to add (focus-1qm) — and
+            // came back at focus-u3w with the add affordance that was the reason it went.
+            voiceSection
+                .companionSurface()
+                .shellRendered(.interventionVoice, settings.voice.rawValue)
+            Divider()
+            reducedInterruptionSection
+                .companionSurface()
+                .shellRendered(
+                    .reducedInterruption, settings.reducedInterruption ? "on" : "off"
+                )
+                .shellRendered(
+                    .reducedInterruptionForced,
+                    settings.reducedInterruptionIsForced ? "forced" : "chosen"
+                )
+            Divider()
+            quietHoursSection
+                .companionSurface()
+                .shellRendered(.quietHours, ShellValueDigest.describe(settings.quietHours))
+            Divider()
+            notchSection
+                .companionSurface()
+                .shellRendered(.notchCompanion, Self.notchReceipt(settings.notchRefusal))
+            Divider()
+            // **The section that was deleted, with the half that was missing** (focus-62o,
+            // focus-u3w). It drew a heading and an instruction to add an application the
+            // application offered no way to add, so it went at a081d64 rather than being
+            // reworded. This is the list, a Remove on each row, and an add row naming what is
+            // running now.
+            PresentationExclusionSection(
+                excluded: settings.presentationExclusions,
+                addable: settings.addableApplications,
+                onAction: onAction
+            )
+            .shellRendered(
+                .presentationExclusions,
+                PresentationExclusionSection.rendered(
+                    excluded: settings.presentationExclusions,
+                    addable: settings.addableApplications
+                )
+            )
+            Divider()
+            routingMatrix
+            Divider()
+            capsSection
+                .shellRendered(.interruptionUsage, ShellValueDigest.describe(settings.usage))
+            Divider()
+            thresholdsSection
+        }
+        .padding(DesignTokens.spacing(spacing, scale: textScale))
+        .background(DesignTokens.Palette.role(.inlay, for: traits))
+        .buttonStyle(CompanionButtonStyle())
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    // MARK: - Voice
+
+    private var voiceSection: some View {
+        VStack(alignment: .leading, spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
+            ShellText(.interventionVoiceLabel, role: .headline)
+            ForEach(NudgeVoice.allCases, id: \.self) { voice in
+                Button {
+                    onAction(.setVoice(voice))
+                } label: {
+                    HStack(spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
+                        Image(
+                            systemName: voice == settings.voice
+                                ? "largecircle.fill.circle"
+                                : "circle"
+                        )
+                        .symbolRenderingMode(.hierarchical)
+                        .accessibilityHidden(true)
+                        ShellText(Self.voiceKey(voice), role: .callout)
+                        Spacer(minLength: 0)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .buttonStyle(CompanionButtonStyle(selected: voice == settings.voice))
+                .accessibilityLabel(Text(ShellStrings.resource(Self.voiceKey(voice))))
+                .accessibilityAddTraits(voice == settings.voice ? [.isSelected] : [])
+            }
+        }
+    }
+
+    /// Each deck's name. Declared as a total switch, so a fifth voice is a compile error here
+    /// rather than a blank row in a settings pane.
+    nonisolated public static func voiceKey(_ voice: NudgeVoice) -> ShellStringKey {
+        switch voice {
+        case .neutral: .interventionVoiceNeutral
+        case .warm: .interventionVoiceWarm
+        case .direct: .interventionVoiceDirect
+        case .silentVisual: .interventionVoiceSilentVisual
+        }
+    }
+
+    // MARK: - Reduced interruption (R-92, F-148)
+
+    private var reducedInterruptionSection: some View {
+        VStack(alignment: .leading, spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
+            Button {
+                onAction(.setReducedInterruption(!settings.reducedInterruption))
+            } label: {
+                HStack(spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
+                    Image(
+                        systemName: settings.reducedInterruption
+                            ? "checkmark.circle.fill"
+                            : "circle"
+                    )
+                    .symbolRenderingMode(.hierarchical)
+                    .accessibilityHidden(true)
+                    ShellText(.interventionReducedLabel, role: .headline)
+                    Spacer(minLength: 0)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .buttonStyle(CompanionButtonStyle(selected: settings.reducedInterruption))
+            .disabled(settings.reducedInterruptionIsForced)
+            .accessibilityLabel(Text(ShellStrings.resource(.interventionReducedLabel)))
+            .accessibilityAddTraits(settings.reducedInterruption ? [.isSelected] : [])
+
+            ShellText(
+                settings.reducedInterruptionIsForced
+                    ? .interventionReducedForced
+                    : .interventionReducedExplanation,
+                role: .footnote
+            )
+            .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+            .lineLimit(nil)
+            .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    // MARK: - Quiet hours (R-85)
+
+    private var quietHoursSection: some View {
+        VStack(alignment: .leading, spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
+            HStack(spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
+                ShellText(.interventionQuietHoursLabel, role: .headline)
+                Spacer(minLength: 0)
+                Button {
+                    onAction(.setQuietHours(settings.quietHours == nil ? Self.startingWindow : nil))
+                } label: {
+                    ShellText(
+                        settings.quietHours == nil
+                            ? .interventionQuietHoursTurnOn
+                            : .interventionQuietHoursTurnOff,
+                        role: .callout
+                    )
+                    .fixedSize(horizontal: true, vertical: false)
+                }
+                .buttonStyle(CompanionButtonStyle())
+            }
+
+            if let window = settings.quietHours {
+                // The two boundaries through the locale's own clock, joined by the catalog's
+                // separator — not a `%02d:%02d` with an authored dash, which drew
+                // `22:00 – 07:00` on a Mac set to a 12-hour clock (focus-43k).
+                let range = ShellText(
+                    .interventionQuietHoursRange,
+                    arguments: [
+                        Self.clock(window.startMinuteOfDay, locale: locale),
+                        Self.clock(window.endMinuteOfDay, locale: locale)
+                    ]
+                )
+                .monospacedDigit()
+                // The range and its four buttons on one line where they fit, and the buttons
+                // under the range, two by two, where they do not (focus-exdi): four bordered
+                // buttons that may not compress were the widest thing on the pane, and at the
+                // window's committed width they ran off its right edge.
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
+                        range
+                        Spacer(minLength: 0)
+                        boundaryButtons(window)
+                    }
+                    VStack(alignment: .leading, spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
+                        range
+                        boundaryButtons(window, stacked: true)
+                    }
+                }
+            } else {
+                ShellText(.interventionQuietHoursOff, role: .callout)
+                    .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+            }
+
+            // **The sentence that keeps a capability claim honest.** The app makes no claim to
+            // read the system Focus: P-137 measured the private route unreadable as well as
+            // forbidden, so what it honours is this window and nothing else.
+            //
+            // It used to add *"notifications still follow your Mac's Focus, because the system
+            // applies it for us"* — true of an app that posts notifications, and this one does
+            // not (focus-wy0). A true sentence about a capability the app has given up is still
+            // a claim a person will read as a capability.
+            ShellText(.interventionQuietHoursExplanation, role: .footnote)
+                .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+                .lineLimit(nil)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    @ViewBuilder
+    private func boundaryButtons(_ window: QuietHoursWindow, stacked: Bool = false) -> some View {
+        let gap = DesignTokens.spacing(spacing / 2, scale: textScale)
+        let start = HStack(spacing: gap) {
+            adjust(.interventionQuietHoursStartEarlier) {
+                onAction(.setQuietHours(Self.moved(window, startBy: -Self.quietHoursStep)))
+            }
+            adjust(.interventionQuietHoursStartLater) {
+                onAction(.setQuietHours(Self.moved(window, startBy: Self.quietHoursStep)))
+            }
+        }
+        let end = HStack(spacing: gap) {
+            adjust(.interventionQuietHoursEndEarlier) {
+                onAction(.setQuietHours(Self.moved(window, endBy: -Self.quietHoursStep)))
+            }
+            adjust(.interventionQuietHoursEndLater) {
+                onAction(.setQuietHours(Self.moved(window, endBy: Self.quietHoursStep)))
+            }
+        }
+        if stacked {
+            VStack(alignment: .leading, spacing: gap) {
+                start
+                end
+            }
+        } else {
+            HStack(spacing: gap) {
+                start
+                end
+            }
+        }
+    }
+
+    private func adjust(
+        _ key: ShellStringKey,
+        perform: @escaping () -> Void
+    ) -> some View {
+        Button(action: perform) {
+            ShellText(key, role: .footnote)
+                .fixedSize(horizontal: true, vertical: false)
+        }
+        .buttonStyle(CompanionButtonStyle())
+    }
+
+    /// The window a person gets when they first switch quiet hours on.
+    ///
+    /// **Not a shipped default.** `InterventionPolicy.quietHoursDefault` is `nil` and stays
+    /// `nil`; this is the starting point of an edit somebody deliberately began, which is a
+    /// different thing from the app having an opinion about their evenings.
+    nonisolated public static let startingWindow = QuietHoursWindow(
+        startMinuteOfDay: 22 * 60,
+        endMinuteOfDay: 8 * 60
+    )
+
+    nonisolated public static func moved(
+        _ window: QuietHoursWindow,
+        startBy delta: Int = 0,
+        endBy endDelta: Int = 0
+    ) -> QuietHoursWindow {
+        QuietHoursWindow(
+            startMinuteOfDay: wrapped(window.startMinuteOfDay + delta),
+            endMinuteOfDay: wrapped(window.endMinuteOfDay + endDelta)
+        )
+    }
+
+    nonisolated private static func wrapped(_ minute: Int) -> Int {
+        ((minute % minutesPerDay) + minutesPerDay) % minutesPerDay
+    }
+
+    /// The window as the pane draws it for a locale: `22:00 – 08:00` under `en_GB`,
+    /// `10:00 PM – 8:00 AM` under `en_US` (focus-43k).
+    ///
+    /// The same two calls the row makes, joined by the same catalog entry, so a test of this
+    /// function is a test of the row. It was `String(format: "%02d:%02d")` twice with an
+    /// authored en dash between — a 24-hour clock in every locale, and punctuation no catalog
+    /// could reach — while every other time value in the app went through a locale-aware
+    /// formatter. One row that missed the treatment the app gives uniformly.
+    nonisolated public static func render(_ window: QuietHoursWindow, locale: Locale) -> String {
+        String(
+            format: String(localized: ShellStrings.resource(.interventionQuietHoursRange)),
+            arguments: [
+                clock(window.startMinuteOfDay, locale: locale),
+                clock(window.endMinuteOfDay, locale: locale)
+            ]
+        )
+    }
+
+    /// One boundary, as a time of day in the locale's own clock.
+    ///
+    /// `DateFormatter` at `.short` over a real instant rather than a hand-built string: the
+    /// hour cycle, the zero padding, the day-period words and their placement are the locale's
+    /// — `08:00` under `en_GB`, `8:00 AM` under `en_US`, `8:00 am` under `en_AU` (measured). It
+    /// is `DateFormatter` and not `Date.FormatStyle(time: .shortened)` because the latter drops a
+    /// 24-hour locale's leading zero (`8:00` for `en_GB`, measured), which is not what that
+    /// locale's own clock shows. The calendar and time zone are pinned so the same minute of the
+    /// day is the same instant on every Mac; a minute of the day is not a date, so the day it is
+    /// placed on is arbitrary and does not show.
+    nonisolated public static func clock(_ minuteOfDay: Int, locale: Locale) -> String {
+        var calendar = Calendar(identifier: .gregorian)
+        let zone = TimeZone(secondsFromGMT: 0) ?? .current
+        calendar.timeZone = zone
+        calendar.locale = locale
+        let instant = calendar.date(
+            from: DateComponents(
+                year: 2001, month: 1, day: 1,
+                hour: minuteOfDay / 60, minute: minuteOfDay % 60
+            )
+        ) ?? Date(timeIntervalSinceReferenceDate: Double(minuteOfDay) * 60)
+        let formatter = DateFormatter()
+        formatter.locale = locale
+        formatter.calendar = calendar
+        formatter.timeZone = zone
+        formatter.dateStyle = .none
+        formatter.timeStyle = .short
+        return formatter.string(from: instant)
+    }
+
+    // MARK: - The notch companion, as a reading of the display (e08a)
+
+    /// **A reading, never a control that does nothing** (e08a, review §6).
+    ///
+    /// The sentence is chosen by `NotchLanding`, so what a person is told about the notch is what
+    /// the geometry said — not what a preference is set to. That distinction is the whole of why
+    /// this row is worth shipping on a Mac with no built-in display: the honest answer here is
+    /// *"not available"*, and a row rendered from a switch would have said the surface was real.
+    ///
+    /// **There is no toggle in e08a, and its absence is a decision rather than an omission.** A
+    /// switch here would have to be remembered across launches to be worth anything, and there is
+    /// no column for it: focus-40i is the bead where a preference held only in memory silently
+    /// restored the panel for somebody who had asked for quiet, and focus-wy0 and focus-1qm are
+    /// the two rounds that deleted controls buying nothing. The stored column is a schema stage,
+    /// the hardware to operate it on does not exist here, and the README's e08 section names both
+    /// as e08b receipts. Until then this row says what is true and offers nothing.
+    private var notchSection: some View {
+        VStack(alignment: .leading, spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
+            ShellText(.interventionNotchHeading, role: .headline)
+            ShellText(Self.notchKey(settings.notchRefusal), role: .callout)
+                .lineLimit(nil)
+                .fixedSize(horizontal: false, vertical: true)
+            // **The same second sentence in every case.** Whatever the geometry answered, the
+            // ambient state is on the menu-bar glyph — so a person reading "not available" learns
+            // that they are losing a second rendering and not a rung.
+            ShellText(.interventionNotchExplanation, role: .footnote)
+                .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+                .lineLimit(nil)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    /// The sentence for a landing. **Total over `NotchLanding.Refusal`**, so a seventh refusal is
+    /// a compile error here rather than a blank row in a settings pane.
+    ///
+    /// Four sentences over seven states, and the grouping is the claim:
+    ///
+    /// * `nil` — the geometry landed, and there is a strip under the housing to describe;
+    /// * `.noBuiltInDisplay` — **its own sentence**, because *"this Mac has no notch"* is false
+    ///   for a Mac with no built-in panel at all (review §6). This is the answer on this rig;
+    /// * `.noSafeAreaInset` / `.auxiliaryAreasAbsent` — a built-in panel with no notch, which is
+    ///   every notchless MacBook and is a different fact from the one above;
+    /// * the remaining three — a built-in panel whose auxiliary areas the app could not make
+    ///   sense of. One sentence, because a person cannot act on the difference between an
+    ///   incoherent pair, too narrow a gap and a housing off the display, and three sentences
+    ///   claiming they can would be three sentences pretending to a diagnosis.
+    nonisolated public static func notchKey(_ refusal: NotchLanding.Refusal?) -> ShellStringKey {
+        guard let refusal else { return .interventionNotchLanded }
+        switch refusal {
+        case .noBuiltInDisplay: return .interventionNotchNoBuiltInDisplay
+        case .noSafeAreaInset, .auxiliaryAreasAbsent: return .interventionNotchNoNotch
+        case .auxiliaryAreasIncoherent, .housingTooNarrow, .housingOffDisplay:
+            return .interventionNotchUnreadable
+        }
+    }
+
+    /// What the row reports it drew. The refusal's own name, or `landed` — the vocabulary the
+    /// self-check publishes, so the receipt and the report say the same word.
+    nonisolated public static func notchReceipt(_ refusal: NotchLanding.Refusal?) -> String {
+        refusal?.rawValue ?? "landed"
+    }
+
+    // MARK: - The routing matrix — where a nudge actually appears
+
+    /// **The rendered table is `SurfaceRouter.table(…)` itself**, not a description of it.
+    ///
+    /// R-82 requires the routing table to be a value precisely so this pane can render it: a
+    /// pane that explained the routing in prose would be a pane somebody has to remember to
+    /// edit. `InterventionSettingsTests` asserts the rendered rows equal the router's own, so
+    /// the copy cannot drift from the behaviour because it is not copy.
+    ///
+    /// **Two columns, and it used to draw three** (focus-wy0). The middle one was the notification
+    /// authorisation, and the four rows it produced for each rung carried four different headings
+    /// over one identical route. A table whose extra column never changes an answer is a table
+    /// making a promise about consequence that the router does not keep.
+    private var routingMatrix: some View {
+        VStack(alignment: .leading, spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
+            ShellText(.interventionRoutingHeading, role: .headline)
+            ShellText(.interventionRoutingExplanation, role: .footnote)
+                .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+                .lineLimit(nil)
+                .fixedSize(horizontal: false, vertical: true)
+
+            ForEach(drawnRows, id: \.self) { row in
+                if let key = Self.surfaceKey(row.route) {
+                    HStack(spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
+                        ShellText(resource: row.rung.copyResource, role: .footnote)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        ShellText(resource: ShellStrings.resource(key), role: .footnote)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+            }
+        }
+    }
+
+    /// The rows this pane draws, for the settings the person actually has.
+    ///
+    /// Exposed so the test compares the **drawn** rows against `SurfaceRouter.table(…)` rather
+    /// than re-deriving them, which would be the test agreeing with itself.
+    nonisolated public var drawnRows: [SurfaceRoutingRow] {
+        SurfaceRouter.table(
+            reducedInterruption: settings.reducedInterruption,
+            voice: settings.voice
+        )
+    }
+
+    /// The sentence for a route, **or nothing when the pane has no business drawing one**
+    /// (focus-pzl).
+    ///
+    /// ## Why this went from total to partial
+    ///
+    /// `SurfaceRoute` is wider than this pane's domain by exactly two cases, and both of them
+    /// had a shipped sentence nobody could reach. `settings.intervention.surface.notification`
+    /// read *"A notification"* four lines under
+    /// `settings.intervention.routing.explanation` — *"Every step of a nudge appears inside
+    /// Focus. It never sends a notification, and never asks for permission to."* The catalogue
+    /// held the row that contradicted the app's own promise, and the switch arm that mentioned
+    /// the key was what passed it through the string lint.
+    ///
+    /// Neither can be handed to this function by anything the pane draws.
+    /// `SurfaceRouter.table(…)` pins `presentation: .notPresenting`, `media: .idle` and
+    /// `menuBarVisible: true`, so no row can be `.unavailable`; and no branch of `route(…)`
+    /// returns `.notification` at all since U-2 deferred the recommitment rung to focus-5ab —
+    /// the shipped binary says so about itself, with
+    /// `surfacesARungCanReach == [menuBar, panel, popoverBadge]` — pinned in both directions over
+    /// the whole 160-cell input space, not searched for one name in a two-cell table (focus-3vb).
+    ///
+    /// ## What happens if that stops being true
+    ///
+    /// `routingMatrix` draws no row for a route with no sentence, and
+    /// `InterventionSettingsTests.everyDrawnRowHasASentence` fails over the whole voice × flag
+    /// cross-product the moment the router produces one. That is the difference this change is
+    /// about: the day focus-5ab puts a rung back on a notification, the gate says *"this route
+    /// has no copy"* instead of a person reading a sentence the app spent a year contradicting.
+    nonisolated public static func surfaceKey(_ route: SurfaceRoute) -> ShellStringKey? {
+        switch route {
+        case .surface(.menuBar): .interventionSurfaceMenuBar
+        case .surface(.panel): .interventionSurfacePanel
+        case .surface(.popoverBadge): .interventionSurfacePopoverBadge
+        case .surface(.notification), .unavailable: nil
+        }
+    }
+
+    // MARK: - The caps, as usage (D-01)
+
+    private var capsSection: some View {
+        VStack(alignment: .leading, spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
+            ShellText(.interventionCapsHeading, role: .headline)
+            usageRow(
+                .interventionCapsQueriesPriority,
+                used: settings.usage.queriesForPriorityToday,
+                cap: settings.tunings.count(.dailyQueryCap)
+            )
+            usageRow(
+                .interventionCapsQueriesDay,
+                used: settings.usage.queriesAllPrioritiesToday,
+                cap: settings.tunings.count(.dailyQueryCapAllPriorities)
+            )
+            usageRow(
+                .interventionCapsAccusations,
+                used: settings.usage.accusationsToday,
+                cap: settings.tunings.count(.dailyAccusationCap)
+            )
+            usageRow(
+                .interventionCapsInterruptions,
+                used: settings.usage.interruptionsToday,
+                cap: settings.tunings.count(.dailyInterruptionCap)
+            )
+            ShellText(.interventionCapsExplanation, role: .footnote)
+                .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+                .lineLimit(nil)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private func usageRow(_ key: ShellStringKey, used: Int, cap: Int) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
+            ShellText(key, role: .callout)
+                .lineLimit(nil)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+            // Digits, monospaced, and no bar: a progress bar is a thing to fill, and a thing to
+            // fill is a score to defend (D-01).
+            //
+            // **`.formatted()`, not interpolation** (focus-7zr's sweep). String interpolation of
+            // an `Int` is `String(describing:)` and draws Western Arabic digits in every locale;
+            // every other number this app shows a person goes through `.formatted()` —
+            // `CascadePrecedenceView`'s rank, `RecentPrioritiesView`'s attachment count,
+            // `SensingStatusView`'s readings. This row was the one that did not, and
+            // `Text(verbatim:)` is why nothing noticed: it is the construct the string lint
+            // exempts by design.
+            Text(verbatim: "\(used.formatted()) / \(cap.formatted())")
+                .font(DesignTokens.font(.callout, scale: textScale).monospacedDigit())
+                .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+        }
+    }
+
+    // MARK: - The thresholds, as read-only mirrors
+
+    /// Read-only, and read from `InterventionPolicy` — so the numbers a person sees are the
+    /// numbers the app uses, and there is no second place for them to drift.
+    /// **Every dial the app decides with** (focus-exdi, owner ruling 2026-09-08).
+    ///
+    /// The Timings rows this section replaces were read-only mirrors of the two policy files. Now
+    /// each constant is a row with its value, a pair of buttons that move it one step, and the
+    /// note that says what it does; a row a person has turned shows the shipped value beside it
+    /// and a Reset. Bordered buttons rather than a `Stepper`, for the reason every control on
+    /// this pane is: an AppKit-backed control rasterises as a yellow placeholder under
+    /// `ImageRenderer`, and this pane has baselines.
+    private var thresholdsSection: some View {
+        VStack(alignment: .leading, spacing: DesignTokens.spacing(spacing, scale: textScale)) {
+            VStack(alignment: .leading, spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
+                ShellText(.settingsTuningsHeading, role: .headline)
+                ShellText(.settingsTuningsExplanation, role: .footnote)
+                    .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            ForEach(PolicyTuning.Family.allCases, id: \.self) { family in
+                VStack(alignment: .leading, spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
+                    ShellText(Self.familyKey(family), role: .callout)
+                        .foregroundStyle(DesignTokens.Palette.role(.spruce, for: traits))
+                    ForEach(PolicyTuning.allCases.filter { $0.family == family }) { tuning in
+                        tuningRow(tuning)
+                    }
+                }
+            }
+            Button {
+                onAction(.resetPolicyTunings)
+            } label: {
+                ShellText(.settingsTuningsResetAll, role: .callout)
+            }
+            .buttonStyle(.bordered)
+            .disabled(settings.tunings.isShipped)
+        }
+        .shellRendered(.policyTunings, ShellValueDigest.describe(settings.tunings))
+    }
+
+    private func tuningRow(_ tuning: PolicyTuning) -> some View {
+        let value = settings.tunings.value(tuning)
+        let changed = settings.tunings.overrides[tuning] != nil
+        let gap = DesignTokens.spacing(spacing / 2, scale: textScale)
+        return VStack(alignment: .leading, spacing: gap / 2) {
+            HStack(alignment: .firstTextBaseline, spacing: gap) {
+                ShellText(Self.labelKey(tuning), role: .callout)
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: gap)
+                HStack(spacing: gap / 2) {
+                    dialButton(systemImage: "minus", label: .settingsTuningsLower) {
+                        onAction(.setPolicyTuning(tuning, value - tuning.step))
+                    }
+                    .disabled(value <= tuning.range.lowerBound)
+                    valueText(tuning, value)
+                        .frame(minWidth: DesignTokens.spacing(Self.valueColumnWidth, scale: textScale), alignment: .trailing)
+                    dialButton(systemImage: "plus", label: .settingsTuningsRaise) {
+                        onAction(.setPolicyTuning(tuning, value + tuning.step))
+                    }
+                    .disabled(value >= tuning.range.upperBound)
+                }
+            }
+            HStack(alignment: .firstTextBaseline, spacing: gap) {
+                ShellText(Self.noteKey(tuning), role: .footnote)
+                    .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
+                if changed {
+                    Spacer(minLength: gap)
+                    ShellText(
+                        .settingsTuningsShipped,
+                        role: .footnote,
+                        argument: Self.rendered(tuning, tuning.shippedValue)
+                    )
+                    .foregroundStyle(DesignTokens.Palette.role(.kiln, for: traits))
+                    .fixedSize(horizontal: true, vertical: false)
+                    Button {
+                        onAction(.setPolicyTuning(tuning, tuning.shippedValue))
+                    } label: {
+                        ShellText(.settingsTuningsResetOne, role: .footnote)
+                    }
+                    .buttonStyle(.bordered)
+                }
+            }
+        }
+    }
+
+    private func dialButton(
+        systemImage: String,
+        label: ShellStringKey,
+        perform: @escaping () -> Void
+    ) -> some View {
+        Button(action: perform) {
+            Image(systemName: systemImage)
+        }
+        .buttonStyle(.bordered)
+        .accessibilityLabel(Text(ShellStrings.resource(label)))
+    }
+
+    @ViewBuilder
+    private func valueText(_ tuning: PolicyTuning, _ value: Double) -> some View {
+        switch tuning.unit {
+        case .seconds:
+            let whole = Int(value.rounded())
+            if whole >= Self.secondsPerMinute, whole % Self.secondsPerMinute == 0 {
+                ShellText(.settingsTuningsUnitMinutes, role: .callout, argument: (whole / Self.secondsPerMinute).formatted())
+                    .monospacedDigit()
+            } else {
+                ShellText(.settingsTuningsUnitSeconds, role: .callout, argument: whole.formatted())
+                    .monospacedDigit()
+            }
+        case .count:
+            Text(verbatim: Int(value.rounded()).formatted())
+                .font(DesignTokens.font(.callout, scale: textScale).monospacedDigit())
+        case .ratio:
+            Text(verbatim: value.formatted(.number.precision(.fractionLength(2))))
+                .font(DesignTokens.font(.callout, scale: textScale).monospacedDigit())
+        }
+    }
+
+    /// The value as the row draws it, for the "Shipped: …" caption.
+    static func rendered(_ tuning: PolicyTuning, _ value: Double) -> String {
+        switch tuning.unit {
+        case .seconds:
+            let whole = Int(value.rounded())
+            if whole >= secondsPerMinute, whole % secondsPerMinute == 0 {
+                return ShellStrings.string(.settingsTuningsUnitMinutes, argument: (whole / secondsPerMinute).formatted())
+            }
+            return ShellStrings.string(.settingsTuningsUnitSeconds, argument: whole.formatted())
+        case .count:
+            return Int(value.rounded()).formatted()
+        case .ratio:
+            return value.formatted(.number.precision(.fractionLength(2)))
+        }
+    }
+
+    private static let secondsPerMinute = 60
+    private static let valueColumnWidth: CGFloat = 56
+
+    static func familyKey(_ family: PolicyTuning.Family) -> ShellStringKey {
+        switch family {
+        case .interventions: .settingsTuningsFamilyInterventions
+        case .drift: .settingsTuningsFamilyDrift
+        case .relevance: .settingsTuningsFamilyRelevance
+        }
+    }
+
+    static func labelKey(_ tuning: PolicyTuning) -> ShellStringKey {
+        switch tuning {
+        case .queryDwellThreshold: .settingsTuningQueryDwellThreshold
+        case .queryCooldown: .settingsTuningQueryCooldown
+        case .mandateCooldown: .settingsTuningMandateCooldown
+        case .escalationDwell: .settingsTuningEscalationDwell
+        case .snoozeFirst: .settingsTuningSnoozeFirst
+        case .snoozeSecond: .settingsTuningSnoozeSecond
+        case .snoozeThird: .settingsTuningSnoozeThird
+        case .dailyQueryCap: .settingsTuningDailyQueryCap
+        case .dailyQueryCapAllPriorities: .settingsTuningDailyQueryCapAllPriorities
+        case .dailyAccusationCap: .settingsTuningDailyAccusationCap
+        case .dailyInterruptionCap: .settingsTuningDailyInterruptionCap
+        case .reservedAccusationUnits: .settingsTuningReservedAccusationUnits
+        case .ignoredQueryBackoff: .settingsTuningIgnoredQueryBackoff
+        case .ignoredAccusationBackoff: .settingsTuningIgnoredAccusationBackoff
+        case .backoffSpan: .settingsTuningBackoffSpan
+        case .pausePreset: .settingsTuningPausePreset
+        case .sustainedDriftThreshold: .settingsTuningSustainedDriftThreshold
+        case .driftResetGrace: .settingsTuningDriftResetGrace
+        case .lookBackSpan: .settingsTuningLookBackSpan
+        case .maximumLookBackEvents: .settingsTuningMaximumLookBackEvents
+        case .returnAnchorDwell: .settingsTuningReturnAnchorDwell
+        case .detourExtension: .settingsTuningDetourExtension
+        case .minimumTokenLength: .settingsTuningMinimumTokenLength
+        case .minimumStrongTokenLength: .settingsTuningMinimumStrongTokenLength
+        case .minimumOverlapTokens: .settingsTuningMinimumOverlapTokens
+        case .minimumPriorityContentTokens: .settingsTuningMinimumPriorityContentTokens
+        case .minimumNegativeBasisItems: .settingsTuningMinimumNegativeBasisItems
+        case .maximumExplanationTokens: .settingsTuningMaximumExplanationTokens
+        case .similarityRelevantCeiling: .settingsTuningSimilarityRelevantCeiling
+        case .languageConfidenceFloor: .settingsTuningLanguageConfidenceFloor
+        case .similarityCacheCapacity: .settingsTuningSimilarityCacheCapacity
+        }
+    }
+
+    static func noteKey(_ tuning: PolicyTuning) -> ShellStringKey {
+        switch tuning {
+        case .queryDwellThreshold: .settingsTuningQueryDwellThresholdNote
+        case .queryCooldown: .settingsTuningQueryCooldownNote
+        case .mandateCooldown: .settingsTuningMandateCooldownNote
+        case .escalationDwell: .settingsTuningEscalationDwellNote
+        case .snoozeFirst: .settingsTuningSnoozeFirstNote
+        case .snoozeSecond: .settingsTuningSnoozeSecondNote
+        case .snoozeThird: .settingsTuningSnoozeThirdNote
+        case .dailyQueryCap: .settingsTuningDailyQueryCapNote
+        case .dailyQueryCapAllPriorities: .settingsTuningDailyQueryCapAllPrioritiesNote
+        case .dailyAccusationCap: .settingsTuningDailyAccusationCapNote
+        case .dailyInterruptionCap: .settingsTuningDailyInterruptionCapNote
+        case .reservedAccusationUnits: .settingsTuningReservedAccusationUnitsNote
+        case .ignoredQueryBackoff: .settingsTuningIgnoredQueryBackoffNote
+        case .ignoredAccusationBackoff: .settingsTuningIgnoredAccusationBackoffNote
+        case .backoffSpan: .settingsTuningBackoffSpanNote
+        case .pausePreset: .settingsTuningPausePresetNote
+        case .sustainedDriftThreshold: .settingsTuningSustainedDriftThresholdNote
+        case .driftResetGrace: .settingsTuningDriftResetGraceNote
+        case .lookBackSpan: .settingsTuningLookBackSpanNote
+        case .maximumLookBackEvents: .settingsTuningMaximumLookBackEventsNote
+        case .returnAnchorDwell: .settingsTuningReturnAnchorDwellNote
+        case .detourExtension: .settingsTuningDetourExtensionNote
+        case .minimumTokenLength: .settingsTuningMinimumTokenLengthNote
+        case .minimumStrongTokenLength: .settingsTuningMinimumStrongTokenLengthNote
+        case .minimumOverlapTokens: .settingsTuningMinimumOverlapTokensNote
+        case .minimumPriorityContentTokens: .settingsTuningMinimumPriorityContentTokensNote
+        case .minimumNegativeBasisItems: .settingsTuningMinimumNegativeBasisItemsNote
+        case .maximumExplanationTokens: .settingsTuningMaximumExplanationTokensNote
+        case .similarityRelevantCeiling: .settingsTuningSimilarityRelevantCeilingNote
+        case .languageConfidenceFloor: .settingsTuningLanguageConfidenceFloorNote
+        case .similarityCacheCapacity: .settingsTuningSimilarityCacheCapacityNote
+        }
+    }
+}

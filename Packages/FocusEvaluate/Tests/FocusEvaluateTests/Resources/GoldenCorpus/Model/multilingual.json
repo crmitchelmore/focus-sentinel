@@ -1,0 +1,150 @@
+{
+  "file": "multilingual",
+  "note": "The second competence, in the same shape: three non-English priorities x three subjects, every cell `uncertain(.languageNotSupported)` in lane 1. `NLEmbedding` is nil for fr, de, ja, zh-Hans and es — word and sentence, every one (P-111) — so for a non-English priority the deterministic engine has NO instrument, not a weak one, which is why it declines at every dwell. A model trained on more than one language does have one. Row and column both carry a rescue and a hold, for the same reason the 6x6 grid does. Every expectation is justifiable from the case's own prose by a reader who has never run the model.",
+  "cells": [
+    {
+      "id": "ml-l1s1",
+      "row": "l1",
+      "column": "s1",
+      "note": "A quarterly financial proposal is priced in a spreadsheet. The priority is French, so the deterministic engine has no instrument at all — `NLEmbedding` is nil for every language this OS ships but English — and this is precisely the competence a multilingual model has and the heuristic does not.",
+      "language": "fr",
+      "priority": {
+        "intent": "rédiger la proposition financière du troisième trimestre",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "com.microsoft.Excel"
+      },
+      "dwellSeconds": 400,
+      "modelExpectation": "rescue"
+    },
+    {
+      "id": "ml-l1s3",
+      "row": "l1",
+      "column": "s3",
+      "note": "A financial proposal is not compiled, in any language.",
+      "language": "fr",
+      "priority": {
+        "intent": "rédiger la proposition financière du troisième trimestre",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "com.apple.dt.Xcode"
+      },
+      "dwellSeconds": 400,
+      "modelExpectation": "hold"
+    },
+    {
+      "id": "ml-l1s4",
+      "row": "l1",
+      "column": "s4",
+      "note": "A games storefront has no part in a quarterly financial proposal.",
+      "language": "fr",
+      "priority": {
+        "intent": "rédiger la proposition financière du troisième trimestre",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "com.valvesoftware.steam"
+      },
+      "dwellSeconds": 400,
+      "modelExpectation": "hold"
+    },
+    {
+      "id": "ml-l2s1",
+      "row": "l2",
+      "column": "s1",
+      "note": "A checkout defect in a customer account is a code defect, not a ledger.",
+      "language": "de",
+      "priority": {
+        "intent": "den Absturz beim Bezahlvorgang im Kundenkonto beheben",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "com.microsoft.Excel"
+      },
+      "dwellSeconds": 400,
+      "modelExpectation": "hold"
+    },
+    {
+      "id": "ml-l2s3",
+      "row": "l2",
+      "column": "s3",
+      "note": "Fixing a checkout crash is what an IDE is for. The German wording is the only reason the deterministic engine cannot see it.",
+      "language": "de",
+      "priority": {
+        "intent": "den Absturz beim Bezahlvorgang im Kundenkonto beheben",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "com.apple.dt.Xcode"
+      },
+      "dwellSeconds": 400,
+      "modelExpectation": "rescue"
+    },
+    {
+      "id": "ml-l2s4",
+      "row": "l2",
+      "column": "s4",
+      "note": "A games storefront has no part in fixing somebody's checkout.",
+      "language": "de",
+      "priority": {
+        "intent": "den Absturz beim Bezahlvorgang im Kundenkonto beheben",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "com.valvesoftware.steam"
+      },
+      "dwellSeconds": 400,
+      "modelExpectation": "hold"
+    },
+    {
+      "id": "ml-l3s1",
+      "row": "l3",
+      "column": "s1",
+      "note": "Writing a game review has no spreadsheet in it.",
+      "language": "ja",
+      "priority": {
+        "intent": "新しいインディーゲームのレビューを書く",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "com.microsoft.Excel"
+      },
+      "dwellSeconds": 400,
+      "modelExpectation": "hold"
+    },
+    {
+      "id": "ml-l3s3",
+      "row": "l3",
+      "column": "s3",
+      "note": "Writing about a game is not compiling one.",
+      "language": "ja",
+      "priority": {
+        "intent": "新しいインディーゲームのレビューを書く",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "com.apple.dt.Xcode"
+      },
+      "dwellSeconds": 400,
+      "modelExpectation": "hold"
+    },
+    {
+      "id": "ml-l3s4",
+      "row": "l3",
+      "column": "s4",
+      "note": "The game being reviewed is played through the storefront it ships on. The work itself, in Japanese.",
+      "language": "ja",
+      "priority": {
+        "intent": "新しいインディーゲームのレビューを書く",
+        "revision": 1
+      },
+      "evidence": {
+        "bundleID": "com.valvesoftware.steam"
+      },
+      "dwellSeconds": 400,
+      "modelExpectation": "rescue"
+    }
+  ]
+}

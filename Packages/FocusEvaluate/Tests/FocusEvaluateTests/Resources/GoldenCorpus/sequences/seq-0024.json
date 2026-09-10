@@ -1,0 +1,55 @@
+{
+  "id": "seq-0024",
+  "note": "queryDwellThreshold, walked one second at a time, in the shape seq-0003 walks sustainedDriftThreshold. Forty-three seconds is silence, forty-four is silence, forty-five speaks. The threshold is asserted equal to half RelevancePolicy.sustainedDriftThreshold: a question may come at half the dwell an accusation needs because it is cheaper — one click and a durable rule — but never the instant somebody opens an application, which would be a question about a keystroke rather than about their work. gc-0501 is the single-shot half of the same boundary.  AMENDED BY e06 alongside gc-0501: the question is the same question at the same second, and only the reason it names moved — from `noNegativeBasis` to `mixedUseApplication`, because Terminal is a seeded mixed-use subject and the two declines now run above the basis guard. The threshold this fixture exists to walk is untouched: 43 silent, 44 silent, 45 speaks.",
+  "snapshot": {
+    "priority": {
+      "intent": "write the onboarding guide for new hires",
+      "revision": 1
+    }
+  },
+  "steps": [
+    {
+      "advanceSeconds": 0,
+      "bundleID": "com.apple.Terminal",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "nudge": "silent:verdictDoesNotAuthorise",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 43,
+      "bundleID": "com.apple.Terminal",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "nudge": "silent:verdictDoesNotAuthorise",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 1,
+      "bundleID": "com.apple.Terminal",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "nudge": "silent:verdictDoesNotAuthorise",
+        "accumulatedSeconds": 0
+      }
+    },
+    {
+      "advanceSeconds": 1,
+      "bundleID": "com.apple.Terminal",
+      "expect": {
+        "verdict": "uncertain",
+        "drift": "aligned",
+        "nudge": "ask:mixedUseApplication",
+        "accumulatedSeconds": 0
+      }
+    }
+  ],
+  "expectMandates": 0,
+  "expectQueries": 1,
+  "expectAccusations": 0
+}

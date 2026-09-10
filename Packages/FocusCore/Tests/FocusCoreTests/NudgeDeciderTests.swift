@@ -1,0 +1,1117 @@
+import Foundation
+import Testing
+
+@testable import FocusCore
+
+/// **U-1's whole truth table, in the one function that decides anything** (R-76, R-83, R-84, U-1).
+///
+/// | verdict | what must happen |
+/// |---|---|
+/// | `relevant`, confidently derived | silence — the only thing that buys it |
+/// | `uncertain`, askable, unasked, affordable | a question |
+/// | `uncertain`, unaskable | silence, with the reason named |
+/// | `uncertain`, already asked | silence, **whether or not the rule that answer wrote survives** |
+/// | `unrelated`, sustained, banded | the ladder, one rung at a time |
+///
+/// And the invariant that outranks every other in the epic: **no input ever yields `.accuse` from
+/// an `uncertain` verdict.** The guarantee is the types — `.accuse` carries a `LadderRung`, a rung
+/// takes a mandate, and e04's sole producer returns before reading anything else on `uncertain` —
+/// so the cross-product below is a *check* on the guarantee rather than the guarantee itself.
+@Suite("Nudge decider")
+struct NudgeDeciderTests {
+    static let decoy = "com.chrismitchelmore.FocusDecoy"
+    static let neutral = "com.chrismitchelmore.FocusDecoy2"
+    static let stamp = EngineStamp.current
+    static let reference = Date(timeIntervalSince1970: 1_767_225_600)   // 2026-01-01T00:00:00Z
+
+    static var londonCalendar: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Europe/London")!
+        return calendar
+    }
+
+    static func sensitivity(_ bundle: String) -> SensitiveScreenDecision {
+        SensitivityGate().evaluate(
+            FrontmostActivation(
+                bundleIdentifier: bundle,
+                localizedName: bundle,
+                pid: 4242,
+                at: reference,
+                dwellSeconds: 120
+            )
+        )
+    }
+
+    static let cleared = sensitivity(decoy)
+    static let blocked = sensitivity("com.apple.keychainaccess")
+
+    static let presenting = PresentationState(
+        signals: PresentationSignals(
+            frontmostWindowFillsAScreen: true,
+            presentationOptionsSayFullScreen: true,
+            menuBarHidden: true
+        ),
+        isUserExcluded: false,
+        isPresenting: true
+    )
+
+    // MARK: - Building a judgement
+
+    static func status(for verdict: Verdict) -> FocusStatus {
+        switch verdict {
+        case .relevant: .relevant
+        case .uncertain: .uncertain
+        case .unrelated: .unrelated
+        }
+    }
+
+    static func clauses(for verdict: Verdict, uncertainty: UncertaintyReason?) -> [ExplanationClause] {
+        switch verdict {
+        case .relevant: [.similarityCorroborated]
+        case .unrelated: [.sustainedDwell(seconds: 120)]
+        case .uncertain: [.insufficientEvidence(reason: uncertainty ?? .noNegativeBasis)]
+        }
+    }
+
+    static func judgement(
+        verdict: Verdict,
+        uncertainty: UncertaintyReason? = nil,
+        subject: String? = NudgeDeciderTests.decoy,
+        dwelled: Duration = .seconds(120),
+        band: EvidenceBand = .high,
+        drift: DriftState? = nil,
+        status: FocusStatus? = nil,
+        phase: SessionPhase = .focus,
+        isUserIdle: Bool = false,
+        hasActivePriority: Bool = true
+    ) -> NudgeJudgement {
+        let outcome = ClassificationOutcome(
+            verdict: verdict, source: .heuristic, confidence: 1, band: band
+        )
+        let explanation = Explanation.make(
+            stage: .heuristic,
+            band: band,
+            clauses: clauses(for: verdict, uncertainty: uncertainty),
+            stamp: stamp
+        )
+        let effectiveDrift = drift ?? (
+            verdict == .unrelated
+                ? .sustained(
+                    subject: .single(subject ?? ""), accumulated: dwelled, isMixed: false
+                )
+                : .aligned
+        )
+        let effectiveStatus = status ?? Self.status(for: verdict)
+        let eligibility = InterventionEligibility.decide(
+            outcome: outcome,
+            drift: effectiveDrift,
+            phase: phase,
+            status: effectiveStatus,
+            isUserIdle: isUserIdle,
+            hasActivePriority: hasActivePriority,
+            explanation: explanation,
+            stamp: stamp
+        )
+
+        return NudgeJudgement(
+            outcome: outcome,
+            uncertainty: uncertainty,
+            subject: subject,
+            dwelled: dwelled,
+            snapshot: VerdictSnapshot(
+                status: effectiveStatus,
+                stage: .heuristic,
+                band: verdict == .uncertain ? nil : band,
+                drift: effectiveDrift,
+                eligibility: eligibility,
+                explanation: explanation,
+                stampKey: stamp.cacheKey
+            ),
+            stamp: stamp
+        )
+    }
+
+    /// The one commitment every decider drive runs under. Fixed, so nothing in these suites is a
+    /// function of which identifier the run happened to mint.
+    static let commitment = ActiveCommitment(
+        id: UUID(uuidString: "DEC1DE00-0000-4000-8000-000000000001")!,
+        intent: "Write the Q3 proposal for Acme"
+    )
+
+    static func surroundings(
+        hasActivePriority: Bool = true,
+        sensingPaused: Bool = false,
+        sensitivity: SensitiveScreenDecision = NudgeDeciderTests.cleared,
+        phase: SessionPhase = .focus,
+        idleSeconds: Double = 0,
+        media: MediaActivity = .idle,
+        mediaSuppressionEnabled: Bool = true,
+        presentation: PresentationState = .notPresenting,
+        menuBarVisible: Bool = true,
+        quietHours: QuietHours = .off,
+        now: Date = NudgeDeciderTests.reference,
+        monotonic: Duration = .seconds(10_000)
+    ) -> NudgeSurroundings {
+        NudgeSurroundings(
+            // Gate 1 is `commitment != nil` and there is no second reading (focus-zrs); the
+            // decider never looks at the identifier, so the suite still says "is there one?".
+            commitment: hasActivePriority ? NudgeDeciderTests.commitment : nil,
+            sensingPaused: sensingPaused,
+            sensitivity: sensitivity,
+            phase: phase,
+            idle: IdleReading(hardwareSeconds: idleSeconds, sessionSeconds: idleSeconds),
+            idleThresholdSeconds: 120,
+            media: media,
+            mediaSuppressionEnabled: mediaSuppressionEnabled,
+            presentation: presentation,
+            menuBarVisible: menuBarVisible,
+            quietHours: quietHours,
+            now: now,
+            calendar: londonCalendar,
+            monotonic: monotonic
+        )
+    }
+
+    static let exhausted = BudgetDay.spending(
+        queries: InterventionPolicy.dailyQueryCap,
+        otherPriorityQueries: InterventionPolicy.dailyQueryCapAllPriorities
+            - InterventionPolicy.dailyQueryCap,
+        accusations: InterventionPolicy.dailyAccusationCap
+    )
+
+    static func decide(
+        _ judgement: NudgeJudgement,
+        surroundings: NudgeSurroundings? = nil,
+        memory: NudgeMemory = NudgeMemory(),
+        preferences: NudgePreferences = NudgePreferences()
+    ) -> NudgeDecision {
+        NudgeDecider.decide(
+            judgement,
+            surroundings: surroundings ?? Self.surroundings(),
+            memory: memory,
+            preferences: preferences
+        )
+    }
+
+    // MARK: - The three postures
+
+    @Test("confident relevance is silent, and it is the only thing that buys silence")
+    func confidentRelevanceIsSilent() {
+        let decision = Self.decide(Self.judgement(verdict: .relevant))
+
+        #expect(decision.isSpeaking == false)
+        #expect(decision.silence?.reason == .verdictDoesNotAuthorise)
+        #expect(decision.silence?.query == .verdictRelevant)
+        #expect(decision.silence?.accusation == .verdictRelevant)
+    }
+
+    @Test("an askable uncertainty with a subject, a dwell and a budget asks one question")
+    func uncertaintyAsks() {
+        let decision = Self.decide(
+            Self.judgement(verdict: .uncertain, uncertainty: .noNegativeBasis, subject: Self.neutral)
+        )
+
+        guard case .ask(let warrant, let route) = decision else {
+            Issue.record("U-1's central case did not ask: \(decision)")
+            return
+        }
+        #expect(warrant.reason == .noNegativeBasis)
+        #expect(warrant.subject.identifier == Self.neutral)
+        #expect(warrant.subject.kind == .app)
+        #expect(route == .surface(.panel))
+        #expect(decision.kind == .query)
+    }
+
+    @Test("all three askable uncertainties ask, and the warrant names which")
+    func everyAskableReasonAsks() {
+        for askable in QueryableUncertainty.allCases {
+            let decision = Self.decide(
+                Self.judgement(verdict: .uncertain, uncertainty: askable.reason)
+            )
+            #expect(decision.warrant?.reason == askable, "\(askable)")
+        }
+    }
+
+    @Test("a sustained, banded, unrelated verdict enters the ladder at the ambient rung")
+    func unrelatednessAccuses() {
+        let decision = Self.decide(Self.judgement(verdict: .unrelated))
+
+        guard case .accuse(let rung, let route) = decision else {
+            Issue.record("a mandate did not reach the ladder: \(decision)")
+            return
+        }
+        #expect(rung.kind == .ambient)
+        #expect(rung.mandate.subject == Self.decoy)
+        #expect(route == .surface(.menuBar))
+        #expect(decision.kind == .accusation)
+    }
+
+    // MARK: - The unaskable five
+
+    @Test("noEvidence is unaskable BY NAME: we did not look, so we do not ask what they were doing")
+    func noEvidenceIsUnaskable() {
+        let decision = Self.decide(
+            Self.judgement(verdict: .uncertain, uncertainty: .noEvidence)
+        )
+
+        #expect(decision.isSpeaking == false)
+        #expect(
+            decision.silence?.query == .reasonNotAskable,
+            """
+            `noEvidence` means the app DELIBERATELY DID NOT LOOK — a sensitive application, a \
+            private window, an activation e03's gate suppressed before the engine saw it. \
+            Asking "is this part of your task?" about a password manager tells the person we \
+            noticed. "We did not look" must never become "tell us what you were doing" (R-77).
+            """
+        )
+    }
+
+    @Test("every unaskable reason is silent, and every askable one is not")
+    func askabilityDecidesEntirely() {
+        for reason in UncertaintyReason.allCases {
+            let decision = Self.decide(
+                Self.judgement(verdict: .uncertain, uncertainty: reason)
+            )
+            if reason.isQueryable {
+                #expect(decision.warrant != nil, "\(reason) is askable and was not asked")
+            } else {
+                #expect(decision.warrant == nil, "\(reason) is unaskable and was asked")
+                #expect(decision.silence?.query == .reasonNotAskable, "\(reason)")
+            }
+        }
+    }
+
+    @Test("an uncertain verdict with no reason at all is unaskable, because a question needs one")
+    func anUnreasonedUncertaintyIsUnaskable() {
+        let decision = Self.decide(Self.judgement(verdict: .uncertain, uncertainty: nil))
+        #expect(decision.silence?.query == .reasonNotAskable)
+    }
+
+    @Test("an activation with no bundle identifier is unaskable: there is nothing to write a rule about")
+    func anUnbundledActivationIsUnaskable() {
+        let decision = Self.decide(
+            Self.judgement(verdict: .uncertain, uncertainty: .noNegativeBasis, subject: nil)
+        )
+        #expect(decision.silence?.query == .noSingleSubject)
+    }
+
+    @Test("mixed drift has no single subject, so there is no question to ask")
+    func mixedDriftHasNoQuestion() {
+        let decision = Self.decide(
+            Self.judgement(
+                verdict: .uncertain,
+                uncertainty: .noNegativeBasis,
+                drift: .sustained(subject: .mixed, accumulated: .seconds(120), isMixed: true)
+            )
+        )
+        #expect(decision.silence?.query == .noSingleSubject)
+    }
+
+    @Test("a question may come at half an accusation's dwell, but never instantly")
+    func theQueryDwell() {
+        let threshold = InterventionPolicy.queryDwellThreshold
+        #expect(threshold * 2 == RelevancePolicy.sustainedDriftThreshold)
+
+        let early = Self.decide(
+            Self.judgement(
+                verdict: .uncertain, uncertainty: .noNegativeBasis, dwelled: threshold - .seconds(1)
+            )
+        )
+        #expect(early.silence?.query == .withinDwellGrace)
+
+        let due = Self.decide(
+            Self.judgement(verdict: .uncertain, uncertainty: .noNegativeBasis, dwelled: threshold)
+        )
+        #expect(due.warrant != nil)
+    }
+
+    // MARK: - Never twice, and the rule that is allowed to disappear
+
+    @Test("a receipt in the ledger silences the question, and names alreadyAsked")
+    func aReceiptSilencesTheQuestion() {
+        let decision = Self.decide(
+            Self.judgement(verdict: .uncertain, uncertainty: .noNegativeBasis),
+            memory: NudgeMemory(hasAsked: true)
+        )
+
+        #expect(decision.warrant == nil)
+        #expect(decision.silence?.reason == .alreadyAsked)
+        #expect(decision.silence?.query == .alreadyAsked)
+    }
+
+    @Test("deleting the rule does not re-open the question")
+    func deletingTheRuleDoesNotReOpenTheQuestion() {
+        // The sequence finding 3 exposed, as the decider sees it. Answering "Yes" wrote a rule
+        // AND a receipt; deleting the rule takes the subject back to `uncertain`, which is
+        // exactly the input below. The receipt is the record that has not moved.
+        //
+        // Note what is NOT among the decider's inputs: a rule. The decider cannot read one, so
+        // "whether or not the rule that answer wrote still exists" is not a branch it has — the
+        // silence rests on the receipt alone, which is what R-78 requires of an invariant U-1
+        // states in absolute terms.
+        let afterDeletion = Self.judgement(verdict: .uncertain, uncertainty: .noNegativeBasis)
+
+        #expect(Self.decide(afterDeletion, memory: NudgeMemory(hasAsked: true)).warrant == nil)
+        #expect(
+            Self.decide(afterDeletion, memory: NudgeMemory(hasAsked: true)).silence?.reason
+                == .alreadyAsked
+        )
+
+        // And the counter-check: with no receipt, the very same judgement asks. So the silence
+        // above is the receipt's doing and nothing else's.
+        #expect(Self.decide(afterDeletion, memory: NudgeMemory(hasAsked: false)).warrant != nil)
+    }
+
+    @Test("a receipt never silences an accusation: gate 11 is queries only")
+    func aReceiptDoesNotSilenceAnAccusation() {
+        let decision = Self.decide(
+            Self.judgement(verdict: .unrelated),
+            memory: NudgeMemory(hasAsked: true)
+        )
+        #expect(decision.rung?.kind == .ambient)
+    }
+
+    // MARK: - The twelve gates, through the decider
+
+    @Test("gate 1: no active priority, and there is nothing to be off task from")
+    func gateOne() {
+        for verdict in Verdict.allCases {
+            let decision = Self.decide(
+                Self.judgement(verdict: verdict, hasActivePriority: false),
+                surroundings: Self.surroundings(hasActivePriority: false)
+            )
+            #expect(decision.silence?.reason == .noActivePriority, "\(verdict)")
+        }
+    }
+
+    @Test("gate 2: the global pause switch silences both kinds")
+    func gateTwo() {
+        for verdict in [Verdict.uncertain, .unrelated] {
+            let decision = Self.decide(
+                Self.judgement(verdict: verdict, uncertainty: .noNegativeBasis),
+                surroundings: Self.surroundings(sensingPaused: true)
+            )
+            #expect(decision.silence?.reason == .sensingPaused, "\(verdict)")
+        }
+    }
+
+    @Test("gate 3: a sensitive application, and the subject is never named in the answer")
+    func gateThree() {
+        let decision = Self.decide(
+            Self.judgement(verdict: .uncertain, uncertainty: .noNegativeBasis),
+            surroundings: Self.surroundings(sensitivity: Self.blocked)
+        )
+        #expect(decision.silence?.reason == .sensitiveApplication)
+        #expect(decision.warrant == nil)
+    }
+
+    @Test("gate 4: any phase but focus silences both kinds")
+    func gateFour() {
+        for phase in SessionPhase.allCases where phase != .focus {
+            let decision = Self.decide(
+                Self.judgement(verdict: .uncertain, uncertainty: .noNegativeBasis, phase: phase),
+                surroundings: Self.surroundings(phase: phase)
+            )
+            #expect(decision.silence?.reason == .sessionPhaseForbids, "\(phase)")
+        }
+    }
+
+    @Test("gate 5: a person who walked away is not drifting")
+    func gateFive() {
+        let decision = Self.decide(
+            Self.judgement(verdict: .unrelated, isUserIdle: true),
+            surroundings: Self.surroundings(idleSeconds: 600)
+        )
+        #expect(decision.silence?.reason == .userIdle)
+    }
+
+    @Test("gate 6: a panel over a call is a panel everybody on the call can see")
+    func gateSix() {
+        let decision = Self.decide(
+            Self.judgement(verdict: .uncertain, uncertainty: .noNegativeBasis),
+            surroundings: Self.surroundings(media: MediaActivity(microphoneRunning: true))
+        )
+        #expect(decision.silence?.reason == .mediaInUse)
+
+        // And the person's own switch turns it off, without pretending the reading was not taken.
+        let allowed = Self.decide(
+            Self.judgement(verdict: .uncertain, uncertainty: .noNegativeBasis),
+            surroundings: Self.surroundings(
+                media: MediaActivity(microphoneRunning: true), mediaSuppressionEnabled: false
+            )
+        )
+        #expect(allowed.warrant != nil)
+    }
+
+    @Test("gate 7: a question is suppressed over a presentation, and the glyph is DEFERRED")
+    func gateSeven() {
+        let question = Self.decide(
+            Self.judgement(verdict: .uncertain, uncertainty: .noNegativeBasis),
+            surroundings: Self.surroundings(presentation: Self.presenting, menuBarVisible: false)
+        )
+        #expect(question.silence?.reason == .presentationActive)
+
+        // Frame 15's shape. P-131 measured the menu bar hidden during a full-screen space, so
+        // the ambient rung is UNDELIVERABLE rather than unwanted: it is deferred, the ladder does
+        // not advance, and no cap is spent.
+        let glyph = Self.decide(
+            Self.judgement(verdict: .unrelated),
+            surroundings: Self.surroundings(presentation: Self.presenting, menuBarVisible: false)
+        )
+        #expect(glyph == .deferred(.menuBarHidden))
+        #expect(glyph.isSpeaking == false)
+        #expect(glyph.rung == nil, "a deferred rung must not be reported as delivered")
+    }
+
+    @Test("gate 8: the person's own quiet hours, which are not the system Focus")
+    func gateEight() {
+        let window = QuietHours.window(
+            fromHour: 22, minute: 0, toHour: 8, minute: 0, calendar: Self.londonCalendar
+        )
+        let quiet = QuietHours(window: window)
+        let midnight = Self.reference   // 2026-01-01T00:00:00Z, inside a 22:00–08:00 window
+
+        // A question is a sentence, so quiet hours refuse it.
+        #expect(
+            Self.decide(
+                Self.judgement(verdict: .uncertain, uncertainty: .noNegativeBasis),
+                surroundings: Self.surroundings(quietHours: quiet, now: midnight)
+            ).silence?.reason == .quietHours
+        )
+
+        // **And so is the panel rung** — the half that must not change. Driven from a ladder
+        // standing past the escalation dwell, because a fresh ladder offers the glyph and the
+        // glyph is what this gate now passes over.
+        let (ladder, later) = Self.standingAtThePanel()
+        let panel = Self.decide(
+            Self.judgement(verdict: .unrelated),
+            surroundings: Self.surroundings(quietHours: quiet, now: midnight, monotonic: later),
+            memory: NudgeMemory(ladder: ladder)
+        )
+        #expect(panel.silence?.reason == .quietHours, "the rung that speaks spoke during quiet hours")
+
+        // **The glyph is not** (focus-0y6). R-85 is a request that the app not SAY anything
+        // between two times — the request a snooze makes, and R-87 already ruled that a snooze
+        // never takes the glyph. F-146: the state is always legible.
+        let glyph = Self.decide(
+            Self.judgement(verdict: .unrelated),
+            surroundings: Self.surroundings(quietHours: quiet, now: midnight)
+        )
+        #expect(
+            glyph.rung?.kind == .ambient,
+            """
+            quiet hours took the status item with it — \(String(describing: glyph)). The glyph is \
+            a state, not a sentence.
+            """
+        )
+
+        // Non-vacuity for the pair: outside the window, the panel rung speaks.
+        let daytime = Self.reference.addingTimeInterval(12 * 3600)
+        let (day, dayLater) = Self.standingAtThePanel()
+        #expect(
+            Self.decide(
+                Self.judgement(verdict: .unrelated),
+                surroundings: Self.surroundings(quietHours: quiet, now: daytime, monotonic: dayLater),
+                memory: NudgeMemory(ladder: day)
+            ).rung?.kind == .panel,
+            "the ladder never reached the panel at all, so the row above refuses nothing"
+        )
+
+        // The shipped default is off, with no bundled window: a default 22:00–08:00 would be the
+        // app making a claim about a person's life it has no evidence for (R-85).
+        #expect(QuietHours.off.isEnabled == false)
+    }
+
+    @Test("gate 9: one open interruption at a time, and a question never takes the slot")
+    func gateNine() {
+        let held = InterruptionSlot(holder: .accusation(Self.ambientRung()))
+        let decision = Self.decide(
+            Self.judgement(verdict: .uncertain, uncertainty: .noNegativeBasis),
+            memory: NudgeMemory(slot: held)
+        )
+        #expect(decision.silence?.reason == .interruptionInFlight)
+        #expect(decision.warrant == nil)
+    }
+
+    /// **Gate 10: the caps silence the sentences and leave the glyph alone** (focus-2yy).
+    ///
+    /// It asserted `.budgetExhausted` for both verdicts, which required the ambient rung — a mark
+    /// that spends neither cap — to be refused by one. Gates 1, 2 and 3 of `FatigueController`
+    /// each exempt that rung by name; this one exempted nothing, so a day that had spent its six
+    /// accusations went on to spend its status item as well, and the menu bar stopped saying
+    /// anything at all for the rest of it. That is F-146's *"the state is always legible"* broken
+    /// by arithmetic, and it is exactly what the ignored-accusation hold's `rung != .ambient` was
+    /// written to prevent.
+    ///
+    /// So the gate is asserted as the two different things it is. A **question** is a sentence and
+    /// is refused. An **accusation** is refused at the rung that makes one and permitted at the
+    /// rung that does not, which is the glyph — and the glyph is where it stops, because
+    /// `LadderMachine.candidate(…)` will not climb past a rung the budget has closed.
+    @Test("gate 10: the day's spend silences every sentence and leaves the glyph telling the truth")
+    func gateTen() {
+        let question = Self.decide(
+            Self.judgement(verdict: .uncertain, uncertainty: .noNegativeBasis),
+            memory: NudgeMemory(budget: Self.exhausted)
+        )
+        #expect(question.silence?.reason == .budgetExhausted)
+
+        // The rung that accuses somebody is refused by the cap it would spend.
+        #expect(
+            !FatigueController.permits(
+                kind: .accusation,
+                subject: Self.decoy,
+                rung: .panel,
+                budget: Self.exhausted,
+                fatigue: .fresh,
+                now: .seconds(10_000)
+            ),
+            "a spent day still permitted the rung that carries a sentence"
+        )
+        // And the rung that accuses nobody is not, because it spends neither cap.
+        #expect(
+            FatigueController.permits(
+                kind: .accusation,
+                subject: Self.decoy,
+                rung: .ambient,
+                budget: Self.exhausted,
+                fatigue: .fresh,
+                now: .seconds(10_000)
+            ),
+            """
+            a day of six accusations took the status item as well, so the menu bar stopped \
+            telling the person what it thinks for the rest of it
+            """
+        )
+        // Driven rather than asserted on the predicate: the loop really does still mark the item.
+        let drift = Self.decide(
+            Self.judgement(verdict: .unrelated, uncertainty: nil),
+            memory: NudgeMemory(budget: Self.exhausted)
+        )
+        #expect(
+            drift.silence == nil,
+            """
+            the app went quiet about a person's own state on a day it had already said its six \
+            sentences — \(String(describing: drift.silence?.reason))
+            """
+        )
+    }
+
+    @Test("the gates are reported in R-84's order: the first that applied is the one told")
+    func theFirstGateIsTheOneReported() {
+        // Every gate closed at once. The reason a person is given is the first, which is the one
+        // they would give themselves.
+        let decision = Self.decide(
+            Self.judgement(
+                verdict: .uncertain, uncertainty: .noNegativeBasis, hasActivePriority: false
+            ),
+            surroundings: Self.surroundings(
+                hasActivePriority: false,
+                sensingPaused: true,
+                sensitivity: Self.blocked,
+                phase: .paused,
+                idleSeconds: 600,
+                media: MediaActivity(microphoneRunning: true),
+                presentation: Self.presenting
+            ),
+            memory: NudgeMemory(budget: Self.exhausted, hasAsked: true)
+        )
+        #expect(decision.silence?.reason == .noActivePriority)
+        #expect(NudgeSuppressionReason.noActivePriority.gateNumber == 1)
+    }
+
+    // MARK: - The ladder, driven through the decider
+
+    /// **A ladder standing on a delivered ambient rung, past the escalation dwell** — so the next
+    /// candidate is the PANEL rung, the one that speaks.
+    ///
+    /// Needed by every gate whose ruling now differs between the two rungs (focus-0y6): asserting
+    /// "the gate refuses an accusation" on a fresh ladder asserts it of the glyph, which is
+    /// exactly the rung those gates must pass over. A test that only ever reached the ambient
+    /// rung could not tell a working gate from a deleted one.
+    static func standingAtThePanel(
+        at now: Duration = .seconds(10_000)
+    ) -> (ladder: LadderMachine, monotonic: Duration) {
+        var ladder = LadderMachine()
+        ladder.reduce(.mandate(ambientRung().mandate), now: now)
+        ladder.offer(at: now, budgetPermits: true)
+        ladder.reduce(.delivery(.delivered(.menuBar)), now: now)
+        return (ladder, now + RelevancePolicy.escalationDwell + .seconds(1))
+    }
+
+    static func ambientRung() -> LadderRung {
+        let judgement = judgement(verdict: .unrelated)
+        guard let mandate = judgement.eligibility.mandate else {
+            preconditionFailure("the mandating cell did not mandate")
+        }
+        return LadderRung.entry(for: mandate)
+    }
+
+    @Test("the ladder climbs through the decider, one delivered rung at a time")
+    func theLadderClimbs() {
+        var ladder = LadderMachine()
+        var at = Duration.seconds(10_000)
+        var rungs: [LadderRung.Kind] = []
+
+        for _ in 0..<LadderRung.Kind.allCases.count {
+            let decision = Self.decide(
+                Self.judgement(verdict: .unrelated),
+                surroundings: Self.surroundings(monotonic: at),
+                memory: NudgeMemory(ladder: ladder)
+            )
+            guard let rung = decision.rung else { break }
+            rungs.append(rung.kind)
+
+            // The host's own bookkeeping: the machine is offered the rung the decider chose and
+            // told what became of it.
+            ladder.reduce(.mandate(rung.mandate), now: at)
+            ladder.offer(at: at, budgetPermits: true)
+            ladder.reduce(.delivery(decision.route?.delivery ?? .suppressed(.budgetExhausted)), now: at)
+            at = at + RelevancePolicy.escalationDwell
+        }
+
+        #expect(rungs == [.ambient, .panel])
+    }
+
+    @Test("a rung nobody could see does not become the rung below it on the next observation")
+    func aDeferredRungDoesNotAdvance() {
+        var ladder = LadderMachine()
+        let at = Duration.seconds(10_000)
+
+        // Rung 1 is deferred over a presentation.
+        let deferredDecision = Self.decide(
+            Self.judgement(verdict: .unrelated),
+            surroundings: Self.surroundings(
+                presentation: Self.presenting, menuBarVisible: false, monotonic: at
+            ),
+            memory: NudgeMemory(ladder: ladder)
+        )
+        #expect(deferredDecision == .deferred(.menuBarHidden))
+
+        ladder.reduce(.mandate(Self.ambientRung().mandate), now: at)
+        ladder.offer(at: at, budgetPermits: true)
+        ladder.reduce(.delivery(.deferred(.menuBarHidden)), now: at)
+
+        // An hour later, the presentation over: still the AMBIENT rung, not the panel. The
+        // escalation clock never started, which is what `nudge.escalationsFromDeferred == 0`
+        // measures.
+        let resumed = Self.decide(
+            Self.judgement(verdict: .unrelated),
+            surroundings: Self.surroundings(monotonic: at + .seconds(3600)),
+            memory: NudgeMemory(ladder: ladder)
+        )
+        #expect(resumed.rung?.kind == .ambient)
+    }
+
+    @Test("an engaged ladder inside the escalation dwell says nothing rather than repeating itself")
+    func withinTheEscalationDwell() {
+        var ladder = LadderMachine()
+        let at = Duration.seconds(10_000)
+        ladder.reduce(.mandate(Self.ambientRung().mandate), now: at)
+        ladder.offer(at: at, budgetPermits: true)
+        ladder.reduce(.delivery(.delivered(.menuBar)), now: at)
+
+        let decision = Self.decide(
+            Self.judgement(verdict: .unrelated),
+            surroundings: Self.surroundings(monotonic: at + .seconds(1)),
+            memory: NudgeMemory(ladder: ladder)
+        )
+        #expect(decision.isSpeaking == false)
+        #expect(decision.silence?.reason == .budgetExhausted)
+        // **And the silence says which of the four it was** (focus-628). It reported
+        // `.budgetExhausted` for a dwell, a top-out, a refusal and a hold alike, which is three
+        // wrong answers to *"why did the app go quiet?"* out of four.
+        #expect(decision.silence?.ladder == .escalationDwell)
+    }
+
+    /// **The ladder's hold retains the mark it says it retains** (focus-628, focus-50m).
+    ///
+    /// `LadderState.heldAtAmbient`'s own doc has always read *"it does not go fully silent: the
+    /// glyph still tells the truth"*, and `candidate(at:budgetPermits:)` answered `nil` from that
+    /// state — which `accuse(…)` turned into `.silent(.budgetExhausted)`. So the one state whose
+    /// whole definition is *the ladder comes down to the rung that says nothing* delivered
+    /// nothing at all.
+    @Test("a ladder held at the ambient rung still marks the person")
+    func theHoldStillMarks() {
+        var ladder = LadderMachine()
+        let at = Duration.seconds(10_000)
+        ladder.reduce(.mandate(Self.ambientRung().mandate), now: at)
+        ladder.offer(at: at, budgetPermits: true)
+        ladder.reduce(.delivery(.delivered(.menuBar)), now: at)
+        for _ in 0..<InterventionPolicy.ignoredAccusationBackoff {
+            ladder.reduce(.rungIgnored, now: at)
+        }
+        guard case .heldAtAmbient = ladder.state else {
+            Issue.record("the ladder is not held, so this proves nothing")
+            return
+        }
+
+        let decision = Self.decide(
+            Self.judgement(verdict: .unrelated),
+            surroundings: Self.surroundings(monotonic: at + .seconds(60)),
+            memory: NudgeMemory(ladder: ladder)
+        )
+
+        #expect(decision.rung?.kind == .ambient, "the hold showed the person nothing at all")
+        #expect(decision.silence == nil)
+    }
+
+    /// **A refusal about the app SPEAKING passes the rung that says nothing — including when the
+    /// ladder wanted to climb** (focus-628, focus-fzf, F-63, R-87).
+    ///
+    /// `FatigueController` has applied `SilenceSubject`'s rule since focus-uru, and it applies it
+    /// to the rung it is *handed*. The ladder hands it an escalation, so a held or capped ladder
+    /// standing on the glyph had exactly one thing to offer and went completely quiet when it was
+    /// refused. Measured on the shipping root, that was eleven of sixteen drifts showing nothing.
+    @Test("a fatigue hold on the escalation leaves the glyph alone")
+    func aRefusedEscalationFallsBackToTheGlyph() {
+        let (ladder, monotonic) = Self.standingAtThePanel()
+        let held = FatigueState(
+            consecutiveIgnoredAccusations: 0,
+            accusationsHeldUntil: monotonic + InterventionPolicy.backoffSpan
+        )
+        // The escalation the ladder wants, and the refusal it meets.
+        #expect(ladder.candidate(at: monotonic, budgetPermits: true)?.kind == .panel)
+        #expect(
+            FatigueController.decide(
+                kind: .accusation,
+                subject: Self.ambientRung().subject,
+                rung: .panel,
+                budget: .empty,
+                fatigue: held,
+                now: monotonic
+            ).refusal?.kind == .heldAtAmbient
+        )
+
+        let decision = Self.decide(
+            Self.judgement(verdict: .unrelated),
+            surroundings: Self.surroundings(monotonic: monotonic),
+            memory: NudgeMemory(fatigue: held, ladder: ladder)
+        )
+
+        #expect(
+            decision.rung?.kind == .ambient,
+            "a backoff that exempts the ambient rung by name silenced it anyway"
+        )
+    }
+
+    /// The other half of the same rule: a refusal about **legibility** stops every rung, glyph
+    /// included, and the fallback must not smuggle one past it.
+    @Test("a correction stops the glyph as well, and the fallback does not smuggle one past it")
+    func aCorrectionStopsTheGlyphToo() {
+        let (ladder, monotonic) = Self.standingAtThePanel()
+        let subject = Self.ambientRung().subject ?? ""
+
+        let decision = Self.decide(
+            Self.judgement(verdict: .unrelated),
+            surroundings: Self.surroundings(monotonic: monotonic),
+            memory: NudgeMemory(correctedSubjects: [subject], ladder: ladder)
+        )
+
+        #expect(decision.rung == nil, "a corrected subject was marked anyway")
+        #expect(decision.silence?.reason == .budgetExhausted)
+    }
+
+    // MARK: - Neither interruption displaces the other, at the decider's level
+
+    /// **An accusation offered while a question is open is withheld, and waits** (U-2).
+    ///
+    /// The decider used to answer `.accuse` here, carrying the question it had closed. Preemption
+    /// is gone: the slot withholds, the stack reports `interruptionInFlight`, and the ladder is
+    /// untouched — so the same rung is offered again on the next judgement, once the person has
+    /// dealt with the question in front of them.
+    @Test("an accusation raised over an open question is withheld rather than preempting it")
+    func anAccusationWaitsForAnOpenQuestion() {
+        let asked = Self.decide(
+            Self.judgement(verdict: .uncertain, uncertainty: .noNegativeBasis, subject: Self.neutral)
+        )
+        guard let warrant = asked.warrant else {
+            Issue.record("the question the accusation was supposed to wait for was never asked")
+            return
+        }
+
+        // **The panel rung**, not the glyph: gate 9 is an occupancy rule and
+        // `NudgeSurface.menuBar.holdsTheInterruptionSlot` is `false`, so since focus-0y6 the
+        // ambient rung passes over it — see `theGlyphIsNotWithheldByAnOpenQuestion` below. What
+        // U-2 ruled out is a *panel* displacing a question, and that is what this drives.
+        let (ladder, later) = Self.standingAtThePanel()
+        let decision = Self.decide(
+            Self.judgement(verdict: .unrelated),
+            surroundings: Self.surroundings(monotonic: later),
+            memory: NudgeMemory(slot: InterruptionSlot(holder: .query(warrant)), ladder: ladder)
+        )
+
+        #expect(decision.rung == nil, "the accusation was raised over an open question")
+        #expect(decision.isSpeaking == false)
+        #expect(decision.silence?.reason == .interruptionInFlight)
+    }
+
+    /// **And the glyph is not withheld by it** (focus-0y6).
+    ///
+    /// The other half of the ruling above, and the defect it repairs. Gate 9 is occupancy — one
+    /// open interruption at a time — and the ambient rung occupies nothing:
+    /// `NudgeSurface.menuBar.holdsTheInterruptionSlot` is `false`, which is why `NudgeHost.slot`
+    /// asks *where the rung landed* rather than whether one exists. Refusing the glyph here was
+    /// refusing a thing on the grounds of a property it does not have, and the consequence was
+    /// the status item going blank for as long as one question sat on the screen.
+    @Test("an open question withholds the panel rung and never the glyph")
+    func theGlyphIsNotWithheldByAnOpenQuestion() {
+        let asked = Self.decide(
+            Self.judgement(verdict: .uncertain, uncertainty: .noNegativeBasis, subject: Self.neutral)
+        )
+        guard let warrant = asked.warrant else {
+            Issue.record("the question the glyph was supposed to survive was never asked")
+            return
+        }
+
+        let decision = Self.decide(
+            Self.judgement(verdict: .unrelated),
+            memory: NudgeMemory(slot: InterruptionSlot(holder: .query(warrant)))
+        )
+        #expect(
+            decision.rung?.kind == .ambient,
+            """
+            one open question took the status item with it — \(String(describing: decision))
+            """
+        )
+        #expect(!NudgeSurface.menuBar.holdsTheInterruptionSlot)
+    }
+
+    /// And with nothing in the slot at all, the very same judgement does speak — so the test
+    /// above is about the question and not about a judgement that could never accuse.
+    @Test("the same judgement accuses freely once the slot is empty")
+    func theSameJudgementAccusesAgainstAnEmptySlot() {
+        let decision = Self.decide(Self.judgement(verdict: .unrelated))
+        #expect(decision.rung?.kind == .ambient)
+        #expect(decision.isSpeaking)
+    }
+
+    // MARK: - Voices and surfaces
+
+    /// **The silent deck sends the top rung to the badge, not to the glyph** (focus-vxo).
+    ///
+    /// This test pinned the defect: it asserted `.surface(.menuBar)` and called it "rendered as
+    /// the glyph", one line after asserting that the ladder really had escalated and the rung
+    /// really was rung 2. Both halves are the same decision object, so the file said in two
+    /// adjacent expectations that the app had climbed to an accusation and then put it somewhere
+    /// with nothing on it to press. The escalation half was always right; a rung the ladder
+    /// climbed to and the loop records delivered against a named subject is an accusation, and a
+    /// deck chooses how quiet it lands, never whether it is one.
+    @Test("the silent deck routes the panel rung to the badge without changing the ladder")
+    func theSilentDeckRoutesRatherThanSilences() {
+        var ladder = LadderMachine()
+        let at = Duration.seconds(10_000)
+        ladder.reduce(.mandate(Self.ambientRung().mandate), now: at)
+        ladder.offer(at: at, budgetPermits: true)
+        ladder.reduce(.delivery(.delivered(.menuBar)), now: at)
+
+        let decision = Self.decide(
+            Self.judgement(verdict: .unrelated),
+            surroundings: Self.surroundings(monotonic: at + RelevancePolicy.escalationDwell),
+            memory: NudgeMemory(ladder: ladder),
+            preferences: NudgePreferences(voice: .silentVisual)
+        )
+
+        // The ladder really escalated — the rung is rung 2 — and it lands quietly, on a surface
+        // that carries the whole correction economy.
+        #expect(decision.rung?.kind == .panel)
+        #expect(decision.route == .surface(.popoverBadge))
+        #expect(decision.route?.surface?.offersAnAnswer == true)
+    }
+
+    @Test("reduced interruption moves the question to a badge without withdrawing it")
+    func reducedInterruptionRoutesTheQuestion() {
+        let decision = Self.decide(
+            Self.judgement(verdict: .uncertain, uncertainty: .noNegativeBasis),
+            preferences: NudgePreferences(reducedInterruption: true)
+        )
+        #expect(decision.warrant != nil)
+        #expect(decision.route == .surface(.popoverBadge))
+    }
+
+    /// **No rung reaches a notification** (U-2, focus-wy0).
+    ///
+    /// This used to assert that the top rung went to a notification wherever the system would
+    /// carry one. The notification was the recommitment rung's surface and nothing else's, and
+    /// that rung is deferred to focus-5ab — so the whole system surface left the ladder with it.
+    ///
+    /// It then spent a round asserting the same thing four times, once per authorisation value,
+    /// on the argument that this is what made R-82.2 true by construction. It was true by
+    /// construction because `NudgePreferences` no longer reached a reader — the loop is entirely
+    /// in-app whatever the person has or has not granted, and there is now no value to pass in.
+    /// Once, is the honest count.
+    @Test("no rung routes to a notification")
+    func noRungReachesANotification() {
+        var ladder = LadderMachine()
+        var at = Duration.seconds(10_000)
+        // One delivered rung, so the next offer is the panel — which is the top of the ladder now.
+        ladder.reduce(.mandate(Self.ambientRung().mandate), now: at)
+        ladder.offer(at: at, budgetPermits: true)
+        ladder.reduce(.delivery(.delivered(.menuBar)), now: at)
+        at = at + RelevancePolicy.escalationDwell
+
+        let decision = Self.decide(
+            Self.judgement(verdict: .unrelated),
+            surroundings: Self.surroundings(monotonic: at),
+            memory: NudgeMemory(ladder: ladder)
+        )
+        #expect(decision.rung?.kind == .panel)
+        #expect(decision.route?.surface?.isInApp == true)
+        #expect(decision.route != .surface(.notification))
+    }
+
+    // MARK: - The invariant that outranks every other in the epic
+
+    @Test("no input yields an accusation from an uncertain verdict, and none yields both")
+    func theWholeTruthTable() {
+        var cells = 0
+        var asks = 0
+        var accusations = 0
+
+        let reasons: [UncertaintyReason?] = UncertaintyReason.allCases.map { $0 } + [nil]
+        let drifts: [DriftState] = [
+            .aligned,
+            .sustained(subject: .single(Self.decoy), accumulated: .seconds(200), isMixed: false)
+        ]
+        let budgets = [InterruptionBudget.empty, Self.exhausted]
+
+        for verdict in Verdict.allCases {
+            for band in EvidenceBand.allCases {
+                for reason in reasons {
+                    for phase in SessionPhase.allCases {
+                        for status in FocusStatus.allCases {
+                            for drift in drifts {
+                                for hasAsked in [false, true] {
+                                    for budget in budgets {
+                                        cells += 1
+
+                                        let decision = Self.decide(
+                                            Self.judgement(
+                                                verdict: verdict,
+                                                uncertainty: reason,
+                                                band: band,
+                                                drift: drift,
+                                                status: status,
+                                                phase: phase
+                                            ),
+                                            surroundings: Self.surroundings(phase: phase),
+                                            memory: NudgeMemory(
+                                                budget: budget, hasAsked: hasAsked
+                                            )
+                                        )
+
+                                        switch decision {
+                                        case .accuse:
+                                            accusations += 1
+                                            #expect(
+                                                verdict == .unrelated,
+                                                "an accusation from \(verdict)/\(String(describing: reason))"
+                                            )
+                                        case .ask:
+                                            asks += 1
+                                            #expect(
+                                                verdict == .uncertain,
+                                                "a question from \(verdict)"
+                                            )
+                                            #expect(hasAsked == false, "a question that was already asked")
+                                        case .silent, .deferred:
+                                            break
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        #expect(cells == 19_440)
+        #expect(accusations > 0, "the table never reached an accusation at all")
+        #expect(asks > 0, "the table never reached a question at all")
+    }
+
+    /// **With no commitment, nothing the stores could have said changes the answer** (focus-tzj.2).
+    ///
+    /// `NudgeMemory.reading(…)` fetched today's whole intervention log before gate 1 was
+    /// consulted — a fold over every row the app had written since midnight, on every
+    /// five-second corroboration tick, for a decision that cannot reach the number. The repair
+    /// is to return early with `budget: .empty` and `hasAsked: false` when there is no
+    /// commitment, and *that* is only sound if those two fields are unreachable in that state.
+    ///
+    /// This is the fold that says so, over the whole space rather than at one point: every
+    /// verdict, every uncertainty, both slot states, an exhausted budget against an empty one and
+    /// both answers to "has this been asked", with no commitment. Every cell must decide exactly
+    /// what the cheap memory decides.
+    ///
+    /// Non-vacuity is asserted twice over: the fold has to reach every cell it claims, and the
+    /// **same** comparison run *with* a commitment has to find a disagreement — otherwise this
+    /// would pass just as well against a decider that ignored the budget entirely, which is a
+    /// far worse product than the one it is meant to protect.
+    @Test("with no commitment, the budget and the receipt cannot change the decision")
+    func everyMemoryDecidesTheSameThingWithNoCommitment() {
+        let budgets: [InterruptionBudget] = [.empty, Self.exhausted]
+        var cells = 0
+        var disagreementsWithACommitment = 0
+
+        for verdict in Verdict.allCases {
+            for uncertainty in [nil] + UncertaintyReason.allCases.map({ Optional($0) }) {
+                for hasAsked in [false, true] {
+                    for budget in budgets {
+                        cells += 1
+                        let rich = NudgeMemory(budget: budget, hasAsked: hasAsked)
+                        let cheap = NudgeMemory(budget: .empty, hasAsked: false)
+
+                        let without = Self.surroundings(hasActivePriority: false)
+                        let uncommitted = Self.judgement(
+                            verdict: verdict,
+                            uncertainty: uncertainty,
+                            subject: Self.neutral,
+                            hasActivePriority: false
+                        )
+                        #expect(
+                            Self.decide(uncommitted, surroundings: without, memory: rich)
+                                == Self.decide(uncommitted, surroundings: without, memory: cheap),
+                            """
+                            with no commitment, \(verdict)/\(String(describing: uncertainty)) \
+                            decided differently for a budget nothing should have read
+                            """
+                        )
+
+                        // The control: the same two memories, with a commitment. If these never
+                        // part company the comparison above is measuring nothing.
+                        let withOne = Self.surroundings(hasActivePriority: true)
+                        let committed = Self.judgement(
+                            verdict: verdict,
+                            uncertainty: uncertainty,
+                            subject: Self.neutral,
+                            hasActivePriority: true
+                        )
+                        if Self.decide(committed, surroundings: withOne, memory: rich)
+                            != Self.decide(committed, surroundings: withOne, memory: cheap) {
+                            disagreementsWithACommitment += 1
+                        }
+                    }
+                }
+            }
+        }
+
+        #expect(cells == Verdict.allCases.count * (UncertaintyReason.allCases.count + 1) * 2 * 2)
+        #expect(cells > 0)
+        #expect(
+            disagreementsWithACommitment > 0,
+            """
+            the budget and the receipt changed nothing even WITH a commitment, so this fold \
+            proves nothing about skipping them without one
+            """
+        )
+    }
+
+    @Test("the decision is a function of its inputs: two runs give the same answer")
+    func theDeciderIsPure() {
+        let judgement = Self.judgement(verdict: .uncertain, uncertainty: .mixedUseApplication)
+        #expect(Self.decide(judgement) == Self.decide(judgement))
+
+        let mandated = Self.judgement(verdict: .unrelated)
+        #expect(Self.decide(mandated) == Self.decide(mandated))
+    }
+}

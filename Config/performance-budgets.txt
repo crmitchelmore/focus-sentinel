@@ -1,0 +1,41 @@
+# The energy and performance budgets this application is held to (F-163, e10 plan §9.5).
+#
+# THE BINDING RULE, from the roadmap's own risk note and repeated by the plan: the numbers are set
+# from the **measured** e05-e09 data, read first and committed here *before* the checks that read
+# them were written. A budget is never weakened to make a run green; a change to one carries a bead
+# naming what moved and why, in the same commit as the change.
+#
+# WHAT IS NOT HERE, and why. `XCTCPUMetric`, `XCTMemoryMetric` and `os_signpost` intervals are not
+# used. `powermetrics` needs root and will not run here (Court ruling, retained), so battery claims
+# were already downgraded to proxies — and the proxies this app has are better than a stopwatch on
+# a store with four rows in it. The tick's cost does not show up in a duration; it shows up as a
+# COUNT of store fetches and of hosting controllers, which is why "What the tick costs" in the
+# README measures counts. Those counts are the app's own, published every run, and two wall times
+# the gate already takes complete the set. A budget nobody can breach is decoration (**H9.4**), and
+# a metric that measures the machine rather than the app is worse than none.
+#
+# ROW SHAPE — five columns, separated by ` · `:
+#
+#     <name> · <limit> · <measured> · <headroom> · <what it is, and what breaching it would mean>
+#
+#   limit      the number the gate holds. `<= n` or `== n`.
+#   measured   the value on the run this row was derived from: the green gate at 9af6d0c,
+#              /private/tmp/focus-s10-logs-8.
+#   headroom   limit ÷ measured. **H9.4: a budget with more than 3x headroom must justify itself in
+#              its sentence or be tightened.** `exact` where the limit is zero and so is the
+#              measurement — a count that must not exist has no headroom to have.
+#
+# WHO READS THEM. `scripts/self-check.sh` holds the five counter rows against the app's own
+# published survey, in both the Debug and Release lanes. The `unit-counts` gate stage holds the two
+# wall-time rows against the same `Test run with N tests … after S seconds` lines it already reads
+# the test counts from. Every row has a reader, and a row nobody reads is a number in a file.
+
+tick.fetchesPerQuietTick.noCommitment · <= 2 · 2.0 · 1.0x · Store fetches per five-second corroboration tick with no commitment at all, averaged over nine steady ticks. Before focus-tzj it was 4: the whole PriorityTask table sorted in Swift, and today's whole intervention log fetched before gate 1 was consulted. Breaching it means somebody put a fetch back into the heartbeat.
+tick.fetchesPerQuietTick.commitmentPopoverClosed · <= 2 · 2.0 · 1.0x · The same tick with a commitment made and the popover shut, which is the state the app spends most of its life in.
+tick.fetchesPerQuietTick.commitmentPopoverOpen · <= 2 · 2.0 · 1.0x · The same tick with the popover open. It is the same number as the closed state deliberately: an open popover must not cost the store anything, because it is redrawn on every tick.
+tick.nudgeFetchesPerQuietTick · == 0 · 0 · exact · The nudge half of a quiet tick goes to the store not at all — the budget and the query receipt are answered from a cache keyed on the store's own write count, and a tick writes nothing.
+tick.popoverFetchesPerQuietTick · == 0 · 0 · exact · Building the popover's content touches no store. A surface that fetched to draw itself would pay for every tick it was open.
+popover.hostingConstructionsPerPresentationChange · <= 3 · 3.0 · 1.0x · One `NSHostingController` for the content and two more to measure it, per change of what the popover is drawing. Before focus-tzj.1 it was three per TICK whatever the popover was showing: twenty ticks and two changes cost sixty controllers where six is the whole cost.
+popover.buildsOnUnchangedTicks · == 0 · 0 · exact · A tick that changes nothing rebuilds nothing. This is the reading that makes the row above a rate rather than a total.
+lane.snapshot.seconds · <= 420 · 271.755 · 1.55x · `FocusUITests` wall time — the snapshot lane, and the only one that renders. It runs 700-odd `ImageRenderer` PNGs; the ceiling is where a person stops running the gate. Headroom is a whole minute and a half because the lane is the one that grows with every surface e08b and e11 add, and a ceiling that has to be raised every round is a ceiling nobody believes.
+lane.unit.seconds · <= 900 · 640.765 · 1.40x · The whole unit lane: the sum of the eight bundles' own `Test run … after S seconds` figures. Not a wall clock on the stage, because the stage also links and copies; this is the number the suites themselves report, so it moves when the tests move and not when the machine is busy.

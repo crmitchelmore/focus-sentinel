@@ -1,0 +1,5416 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "capability.fallback.degraded" : {
+      "comment" : "What the named consumers do instead. %@ is the name of the cheaper capability.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "uses \"%@\" instead."
+          }
+        }
+      }
+    },
+    "capability.fallback.featureAbsent" : {
+      "comment" : "What the named consumers do instead.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "does not run."
+          }
+        }
+      }
+    },
+    "capability.fallback.fullFunction" : {
+      "comment" : "What the named consumers do instead: this signal is not one they need.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "continues unchanged."
+          }
+        }
+      }
+    },
+    "capability.fallback.showUnavailable" : {
+      "comment" : "What the named consumers do instead.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "is unavailable."
+          }
+        }
+      }
+    },
+    "capability.fallback.suppressOnly" : {
+      "comment" : "What the named consumers do instead. The safe direction for every suppression rule.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "limits interruptions."
+          }
+        }
+      }
+    },
+    "capability.consumer.activationTimeline" : {
+      "comment" : "Names one thing the app does with a signal, so a fallback sentence says WHOSE fallback it is.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App activity history"
+          }
+        }
+      }
+    },
+    "capability.consumer.dwellAttribution" : {
+      "comment" : "Names one thing the app does with a signal, so a fallback sentence says WHOSE fallback it is.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Time spent in each app"
+          }
+        }
+      }
+    },
+    "capability.consumer.displayFairness" : {
+      "comment" : "Names one thing the app does with a signal, so a fallback sentence says WHOSE fallback it is.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nudge placement across displays"
+          }
+        }
+      }
+    },
+    "capability.consumer.presentationSuppression" : {
+      "comment" : "Names one thing the app does with a signal, so a fallback sentence says WHOSE fallback it is.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quiet during presentations"
+          }
+        }
+      }
+    },
+    "capability.consumer.mediaSuppression" : {
+      "comment" : "Names one thing the app does with a signal, so a fallback sentence says WHOSE fallback it is.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quiet while the microphone is in use"
+          }
+        }
+      }
+    },
+    "capability.consumer.lifecyclePause" : {
+      "comment" : "Names one thing the app does with a signal, so a fallback sentence says WHOSE fallback it is.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pausing on lock and sleep"
+          }
+        }
+      }
+    },
+    "capability.consumer.idlePause" : {
+      "comment" : "Names one thing the app does with a signal, so a fallback sentence says WHOSE fallback it is.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pausing when you step away"
+          }
+        }
+      }
+    },
+    "capability.consumer.classification" : {
+      "comment" : "Names one thing the app does with a signal, so a fallback sentence says WHOSE fallback it is.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Checking relevance to your priority"
+          }
+        }
+      }
+    },
+    "capability.consumer.nudgeLadder" : {
+      "comment" : "Names one thing the app does with a signal, so a fallback sentence says WHOSE fallback it is.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nudges"
+          }
+        }
+      }
+    },
+    "capability.consumer.analytics" : {
+      "comment" : "Names one thing the app does with a signal, so a fallback sentence says WHOSE fallback it is.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your local summaries"
+          }
+        }
+      }
+    },
+    "capability.fallback.attributed" : {
+      "comment" : "One fallback line. %1$@ is the list of things this answer is true of, %2$@ is what they do.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: %2$@"
+          }
+        }
+      }
+    },
+    "capability.name.accessibilityWindowContext" : {
+      "comment" : "Capability name. A later version's, with consent.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Window titles and browser context"
+          }
+        }
+      }
+    },
+    "capability.name.cameraActivity" : {
+      "comment" : "Capability name. Held off in this version on every Mac.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Whether a camera is running"
+          }
+        }
+      }
+    },
+    "capability.name.displayGeometry" : {
+      "comment" : "Capability name.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Which display a window is on"
+          }
+        }
+      }
+    },
+    "capability.name.frontmostApplication" : {
+      "comment" : "Capability name.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The active app"
+          }
+        }
+      }
+    },
+    "capability.name.idle" : {
+      "comment" : "Capability name.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Whether you are at the keyboard"
+          }
+        }
+      }
+    },
+    "capability.name.microphoneActivity" : {
+      "comment" : "Capability name.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Whether a microphone is running"
+          }
+        }
+      }
+    },
+    "capability.name.notifications" : {
+      "comment" : "Capability name. A later version's.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notifications"
+          }
+        }
+      }
+    },
+    "capability.name.onDeviceModel" : {
+      "comment" : "Capability name. A later version's.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The on-device model"
+          }
+        }
+      }
+    },
+    "capability.name.presentation" : {
+      "comment" : "Capability name.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Full screen and presentations"
+          }
+        }
+      }
+    },
+    "capability.name.screenCapture" : {
+      "comment" : "Capability name. Parked.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Screenshots"
+          }
+        }
+      }
+    },
+    "capability.name.systemLifecycle" : {
+      "comment" : "Capability name.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lock and sleep"
+          }
+        }
+      }
+    },
+    "capability.name.windowMetadata" : {
+      "comment" : "Capability name. Never a window title.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Window positions"
+          }
+        }
+      }
+    },
+    "capability.pane.explanation" : {
+      "comment" : "Subtitle of the matrix. There is no call to action anywhere in this surface.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This page shows what Focus can read. It does not request permissions."
+          }
+        }
+      }
+    },
+    "capability.pane.heading" : {
+      "comment" : "Heading of the graceful-degradation matrix.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Available on this Mac"
+          }
+        }
+      }
+    },
+    "capability.state.available" : {
+      "comment" : "Capability state.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Working"
+          }
+        }
+      }
+    },
+    "capability.state.denied" : {
+      "comment" : "Capability state. An answer to respect, never a problem to invite the person to solve.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permission denied"
+          }
+        }
+      }
+    },
+    "capability.state.notRequested" : {
+      "comment" : "Capability state. In this version the app never will.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not requested"
+          }
+        }
+      }
+    },
+    "capability.state.restricted" : {
+      "comment" : "Capability state: a managed device or Screen Time.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restricted by macOS"
+          }
+        }
+      }
+    },
+    "capability.state.unavailable" : {
+      "comment" : "Capability state: the hardware or the platform does not have it. Not a refusal.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unavailable"
+          }
+        }
+      }
+    },
+    "capture.action.refine" : {
+      "comment" : "Button that opens the suggestion strip on demand, before Set Priority has been pressed.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Refine"
+          }
+        }
+      }
+    },
+    "capture.action.set" : {
+      "comment" : "Button that commits the typed sentence as the current priority. Never disabled by validation.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set priority"
+          }
+        }
+      }
+    },
+    "capture.field.label" : {
+      "comment" : "Accessibility label for the capture field, where the user types the one thing.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Priority"
+          }
+        }
+      }
+    },
+    "capture.field.prompt" : {
+      "comment" : "Placeholder in the capture field.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "What are you working on?"
+          }
+        }
+      }
+    },
+    "capture.finding.noLeadingVerb" : {
+      "comment" : "Refinement explanation: the sentence does not begin with an imperative verb.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start with what you need to do."
+          }
+        }
+      }
+    },
+    "capture.finding.noOutcome" : {
+      "comment" : "Refinement explanation: there is a verb but no concrete outcome.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add what you want to finish or produce."
+          }
+        }
+      }
+    },
+    "capture.finding.nounOnlyPhrase" : {
+      "comment" : "Refinement explanation: the sentence is a bare noun phrase.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Say what you want to do with this topic."
+          }
+        }
+      }
+    },
+    "capture.finding.tooShort" : {
+      "comment" : "Refinement explanation: the sentence is a single word or barely any characters.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add a little more detail."
+          }
+        }
+      }
+    },
+    "capture.panel.hint" : {
+      "comment" : "Footer hint in the quick-capture panel.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Return sets the priority. Command-Return also returns to your previous app. Escape closes this window."
+          }
+        }
+      }
+    },
+    "capture.panel.title" : {
+      "comment" : "Title of the global quick-capture panel.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quick capture"
+          }
+        }
+      }
+    },
+    "capture.refine.heading" : {
+      "comment" : "Heading of the refinement strip under the capture field.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suggested wording"
+          }
+        }
+      }
+    },
+    "capture.suggestion.doneWhen" : {
+      "comment" : "Pre-filled definition of done. The single argument is the object phrase from the user's own sentence.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ is finished"
+          }
+        }
+      }
+    },
+    "capture.suggestion.doneWhenLabel" : {
+      "comment" : "Caption above the pre-filled done-when in the refinement strip.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suggested completion goal"
+          }
+        }
+      }
+    },
+    "capture.suggestion.keep" : {
+      "comment" : "Button that dismisses the suggestion and leaves the typed sentence untouched.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep my words"
+          }
+        }
+      }
+    },
+    "capture.suggestion.nameTheOutcome" : {
+      "comment" : "Suggested rewrite. The single argument is the user's own sentence.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Say what you want to finish. Try \"%@\"."
+          }
+        }
+      }
+    },
+    "capture.suggestion.sayMore" : {
+      "comment" : "Suggested rewrite. The single argument is the user's own sentence.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add more detail to \"%@\"."
+          }
+        }
+      }
+    },
+    "capture.suggestion.startWithVerb" : {
+      "comment" : "Suggested rewrite. The single argument is the user's own sentence, re-ordered — never new words.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start with an action. Try \"%@\"."
+          }
+        }
+      }
+    },
+    "capture.suggestion.use" : {
+      "comment" : "Button that puts the suggested rewrite into the capture field.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use this"
+          }
+        }
+      }
+    },
+    "context.action.addFiles" : {
+      "comment" : "Button that opens the file importer to attach files to the context pack.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add files…"
+          }
+        }
+      }
+    },
+    "context.action.addKeyword" : {
+      "comment" : "Button that adds the typed keyword to the context pack.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add"
+          }
+        }
+      }
+    },
+    "context.action.locate" : {
+      "comment" : "Button on a context chip whose file can no longer be found, offering to re-attach it.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Locate…"
+          }
+        }
+      }
+    },
+    "context.action.remove" : {
+      "comment" : "Accessibility label for the button that removes one context item.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove"
+          }
+        }
+      }
+    },
+    "context.app.notInstalled" : {
+      "comment" : "Shown on an application chip whose bundle identifier resolves to no installed app.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not installed"
+          }
+        }
+      }
+    },
+    "context.file.missing" : {
+      "comment" : "Shown on a file chip whose bookmark no longer resolves. The chip is never removed automatically.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Missing"
+          }
+        }
+      }
+    },
+    "context.keyword.prompt" : {
+      "comment" : "Placeholder in the field that adds a keyword to the context pack.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add a keyword"
+          }
+        }
+      }
+    },
+    "context.kind.app" : {
+      "comment" : "The name of the application context-item kind, drawn when the user differentiates without colour.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App"
+          }
+        }
+      }
+    },
+    "context.kind.domain" : {
+      "comment" : "The name of the web-origin context-item kind.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Site"
+          }
+        }
+      }
+    },
+    "context.kind.file" : {
+      "comment" : "The name of the file context-item kind.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "File"
+          }
+        }
+      }
+    },
+    "context.kind.keyword" : {
+      "comment" : "The name of the keyword context-item kind.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keyword"
+          }
+        }
+      }
+    },
+    "context.kind.unknown" : {
+      "comment" : "The name given to a stored context item of a kind this build does not understand.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unrecognised"
+          }
+        }
+      }
+    },
+    "context.pack.empty" : {
+      "comment" : "Shown in place of the context pack when a task has no context items yet.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drag an app, a link or a file here, or type a keyword."
+          }
+        }
+      }
+    },
+    "context.pack.heading" : {
+      "comment" : "Caption above the task's context pack in the cockpit.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Context"
+          }
+        }
+      }
+    },
+    "handoff.confirm.action.cancel" : {
+      "comment" : "Button that dismisses the handoff and changes nothing. Also what Escape does.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep mine"
+          }
+        }
+      }
+    },
+    "handoff.confirm.action.replace" : {
+      "comment" : "Destructive button that accepts the incoming priority in place of the current one.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Replace priority"
+          }
+        }
+      }
+    },
+    "handoff.confirm.current.label" : {
+      "comment" : "Caption above the priority the store currently holds.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Working on now"
+          }
+        }
+      }
+    },
+    "handoff.confirm.current.none" : {
+      "comment" : "Shown in place of the current priority when there is none.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing yet"
+          }
+        }
+      }
+    },
+    "handoff.confirm.explanation" : {
+      "comment" : "Explains that an external URL cannot replace the priority without this confirmation.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Another app asked to change your priority. Review it before replacing your current one."
+          }
+        }
+      }
+    },
+    "handoff.confirm.heading" : {
+      "comment" : "Heading of the sheet an incoming focus:// URL lands on.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Replace your priority?"
+          }
+        }
+      }
+    },
+    "handoff.confirm.incoming.label" : {
+      "comment" : "Caption above the incoming priority from the URL.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Requested priority"
+          }
+        }
+      }
+    },
+    "handoff.flag.controlCharacters" : {
+      "comment" : "Disclosure on the handoff sheet.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Removed control characters from the incoming text."
+          }
+        }
+      }
+    },
+    "handoff.flag.doneWhenTruncated" : {
+      "comment" : "Disclosure on the handoff sheet. The argument is the original character count.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shortened the completion goal from %@ characters to fit."
+          }
+        }
+      }
+    },
+    "handoff.flag.duplicateKeys" : {
+      "comment" : "Disclosure on the handoff sheet. The argument is a list of query-key names.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ignored duplicate values for %@ and used the first value for each."
+          }
+        }
+      }
+    },
+    "handoff.flag.taskTruncated" : {
+      "comment" : "Disclosure on the handoff sheet. The argument is the original character count.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shortened the task from %@ characters to fit."
+          }
+        }
+      }
+    },
+    "handoff.flag.unknownItems" : {
+      "comment" : "Disclosure on the handoff sheet. The argument is a list of query-key names.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ignored unrecognised parts of the link: %@."
+          }
+        }
+      }
+    },
+    "priority.action.change" : {
+      "comment" : "Cockpit button that reopens the capture field so a new sentence can replace the current priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Change priority…"
+          }
+        }
+      }
+    },
+    "priority.action.clear" : {
+      "comment" : "Cockpit button that puts the current priority down without completing it.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear priority"
+          }
+        }
+      }
+    },
+    "priority.action.complete" : {
+      "comment" : "Primary cockpit button that finishes the current priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Complete priority"
+          }
+        }
+      }
+    },
+    "priority.action.sameContext" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Cockpit verb that captures a new priority and copies the current one’s context items and rules onto it (focus-1rj7).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New Priority, Same Context…"
+          }
+        }
+      }
+    },
+    "priority.action.editIntent" : {
+      "comment" : "Cockpit button that puts the current priority's own sentence into an editable field, in place, without starting a new commitment.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fix wording…"
+          }
+        }
+      }
+    },
+    "priority.complete.action.cancel" : {
+      "comment" : "Button that closes the completion sheet without finishing anything.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancel"
+          }
+        }
+      }
+    },
+    "priority.complete.action.confirm" : {
+      "comment" : "Button that finishes the priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Complete"
+          }
+        }
+      }
+    },
+    "priority.complete.heading" : {
+      "comment" : "Heading of the completion sheet.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Finish this priority"
+          }
+        }
+      }
+    },
+    "priority.complete.note" : {
+      "comment" : "Explains that the completion sheet never requires a reflection.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You can leave both fields blank."
+          }
+        }
+      }
+    },
+    "priority.complete.restart.label" : {
+      "comment" : "Caption above the optional field recording where to pick the work up again.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Where to restart"
+          }
+        }
+      }
+    },
+    "priority.complete.restart.prompt" : {
+      "comment" : "Placeholder in the optional where-to-restart field.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Where to pick this up next time"
+          }
+        }
+      }
+    },
+    "priority.complete.shipped.label" : {
+      "comment" : "Caption above the optional field recording what was finished.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "What you finished"
+          }
+        }
+      }
+    },
+    "priority.complete.shipped.prompt" : {
+      "comment" : "Placeholder in the optional what-shipped field.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "What would you like to remember?"
+          }
+        }
+      }
+    },
+    "priority.doneWhen.label" : {
+      "comment" : "Caption above the definition-of-done field, directly under the priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Done when"
+          }
+        }
+      }
+    },
+    "priority.doneWhen.prompt" : {
+      "comment" : "Placeholder in the definition-of-done field. It is optional and never required.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How will you know it is finished?"
+          }
+        }
+      }
+    },
+    "priority.hero.empty" : {
+      "comment" : "The priority hero when nothing has been committed to yet: the question itself, drawn at hero size.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "What are you working on?"
+          }
+        }
+      }
+    },
+    "priority.intent.edit.label" : {
+      "comment" : "Accessibility label and field label for the in-place editor of the current priority's sentence.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Priority wording"
+          }
+        }
+      }
+    },
+    "priority.intent.edit.prompt" : {
+      "comment" : "Placeholder shown in the in-place editor when the priority's sentence has been emptied.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit your priority"
+          }
+        }
+      }
+    },
+    "priority.recent.action.again" : {
+      "comment" : "Button that makes a previous priority the current one, with its stored context.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Work on this again"
+          }
+        }
+      }
+    },
+    "priority.recent.completed" : {
+      "comment" : "Shown on a previous priority that was finished.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Completed"
+          }
+        }
+      }
+    },
+    "priority.recent.contextItems" : {
+      "comment" : "Accessibility label for the count of context items carried by a previous priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Context items"
+          }
+        }
+      }
+    },
+    "priority.recent.heading" : {
+      "comment" : "Caption above the history of previous commitments.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recent priorities"
+          }
+        }
+      }
+    },
+    "priority.ritual.action.dismiss" : {
+      "comment" : "Ritual banner button that dismisses it. Dismissing also writes the day key, so it asks once.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not today"
+          }
+        }
+      }
+    },
+    "priority.ritual.action.set" : {
+      "comment" : "Ritual banner button that moves focus to the capture field.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Answer now"
+          }
+        }
+      }
+    },
+    "priority.ritual.message" : {
+      "comment" : "The daily ritual banner's question, shown once per local day.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "What is the one thing today?"
+          }
+        }
+      }
+    },
+    "priority.rules.action.addRelated" : {
+      "comment" : "Button that adds a new rule saying the subject supports the priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add as related"
+          }
+        }
+      }
+    },
+    "priority.rules.action.addUnrelated" : {
+      "comment" : "Button that adds a new rule saying the subject does not support the priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add as unrelated"
+          }
+        }
+      }
+    },
+    "priority.rules.action.remove" : {
+      "comment" : "Accessibility label for the button that deletes one rule.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove rule"
+          }
+        }
+      }
+    },
+    "priority.rules.empty" : {
+      "comment" : "Shown when the current priority has no rules of its own.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No rules for this priority yet."
+          }
+        }
+      }
+    },
+    "priority.rules.heading" : {
+      "comment" : "Caption above the per-task relevance rules.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rules for this priority"
+          }
+        }
+      }
+    },
+    "priority.rules.scope.app" : {
+      "comment" : "Rule scope: the rule is about a whole application.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App"
+          }
+        }
+      }
+    },
+    "priority.rules.scope.domain" : {
+      "comment" : "Rule scope: the rule is about a web origin.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Site"
+          }
+        }
+      }
+    },
+    "priority.rules.scope.retired" : {
+      "comment" : "Caption on a stored rule whose scope the app no longer reads (a title-token rule). The row is kept and can be removed; its verdict cannot be changed.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No longer supported"
+          }
+        }
+      }
+    },
+    "priority.rules.scope.session" : {
+      "comment" : "Rule scope: the rule lasts until this priority is completed.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This session only"
+          }
+        }
+      }
+    },
+    "priority.rules.scope.titleToken" : {
+      "comment" : "Rule scope: the rule is about a word drawn from a window or tab title.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Word in a title"
+          }
+        }
+      }
+    },
+    "priority.rules.subject.prompt" : {
+      "comment" : "Placeholder in the field that names what a new rule is about.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bundle identifier, site or word"
+          }
+        }
+      }
+    },
+    "priority.rules.verdict.relevant" : {
+      "comment" : "Rule verdict: the subject supports the current priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Related"
+          }
+        }
+      }
+    },
+    "priority.rules.verdict.uncertain" : {
+      "comment" : "Rule verdict: the user explicitly declined to decide. Never treated as unrelated.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Undecided"
+          }
+        }
+      }
+    },
+    "priority.rules.verdict.unrelated" : {
+      "comment" : "Rule verdict: the subject does not support the current priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unrelated"
+          }
+        }
+      }
+    },
+    "priority.timebox.label" : {
+      "comment" : "Caption above the timebox control.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Timebox"
+          }
+        }
+      }
+    },
+    "priority.timebox.none" : {
+      "comment" : "Timebox choice that clears the timebox.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No timebox"
+          }
+        }
+      }
+    },
+    "priority.timebox.overtime" : {
+      "comment" : "Timebox readout once the box is spent. The argument is a formatted duration.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ over"
+          }
+        }
+      }
+    },
+    "priority.timebox.remaining" : {
+      "comment" : "Timebox readout while still inside the box. The argument is a formatted duration.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ left"
+          }
+        }
+      }
+    },
+    "sensing.camera.held" : {
+      "comment" : "Camera detail line where cameras exist. The deeper path has never been observed for prompts, so it is held off.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Camera activity is not used in this version."
+          }
+        }
+      }
+    },
+    "sensing.camera.noDevices" : {
+      "comment" : "Camera detail line where the hardware is absent. Not a denial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "There is no camera on this Mac."
+          }
+        }
+      }
+    },
+    "sensing.detail.observers" : {
+      "comment" : "Label for the live observer count.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Active observers"
+          }
+        }
+      }
+    },
+    "sensing.detail.redundant" : {
+      "comment" : "Label for the count of activations naming the app that was already in front.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repeat activations ignored"
+          }
+        }
+      }
+    },
+    "sensing.display.primary" : {
+      "comment" : "Display detail line.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On the main display"
+          }
+        }
+      }
+    },
+    "sensing.display.secondary" : {
+      "comment" : "Display detail line. Recorded in this version and acted on by nothing.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On a second display"
+          }
+        }
+      }
+    },
+    "sensing.idle.away" : {
+      "comment" : "Idle detail line.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Away from the keyboard"
+          }
+        }
+      }
+    },
+    "sensing.idle.present" : {
+      "comment" : "Idle detail line.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "At the keyboard"
+          }
+        }
+      }
+    },
+    "sensing.lifecycle.active" : {
+      "comment" : "Lifecycle detail line. No copy may claim exact detection.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOS reports that this Mac is awake and unlocked."
+          }
+        }
+      }
+    },
+    "sensing.lifecycle.displaysAsleep" : {
+      "comment" : "Lifecycle detail line. No copy may claim exact detection.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOS reports that the display is asleep."
+          }
+        }
+      }
+    },
+    "sensing.lifecycle.poweringOff" : {
+      "comment" : "Lifecycle detail line.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This Mac is shutting down."
+          }
+        }
+      }
+    },
+    "sensing.lifecycle.screenLocked" : {
+      "comment" : "Lifecycle detail line. No copy may claim exact detection.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOS reports that the screen is locked."
+          }
+        }
+      }
+    },
+    "sensing.lifecycle.sessionInactive" : {
+      "comment" : "Lifecycle detail line: fast user switching.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOS reports that this user session is inactive."
+          }
+        }
+      }
+    },
+    "sensing.lifecycle.systemAsleep" : {
+      "comment" : "Lifecycle detail line. No copy may claim exact detection.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOS reports that this Mac is asleep."
+          }
+        }
+      }
+    },
+    "sensing.limitation.screenSharing" : {
+      "comment" : "The known limitation of the hardware idle source, stated rather than hidden.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus cannot detect keyboard or mouse activity through Screen Sharing. It may treat you as away and keep quiet."
+          }
+        }
+      }
+    },
+    "sensing.mic.idle" : {
+      "comment" : "Media detail line.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No microphone is running"
+          }
+        }
+      }
+    },
+    "sensing.mic.running" : {
+      "comment" : "Media detail line. It may suppress an interruption and can never assert that a meeting is occurring.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A microphone is in use"
+          }
+        }
+      }
+    },
+    "sensing.pane.heading" : {
+      "comment" : "Heading for the sensing status surface.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watching"
+          }
+        }
+      }
+    },
+    "sensing.pause.explanation" : {
+      "comment" : "What the switch actually does, which is the whole of what is being promised.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turning this off stops all activity monitoring."
+          }
+        }
+      }
+    },
+    "sensing.pause.label" : {
+      "comment" : "The global switch, read positively so that on means watching.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watch what I am working on"
+          }
+        }
+      }
+    },
+    "sensing.presentation.off" : {
+      "comment" : "Presentation detail line.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The active app is windowed"
+          }
+        }
+      }
+    },
+    "sensing.presentation.on" : {
+      "comment" : "Presentation detail line.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The active app is full screen"
+          }
+        }
+      }
+    },
+    "sensing.status.detached" : {
+      "comment" : "The status line when the graph holds no observers and the person did not ask for that.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Activity monitoring is off."
+          }
+        }
+      }
+    },
+    "sensing.status.paused" : {
+      "comment" : "The status line while the person has the global switch off.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Activity monitoring is off. You can turn it back on here."
+          }
+        }
+      }
+    },
+    "sensing.status.watching" : {
+      "comment" : "The status line while the observer graph is attached.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watching the active app. Focus does not read window titles, take screenshots or record what you type."
+          }
+        }
+      }
+    },
+    "session.action.breakEnd" : {
+      "comment" : "Ends the break and returns to focus.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Back to work"
+          }
+        }
+      }
+    },
+    "session.action.breakStart" : {
+      "comment" : "A break may be started only from focus; the surface ends a detour first.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Take a break"
+          }
+        }
+      }
+    },
+    "session.action.complete" : {
+      "comment" : "Completes the session. Also the menu item, sharing this key rather than declaring a second.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Finish session"
+          }
+        }
+      }
+    },
+    "session.action.detourEnd" : {
+      "comment" : "Returns to focus.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "End the detour"
+          }
+        }
+      }
+    },
+    "session.action.detourStart" : {
+      "comment" : "Declares the current deviation deliberate.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start a detour"
+          }
+        }
+      }
+    },
+    "session.action.interrupt" : {
+      "comment" : "Opens the interruption sheet. Terminal once confirmed.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stop with a note…"
+          }
+        }
+      }
+    },
+    "session.action.pause" : {
+      "comment" : "The person's own pause. Also the menu item.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pause session"
+          }
+        }
+      }
+    },
+    "session.action.resume" : {
+      "comment" : "Lifts the person's own pause, and only that one.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Resume session"
+          }
+        }
+      }
+    },
+    "session.action.start" : {
+      "comment" : "Begins a session on the active priority. Also the menu item.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start session"
+          }
+        }
+      }
+    },
+    "session.badge.break" : {
+      "comment" : "Session phase badge.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On a break"
+          }
+        }
+      }
+    },
+    "session.badge.complete" : {
+      "comment" : "Session phase badge. Terminal.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Finished"
+          }
+        }
+      }
+    },
+    "session.badge.detour" : {
+      "comment" : "Session phase badge: the person declared this deviation deliberate.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Detour"
+          }
+        }
+      }
+    },
+    "session.badge.focus" : {
+      "comment" : "Session phase badge: working on the one thing. The only phase that permits an interruption.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus"
+          }
+        }
+      }
+    },
+    "session.badge.interrupted" : {
+      "comment" : "Session phase badge. Terminal.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Interrupted"
+          }
+        }
+      }
+    },
+    "session.badge.paused" : {
+      "comment" : "Session phase badge. The causes are listed separately, because only the cause that paused can lift it.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paused"
+          }
+        }
+      }
+    },
+    "session.cause.displaysAsleep" : {
+      "comment" : "One pause cause. No copy may claim exact detection.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOS reported that the display went to sleep"
+          }
+        }
+      }
+    },
+    "session.cause.globalPause" : {
+      "comment" : "One pause cause.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "watching is switched off"
+          }
+        }
+      }
+    },
+    "session.cause.heading" : {
+      "comment" : "Caption above the list of reasons a paused session is paused.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paused because"
+          }
+        }
+      }
+    },
+    "session.cause.relaunch" : {
+      "comment" : "One pause cause: more than fifteen minutes since the last phase change.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus was closed for a while"
+          }
+        }
+      }
+    },
+    "session.cause.screenLocked" : {
+      "comment" : "One pause cause. No copy may claim exact screen-lock detection.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOS reported that the screen locked"
+          }
+        }
+      }
+    },
+    "session.cause.sensitiveApp" : {
+      "comment" : "One pause cause. Answered by a bundle identifier being on a list, never by looking at a screen.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "a private app came to the front"
+          }
+        }
+      }
+    },
+    "session.cause.sessionInactive" : {
+      "comment" : "One pause cause: fast user switching.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "someone else signed in"
+          }
+        }
+      }
+    },
+    "session.cause.systemAsleep" : {
+      "comment" : "One pause cause. No copy may claim exact detection.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOS reported that this Mac went to sleep"
+          }
+        }
+      }
+    },
+    "session.cause.systemRestart" : {
+      "comment" : "One pause cause: the boot identity differs, so the uptime anchor was discarded.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "this Mac restarted"
+          }
+        }
+      }
+    },
+    "session.cause.user" : {
+      "comment" : "One pause cause, phrased to finish the sentence 'Paused because …'.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "you pressed Pause"
+          }
+        }
+      }
+    },
+    "session.interrupt.action.cancel" : {
+      "comment" : "Closes the interruption sheet and changes nothing.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep going"
+          }
+        }
+      }
+    },
+    "session.interrupt.action.confirm" : {
+      "comment" : "Confirms the interruption. Enabled with every field empty.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stop session"
+          }
+        }
+      }
+    },
+    "session.interrupt.explanation" : {
+      "comment" : "Sheet subtitle. Reflection is offered, never extracted.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You can add a reason or a note before stopping. Both are optional."
+          }
+        }
+      }
+    },
+    "session.interrupt.heading" : {
+      "comment" : "Title of the interruption sheet.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stop this session"
+          }
+        }
+      }
+    },
+    "session.interrupt.lastActiveLabel" : {
+      "comment" : "Label for the last-active context: a bundle identifier and nothing else.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last active app"
+          }
+        }
+      }
+    },
+    "session.interrupt.lastActiveNone" : {
+      "comment" : "Shown when no application activation has been observed.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing was recorded."
+          }
+        }
+      }
+    },
+    "session.interrupt.noteLabel" : {
+      "comment" : "Label for the optional restart-point field.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Where to pick it up"
+          }
+        }
+      }
+    },
+    "session.interrupt.notePrompt" : {
+      "comment" : "Placeholder in the restart-point field.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The next thing you would have done"
+          }
+        }
+      }
+    },
+    "session.interrupt.reason.appQuit" : {
+      "comment" : "One interruption reason.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The app quit"
+          }
+        }
+      }
+    },
+    "session.interrupt.reason.priorityChanged" : {
+      "comment" : "One interruption reason.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The priority changed"
+          }
+        }
+      }
+    },
+    "session.interrupt.reason.systemRestart" : {
+      "comment" : "One interruption reason.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This Mac restarted"
+          }
+        }
+      }
+    },
+    "session.interrupt.reason.timeboxAbandoned" : {
+      "comment" : "One interruption reason.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I let the timebox go"
+          }
+        }
+      }
+    },
+    "session.interrupt.reason.user" : {
+      "comment" : "One interruption reason.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I chose to stop"
+          }
+        }
+      }
+    },
+    "session.interrupt.reasonLabel" : {
+      "comment" : "Label for the interruption reason picker.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "What happened"
+          }
+        }
+      }
+    },
+    "session.note.clockAnomaly" : {
+      "comment" : "What restoration had to say. The wall-clock figure is still shown; the person is told rather than misled.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The clock changed during this session. The elapsed time may be inaccurate."
+          }
+        }
+      }
+    },
+    "session.note.rebooted" : {
+      "comment" : "What restoration had to say about the session.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This Mac restarted while the session was running."
+          }
+        }
+      }
+    },
+    "session.note.stale" : {
+      "comment" : "What restoration had to say about the session.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "More than 15 minutes passed before Focus restored this session. It resumed paused."
+          }
+        }
+      }
+    },
+    "session.pane.elapsed" : {
+      "comment" : "How long the session has been going on the wall clock. %@ is a formatted duration.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Running for %@"
+          }
+        }
+      }
+    },
+    "session.pane.heading" : {
+      "comment" : "Caption above the session controls in the cockpit.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This session"
+          }
+        }
+      }
+    },
+    "session.pane.none" : {
+      "comment" : "Shown where a session would be, when there is none. Sensing runs whether or not a session does.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No session is running."
+          }
+        }
+      }
+    },
+    "session.resume.blocked" : {
+      "comment" : "Why the Resume control is disabled. A button that says why is better than one that does nothing.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You can resume once all the reasons above have cleared."
+          }
+        }
+      }
+    },
+    "settings.appearance.dark" : {
+      "comment" : "Appearance preference: always dark.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dark"
+          }
+        }
+      }
+    },
+    "settings.appearance.label" : {
+      "comment" : "Label for the appearance preference control in General settings.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Appearance"
+          }
+        }
+      }
+    },
+    "settings.appearance.light" : {
+      "comment" : "Appearance preference: always light.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Light"
+          }
+        }
+      }
+    },
+    "settings.appearance.matchSystem" : {
+      "comment" : "Appearance preference: follow the Mac's own setting.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Match system"
+          }
+        }
+      }
+    },
+    "settings.appearance.note" : {
+      "comment" : "Explains that the app follows the system accent colour and accessibility settings.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus follows your Mac's accessibility display settings, including Increase Contrast, Reduce Transparency and Reduce Motion."
+          }
+        }
+      }
+    },
+    "settings.general.quickCaptureShortcut" : {
+      "comment" : "Picker label for the global quick-capture shortcut.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quick capture shortcut"
+          }
+        }
+      }
+    },
+    "settings.general.quickCaptureShortcutNote" : {
+      "comment" : "Footnote under the quick-capture shortcut picker.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose a different shortcut if another app uses this one. Focus only offers shortcuts it can register."
+          }
+        }
+      }
+    },
+    "settings.general.ritualEnabled" : {
+      "comment" : "Switch that turns the daily ritual banner on or off.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ask what today's priority is"
+          }
+        }
+      }
+    },
+    "settings.general.ritualEnabledNote" : {
+      "comment" : "Footnote under the daily-ritual switch.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ask once a day when you first open Focus."
+          }
+        }
+      }
+    },
+    "settings.general.version" : {
+      "comment" : "General settings: the label beside the version this copy of the app was built from.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Version"
+          }
+        }
+      }
+    },
+    "settings.general.launchAtLoginUnavailable" : {
+      "comment" : "General settings: the footnote under the switch when the system cannot find this copy of the app to register.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOS cannot find this copy of Focus to open at login."
+          }
+        }
+      }
+    },
+    "settings.general.launchAtLoginOpenSettings" : {
+      "comment" : "General settings: the button beside that footnote, which opens Login Items in System Settings.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Login Items settings"
+          }
+        }
+      }
+    },
+    "settings.general.launchAtLoginApproval" : {
+      "comment" : "General settings: the footnote under the launch-at-login switch when the registration is waiting for the person's approval in System Settings.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Approve Focus in System Settings under Login Items."
+          }
+        }
+      }
+    },
+    "settings.general.launchAtLogin" : {
+      "comment" : "General settings: the switch that opens Focus Sentinel when the person logs in.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open at login"
+          }
+        }
+      }
+    },
+    "settings.general.title" : {
+      "comment" : "Title of the General settings tab.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "General"
+          }
+        }
+      }
+    },
+    "settings.intervention.caps.accusations" : {
+      "comment" : "Usage row label.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nudges today"
+          }
+        }
+      }
+    },
+    "settings.intervention.caps.explanation" : {
+      "comment" : "Explains the shared budget and the reserved unit.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Questions and nudges share a daily limit. Focus reserves the last interruption for a nudge."
+          }
+        }
+      }
+    },
+    "settings.intervention.caps.heading" : {
+      "comment" : "Heading above the daily usage rows.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Today"
+          }
+        }
+      }
+    },
+    "settings.intervention.caps.interruptions" : {
+      "comment" : "Usage row label for the shared budget.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Interruptions today"
+          }
+        }
+      }
+    },
+    "settings.intervention.caps.queriesDay" : {
+      "comment" : "Usage row label.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Questions today"
+          }
+        }
+      }
+    },
+    "settings.intervention.caps.queriesPriority" : {
+      "comment" : "Usage row label.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Questions about this task"
+          }
+        }
+      }
+    },
+    "settings.intervention.notch.explanation" : {
+      "comment" : "Revised at the owner's request on 2026-09-09 using the Unslop guidance. Earlier D-11 approval covered the previous wording.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The menu bar icon shows your focus status whether this is on or off."
+          }
+        }
+      }
+    },
+    "settings.intervention.notch.heading" : {
+      "comment" : "APPROVED BY USER (D-11, 2026-09-08): new copy, reviewed and approved by the user. Section heading for the notch companion's row.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notch companion"
+          }
+        }
+      }
+    },
+    "settings.intervention.notch.landed" : {
+      "comment" : "APPROVED BY USER (D-11, 2026-09-08): new copy, reviewed and approved by the user. What the companion does when the built-in display has a notch.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus draws a thin line under the notch of the built-in display."
+          }
+        }
+      }
+    },
+    "settings.intervention.notch.noBuiltInDisplay" : {
+      "comment" : "Revised at the owner's request on 2026-09-09 using the Unslop guidance. Earlier D-11 approval covered the previous wording.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This Mac has no built-in display."
+          }
+        }
+      }
+    },
+    "settings.intervention.notch.noNotch" : {
+      "comment" : "Revised at the owner's request on 2026-09-09 using the Unslop guidance. Earlier D-11 approval covered the previous wording.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This Mac's built-in display has no notch."
+          }
+        }
+      }
+    },
+    "settings.intervention.notch.unreadable" : {
+      "comment" : "Revised at the owner's request on 2026-09-09 using the Unslop guidance. Earlier D-11 approval covered the previous wording.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus could not locate the notch on this Mac's built-in display."
+          }
+        }
+      }
+    },
+    "settings.intervention.quietHours.endEarlier" : {
+      "comment" : "Action: move the end of the quiet window back.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "End earlier"
+          }
+        }
+      }
+    },
+    "settings.intervention.quietHours.endLater" : {
+      "comment" : "Action: move the end of the quiet window forward.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "End later"
+          }
+        }
+      }
+    },
+    "settings.intervention.quietHours.explanation" : {
+      "comment" : "The honest capability statement: the app makes no claim to read the system Focus state.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "These hours apply to this app. Focus cannot read your Mac's Focus mode."
+          }
+        }
+      }
+    },
+    "settings.intervention.quietHours.label" : {
+      "comment" : "Heading for the app's own quiet window.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quiet hours"
+          }
+        }
+      }
+    },
+    "settings.intervention.quietHours.off" : {
+      "comment" : "Shown when no quiet-hours window is set, which is what ships.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quiet hours are off."
+          }
+        }
+      }
+    },
+    "settings.intervention.quietHours.startEarlier" : {
+      "comment" : "Action: move the start of the quiet window back.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start earlier"
+          }
+        }
+      }
+    },
+    "settings.intervention.quietHours.startLater" : {
+      "comment" : "Action: move the start of the quiet window forward.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start later"
+          }
+        }
+      }
+    },
+    "settings.intervention.quietHours.range" : {
+      "comment" : "The quiet-hours window on the Intervention pane. %1$@ and %2$@ are the start and end times, each already formatted for the person's locale; only the separator is authored here.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ to %2$@"
+          }
+        }
+      }
+    },
+    "settings.intervention.quietHours.turnOff" : {
+      "comment" : "Action: remove the quiet-hours window.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn off"
+          }
+        }
+      }
+    },
+    "settings.intervention.quietHours.turnOn" : {
+      "comment" : "Action: begin editing a quiet-hours window.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set quiet hours"
+          }
+        }
+      }
+    },
+    "settings.intervention.reduced.explanation" : {
+      "comment" : "What reduced interruption actually changes — it is a routing preference, not a second set of surfaces.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show nudges and questions in the menu bar instead of opening panels."
+          }
+        }
+      }
+    },
+    "settings.intervention.reduced.forced" : {
+      "comment" : "Shown when the accessibility setting forces the flag on.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Required while Reduce Motion is on."
+          }
+        }
+      }
+    },
+    "settings.intervention.reduced.label" : {
+      "comment" : "F-148's routing flag, as a preference.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Interrupt me less"
+          }
+        }
+      }
+    },
+    "settings.intervention.routing.explanation" : {
+      "comment" : "Caption above the rendered routing table.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nudges stay inside Focus. The app does not send system notifications or request notification permission."
+          }
+        }
+      }
+    },
+    "settings.intervention.routing.heading" : {
+      "comment" : "Heading above the routing matrix.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Where nudges appear"
+          }
+        }
+      }
+    },
+    "settings.intervention.surface.menuBar" : {
+      "comment" : "A routing destination.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menu bar"
+          }
+        }
+      }
+    },
+    "settings.intervention.surface.panel" : {
+      "comment" : "A routing destination.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A small panel"
+          }
+        }
+      }
+    },
+    "settings.intervention.surface.popoverBadge" : {
+      "comment" : "A routing destination.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menu bar popover"
+          }
+        }
+      }
+    },
+    "settings.intervention.title" : {
+      "comment" : "Title of the Intervention settings tab.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nudges"
+          }
+        }
+      }
+    },
+    "settings.intervention.voice.direct" : {
+      "comment" : "A terse deck. Fewer words, never harder words. The key tail is the stored raw value and does not move with the display name (D4).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terse"
+          }
+        }
+      }
+    },
+    "settings.intervention.voice.label" : {
+      "comment" : "Heading above the four static voice decks.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voice"
+          }
+        }
+      }
+    },
+    "settings.intervention.voice.neutral" : {
+      "comment" : "The Court's adopted default deck. The key tail is the stored raw value and does not move with the display name (D4).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Standard"
+          }
+        }
+      }
+    },
+    "settings.intervention.voice.silentVisual" : {
+      "comment" : "A routing deck: no panel, no motion, no sound. The key tail is the stored raw value and does not move with the display name (D4).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Silent"
+          }
+        }
+      }
+    },
+    "settings.intervention.voice.warm" : {
+      "comment" : "A gentler deck.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Warm"
+          }
+        }
+      }
+    },
+    "settings.privacy.delete.button" : {
+      "comment" : "Privacy pane: the destructive button that opens the delete-everything confirmation sheet.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete everything…"
+          }
+        }
+      }
+    },
+    "settings.privacy.delete.confirm.action" : {
+      "comment" : "Delete-everything sheet: the destructive confirmation button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete everything"
+          }
+        }
+      }
+    },
+    "settings.privacy.delete.confirm.body" : {
+      "comment" : "Delete-everything sheet: what will happen, stated plainly. Not undoable.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This deletes all priorities, sessions, rules, questions and activity records from this Mac. Focus replaces its data file with an empty one and restarts. You cannot undo this."
+          }
+        }
+      }
+    },
+    "settings.privacy.delete.confirm.cancel" : {
+      "comment" : "Delete-everything sheet: the harmless button, which also answers Escape.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep my data"
+          }
+        }
+      }
+    },
+    "settings.privacy.delete.confirm.heading" : {
+      "comment" : "Delete-everything sheet heading.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete all Focus data?"
+          }
+        }
+      }
+    },
+    "settings.privacy.delete.explanation" : {
+      "comment" : "Privacy pane: what the delete-everything button does and what it costs.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete all saved Focus data and restart with an empty data file. You cannot undo this."
+          }
+        }
+      }
+    },
+    "settings.privacy.delete.heading" : {
+      "comment" : "Privacy pane: heading over the delete-everything control.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete everything"
+          }
+        }
+      }
+    },
+    "settings.intervention.exclusion.addHeading" : {
+      "comment" : "Sub-heading over the list of running applications a person can add to the presentation-exclusion list.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Running apps"
+          }
+        }
+      }
+    },
+    "settings.intervention.exclusion.empty" : {
+      "comment" : "Shown in place of the exclusion list when nothing is on it.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No apps added."
+          }
+        }
+      }
+    },
+    "settings.intervention.exclusion.explanation" : {
+      "comment" : "Explains what putting an application on the presentation-exclusion list does.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus stays quiet when an app is full screen. Add apps here if you still want nudges while they are full screen."
+          }
+        }
+      }
+    },
+    "settings.intervention.exclusion.heading" : {
+      "comment" : "Heading over the presentation-exclusion list in the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Allow nudges in full screen"
+          }
+        }
+      }
+    },
+    "settings.intervention.exclusion.noneRunning" : {
+      "comment" : "Shown when no application is running that could be added.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing else is running."
+          }
+        }
+      }
+    },
+    "settings.intervention.exclusion.remove" : {
+      "comment" : "Button that takes one application off the presentation-exclusion list.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove"
+          }
+        }
+      }
+    },
+    "settings.privacy.noNetwork" : {
+      "comment" : "Privacy pane disclosure: this app opens no network connection, ever.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus never connects to the internet."
+          }
+        }
+      }
+    },
+    "settings.privacy.noUpdateCheck" : {
+      "comment" : "Privacy pane disclosure: this app has no updater and phones nobody to ask about versions.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "It never checks for updates."
+          }
+        }
+      }
+    },
+    "settings.privacy.portability.explanation" : {
+      "comment" : "Sentence under the take-it-away heading.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Export your activity data and settings as separate files."
+          }
+        }
+      }
+    },
+    "settings.privacy.portability.exportData" : {
+      "comment" : "Button and File-menu item: write everything the app holds about the person to a JSON file.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Export my data…"
+          }
+        }
+      }
+    },
+    "settings.privacy.portability.exportSettings" : {
+      "comment" : "Button and File-menu item: write the person's preferences to a JSON file.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Export settings…"
+          }
+        }
+      }
+    },
+    "settings.privacy.portability.heading" : {
+      "comment" : "Heading over the Privacy pane's export and import controls.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Export and import"
+          }
+        }
+      }
+    },
+    "settings.privacy.portability.importRefused" : {
+      "comment" : "Title of the alert shown when a settings file could not be imported.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus could not import that settings file"
+          }
+        }
+      }
+    },
+    "settings.privacy.portability.importSettings" : {
+      "comment" : "Button and File-menu item: read a settings file back in.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Import settings…"
+          }
+        }
+      }
+    },
+    "settings.privacy.retention.explanation" : {
+      "comment" : "Sentence under the retention heading, saying what choosing a window does.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus checks once a day and deletes records older than this limit."
+          }
+        }
+      }
+    },
+    "settings.privacy.retention.forever" : {
+      "comment" : "Retention-window button: never delete anything on age.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Forever"
+          }
+        }
+      }
+    },
+    "settings.privacy.retention.heading" : {
+      "comment" : "Heading over the Privacy pane's retention-window control.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep records for"
+          }
+        }
+      }
+    },
+    "settings.privacy.retention.ninetyDays" : {
+      "comment" : "Retention-window button: keep ninety days, which is the default.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "90 days"
+          }
+        }
+      }
+    },
+    "settings.privacy.retention.sevenDays" : {
+      "comment" : "Retention-window button: keep one week.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "7 days"
+          }
+        }
+      }
+    },
+    "settings.privacy.retention.thirtyDays" : {
+      "comment" : "Retention-window button: keep thirty days.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "30 days"
+          }
+        }
+      }
+    },
+    "settings.privacy.reveal" : {
+      "comment" : "Button that reveals the local data store in the Finder.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show data file in Finder"
+          }
+        }
+      }
+    },
+    "settings.privacy.statement" : {
+      "comment" : "The local-only privacy statement shown in the Privacy settings tab.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your data stays on this Mac. Focus has no account or sync and sends no usage reports. Your priorities, sessions and rules are stored here:"
+          }
+        }
+      }
+    },
+    "settings.privacy.storeLabel" : {
+      "comment" : "Caption above the file-system path of the local data store in the Privacy settings tab.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Data file"
+          }
+        }
+      }
+    },
+    "settings.privacy.title" : {
+      "comment" : "Title of the Privacy settings tab.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Privacy"
+          }
+        }
+      }
+    },
+    "settings.verdict.bandLabel" : {
+      "comment" : "Label before the evidence band — how much Focus had to go on.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Evidence"
+          }
+        }
+      }
+    },
+    "settings.verdict.driftLabel" : {
+      "comment" : "Label before the drift clock: how long the person has been away from their priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Away for"
+          }
+        }
+      }
+    },
+    "settings.verdict.engineLabel" : {
+      "comment" : "Label before the engine version stamp.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Engine"
+          }
+        }
+      }
+    },
+    "settings.verdict.explanation" : {
+      "comment" : "Introduces the verdict inspector. States plainly that this version never interrupts.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus checks the active app against your rules on this Mac. This is the result it uses to decide whether to nudge you."
+          }
+        }
+      }
+    },
+    "settings.verdict.heading" : {
+      "comment" : "The heading of the verdict inspector in Settings ▸ Privacy.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Current assessment"
+          }
+        }
+      }
+    },
+    "settings.verdict.mandated" : {
+      "comment" : "Shown when the engine is free to interrupt: the ladder has somewhere to go.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus can nudge you now. It starts with the menu bar icon and opens a panel if unrelated activity continues."
+          }
+        }
+      }
+    },
+    "settings.verdict.nothingJudged" : {
+      "comment" : "Shown when the engine has concluded nothing yet. Never shown as a verdict.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No assessment yet."
+          }
+        }
+      }
+    },
+    "settings.verdict.reasonsLabel" : {
+      "comment" : "Label above the list of explanation clauses.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Why"
+          }
+        }
+      }
+    },
+    "settings.verdict.rungLabel" : {
+      "comment" : "Label before the name of the cascade rung that decided.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Decided by"
+          }
+        }
+      }
+    },
+    "settings.verdict.silenceLabel" : {
+      "comment" : "Label before the reason Focus is not saying anything.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Staying quiet because"
+          }
+        }
+      }
+    },
+    "shell.intent.refusal.emptyPriority" : {
+      "comment" : "Spoken when a shortcut passed no priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter a priority first."
+          }
+        }
+      }
+    },
+    "shell.intent.refusal.noSession" : {
+      "comment" : "Spoken when a shortcut asked to finish a session and there is none.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "There is no session to finish."
+          }
+        }
+      }
+    },
+    "shell.intent.refusal.unavailable" : {
+      "comment" : "Spoken when Focus is not running and cannot carry the shortcut out.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus could not complete that change. Open Focus to check its status."
+          }
+        }
+      }
+    },
+    "shell.intent.refusal.sessionRunning" : {
+      "comment" : "Spoken when a shortcut asked to start a session and one is already running.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A session is already running."
+          }
+        }
+      }
+    },
+    "shell.cockpit.heading" : {
+      "comment" : "Heading of the main cockpit window.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus Sentinel"
+          }
+        }
+      }
+    },
+    "settings.tunings.heading" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. The Intervention pane section holding every dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Timings and thresholds"
+          }
+        }
+      }
+    },
+    "settings.tunings.explanation" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Explanation under the tunings heading.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Every number Focus decides with. The shipped value is shown beside each one; a dial you have turned is marked."
+          }
+        }
+      }
+    },
+    "settings.tunings.family.interventions" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Tunings subsection: questions, nudges, budgets.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Interruptions"
+          }
+        }
+      }
+    },
+    "settings.tunings.family.drift" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Tunings subsection: drift timing.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drift and return"
+          }
+        }
+      }
+    },
+    "settings.tunings.family.relevance" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Tunings subsection: text comparison thresholds.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Relevance"
+          }
+        }
+      }
+    },
+    "settings.tunings.shipped" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. The shipped value beside a dial, with the value substituted.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shipped: %@"
+          }
+        }
+      }
+    },
+    "settings.tunings.resetAll" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Button that deletes every override.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reset All to Shipped Values"
+          }
+        }
+      }
+    },
+    "settings.privacy.grant.accessibility" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Switch that lets the app ask macOS for Accessibility (focus-exdi.4).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let Focus ask for Accessibility"
+          }
+        }
+      }
+    },
+    "settings.privacy.grant.accessibility.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the Accessibility switch.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Accessibility would let Focus read window titles and the address of the page you are on. Switching this on asks macOS; macOS asks you."
+          }
+        }
+      }
+    },
+    "settings.privacy.grant.screenCapture" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Switch that lets the app ask macOS for Screen Recording.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let Focus ask for Screen Recording"
+          }
+        }
+      }
+    },
+    "settings.privacy.grant.screenCapture.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the Screen Recording switch.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Screen Recording would let Focus read the pixels of what is in front of you. Switching this on asks macOS; macOS asks you."
+          }
+        }
+      }
+    },
+    "settings.privacy.grant.unused" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Warning beside a switch whose grant nothing in this build reads.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing in this version reads what this would unlock."
+          }
+        }
+      }
+    },
+    "settings.privacy.grants.explanation" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Explanation under the grants heading.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus asks macOS for nothing unless you switch it on here. Everything above works without any of these, and switching one off stops Focus using it."
+          }
+        }
+      }
+    },
+    "settings.privacy.grants.heading" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Heading of the opt-in grants section on the Privacy pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permissions you can give Focus"
+          }
+        }
+      }
+    },
+    "settings.privacy.watching.awayAfter" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Privacy pane dial: the idle threshold (focus-exdi.3).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Treat me as away after"
+          }
+        }
+      }
+    },
+    "settings.privacy.watching.awayAfter.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the away dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No keyboard or mouse for this long, and Focus stops counting time and stays quiet until you are back."
+          }
+        }
+      }
+    },
+    "settings.privacy.watching.microphone" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Privacy pane switch: microphone suppression.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A running microphone keeps Focus quiet"
+          }
+        }
+      }
+    },
+    "settings.privacy.watching.microphone.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the microphone switch.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A call is not a distraction. Switch this off and a nudge may arrive mid-call."
+          }
+        }
+      }
+    },
+    "settings.privacy.watching.launchContext" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Privacy pane switch: open the context pack on session start.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open the context pack when a session starts"
+          }
+        }
+      }
+    },
+    "settings.privacy.watching.launchContext.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the launch-context switch.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The apps, sites and files on the priority’s list open with the session."
+          }
+        }
+      }
+    },
+    "settings.tunings.lower" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Accessibility label of the minus button beside a dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lower"
+          }
+        }
+      }
+    },
+    "settings.tunings.raise" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Accessibility label of the plus button beside a dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Raise"
+          }
+        }
+      }
+    },
+    "settings.tunings.resetOne" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Button beside one dial that returns it to the shipped value.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reset"
+          }
+        }
+      }
+    },
+    "settings.tunings.unit.seconds" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. A span in seconds, with the number substituted.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ s"
+          }
+        }
+      }
+    },
+    "settings.tunings.unit.minutes" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. A span in whole minutes, with the number substituted.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ min"
+          }
+        }
+      }
+    },
+    "settings.tuning.queryDwellThreshold" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the queryDwellThreshold dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Before a question"
+          }
+        }
+      }
+    },
+    "settings.tuning.queryDwellThreshold.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the queryDwellThreshold dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How long an app has to be in front before Focus may ask about it."
+          }
+        }
+      }
+    },
+    "settings.tuning.queryCooldown" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the queryCooldown dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Between questions"
+          }
+        }
+      }
+    },
+    "settings.tuning.queryCooldown.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the queryCooldown dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The shortest gap between two questions."
+          }
+        }
+      }
+    },
+    "settings.tuning.mandateCooldown" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the mandateCooldown dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Between nudges"
+          }
+        }
+      }
+    },
+    "settings.tuning.mandateCooldown.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the mandateCooldown dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The shortest gap between two nudges about the same app."
+          }
+        }
+      }
+    },
+    "settings.tuning.escalationDwell" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the escalationDwell dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Before the next step"
+          }
+        }
+      }
+    },
+    "settings.tuning.escalationDwell.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the escalationDwell dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How long a nudge stands before the next rung may follow it."
+          }
+        }
+      }
+    },
+    "settings.tuning.snoozeFirst" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the snoozeFirst dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "First snooze length"
+          }
+        }
+      }
+    },
+    "settings.tuning.snoozeFirst.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the snoozeFirst dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The shortest of the three snooze buttons."
+          }
+        }
+      }
+    },
+    "settings.tuning.snoozeSecond" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the snoozeSecond dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Second snooze length"
+          }
+        }
+      }
+    },
+    "settings.tuning.snoozeSecond.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the snoozeSecond dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The middle snooze button."
+          }
+        }
+      }
+    },
+    "settings.tuning.snoozeThird" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the snoozeThird dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Third snooze length"
+          }
+        }
+      }
+    },
+    "settings.tuning.snoozeThird.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the snoozeThird dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The longest snooze button."
+          }
+        }
+      }
+    },
+    "settings.tuning.dailyQueryCap" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the dailyQueryCap dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Questions about one task, per day"
+          }
+        }
+      }
+    },
+    "settings.tuning.dailyQueryCap.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the dailyQueryCap dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "After this many, Focus stops asking about that task until tomorrow."
+          }
+        }
+      }
+    },
+    "settings.tuning.dailyQueryCapAllPriorities" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the dailyQueryCapAllPriorities dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Questions per day"
+          }
+        }
+      }
+    },
+    "settings.tuning.dailyQueryCapAllPriorities.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the dailyQueryCapAllPriorities dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Across every task."
+          }
+        }
+      }
+    },
+    "settings.tuning.dailyAccusationCap" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the dailyAccusationCap dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nudges per day"
+          }
+        }
+      }
+    },
+    "settings.tuning.dailyAccusationCap.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the dailyAccusationCap dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "After this many, Focus stays quiet until tomorrow."
+          }
+        }
+      }
+    },
+    "settings.tuning.dailyInterruptionCap" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the dailyInterruptionCap dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Interruptions per day"
+          }
+        }
+      }
+    },
+    "settings.tuning.dailyInterruptionCap.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the dailyInterruptionCap dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Questions and nudges share this one budget."
+          }
+        }
+      }
+    },
+    "settings.tuning.reservedAccusationUnits" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the reservedAccusationUnits dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Budget kept back for a nudge"
+          }
+        }
+      }
+    },
+    "settings.tuning.reservedAccusationUnits.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the reservedAccusationUnits dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Interruptions a question may never spend, so the last one is always a nudge."
+          }
+        }
+      }
+    },
+    "settings.tuning.ignoredQueryBackoff" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the ignoredQueryBackoff dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unanswered questions before a pause"
+          }
+        }
+      }
+    },
+    "settings.tuning.ignoredQueryBackoff.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the ignoredQueryBackoff dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "After this many go unanswered, questions stop for a while."
+          }
+        }
+      }
+    },
+    "settings.tuning.ignoredAccusationBackoff" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the ignoredAccusationBackoff dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ignored nudges before a pause"
+          }
+        }
+      }
+    },
+    "settings.tuning.ignoredAccusationBackoff.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the ignoredAccusationBackoff dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "After this many are ignored, the ladder drops back to the menu bar."
+          }
+        }
+      }
+    },
+    "settings.tuning.backoffSpan" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the backoffSpan dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Length of that pause"
+          }
+        }
+      }
+    },
+    "settings.tuning.backoffSpan.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the backoffSpan dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How long questions or nudges stay off after being ignored."
+          }
+        }
+      }
+    },
+    "settings.tuning.pausePreset" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the pausePreset dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pause preset"
+          }
+        }
+      }
+    },
+    "settings.tuning.pausePreset.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the pausePreset dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The fixed span the Pause action offers."
+          }
+        }
+      }
+    },
+    "settings.tuning.sustainedDriftThreshold" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the sustainedDriftThreshold dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drift counts after"
+          }
+        }
+      }
+    },
+    "settings.tuning.sustainedDriftThreshold.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the sustainedDriftThreshold dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How long an unrelated app has to be in front before it counts as drift."
+          }
+        }
+      }
+    },
+    "settings.tuning.driftResetGrace" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the driftResetGrace dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Return counts after"
+          }
+        }
+      }
+    },
+    "settings.tuning.driftResetGrace.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the driftResetGrace dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How long you have to be back before a return counts."
+          }
+        }
+      }
+    },
+    "settings.tuning.lookBackSpan" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the lookBackSpan dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Look-back window"
+          }
+        }
+      }
+    },
+    "settings.tuning.lookBackSpan.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the lookBackSpan dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How far back Focus looks when it decides what you were doing."
+          }
+        }
+      }
+    },
+    "settings.tuning.maximumLookBackEvents" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the maximumLookBackEvents dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Events kept in the look-back"
+          }
+        }
+      }
+    },
+    "settings.tuning.maximumLookBackEvents.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the maximumLookBackEvents dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How many app switches the look-back window holds."
+          }
+        }
+      }
+    },
+    "settings.tuning.returnAnchorDwell" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the returnAnchorDwell dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "An app becomes an anchor after"
+          }
+        }
+      }
+    },
+    "settings.tuning.returnAnchorDwell.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the returnAnchorDwell dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Time in an app before a detour from it is measured against it."
+          }
+        }
+      }
+    },
+    "settings.tuning.detourExtension" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the detourExtension dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Extra grace on an anchored detour"
+          }
+        }
+      }
+    },
+    "settings.tuning.detourExtension.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the detourExtension dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Added to the drift threshold when you leave an anchor."
+          }
+        }
+      }
+    },
+    "settings.tuning.minimumTokenLength" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the minimumTokenLength dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shortest word Focus reads"
+          }
+        }
+      }
+    },
+    "settings.tuning.minimumTokenLength.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the minimumTokenLength dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Words shorter than this are ignored when comparing text."
+          }
+        }
+      }
+    },
+    "settings.tuning.minimumStrongTokenLength" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the minimumStrongTokenLength dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shortest strong word"
+          }
+        }
+      }
+    },
+    "settings.tuning.minimumStrongTokenLength.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the minimumStrongTokenLength dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A match on a word this long counts as a medium signal."
+          }
+        }
+      }
+    },
+    "settings.tuning.minimumOverlapTokens" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the minimumOverlapTokens dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Words that must overlap"
+          }
+        }
+      }
+    },
+    "settings.tuning.minimumOverlapTokens.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the minimumOverlapTokens dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How many words your priority and the app must share."
+          }
+        }
+      }
+    },
+    "settings.tuning.minimumPriorityContentTokens" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the minimumPriorityContentTokens dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Words a priority needs"
+          }
+        }
+      }
+    },
+    "settings.tuning.minimumPriorityContentTokens.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the minimumPriorityContentTokens dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A priority shorter than this is not judged at all."
+          }
+        }
+      }
+    },
+    "settings.tuning.minimumNegativeBasisItems" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the minimumNegativeBasisItems dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Context items before absence counts"
+          }
+        }
+      }
+    },
+    "settings.tuning.minimumNegativeBasisItems.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the minimumNegativeBasisItems dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How many apps or sites you must have named before not being on the list means anything."
+          }
+        }
+      }
+    },
+    "settings.tuning.maximumExplanationTokens" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the maximumExplanationTokens dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Words in an explanation"
+          }
+        }
+      }
+    },
+    "settings.tuning.maximumExplanationTokens.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the maximumExplanationTokens dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The most words a verdict explains itself with."
+          }
+        }
+      }
+    },
+    "settings.tuning.similarityRelevantCeiling" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the similarityRelevantCeiling dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Similarity that counts as related"
+          }
+        }
+      }
+    },
+    "settings.tuning.similarityRelevantCeiling.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the similarityRelevantCeiling dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Closer than this and the on-device comparison may back a related verdict."
+          }
+        }
+      }
+    },
+    "settings.tuning.languageConfidenceFloor" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the languageConfidenceFloor dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confidence the text is English"
+          }
+        }
+      }
+    },
+    "settings.tuning.languageConfidenceFloor.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the languageConfidenceFloor dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Below this, the similarity comparison does not run."
+          }
+        }
+      }
+    },
+    "settings.tuning.similarityCacheCapacity" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the similarityCacheCapacity dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Similarity cache size"
+          }
+        }
+      }
+    },
+    "settings.tuning.similarityCacheCapacity.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the similarityCacheCapacity dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How many comparisons are kept in memory."
+          }
+        }
+      }
+    },
+    "shell.cockpit.openHistory" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Button on the cockpit’s Recent tab that opens the History window (focus-1rj7).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show Today’s History…"
+          }
+        }
+      }
+    },
+    "shell.cockpit.openSettings" : {
+      "comment" : "Cockpit button that opens the Settings window.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open settings"
+          }
+        }
+      }
+    },
+    "shell.cockpit.tab.details" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. The cockpit’s second tab: the session in full, context and rules (focus-1rj7).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Details"
+          }
+        }
+      }
+    },
+    "shell.cockpit.tab.now" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. The cockpit’s first tab: what needs doing and how long (focus-1rj7).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Now"
+          }
+        }
+      }
+    },
+    "shell.cockpit.tab.recent" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. The cockpit’s third tab: recent priorities (focus-1rj7).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recent"
+          }
+        }
+      }
+    },
+    "shell.cockpit.store.ready" : {
+      "comment" : "Cockpit line: the local store opened successfully.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Data file is open."
+          }
+        }
+      }
+    },
+    "shell.cockpit.store.unavailable" : {
+      "comment" : "Cockpit line: the local store could not be opened.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus could not open your data file. Changes will not be saved."
+          }
+        }
+      }
+    },
+    "shell.cockpit.store.sheet.acknowledge" : {
+      "comment" : "Button on the store-unavailable sheet. Pressing it lets the person go on capturing, knowing nothing is kept.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continue without saving"
+          }
+        }
+      }
+    },
+    "shell.cockpit.store.sheet.consequence" : {
+      "comment" : "Sheet body: the consequence a person needs to understand before capturing anything.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Changes to priorities, sessions and rules will be lost when you quit. Reopen Focus once the data file is accessible."
+          }
+        }
+      }
+    },
+    "shell.cockpit.store.sheet.location" : {
+      "comment" : "Sheet body: where the store the app tried to open lives. %@ is a file path.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Data file: %@"
+          }
+        }
+      }
+    },
+    "shell.cockpit.store.sheet.title" : {
+      "comment" : "Title of the sheet shown when the local data store could not be opened at all.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your work will not be saved"
+          }
+        }
+      }
+    },
+    "shell.cockpit.store.sheet.whatHappened" : {
+      "comment" : "Sheet body: what happened, when the local data store could not be opened.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus could not open your data file. It is using temporary storage for this session."
+          }
+        }
+      }
+    },
+    "shell.cockpit.store.writeFailed" : {
+      "comment" : "Cockpit line: the store opened but refused the last write. Distinct from shell.cockpit.store.unavailable, which is the store never opening at all.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus could not save the last change. Earlier changes are still saved."
+          }
+        }
+      }
+    },
+    "shell.command.showHistory" : {
+      "comment" : "View-menu item that opens the History window.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show history"
+          }
+        }
+      }
+    },
+    "shell.firstRun.dismiss" : {
+      "comment" : "First-run sheet: the one button, which puts it away for good.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continue"
+          }
+        }
+      }
+    },
+    "shell.firstRun.storeLabel" : {
+      "comment" : "First-run sheet: the label above the path where the local store lives. The same path Settings > Privacy shows.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus stores your data on this Mac:"
+          }
+        }
+      }
+    },
+    "shell.firstRun.permissions" : {
+      "comment" : "First-run sheet: the permissions posture.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus does not request Screen Recording or Accessibility permission in this version."
+          }
+        }
+      }
+    },
+    "shell.firstRun.never" : {
+      "comment" : "First-run sheet: what the app never reads. The list is exhaustive on purpose.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus does not read window titles, full web addresses, file paths, document names or anything you type."
+          }
+        }
+      }
+    },
+    "shell.firstRun.observes" : {
+      "comment" : "First-run sheet: what the app reads.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus reads which app is active. If a browser shares its site without a permission request, Focus reads the host name only."
+          }
+        }
+      }
+    },
+    "shell.firstRun.title" : {
+      "comment" : "First-run sheet: the heading. Shown once, on a store the app has never opened.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "What Focus Sentinel watches"
+          }
+        }
+      }
+    },
+    "shell.cockpit.launchAtLogin.dismiss" : {
+      "comment" : "Cockpit footer: decline the one-time launch-at-login offer. It is not asked again.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not now"
+          }
+        }
+      }
+    },
+    "shell.cockpit.launchAtLogin.accept" : {
+      "comment" : "Cockpit footer: accept the one-time launch-at-login offer.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open at login"
+          }
+        }
+      }
+    },
+    "shell.cockpit.launchAtLogin.offer" : {
+      "comment" : "Cockpit footer: the one-time offer, made after a first completed session.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Focus Sentinel at login?"
+          }
+        }
+      }
+    },
+    "shell.about.credits" : {
+      "comment" : "The About panel's credits paragraph: what the app is, and the privacy posture that is the whole shape of the product.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus keeps track of your current priority and nudges you when the active app appears unrelated. It reads the active app and, when available without a permission request, the browser site's host name. It does not read window titles, full web addresses, file paths or anything you type. Your data stays on this Mac."
+          }
+        }
+      }
+    },
+    "shell.command.addFilesToContext" : {
+      "comment" : "File menu item that opens the file importer for the current priority's context pack.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add files to context…"
+          }
+        }
+      }
+    },
+    "shell.command.about" : {
+      "comment" : "App menu item that opens the standard About panel.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "About Focus Sentinel"
+          }
+        }
+      }
+    },
+    "shell.command.closeWindow" : {
+      "comment" : "File menu item that closes the frontmost window.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Close window"
+          }
+        }
+      }
+    },
+    "shell.command.help" : {
+      "comment" : "Help menu item that opens the in-app Keyboard Shortcuts reference.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus Sentinel Help"
+          }
+        }
+      }
+    },
+    "shell.command.answerNo" : {
+      "comment" : "View-menu verb: answer the open question the way the panel's 'No' button does. Writes the unrelated rule and the receipt.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Answer no, unrelated"
+          }
+        }
+      }
+    },
+    "shell.command.answerNotNow" : {
+      "comment" : "View-menu verb: answer the open question the way the panel's 'Not now' button does. Writes the receipt and no rule.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Answer not now"
+          }
+        }
+      }
+    },
+    "shell.command.answerYes" : {
+      "comment" : "View-menu verb: answer the open question the way the panel's 'Yes, add it' button does. Writes the task rule and the receipt.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Answer yes, add it"
+          }
+        }
+      }
+    },
+    "shell.command.hideOverlays" : {
+      "comment" : "View-menu verb: take every nudge surface off the screen without answering anything.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hide all overlays"
+          }
+        }
+      }
+    },
+    "shell.command.newPriority" : {
+      "comment" : "File menu item that brings the cockpit forward and puts the cursor in the capture field.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New priority"
+          }
+        }
+      }
+    },
+    "shell.command.pauseSensing" : {
+      "comment" : "Menu verb for F-119's global switch. The cockpit's control reads positively; a menu item has to name the act.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pause watching"
+          }
+        }
+      }
+    },
+    "shell.command.showMenuBar" : {
+      "comment" : "View-menu verb: open the menu-bar popover from the keyboard.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show Focus in the menu bar"
+          }
+        }
+      }
+    },
+    "shell.command.snoozeNudge" : {
+      "comment" : "View-menu verb: snooze the subject the current nudge is about, for the shortest span.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Snooze nudge"
+          }
+        }
+      }
+    },
+    "shell.command.thisIsRelevant" : {
+      "comment" : "View-menu verb: write the durable task rule the nudge panel's This is relevant button writes.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mark as relevant"
+          }
+        }
+      }
+    },
+    "shell.help.column.action" : {
+      "comment" : "Column heading in the Keyboard Shortcuts window: the action's name.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Action"
+          }
+        }
+      }
+    },
+    "shell.help.column.shortcut" : {
+      "comment" : "Column heading in the Keyboard Shortcuts window: the key equivalent.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shortcut"
+          }
+        }
+      }
+    },
+    "shell.help.group.file" : {
+      "comment" : "Group heading in the Keyboard Shortcuts window for actions in the File menu.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "File menu"
+          }
+        }
+      }
+    },
+    "shell.help.group.help" : {
+      "comment" : "Group heading in the Keyboard Shortcuts window for actions in the Help menu.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Help menu"
+          }
+        }
+      }
+    },
+    "shell.help.group.view" : {
+      "comment" : "Heading for the View menu's group in the Keyboard Shortcuts window. Reads 'View Menu' to match the File and Help headings beside it.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "View menu"
+          }
+        }
+      }
+    },
+    "shell.help.heading" : {
+      "comment" : "Heading of the Keyboard Shortcuts reference window.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keyboard shortcuts"
+          }
+        }
+      }
+    },
+    "shell.help.introduction" : {
+      "comment" : "Sentence under the Keyboard Shortcuts heading explaining where the list comes from.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus adds these shortcuts to the standard Mac shortcuts."
+          }
+        }
+      }
+    },
+    "shell.history.answerLabel" : {
+      "comment" : "Label before the person's own answer to a question.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You said"
+          }
+        }
+      }
+    },
+    "shell.history.correctAction" : {
+      "comment" : "Button on an interval Focus watched go past in silence.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This was a distraction"
+          }
+        }
+      }
+    },
+    "shell.history.correctionWritten" : {
+      "comment" : "Confirmation after the correction is written.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Added to this priority's rules."
+          }
+        }
+      }
+    },
+    "shell.history.empty" : {
+      "comment" : "Shown when the day has no rows at all.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No activity recorded today."
+          }
+        }
+      }
+    },
+    "shell.history.heading" : {
+      "comment" : "Heading of the History window.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "What Focus did today"
+          }
+        }
+      }
+    },
+    "shell.history.introduction" : {
+      "comment" : "One sentence under the History heading.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Today's nudges, questions and recorded activity, including times when Focus stayed quiet."
+          }
+        }
+      }
+    },
+    "shell.history.outcomeLabel" : {
+      "comment" : "Label before what the person did about an interruption.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "What you did"
+          }
+        }
+      }
+    },
+    "shell.history.reasonNotRecorded" : {
+      "comment" : "Shown when a row was written before Focus recorded its reasons.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not recorded"
+          }
+        }
+      }
+    },
+    "shell.history.rowAccusation" : {
+      "comment" : "Row label for an interruption that said the person had drifted.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Flagged unrelated activity"
+          }
+        }
+      }
+    },
+    "shell.history.rowQuestion" : {
+      "comment" : "Row label for a question Focus asked.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Asked about this"
+          }
+        }
+      }
+    },
+    "shell.history.rowSession" : {
+      "comment" : "Row label for a focus session.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Session"
+          }
+        }
+      }
+    },
+    "shell.history.rowSilence" : {
+      "comment" : "Row label for an app Focus watched without saying anything.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No nudge"
+          }
+        }
+      }
+    },
+    "shell.history.underLabel" : {
+      "comment" : "Label before the priority a row happened under.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Under"
+          }
+        }
+      }
+    },
+    "shell.history.wordingNote" : {
+      "comment" : "Footnote explaining that priority wording is today's.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "History uses the current wording of each priority. Earlier wording is not saved."
+          }
+        }
+      }
+    },
+    "shell.menuBar.cancelSnooze" : {
+      "comment" : "Popover action: end one subject's snooze now.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancel"
+          }
+        }
+      }
+    },
+    "shell.menuBar.nudgeRung" : {
+      "comment" : "Label for the rung the accusation ladder is on right now, in the menu-bar popover. The step you are on, never a step that is scheduled.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Current nudge"
+          }
+        }
+      }
+    },
+    "shell.menuBar.openCockpit" : {
+      "comment" : "Popover action: bring the main window forward.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Focus Sentinel"
+          }
+        }
+      }
+    },
+    "shell.menuBar.pendingQuestion" : {
+      "comment" : "Heading above the question when reduced interruption routed it to the popover instead of a panel.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A question is waiting"
+          }
+        }
+      }
+    },
+    "shell.menuBar.resumeWatching" : {
+      "comment" : "Menu-bar secondary menu: turn watching back on after it was paused. The pausing half is shell.command.pauseSensing, which the app menu draws as well.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Resume watching"
+          }
+        }
+      }
+    },
+    "shell.menuBar.settings" : {
+      "comment" : "Menu-bar secondary menu: open the Settings window. The ellipsis is the Mac's convention for an item that opens something rather than acting immediately.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Settings\u2026"
+          }
+        }
+      }
+    },
+    "shell.menuBar.quit" : {
+      "comment" : "Menu-bar secondary menu: leave the application.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quit Focus Sentinel"
+          }
+        }
+      }
+    },
+    "shell.menuBar.snoozed" : {
+      "comment" : "Heading above the list of subjects a snooze is currently running for.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Snoozed"
+          }
+        }
+      }
+    },
+    "shell.menuBar.statusItem" : {
+      "comment" : "Accessibility label for the menu-bar status item's button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus status"
+          }
+        }
+      }
+    },
+    "shell.nudge.dismiss" : {
+      "comment" : "Accessibility label for the nudge panel's close affordance. Escape does the same thing.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dismiss"
+          }
+        }
+      }
+    },
+    "shell.nudge.snoozeCustom" : {
+      "comment": "Custom quiet duration control, requested by the owner on 9 September 2026.",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Custom…"
+          }
+        }
+      }
+    },
+    "shell.nudge.snoozeCustomMinutes" : {
+      "comment": "Custom quiet duration control, requested by the owner on 9 September 2026.",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Minutes, 1 to 1,440"
+          }
+        }
+      }
+    },
+    "shell.nudge.snoozeCountdown" : {
+      "comment" : "Spoken form of the nudge panel's snooze countdown. %@ is a rendered duration.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Snoozed for %@"
+          }
+        }
+      }
+    },
+    "shell.window.cockpit.title" : {
+      "comment" : "Title of the main cockpit window, as it appears in the Window menu.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus Sentinel"
+          }
+        }
+      }
+    },
+    "shell.window.help.title" : {
+      "comment" : "Title of the Keyboard Shortcuts window, as it appears in the Window menu.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keyboard shortcuts"
+          }
+        }
+      }
+    },
+    "shell.window.history.title" : {
+      "comment" : "Title of the History window.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "History"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

@@ -1,0 +1,198 @@
+# Every stored column, classified — what it is, and whether it may ever leave this app.
+#
+# WHY THIS FILE EXISTS. The e09 plan's §7 asks a harder question than "does the export leak?".
+# It asks whether an epic creates the first column that *could*. A registry answers it in the
+# only way a repository can: every column carries a row somebody wrote, a column with no row
+# fails the gate, and the failure lands on whichever epic added the column rather than on the
+# epic that finally writes an exporter. `scripts/check-export-fields.sh` reads it, in the shape
+# `Config/string-draw-sites.txt` and `Config/verbatim-sites.txt` already established.
+#
+# NO EXPORTER EXISTS YET. This registry lands first on purpose (e09a T2), so that the exporter
+# arrives into an enforcing gate. It is deliberately independent of any exporter's own manifest:
+# a lint that read the exporter's field list to decide what to require would be the exporter
+# marking its own homework, and the two have to be able to disagree.
+#
+# THE CURRENT SCHEMA ONLY. v1…v7 are frozen migration sources; nothing fetches them and no
+# exporter can reach them. The script derives the current entity set the way the schema chain
+# does — for each entity name, the declaration in the highest-numbered schema wins — so a
+# version that re-declares a class cannot leave this file describing the old columns.
+#
+# ROW FORMAT
+#
+#   <entity> | <column> | <class> | <what it is>
+#
+# THE FIVE CLASSES
+#
+#   KEY       bundle identifiers, normalised `scheme://host[:port]` origins, UUIDs
+#   TOKEN     closed-vocabulary raw values and NormalisedTokens — re-derived on the way out,
+#             never copied, so an unknown raw value cannot ride out of the app as a string
+#   MEASURE   instants, durations, counts, booleans
+#   OWN       the person's own typed words. Exportable BECAUSE it is theirs
+#   EXCLUDED  never leaves, and the row says why
+#
+# THE CLASS IS A JUDGEMENT AND THE FOURTH FIELD IS THE ARGUMENT. No script can check whether a
+# classification is right; what the script guarantees is that somebody made it, in a file a
+# reviewer can read. The sharpest edge in here is `ContextItem.value`, which for a file item IS
+# an absolute path. It is classified OWN because the person *attached* it — the app never
+# observed it — and that distinction is the whole basis on which it could be exported at all.
+# Under §7 it belongs to an Everything scope only, named in the published field list before any
+# panel opens, and never to Sessions or Judgements.
+#
+# WHAT NEVER LEAVES, restated as a list a reviewer can check against the rows below: window
+# titles, URLs beyond a normalised origin, document names, file paths the app observed, OCR
+# text, image data of any kind, keystroke or input content, security-scoped bookmark blobs,
+# machine identifiers, Keychain material, and any similarity number.
+
+SCHEMA 10
+ENTITIES 17
+
+# ---------------------------------------------------------------- the commitment
+
+PriorityTask | id | KEY | The priority's identifier; what every other table's priorityID names
+PriorityTask | intent | OWN | What the person typed they were going to do
+PriorityTask | doneWhen | OWN | Their own definition of done
+PriorityTask | createdAt | MEASURE | When they wrote it
+PriorityTask | completedAt | MEASURE | When they said it was finished
+PriorityTask | revision | MEASURE | How many times they edited it. A count, and no prior text
+PriorityTask | timeboxSeconds | MEASURE | The length they chose
+PriorityTask | startedAt | MEASURE | When the first session on it began
+PriorityTask | shipped | OWN | What they said they actually shipped
+PriorityTask | restartPoint | OWN | The sentence they left themselves to pick it up again
+PriorityTask | lastActivatedAt | MEASURE | When it was last made the active one
+PriorityTask | contextItems | EXCLUDED | A relationship, not a value: the items export themselves
+PriorityTask | rules | EXCLUDED | A relationship, not a value: the rules export themselves
+PriorityTask | activePointer | EXCLUDED | A relationship to the single-slot pointer row
+
+ActivePriority | task | EXCLUDED | A relationship; the identifier on the other side is the fact
+ActivePriority | activatedAt | MEASURE | When this priority became the active one
+
+ContextItem | id | KEY | The item's identifier
+ContextItem | kindRaw | TOKEN | ContextItemKind — closed vocabulary
+ContextItem | value | OWN | What they attached. For a file item this IS an absolute path — theirs, never observed; Everything scope only
+ContextItem | displayName | OWN | The name they gave it, or the one the file already had
+ContextItem | bookmark | EXCLUDED | A security-scoped bookmark blob: an opaque handle to this Mac, meaningless elsewhere and a machine identifier in effect
+ContextItem | addedAt | MEASURE | When they attached it
+ContextItem | task | EXCLUDED | A relationship; the priority's identifier is the fact
+
+RelevanceRule | id | KEY | The rule's identifier
+RelevanceRule | scopeRaw | TOKEN | PriorityRuleScope — closed vocabulary, retired cases included
+RelevanceRule | subject | KEY | A bundle identifier or a normalised scheme://host[:port]
+RelevanceRule | verdictRaw | TOKEN | RelevanceVerdict — closed vocabulary
+RelevanceRule | createdAt | MEASURE | When the rule was written
+RelevanceRule | task | EXCLUDED | A relationship; the priority's identifier is the fact
+
+# ---------------------------------------------------------------- the sessions
+
+FocusSessionRecord | id | KEY | The session's identifier
+FocusSessionRecord | taskID | KEY | The priority it ran under
+FocusSessionRecord | startedAt | MEASURE | When it began
+FocusSessionRecord | endedAt | MEASURE | When it ended, or nil while it is running
+FocusSessionRecord | phaseRaw | TOKEN | SessionPhase — closed vocabulary
+FocusSessionRecord | phaseChangedAt | MEASURE | When the phase last moved
+FocusSessionRecord | resumeToRaw | TOKEN | ResumablePhase — closed vocabulary
+FocusSessionRecord | kindRaw | TOKEN | SessionKind — closed vocabulary
+FocusSessionRecord | plannedSeconds | MEASURE | The length that was chosen
+FocusSessionRecord | deadlineAt | MEASURE | When a countdown is due
+FocusSessionRecord | uptimeAnchorSeconds | EXCLUDED | Seconds since THIS Mac booted: paired with bootIdentity it is a machine fingerprint, and it means nothing off the machine that wrote it
+FocusSessionRecord | bootIdentity | EXCLUDED | This Mac's boot identity — a machine identifier, and never exportable
+FocusSessionRecord | pauseCausesRaw | TOKEN | PauseCause values, sorted and comma-joined
+FocusSessionRecord | interruptionReasonRaw | TOKEN | SessionInterruptionReason — closed vocabulary
+FocusSessionRecord | restartPointNote | OWN | The note they left themselves when they broke off
+FocusSessionRecord | lastActiveBundleID | KEY | A bundle identifier and nothing else — never a window title, never a document
+FocusSessionRecord | transitions | EXCLUDED | A relationship; the transition rows export themselves
+
+SessionTransitionRecord | id | KEY | The transition's identifier
+SessionTransitionRecord | at | MEASURE | When the phase moved
+SessionTransitionRecord | fromRaw | TOKEN | SessionPhase — closed vocabulary
+SessionTransitionRecord | toRaw | TOKEN | SessionPhase — closed vocabulary
+SessionTransitionRecord | eventRaw | TOKEN | SessionEvent — closed vocabulary
+SessionTransitionRecord | reasonRaw | TOKEN | The cause, from a closed vocabulary
+SessionTransitionRecord | outcomeRaw | TOKEN | Whether the machine accepted or refused the move
+SessionTransitionRecord | session | EXCLUDED | A relationship; the session's identifier is the fact
+
+# ---------------------------------------------------------------- what was observed
+
+ActivityEvent | id | KEY | The observation's identifier
+ActivityEvent | at | MEASURE | When it was observed
+ActivityEvent | kindRaw | TOKEN | ActivityEventKind — closed vocabulary
+ActivityEvent | bundleID | KEY | The application's identifier. Never a window title, never a path
+ActivityEvent | detail | TOKEN | Assignable only from a NormalisedDetail, whose vocabulary is closed and lint-enforced (R-41). Free text is unrepresentable here, not merely absent
+ActivityEvent | sessionID | KEY | The session it fell inside
+ActivityEvent | dwellSeconds | MEASURE | How long the subject was frontmost
+ActivityEvent | displayID | EXCLUDED | A CoreGraphics display id: a number about this Mac's hardware arrangement, useless elsewhere and a weak machine fingerprint
+
+CapabilityRecord | id | KEY | The observation's identifier
+CapabilityRecord | capabilityRaw | TOKEN | ObservableCapability — closed vocabulary
+CapabilityRecord | stateRaw | TOKEN | CapabilityState — closed vocabulary
+CapabilityRecord | observedAt | MEASURE | When the state was read
+CapabilityRecord | educationShownAt | MEASURE | When the app last explained the capability
+
+SensitiveAppEntry | id | KEY | The entry's identifier
+SensitiveAppEntry | bundleID | KEY | The application the app refuses to look at
+SensitiveAppEntry | kindRaw | TOKEN | The reason it is on the list, from a closed vocabulary
+SensitiveAppEntry | isBuiltIn | MEASURE | Whether the app shipped this row or the person added it
+SensitiveAppEntry | addedAt | MEASURE | When it joined the list
+
+# ---------------------------------------------------------------- what the app did
+
+InterventionRecord | id | KEY | The row's identifier
+InterventionRecord | at | MEASURE | When the app spoke, or stayed quiet on purpose
+InterventionRecord | localDayKey | MEASURE | The person's own local day, yyyy-MM-dd
+InterventionRecord | kindRaw | TOKEN | InterruptionKind — query or accusation
+InterventionRecord | rungRaw | TOKEN | LadderRung.Kind — closed vocabulary
+InterventionRecord | subject | KEY | A bundle identifier or a normalised origin; empty when it named nobody
+InterventionRecord | subjectKindRaw | TOKEN | RuleSubjectKind, read off the subject rather than assumed (focus-tee.2)
+InterventionRecord | priorityID | KEY | The priority the judgement ran under
+InterventionRecord | surfaceRaw | TOKEN | NudgeSurface, or the empty string when it reached none
+InterventionRecord | dispositionRaw | TOKEN | InterventionDisposition — delivered, deferred, unopened, suppressed
+InterventionRecord | outcomeRaw | TOKEN | InterventionOutcome — what the person did about it
+InterventionRecord | originatingAnswerRaw | TOKEN | QueryAnswer — which click wrote the rule the verdict rested on
+InterventionRecord | explanationKindsRaw | TOKEN | ExplanationClauseKind values, comma-joined. Kinds only: the enum has no payload, so no token, subject, number or distance can reach this column
+
+AskedQuestion | id | KEY | The receipt's identifier
+AskedQuestion | priorityID | KEY | The priority the question was asked under
+AskedQuestion | subjectKindRaw | TOKEN | RuleSubjectKind — part of the never-ask-twice key
+AskedQuestion | subject | KEY | A bundle identifier or a normalised origin
+AskedQuestion | reasonRaw | TOKEN | QueryableUncertainty — the app's own reason for asking
+AskedQuestion | askedAt | MEASURE | When it was asked
+AskedQuestion | outcomeRaw | TOKEN | AskedQuestionOutcome — what the person answered
+AskedQuestion | answeredAt | MEASURE | When they answered, or nil while it stands
+
+# ---------------------------------------------------------------- what was chosen
+
+AppSettingsRecord | id | KEY | The row's identifier
+AppSettingsRecord | appearancePreferenceRaw | TOKEN | AppearancePreference — closed vocabulary
+AppSettingsRecord | schemaTouchedAt | MEASURE | When the schema last wrote this row
+AppSettingsRecord | lastRitualLocalDay | MEASURE | The local day the daily ritual was last offered
+AppSettingsRecord | ritualEnabled | MEASURE | Whether the daily ritual banner is offered at all
+AppSettingsRecord | hotKeyKeyCode | MEASURE | The quick-capture shortcut's virtual key code
+AppSettingsRecord | hotKeyModifierFlags | MEASURE | The quick-capture shortcut's modifiers
+AppSettingsRecord | sensingPaused | MEASURE | Whether the person has stopped the app looking
+AppSettingsRecord | idleThresholdSeconds | MEASURE | How long before they count as away
+AppSettingsRecord | corroborationTickSeconds | MEASURE | How often the corroborating signal is read
+AppSettingsRecord | launchContextOnSessionStart | MEASURE | Whether attached context opens with a session
+AppSettingsRecord | mediaSuppressionEnabled | MEASURE | Whether playing media keeps the app quiet
+
+NudgePreferencesRecord | id | KEY | The row's identifier
+NudgePreferencesRecord | voiceRaw | TOKEN | NudgeVoice — closed vocabulary
+NudgePreferencesRecord | reducedInterruption | MEASURE | Whether they asked to be interrupted less
+NudgePreferencesRecord | quietHoursStartMinuteOfDay | MEASURE | Minutes past local midnight
+NudgePreferencesRecord | quietHoursEndMinuteOfDay | MEASURE | Minutes past local midnight
+NudgePreferencesRecord | touchedAt | MEASURE | When they last changed any of it
+
+PolicyTuningRecord | id | KEY | The row's identifier
+PolicyTuningRecord | key | TOKEN | Which dial was turned: a PolicyTuning raw value, re-derived on the way out
+PolicyTuningRecord | value | MEASURE | What they turned it to, clamped to the dial's own range
+PolicyTuningRecord | touchedAt | MEASURE | When they last turned it
+GrantOptInRecord | id | KEY | The row's identifier
+GrantOptInRecord | key | TOKEN | Which macOS grant they allowed the app to ask for: a GrantOptIn raw value, re-derived on the way out
+GrantOptInRecord | touchedAt | MEASURE | When they switched it on
+PrivacyPreferencesRecord | id | KEY | The row's identifier
+PrivacyPreferencesRecord | retentionDays | MEASURE | How long they asked the app to keep things: 7, 30, 90, or 0 for forever
+PrivacyPreferencesRecord | touchedAt | MEASURE | When they last chose a window
+
+ShellStateRecord | id | KEY | The row's identifier
+ShellStateRecord | firstRunExplanationShownAt | MEASURE | When the first-run explanation was shown
+ShellStateRecord | launchAtLoginOfferedAt | MEASURE | When the launch-at-login offer was made
+ShellStateRecord | openWindowsAtLastQuitRaw | TOKEN | Scene identifiers from a closed set, sorted and comma-joined
+ShellStateRecord | touchedAt | MEASURE | When the shell last wrote this row

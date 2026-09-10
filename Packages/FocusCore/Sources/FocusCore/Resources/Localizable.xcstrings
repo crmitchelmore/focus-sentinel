@@ -1,0 +1,1838 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "nudge.direct.query.panel.heading" : {
+      "comment" : "Companion heading. Approved by Chris on 9 September 2026 (focus-gl3x, D-11).",
+      "extractionState" : "manual",
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "A small question." } } }
+    },
+    "nudge.neutral.query.panel.heading" : {
+      "comment" : "Companion heading. Approved by Chris on 9 September 2026 (focus-gl3x, D-11).",
+      "extractionState" : "manual",
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "A small question." } } }
+    },
+    "nudge.silentVisual.query.panel.heading" : {
+      "comment" : "Companion heading. Approved by Chris on 9 September 2026 (focus-gl3x, D-11).",
+      "extractionState" : "manual",
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "A small question." } } }
+    },
+    "nudge.warm.query.panel.heading" : {
+      "comment" : "Companion heading. Approved by Chris on 9 September 2026 (focus-gl3x, D-11).",
+      "extractionState" : "manual",
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "A small question." } } }
+    },
+    "cascade.precedence.footnote" : {
+      "comment" : "Footnote under the precedence ladder.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus follows your rules before using its own assessment."
+          }
+        }
+      }
+    },
+    "cascade.precedence.heading" : {
+      "comment" : "Heading of the Settings pane that lists the precedence ladder in order.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How Focus decides"
+          }
+        }
+      }
+    },
+    "cascade.rung.contextPack" : {
+      "comment" : "Precedence pane row: an app, site, keyword or file attached to this priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Attached context"
+          }
+        }
+      }
+    },
+    "cascade.rung.globalRule" : {
+      "comment" : "Precedence pane row: a rule the user scoped to no particular priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rule for all priorities"
+          }
+        }
+      }
+    },
+    "cascade.rung.heuristic" : {
+      "comment" : "Precedence pane row: the on-device deterministic heuristic — tokens, similarity and dwell.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shared words"
+          }
+        }
+      }
+    },
+    "cascade.rung.onDeviceModel" : {
+      "comment" : "Precedence pane row: the on-device model. Declared here so its placement below every rule is visible; it is not part of this version.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On-device model"
+          }
+        }
+      }
+    },
+    "cascade.rung.seedFallback" : {
+      "comment" : "Precedence pane row: a bundled default for a mixed-use app, which always declines to decide.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Default to asking"
+          }
+        }
+      }
+    },
+    "cascade.rung.seedRule" : {
+      "comment" : "Precedence pane row: a decisive default this app ships, overridable in one click.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Built-in default"
+          }
+        }
+      }
+    },
+    "cascade.rung.sessionRule" : {
+      "comment" : "Precedence pane row: a rule that lasts until the current focus session ends.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rule for this session"
+          }
+        }
+      }
+    },
+    "cascade.rung.taskRule" : {
+      "comment" : "Precedence pane row: a rule the user scoped to the current priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rule for this priority"
+          }
+        }
+      }
+    },
+    "cascade.rung.unavailable" : {
+      "comment" : "Caption drawn beside a precedence row this build cannot consult.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not in this version"
+          }
+        }
+      }
+    },
+    "cascade.rung.unresolved" : {
+      "comment" : "Precedence pane row: the last rung, where the app has nothing to go on and says so.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing matched"
+          }
+        }
+      }
+    },
+    "evidence.band.high" : {
+      "comment" : "Label for the highest evidence band: you said so, or something you attached matched exactly.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Strong"
+          }
+        }
+      }
+    },
+    "evidence.band.low" : {
+      "comment" : "Label for the lowest evidence band. A band this weak can never cause an interruption.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Weak"
+          }
+        }
+      }
+    },
+    "evidence.band.medium" : {
+      "comment" : "Label for the middle evidence band.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fair"
+          }
+        }
+      }
+    },
+    "explanation.clause.conflictingRules" : {
+      "comment" : "Explanation clause: two rules of equal authority and narrowness contradict each other.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "two of your rules disagree"
+          }
+        }
+      }
+    },
+    "explanation.clause.contextItem" : {
+      "comment" : "Explanation clause: the answer came from the priority's context pack.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "something you attached to this priority"
+          }
+        }
+      }
+    },
+    "explanation.clause.insufficientEvidence" : {
+      "comment" : "Explanation clause: the engine declined, and the named reason says which route it took.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "not enough evidence"
+          }
+        }
+      }
+    },
+    "explanation.clause.languageNotSupported" : {
+      "comment" : "Explanation clause: no embedding exists for this language on this Mac.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus can only compare wording in English"
+          }
+        }
+      }
+    },
+    "explanation.clause.mixedSubjects" : {
+      "comment" : "Explanation clause: drift accumulated across more than one subject, so none is named.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "several unrelated apps"
+          }
+        }
+      }
+    },
+    "explanation.clause.modelDirect" : {
+      "comment" : "Explanation clause: the on-device model judged this application to BE the work. A guess, banded low, and never rendered in the model's own words.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "this looks like your task"
+          }
+        }
+      }
+    },
+    "explanation.clause.modelSupporting" : {
+      "comment" : "Explanation clause: the on-device model judged this application to serve the work rather than be it — documentation, a reference, a tool the work needs.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "this looks like it supports your task"
+          }
+        }
+      }
+    },
+    "explanation.clause.noNegativeBasis" : {
+      "comment" : "Explanation clause: the priority names no app or site, so an absence means nothing. The only clause whose copy carries an ask.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add an app or site to this priority so Focus can recognise your work."
+          }
+        }
+      }
+    },
+    "explanation.clause.returnedToAnchor" : {
+      "comment" : "Explanation clause: the person returned to the subject they were working in.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "you went back to it"
+          }
+        }
+      }
+    },
+    "explanation.clause.seedDefault" : {
+      "comment" : "Explanation clause: the answer came from a bundled default, overridable in one click.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "a built-in default"
+          }
+        }
+      }
+    },
+    "explanation.clause.seedFallbackMixedUse" : {
+      "comment" : "Explanation clause: a bundled ‘ask each time’ default for a mixed-use application.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "this app has several uses"
+          }
+        }
+      }
+    },
+    "explanation.clause.similarityCorroborated" : {
+      "comment" : "Explanation clause: the on-device sentence-similarity signal agreed. No number is ever shown.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "similar wording"
+          }
+        }
+      }
+    },
+    "explanation.clause.sustainedDwell" : {
+      "comment" : "Explanation clause: drift has been sustained past the threshold.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "time spent in this app"
+          }
+        }
+      }
+    },
+    "explanation.clause.tokenOverlap" : {
+      "comment" : "Explanation clause: the priority and what is on screen share these words.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "words in common with your priority"
+          }
+        }
+      }
+    },
+    "explanation.clause.userRule" : {
+      "comment" : "Explanation clause: the answer came from a rule the user authored.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "a rule you wrote"
+          }
+        }
+      }
+    },
+    "history.answer.answeredRelevant" : {
+      "comment" : "The person's own answer to a question.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yes"
+          }
+        }
+      }
+    },
+    "history.answer.answeredUnrelated" : {
+      "comment" : "The person's own answer to a question.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No"
+          }
+        }
+      }
+    },
+    "history.answer.declined" : {
+      "comment" : "The person's own answer to a question.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not now"
+          }
+        }
+      }
+    },
+    "history.answer.expired" : {
+      "comment" : "The person's own answer to a question.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No answer before it closed"
+          }
+        }
+      }
+    },
+    "history.disposition.deferred" : {
+      "comment" : "What became of an interruption.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No available place to show it"
+          }
+        }
+      }
+    },
+    "history.disposition.delivered" : {
+      "comment" : "What became of an interruption.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Displayed"
+          }
+        }
+      }
+    },
+    "history.disposition.suppressed" : {
+      "comment" : "What became of an interruption.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suppressed by settings or context"
+          }
+        }
+      }
+    },
+    "history.disposition.unopened" : {
+      "comment" : "What became of an interruption.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Displayed but not opened"
+          }
+        }
+      }
+    },
+    "history.outcome.answered" : {
+      "comment" : "What the person did about an interruption.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Answered"
+          }
+        }
+      }
+    },
+    "history.outcome.corrected" : {
+      "comment" : "What the person did about an interruption.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Said it was relevant"
+          }
+        }
+      }
+    },
+    "history.outcome.dismissed" : {
+      "comment" : "What the person did about an interruption.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dismissed"
+          }
+        }
+      }
+    },
+    "history.outcome.ignored" : {
+      "comment" : "What the person did about an interruption.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No response"
+          }
+        }
+      }
+    },
+    "history.outcome.pausedSession" : {
+      "comment" : "What the person did about an interruption.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paused the session"
+          }
+        }
+      }
+    },
+    "history.outcome.priorityChanged" : {
+      "comment" : "What the person did about an interruption.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Changed priority"
+          }
+        }
+      }
+    },
+    "history.outcome.returned" : {
+      "comment" : "What the person did about an interruption.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Went back to the task"
+          }
+        }
+      }
+    },
+    "history.outcome.snoozed" : {
+      "comment" : "What the person did about an interruption.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Asked for quiet"
+          }
+        }
+      }
+    },
+    "history.surface.menuBar" : {
+      "comment" : "Where an interruption was carried.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menu bar icon"
+          }
+        }
+      }
+    },
+    "history.surface.notification" : {
+      "comment" : "Where an interruption was carried.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notification"
+          }
+        }
+      }
+    },
+    "history.surface.panel" : {
+      "comment" : "Where an interruption was carried.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Panel"
+          }
+        }
+      }
+    },
+    "history.surface.popoverBadge" : {
+      "comment" : "Where an interruption was carried.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menu bar popover"
+          }
+        }
+      }
+    },
+    "history.withdrawal.noPriority" : {
+      "comment" : "Why a correction is not offered.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No priority was set at the time."
+          }
+        }
+      }
+    },
+    "history.withdrawal.noSubject" : {
+      "comment" : "Why a correction is not offered.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No specific app or site was recorded."
+          }
+        }
+      }
+    },
+    "history.withdrawal.originSubject" : {
+      "comment" : "Why a correction is not offered.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus cannot yet change a site assessment from history."
+          }
+        }
+      }
+    },
+    "history.withdrawal.priorityDeleted" : {
+      "comment" : "Why a correction is not offered.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This priority was deleted, so you cannot add a rule to it."
+          }
+        }
+      }
+    },
+    "nudge.attention.noticing" : {
+      "comment" : "Read by VoiceOver off the menu-bar item when the ambient rung has landed on the glyph: the app has spoken, and there is nothing on it to press.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus has a nudge. No answer needed."
+          }
+        }
+      }
+    },
+    "nudge.attention.waiting" : {
+      "comment" : "Read by VoiceOver off the menu-bar item when a question or an accusation is waiting in the popover. It is the invitation to open it. Revised at the owner's request on 2026-09-09 using the Unslop guidance. Earlier D-11 approval covered the previous wording.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Focus to answer a question."
+          }
+        }
+      }
+    },
+    "nudge.direct.accusation.action.notNow" : {
+      "comment" : "[direct] Accusation action: a session-lived rule that dies with the session.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Allow for this session"
+          }
+        }
+      }
+    },
+    "nudge.direct.accusation.action.pause" : {
+      "comment" : "[direct] Accusation action: pause the session.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pause"
+          }
+        }
+      }
+    },
+    "nudge.direct.accusation.action.priority" : {
+      "comment" : "[direct] Accusation action: open the quick-capture confirm surface.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Change priority"
+          }
+        }
+      }
+    },
+    "nudge.direct.accusation.action.relevant" : {
+      "comment" : "[direct] Accusation action: write a task-authority rule marking this subject relevant.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Relevant"
+          }
+        }
+      }
+    },
+    "nudge.direct.accusation.action.return" : {
+      "comment" : "[direct] Accusation action: return to the stored work application. %@ is its name.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Back to %@"
+          }
+        }
+      }
+    },
+    "nudge.direct.accusation.action.snooze" : {
+      "comment" : "[direct] Accusation action: snooze this subject for the selected duration.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Snooze"
+          }
+        }
+      }
+    },
+    "nudge.direct.accusation.panel.body" : {
+      "comment" : "[direct] Accusation panel body. %1$@ is the application or origin, %2$@ a rendered duration.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ has been active for %@."
+          }
+        }
+      }
+    },
+    "nudge.direct.accusation.panel.title" : {
+      "comment" : "[direct] Accusation panel title. %@ is the priority's intent. Revised at the owner's request on 2026-09-09 using the Unslop guidance. Earlier D-11 approval covered the previous wording.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The current priority is %@."
+          }
+        }
+      }
+    },
+    "nudge.direct.query.action.no" : {
+      "comment" : "[direct] Query action: no, this is not part of the task.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No"
+          }
+        }
+      }
+    },
+    "nudge.direct.query.action.notNow" : {
+      "comment" : "[direct] Query action: decline to answer. Escape does the same.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Later"
+          }
+        }
+      }
+    },
+    "nudge.direct.query.action.yes" : {
+      "comment" : "[direct] Query action: yes, this is part of the task.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yes"
+          }
+        }
+      }
+    },
+    "nudge.direct.query.panel.scope.app" : {
+      "comment" : "[direct] Query panel: the scope the rule an answer writes will have.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Applies to this app for this priority."
+          }
+        }
+      }
+    },
+    "nudge.direct.query.panel.title" : {
+      "comment" : "[direct] Query panel title. %1$@ is the application or origin, %2$@ the priority's intent.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Is %@ part of %@?"
+          }
+        }
+      }
+    },
+    "nudge.neutral.accusation.action.notNow" : {
+      "comment" : "[neutral] Accusation action: a session-lived rule that dies with the session. Revised at the owner's request on 2026-09-09 using the Unslop guidance. Earlier D-11 approval covered the previous wording.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Allow for this session"
+          }
+        }
+      }
+    },
+    "nudge.neutral.accusation.action.pause" : {
+      "comment" : "[neutral] Accusation action: pause the session.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pause"
+          }
+        }
+      }
+    },
+    "nudge.neutral.accusation.action.priority" : {
+      "comment" : "[neutral] Accusation action: open the quick-capture confirm surface.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Change priority"
+          }
+        }
+      }
+    },
+    "nudge.neutral.accusation.action.relevant" : {
+      "comment" : "[neutral] Accusation action: write a task-authority rule marking this subject relevant. APPROVED BY USER (D-11, 2026-09-08): drafted by an agent in e11a because R-96t/R-96v fold over the whole deck space; the user approved this line on 2026-09-08.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Part of this task"
+          }
+        }
+      }
+    },
+    "nudge.neutral.accusation.action.return" : {
+      "comment" : "[neutral] Accusation action: return to the stored work application. %@ is its name.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Back to %@"
+          }
+        }
+      }
+    },
+    "nudge.neutral.accusation.action.snooze" : {
+      "comment" : "[neutral] Accusation action: snooze this subject for the selected duration. APPROVED BY USER (D-11, 2026-09-08): drafted by an agent in e11a because R-96t/R-96v fold over the whole deck space; the user approved this line on 2026-09-08.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quiet for"
+          }
+        }
+      }
+    },
+    "nudge.neutral.accusation.panel.body" : {
+      "comment" : "[neutral] Accusation panel body. %1$@ is the application or origin, %2$@ a rendered duration. Revised at the owner's request on 2026-09-09 using the Unslop guidance. Earlier D-11 approval covered the previous wording.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ has been active for %@."
+          }
+        }
+      }
+    },
+    "nudge.neutral.accusation.panel.title" : {
+      "comment" : "[neutral] Accusation panel title. %@ is the priority's intent. Revised at the owner's request on 2026-09-09 using the Unslop guidance. Earlier D-11 approval covered the previous wording.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "\"%@\" is the current priority."
+          }
+        }
+      }
+    },
+    "nudge.neutral.query.action.no" : {
+      "comment" : "[neutral] Query action: no, this is not part of the task. Revised at the owner's request on 2026-09-09 using the Unslop guidance. Earlier D-11 approval covered the previous wording.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No, it isn't"
+          }
+        }
+      }
+    },
+    "nudge.neutral.query.action.notNow" : {
+      "comment" : "[neutral] Query action: decline to answer. Escape does the same. APPROVED BY USER (D-11, 2026-09-08): drafted by an agent in e11a because R-96t/R-96v fold over the whole deck space; the user approved this line on 2026-09-08.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ask later"
+          }
+        }
+      }
+    },
+    "nudge.neutral.query.action.yes" : {
+      "comment" : "[neutral] Query action: yes, this is part of the task.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yes, add it"
+          }
+        }
+      }
+    },
+    "nudge.neutral.query.panel.scope.app" : {
+      "comment" : "[neutral] Query panel: the scope the rule an answer writes will have. Revised at the owner's request on 2026-09-09 using the Unslop guidance. Earlier D-11 approval covered the previous wording.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Applies to this whole app for this priority."
+          }
+        }
+      }
+    },
+    "nudge.neutral.query.panel.title" : {
+      "comment" : "[neutral] Query panel title. %1$@ is the application or origin, %2$@ the priority's intent.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Is %@ part of %@?"
+          }
+        }
+      }
+    },
+    "nudge.query.reason.languageNotSupported" : {
+      "comment" : "Query reason line: this Mac has no sentence embedding for the language in play.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus cannot assess this wording."
+          }
+        }
+      }
+    },
+    "nudge.query.reason.mixedUseApplication" : {
+      "comment" : "Query reason line: a browser, a chat client or a media player — used for all sorts of things.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This app has several uses."
+          }
+        }
+      }
+    },
+    "nudge.query.reason.noNegativeBasis" : {
+      "comment" : "Query reason line: the priority names nothing this app could be judged against.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No apps have been added to this priority yet."
+          }
+        }
+      }
+    },
+    "nudge.rung.ambient" : {
+      "comment" : "Ladder rung 1, named by what it is rather than by where it appears — the routing table's other column says the surface (focus-91d).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quiet signal. No answer needed."
+          }
+        }
+      }
+    },
+    "nudge.rung.panel" : {
+      "comment" : "Ladder rung 2, named by what it is rather than by where it appears: it is drawn as a panel, a menu-bar badge or a popover row depending on the deck and the settings (focus-91d).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nudge with actions"
+          }
+        }
+      }
+    },
+    "nudge.restart.cue" : {
+      "comment" : "Read by VoiceOver off the menu-bar item, and shown as its tooltip, when a break ended and the person has not gone back to their commitment within the grace. States a fact and asks for nothing: no praise, no count, nothing to press. Revised at the owner's request on 2026-09-09 using the Unslop guidance. Earlier D-11 approval covered the previous wording.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your break ended. No answer needed."
+          }
+        }
+      }
+    },
+    "nudge.silentVisual.accusation.action.notNow" : {
+      "comment" : "[silentVisual] Accusation action: a session-lived rule that dies with the session.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Allow for this session"
+          }
+        }
+      }
+    },
+    "nudge.silentVisual.accusation.action.pause" : {
+      "comment" : "[silentVisual] Accusation action: pause the session.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pause"
+          }
+        }
+      }
+    },
+    "nudge.silentVisual.accusation.action.priority" : {
+      "comment" : "[silentVisual] Accusation action: open the quick-capture confirm surface.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Change priority"
+          }
+        }
+      }
+    },
+    "nudge.silentVisual.accusation.action.relevant" : {
+      "comment" : "[silentVisual] Accusation action: write a task-authority rule marking this subject relevant.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Relevant"
+          }
+        }
+      }
+    },
+    "nudge.silentVisual.accusation.action.return" : {
+      "comment" : "[silentVisual] Accusation action: return to the stored work application. %@ is its name.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Back to %@"
+          }
+        }
+      }
+    },
+    "nudge.silentVisual.accusation.action.snooze" : {
+      "comment" : "[silentVisual] Accusation action: snooze this subject for the selected duration.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Snooze"
+          }
+        }
+      }
+    },
+    "nudge.silentVisual.accusation.panel.body" : {
+      "comment" : "[silentVisual] Accusation panel body. %1$@ is the application or origin, %2$@ a rendered duration.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ for %@"
+          }
+        }
+      }
+    },
+    "nudge.silentVisual.accusation.panel.title" : {
+      "comment" : "[silentVisual] Accusation panel title. %@ is the priority's intent.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@"
+          }
+        }
+      }
+    },
+    "nudge.silentVisual.query.action.no" : {
+      "comment" : "[silentVisual] Query action: no, this is not part of the task.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No"
+          }
+        }
+      }
+    },
+    "nudge.silentVisual.query.action.notNow" : {
+      "comment" : "[silentVisual] Query action: decline to answer. Escape does the same.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Later"
+          }
+        }
+      }
+    },
+    "nudge.silentVisual.query.action.yes" : {
+      "comment" : "[silentVisual] Query action: yes, this is part of the task.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add"
+          }
+        }
+      }
+    },
+    "nudge.silentVisual.query.panel.scope.app" : {
+      "comment" : "[silentVisual] Query panel: the scope the rule an answer writes will have.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This app, for this priority."
+          }
+        }
+      }
+    },
+    "nudge.silentVisual.query.panel.title" : {
+      "comment" : "[silentVisual] Query panel title. %1$@ is the application or origin, %2$@ the priority's intent.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Is %@ part of %@?"
+          }
+        }
+      }
+    },
+    "nudge.warm.accusation.action.notNow" : {
+      "comment" : "[warm] Accusation action: a session-lived rule that dies with the session.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Allow for this session"
+          }
+        }
+      }
+    },
+    "nudge.warm.accusation.action.pause" : {
+      "comment" : "[warm] Accusation action: pause the session.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pause for now"
+          }
+        }
+      }
+    },
+    "nudge.warm.accusation.action.priority" : {
+      "comment" : "[warm] Accusation action: open the quick-capture confirm surface.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Work on something else"
+          }
+        }
+      }
+    },
+    "nudge.warm.accusation.action.relevant" : {
+      "comment" : "[warm] Accusation action: write a task-authority rule marking this subject relevant.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This helps with my task"
+          }
+        }
+      }
+    },
+    "nudge.warm.accusation.action.return" : {
+      "comment" : "[warm] Accusation action: return to the stored work application. %@ is its name.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Back to %@"
+          }
+        }
+      }
+    },
+    "nudge.warm.accusation.action.snooze" : {
+      "comment" : "[warm] Accusation action: snooze this subject for the selected duration.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quiet for"
+          }
+        }
+      }
+    },
+    "nudge.warm.accusation.panel.body" : {
+      "comment" : "[warm] Accusation panel body. %1$@ is the application or origin, %2$@ a rendered duration. Revised at the owner's request on 2026-09-09 using the Unslop guidance. Earlier D-11 approval covered the previous wording.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ has been active for %@."
+          }
+        }
+      }
+    },
+    "nudge.warm.accusation.panel.title" : {
+      "comment" : "[warm] Accusation panel title. %@ is the priority's intent. Revised at the owner's request on 2026-09-09 using the Unslop guidance. Earlier D-11 approval covered the previous wording.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "\"%@\" is still the priority."
+          }
+        }
+      }
+    },
+    "nudge.warm.query.action.no" : {
+      "comment" : "[warm] Query action: no, this is not part of the task.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not really"
+          }
+        }
+      }
+    },
+    "nudge.warm.query.action.notNow" : {
+      "comment" : "[warm] Query action: decline to answer. Escape does the same.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skip for now"
+          }
+        }
+      }
+    },
+    "nudge.warm.query.action.yes" : {
+      "comment" : "[warm] Query action: yes, this is part of the task.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yes, keep it"
+          }
+        }
+      }
+    },
+    "nudge.warm.query.panel.scope.app" : {
+      "comment" : "[warm] Query panel: the scope the rule an answer writes will have.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Applies to the whole app for this priority."
+          }
+        }
+      }
+    },
+    "nudge.warm.query.panel.title" : {
+      "comment" : "[warm] Query panel title. %1$@ is the application or origin, %2$@ the priority's intent.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Is %@ part of %@?"
+          }
+        }
+      }
+    },
+    "rule.disposition.alwaysDistracting" : {
+      "comment" : "Per-app disposition: this app never supports the priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Always distracting"
+          }
+        }
+      }
+    },
+    "rule.disposition.alwaysRelevant" : {
+      "comment" : "Per-app disposition: this app always supports the priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Always relevant"
+          }
+        }
+      }
+    },
+    "rule.disposition.askEachTime" : {
+      "comment" : "Per-app disposition: Focus declines to decide and offers a one-click rule instead.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ask each time"
+          }
+        }
+      }
+    },
+    "rule.disposition.interpretByContext" : {
+      "comment" : "Per-app disposition: no rule at all, so Focus works it out from the priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Judge by context"
+          }
+        }
+      }
+    },
+    "status.break.short" : {
+      "comment" : "Short status label: the user is on a deliberate break.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On break"
+          }
+        }
+      }
+    },
+    "status.mark.break" : {
+      "comment" : "What the break mark looks like, for a reader who cannot see it.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "An empty ring, with no dot in it."
+          }
+        }
+      }
+    },
+    "status.mark.paused" : {
+      "comment" : "What the paused mark looks like, for a reader who cannot see it.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Two upright bars, and no ring."
+          }
+        }
+      }
+    },
+    "status.mark.relevant" : {
+      "comment" : "What the relevant mark looks like, for a reader who cannot see it.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A closed ring with a dot at its centre."
+          }
+        }
+      }
+    },
+    "status.mark.uncertain" : {
+      "comment" : "What the uncertain mark looks like, for a reader who cannot see it.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A ring open at the top, with a dot above the opening."
+          }
+        }
+      }
+    },
+    "status.mark.unrelated" : {
+      "comment" : "What the unrelated mark looks like, for a reader who cannot see it.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A three-quarter arc with a dot outside it, low and trailing."
+          }
+        }
+      }
+    },
+    "status.paused.short" : {
+      "comment" : "Short status label: the session is paused, or nothing is being observed.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paused"
+          }
+        }
+      }
+    },
+    "status.relevant.short" : {
+      "comment" : "Short status label: what is on screen supports the current priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Relevant"
+          }
+        }
+      }
+    },
+    "status.uncertain.short" : {
+      "comment" : "Short status label: there is not enough evidence to judge.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uncertain"
+          }
+        }
+      }
+    },
+    "status.unrelated.short" : {
+      "comment" : "Short status label: what is on screen does not support the current priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unrelated"
+          }
+        }
+      }
+    },
+    "suppression.reason.evidenceBandTooLow" : {
+      "comment" : "Shown in the verdict inspector: the evidence was below the band an interruption needs.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "There is not enough evidence."
+          }
+        }
+      }
+    },
+    "suppression.reason.noActivePriority" : {
+      "comment" : "Shown in the verdict inspector: nothing has been committed to.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No priority is set."
+          }
+        }
+      }
+    },
+    "suppression.reason.sessionPhaseForbids" : {
+      "comment" : "Shown in the verdict inspector: the session is not in its focus phase.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nudges are only shown during focus time."
+          }
+        }
+      }
+    },
+    "suppression.reason.statusForbids" : {
+      "comment" : "Shown in the verdict inspector: the overall status does not permit an interruption.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your current status does not call for a nudge."
+          }
+        }
+      }
+    },
+    "suppression.reason.userIdle" : {
+      "comment" : "Shown in the verdict inspector: the hardware idle source says nobody is there.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You're away from the keyboard."
+          }
+        }
+      }
+    },
+    "suppression.reason.verdictRelevant" : {
+      "comment" : "Shown in the verdict inspector: the app stayed silent because the context supports the priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This activity appears relevant."
+          }
+        }
+      }
+    },
+    "suppression.reason.verdictUncertain" : {
+      "comment" : "Shown in the verdict inspector: the app stayed silent because it declined to decide.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus is unsure whether this activity is relevant."
+          }
+        }
+      }
+    },
+    "suppression.reason.withinGracePeriod" : {
+      "comment" : "Shown in the verdict inspector: drift has not been sustained long enough.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This activity is still within the grace period."
+          }
+        }
+      }
+    },
+    "suppression.reason.withinMandateCooldown" : {
+      "comment" : "Shown in the verdict inspector: the engine already said this about this subject.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus mentioned this recently."
+          }
+        }
+      }
+    },
+    "undo.context.add" : {
+      "comment" : "Undo action name: a context item was added to the priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add context"
+          }
+        }
+      }
+    },
+    "undo.context.remove" : {
+      "comment" : "Undo action name: a context item was removed from the priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove context"
+          }
+        }
+      }
+    },
+    "undo.doneWhen.edit" : {
+      "comment" : "Undo action name: the definition of done was edited.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit completion goal"
+          }
+        }
+      }
+    },
+    "undo.intent.edit" : {
+      "comment" : "Undo action name: the priority's wording was edited.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit priority wording"
+          }
+        }
+      }
+    },
+    "undo.priority.change" : {
+      "comment" : "Undo action name: a different task became the active priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Change priority"
+          }
+        }
+      }
+    },
+    "undo.priority.clear" : {
+      "comment" : "Undo action name: the active priority was cleared.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear priority"
+          }
+        }
+      }
+    },
+    "undo.priority.complete" : {
+      "comment" : "Undo action name: the priority was completed.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Complete priority"
+          }
+        }
+      }
+    },
+    "undo.priority.create" : {
+      "comment" : "Undo action name: a task was created without being activated.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add priority"
+          }
+        }
+      }
+    },
+    "undo.priority.delete" : {
+      "comment" : "Undo action name: a task and everything attached to it was deleted.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete priority"
+          }
+        }
+      }
+    },
+    "undo.priority.set" : {
+      "comment" : "Undo action name: a new priority was captured and made active.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set priority"
+          }
+        }
+      }
+    },
+    "undo.rule.add" : {
+      "comment" : "Undo action name: a relevance rule was added.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add rule"
+          }
+        }
+      }
+    },
+    "undo.rule.change" : {
+      "comment" : "Undo action name: a relevance rule's verdict was changed.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Change rule"
+          }
+        }
+      }
+    },
+    "undo.rule.remove" : {
+      "comment" : "Undo action name: a relevance rule was removed.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove rule"
+          }
+        }
+      }
+    },
+    "undo.timebox.set" : {
+      "comment" : "Undo action name: the priority's timebox was set or cleared.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set timebox"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

@@ -1,0 +1,328 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		B00000000000000000000001 /* FocusCore in Frameworks */ = {isa = PBXBuildFile; productRef = A00000000000000000000001 /* FocusCore */; };
+		B00000000000000000000002 /* FocusRules in Frameworks */ = {isa = PBXBuildFile; productRef = A00000000000000000000002 /* FocusRules */; };
+		B00000000000000000000003 /* FocusClassify in Frameworks */ = {isa = PBXBuildFile; productRef = A00000000000000000000003 /* FocusClassify */; };
+		B00000000000000000000004 /* FocusSensing in Frameworks */ = {isa = PBXBuildFile; productRef = A00000000000000000000004 /* FocusSensing */; };
+		B00000000000000000000005 /* FocusUI in Frameworks */ = {isa = PBXBuildFile; productRef = A00000000000000000000005 /* FocusUI */; };
+		B00000000000000000000006 /* FocusHost in Frameworks */ = {isa = PBXBuildFile; productRef = A00000000000000000000006 /* FocusHost */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		500000000000000000000001 /* FocusSentinel.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FocusSentinel.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		300000000000000000000001 /* App */ = {isa = PBXFileSystemSynchronizedRootGroup; path = App; sourceTree = "<group>"; };
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		600000000000000000000002 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B00000000000000000000001 /* FocusCore in Frameworks */,
+				B00000000000000000000002 /* FocusRules in Frameworks */,
+				B00000000000000000000003 /* FocusClassify in Frameworks */,
+				B00000000000000000000004 /* FocusSensing in Frameworks */,
+				B00000000000000000000005 /* FocusUI in Frameworks */,
+				B00000000000000000000006 /* FocusHost in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		200000000000000000000001 = {
+			isa = PBXGroup;
+			children = (
+				300000000000000000000001 /* App */,
+				200000000000000000000002 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		200000000000000000000002 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				500000000000000000000001 /* FocusSentinel.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		400000000000000000000001 /* FocusSentinel */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 700000000000000000000002 /* Build configuration list for PBXNativeTarget "FocusSentinel" */;
+			buildPhases = (
+				600000000000000000000001 /* Sources */,
+				600000000000000000000002 /* Frameworks */,
+				600000000000000000000003 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				300000000000000000000001 /* App */,
+			);
+			name = FocusSentinel;
+			packageProductDependencies = (
+				A00000000000000000000001 /* FocusCore */,
+				A00000000000000000000002 /* FocusRules */,
+				A00000000000000000000003 /* FocusClassify */,
+				A00000000000000000000004 /* FocusSensing */,
+				A00000000000000000000005 /* FocusUI */,
+				A00000000000000000000006 /* FocusHost */,
+			);
+			productName = FocusSentinel;
+			productReference = 500000000000000000000001 /* FocusSentinel.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		100000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2620;
+				LastUpgradeCheck = 2620;
+				TargetAttributes = {
+					400000000000000000000001 = {
+						CreatedOnToolsVersion = 26.2;
+					};
+				};
+			};
+			buildConfigurationList = 700000000000000000000001 /* Build configuration list for PBXProject "FocusSentinel" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 200000000000000000000001;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				900000000000000000000001 /* XCLocalSwiftPackageReference "Packages/FocusCore" */,
+				900000000000000000000002 /* XCLocalSwiftPackageReference "Packages/FocusRules" */,
+				900000000000000000000003 /* XCLocalSwiftPackageReference "Packages/FocusClassify" */,
+				900000000000000000000004 /* XCLocalSwiftPackageReference "Packages/FocusSensing" */,
+				900000000000000000000005 /* XCLocalSwiftPackageReference "Packages/FocusUI" */,
+				900000000000000000000006 /* XCLocalSwiftPackageReference "Packages/FocusHost" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 200000000000000000000002 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				400000000000000000000001 /* FocusSentinel */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		600000000000000000000003 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		600000000000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		800000000000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		800000000000000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		800000000000000000000003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/FocusSentinel.entitlements;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = YES;
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_HARDENED_RUNTIME = NO;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				FOCUS_GIT_HASH = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Config/FocusSentinel-Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Focus Sentinel";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.chrismitchelmore.FocusSentinel;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+			};
+			name = Debug;
+		};
+		800000000000000000000004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/FocusSentinel.entitlements;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_HARDENED_RUNTIME = NO;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				FOCUS_GIT_HASH = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Config/FocusSentinel-Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Focus Sentinel";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.chrismitchelmore.FocusSentinel;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		700000000000000000000001 /* Build configuration list for PBXProject "FocusSentinel" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				800000000000000000000001 /* Debug */,
+				800000000000000000000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		700000000000000000000002 /* Build configuration list for PBXNativeTarget "FocusSentinel" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				800000000000000000000003 /* Debug */,
+				800000000000000000000004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		900000000000000000000001 /* XCLocalSwiftPackageReference "Packages/FocusCore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/FocusCore;
+		};
+		900000000000000000000002 /* XCLocalSwiftPackageReference "Packages/FocusRules" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/FocusRules;
+		};
+		900000000000000000000003 /* XCLocalSwiftPackageReference "Packages/FocusClassify" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/FocusClassify;
+		};
+		900000000000000000000004 /* XCLocalSwiftPackageReference "Packages/FocusSensing" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/FocusSensing;
+		};
+		900000000000000000000005 /* XCLocalSwiftPackageReference "Packages/FocusUI" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/FocusUI;
+		};
+		900000000000000000000006 /* XCLocalSwiftPackageReference "Packages/FocusHost" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/FocusHost;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A00000000000000000000001 /* FocusCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = FocusCore;
+		};
+		A00000000000000000000002 /* FocusRules */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = FocusRules;
+		};
+		A00000000000000000000003 /* FocusClassify */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = FocusClassify;
+		};
+		A00000000000000000000004 /* FocusSensing */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = FocusSensing;
+		};
+		A00000000000000000000005 /* FocusUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = FocusUI;
+		};
+		A00000000000000000000006 /* FocusHost */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = FocusHost;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 100000000000000000000001 /* Project object */;
+}

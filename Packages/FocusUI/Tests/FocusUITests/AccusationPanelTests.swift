@@ -1,0 +1,482 @@
+import FocusCore
+import Foundation
+import SwiftUI
+import Testing
+
+@testable import FocusUI
+
+/// The fixtures the accusation panel is drawn from.
+///
+/// Named rather than inline, so the snapshot names and the structural assertions are about the
+/// same values and a reader of a failing baseline can find what produced it.
+enum AccusationFixture {
+    /// **The subject, with both halves** (focus-ebv). `safari.identifier` is what a rule, a
+    /// snooze and a receipt are keyed on; `safari.displayName` is the only half a sentence may
+    /// draw. Every fixture in the nudge suites is built through this, so a test that asserted on
+    /// a raw identifier is asserting about the key rather than about what a person reads.
+    static let safari = NudgeSubject.named("com.apple.Safari", runningName: "Safari")!
+
+    /// Rung 2, with everything on offer: a named subject and a stored return anchor, which is
+    /// the state the whole correction economy is reachable from.
+    static func rungTwo(voice: NudgeVoice = .standard) -> AccusationPresentation {
+        AccusationPresentation(
+            rung: .panel,
+            voice: voice,
+            task: "Write the Q3 proposal",
+            subject: Self.safari,
+            dwelled: .seconds(720),
+            returnTarget: "Pages",
+            hasOpenSession: true
+        )
+    }
+
+    /// Drift across several applications. There is no single subject, so the body line and the
+    /// two rule-writing actions are withdrawn rather than filled in with a guess.
+    static let mixed = AccusationPresentation(
+        rung: .panel,
+        voice: .standard,
+        task: "Write the Q3 proposal",
+        subject: nil,
+        dwelled: .seconds(900),
+        returnTarget: "Pages",
+        hasOpenSession: true
+    )
+
+    /// No stored return anchor: "Back to …" is not offered at all (R-88).
+    static let noReturnTarget = AccusationPresentation(
+        rung: .panel,
+        voice: .standard,
+        task: "Write the Q3 proposal",
+        subject: safari,
+        dwelled: .seconds(600),
+        returnTarget: nil,
+        hasOpenSession: true
+    )
+
+    /// **No open session**, which is a supported default working state rather than an edge: the
+    /// app never starts one by itself, so the ladder can climb and the panel can appear with only
+    /// a priority set (focus-rdw).
+    static let noSession = AccusationPresentation(
+        rung: .panel,
+        voice: .standard,
+        task: "Write the Q3 proposal",
+        subject: safari,
+        dwelled: .seconds(600),
+        returnTarget: "Pages",
+        hasOpenSession: false
+    )
+
+    /// A running snooze, drawn as a visible countdown (R-87).
+    static let snoozed = AccusationPresentation(
+        rung: .panel,
+        voice: .standard,
+        task: "Write the Q3 proposal",
+        subject: safari,
+        dwelled: .seconds(600),
+        returnTarget: "Pages",
+        snoozeRemaining: .seconds(305),
+        hasOpenSession: true
+    )
+}
+
+/// **The panel a person can answer back to** (R-86, D-07).
+@Suite("The accusation panel carries the whole economy")
+@MainActor
+struct AccusationPanelTests {
+    // MARK: - The economy is complete, and it is complete by construction
+
+    /// Every action except the dismissal has a place in the panel, exactly once.
+    ///
+    /// `dismiss` is the exception on purpose: it is Escape and the close affordance, and a
+    /// button labelled "ignore me" in a row of six would be a panel arguing with itself. The
+    /// assertion is a **partition** rather than a subset, so an action added to
+    /// `CorrectionAction` in a later epic fails this test rather than quietly never being shown.
+    @Test("the display order is every correction action except the dismissal, each once")
+    func displayOrderIsAPartition() {
+        let ordered = AccusationPresentation.actionOrder
+
+        #expect(Set(ordered).count == ordered.count)
+        #expect(Set(ordered) == Set(CorrectionAction.allCases).subtracting([.dismiss]))
+        #expect(!ordered.contains(.dismiss))
+    }
+
+    @Test("every offered action carries a deck line, and only the dismissal does not")
+    func everyOfferedActionHasCopy() {
+        for action in AccusationPresentation.actionOrder {
+            #expect(action.copyKey != nil)
+        }
+        #expect(CorrectionAction.dismiss.copyKey == nil)
+    }
+
+    @Test("with a subject and a return anchor the whole economy is on offer")
+    func fullEconomy() {
+        let offered = AccusationFixture.rungTwo().offeredActions
+        #expect(offered == AccusationPresentation.actionOrder)
+        #expect(offered.contains(.thisIsRelevant))
+        #expect(offered.contains(.notThisTime))
+        #expect(offered.contains(.snooze))
+        #expect(offered.contains(.changePriority))
+        #expect(offered.contains(.pause))
+        #expect(offered.contains(.returnToTask))
+    }
+
+    // MARK: - What is withdrawn, and why
+
+    /// R-88: a "back to work" button with nowhere to go is a button that lies.
+    @Test("with no stored return anchor the return action is not offered at all")
+    func returnWithdrawnWithNoAnchor() {
+        let offered = AccusationFixture.noReturnTarget.offeredActions
+        #expect(!offered.contains(.returnToTask))
+        // …and everything else is still there. Withdrawing one action must not withdraw the
+        // economy: a panel with nothing on it is the anti-pattern, not the fix.
+        #expect(offered.contains(.thisIsRelevant))
+        #expect(offered.contains(.pause))
+        #expect(AccusationFixture.noReturnTarget.primaryAction == .thisIsRelevant)
+    }
+
+    /// **The quadrant nothing covered** (focus-rdw). With no session, *"Not this time"* wrote no
+    /// rule — `apply(_:…)` returned early on the missing identifier — and *"Pause"* threw
+    /// `noOpenSession`, while `resolve(…)` went on to complete the row as `.corrected`, spend
+    /// fatigue, de-escalate the ladder and hide the panel. The person excused the app, the log
+    /// recorded a correction, and the next mandate accused them about the thing they had just
+    /// excused.
+    @Test("with no session open the two session-scoped actions are not offered at all")
+    func sessionScopedActionsWithdrawnWithNoSession() {
+        let offered = AccusationFixture.noSession.offeredActions
+
+        for action in CorrectionAction.allCases where action.requiresOpenSession {
+            #expect(!offered.contains(action), "\(action) was offered with no session to act on")
+        }
+        // …and withdrawing two must not withdraw the economy: a panel with nothing on it is the
+        // anti-pattern, not the fix. Everything whose write does not need a session is still here.
+        for action in AccusationPresentation.actionOrder where !action.requiresOpenSession {
+            #expect(offered.contains(action), "\(action) was withdrawn by the session state")
+        }
+        #expect(AccusationFixture.noSession.primaryAction == .returnToTask)
+    }
+
+    /// The two conditions are independent: a mixed-drift accusation with no session withdraws
+    /// both sets rather than one masking the other.
+    @Test("no subject and no session withdraw their own actions and no others")
+    func theTwoWithdrawalsCompose() {
+        let presentation = AccusationPresentation(
+            rung: .panel,
+            voice: .standard,
+            task: "Write the Q3 proposal",
+            subject: nil,
+            dwelled: .seconds(900),
+            returnTarget: "Pages",
+            hasOpenSession: false
+        )
+        let offered = presentation.offeredActions
+
+        #expect(offered == [.returnToTask, .changePriority])
+        #expect(!offered.isEmpty, "an accusation nobody can answer is the anti-pattern")
+    }
+
+    /// Mixed drift names nobody, so a rule about "several unrelated apps" would be a rule about
+    /// something the person never pointed at.
+    @Test("mixed drift withdraws exactly the actions that would write a rule about a subject")
+    func mixedWithdrawsScopedActions() {
+        let presentation = AccusationFixture.mixed
+        let offered = presentation.offeredActions
+
+        #expect(!presentation.hasScope)
+        for action in CorrectionAction.allCases where action.requiresScope {
+            #expect(!offered.contains(action))
+        }
+        for action in AccusationPresentation.actionOrder where !action.requiresScope {
+            if action == .returnToTask { continue }
+            #expect(offered.contains(action))
+        }
+        #expect(offered.contains(.returnToTask))
+    }
+
+    @Test("the primary action is the way back to work whenever there is one")
+    func primaryActionIsTheWayBack() {
+        #expect(AccusationFixture.rungTwo().primaryAction == .returnToTask)
+        #expect(AccusationFixture.mixed.primaryAction == .returnToTask)
+    }
+
+    // MARK: - Owner-selected snooze shortcuts
+
+    @Test("the snooze shortcuts are one, five and twenty minutes")
+    func snoozeSpansMatchTheShortcuts() {
+        #expect(AccusationFixture.rungTwo().snoozeDurations == [.seconds(60), .seconds(300), .seconds(1_200)])
+    }
+
+    @Test("a running snooze is drawn as a countdown in the fixed mm:ss form")
+    func snoozeCountdownForm() {
+        #expect(NudgeCopy.countdown(.seconds(305)) == "05:05")
+        #expect(NudgeCopy.countdown(.seconds(900)) == "15:00")
+        // Width is what P-133 is about: every four-digit countdown is the same number of
+        // characters, so the field cannot move the items beside it.
+        #expect(NudgeCopy.countdown(.seconds(59)).count == NudgeCopy.countdown(.seconds(3_599)).count)
+        // A lifted snooze is zero, never a negative countdown.
+        #expect(NudgeCopy.countdown(.seconds(-30)) == "00:00")
+    }
+
+    // MARK: - The panel is opaque because nobody asked for it (focus-0nm, U-1)
+
+    /// **The wiring, measured rather than asserted about the token.**
+    ///
+    /// `DesignTokenTests` proves what `material(for:provenance:)` answers. This proves that the
+    /// panel *asks* — the half that would be missing if the token grew an axis nothing consumed,
+    /// which is exactly what the panel did before this: nothing under `Sources/FocusUI/Nudge/`
+    /// set a background, an `isOpaque` or a visual-effect view at all.
+    ///
+    /// Two renders of one presentation, differing in nothing but who is said to have raised the
+    /// surface. If the `shellSurface` call goes, both cells draw the same picture and this fails.
+    @Test(
+        "the panel draws a different surface when it was not asked for",
+        .enabled(if: LocalizationLane.catalogsAreCompiled)
+    )
+    @MainActor
+    func anUninvitedPanelIsNotDrawnLikeASummonedOne() throws {
+        let presentation = AccusationFixture.rungTwo()
+        let uninvited = try SnapshotHarness.render(
+            AccusationPanelView(presentation: presentation, provenance: .uninvited),
+            traits: .light,
+            width: AccusationPanelSnapshotTests.panelWidth,
+            name: "accusationPanel.provenance.uninvited"
+        )
+        let summoned = try SnapshotHarness.render(
+            AccusationPanelView(presentation: presentation, provenance: .summoned),
+            traits: .light,
+            width: AccusationPanelSnapshotTests.panelWidth,
+            name: "accusationPanel.provenance.summoned"
+        )
+        #expect(
+            PNGCompare.areDistinct(uninvited.pixels, summoned.pixels),
+            """
+            the panel draws the same surface whoever raised it, so the provenance axis reaches \
+            the token and stops there
+            """
+        )
+    }
+
+    /// **The two panels do not draw the same rule**, measured on the pixels rather than on the
+    /// token, so a rule that resolved correctly and was never drawn fails here.
+    ///
+    /// The leading edge only. The rest of the two panels legitimately differs — different words,
+    /// different actions — so a whole-frame comparison would pass whatever the rule did.
+    @Test(
+        "the accusation and the question are marked apart down the leading edge",
+        .enabled(if: LocalizationLane.catalogsAreCompiled)
+    )
+    @MainActor
+    func theTwoPanelsAreMarkedApart() throws {
+        let accusation = try SnapshotHarness.render(
+            AccusationPanelView(presentation: AccusationFixture.rungTwo()),
+            traits: .light,
+            width: AccusationPanelSnapshotTests.panelWidth,
+            name: "accusationPanel.rule.light"
+        )
+        let question = try SnapshotHarness.render(
+            QueryPanelView(presentation: QueryFixture.noNegativeBasis()),
+            traits: .light,
+            width: AccusationPanelSnapshotTests.panelWidth,
+            name: "queryPanel.rule.light"
+        )
+        let accusationEdge = Self.leadingEdgeColours(accusation.pixels)
+        let questionEdge = Self.leadingEdgeColours(question.pixels)
+
+        #expect(!accusationEdge.isEmpty && !questionEdge.isEmpty)
+        #expect(
+            accusationEdge != questionEdge,
+            """
+            the two panels paint the same leading edge, so the rule either is not drawn or does \
+            not distinguish the surfaces
+            """
+        )
+        // Non-vacuity: each edge really is one solid colour, which is what a 3-point rule at
+        // full column height looks like and what a missing rule does not.
+        #expect(accusationEdge.count == 1, "the accusation's leading edge is not a rule")
+        #expect(questionEdge.count == 1, "the question's leading edge is not a rule")
+    }
+
+    /// The distinct colours down the rule's own column, sampled inside the harness's padding.
+    ///
+    /// The harness pads the content by 16 points and then frames the padded whole at the
+    /// committed width, so the rule begins one padding in and the image is the committed width
+    /// times the display scale. One column is sampled rather than a band, so anti-aliasing at
+    /// the rule's outer edge cannot make a solid rule look like several colours.
+    static func leadingEdgeColours(_ buffer: PixelBuffer) -> Set<[UInt8]> {
+        let scale = buffer.width / Int(AccusationPanelSnapshotTests.panelWidth)
+        guard scale > 0 else { return [] }
+        let column = 16 * scale + scale / 2
+        var colours: Set<[UInt8]> = []
+        for row in (buffer.height / 4)..<(buffer.height * 3 / 4) {
+            let offset = (row * buffer.width + column) * 4
+            guard offset + 3 < buffer.bytes.count else { continue }
+            colours.insert(Array(buffer.bytes[offset..<(offset + 4)]))
+        }
+        return colours
+    }
+
+    // MARK: - What VoiceOver hears (F-144)
+
+    @Test(
+        "the announcement is the panel's own words, and omits the body it does not draw",
+        .enabled(if: LocalizationLane.catalogsAreCompiled)
+    )
+    func announcementMatchesTheDrawnCopy() {
+        let announced = AccusationFixture.rungTwo().announcement()
+        #expect(announced.contains("Write the Q3 proposal"))
+        // **The name, and the ABSENCE of the key** (focus-ebv). This asserted
+        // `announced.contains("com.apple.Safari")` — so what VoiceOver spoke was the storage
+        // key, and the suite that exists to check the spoken words was pinning it there. What a
+        // person hears is what the panel draws, and the panel draws a name.
+        #expect(announced.contains(AccusationFixture.safari.displayName))
+        #expect(!announced.contains(AccusationFixture.safari.identifier))
+
+        // Mixed drift draws no body line, so it announces none: a spoken sentence naming a
+        // subject the panel does not show would be the app inventing evidence out loud. Both
+        // halves are checked, because "names nobody" must not mean "names nobody by name".
+        let mixed = AccusationFixture.mixed.announcement()
+        #expect(mixed.contains("Write the Q3 proposal"))
+        #expect(!mixed.contains(AccusationFixture.safari.displayName))
+        #expect(!mixed.contains(AccusationFixture.safari.identifier))
+    }
+
+    /// The accusation never says "you are distracted" — and the check that it does not is
+    /// `check-forbidden.sh`'s R-96f, on the **query** deck. What is asserted here is the other
+    /// half of the same contract: the accusation panel draws accusation lines and nothing else.
+    @Test("the panel draws no line from a query key")
+    func drawsNoQueryLine() {
+        for action in AccusationPresentation.actionOrder {
+            #expect(action.copyKey?.isQueryLine == false)
+        }
+        #expect(NudgeCopyKey.accusationPanelTitle.isQueryLine == false)
+        #expect(NudgeCopyKey.accusationPanelBody.isQueryLine == false)
+    }
+
+    // MARK: - The clicks
+
+    @Test("every button reports its own action, and the snooze reports its span")
+    func clicksReportThemselves() {
+        var seen: [(CorrectionAction, Duration?)] = []
+        let view = AccusationPanelView(presentation: AccusationFixture.rungTwo()) { action, span in
+            seen.append((action, span))
+        }
+        // The callback is the view's whole contract with the host: it decides nothing and
+        // writes nothing, which is what keeps `CorrectionAction.outcome(scope:at:)` the single
+        // place a click becomes a write (R-86).
+        view.onAction(.thisIsRelevant, nil)
+        view.onAction(.snooze, .seconds(600))
+        view.onAction(.dismiss, nil)
+
+        #expect(seen.count == 3)
+        #expect(seen[0].0 == .thisIsRelevant)
+        #expect(seen[0].1 == nil)
+        #expect(seen[1].0 == .snooze)
+        #expect(seen[1].1 == .seconds(600))
+        #expect(seen[2].0 == .dismiss)
+    }
+}
+
+/// The rendered panel, against its committed baselines.
+///
+/// Gated on the localisation lane for the reason every other snapshot suite is: SwiftPM copies
+/// String Catalogs rather than compiling them, so under `swift test` every line would render as
+/// its own key and the baselines would be pictures of key names.
+@Suite(
+    "Accusation panel snapshots",
+    .enabled(if: LocalizationLane.catalogsAreCompiled)
+)
+@MainActor
+struct AccusationPanelSnapshotTests {
+    static let panelWidth: CGFloat = 380
+
+    /// **All five decks.** A deck with a missing or wrong line is an untranslated nudge shipped
+    /// to somebody at their most sensitive moment, and `silentVisual` carries the full line set
+    /// as well as its routing behaviour precisely so it can be checked like the rest.
+    @Test(
+        "every deck draws the rung-2 panel the same shape",
+        arguments: NudgeVoice.allCases, ["light", "dark"]
+    )
+    func everyDeck(voice: NudgeVoice, variant: String) throws {
+        try SnapshotHarness.assertSnapshot(
+            AccusationPanelView(presentation: AccusationFixture.rungTwo(voice: voice)),
+            component: "accusationPanel.\(voice.rawValue)",
+            variant: variant,
+            width: Self.panelWidth
+        )
+    }
+
+    /// **A body taller than the panel's ceiling, at both text sizes and in both schemes.**
+    ///
+    /// The gap the review found: every baseline in this suite was content that fits, so the
+    /// pinned action shelf — the branch a person at the largest text size actually meets — had no
+    /// picture anywhere in the estate. `DecisionSurfaceScrollTests` proves the actions are in
+    /// reach; this is what a person sees while they are.
+    @Test(
+        "the panel keeps its shelf when the body outgrows it",
+        arguments: ["light", "dark"], SnapshotTypeSize.allCases
+    )
+    func tallBody(variant: String, size: SnapshotTypeSize) throws {
+        try SnapshotHarness.assertSnapshot(
+            AccusationPanelView(
+                presentation: AccusationPresentation(
+                    rung: .panel,
+                    task: DecisionSurfaceScrollTests.tallPriority(6),
+                    subject: AccusationFixture.safari,
+                    dwelled: .seconds(600),
+                    returnTarget: "Pages",
+                    snoozeRemaining: .seconds(305),
+                    hasOpenSession: true
+                )
+            ),
+            component: "accusationPanel.tallBody",
+            variant: variant,
+            textScale: size.textScale,
+            width: Self.panelWidth
+        )
+    }
+
+    /// Increased contrast and reduced transparency, at both text sizes. A panel that truncated
+    /// an action at the accessibility size would be a panel that stopped offering it.
+    @Test(
+        "the panel survives the appearance variants at both text sizes",
+        arguments: ["increasedContrast", "reduceTransparency"], SnapshotTypeSize.allCases
+    )
+    func appearanceVariants(variant: String, size: SnapshotTypeSize) throws {
+        try SnapshotHarness.assertSnapshot(
+            AccusationPanelView(presentation: AccusationFixture.rungTwo()),
+            component: "accusationPanel",
+            variant: variant,
+            textScale: size.textScale,
+            width: Self.panelWidth
+        )
+    }
+
+    @Test("the default deck survives the largest text size in light and dark",
+          arguments: ["light", "dark"])
+    func largeText(variant: String) throws {
+        try SnapshotHarness.assertSnapshot(
+            AccusationPanelView(presentation: AccusationFixture.rungTwo()),
+            component: "accusationPanel",
+            variant: variant,
+            textScale: .accessibilityLarge,
+            width: Self.panelWidth
+        )
+    }
+
+    @Test("the three states that change what the panel offers", arguments: ["light", "dark"])
+    func statefulVariants(variant: String) throws {
+        let cases: [(String, AccusationPresentation)] = [
+            ("mixed", AccusationFixture.mixed),
+            ("noReturnTarget", AccusationFixture.noReturnTarget),
+            ("snoozed", AccusationFixture.snoozed)
+        ]
+        for (name, presentation) in cases {
+            try SnapshotHarness.assertSnapshot(
+                AccusationPanelView(presentation: presentation),
+                component: "accusationPanel.\(name)",
+                variant: variant,
+                width: Self.panelWidth
+            )
+        }
+    }
+
+}

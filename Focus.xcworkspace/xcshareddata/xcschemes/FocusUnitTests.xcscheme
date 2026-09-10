@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Scheme
+   LastUpgradeVersion = "2620"
+   version = "1.7">
+   <BuildAction
+      parallelizeBuildables = "YES"
+      buildImplicitDependencies = "YES">
+   </BuildAction>
+   <TestAction
+      buildConfiguration = "Debug"
+      language = "en"
+      region = "GB"
+      selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
+      selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
+      shouldUseLaunchSchemeArgsEnv = "NO">
+      <Testables>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "FocusCoreTests"
+               BuildableName = "FocusCoreTests.xctest"
+               BlueprintName = "FocusCoreTests"
+               ReferencedContainer = "container:Packages/FocusCore">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "FocusRulesTests"
+               BuildableName = "FocusRulesTests.xctest"
+               BlueprintName = "FocusRulesTests"
+               ReferencedContainer = "container:Packages/FocusRules">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "FocusClassifyTests"
+               BuildableName = "FocusClassifyTests.xctest"
+               BlueprintName = "FocusClassifyTests"
+               ReferencedContainer = "container:Packages/FocusClassify">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "FocusEvaluateTests"
+               BuildableName = "FocusEvaluateTests.xctest"
+               BlueprintName = "FocusEvaluateTests"
+               ReferencedContainer = "container:Packages/FocusEvaluate">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "FocusModelTests"
+               BuildableName = "FocusModelTests.xctest"
+               BlueprintName = "FocusModelTests"
+               ReferencedContainer = "container:Packages/FocusModel">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "FocusSensingTests"
+               BuildableName = "FocusSensingTests.xctest"
+               BlueprintName = "FocusSensingTests"
+               ReferencedContainer = "container:Packages/FocusSensing">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "FocusUITests"
+               BuildableName = "FocusUITests.xctest"
+               BlueprintName = "FocusUITests"
+               ReferencedContainer = "container:Packages/FocusUI">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "FocusHostTests"
+               BuildableName = "FocusHostTests.xctest"
+               BlueprintName = "FocusHostTests"
+               ReferencedContainer = "container:Packages/FocusHost">
+            </BuildableReference>
+         </TestableReference>
+      </Testables>
+      <EnvironmentVariables>
+         <EnvironmentVariable
+            key = "TZ"
+            value = "Europe/London"
+            isEnabled = "YES">
+         </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "FOCUS_GATE_LANE"
+            value = "xcodebuild"
+            isEnabled = "YES">
+         </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "SWT_SWIFT_ERROR_BACKTRACING_ENABLED"
+            value = "0"
+            isEnabled = "YES">
+         </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "SWT_FOUNDATION_ERROR_BACKTRACING_ENABLED"
+            value = "0"
+            isEnabled = "YES">
+         </EnvironmentVariable>
+      </EnvironmentVariables>
+   </TestAction>
+   <AnalyzeAction
+      buildConfiguration = "Debug">
+   </AnalyzeAction>
+</Scheme>

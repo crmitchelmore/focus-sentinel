@@ -1,0 +1,361 @@
+import AppKit
+import FocusCore
+import FocusUI
+import Foundation
+import Testing
+
+@testable import FocusHost
+
+/// **The three readings the host takes, driven on the real surfaces** (focus-kby, U-1).
+///
+/// ## What used to stand here instead
+///
+/// `NudgeHostContractTests` grepped `App/NudgeHost.swift` for the substrings these readings were
+/// spelled with, because no test target could import the application target. Three separate
+/// mutations to this file survived the whole lane untouched:
+///
+/// 1. `openQuestionReadingAtAsk = reading.everyActionIsReachable ? … : …` → `= .readable`
+/// 2. `popoverReadability()`'s two guards → `return .readable`
+/// 3. `guard panel.isVisible else { return .unknowable }` → `else { return .readable }`
+///
+/// Each one reinstates a path by which the app spends its single licensed interruption on a
+/// surface nobody read, and each one leaves a receipt behind — which is permanent, because
+/// `hasAsked(…)` is gate 11 of the suppression stack. Every test below turns one of them red.
+@Suite("The question's readability, on real surfaces", .serialized)
+@MainActor
+struct NudgeHostQuestionTests {
+    static let subject = "com.example.Reader"
+
+    /// A subject long enough to overflow the panel's ceiling once the copy is real.
+    ///
+    /// The question renders `Is {subject} part of {task}?`, so a subject nobody would ever see is
+    /// how this suite builds a **real** panel whose answers are genuinely out of reach — no
+    /// contrived view, no injected size, the shipping layout doing what it does with the content
+    /// it is given.
+    static let overflowingSubject = (1...240)
+        .map { "verylongsegmentnumber\($0)" }
+        .joined(separator: ".")
+
+    /// A display on which **no** decision can be pinned, whatever the copy resolves to
+    /// (focus-din).
+    ///
+    /// Chosen by the arithmetic rather than by a measurement, which is the point: the panel's
+    /// ceiling is `min(800, visible − 2 × edgeMargin)` floored at its own starting height, so 100
+    /// visible points is a ceiling of 52 — **below `DecisionSurfaceLayout.minimumContextHeight`
+    /// on its own**, so `SurfaceSizeCommitments.overflow(…)` answers `everythingScrolls` for a
+    /// decision of any height at all.
+    ///
+    /// A display picked from a measured decision would not do. The two lanes resolve the three
+    /// answers to different strings — the inner loop to their keys, the gate to real copy — so a
+    /// 200-point display that could not pin the keys pinned the sentences, and the same tree gave
+    /// two answers. Measured, and it is why this constant is derived from the two constants above
+    /// rather than from a panel.
+    static let tooShortForAnyDecision = DisplayGeometry(
+        displayID: 77,
+        screenIndex: 0,
+        isPrimary: true,
+        frame: ScreenRect(x: 0, y: 0, width: 1440, height: 189),
+        visibleFrame: ScreenRect(x: 0, y: 89, width: 1440, height: 100),
+        backingScaleFactor: 2
+    )
+
+    // MARK: - Mutation 1 — the reading taken when the question goes up
+
+    /// **A question on a panel nobody can answer is deferred, and nothing is written down.**
+    ///
+    /// The control and the case are in one test on purpose: an assertion that "nothing was
+    /// delivered" is satisfied just as well by a loop that never asks anything, so the same
+    /// fixture shape is driven twice and the difference between the two is the whole claim.
+    ///
+    /// **What "out of reach" means since focus-din**, and why this needs a display as well as a
+    /// sentence.
+    ///
+    /// A long question used to put the three answers below the fold, because the whole panel was
+    /// inside the scroll view. It is not any more: a decision surface never scrolls its decision,
+    /// so a question of any length keeps its answers in the viewport and — correctly — is
+    /// delivered. The case this test is about survives in one shape only: a surface on which the
+    /// **answers themselves** do not fit, which is `everythingScrolls` and is a fact about the
+    /// display rather than about the copy.
+    ///
+    /// So the overflow is driven from both ends. The sentence is still real and still enormous,
+    /// which is what makes the panel one the layout genuinely has to clamp; and the display is
+    /// injected through the panel's own seam, small enough that three buttons cannot be pinned
+    /// against it. That also takes the catalog gate off: the claim no longer depends on which
+    /// lane resolved the copy, so it holds in the inner loop and in the gate alike.
+    @Test("a question on a panel whose answers are out of reach is deferred, never delivered")
+    func aQuestionNobodyCouldAnswerIsDeferred() throws {
+        // The control: an ordinary subject, an ordinary panel, one delivered question.
+        let ordinary = try NudgeHostFixture()
+        defer { ordinary.tearDown() }
+        ordinary.host.consider(NudgeHostFixture.uncertainJudgement(subject: Self.subject))
+        NudgeHostFixture.settle()
+
+        #expect(ordinary.host.deliveredCount == 1)
+        #expect(ordinary.host.deferredCount == 0)
+        #expect(ordinary.panel.isVisible)
+        #expect(
+            ordinary.panel
+                .decisionSurfaceReading(offering: QueryPresentation.actionOrder.map(\.rawValue))
+                .everyActionIsReachable
+        )
+
+        // The case: the same loop, the same surface, a question whose three answers are below
+        // the fold. Nothing is delivered, nothing is counted, and the subject stays askable.
+        let overflowing = try NudgeHostFixture()
+        defer { overflowing.tearDown() }
+        // A display too short to hold three buttons, so the decision cannot be pinned against it
+        // and the panel scrolls whole — the one shape in which a person really cannot answer.
+        overflowing.panel.displays = { [Self.tooShortForAnyDecision] }
+        overflowing.host.consider(
+            NudgeHostFixture.uncertainJudgement(subject: Self.overflowingSubject)
+        )
+        NudgeHostFixture.settle()
+
+        let reading = overflowing.panel.decisionSurfaceReading(
+            offering: QueryPresentation.actionOrder.map(\.rawValue)
+        )
+        #expect(
+            !reading.unreachableActions.isEmpty,
+            "the fixture did not build an unreachable panel: \(reading.summary)"
+        )
+
+        #expect(
+            overflowing.host.deliveredCount == 0,
+            "a question nobody could answer was counted as asked"
+        )
+        #expect(overflowing.host.deferredCount == 1)
+        #expect(!overflowing.panel.isVisible, "the panel was left up carrying an unanswerable question")
+
+        let rows = try overflowing.interventions()
+        #expect(rows.count == 1)
+        #expect(rows.first?.dispositionRaw == InterventionDisposition.deferred.rawValue)
+        // A deferral reached no surface, and the record says so rather than naming one.
+        #expect(rows.first?.surfaceRaw.isEmpty == true)
+
+        // And the question is still askable: no receipt, and the slot was given back.
+        #expect(try overflowing.receipts().isEmpty)
+        #expect(overflowing.host.pendingPopoverQuery == nil)
+    }
+
+    // MARK: - Mutation 2 — the badge is an invitation, not a delivery
+
+    /// **A badge question reaches nobody until the popover is open on it.**
+    ///
+    /// `SurfaceRouter.routeQuery(…)` sends a question to the badge on three ordinary conditions,
+    /// and the popover opens **only** when a person clicks the status item. The loop used to mark
+    /// such a question presentable having read nothing at all.
+    @Test("a badge question is not delivered until the popover is open on it")
+    func aBadgeQuestionWaitsForTheClick() throws {
+        let fixture = try NudgeHostFixture()
+        defer { fixture.tearDown() }
+        // Reduced interruption is one of the three conditions that route a question to the badge.
+        fixture.host.choose(reducedInterruption: true)
+
+        fixture.host.consider(NudgeHostFixture.uncertainJudgement(subject: Self.subject))
+        NudgeHostFixture.settle()
+
+        guard case .ask(_, .surface(.popoverBadge)) = fixture.host.lastDecision else {
+            Issue.record("the question was not routed to the badge: \(String(describing: fixture.host.lastDecision))")
+            return
+        }
+
+        // The invitation is up…
+        #expect(fixture.host.pendingPopoverQuery != nil)
+        // …and nothing has been delivered, counted or written, because nobody has looked.
+        #expect(
+            fixture.host.deliveredCount == 0,
+            "a question sitting behind a click was counted as asked"
+        )
+        #expect(try fixture.interventions().isEmpty)
+        #expect(!fixture.menuBar.isPopoverShown)
+
+        // The click. This is the whole of the badge route: the menu bar is the only object that
+        // knows it happened, and `onPopoverDidShow` is the only wire that tells the loop.
+        let opened = try MenuBarStage.open(
+            fixture.menuBar,
+            showing: MenuBarPresentation(status: .uncertain, pendingQuery: fixture.host.pendingPopoverQuery),
+            onDidShow: { fixture.host.popoverPresented() }
+        )
+        guard MenuBarStage.taken(opened) else { return }
+
+        #expect(fixture.menuBar.isDrawing(.query))
+        #expect(fixture.host.deliveredCount == 1, "the popover opened on the question and nothing counted it")
+        let rows = try fixture.interventions()
+        #expect(rows.count == 1)
+        #expect(rows.first?.dispositionRaw == InterventionDisposition.delivered.rawValue)
+        #expect(rows.first?.surfaceRaw == NudgeSurface.popoverBadge.rawValue)
+    }
+
+    /// **…and a badge question nobody ever opened is not written down** — which is what stops it
+    /// being silenced for the life of the priority.
+    @Test("a badge question nobody opened leaves no receipt when the session ends")
+    func aBadgeQuestionNobodySawStaysAskable() throws {
+        let fixture = try NudgeHostFixture()
+        defer { fixture.tearDown() }
+        fixture.host.choose(reducedInterruption: true)
+
+        fixture.host.consider(NudgeHostFixture.uncertainJudgement(subject: Self.subject))
+        NudgeHostFixture.settle()
+        #expect(fixture.host.pendingPopoverQuery != nil)
+
+        // The session ends with the popover never having been opened.
+        fixture.host.sessionEnded()
+
+        #expect(
+            try fixture.receipts().isEmpty,
+            "a receipt was written about a question nobody was ever shown"
+        )
+        #expect(
+            !(try fixture.ledger.isSettled(
+                priorityID: fixture.priorityID,
+                subjectKind: .app,
+                subject: Self.subject
+            )),
+            "gate 11 would now suppress a question that was never asked"
+        )
+    }
+
+    /// **…and it is delivered exactly once, however many times the popover is opened on it**
+    /// (focus-22m, S5).
+    ///
+    /// `popoverPresented()` is wired to `MenuBarController.onPopoverDidShow`, which
+    /// fires on **every** open. The guard that makes a second open cost nothing is
+    /// `openQuestionReadingAtAsk != .readable`, and with it removed a person who closed the
+    /// popover and opened it again would have their one question delivered twice: two rows, two
+    /// units of the day's interruption budget spent on one asking, and the first row orphaned
+    /// forever because `openRecordID` is overwritten and `complete(_:)` can only ever fill in the
+    /// last one. Under U-1 that budget is what decides whether the app may speak again at all.
+    @Test("a badge question is delivered once however many times the popover is opened")
+    func aBadgeQuestionIsDeliveredOnce() throws {
+        let fixture = try NudgeHostFixture()
+        defer { fixture.tearDown() }
+        fixture.host.choose(reducedInterruption: true)
+
+        fixture.host.consider(NudgeHostFixture.uncertainJudgement(subject: Self.subject))
+        NudgeHostFixture.settle()
+        try #require(fixture.host.pendingPopoverQuery != nil)
+
+        let opened = try MenuBarStage.open(
+            fixture.menuBar,
+            showing: MenuBarPresentation(
+                status: .uncertain, pendingQuery: fixture.host.pendingPopoverQuery
+            ),
+            onDidShow: { fixture.host.popoverPresented() }
+        )
+        guard MenuBarStage.taken(opened) else { return }
+        try #require(fixture.host.deliveredCount == 1)
+
+        // The person closes the popover and opens it again — the ordinary thing to do with a
+        // menu-bar item, and the wire fires every time.
+        fixture.menuBar.closePopover()
+        NudgeHostFixture.settle(0.2)
+        for _ in 0..<6 where !fixture.menuBar.isPopoverShown {
+            fixture.menuBar.togglePopover()
+            NudgeHostFixture.settle(0.2)
+        }
+        try #require(fixture.menuBar.isPopoverShown, "the popover never re-opened")
+
+        #expect(
+            fixture.host.deliveredCount == 1,
+            "one question was counted as two askings because the popover was opened twice"
+        )
+        let delivered = try fixture.interventions()
+            .filter { $0.dispositionRaw == InterventionDisposition.delivered.rawValue }
+        #expect(delivered.count == 1, "one asking wrote two rows")
+
+        // …and the row that exists is the one the person's answer completes, rather than an
+        // orphan the first open left behind.
+        fixture.host.answer(.yesAddIt)
+        let completed = try fixture.interventions()
+            .filter { $0.outcomeRaw != nil }
+        #expect(completed.count == 1, "the delivered row was orphaned by a second delivery")
+        #expect(
+            try fixture.log.budget(
+                on: fixture.log.today, priorityID: fixture.priorityID
+            ).queriesForPriorityToday == 1,
+            "one question spent two units of the day's query cap"
+        )
+    }
+
+    // MARK: - Mutation 3 — a surface that has gone cannot be re-read
+
+    /// **A question whose surface has gone is not written down** (focus-kby).
+    ///
+    /// The panel is taken off screen by something that is not the loop — which is exactly the
+    /// case the `unknowable` value exists for. The old shape answered `true` for it, and the
+    /// consequence is permanent: an immutable receipt about a question the person never got to
+    /// answer, and gate 11 silences the subject for the life of the priority.
+    ///
+    /// The answered path is unaffected and is asserted beside it, because a rule that refused
+    /// *every* write would be a rule that broke R-78's transaction.
+    @Test("a question whose panel has gone is not written down, but an answered one always is")
+    func aQuestionOnAVanishedPanelStaysAskable() throws {
+        let fixture = try NudgeHostFixture()
+        defer { fixture.tearDown() }
+
+        fixture.host.consider(NudgeHostFixture.uncertainJudgement(subject: Self.subject))
+        NudgeHostFixture.settle()
+        #expect(fixture.host.deliveredCount == 1)
+        #expect(fixture.panel.isVisible)
+
+        // The surface goes, and the loop is not told. Nothing can be established about it now.
+        fixture.panel.hide()
+        #expect(!fixture.panel.isVisible)
+
+        fixture.host.sessionEnded()
+        #expect(
+            try fixture.receipts().isEmpty,
+            "a receipt was written about a panel nothing could re-read"
+        )
+
+        // The control: a person's own answer is its own proof of readability and always writes.
+        let answered = try NudgeHostFixture()
+        defer { answered.tearDown() }
+        answered.host.consider(NudgeHostFixture.uncertainJudgement(subject: Self.subject))
+        NudgeHostFixture.settle()
+        answered.host.answer(.notNow)
+        #expect(try answered.receipts().count == 1)
+    }
+
+    // MARK: - The panel never outlives the presentation gate (R-84, F-35, P-130)
+
+    /// The executable form of a scan that used to look for the words `suppressesOverlays` and
+    /// `withdrawForPresentation()` in this file. A panel is deliberately sticky, so one shown
+    /// before a full-screen space opens is still there — and still flagged — when it does.
+    @Test("an open panel is taken off a display a presentation has claimed")
+    func anOpenPanelIsWithdrawnForAPresentation() throws {
+        let fixture = try NudgeHostFixture()
+        defer { fixture.tearDown() }
+
+        fixture.host.consider(NudgeHostFixture.uncertainJudgement(subject: Self.subject))
+        NudgeHostFixture.settle()
+        #expect(fixture.panel.isVisible)
+
+        // The gate closes under a panel that is already up. The host hears about it on the next
+        // corroboration tick, which is the same cadence every other nudge decision runs at.
+        let presenting = PresentationState(
+            signals: PresentationSignals(
+                frontmostWindowFillsAScreen: true,
+                presentationOptionsSayFullScreen: true,
+                menuBarHidden: true
+            ),
+            isUserExcluded: false,
+            isPresenting: true
+        )
+        fixture.host.surroundings = { [clock = fixture.clock, commitment = fixture.commitment] in
+            NudgeHostFixture.surroundings(
+                monotonic: clock.elapsed,
+                commitment: commitment,
+                presentation: presenting
+            )
+        }
+        fixture.host.consider(NudgeHostFixture.uncertainJudgement(subject: Self.subject))
+        NudgeHostFixture.settle()
+
+        #expect(!fixture.panel.isVisible, "a panel was left on a display a presentation had claimed")
+        #expect(!fixture.panel.properties.isFullScreenAuxiliary)
+        // The reading was taken before the window went, so the asking is recorded rather than
+        // lost — a question whose receipt was never written is a question that comes back.
+        #expect(try fixture.receipts().count == 1)
+    }
+}

@@ -1,0 +1,518 @@
+import FocusCore
+import SwiftUI
+import Testing
+
+@testable import FocusUI
+
+/// Hosts a component that wants a `@FocusState` binding.
+///
+/// Four of e02's surfaces take a `FocusState<FocusField?>.Binding` — the keyboard-traversal
+/// contract is expressed by the cockpit owning one focus state and lending it out — and a
+/// binding like that can only be made inside a `View`. This is the smallest thing that is one.
+struct FocusHost<Content: View>: View {
+    @FocusState private var focus: FocusField?
+    let content: (FocusState<FocusField?>.Binding) -> Content
+
+    init(@ViewBuilder content: @escaping (FocusState<FocusField?>.Binding) -> Content) {
+        self.content = content
+    }
+
+    var body: some View {
+        content($focus)
+    }
+}
+
+/// The fixture values every priority render is drawn from.
+///
+/// Fixed, and fixed in a *file*: a baseline whose content depends on the clock, the locale or
+/// the machine is a baseline that fails on somebody else's Tuesday. Every date here is an
+/// explicit `timeIntervalSince1970` — `Date()` is banned repository-wide, tests included, for
+/// exactly this reason (R-26).
+enum PriorityFixture {
+    /// 2026-01-01T00:00:00Z.
+    static let now = Date(timeIntervalSince1970: 1_767_225_600)
+
+    static let id = UUID(uuidString: "E0200000-0000-4000-A000-000000000001")!
+
+    /// A real sentence, well-formed by the validator's rules: a leading imperative verb and a
+    /// concrete outcome.
+    static let intent = "Finish and submit the Q3 partnership proposal"
+
+    /// 180 characters, for the F-147 resilience proofs. The promise is that this wraps and
+    /// stays legible at the largest text size, so the fixture has to be long enough to make
+    /// the promise mean something.
+    static let longIntent = String(
+        repeating: "Finish the quarterly partnership proposal and send it to legal. ",
+        count: 3
+    ).prefix(180).description
+
+    static let contextItems: [ContextItemValue] = [
+        ContextItemValue.app(
+            bundleID: "com.apple.Safari",
+            displayName: "Safari",
+            addedAt: now,
+            id: UUID(uuidString: "E0200000-0000-4000-A000-000000000011")!
+        ),
+        ContextItemValue.domain(
+            origin: "https://docs.example.com",
+            addedAt: now,
+            id: UUID(uuidString: "E0200000-0000-4000-A000-000000000012")!
+        )!,
+        ContextItemValue.keyword(
+            "partnership",
+            addedAt: now,
+            id: UUID(uuidString: "E0200000-0000-4000-A000-000000000013")!
+        )!,
+        ContextItemValue(
+            id: UUID(uuidString: "E0200000-0000-4000-A000-000000000014")!,
+            kind: .file,
+            value: "/Users/example/Documents/proposal.pdf",
+            displayName: "proposal.pdf",
+            addedAt: now
+        ),
+        // A file whose disk went away. It is drawn as *missing*, with a Locate… action, and is
+        // never removed — deleting somebody's context because a volume was unplugged is a bug,
+        // not tidiness (R-22).
+        ContextItemValue(
+            id: UUID(uuidString: "E0200000-0000-4000-A000-000000000015")!,
+            kind: .file,
+            value: "/Volumes/Archive/last-year.key",
+            displayName: "last-year.key",
+            addedAt: now,
+            availability: .missing
+        ),
+        // A kind written by a later version of the app. It renders as an inert chip rather
+        // than crashing or vanishing — forward compatibility you can look at.
+        ContextItemValue(
+            id: UUID(uuidString: "E0200000-0000-4000-A000-000000000016")!,
+            kind: ContextItemKind(rawValue: "person"),
+            value: "someone",
+            displayName: "someone",
+            addedAt: now,
+            availability: .unknownKind
+        )
+    ]
+
+    static let rules: [PriorityRuleValue] = [
+        PriorityRuleValue(
+            id: UUID(uuidString: "E0200000-0000-4000-A000-000000000021")!,
+            scope: .app,
+            subject: "com.apple.Safari",
+            verdict: .relevant,
+            createdAt: now
+        ),
+        PriorityRuleValue(
+            id: UUID(uuidString: "E0200000-0000-4000-A000-000000000022")!,
+            scope: .domain,
+            subject: "https://news.example.com",
+            verdict: .unrelated,
+            createdAt: now
+        ),
+        PriorityRuleValue(
+            id: UUID(uuidString: "E0200000-0000-4000-A000-000000000023")!,
+            scope: .session,
+            subject: "proposal",
+            verdict: .uncertain,
+            createdAt: now
+        )
+    ]
+
+    /// The same three, plus a stored rule of a **retired** scope (e07a): a title-token row a
+    /// person authored before the affordance was withdrawn. It is what the rules pane's own
+    /// picture is about — kept, deletable, captioned *no longer read*, its verdict controls
+    /// withdrawn — and it lives beside `rules` rather than in it so the cockpit's baselines,
+    /// which draw `rules` whole, stay pictures of a cockpit with nothing retired in it.
+    static let rulesWithARetiredRow: [PriorityRuleValue] = rules + [
+        PriorityRuleValue(
+            id: UUID(uuidString: "E0200000-0000-4000-A000-000000000024")!,
+            scope: .titleToken,
+            subject: "invoice",
+            verdict: .relevant,
+            createdAt: now
+        )
+    ]
+
+    /// The committed definition of done. Named rather than inline, because focus-0ai's second
+    /// baseline is the same fixture with this **absent**, and two literals would let the two
+    /// pictures drift into being about two different priorities.
+    static let doneWhen = "The signed PDF is in the shared folder and legal has replied"
+
+    static func priority(
+        intent: String = PriorityFixture.intent,
+        doneWhen: String? = PriorityFixture.doneWhen,
+        timebox: TimeboxState = .running(remaining: .seconds(19 * 60))
+    ) -> PrioritySnapshot {
+        PrioritySnapshot(
+            id: id,
+            intent: intent,
+            doneWhen: doneWhen,
+            createdAt: now,
+            lastActivatedAt: now,
+            timeboxSeconds: 25 * 60,
+            startedAt: now,
+            timebox: timebox,
+            contextItems: contextItems,
+            rules: rules,
+            assessment: .wellFormed
+        )
+    }
+
+    static let recent: [RecentPriority] = [
+        RecentPriority(
+            id: id,
+            intent: intent,
+            doneWhen: "The signed PDF is in the shared folder",
+            contextItemCount: 6,
+            lastActivatedAt: now,
+            isActive: true
+        ),
+        RecentPriority(
+            id: UUID(uuidString: "E0200000-0000-4000-A000-000000000031")!,
+            intent: "Rewrite the onboarding checklist",
+            doneWhen: nil,
+            contextItemCount: 2,
+            lastActivatedAt: now.addingTimeInterval(-86_400)
+        ),
+        RecentPriority(
+            id: UUID(uuidString: "E0200000-0000-4000-A000-000000000032")!,
+            intent: "Reply to the accessibility audit",
+            doneWhen: "Every finding has an owner",
+            contextItemCount: 0,
+            lastActivatedAt: now.addingTimeInterval(-172_800),
+            completedAt: now.addingTimeInterval(-170_000)
+        )
+    ]
+
+    /// An incoming handoff carrying every flag the confirm surface has to disclose, so the
+    /// baseline shows the *worst* case rather than the tidy one.
+    static let handoff = HandoffRequest(
+        verb: .start,
+        task: "Draft the migration note for the storage change",
+        doneWhen: "The note is in the shared folder",
+        flags: [
+            .taskTruncated(originalLength: 5_019),
+            .controlCharactersStripped,
+            .duplicateKeysIgnored(["task"]),
+            .unknownQueryItems(["project", "assignee"])
+        ]
+    )
+
+    /// The committed cockpit, drawn as the app really looks once it is running.
+    ///
+    /// From e03 the fixture is **watching**, with the capability matrix the rig actually
+    /// measured at zero grants (`CapabilityFixture.asMeasured`) and a session in `.focus`. That
+    /// matters for the baseline's value as evidence: an unobserved matrix would draw eight
+    /// standing lines of "never asked for" under a window whose whole point is one sentence, and
+    /// a picture of that would be a picture of a state the app is only ever in for the instant
+    /// before its first probe.
+    static func cockpit(
+        intent: String = PriorityFixture.intent,
+        doneWhen: String? = PriorityFixture.doneWhen
+    ) -> CockpitState {
+        CockpitState(
+            status: .uncertain,
+            storeOpened: true,
+            isObservingActivity: true,
+            priority: priority(intent: intent, doneWhen: doneWhen),
+            recent: recent,
+            session: SessionFixture.session(phase: .focus),
+            sensing: SensingSummary(
+                isObserving: true,
+                isPausedByUser: false,
+                liveObserverCount: 12,
+                redundantActivations: 3,
+                lifecycle: .active,
+                isUserIdle: false,
+                media: .idle,
+                cameraReason: .noDevices,
+                presentation: .notPresenting,
+                isOnSecondaryDisplay: false
+            ),
+            capabilities: CapabilityFixture.asMeasured
+        )
+    }
+}
+
+/// Every e02 surface the snapshot matrix covers.
+///
+/// **What is deliberately absent, and why.** Measured on this machine and recorded in e01's
+/// `SnapshotTests`: an AppKit-backed control does not rasterise under `ImageRenderer` — a
+/// `TextField` or a `Picker` draws SwiftUI's yellow "unrenderable view" placeholder whatever
+/// appearance is injected. So the capture field, the quick-capture panel and the completion
+/// sheet are not here: committing those renders would mean committing a picture of a broken
+/// control and calling it a baseline. They are covered by structural tests instead, and by the
+/// TCC-gated live frames where AppKit draws them for real.
+///
+/// The context pack and the rules pane *are* here, in their read-only form. Both hide their
+/// composing controls when no mutation host is attached, so what renders is exactly the chips
+/// and rows — which is the part these baselines exist to watch.
+enum PriorityComponent: String, CaseIterable, Sendable {
+    case priorityHero
+    case priorityHeroEmpty
+    case cockpitWithPriority
+    /// **The same cockpit with no definition of done** (focus-0ai, focus-odz.5).
+    ///
+    /// The bead's own acceptance criterion is that this picture exists: *"the snapshot fixture
+    /// always has a `doneWhen`, so no baseline covers the empty case"*. Without it the fix is
+    /// unwitnessed and the next fixture change reintroduces the heading-over-nothing silently.
+    case cockpitWithPriorityNoDoneWhen
+    /// **The other two tabs** (focus-1rj7). `cockpitWithPriority` photographs Now; these
+    /// photograph the session in full with the desk and the rules, and the recent priorities.
+    case cockpitDetails
+    case cockpitRecent
+    case contextPack
+    case taskRules
+    case timeboxRunning
+    case timeboxOvertime
+    case recentPriorities
+    case ritualBanner
+    case handoffConfirm
+
+    /// Everything wraps inside a fixed width, so growing text grows the *height* — which is
+    /// what the dynamic-type and pseudo-localisation assertions read.
+    var width: CGFloat? {
+        // The handoff sheet commits a width now, so it is photographed at the width it commits
+        // to, plus the harness's own 16-point padding on each side (focus-nu6).
+        self == .handoffConfirm ? ShellSurfaceBounds.handoffSheetWidth + 32 : 520
+    }
+
+    /// Whether a pseudo-localised pass means anything for this component.
+    ///
+    /// `priorityHero` draws one thing: the user's own sentence, through `Text(verbatim:)`,
+    /// because it is data and not prose. Pseudo-localising it would correctly change nothing,
+    /// so asserting "more ink" over it would be asserting that the hero *is* translated — the
+    /// opposite of what F-149 wants.
+    var drawsLocalisedProse: Bool { self != .priorityHero }
+
+    /// Whether "more ink when pseudo-localised" is a measurement this component can carry.
+    ///
+    /// The two cockpit composites cannot, since e11c (focus-6uya). Ink is counted against the
+    /// top-left pixel, and the cockpit now stands two of its zones on a washed Inlay well: the
+    /// well is a solid block of ink to that measure, so the text it carries adds nothing, and
+    /// the plain cockpit measured *more* ink than the pseudo-localised one while visibly drawing
+    /// less text — the count was reading well geometry, not words. Every part the cockpit is
+    /// composed of is measured on its own in the same test. The composite keeps the width and
+    /// height growth assertions, and its pseudo-localised picture is held to its own baseline.
+    var measuresPseudoLocalisedInk: Bool {
+        drawsLocalisedProse && !Self.cockpitComposites.contains(self)
+    }
+
+    /// The whole-cockpit renders: one per tab (focus-1rj7), and the no-done-when variant.
+    static let cockpitComposites: Set<PriorityComponent> = [
+        .cockpitWithPriority, .cockpitWithPriorityNoDoneWhen, .cockpitDetails, .cockpitRecent
+    ]
+
+    /// Whether Increase Contrast has anything to change in this component.
+    ///
+    /// `DesignTokens.emphasis(for:)` is the whole of the shell's Increase Contrast response:
+    /// it thickens borders, drives outline opacity to 1, and **promotes secondary text** to
+    /// the primary label colour. A component with a border or a supporting line therefore has
+    /// to render differently, and every one of them does — asserted below.
+    ///
+    /// The companion palette also promotes the ground, so even the committed hero
+    /// now responds to Increase Contrast. No component needs an exemption.
+
+    @MainActor
+    var view: AnyView {
+        switch self {
+        case .priorityHero:
+            AnyView(PriorityHeroView(intent: PriorityFixture.intent))
+        case .priorityHeroEmpty:
+            AnyView(PriorityHeroView(intent: nil))
+        case .cockpitWithPriority:
+            // The elapsed figure is passed in, as it is in the app: there is no clock in this
+            // view and no timer anywhere in the programme, so the baseline is a picture at a
+            // fixed instant rather than a race with the machine that renders it.
+            AnyView(
+                CockpitView(
+                    state: PriorityFixture.cockpit(),
+                    sessionElapsedSeconds: SessionFixture.elapsedSeconds
+                )
+            )
+        case .cockpitWithPriorityNoDoneWhen:
+            // One field different from the picture above, and that is the point: what a reader
+            // compares is the two baselines, where the *whole section* is gone rather than a
+            // caption standing over a blank line.
+            AnyView(
+                CockpitView(
+                    state: PriorityFixture.cockpit(doneWhen: nil),
+                    sessionElapsedSeconds: SessionFixture.elapsedSeconds
+                )
+            )
+        case .cockpitDetails:
+            AnyView(
+                CockpitView(
+                    state: PriorityFixture.cockpit(),
+                    sessionElapsedSeconds: SessionFixture.elapsedSeconds,
+                    tab: .details
+                )
+            )
+        case .cockpitRecent:
+            AnyView(
+                CockpitView(
+                    state: PriorityFixture.cockpit(),
+                    sessionElapsedSeconds: SessionFixture.elapsedSeconds,
+                    tab: .recent
+                )
+            )
+        case .contextPack:
+            AnyView(
+                FocusHost { focus in
+                    ContextChipRow(items: PriorityFixture.contextItems, focus: focus)
+                }
+            )
+        case .taskRules:
+            AnyView(
+                FocusHost { focus in
+                    TaskRulesView(rules: PriorityFixture.rulesWithARetiredRow, focus: focus)
+                }
+            )
+        case .timeboxRunning:
+            AnyView(
+                FocusHost { focus in
+                    TimeboxControl(
+                        timeboxSeconds: 25 * 60,
+                        state: .running(remaining: .seconds(19 * 60)),
+                        focus: focus
+                    )
+                }
+            )
+        case .timeboxOvertime:
+            AnyView(
+                FocusHost { focus in
+                    TimeboxControl(
+                        timeboxSeconds: 25 * 60,
+                        state: .overtime(over: .seconds(7 * 60)),
+                        focus: focus
+                    )
+                }
+            )
+        case .recentPriorities:
+            AnyView(RecentPrioritiesView(rows: PriorityFixture.recent))
+        case .ritualBanner:
+            AnyView(
+                FocusHost { focus in
+                    RitualBanner(answer: {}, dismiss: {}, focus: focus)
+                }
+            )
+        case .handoffConfirm:
+            AnyView(
+                // `screens: []` — no display, so the sheet's container draws its column whole
+                // (focus-nu6). `ImageRenderer` cannot draw the scroll view it reaches for past a
+                // ceiling, and the ceiling is read from the live display, so a picture of the
+                // bounded sheet would have dimensions that followed the monitor.
+                HandoffConfirmationSheet(
+                    request: PriorityFixture.handoff,
+                    current: PriorityFixture.priority(),
+                    replace: {},
+                    cancel: {},
+                    screens: []
+                )
+            )
+        }
+    }
+}
+
+/// The F-157 snapshot lane, extended to e02's surfaces.
+///
+/// Same machinery as e01's: `ImageRenderer` inside the ordinary unit lane, with every
+/// appearance variant and every text size **injected** rather than read from the system, so a
+/// Mac with every accessibility setting switched off still renders all five variants
+/// deterministically.
+///
+/// Lane-gated on compiled String Catalogs, and that is not a convenience: under `swift test`
+/// SwiftPM copies the catalogs verbatim, so every label would render as its own key and the
+/// baselines would be pictures of `priority.timebox.label`.
+@Suite("Priority snapshots", .enabled(if: LocalizationLane.catalogsAreCompiled))
+@MainActor
+struct PrioritySnapshotTests {
+    @Test(
+        "every priority surface matches its baseline in every appearance variant",
+        arguments: PriorityComponent.allCases, AppearanceTraits.namedVariants.map(\.name)
+    )
+    func componentMatchesBaseline(component: PriorityComponent, variant: String) throws {
+        for size in SnapshotTypeSize.allCases {
+            try SnapshotHarness.assertSnapshot(
+                component.view,
+                component: component.rawValue,
+                variant: variant,
+                textScale: size.textScale,
+                width: component.width
+            )
+        }
+    }
+
+    @Test("light and dark are different pictures", arguments: PriorityComponent.allCases)
+    func lightAndDarkDiffer(component: PriorityComponent) throws {
+        let light = try render(component, variant: "light")
+        let dark = try render(component, variant: "dark")
+        let differs = PNGCompare.areDistinct(light.pixels, dark.pixels)
+        #expect(differs, "\(component.rawValue) ignores dark mode")
+    }
+
+    @Test(
+        "increased contrast changes the picture",
+        arguments: PriorityComponent.allCases
+    )
+    func increasedContrastDiffers(component: PriorityComponent) throws {
+        let plain = try render(component, variant: "light")
+        let contrasted = try render(component, variant: "increasedContrast")
+        let differs = PNGCompare.areDistinct(plain.pixels, contrasted.pixels)
+        #expect(differs, "\(component.rawValue) ignores Increase Contrast")
+    }
+
+    /// Every context-item kind has to be told apart without colour.
+    ///
+    /// The chips encode their kind in an SF Symbol silhouette and their availability in a
+    /// second one, never in a tint — which is the same shape+label rule e01 applied to the
+    /// status badge (F-146). This is the assertion that keeps it true.
+    @Test("every context-chip kind renders distinctly without colour")
+    func contextChipKindsAreDistinctWithoutColour() throws {
+        let traits = AppearanceTraits(colorScheme: .light, differentiateWithoutColor: true)
+        var renders: [(name: String, snapshot: Snapshot)] = []
+
+        for item in PriorityFixture.contextItems {
+            let name = "contextChip.differentiateWithoutColor.\(item.kind.rawValue).\(item.availability)"
+            renders.append(
+                (
+                    item.displayName,
+                    try SnapshotHarness.render(
+                        ContextChip(item: item),
+                        traits: traits,
+                        width: nil,
+                        name: name
+                    )
+                )
+            )
+        }
+
+        for (index, subject) in renders.enumerated() {
+            for other in renders[(index + 1)...] {
+                let differs = PNGCompare.areDistinct(subject.snapshot.pixels, other.snapshot.pixels)
+                #expect(
+                    differs,
+                    "\(subject.name) and \(other.name) render identically without colour"
+                )
+            }
+        }
+    }
+
+    /// A timebox that has run over must not look like one that has not.
+    @Test("running and overtime are different pictures")
+    func timeboxStatesAreDistinct() throws {
+        let running = try render(.timeboxRunning, variant: "light")
+        let overtime = try render(.timeboxOvertime, variant: "light")
+        #expect(PNGCompare.areDistinct(running.pixels, overtime.pixels))
+    }
+
+    // MARK: -
+
+    private func render(_ component: PriorityComponent, variant: String) throws -> Snapshot {
+        try SnapshotHarness.render(
+            component.view,
+            traits: SnapshotHarness.variantTraits(named: variant),
+            width: component.width,
+            name: "\(component.rawValue).distinctness.\(variant)"
+        )
+    }
+}

@@ -1,0 +1,539 @@
+{
+  "file": "rules",
+  "note": "Precedence, on both axes. Every pair of executable rungs that can co-fire is here in both orders, so a re-ordered ladder fails rather than merely renders differently; the three authorities appear against all three subject kinds; the inner specificity axis is exercised in both directions; a same-cell conflict declines to decide rather than resolving by recency; and the four F-130 dispositions are shown mapping onto the shipped rule vocabulary with no schema change. Note the recurring returnedToAnchor clause on relevant cases held past returnAnchorDwell: the subject has been relevant long enough to count as somewhere the person was, which is a statement about the transition window and not about the rung.",
+  "cases": [
+    {
+      "id": "gc-0101",
+      "note": "Rungs 0 and 1 disagree. A session-lived rule is the most recent thing the person said, so it outranks the rule they attached to the priority — and the stage says which one answered, which a verdict-only assertion could not.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "rules": [
+        { "authority": "session", "subjectKind": "app", "subject": "com.acme.ProposalBuilder", "verdict": "relevant" },
+        { "authority": "task", "subjectKind": "app", "subject": "com.acme.ProposalBuilder", "verdict": "unrelated" }
+      ],
+      "evidence": { "bundleID": "com.acme.ProposalBuilder", "titleTokens": [] },
+      "dwellSeconds": 10,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "relevant", "source": "userRule", "stage": "sessionRule", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["userRule"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
+    },
+    {
+      "id": "gc-0102",
+      "note": "The same pair the other way round. The session rule now says unrelated over a task rule that says relevant, and it is the session rule that mandates — the ladder is a total order, not a vote.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "rules": [
+        { "authority": "session", "subjectKind": "app", "subject": "com.acme.ProposalBuilder", "verdict": "unrelated" },
+        { "authority": "task", "subjectKind": "app", "subject": "com.acme.ProposalBuilder", "verdict": "relevant" }
+      ],
+      "evidence": { "bundleID": "com.acme.ProposalBuilder", "titleTokens": [] },
+      "dwellSeconds": 120,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "unrelated", "source": "userRule", "stage": "sessionRule", "band": "high", "eligibility": "mandated", "clauses": ["userRule", "sustainedDwell"] },
+      "expectNudge": "accuse:ambient"
+    },
+    {
+      "id": "gc-0103",
+      "note": "Rungs 0 and 2. A session rule outranks a global one, because a global rule is what the person believes in general and a session rule is what they decided about this afternoon.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "rules": [
+        { "authority": "session", "subjectKind": "app", "subject": "com.acme.ProposalBuilder", "verdict": "relevant" },
+        { "authority": "global", "subjectKind": "app", "subject": "com.acme.ProposalBuilder", "verdict": "unrelated" }
+      ],
+      "evidence": { "bundleID": "com.acme.ProposalBuilder", "titleTokens": [] },
+      "dwellSeconds": 10,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "relevant", "source": "userRule", "stage": "sessionRule", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["userRule"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
+    },
+    {
+      "id": "gc-0104",
+      "note": "The same pair reversed, at zero dwell. The verdict is unrelated the instant the subject arrives; the eligibility waits, which is the difference between concluding something and saying it.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "rules": [
+        { "authority": "session", "subjectKind": "app", "subject": "com.acme.ProposalBuilder", "verdict": "unrelated" },
+        { "authority": "global", "subjectKind": "app", "subject": "com.acme.ProposalBuilder", "verdict": "relevant" }
+      ],
+      "evidence": { "bundleID": "com.acme.ProposalBuilder", "titleTokens": [] },
+      "dwellSeconds": 0,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "unrelated", "source": "userRule", "stage": "sessionRule", "band": "high", "eligibility": "suppressed:withinGracePeriod", "clauses": ["userRule"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
+    },
+    {
+      "id": "gc-0105",
+      "note": "Rungs 1 and 2. A rule attached to this priority beats the same rule written in general, because the person who attached it meant it about this work.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "rules": [
+        { "authority": "task", "subjectKind": "app", "subject": "com.acme.ProposalBuilder", "verdict": "relevant" },
+        { "authority": "global", "subjectKind": "app", "subject": "com.acme.ProposalBuilder", "verdict": "unrelated" }
+      ],
+      "evidence": { "bundleID": "com.acme.ProposalBuilder", "titleTokens": [] },
+      "dwellSeconds": 10,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "relevant", "source": "userRule", "stage": "taskRule", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["userRule"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
+    },
+    {
+      "id": "gc-0106",
+      "note": "Rungs 1 and 2 reversed, held past the threshold. The task rule mandates over a global rule that would have said nothing.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "rules": [
+        { "authority": "task", "subjectKind": "app", "subject": "com.acme.ProposalBuilder", "verdict": "unrelated" },
+        { "authority": "global", "subjectKind": "app", "subject": "com.acme.ProposalBuilder", "verdict": "relevant" }
+      ],
+      "evidence": { "bundleID": "com.acme.ProposalBuilder", "titleTokens": [] },
+      "dwellSeconds": 120,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "unrelated", "source": "userRule", "stage": "taskRule", "band": "high", "eligibility": "mandated", "clauses": ["userRule", "sustainedDwell"] },
+      "expectNudge": "accuse:ambient"
+    },
+    {
+      "id": "gc-0107",
+      "note": "Rungs 0 and 3. The person put Pages in the context pack and then wrote a session rule saying it is not what they are doing now; the rule wins, and the app is capable of saying so about an application it was told to expect.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "contextPack": [ { "kind": "app", "value": "com.apple.Pages" } ],
+      "rules": [ { "authority": "session", "subjectKind": "app", "subject": "com.apple.Pages", "verdict": "unrelated" } ],
+      "evidence": { "bundleID": "com.apple.Pages", "titleTokens": [] },
+      "dwellSeconds": 120,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "unrelated", "source": "userRule", "stage": "sessionRule", "band": "high", "eligibility": "mandated", "clauses": ["userRule", "sustainedDwell"] },
+      "expectNudge": "accuse:ambient"
+    },
+    {
+      "id": "gc-0108",
+      "note": "The same two rungs agreeing. The verdict would be identical either way, and the stage is what proves rung 0 answered — the assertion that stops a ladder re-ordering passing unnoticed.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "contextPack": [ { "kind": "app", "value": "com.apple.Pages" } ],
+      "rules": [ { "authority": "session", "subjectKind": "app", "subject": "com.apple.Pages", "verdict": "relevant" } ],
+      "evidence": { "bundleID": "com.apple.Pages", "titleTokens": [] },
+      "dwellSeconds": 10,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "relevant", "source": "userRule", "stage": "sessionRule", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["userRule"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
+    },
+    {
+      "id": "gc-0109",
+      "note": "Rungs 1 and 3: a task rule overrides the context pack attached to the same priority. The pack says what the work looks like; a rule says what the person decided.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "contextPack": [ { "kind": "app", "value": "com.apple.Pages" } ],
+      "rules": [ { "authority": "task", "subjectKind": "app", "subject": "com.apple.Pages", "verdict": "unrelated" } ],
+      "evidence": { "bundleID": "com.apple.Pages", "titleTokens": [] },
+      "dwellSeconds": 120,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "unrelated", "source": "userRule", "stage": "taskRule", "band": "high", "eligibility": "mandated", "clauses": ["userRule", "sustainedDwell"] },
+      "expectNudge": "accuse:ambient"
+    },
+    {
+      "id": "gc-0110",
+      "note": "Rungs 2 and 3: even the weakest user rule outranks the context pack. Every rule the person wrote sits above every identity they merely attached.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "contextPack": [ { "kind": "app", "value": "com.apple.Pages" } ],
+      "rules": [ { "authority": "global", "subjectKind": "app", "subject": "com.apple.Pages", "verdict": "unrelated" } ],
+      "evidence": { "bundleID": "com.apple.Pages", "titleTokens": [] },
+      "dwellSeconds": 120,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "unrelated", "source": "userRule", "stage": "globalRule", "band": "high", "eligibility": "mandated", "clauses": ["userRule", "sustainedDwell"] },
+      "expectNudge": "accuse:ambient"
+    },
+    {
+      "id": "gc-0111",
+      "note": "Rungs 2 and 3 agreeing. Same verdict, different rung, and the fixture pins the rung.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "contextPack": [ { "kind": "app", "value": "com.apple.Pages" } ],
+      "rules": [ { "authority": "global", "subjectKind": "app", "subject": "com.apple.Pages", "verdict": "relevant" } ],
+      "evidence": { "bundleID": "com.apple.Pages", "titleTokens": [] },
+      "dwellSeconds": 10,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "relevant", "source": "userRule", "stage": "globalRule", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["userRule"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
+    },
+    {
+      "id": "gc-0112",
+      "note": "Rungs 0 and 4: a session rule overrules the one opinion this app ships. F-171's row is one click from being wrong about somebody, and this is that click.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "rules": [ { "authority": "session", "subjectKind": "app", "subject": "com.apple.ScreenContinuity", "verdict": "relevant" } ],
+      "evidence": { "bundleID": "com.apple.ScreenContinuity", "titleTokens": [] },
+      "dwellSeconds": 10,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "relevant", "source": "userRule", "stage": "sessionRule", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["userRule"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
+    },
+    {
+      "id": "gc-0113",
+      "note": "Rungs 1 and 4: the same override, attached to this priority rather than to the session.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "rules": [ { "authority": "task", "subjectKind": "app", "subject": "com.apple.ScreenContinuity", "verdict": "relevant" } ],
+      "evidence": { "bundleID": "com.apple.ScreenContinuity", "titleTokens": [] },
+      "dwellSeconds": 10,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "relevant", "source": "userRule", "stage": "taskRule", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["userRule"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
+    },
+    {
+      "id": "gc-0114",
+      "note": "Rungs 2 and 4: even a general rule beats a bundled default. Removing a seed IS writing a rule, which is why the seed list needs no persistence and no reseed reconciliation.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "rules": [ { "authority": "global", "subjectKind": "app", "subject": "com.apple.ScreenContinuity", "verdict": "relevant" } ],
+      "evidence": { "bundleID": "com.apple.ScreenContinuity", "titleTokens": [] },
+      "dwellSeconds": 10,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "relevant", "source": "userRule", "stage": "globalRule", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["userRule"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
+    },
+    {
+      "id": "gc-0115",
+      "note": "Rungs 2 and 4 agreeing, and the band is what distinguishes them: a user rule bands high, a bundled default bands medium. Same verdict, different confidence in it, and the fixture holds the difference.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "rules": [ { "authority": "global", "subjectKind": "app", "subject": "com.apple.ScreenContinuity", "verdict": "unrelated" } ],
+      "evidence": { "bundleID": "com.apple.ScreenContinuity", "titleTokens": [] },
+      "dwellSeconds": 120,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "unrelated", "source": "userRule", "stage": "globalRule", "band": "high", "eligibility": "mandated", "clauses": ["userRule", "sustainedDwell"] },
+      "expectNudge": "accuse:ambient"
+    },
+    {
+      "id": "gc-0116",
+      "note": "Rungs 0 and 5. The heuristic would have found a strong token overlap and said relevant; the session rule says otherwise and is believed. A user's own words outrank an inference about their words.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "rules": [ { "authority": "session", "subjectKind": "app", "subject": "com.acme.ProposalBuilder", "verdict": "unrelated" } ],
+      "evidence": { "bundleID": "com.acme.ProposalBuilder", "titleTokens": [] },
+      "dwellSeconds": 120,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "unrelated", "source": "userRule", "stage": "sessionRule", "band": "high", "eligibility": "mandated", "clauses": ["userRule", "sustainedDwell"] },
+      "expectNudge": "accuse:ambient"
+    },
+    {
+      "id": "gc-0117",
+      "note": "Rungs 0 and 5 the other way. Everything the heuristic needs for an accusation is present — a negative basis, no overlap, two minutes of dwell — and the session rule says this is the work, so nothing is said.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "contextPack": [ { "kind": "app", "value": "com.apple.Pages" } ],
+      "rules": [ { "authority": "session", "subjectKind": "app", "subject": "com.microsoft.Excel", "verdict": "relevant" } ],
+      "evidence": { "bundleID": "com.microsoft.Excel", "titleTokens": [] },
+      "dwellSeconds": 120,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "relevant", "source": "userRule", "stage": "sessionRule", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["userRule", "returnedToAnchor"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
+    },
+    {
+      "id": "gc-0118",
+      "note": "Rungs 1 and 5: a task rule overrides a token overlap the heuristic would have found convincing.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "rules": [ { "authority": "task", "subjectKind": "app", "subject": "com.acme.ProposalBuilder", "verdict": "unrelated" } ],
+      "evidence": { "bundleID": "com.acme.ProposalBuilder", "titleTokens": [] },
+      "dwellSeconds": 120,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "unrelated", "source": "userRule", "stage": "taskRule", "band": "high", "eligibility": "mandated", "clauses": ["userRule", "sustainedDwell"] },
+      "expectNudge": "accuse:ambient"
+    },
+    {
+      "id": "gc-0119",
+      "note": "Rungs 1 and 5 reversed: the task rule rescues an application the heuristic would have accused.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "contextPack": [ { "kind": "app", "value": "com.apple.Pages" } ],
+      "rules": [ { "authority": "task", "subjectKind": "app", "subject": "com.microsoft.Excel", "verdict": "relevant" } ],
+      "evidence": { "bundleID": "com.microsoft.Excel", "titleTokens": [] },
+      "dwellSeconds": 120,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "relevant", "source": "userRule", "stage": "taskRule", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["userRule", "returnedToAnchor"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
+    },
+    {
+      "id": "gc-0120",
+      "note": "Rungs 2 and 5: the weakest user rule still outranks the strongest heuristic evidence.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "rules": [ { "authority": "global", "subjectKind": "app", "subject": "com.acme.ProposalBuilder", "verdict": "unrelated" } ],
+      "evidence": { "bundleID": "com.acme.ProposalBuilder", "titleTokens": [] },
+      "dwellSeconds": 120,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "unrelated", "source": "userRule", "stage": "globalRule", "band": "high", "eligibility": "mandated", "clauses": ["userRule", "sustainedDwell"] },
+      "expectNudge": "accuse:ambient"
+    },
+    {
+      "id": "gc-0121",
+      "note": "Rungs 2 and 5 reversed. This is the correction economy in one fixture: a person who once said 'Excel is work' is never nudged about Excel again.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "contextPack": [ { "kind": "app", "value": "com.apple.Pages" } ],
+      "rules": [ { "authority": "global", "subjectKind": "app", "subject": "com.microsoft.Excel", "verdict": "relevant" } ],
+      "evidence": { "bundleID": "com.microsoft.Excel", "titleTokens": [] },
+      "dwellSeconds": 120,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "relevant", "source": "userRule", "stage": "globalRule", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["userRule", "returnedToAnchor"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
+    },
+    {
+      "id": "gc-0122",
+      "note": "Rungs 3 and 4: an identity the person attached to this priority beats the bundled default about the same application, with no rule written at all. This is family 3's paired case — somebody recording an iPhone Mirroring demo puts it in the pack, and the app stops having an opinion.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "contextPack": [ { "kind": "app", "value": "com.apple.ScreenContinuity" } ],
+      "evidence": { "bundleID": "com.apple.ScreenContinuity", "titleTokens": [] },
+      "dwellSeconds": 10,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "relevant", "source": "userRule", "stage": "contextPack", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["contextItem"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
+    },
+    {
+      "id": "gc-0123",
+      "note": "Rungs 3 and 5 agreeing on the verdict and disagreeing on everything else. The heuristic would have found the overlap and banded medium; the pack matched an exact identity and bands high. The band is the assertion here.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "contextPack": [ { "kind": "app", "value": "com.acme.ProposalBuilder" } ],
+      "evidence": { "bundleID": "com.acme.ProposalBuilder", "titleTokens": [] },
+      "dwellSeconds": 10,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "relevant", "source": "userRule", "stage": "contextPack", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["contextItem"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
+    },
+    {
+      "id": "gc-0124",
+      "note": "Rungs 4 and 5. A decisive bundled default must out-rank the heuristic or F-171's row would be argued out of existence by a token coincidence — which is exactly why seedRule and seedFallback are two rungs rather than one.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "contextPack": [ { "kind": "app", "value": "com.apple.Pages" } ],
+      "evidence": { "bundleID": "com.apple.ScreenContinuity", "titleTokens": [] },
+      "dwellSeconds": 120,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "unrelated", "source": "heuristic", "stage": "seedRule", "band": "medium", "eligibility": "mandated", "clauses": ["seedDefault", "sustainedDwell"] },
+      "expectNudge": "accuse:ambient"
+    },
+    {
+      "id": "gc-0125",
+      "note": "The seed-override guard, on the Court's own worked example. The priority's own words contain 'iPhone', so the one alwaysDistracting row this app ships is downgraded to uncertain — a bundled default is the app's opinion, and the person's own words outrank it. The guard fires downward only, and seven minutes of dwell does not bring it back.",
+      "priority": { "intent": "record the iPhone Mirroring demo", "revision": 1 },
+      "evidence": { "bundleID": "com.apple.ScreenContinuity", "titleTokens": [] },
+      "dwellSeconds": 400,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "uncertain", "source": "heuristic", "stage": "seedRule", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["seedDefault", "insufficientEvidence"], "uncertaintyReason": "mixedUseApplication" },
+      "expectNudge": "ask:mixedUseApplication",
+      "queryGroundTruth": "relevant"
+    },
+    {
+      "id": "gc-0126",
+      "note": "The inner axis: narrower wins. A domain rule about the documentation site beats an app rule about the browser showing it, because the person who wrote the narrower rule meant it as the exception.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "rules": [
+        { "authority": "global", "subjectKind": "app", "subject": "com.apple.Safari", "verdict": "unrelated" },
+        { "authority": "global", "subjectKind": "domain", "subject": "https://docs.google.com", "verdict": "relevant" }
+      ],
+      "evidence": { "bundleID": "com.apple.Safari", "origin": "https://docs.google.com", "titleTokens": [] },
+      "dwellSeconds": 10,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "relevant", "source": "userRule", "stage": "globalRule", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["userRule"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
+    },
+    {
+      "id": "gc-0127",
+      "note": "The same axis in the other direction: 'the browser is fine, but not that site'. The narrower rule still wins, and here that means the app speaks rather than staying quiet.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "rules": [
+        { "authority": "global", "subjectKind": "app", "subject": "com.apple.Safari", "verdict": "relevant" },
+        { "authority": "global", "subjectKind": "domain", "subject": "https://docs.google.com", "verdict": "unrelated" }
+      ],
+      "evidence": { "bundleID": "com.apple.Safari", "origin": "https://docs.google.com", "titleTokens": [] },
+      "dwellSeconds": 120,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "unrelated", "source": "userRule", "stage": "globalRule", "band": "high", "eligibility": "mandated", "clauses": ["userRule", "sustainedDwell"] },
+      "expectNudge": "accuse:ambient"
+    },
+    {
+      "id": "gc-0128",
+      "note": "A title token is narrower than a domain: one document rather than a whole site. Empty in every shipping path in this epic and exercised here, so e07 turns a capability on rather than writing a rung.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "rules": [
+        { "authority": "global", "subjectKind": "titleToken", "subject": "proposal", "verdict": "relevant" },
+        { "authority": "global", "subjectKind": "domain", "subject": "https://docs.google.com", "verdict": "unrelated" }
+      ],
+      "evidence": { "origin": "https://docs.google.com", "titleTokens": ["proposal", "draft"] },
+      "dwellSeconds": 10,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "relevant", "source": "userRule", "stage": "globalRule", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["userRule"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
+    },
+    {
+      "id": "gc-0129",
+      "note": "A title token is narrower than an app, and the two ends of the axis therefore order transitively. The document decides, not the application showing it.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "rules": [
+        { "authority": "global", "subjectKind": "titleToken", "subject": "invoice", "verdict": "unrelated" },
+        { "authority": "global", "subjectKind": "app", "subject": "com.apple.Safari", "verdict": "relevant" }
+      ],
+      "evidence": { "bundleID": "com.apple.Safari", "titleTokens": ["invoice", "reminder"] },
+      "dwellSeconds": 120,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "unrelated", "source": "userRule", "stage": "globalRule", "band": "high", "eligibility": "mandated", "clauses": ["userRule", "sustainedDwell"] },
+      "expectNudge": "accuse:ambient"
+    },
+    {
+      "id": "gc-0130",
+      "note": "Same authority, same subject kind, opposite verdicts. This resolves to uncertain and never to a winner: it does not resolve by recency, and it does not resolve to unrelated. A nudger that fires on contradictory evidence is the failure this whole epic exists to prevent.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "rules": [
+        { "authority": "global", "subjectKind": "titleToken", "subject": "proposal", "verdict": "relevant" },
+        { "authority": "global", "subjectKind": "titleToken", "subject": "invoice", "verdict": "unrelated" }
+      ],
+      "evidence": { "bundleID": "com.apple.Safari", "titleTokens": ["proposal", "invoice"] },
+      "dwellSeconds": 120,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "uncertain", "source": "userRule", "stage": "globalRule", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["conflictingRules", "insufficientEvidence"], "uncertaintyReason": "conflictingRules" },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
+    },
+    {
+      "id": "gc-0131",
+      "note": "The same conflict at task authority. The rung moves; the answer does not, because declining to decide is a property of the cell rather than of which cell it is.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "rules": [
+        { "authority": "task", "subjectKind": "titleToken", "subject": "proposal", "verdict": "relevant" },
+        { "authority": "task", "subjectKind": "titleToken", "subject": "invoice", "verdict": "unrelated" }
+      ],
+      "evidence": { "bundleID": "com.apple.Safari", "titleTokens": ["proposal", "invoice"] },
+      "dwellSeconds": 120,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "uncertain", "source": "userRule", "stage": "taskRule", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["conflictingRules", "insufficientEvidence"], "uncertaintyReason": "conflictingRules" },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
+    },
+    {
+      "id": "gc-0132",
+      "note": "And at session authority, which is the rung e05's one-click affordance will write into. Two contradictory decisions taken minutes apart still produce silence rather than a coin toss.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "rules": [
+        { "authority": "session", "subjectKind": "titleToken", "subject": "proposal", "verdict": "relevant" },
+        { "authority": "session", "subjectKind": "titleToken", "subject": "invoice", "verdict": "unrelated" }
+      ],
+      "evidence": { "bundleID": "com.apple.Safari", "titleTokens": ["proposal", "invoice"] },
+      "dwellSeconds": 120,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "uncertain", "source": "userRule", "stage": "sessionRule", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["conflictingRules", "insufficientEvidence"], "uncertaintyReason": "conflictingRules" },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
+    },
+    {
+      "id": "gc-0133",
+      "note": "F-130's third disposition. 'Ask each time' is stored as RuleVerdict.uncertain and IS a decision — it decides to say nothing — so it terminates the cascade at rung 2 rather than falling through to the heuristic. Band low, because there is no evidence to band.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "rules": [ { "authority": "global", "subjectKind": "app", "subject": "com.apple.Safari", "verdict": "uncertain" } ],
+      "evidence": { "bundleID": "com.apple.Safari", "titleTokens": [] },
+      "dwellSeconds": 400,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "uncertain", "source": "userRule", "stage": "globalRule", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["userRule"], "uncertaintyReason": "mixedUseApplication" },
+      "expectNudge": "ask:mixedUseApplication",
+      "queryGroundTruth": "eitherIsReasonable"
+    },
+    {
+      "id": "gc-0134",
+      "note": "F-130's fourth disposition, which is the absence of a row: 'interpret by context' means the cascade falls through to the heuristic. A rule about a different application does not match, so nothing at rungs 0 to 4 answers.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "contextPack": [ { "kind": "app", "value": "com.apple.Pages" } ],
+      "rules": [ { "authority": "global", "subjectKind": "app", "subject": "com.valvesoftware.steam", "verdict": "unrelated" } ],
+      "evidence": { "bundleID": "com.microsoft.Excel", "titleTokens": [] },
+      "dwellSeconds": 120,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "unrelated", "source": "heuristic", "stage": "heuristic", "band": "medium", "eligibility": "mandated", "clauses": ["sustainedDwell"] },
+      "expectNudge": "accuse:ambient"
+    },
+    {
+      "id": "gc-0135",
+      "note": "Session authority against a domain subject: the third authority crossed with the middle subject kind. The explanation carries the host and nothing else, because NormalisedToken would not accept a scheme.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "rules": [ { "authority": "session", "subjectKind": "domain", "subject": "https://news.example.com", "verdict": "unrelated" } ],
+      "evidence": { "origin": "https://news.example.com", "titleTokens": [] },
+      "dwellSeconds": 120,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "unrelated", "source": "userRule", "stage": "sessionRule", "band": "high", "eligibility": "mandated", "clauses": ["userRule", "sustainedDwell"] },
+      "expectNudge": "accuse:ambient"
+    },
+    {
+      "id": "gc-0136",
+      "note": "Session authority against a title-token subject, which is the narrowest cell in the whole matrix.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "rules": [ { "authority": "session", "subjectKind": "titleToken", "subject": "proposal", "verdict": "relevant" } ],
+      "evidence": { "bundleID": "com.microsoft.Excel", "titleTokens": ["proposal", "draft"] },
+      "dwellSeconds": 10,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "relevant", "source": "userRule", "stage": "sessionRule", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["userRule"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
+    },
+    {
+      "id": "gc-0137",
+      "note": "Task authority against a domain subject: 'for this priority, that site is the work'.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "rules": [ { "authority": "task", "subjectKind": "domain", "subject": "https://docs.google.com", "verdict": "relevant" } ],
+      "evidence": { "origin": "https://docs.google.com", "titleTokens": [] },
+      "dwellSeconds": 10,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "relevant", "source": "userRule", "stage": "taskRule", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["userRule"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
+    },
+    {
+      "id": "gc-0138",
+      "note": "Task authority against a title-token subject, saying unrelated, held past the threshold. The ninth cell of the authority-by-subject-kind matrix, and the one that mandates.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "rules": [ { "authority": "task", "subjectKind": "titleToken", "subject": "invoice", "verdict": "unrelated" } ],
+      "evidence": { "bundleID": "com.microsoft.Excel", "titleTokens": ["invoice"] },
+      "dwellSeconds": 120,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "unrelated", "source": "userRule", "stage": "taskRule", "band": "high", "eligibility": "mandated", "clauses": ["userRule", "sustainedDwell"] },
+      "expectNudge": "accuse:ambient"
+    },
+    {
+      "id": "gc-0139",
+      "note": "'Ask each time' written about a site rather than an application. Five minutes of dwell cannot escalate it, because decide() returns on the verdict before it reads a band or a drift state.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "rules": [ { "authority": "global", "subjectKind": "domain", "subject": "https://reddit.com", "verdict": "uncertain" } ],
+      "evidence": { "origin": "https://reddit.com", "titleTokens": [] },
+      "dwellSeconds": 300,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "uncertain", "source": "userRule", "stage": "globalRule", "band": null, "eligibility": "suppressed:verdictUncertain", "clauses": ["userRule"], "uncertaintyReason": "mixedUseApplication" },
+      "expectNudge": "ask:mixedUseApplication",
+      "queryGroundTruth": "unrelated"
+    },
+    {
+      "id": "gc-0140",
+      "note": "Two rules in the same cell that AGREE. This is the case that proves the conflict rule is about disagreement rather than about multiplicity: two matching title tokens both saying relevant resolve normally, and both subjects reach the explanation.",
+      "priority": { "intent": "Write the Q3 proposal for Acme", "doneWhen": "sent to Dana", "revision": 1 },
+      "rules": [
+        { "authority": "global", "subjectKind": "titleToken", "subject": "proposal", "verdict": "relevant" },
+        { "authority": "global", "subjectKind": "titleToken", "subject": "draft", "verdict": "relevant" }
+      ],
+      "evidence": { "bundleID": "com.apple.Safari", "titleTokens": ["proposal", "draft"] },
+      "dwellSeconds": 10,
+      "sessionPhase": "focus",
+      "isUserIdle": false,
+      "expect": { "verdict": "relevant", "source": "userRule", "stage": "globalRule", "band": "high", "eligibility": "suppressed:verdictRelevant", "clauses": ["userRule"] },
+      "expectNudge": "silent:verdictDoesNotAuthorise"
+    }
+  ]
+}

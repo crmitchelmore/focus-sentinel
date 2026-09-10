@@ -1,0 +1,99 @@
+{
+  "id": "day-03",
+  "note": "The day the app says NOTHING, and the reason that is a fixture rather than an absence. A person who works in the one application they named, takes a break, pauses, walks away and gives a presentation has done nothing that warrants a word — and every gate that keeps the app quiet is exercised here in turn: the confident relevance that is the only thing buying silence under U-1, the session phase, the hardware idle source and the presentation gate. A guardian that could not produce a silent day would be a guardian nobody keeps installed, and this is the fixture that fails the moment one becomes impossible.",
+  "segments": [
+    {
+      "priority": {
+        "intent": "Write the Q3 proposal for Acme",
+        "doneWhen": "sent to Dana",
+        "revision": 1
+      },
+      "steps": [
+        {
+          "advanceSeconds": 0,
+          "bundleID": "com.apple.Pages",
+          "expect": {
+            "verdict": "relevant",
+            "drift": "aligned",
+            "nudge": "silent:verdictDoesNotAuthorise",
+            "accumulatedSeconds": 0
+          }
+        },
+        {
+          "advanceSeconds": 900,
+          "bundleID": "com.apple.Pages",
+          "expect": {
+            "verdict": "relevant",
+            "drift": "aligned",
+            "nudge": "silent:verdictDoesNotAuthorise",
+            "accumulatedSeconds": 0
+          }
+        },
+        {
+          "advanceSeconds": 900,
+          "bundleID": "com.apple.Pages",
+          "sessionPhase": "onBreak",
+          "expect": {
+            "verdict": "relevant",
+            "drift": "aligned",
+            "nudge": "silent:sessionPhaseForbids",
+            "accumulatedSeconds": 0
+          }
+        },
+        {
+          "advanceSeconds": 900,
+          "bundleID": "com.apple.Pages",
+          "sessionPhase": "paused",
+          "expect": {
+            "verdict": "relevant",
+            "drift": "aligned",
+            "nudge": "silent:sessionPhaseForbids",
+            "accumulatedSeconds": 0
+          }
+        },
+        {
+          "advanceSeconds": 900,
+          "bundleID": "com.apple.Pages",
+          "isUserIdle": true,
+          "expect": {
+            "verdict": "relevant",
+            "drift": "aligned",
+            "nudge": "silent:userIdle",
+            "accumulatedSeconds": 0
+          }
+        },
+        {
+          "advanceSeconds": 900,
+          "bundleID": "com.apple.Pages",
+          "isPresenting": true,
+          "menuBarVisible": false,
+          "expect": {
+            "verdict": "relevant",
+            "drift": "aligned",
+            "nudge": "silent:presentationActive",
+            "accumulatedSeconds": 0
+          }
+        },
+        {
+          "advanceSeconds": 900,
+          "bundleID": "com.apple.Pages",
+          "expect": {
+            "verdict": "relevant",
+            "drift": "aligned",
+            "nudge": "silent:verdictDoesNotAuthorise",
+            "accumulatedSeconds": 0
+          }
+        }
+      ],
+      "contextPack": [
+        {
+          "kind": "app",
+          "value": "com.apple.Pages"
+        }
+      ]
+    }
+  ],
+  "expectQueries": 0,
+  "expectAccusations": 0,
+  "expectInterruptions": 0
+}

@@ -1,11 +1,41 @@
-# Programme machinery — never version-controlled (charter commit policy)
+# Focus Sentinel — ignore rules
+#
+# Two kinds of entry live here:
+#   1. NEVER-COMMIT — programme machinery and evidence (charter commit policy).
+#   2. Build artefacts — regenerable output of the toolchain.
+#
+# What is deliberately NOT ignored, because it is committed source:
+#   FocusSentinel.xcodeproj/                  hand-authored, never generated (R-01)
+#   Focus.xcworkspace/                        the unit lane lives here (P-15/P-16)
+#   */xcshareddata/                           shared schemes are the lane definitions
+#   Packages/*/Tests/*/Resources/             test fixtures (P-35)
+#   Packages/*/Tests/*/__Snapshots__/         snapshot baselines (R-10)
+#   App/Assets.xcassets/                      the rendered app icon
+
+# --- NEVER COMMIT: programme machinery (charter commit policy) ---
 .agents/
 explainers/
+.beads/
 .claude/
+.codex/
+*.log
 
-# Build products and local tooling state
+# --- Build products and local toolchain state ---
 build/
 DerivedData/
+.build/
+# …and `.build` itself, which on this machine is a SYMLINK into a shared build cache.
+# `.build/` matches a directory only, so the symlink was invisible to it and eight of them
+# were committed by a `git add -A` before this line existed (focus-0nm).
+.build
+__pycache__/
+*.xcresult
 *.xcuserstate
 xcuserdata/
+*.xcuserdatad/
+Packages/*/.swiftpm/
+.swiftpm/
+Tools/*/.swiftpm/
+
+# --- macOS noise ---
 .DS_Store
