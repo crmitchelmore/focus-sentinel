@@ -32,8 +32,9 @@ struct StoreTests {
         // the Intervention pane's own settings row, v6's record of what the shell remembers
         // about itself between launches, and v8's Privacy row carrying the retention window.
         // v7 added none — it re-declared one — which is why fourteen stood for two versions.
-        #expect(FocusStore.schema.entities.count == 15)
-        #expect(FocusMigrationPlan.schemas.last is FocusSchemaV8.Type)
+        // v9 adds the policy tunings' rows and v10 the grant opt-ins' (focus-exdi): seventeen.
+        #expect(FocusStore.schema.entities.count == 17)
+        #expect(FocusMigrationPlan.schemas.last is FocusSchemaV10.Type)
     }
 
     @Test("in-memory: insert, save and fetch round-trip")
@@ -104,7 +105,7 @@ struct StoreTests {
         let second = try FocusStore.makeContainer(kind: .inMemory)
 
         #expect(first.schema.entities.count == second.schema.entities.count)
-        #expect(first.schema.entities.count == 15)
+        #expect(first.schema.entities.count == 17)
     }
 
     @Test("every enum-backed field persists as its string raw value")

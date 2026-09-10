@@ -202,7 +202,13 @@ public enum InterventionPolicy {
 
     /// **S.** F-61's own three snooze spans, shortest first. A snooze is subject-scoped, in
     /// memory, and shows a countdown in the menu bar; it is never a global mute.
-    public static let snoozeDurations: [Duration] = [.seconds(300), .seconds(600), .seconds(900)]
+    ///
+    /// **One minute, five, twenty since the companion round** (focus-oqsx). The identity work
+    /// chose those spans and spelled them in the panel; they belong here instead, because this
+    /// is the file every reader of a threshold consults and because `PolicyTuning` offers them
+    /// to the person as dials. Two spellings of one product decision is how the panel and the
+    /// pane come to disagree about what a snooze is.
+    public static let snoozeDurations: [Duration] = [.seconds(60), .seconds(300), .seconds(1_200)]
 
     /// **S.** F-64's own three pause presets, in the order a surface offers them.
     public static let pauseDurations: [PausePreset] = [
@@ -399,6 +405,10 @@ public enum InterventionPolicy {
     /// committed digest alongside it, and the row says what moved — which is what a reader of
     /// an intervention digest six months from now actually needs.
     public static let revisions: [String] = [
+        "focus-oqsx — snoozeDurations [300, 600, 900] -> [60, 300, 1200]. The identity round "
+            + "chose one minute, five and twenty and spelled them in AccusationPresentation; the "
+            + "spans are a product decision about interruption, so they live here, where the "
+            + "digest carries them and where the tunings table can offer them as dials.",
         "T113 — the fifteen constants of R-95's table, digested and classed B/C/S, in the "
             + "nudge's own manifest so that a cooldown cannot invalidate a verdict cache",
         "U-2 — ladderRungCount 3 -> 2 and ignoredAccusationBackoff 3 -> 2. D-06's third rung, "

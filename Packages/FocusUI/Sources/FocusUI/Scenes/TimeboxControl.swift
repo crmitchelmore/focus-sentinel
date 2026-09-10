@@ -40,7 +40,7 @@ public struct TimeboxControl: View {
     public var body: some View {
         VStack(alignment: .leading, spacing: spacing / 2) {
             HStack(spacing: spacing) {
-                ShellText(.priorityTimeboxLabel, role: .sectionHeading)
+                CompanionSectionHeading(key: .priorityTimeboxLabel, symbol: "timer")
                     .foregroundStyle(DesignTokens.Palette.role(.spruce, for: traits))
 
                 if let readoutKey, let duration = state.duration {
@@ -72,7 +72,7 @@ public struct TimeboxControl: View {
                 } label: {
                     ShellText(.priorityTimeboxNone, role: .callout)
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(CompanionButtonStyle())
                 .disabled(choose == nil || timeboxSeconds == nil)
 
                 Spacer(minLength: 0)
@@ -94,7 +94,7 @@ public struct TimeboxControl: View {
             Text(verbatim: Self.formatPreset(.seconds(seconds)))
                 .font(DesignTokens.font(.callout, scale: textScale))
         }
-        .buttonStyle(.bordered)
+        .buttonStyle(CompanionButtonStyle())
         .tint(timeboxSeconds == seconds ? DesignTokens.Palette.accent(for: traits) : nil)
         .disabled(choose == nil)
 

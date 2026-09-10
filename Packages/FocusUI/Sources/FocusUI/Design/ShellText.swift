@@ -136,6 +136,104 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case cockpitStoreSheetConsequence = "shell.cockpit.store.sheet.consequence"
     case cockpitStoreSheetAcknowledge = "shell.cockpit.store.sheet.acknowledge"
     case cockpitOpenSettings = "shell.cockpit.openSettings"
+    /// The cockpit's three tabs (focus-1rj7).
+    case cockpitTabNow = "shell.cockpit.tab.now"
+    case cockpitTabDetails = "shell.cockpit.tab.details"
+    case cockpitTabRecent = "shell.cockpit.tab.recent"
+    /// The Recent tab's route to the day's history window (focus-1rj7).
+    case cockpitOpenHistory = "shell.cockpit.openHistory"
+    /// A new priority that keeps the current one's desk (focus-1rj7).
+    case priorityActionSameContext = "priority.action.sameContext"
+    /// The policy tunings table (focus-exdi): one label and one note per dial, plus its chrome.
+    case settingsTuningsHeading = "settings.tunings.heading"
+    case settingsTuningsExplanation = "settings.tunings.explanation"
+    case settingsTuningsFamilyInterventions = "settings.tunings.family.interventions"
+    case settingsTuningsFamilyDrift = "settings.tunings.family.drift"
+    case settingsTuningsFamilyRelevance = "settings.tunings.family.relevance"
+    case settingsTuningsShipped = "settings.tunings.shipped"
+    case settingsTuningsResetAll = "settings.tunings.resetAll"
+    case settingsTuningsResetOne = "settings.tunings.resetOne"
+    case settingsTuningsLower = "settings.tunings.lower"
+    /// The Privacy pane's observer switches (focus-exdi.3).
+    case settingsPrivacyAwayAfter = "settings.privacy.watching.awayAfter"
+    case settingsPrivacyAwayAfterNote = "settings.privacy.watching.awayAfter.note"
+    case settingsPrivacyMicrophoneSuppression = "settings.privacy.watching.microphone"
+    case settingsPrivacyMicrophoneSuppressionNote = "settings.privacy.watching.microphone.note"
+    case settingsPrivacyLaunchContext = "settings.privacy.watching.launchContext"
+    case settingsPrivacyLaunchContextNote = "settings.privacy.watching.launchContext.note"
+    /// The two grants a person may switch on (focus-exdi.4).
+    case settingsPrivacyGrantsHeading = "settings.privacy.grants.heading"
+    case settingsPrivacyGrantsExplanation = "settings.privacy.grants.explanation"
+    case settingsPrivacyGrantAccessibility = "settings.privacy.grant.accessibility"
+    case settingsPrivacyGrantAccessibilityNote = "settings.privacy.grant.accessibility.note"
+    case settingsPrivacyGrantScreenCapture = "settings.privacy.grant.screenCapture"
+    case settingsPrivacyGrantScreenCaptureNote = "settings.privacy.grant.screenCapture.note"
+    case settingsPrivacyGrantUnused = "settings.privacy.grant.unused"
+    case settingsTuningsRaise = "settings.tunings.raise"
+    case settingsTuningsUnitSeconds = "settings.tunings.unit.seconds"
+    case settingsTuningsUnitMinutes = "settings.tunings.unit.minutes"
+    case settingsTuningQueryDwellThreshold = "settings.tuning.queryDwellThreshold"
+    case settingsTuningQueryDwellThresholdNote = "settings.tuning.queryDwellThreshold.note"
+    case settingsTuningQueryCooldown = "settings.tuning.queryCooldown"
+    case settingsTuningQueryCooldownNote = "settings.tuning.queryCooldown.note"
+    case settingsTuningMandateCooldown = "settings.tuning.mandateCooldown"
+    case settingsTuningMandateCooldownNote = "settings.tuning.mandateCooldown.note"
+    case settingsTuningEscalationDwell = "settings.tuning.escalationDwell"
+    case settingsTuningEscalationDwellNote = "settings.tuning.escalationDwell.note"
+    case settingsTuningSnoozeFirst = "settings.tuning.snoozeFirst"
+    case settingsTuningSnoozeFirstNote = "settings.tuning.snoozeFirst.note"
+    case settingsTuningSnoozeSecond = "settings.tuning.snoozeSecond"
+    case settingsTuningSnoozeSecondNote = "settings.tuning.snoozeSecond.note"
+    case settingsTuningSnoozeThird = "settings.tuning.snoozeThird"
+    case settingsTuningSnoozeThirdNote = "settings.tuning.snoozeThird.note"
+    case settingsTuningDailyQueryCap = "settings.tuning.dailyQueryCap"
+    case settingsTuningDailyQueryCapNote = "settings.tuning.dailyQueryCap.note"
+    case settingsTuningDailyQueryCapAllPriorities = "settings.tuning.dailyQueryCapAllPriorities"
+    case settingsTuningDailyQueryCapAllPrioritiesNote = "settings.tuning.dailyQueryCapAllPriorities.note"
+    case settingsTuningDailyAccusationCap = "settings.tuning.dailyAccusationCap"
+    case settingsTuningDailyAccusationCapNote = "settings.tuning.dailyAccusationCap.note"
+    case settingsTuningDailyInterruptionCap = "settings.tuning.dailyInterruptionCap"
+    case settingsTuningDailyInterruptionCapNote = "settings.tuning.dailyInterruptionCap.note"
+    case settingsTuningReservedAccusationUnits = "settings.tuning.reservedAccusationUnits"
+    case settingsTuningReservedAccusationUnitsNote = "settings.tuning.reservedAccusationUnits.note"
+    case settingsTuningIgnoredQueryBackoff = "settings.tuning.ignoredQueryBackoff"
+    case settingsTuningIgnoredQueryBackoffNote = "settings.tuning.ignoredQueryBackoff.note"
+    case settingsTuningIgnoredAccusationBackoff = "settings.tuning.ignoredAccusationBackoff"
+    case settingsTuningIgnoredAccusationBackoffNote = "settings.tuning.ignoredAccusationBackoff.note"
+    case settingsTuningBackoffSpan = "settings.tuning.backoffSpan"
+    case settingsTuningBackoffSpanNote = "settings.tuning.backoffSpan.note"
+    case settingsTuningPausePreset = "settings.tuning.pausePreset"
+    case settingsTuningPausePresetNote = "settings.tuning.pausePreset.note"
+    case settingsTuningSustainedDriftThreshold = "settings.tuning.sustainedDriftThreshold"
+    case settingsTuningSustainedDriftThresholdNote = "settings.tuning.sustainedDriftThreshold.note"
+    case settingsTuningDriftResetGrace = "settings.tuning.driftResetGrace"
+    case settingsTuningDriftResetGraceNote = "settings.tuning.driftResetGrace.note"
+    case settingsTuningLookBackSpan = "settings.tuning.lookBackSpan"
+    case settingsTuningLookBackSpanNote = "settings.tuning.lookBackSpan.note"
+    case settingsTuningMaximumLookBackEvents = "settings.tuning.maximumLookBackEvents"
+    case settingsTuningMaximumLookBackEventsNote = "settings.tuning.maximumLookBackEvents.note"
+    case settingsTuningReturnAnchorDwell = "settings.tuning.returnAnchorDwell"
+    case settingsTuningReturnAnchorDwellNote = "settings.tuning.returnAnchorDwell.note"
+    case settingsTuningDetourExtension = "settings.tuning.detourExtension"
+    case settingsTuningDetourExtensionNote = "settings.tuning.detourExtension.note"
+    case settingsTuningMinimumTokenLength = "settings.tuning.minimumTokenLength"
+    case settingsTuningMinimumTokenLengthNote = "settings.tuning.minimumTokenLength.note"
+    case settingsTuningMinimumStrongTokenLength = "settings.tuning.minimumStrongTokenLength"
+    case settingsTuningMinimumStrongTokenLengthNote = "settings.tuning.minimumStrongTokenLength.note"
+    case settingsTuningMinimumOverlapTokens = "settings.tuning.minimumOverlapTokens"
+    case settingsTuningMinimumOverlapTokensNote = "settings.tuning.minimumOverlapTokens.note"
+    case settingsTuningMinimumPriorityContentTokens = "settings.tuning.minimumPriorityContentTokens"
+    case settingsTuningMinimumPriorityContentTokensNote = "settings.tuning.minimumPriorityContentTokens.note"
+    case settingsTuningMinimumNegativeBasisItems = "settings.tuning.minimumNegativeBasisItems"
+    case settingsTuningMinimumNegativeBasisItemsNote = "settings.tuning.minimumNegativeBasisItems.note"
+    case settingsTuningMaximumExplanationTokens = "settings.tuning.maximumExplanationTokens"
+    case settingsTuningMaximumExplanationTokensNote = "settings.tuning.maximumExplanationTokens.note"
+    case settingsTuningSimilarityRelevantCeiling = "settings.tuning.similarityRelevantCeiling"
+    case settingsTuningSimilarityRelevantCeilingNote = "settings.tuning.similarityRelevantCeiling.note"
+    case settingsTuningLanguageConfidenceFloor = "settings.tuning.languageConfidenceFloor"
+    case settingsTuningLanguageConfidenceFloorNote = "settings.tuning.languageConfidenceFloor.note"
+    case settingsTuningSimilarityCacheCapacity = "settings.tuning.similarityCacheCapacity"
+    case settingsTuningSimilarityCacheCapacityNote = "settings.tuning.similarityCacheCapacity.note"
 
     // The priority itself
     case priorityHeroEmpty = "priority.hero.empty"
@@ -484,6 +582,8 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     // the top rung wants an answer.
     case nudgeDismiss = "shell.nudge.dismiss"
     case nudgeSnoozeCountdown = "shell.nudge.snoozeCountdown"
+    case nudgeSnoozeCustom = "shell.nudge.snoozeCustom"
+    case nudgeSnoozeCustomMinutes = "shell.nudge.snoozeCustomMinutes"
 
     // The menu-bar command centre (F-82, F-83, R-91).
     //
@@ -570,12 +670,6 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case interventionCapsAccusations = "settings.intervention.caps.accusations"
     case interventionCapsInterruptions = "settings.intervention.caps.interruptions"
     case interventionCapsExplanation = "settings.intervention.caps.explanation"
-    case interventionThresholdsHeading = "settings.intervention.thresholds.heading"
-    case interventionThresholdQueryDwell = "settings.intervention.thresholds.queryDwell"
-    case interventionThresholdQueryCooldown = "settings.intervention.thresholds.queryCooldown"
-    case interventionThresholdAccusationCooldown = "settings.intervention.thresholds.accusationCooldown"
-    case interventionThresholdEscalation = "settings.intervention.thresholds.escalation"
-    case interventionThresholdSnooze = "settings.intervention.thresholds.snooze"
 }
 
 /// A transform applied to a resolved string immediately before it is drawn.
@@ -655,7 +749,9 @@ extension View {
 /// force, and draws the result — which is what makes the pseudo-localisation and
 /// large-text passes properties of the real views rather than of a test-only copy of them.
 public struct ShellText: View {
-    private let resource: LocalizedStringResource
+    // Resolve once for this view value. Repeated size measurements must not reload
+    // the bundle's string table; transforms and user arguments still apply in body.
+    private let resolvedFormat: String
     private let role: DesignTokens.FontRole
     /// The substitutions, for the format-string entries. Empty for every plain entry.
     private let arguments: [String]
@@ -668,7 +764,7 @@ public struct ShellText: View {
 
     /// A string from `FocusUI`'s own catalog.
     public init(_ key: ShellStringKey, role: DesignTokens.FontRole = .body) {
-        self.resource = ShellStrings.resource(key)
+        self.resolvedFormat = ShellStrings.string(key)
         self.role = role
         self.arguments = []
     }
@@ -679,7 +775,7 @@ public struct ShellText: View {
     /// pseudo-localisation lane expands the authored half and leaves the user's words alone —
     /// which is exactly what a real translation does.
     public init(_ key: ShellStringKey, role: DesignTokens.FontRole = .body, argument: String) {
-        self.resource = ShellStrings.resource(key)
+        self.resolvedFormat = ShellStrings.string(key)
         self.role = role
         self.arguments = [argument]
     }
@@ -696,7 +792,7 @@ public struct ShellText: View {
         role: DesignTokens.FontRole = .body,
         arguments: [String]
     ) {
-        self.resource = ShellStrings.resource(key)
+        self.resolvedFormat = ShellStrings.string(key)
         self.role = role
         self.arguments = arguments
     }
@@ -710,7 +806,7 @@ public struct ShellText: View {
     /// the key one — under `xcodebuild` only, where those symbols exist. The label is what
     /// keeps the two lanes compiling the same source.
     public init(resource: LocalizedStringResource, role: DesignTokens.FontRole = .body) {
-        self.resource = resource
+        self.resolvedFormat = String(localized: resource)
         self.role = role
         self.arguments = []
     }
@@ -724,7 +820,7 @@ public struct ShellText: View {
     }
 
     public var body: some View {
-        let format = transform(String(localized: resource))
+        let format = transform(resolvedFormat)
         let drawn = arguments.isEmpty ? format : String(format: format, arguments: arguments)
         let text = Text(verbatim: drawn)
             .font(DesignTokens.font(role, scale: scale))

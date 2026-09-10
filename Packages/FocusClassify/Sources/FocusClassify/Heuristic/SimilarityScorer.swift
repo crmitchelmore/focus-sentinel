@@ -96,7 +96,21 @@ public final class SimilarityScorer: @unchecked Sendable {
     private var misses = 0
     private var evictions = 0
 
-    public init() {}
+    /// The dials the scorer reads (focus-exdi): the cache's capacity and the ceiling under
+    /// which a distance may corroborate `relevant`. Guarded by the same lock as the cache.
+    private var tunings: PolicyTunings
+
+    public init(tunings: PolicyTunings = .shipped) {
+        self.tunings = tunings
+    }
+
+    /// Take a person's dials. The cache is trimmed at once if the capacity fell.
+    public func adopt(_ tunings: PolicyTunings) {
+        lock.lock()
+        defer { lock.unlock() }
+        self.tunings = tunings
+        evictIfNeededLocked()
+    }
 
     // MARK: - Warm-up
 
@@ -169,7 +183,7 @@ public final class SimilarityScorer: @unchecked Sendable {
     }
 
     private func evictIfNeededLocked() {
-        while recency.count > RelevancePolicy.similarityCacheCapacity {
+        while recency.count > tunings.count(.similarityCacheCapacity) {
             let oldest = recency.removeFirst()
             cache.removeValue(forKey: oldest)
             evictions += 1
@@ -189,7 +203,7 @@ public final class SimilarityScorer: @unchecked Sendable {
         lock.lock()
         defer { lock.unlock() }
         return SimilarityCacheStatistics(
-            capacity: RelevancePolicy.similarityCacheCapacity,
+            capacity: tunings.count(.similarityCacheCapacity),
             entries: cache.count,
             hits: hits,
             misses: misses,
@@ -221,10 +235,14 @@ public final class SimilarityScorer: @unchecked Sendable {
         evidence: ProseTokenSet
     ) -> SimilarityCorroboration {
         // The gate, in the order that makes each refusal cheapest.
-        guard let ceiling = RelevancePolicy.similarityRelevantCeiling.value else { return .none }
+        guard RelevancePolicy.similarityRelevantCeiling.value != nil else { return .none }
+        lock.lock()
+        let tunings = self.tunings
+        lock.unlock()
+        let ceiling = tunings.value(.similarityRelevantCeiling)
         guard let priorityVector else { return .none }
-        guard priorityLanguage?.isJudgeableEnglish == true else { return .none }
-        guard evidence.isJudgeableEnglish else { return .none }
+        guard priorityLanguage?.isJudgeableEnglish(tunings: tunings) == true else { return .none }
+        guard evidence.isJudgeableEnglish(tunings: tunings) else { return .none }
         guard let evidenceVector = vector(for: evidence.sentence) else { return .none }
         guard let distance = priorityVector.distance(to: evidenceVector) else { return .none }
 

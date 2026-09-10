@@ -124,16 +124,22 @@ public struct InterruptionBudget: Sendable, Equatable, Hashable {
     )
 
     /// Units of the shared budget still unspent, never below zero.
-    public var sharedRemaining: Int {
-        max(0, InterventionPolicy.dailyInterruptionCap - interruptionsToday)
+    public var sharedRemaining: Int { sharedRemaining(tunings: .shipped) }
+
+    /// The same reading under a person's dials (focus-exdi). Every reader that decides
+    /// something takes the tunings; the parameterless forms are the shipped policy.
+    public func sharedRemaining(tunings: PolicyTunings) -> Int {
+        max(0, tunings.count(.dailyInterruptionCap) - interruptionsToday)
     }
 
     /// Units of the shared budget a **question** may still spend.
     ///
     /// The reserved units are subtracted here and nowhere else, so there is exactly one place
     /// the rule lives and exactly one place it could be got wrong.
-    public var sharedRemainingForQueries: Int {
-        max(0, sharedRemaining - InterventionPolicy.reservedAccusationUnits)
+    public var sharedRemainingForQueries: Int { sharedRemainingForQueries(tunings: .shipped) }
+
+    public func sharedRemainingForQueries(tunings: PolicyTunings) -> Int {
+        max(0, sharedRemaining(tunings: tunings) - tunings.count(.reservedAccusationUnits))
     }
 
     /// How many more interruptions of this kind the caps allow today.
@@ -141,21 +147,21 @@ public struct InterruptionBudget: Sendable, Equatable, Hashable {
     /// The **minimum** of every cap that applies, because a conjunction of limits is exactly
     /// what a budget is: a question is allowed only while its per-priority cap, its day cap and
     /// the shared budget all still have room.
-    public func remaining(for kind: InterruptionKind) -> Int {
+    public func remaining(for kind: InterruptionKind, tunings: PolicyTunings = .shipped) -> Int {
         switch kind {
         case .query:
             return min(
-                max(0, InterventionPolicy.dailyQueryCap - queriesForPriorityToday),
+                max(0, tunings.count(.dailyQueryCap) - queriesForPriorityToday),
                 max(
                     0,
-                    InterventionPolicy.dailyQueryCapAllPriorities - queriesAllPrioritiesToday
+                    tunings.count(.dailyQueryCapAllPriorities) - queriesAllPrioritiesToday
                 ),
-                sharedRemainingForQueries
+                sharedRemainingForQueries(tunings: tunings)
             )
         case .accusation:
             return min(
-                max(0, InterventionPolicy.dailyAccusationCap - accusationsToday),
-                sharedRemaining
+                max(0, tunings.count(.dailyAccusationCap) - accusationsToday),
+                sharedRemaining(tunings: tunings)
             )
         }
     }
@@ -165,24 +171,27 @@ public struct InterruptionBudget: Sendable, Equatable, Hashable {
     /// Caps only. Cooldowns and backoffs are `FatigueState`'s, and the two are conjoined by
     /// `FatigueController` — kept apart because one is a fact about the day and the other is a
     /// fact about the last few minutes, and mixing them would make a relaunch reset a backoff.
-    public func permits(_ kind: InterruptionKind) -> Bool {
-        remaining(for: kind) > 0
+    public func permits(_ kind: InterruptionKind, tunings: PolicyTunings = .shipped) -> Bool {
+        remaining(for: kind, tunings: tunings) > 0
     }
 
     /// Which cap is the binding one, for a surface that has to say why it stayed quiet.
-    public func bindingLimit(for kind: InterruptionKind) -> InterruptionLimit? {
-        guard !permits(kind) else { return nil }
+    public func bindingLimit(
+        for kind: InterruptionKind,
+        tunings: PolicyTunings = .shipped
+    ) -> InterruptionLimit? {
+        guard !permits(kind, tunings: tunings) else { return nil }
         switch kind {
         case .query:
-            if queriesForPriorityToday >= InterventionPolicy.dailyQueryCap {
+            if queriesForPriorityToday >= tunings.count(.dailyQueryCap) {
                 return .dailyQueryCap
             }
-            if queriesAllPrioritiesToday >= InterventionPolicy.dailyQueryCapAllPriorities {
+            if queriesAllPrioritiesToday >= tunings.count(.dailyQueryCapAllPriorities) {
                 return .dailyQueryCapAllPriorities
             }
-            return sharedRemaining > 0 ? .reservedForAccusation : .dailyInterruptionCap
+            return sharedRemaining(tunings: tunings) > 0 ? .reservedForAccusation : .dailyInterruptionCap
         case .accusation:
-            if accusationsToday >= InterventionPolicy.dailyAccusationCap {
+            if accusationsToday >= tunings.count(.dailyAccusationCap) {
                 return .dailyAccusationCap
             }
             return .dailyInterruptionCap
@@ -343,22 +352,29 @@ public struct FatigueState: Sendable, Equatable, Hashable {
     /// A question's is e05's `queryCooldown`, asserted equal to `RelevancePolicy.lookBackSpan`;
     /// an accusation's is **e04's own `mandateCooldown`, unchanged**. The ladder adds
     /// proportionality above the engine's cooldown and never loosens it.
-    public static func cooldown(for kind: InterruptionKind) -> Duration {
+    public static func cooldown(
+        for kind: InterruptionKind,
+        tunings: PolicyTunings = .shipped
+    ) -> Duration {
         switch kind {
-        case .query: InterventionPolicy.queryCooldown
-        case .accusation: RelevancePolicy.mandateCooldown
+        case .query: tunings.duration(.queryCooldown)
+        case .accusation: tunings.duration(.mandateCooldown)
         }
     }
 
     /// Whether enough time has passed since the last interruption of this kind.
-    public func cooledDown(_ kind: InterruptionKind, now: Duration) -> Bool {
+    public func cooledDown(
+        _ kind: InterruptionKind,
+        now: Duration,
+        tunings: PolicyTunings = .shipped
+    ) -> Bool {
         let last: Duration?
         switch kind {
         case .query: last = lastQueryAt
         case .accusation: last = lastAccusationAt
         }
         guard let last else { return true }
-        return now - last >= Self.cooldown(for: kind)
+        return now - last >= Self.cooldown(for: kind, tunings: tunings)
     }
 
     /// Whether this kind is currently suspended because the person stopped answering.
@@ -387,13 +403,19 @@ public struct FatigueState: Sendable, Equatable, Hashable {
     }
 
     /// Whether fatigue permits this kind now — cooldown and backoff together.
-    public func permits(_ kind: InterruptionKind, now: Duration) -> Bool {
-        cooledDown(kind, now: now) && !isBackedOff(kind, now: now)
+    public func permits(
+        _ kind: InterruptionKind,
+        now: Duration,
+        tunings: PolicyTunings = .shipped
+    ) -> Bool {
+        cooledDown(kind, now: now, tunings: tunings) && !isBackedOff(kind, now: now)
     }
 
     /// Whether the unanswered-question count has reached the backoff threshold.
-    public var hasReachedQueryBackoff: Bool {
-        consecutiveUnansweredQueries >= InterventionPolicy.ignoredQueryBackoff
+    public var hasReachedQueryBackoff: Bool { hasReachedQueryBackoff(tunings: .shipped) }
+
+    public func hasReachedQueryBackoff(tunings: PolicyTunings) -> Bool {
+        consecutiveUnansweredQueries >= tunings.count(.ignoredQueryBackoff)
     }
 
     // **`hasReachedAccusationBackoff` is gone, and it was never once true** (focus-yxb).

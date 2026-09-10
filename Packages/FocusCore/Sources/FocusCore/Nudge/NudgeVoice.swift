@@ -48,6 +48,7 @@ public enum NudgeCopyKey: String, Sendable, CaseIterable, Codable, Hashable {
     case accusationActionPause = "accusation.action.pause"
 
     // The question. U-1's centrepiece: three actions and no more.
+    case queryPanelHeading = "query.panel.heading"
     case queryPanelTitle = "query.panel.title"
     case queryPanelScopeApp = "query.panel.scope.app"
     case queryActionYes = "query.action.yes"
@@ -67,7 +68,7 @@ public enum NudgeCopyKey: String, Sendable, CaseIterable, Codable, Hashable {
         case .queryPanelTitle: [.subject, .task]
         case .accusationActionRelevant, .accusationActionNotNow, .accusationActionSnooze,
              .accusationActionPriority, .accusationActionPause, .queryPanelScopeApp,
-             .queryActionYes, .queryActionNo, .queryActionNotNow: []
+             .queryActionYes, .queryActionNo, .queryActionNotNow, .queryPanelHeading: []
         }
     }
 

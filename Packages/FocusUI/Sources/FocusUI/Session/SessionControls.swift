@@ -43,7 +43,13 @@ public struct SessionControls: View {
     /// control is disabled while it is `nil`, so a button can never look live and do nothing.
     public let actions: (any SessionActing)?
 
+    /// **The Now tab's reading of the session** (focus-1rj7): the phase, the elapsed time, the
+    /// causes that explain a disabled Resume, and the verbs that change the phase. The notes
+    /// and the two endings belong to the Details tab, where the whole session is drawn.
+    public let compact: Bool
+
     @Environment(\.appearanceTraits) private var traits
+    @Environment(\.shellTextScale) private var textScale
     @FocusState.Binding private var focus: FocusField?
     @ScaledMetric(relativeTo: .body) private var spacing: CGFloat = 8
 
@@ -56,18 +62,20 @@ public struct SessionControls: View {
         elapsedSeconds: Double? = nil,
         lastActiveBundleID: String? = nil,
         actions: (any SessionActing)? = nil,
+        compact: Bool = false,
         focus: FocusState<FocusField?>.Binding
     ) {
         self.session = session
         self.elapsedSeconds = elapsedSeconds
         self.lastActiveBundleID = lastActiveBundleID
         self.actions = actions
+        self.compact = compact
         self._focus = focus
     }
 
     public var body: some View {
         VStack(alignment: .leading, spacing: spacing) {
-            ShellText(.sessionHeading, role: .sectionHeading)
+            CompanionSectionHeading(key: .sessionHeading, symbol: "waveform.path")
                 .foregroundStyle(DesignTokens.Palette.role(.spruce, for: traits))
 
             if let session {
@@ -119,21 +127,25 @@ public struct SessionControls: View {
         VStack(alignment: .leading, spacing: spacing) {
             HStack(alignment: .firstTextBaseline, spacing: spacing) {
                 SessionPhaseBadge(phase: session.phase)
+                    .id(session.phase)
+                    .transition(traits.reduceMotion ? .identity : .opacity)
 
                 if let elapsedSeconds {
-                    ShellText(
-                        .sessionElapsed,
-                        role: .callout,
-                        argument: Self.format(elapsedSeconds)
-                    )
-                    .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+                    Text(verbatim: Self.format(elapsedSeconds))
+                        .font(DesignTokens.font(.largeTitle, scale: textScale).monospacedDigit())
+                        .contentTransition(traits.reduceMotion ? .identity : .numericText())
+                        .animation(DesignTokens.animation(for: traits), value: Self.format(elapsedSeconds))
+                        .foregroundStyle(DesignTokens.Palette.role(.spruce, for: traits))
+                        .accessibilityLabel(Text(ShellStrings.string(.sessionElapsed, argument: Self.format(elapsedSeconds))))
                 }
 
                 Spacer(minLength: 0)
             }
+            .padding(.vertical, spacing)
+            .animation(DesignTokens.animation(for: traits), value: session.phase)
 
             causes(session)
-            notes(session)
+            if !compact { notes(session) }
             verbs(session)
         }
     }
@@ -221,14 +233,14 @@ public struct SessionControls: View {
             verbButtons(session)
             // The shelf between the reversible verbs and the terminal ones. It is the whole of
             // the grouping in the wide case: consequence reads as distance.
-            if session.phase.offersAnEnding {
+            if session.phase.offersAnEnding, !compact {
                 Spacer(minLength: spacing)
                 endings
             }
         }
         let column = VStack(alignment: .leading, spacing: spacing) {
             verbButtons(session)
-            if session.phase.offersAnEnding { endings }
+            if session.phase.offersAnEnding, !compact { endings }
         }
 
         // The same discipline the priority actions use: the row wraps to a column rather than
@@ -305,7 +317,7 @@ public struct SessionControls: View {
         // verb as the same object as the four beside it in a slightly different colour, which is
         // the flattening `D02` shows. `.borderedProminent` is the platform's own way of saying
         // "this one", and the fill is the person's accent rather than a hue the app chose.
-        .buttonStyle(.borderedProminent)
+        .buttonStyle(CompanionButtonStyle(prominent: true))
         .tint(DesignTokens.Palette.accent(for: traits))
         .focused($focus, equals: .cockpitSessionPrimary)
         .disabled(actions == nil || !isEnabled)
@@ -318,7 +330,7 @@ public struct SessionControls: View {
         Button(action: perform) {
             ShellText(key, role: .callout)
         }
-        .buttonStyle(.bordered)
+        .buttonStyle(CompanionButtonStyle())
         .disabled(actions == nil)
     }
 
@@ -335,7 +347,7 @@ public struct SessionControls: View {
         Button(action: perform) {
             ShellText(key, role: .callout)
         }
-        .buttonStyle(.link)
+        .buttonStyle(CompanionButtonStyle())
         .tint(DesignTokens.Palette.accent(for: traits))
         .disabled(actions == nil)
     }

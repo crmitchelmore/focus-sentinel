@@ -676,6 +676,21 @@ public final class NudgePanelController {
     /// `layoutIfNeeded()` is what makes the whole thing synchronous — and it is also what makes
     /// the action frames readable in the same turn, because SwiftUI delivers the preference the
     /// action targets publish during that layout rather than one pass later.
+    /// **What would give way if this same nudge were placed on that display list** (focus-din).
+    ///
+    /// The panel's own arithmetic, asked about a display the panel is not on. `currentOverflow`
+    /// says what happened at the last layout; this says what *would* happen — which is the only
+    /// way to name a display too small to hold a surface without writing down a height that the
+    /// next change to the surface would make wrong. The content is the one on screen, measured in
+    /// the traits it is drawn in, so this is a reading of the live nudge rather than of a
+    /// reconstruction of it.
+    public func overflowIfPlaced(on screens: [DisplayGeometry]) -> DecisionSurfaceOverflow {
+        Self.panelLayout(
+            measuring: content.modified { $0.appearanceTraits(traits) },
+            screens: screens
+        ).overflow
+    }
+
     private func layOutContent() {
         // The traits go through the split rather than onto the wrapper alone, so the three
         // renderings and the measurement taken of them are in one environment (focus-din).

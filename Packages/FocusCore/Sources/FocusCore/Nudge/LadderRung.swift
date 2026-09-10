@@ -241,9 +241,9 @@ public enum LadderState: Sendable, Equatable, Hashable {
     ///
     /// A pure function of an injected reading rather than a mutation on a timer (R-96i), so a
     /// replayed transcript expires the hold at the same instant twice.
-    public func afterTheHoldExpires(at now: Duration) -> LadderState {
+    public func afterTheHoldExpires(at now: Duration, tunings: PolicyTunings = .shipped) -> LadderState {
         guard case .heldAtAmbient(_, let since) = self else { return self }
-        return now - since >= InterventionPolicy.backoffSpan ? .idle : self
+        return now - since >= tunings.duration(.backoffSpan) ? .idle : self
     }
 }
 

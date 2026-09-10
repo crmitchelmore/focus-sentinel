@@ -40,6 +40,8 @@ public struct InterventionSettings: Sendable, Equatable {
     /// `NSWorkspace` for itself would draw a different list in every lane that looks at it, and
     /// the gate would be pinning the machine rather than the product.
     public var addableApplications: [PresentationExclusion]
+    /// Every policy dial, with the person's overrides on top (focus-exdi).
+    public var tunings: PolicyTunings
 
     public init(
         voice: NudgeVoice = .standard,
@@ -49,7 +51,8 @@ public struct InterventionSettings: Sendable, Equatable {
         usage: InterruptionBudget = .empty,
         notchRefusal: NotchLanding.Refusal? = .noBuiltInDisplay,
         presentationExclusions: [PresentationExclusion] = [],
-        addableApplications: [PresentationExclusion] = []
+        addableApplications: [PresentationExclusion] = [],
+        tunings: PolicyTunings = .shipped
     ) {
         self.voice = voice
         self.reducedInterruption = reducedInterruption
@@ -59,6 +62,7 @@ public struct InterventionSettings: Sendable, Equatable {
         self.notchRefusal = notchRefusal
         self.presentationExclusions = presentationExclusions
         self.addableApplications = addableApplications
+        self.tunings = tunings
     }
 }
 
@@ -81,6 +85,10 @@ public enum InterventionSettingsAction: Sendable, Equatable {
     /// Take one off again. This half shipped and was unreachable: nothing could ever put a row
     /// on the list, so the Remove button beside a row was a button no row existed to carry.
     case removePresentationExclusion(String)
+    /// Turn one dial (focus-exdi). The value is clamped by the table before it is stored.
+    case setPolicyTuning(PolicyTuning, Double)
+    /// Every dial back to its shipped value.
+    case resetPolicyTunings
 }
 
 /// **The Intervention settings pane** (R-98, R-92, F-132, F-148).
@@ -176,6 +184,7 @@ public struct InterventionSettingsView: View {
 
     private var content: some View {
         VStack(alignment: .leading, spacing: DesignTokens.spacing(spacing, scale: textScale)) {
+            CompanionHeader { ShellText(.interventionTitle, role: .title2) }
             // **All five fields of `InterventionSettings`, each reported beside the section that
             // draws it** (focus-7ow).
             //
@@ -190,9 +199,11 @@ public struct InterventionSettingsView: View {
             // the person to add an app the application offered no way to add (focus-1qm) — and
             // came back at focus-u3w with the add affordance that was the reason it went.
             voiceSection
+                .companionSurface()
                 .shellRendered(.interventionVoice, settings.voice.rawValue)
             Divider()
             reducedInterruptionSection
+                .companionSurface()
                 .shellRendered(
                     .reducedInterruption, settings.reducedInterruption ? "on" : "off"
                 )
@@ -202,9 +213,11 @@ public struct InterventionSettingsView: View {
                 )
             Divider()
             quietHoursSection
+                .companionSurface()
                 .shellRendered(.quietHours, ShellValueDigest.describe(settings.quietHours))
             Divider()
             notchSection
+                .companionSurface()
                 .shellRendered(.notchCompanion, Self.notchReceipt(settings.notchRefusal))
             Divider()
             // **The section that was deleted, with the half that was missing** (focus-62o,
@@ -233,6 +246,8 @@ public struct InterventionSettingsView: View {
             thresholdsSection
         }
         .padding(DesignTokens.spacing(spacing, scale: textScale))
+        .background(DesignTokens.Palette.role(.inlay, for: traits))
+        .buttonStyle(CompanionButtonStyle())
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
@@ -258,7 +273,7 @@ public struct InterventionSettingsView: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(CompanionButtonStyle(selected: voice == settings.voice))
                 .accessibilityLabel(Text(ShellStrings.resource(Self.voiceKey(voice))))
                 .accessibilityAddTraits(voice == settings.voice ? [.isSelected] : [])
             }
@@ -296,7 +311,7 @@ public struct InterventionSettingsView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(CompanionButtonStyle(selected: settings.reducedInterruption))
             .disabled(settings.reducedInterruptionIsForced)
             .accessibilityLabel(Text(ShellStrings.resource(.interventionReducedLabel)))
             .accessibilityAddTraits(settings.reducedInterruption ? [.isSelected] : [])
@@ -331,24 +346,35 @@ public struct InterventionSettingsView: View {
                     )
                     .fixedSize(horizontal: true, vertical: false)
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(CompanionButtonStyle())
             }
 
             if let window = settings.quietHours {
-                HStack(spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
-                    // The two boundaries through the locale's own clock, joined by the catalog's
-                    // separator — not a `%02d:%02d` with an authored dash, which drew
-                    // `22:00 – 07:00` on a Mac set to a 12-hour clock (focus-43k).
-                    ShellText(
-                        .interventionQuietHoursRange,
-                        arguments: [
-                            Self.clock(window.startMinuteOfDay, locale: locale),
-                            Self.clock(window.endMinuteOfDay, locale: locale)
-                        ]
-                    )
-                    .monospacedDigit()
-                    Spacer(minLength: 0)
-                    boundaryButtons(window)
+                // The two boundaries through the locale's own clock, joined by the catalog's
+                // separator — not a `%02d:%02d` with an authored dash, which drew
+                // `22:00 – 07:00` on a Mac set to a 12-hour clock (focus-43k).
+                let range = ShellText(
+                    .interventionQuietHoursRange,
+                    arguments: [
+                        Self.clock(window.startMinuteOfDay, locale: locale),
+                        Self.clock(window.endMinuteOfDay, locale: locale)
+                    ]
+                )
+                .monospacedDigit()
+                // The range and its four buttons on one line where they fit, and the buttons
+                // under the range, two by two, where they do not (focus-exdi): four bordered
+                // buttons that may not compress were the widest thing on the pane, and at the
+                // window's committed width they ran off its right edge.
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
+                        range
+                        Spacer(minLength: 0)
+                        boundaryButtons(window)
+                    }
+                    VStack(alignment: .leading, spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
+                        range
+                        boundaryButtons(window, stacked: true)
+                    }
                 }
             } else {
                 ShellText(.interventionQuietHoursOff, role: .callout)
@@ -370,19 +396,34 @@ public struct InterventionSettingsView: View {
         }
     }
 
-    private func boundaryButtons(_ window: QuietHoursWindow) -> some View {
-        HStack(spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
+    @ViewBuilder
+    private func boundaryButtons(_ window: QuietHoursWindow, stacked: Bool = false) -> some View {
+        let gap = DesignTokens.spacing(spacing / 2, scale: textScale)
+        let start = HStack(spacing: gap) {
             adjust(.interventionQuietHoursStartEarlier) {
                 onAction(.setQuietHours(Self.moved(window, startBy: -Self.quietHoursStep)))
             }
             adjust(.interventionQuietHoursStartLater) {
                 onAction(.setQuietHours(Self.moved(window, startBy: Self.quietHoursStep)))
             }
+        }
+        let end = HStack(spacing: gap) {
             adjust(.interventionQuietHoursEndEarlier) {
                 onAction(.setQuietHours(Self.moved(window, endBy: -Self.quietHoursStep)))
             }
             adjust(.interventionQuietHoursEndLater) {
                 onAction(.setQuietHours(Self.moved(window, endBy: Self.quietHoursStep)))
+            }
+        }
+        if stacked {
+            VStack(alignment: .leading, spacing: gap) {
+                start
+                end
+            }
+        } else {
+            HStack(spacing: gap) {
+                start
+                end
             }
         }
     }
@@ -395,7 +436,7 @@ public struct InterventionSettingsView: View {
             ShellText(key, role: .footnote)
                 .fixedSize(horizontal: true, vertical: false)
         }
-        .buttonStyle(.bordered)
+        .buttonStyle(CompanionButtonStyle())
     }
 
     /// The window a person gets when they first switch quiet hours on.
@@ -623,22 +664,22 @@ public struct InterventionSettingsView: View {
             usageRow(
                 .interventionCapsQueriesPriority,
                 used: settings.usage.queriesForPriorityToday,
-                cap: InterventionPolicy.dailyQueryCap
+                cap: settings.tunings.count(.dailyQueryCap)
             )
             usageRow(
                 .interventionCapsQueriesDay,
                 used: settings.usage.queriesAllPrioritiesToday,
-                cap: InterventionPolicy.dailyQueryCapAllPriorities
+                cap: settings.tunings.count(.dailyQueryCapAllPriorities)
             )
             usageRow(
                 .interventionCapsAccusations,
                 used: settings.usage.accusationsToday,
-                cap: InterventionPolicy.dailyAccusationCap
+                cap: settings.tunings.count(.dailyAccusationCap)
             )
             usageRow(
                 .interventionCapsInterruptions,
                 used: settings.usage.interruptionsToday,
-                cap: InterventionPolicy.dailyInterruptionCap
+                cap: settings.tunings.count(.dailyInterruptionCap)
             )
             ShellText(.interventionCapsExplanation, role: .footnote)
                 .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
@@ -648,8 +689,10 @@ public struct InterventionSettingsView: View {
     }
 
     private func usageRow(_ key: ShellStringKey, used: Int, cap: Int) -> some View {
-        HStack(spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
+        HStack(alignment: .firstTextBaseline, spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
             ShellText(key, role: .callout)
+                .lineLimit(nil)
+                .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
             // Digits, monospaced, and no bar: a progress bar is a thing to fill, and a thing to
             // fill is a score to defend (D-01).
@@ -671,40 +714,220 @@ public struct InterventionSettingsView: View {
 
     /// Read-only, and read from `InterventionPolicy` — so the numbers a person sees are the
     /// numbers the app uses, and there is no second place for them to drift.
+    /// **Every dial the app decides with** (focus-exdi, owner ruling 2026-09-08).
+    ///
+    /// The Timings rows this section replaces were read-only mirrors of the two policy files. Now
+    /// each constant is a row with its value, a pair of buttons that move it one step, and the
+    /// note that says what it does; a row a person has turned shows the shipped value beside it
+    /// and a Reset. Bordered buttons rather than a `Stepper`, for the reason every control on
+    /// this pane is: an AppKit-backed control rasterises as a yellow placeholder under
+    /// `ImageRenderer`, and this pane has baselines.
     private var thresholdsSection: some View {
-        VStack(alignment: .leading, spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
-            ShellText(.interventionThresholdsHeading, role: .headline)
-            thresholdRow(.interventionThresholdQueryDwell, InterventionPolicy.queryDwellThreshold)
-            thresholdRow(.interventionThresholdQueryCooldown, InterventionPolicy.queryCooldown)
-            thresholdRow(
-                .interventionThresholdAccusationCooldown,
-                RelevancePolicy.mandateCooldown
-            )
-            thresholdRow(
-                .interventionThresholdEscalation,
-                RelevancePolicy.escalationDwell
-            )
-            HStack(spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
-                ShellText(.interventionThresholdSnooze, role: .callout)
-                Spacer(minLength: 0)
-                Text(
-                    verbatim: InterventionPolicy.snoozeDurations
-                        .map(NudgeCopy.duration)
-                        .joined(separator: ", ")
-                )
-                .font(DesignTokens.font(.callout, scale: textScale))
-                .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+        VStack(alignment: .leading, spacing: DesignTokens.spacing(spacing, scale: textScale)) {
+            VStack(alignment: .leading, spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
+                ShellText(.settingsTuningsHeading, role: .headline)
+                ShellText(.settingsTuningsExplanation, role: .footnote)
+                    .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            ForEach(PolicyTuning.Family.allCases, id: \.self) { family in
+                VStack(alignment: .leading, spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
+                    ShellText(Self.familyKey(family), role: .callout)
+                        .foregroundStyle(DesignTokens.Palette.role(.spruce, for: traits))
+                    ForEach(PolicyTuning.allCases.filter { $0.family == family }) { tuning in
+                        tuningRow(tuning)
+                    }
+                }
+            }
+            Button {
+                onAction(.resetPolicyTunings)
+            } label: {
+                ShellText(.settingsTuningsResetAll, role: .callout)
+            }
+            .buttonStyle(.bordered)
+            .disabled(settings.tunings.isShipped)
+        }
+        .shellRendered(.policyTunings, ShellValueDigest.describe(settings.tunings))
+    }
+
+    private func tuningRow(_ tuning: PolicyTuning) -> some View {
+        let value = settings.tunings.value(tuning)
+        let changed = settings.tunings.overrides[tuning] != nil
+        let gap = DesignTokens.spacing(spacing / 2, scale: textScale)
+        return VStack(alignment: .leading, spacing: gap / 2) {
+            HStack(alignment: .firstTextBaseline, spacing: gap) {
+                ShellText(Self.labelKey(tuning), role: .callout)
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: gap)
+                HStack(spacing: gap / 2) {
+                    dialButton(systemImage: "minus", label: .settingsTuningsLower) {
+                        onAction(.setPolicyTuning(tuning, value - tuning.step))
+                    }
+                    .disabled(value <= tuning.range.lowerBound)
+                    valueText(tuning, value)
+                        .frame(minWidth: DesignTokens.spacing(Self.valueColumnWidth, scale: textScale), alignment: .trailing)
+                    dialButton(systemImage: "plus", label: .settingsTuningsRaise) {
+                        onAction(.setPolicyTuning(tuning, value + tuning.step))
+                    }
+                    .disabled(value >= tuning.range.upperBound)
+                }
+            }
+            HStack(alignment: .firstTextBaseline, spacing: gap) {
+                ShellText(Self.noteKey(tuning), role: .footnote)
+                    .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
+                if changed {
+                    Spacer(minLength: gap)
+                    ShellText(
+                        .settingsTuningsShipped,
+                        role: .footnote,
+                        argument: Self.rendered(tuning, tuning.shippedValue)
+                    )
+                    .foregroundStyle(DesignTokens.Palette.role(.kiln, for: traits))
+                    .fixedSize(horizontal: true, vertical: false)
+                    Button {
+                        onAction(.setPolicyTuning(tuning, tuning.shippedValue))
+                    } label: {
+                        ShellText(.settingsTuningsResetOne, role: .footnote)
+                    }
+                    .buttonStyle(.bordered)
+                }
             }
         }
     }
 
-    private func thresholdRow(_ key: ShellStringKey, _ span: Duration) -> some View {
-        HStack(spacing: DesignTokens.spacing(spacing / 2, scale: textScale)) {
-            ShellText(key, role: .callout)
-            Spacer(minLength: 0)
-            Text(verbatim: NudgeCopy.duration(span))
-                .font(DesignTokens.font(.callout, scale: textScale))
-                .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+    private func dialButton(
+        systemImage: String,
+        label: ShellStringKey,
+        perform: @escaping () -> Void
+    ) -> some View {
+        Button(action: perform) {
+            Image(systemName: systemImage)
+        }
+        .buttonStyle(.bordered)
+        .accessibilityLabel(Text(ShellStrings.resource(label)))
+    }
+
+    @ViewBuilder
+    private func valueText(_ tuning: PolicyTuning, _ value: Double) -> some View {
+        switch tuning.unit {
+        case .seconds:
+            let whole = Int(value.rounded())
+            if whole >= Self.secondsPerMinute, whole % Self.secondsPerMinute == 0 {
+                ShellText(.settingsTuningsUnitMinutes, role: .callout, argument: (whole / Self.secondsPerMinute).formatted())
+                    .monospacedDigit()
+            } else {
+                ShellText(.settingsTuningsUnitSeconds, role: .callout, argument: whole.formatted())
+                    .monospacedDigit()
+            }
+        case .count:
+            Text(verbatim: Int(value.rounded()).formatted())
+                .font(DesignTokens.font(.callout, scale: textScale).monospacedDigit())
+        case .ratio:
+            Text(verbatim: value.formatted(.number.precision(.fractionLength(2))))
+                .font(DesignTokens.font(.callout, scale: textScale).monospacedDigit())
+        }
+    }
+
+    /// The value as the row draws it, for the "Shipped: …" caption.
+    static func rendered(_ tuning: PolicyTuning, _ value: Double) -> String {
+        switch tuning.unit {
+        case .seconds:
+            let whole = Int(value.rounded())
+            if whole >= secondsPerMinute, whole % secondsPerMinute == 0 {
+                return ShellStrings.string(.settingsTuningsUnitMinutes, argument: (whole / secondsPerMinute).formatted())
+            }
+            return ShellStrings.string(.settingsTuningsUnitSeconds, argument: whole.formatted())
+        case .count:
+            return Int(value.rounded()).formatted()
+        case .ratio:
+            return value.formatted(.number.precision(.fractionLength(2)))
+        }
+    }
+
+    private static let secondsPerMinute = 60
+    private static let valueColumnWidth: CGFloat = 56
+
+    static func familyKey(_ family: PolicyTuning.Family) -> ShellStringKey {
+        switch family {
+        case .interventions: .settingsTuningsFamilyInterventions
+        case .drift: .settingsTuningsFamilyDrift
+        case .relevance: .settingsTuningsFamilyRelevance
+        }
+    }
+
+    static func labelKey(_ tuning: PolicyTuning) -> ShellStringKey {
+        switch tuning {
+        case .queryDwellThreshold: .settingsTuningQueryDwellThreshold
+        case .queryCooldown: .settingsTuningQueryCooldown
+        case .mandateCooldown: .settingsTuningMandateCooldown
+        case .escalationDwell: .settingsTuningEscalationDwell
+        case .snoozeFirst: .settingsTuningSnoozeFirst
+        case .snoozeSecond: .settingsTuningSnoozeSecond
+        case .snoozeThird: .settingsTuningSnoozeThird
+        case .dailyQueryCap: .settingsTuningDailyQueryCap
+        case .dailyQueryCapAllPriorities: .settingsTuningDailyQueryCapAllPriorities
+        case .dailyAccusationCap: .settingsTuningDailyAccusationCap
+        case .dailyInterruptionCap: .settingsTuningDailyInterruptionCap
+        case .reservedAccusationUnits: .settingsTuningReservedAccusationUnits
+        case .ignoredQueryBackoff: .settingsTuningIgnoredQueryBackoff
+        case .ignoredAccusationBackoff: .settingsTuningIgnoredAccusationBackoff
+        case .backoffSpan: .settingsTuningBackoffSpan
+        case .pausePreset: .settingsTuningPausePreset
+        case .sustainedDriftThreshold: .settingsTuningSustainedDriftThreshold
+        case .driftResetGrace: .settingsTuningDriftResetGrace
+        case .lookBackSpan: .settingsTuningLookBackSpan
+        case .maximumLookBackEvents: .settingsTuningMaximumLookBackEvents
+        case .returnAnchorDwell: .settingsTuningReturnAnchorDwell
+        case .detourExtension: .settingsTuningDetourExtension
+        case .minimumTokenLength: .settingsTuningMinimumTokenLength
+        case .minimumStrongTokenLength: .settingsTuningMinimumStrongTokenLength
+        case .minimumOverlapTokens: .settingsTuningMinimumOverlapTokens
+        case .minimumPriorityContentTokens: .settingsTuningMinimumPriorityContentTokens
+        case .minimumNegativeBasisItems: .settingsTuningMinimumNegativeBasisItems
+        case .maximumExplanationTokens: .settingsTuningMaximumExplanationTokens
+        case .similarityRelevantCeiling: .settingsTuningSimilarityRelevantCeiling
+        case .languageConfidenceFloor: .settingsTuningLanguageConfidenceFloor
+        case .similarityCacheCapacity: .settingsTuningSimilarityCacheCapacity
+        }
+    }
+
+    static func noteKey(_ tuning: PolicyTuning) -> ShellStringKey {
+        switch tuning {
+        case .queryDwellThreshold: .settingsTuningQueryDwellThresholdNote
+        case .queryCooldown: .settingsTuningQueryCooldownNote
+        case .mandateCooldown: .settingsTuningMandateCooldownNote
+        case .escalationDwell: .settingsTuningEscalationDwellNote
+        case .snoozeFirst: .settingsTuningSnoozeFirstNote
+        case .snoozeSecond: .settingsTuningSnoozeSecondNote
+        case .snoozeThird: .settingsTuningSnoozeThirdNote
+        case .dailyQueryCap: .settingsTuningDailyQueryCapNote
+        case .dailyQueryCapAllPriorities: .settingsTuningDailyQueryCapAllPrioritiesNote
+        case .dailyAccusationCap: .settingsTuningDailyAccusationCapNote
+        case .dailyInterruptionCap: .settingsTuningDailyInterruptionCapNote
+        case .reservedAccusationUnits: .settingsTuningReservedAccusationUnitsNote
+        case .ignoredQueryBackoff: .settingsTuningIgnoredQueryBackoffNote
+        case .ignoredAccusationBackoff: .settingsTuningIgnoredAccusationBackoffNote
+        case .backoffSpan: .settingsTuningBackoffSpanNote
+        case .pausePreset: .settingsTuningPausePresetNote
+        case .sustainedDriftThreshold: .settingsTuningSustainedDriftThresholdNote
+        case .driftResetGrace: .settingsTuningDriftResetGraceNote
+        case .lookBackSpan: .settingsTuningLookBackSpanNote
+        case .maximumLookBackEvents: .settingsTuningMaximumLookBackEventsNote
+        case .returnAnchorDwell: .settingsTuningReturnAnchorDwellNote
+        case .detourExtension: .settingsTuningDetourExtensionNote
+        case .minimumTokenLength: .settingsTuningMinimumTokenLengthNote
+        case .minimumStrongTokenLength: .settingsTuningMinimumStrongTokenLengthNote
+        case .minimumOverlapTokens: .settingsTuningMinimumOverlapTokensNote
+        case .minimumPriorityContentTokens: .settingsTuningMinimumPriorityContentTokensNote
+        case .minimumNegativeBasisItems: .settingsTuningMinimumNegativeBasisItemsNote
+        case .maximumExplanationTokens: .settingsTuningMaximumExplanationTokensNote
+        case .similarityRelevantCeiling: .settingsTuningSimilarityRelevantCeilingNote
+        case .languageConfidenceFloor: .settingsTuningLanguageConfidenceFloorNote
+        case .similarityCacheCapacity: .settingsTuningSimilarityCacheCapacityNote
         }
     }
 }

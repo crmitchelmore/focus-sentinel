@@ -151,13 +151,17 @@ public struct RuleSnapshot: Sendable, Equatable {
     }
 
     /// Whether the priority supplies enough of a basis for an *absence* to mean anything.
-    public var hasNegativeBasis: Bool {
-        negativeBasisItems.count >= RelevancePolicy.minimumNegativeBasisItems
+    public var hasNegativeBasis: Bool { hasNegativeBasis(tunings: .shipped) }
+
+    public func hasNegativeBasis(tunings: PolicyTunings) -> Bool {
+        negativeBasisItems.count >= tunings.count(.minimumNegativeBasisItems)
     }
 
     /// Whether the priority is judgeable at all — R-56.1's first condition.
-    public var hasJudgeablePriority: Bool {
-        priorityTokens.tokens.count >= RelevancePolicy.minimumPriorityContentTokens
+    public var hasJudgeablePriority: Bool { hasJudgeablePriority(tunings: .shipped) }
+
+    public func hasJudgeablePriority(tunings: PolicyTunings) -> Bool {
+        priorityTokens.tokens.count >= tunings.count(.minimumPriorityContentTokens)
     }
 
     /// Every rule at one authority, in narrowness order. What the cascade walks at rungs 0–2.

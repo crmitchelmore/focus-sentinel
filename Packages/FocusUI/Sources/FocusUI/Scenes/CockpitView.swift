@@ -55,17 +55,25 @@ public struct CockpitView: View {
 
     @Environment(\.appearanceTraits) private var traits
     @Environment(\.openSettings) private var openSettings
+    @Environment(\.openWindow) private var openWindow
     @Environment(\.shellTextScale) private var textScale
     @FocusState private var focus: FocusField?
 
     /// The definition of done, while it is being edited. Committed on Return and on losing
     /// focus; re-seeded whenever the priority underneath it changes.
     @State private var doneWhenDraft: String = ""
+    @State private var contentWidth: CGFloat = 0
 
     /// Whether the capture field is open while a priority already exists — the "change my
     /// mind" path. With no priority the field is always open, because it is the only thing
     /// the window is for.
     @State private var isCapturing: Bool = false
+    /// Whether the capture field, when it commits, keeps the current priority's desk
+    /// (focus-1rj7). Set by the "New Priority, Same Context…" verb and cleared with the field.
+    @State private var isKeepingContext: Bool = false
+    /// Which tab is open (focus-1rj7). The initial value is the view's argument, so the snapshot
+    /// lane can photograph each tab; the app always opens on Now.
+    @State private var tab: CockpitTab
 
     /// Whether the completion sheet is up. Completing is a deliberate act with two things
     /// worth recording, so it gets a sheet rather than happening under the pointer.
@@ -91,6 +99,8 @@ public struct CockpitView: View {
     /// The inset of a well's content from its edge, and the radius of that edge.
     @ScaledMetric(relativeTo: .body) private var wellInset: CGFloat = 14
     @ScaledMetric(relativeTo: .body) private var wellRadius: CGFloat = 8
+    /// The width at which the Details tab reads as two columns rather than one.
+    private static let twoColumnWidth: CGFloat = 800
 
     /// What the view reports when its body is evaluated.
     ///
@@ -118,7 +128,8 @@ public struct CockpitView: View {
         lastActiveBundleID: String? = nil,
         onLaunchAtLoginOffer: @escaping (LaunchAtLoginOfferAction) -> Void = { _ in },
         onFirstRunExplanationDismissed: @escaping () -> Void = {},
-        commandCenter: FocusCommandCenter = .shared
+        commandCenter: FocusCommandCenter = .shared,
+        tab: CockpitTab = .now
     ) {
         self.state = state
         self.actions = actions
@@ -131,6 +142,7 @@ public struct CockpitView: View {
         self.didRender = nil
         self.generation = 0
         self.didDraw = nil
+        self._tab = State(initialValue: tab)
     }
 
     /// **The application scene's initialiser, and the only one it can reach** (focus-2er).
@@ -153,6 +165,7 @@ public struct CockpitView: View {
         self.didRender = connection.didRender
         self.generation = connection.generation
         self.didDraw = connection.didDraw
+        self._tab = State(initialValue: .now)
     }
 
     /// Every verb this window can perform, built from the host and the current priority.
@@ -171,87 +184,98 @@ public struct CockpitView: View {
         // disturb.
         let _ = didRender?()
         VStack(alignment: .leading, spacing: sectionSpacing) {
+            CompanionHeader { ShellText(.cockpitWindowTitle, role: .title2) }
             // **One derivation, two consumers** (focus-7ow). The banner is on the screen exactly
-            // when this is not `nil`, and that is exactly what the receipt reports — so a
-            // mutation that shows the start-of-day ritual when it should not, or never shows it
-            // when it should, changes the reported value with it. It was drawn from
-            // `state.showsRitualPrompt` and reported nowhere.
+            // when this is not `nil`, and that is exactly what the receipt reports.
             let ritualDismissal = state.showsRitualPrompt ? wiring.dismissRitual : nil
             if let dismissRitual = ritualDismissal {
                 RitualBanner(
                     answer: {
                         dismissRitual()
-                        isCapturing = true
-                        focus = .cockpitCaptureField
+                        beginCapturing(keepingContext: false)
                     },
                     dismiss: dismissRitual,
                     focus: $focus
                 )
             }
+            VStack(alignment: .leading, spacing: rowSpacing) {
             header
                 .shellRendered(.ritualBanner, ritualDismissal == nil ? "hidden" : "shown")
-                // **The sections that only exist while there is a commitment still report**
-                // (focus-7ow). A field nobody reported is indistinguishable from a section
-                // somebody deleted, so a cockpit with nothing committed to says so in the same
-                // vocabulary the composition root expects it in.
-                //
                 // A **background** rather than a sibling in the column, and that is measured: a
                 // zero-height `Color.clear` is still a `VStack` child and still takes the stack's
-                // spacing, which moved every committed cockpit baseline by 20 points. A
-                // background proposes no size and is exactly how `shellRendered(_:_:)` itself
-                // reaches the preference channel.
+                // spacing, which moved every committed cockpit baseline by 20 points.
                 .background(absentCommitmentReceipts)
 
-            if let priority = state.priority {
-                // **The commitment zone** (focus-6uya): the definition of done and the verbs
-                // that act on the priority, directly under the hero. The verbs used to sit
-                // between the rules pane and the history, an orphan row a long way from the
-                // thing they finish, change or clear.
-                doneWhenSection(priority)
-                primaryActions(priority)
+            // **The tabs** (focus-1rj7). What needs doing and how long comes first; the
+            // session in full, the desk and the rules are a tab away; the history another.
+            // The hero above never moves.
+            tabBar
+
             }
+            .companionSurface(accent: state.priority != nil)
 
             if showsCapture {
                 capture
+                    .transition(traits.reduceMotion ? .identity : .opacity.combined(with: .move(edge: .top)))
             }
 
-            if let priority = state.priority {
-                // **Two wells, not five boxes** (focus-6uya). The direction's warning was that a
-                // box per section makes the window a form, and one hairline under the header was
-                // the answer. The owner read the result as a column with no organisation, so the
-                // machinery is grouped by what it answers — *how is the time being spent* and
-                // *what belongs* — and each group sits on the quiet Inlay ground the ritual strip
-                // already uses. The commitment stays on the window's own ground, which is what
-                // keeps it the figure and the wells the furniture.
-                well {
-                    timeboxSection(priority)
-                    sessionSection
+            switch tab {
+            case .now:
+                if let priority = state.priority {
+                    doneWhenSection(priority)
+                    primaryActions(priority)
+                    well {
+                        timeboxSection(priority)
+                        sessionSection(compact: true)
+                    }
                 }
-                well {
-                    contextSection(priority)
-                    rulesSection(priority)
+            case .details:
+                if let priority = state.priority {
+                    // **The companion round's responsive pair** (focus-oqsx): side by side where
+                    // the window is wide enough to read two columns, stacked where it is not.
+                    // It lives on this tab because this is where both wells are drawn together.
+                    let columns = contentWidth >= Self.twoColumnWidth && textScale == .standard
+                        ? AnyLayout(HStackLayout(alignment: .top, spacing: sectionSpacing))
+                        : AnyLayout(VStackLayout(alignment: .leading, spacing: sectionSpacing))
+                    columns {
+                        well {
+                            sessionSection(compact: false)
+                        }
+                        well {
+                            contextSection(priority)
+                            Divider()
+                            rulesSection(priority)
+                        }
+                    }
                 }
+            case .recent:
+                RecentPrioritiesView(rows: state.recent, activate: wiring.activate)
+                    // **What is in the rows, not only how many** (focus-7ow).
+                    .shellRendered(.recentCount, state.recent.count)
+                    .shellRendered(.recentDigest, ShellValueDigest.describe(state.recent))
+                openHistoryButton
             }
 
-            RecentPrioritiesView(rows: state.recent, activate: wiring.activate)
-                // **What is in the rows, not only how many** (focus-7ow). `recentCount` alone was
-                // satisfied by a list of the right length holding somebody else's history, and it
-                // was reported from the column rather than from the list that draws it.
-                .shellRendered(.recentCount, state.recent.count)
-                .shellRendered(.recentDigest, ShellValueDigest.describe(state.recent))
-
-            // **The instrument strip** (focus-6uya): the store line, what is being watched, the
-            // switch and the way to Settings, on the same inset ground as the wells but tighter,
-            // so it reads as the window's status bar rather than as a sixth section.
+            // **The instrument strip** (focus-6uya), on every tab: the store line, what is
+            // being watched, the switch and the way to Settings — the window's status bar.
             well(spacing: rowSpacing / 2, washed: false) {
                 footer
             }
 
             Spacer(minLength: 0)
         }
+        // **What the tabs that are not open would have reported** (focus-1rj7). A section on
+        // another tab is not on the screen, and a field nobody reported is indistinguishable
+        // from a section somebody deleted — so the values those sections would draw are reported
+        // here, from the same state, through a background that proposes no size. When a tab
+        // is open its own sections report, from where they are drawn.
+        .background(hiddenTabReceipts)
         .padding(sectionSpacing)
         .frame(minWidth: 420, minHeight: 260, alignment: .topLeading)
-        .background(DesignTokens.Palette.windowBackground(for: traits))
+        .background(DesignTokens.Palette.role(.inlay, for: traits))
+        .buttonStyle(CompanionButtonStyle())
+        .animation(DesignTokens.animation(for: traits), value: isEditingIntent)
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { contentWidth = $0 }
         .background {
             // Empty history deliberately draws no section, so its EmptyView cannot
             // publish preferences. Record that absence without adding a layout child;
@@ -271,7 +295,6 @@ public struct CockpitView: View {
         // `AppearanceTraits.systemDefault` fires the receipt and ignores dark mode and every
         // accessibility setting; this is the value that says which of the two happened.
         .shellRendered(.appearanceTraits, traits.renderedDescription)
-        .defaultFocus($focus, showsCapture ? .cockpitCaptureField : .cockpitDoneWhen)
         // The window is named for the app; the group is too, so VoiceOver announces what it
         // has landed in before reading the priority out of it.
         .accessibilityElement(children: .contain)
@@ -407,14 +430,12 @@ public struct CockpitView: View {
         guard command.isAvailable(in: commandWorld) else { return }
         switch command {
         case .newPriority:
-            isCapturing = true
-            focus = .cockpitCaptureField
+            beginCapture()
         case .completePriority:
             isCompleting = true
         case .addFilesToContext:
             guard state.priority != nil else {
-                isCapturing = true
-                focus = .cockpitCaptureField
+                beginCapture()
                 return
             }
             fileImportToken &+= 1
@@ -609,7 +630,7 @@ public struct CockpitView: View {
                 // with no host draws no fields. Nothing at all when there is no value, heading
                 // included (focus-0ai).
                 if let doneWhen = CockpitWiring.doneWhenToDraw(priority.doneWhen) {
-                    ShellText(.priorityDoneWhenLabel, role: .sectionHeading)
+                    CompanionSectionHeading(key: .priorityDoneWhenLabel, symbol: "checkmark.seal")
                         .foregroundStyle(DesignTokens.Palette.role(.spruce, for: traits))
 
                     Text(verbatim: doneWhen)
@@ -618,7 +639,7 @@ public struct CockpitView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
             } else {
-                ShellText(.priorityDoneWhenLabel, role: .sectionHeading)
+                CompanionSectionHeading(key: .priorityDoneWhenLabel, symbol: "checkmark.seal")
                     .foregroundStyle(DesignTokens.Palette.role(.spruce, for: traits))
 
                 TextField(
@@ -678,12 +699,13 @@ public struct CockpitView: View {
     /// It is shown only where there is a priority, because a session is always about one: the
     /// store starts it on the active task, and offering to start one with nothing committed to
     /// would be offering to time nothing.
-    private var sessionSection: some View {
+    private func sessionSection(compact: Bool) -> some View {
         SessionControls(
             session: state.session,
             elapsedSeconds: sessionElapsedSeconds,
             lastActiveBundleID: lastActiveBundleID,
             actions: sessionActions,
+            compact: compact,
             focus: $focus
         )
         // **The figure the timer is reading, and the phase beside it** (focus-h7h).
@@ -745,6 +767,19 @@ public struct CockpitView: View {
         actions != nil && (state.priority == nil || isCapturing)
     }
 
+    /// Focus the inserted field once its reveal transition has finished.
+    private func beginCapture() {
+        guard !showsCapture else {
+            focus = .cockpitCaptureField
+            return
+        }
+        withAnimation(DesignTokens.animation(for: traits), completionCriteria: .removed) {
+            isCapturing = true
+        } completion: {
+            focus = .cockpitCaptureField
+        }
+    }
+
     /// One sentence in, one priority out.
     ///
     /// Committing while a priority already exists **replaces** it: a second activation
@@ -753,8 +788,13 @@ public struct CockpitView: View {
     private var capture: some View {
         CaptureFieldView(
             commit: { intent, doneWhen in
-                wiring.setPriority?(intent, doneWhen)
+                if isKeepingContext, let keep = wiring.setPriorityKeepingContext {
+                    keep(intent, doneWhen)
+                } else {
+                    wiring.setPriority?(intent, doneWhen)
+                }
                 isCapturing = false
+                isKeepingContext = false
             },
             isEnabled: actions != nil,
             fieldFocus: .cockpitCaptureField,
@@ -778,6 +818,7 @@ public struct CockpitView: View {
             HStack(spacing: rowSpacing) {
                 completeButton
                 changeButton
+                sameContextButton
                 fixWordingButton(priority)
                 clearButton
             }
@@ -785,7 +826,19 @@ public struct CockpitView: View {
                 HStack(spacing: rowSpacing) {
                     completeButton
                     changeButton
+                    sameContextButton
                 }
+                HStack(spacing: rowSpacing) {
+                    fixWordingButton(priority)
+                    clearButton
+                }
+            }
+            VStack(alignment: .leading, spacing: rowSpacing) {
+                HStack(spacing: rowSpacing) {
+                    completeButton
+                    changeButton
+                }
+                sameContextButton
                 HStack(spacing: rowSpacing) {
                     fixWordingButton(priority)
                     clearButton
@@ -794,6 +847,7 @@ public struct CockpitView: View {
             VStack(alignment: .leading, spacing: rowSpacing) {
                 completeButton
                 changeButton
+                sameContextButton
                 fixWordingButton(priority)
                 clearButton
             }
@@ -833,12 +887,45 @@ public struct CockpitView: View {
     private var changeButton: some View {
         if !showsCapture {
             Button {
-                isCapturing = true
-                focus = .cockpitCaptureField
+                beginCapturing(keepingContext: false)
             } label: {
                 ShellText(.priorityActionChange)
             }
             .disabled(actions == nil)
+        }
+    }
+
+    /// **A new priority on the same desk** (focus-1rj7): a different job, the same apps, sites,
+    /// keywords, files and verdicts. Opens the capture field with the desk marked to be kept;
+    /// the copy happens in the host, in one transaction, when the sentence is committed.
+    @ViewBuilder
+    private var sameContextButton: some View {
+        if !showsCapture {
+            Button {
+                beginCapturing(keepingContext: true)
+            } label: {
+                ShellText(.priorityActionSameContext)
+            }
+            .focused($focus, equals: .cockpitSameContext)
+            .disabled(wiring.setPriorityKeepingContext == nil)
+        }
+    }
+
+    /// Open the capture field, and put the caret in it once its reveal has finished.
+    ///
+    /// `keepingContext` is what the "New Priority, Same Context…" verb sets (focus-1rj7); the
+    /// animated reveal and completion-timed focus are the companion round's (focus-oqsx).
+    private func beginCapturing(keepingContext: Bool) {
+        isKeepingContext = keepingContext
+        tab = .now
+        guard !showsCapture else {
+            focus = .cockpitCaptureField
+            return
+        }
+        withAnimation(DesignTokens.animation(for: traits), completionCriteria: .removed) {
+            isCapturing = true
+        } completion: {
+            focus = .cockpitCaptureField
         }
     }
 
@@ -1004,47 +1091,118 @@ public struct CockpitView: View {
         }
     }
 
+    // MARK: - The tabs (focus-1rj7)
+
+    /// Three plain buttons under a hairline, the open one in Spruce with a rule beneath it.
+    ///
+    /// Drawn by hand rather than as a `Picker` or a `TabView`, for two measured reasons: a
+    /// segmented `Picker` is AppKit-backed and rasterises under `ImageRenderer` as the yellow
+    /// "unrenderable view" placeholder, which would put a yellow bar in every cockpit baseline;
+    /// and a macOS `TabView` builds only the selected pane, which is exactly the shape that
+    /// loses receipts (see `ShellRenderedField.settingsTab`). Three buttons and a switch keep
+    /// the whole column one SwiftUI tree the lane can photograph and the audit can read.
+    private var tabBar: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: sectionSpacing) {
+                ForEach(CockpitTab.allCases) { candidate in
+                    tabButton(candidate)
+                }
+                Spacer(minLength: 0)
+            }
+            Divider()
+        }
+        .accessibilityElement(children: .contain)
+    }
+
+    @ViewBuilder
+    private func tabButton(_ candidate: CockpitTab) -> some View {
+        let isOpen = candidate == tab
+        let button = Button {
+            tab = candidate
+        } label: {
+            VStack(alignment: .leading, spacing: rowSpacing / 2) {
+                ShellText(candidate.titleKey, role: .headline)
+                    .foregroundStyle(
+                        isOpen
+                            ? DesignTokens.Palette.role(.spruce, for: traits)
+                            : DesignTokens.supportingTextColor(for: traits)
+                    )
+                Rectangle()
+                    .fill(
+                        isOpen
+                            ? DesignTokens.Palette.role(.spruce, for: traits)
+                            : Color.clear
+                    )
+                    .frame(height: DesignTokens.decisionRuleWidth)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isOpen ? [.isSelected] : [])
+        // One focus identity for the bar, carried by the open tab (see `FocusField.cockpitTabs`).
+        if isOpen {
+            button.focused($focus, equals: .cockpitTabs)
+        } else {
+            button
+        }
+    }
+
+    /// The Recent tab's route to the day's history: the window `HistoryView` draws.
+    private var openHistoryButton: some View {
+        Button {
+            openWindow(id: ShellWindow.history.id)
+        } label: {
+            ShellText(.cockpitOpenHistory, role: .callout)
+        }
+        .focused($focus, equals: .cockpitOpenHistory)
+    }
+
+    /// The receipts of the sections that are on the tabs that are not open (focus-1rj7).
+    ///
+    /// Only for a committed priority: with none, `absentCommitmentReceipts` already reports
+    /// the five commitment fields as `noCommitment`, on every tab.
+    @ViewBuilder
+    private var hiddenTabReceipts: some View {
+        if tab != .recent {
+            Color.clear
+                .shellRendered(.recentCount, state.recent.count)
+                .shellRendered(.recentDigest, ShellValueDigest.describe(state.recent))
+        }
+        if let priority = state.priority {
+            if tab != .now {
+                Color.clear
+                    .shellRendered(.priorityDoneWhen, priority.doneWhen ?? "")
+            }
+            if tab == .recent {
+                Color.clear
+                    .shellRendered(
+                        .sessionElapsedSeconds,
+                        sessionElapsedSeconds.map { String(Int($0)) } ?? "none"
+                    )
+                    .shellRendered(.sessionPhase, state.session?.phase.rawValue ?? "none")
+                    .shellRendered(.sessionDetail, ShellValueDigest.describe(state.session))
+                    .shellRendered(.lastActiveApp, lastActiveBundleID ?? "none")
+            }
+        }
+    }
+
     /// **A well: one zone of the column on the quiet inset ground** (focus-6uya).
     ///
     /// Inlay, never a material and never a shadow — the same rule `RitualBanner` follows, for
     /// the same reason: the cockpit is summoned, and a raised card inside it would compete with
     /// the hero for the eye. The border appears only under Increase Contrast, where a fill two
     /// steps from the window ground is not a boundary a person can rely on.
+
+    /// Working groups share the same furniture as settings and the popover.
     private func well<Content: View>(
         spacing: CGFloat? = nil,
         washed: Bool = true,
         @ViewBuilder _ content: () -> Content
     ) -> some View {
-        let emphasis = DesignTokens.emphasis(for: traits)
-        let shape = RoundedRectangle(cornerRadius: wellRadius, style: .continuous)
-        return VStack(alignment: .leading, spacing: spacing ?? sectionSpacing) {
+        VStack(alignment: .leading, spacing: spacing ?? sectionSpacing) {
             content()
         }
-        .padding(wellInset)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            shape.fill(DesignTokens.Palette.role(.inlay, for: traits))
-                .overlay {
-                    // The working wells carry the app's own hue; the instrument strip does
-                    // not. See `DesignTokens.wellWashOpacity` for why the cockpit may.
-                    if washed {
-                        shape.fill(
-                            DesignTokens.Palette.role(.spruce, for: traits)
-                                .opacity(DesignTokens.wellWashOpacity)
-                        )
-                    }
-                }
-        )
-        .overlay {
-            if emphasis.promotesSecondaryText {
-                RoundedRectangle(cornerRadius: wellRadius, style: .continuous)
-                    .strokeBorder(
-                        DesignTokens.Palette.role(.mist, for: traits)
-                            .opacity(emphasis.outlineOpacity),
-                        lineWidth: emphasis.borderWidth
-                    )
-            }
-        }
+        .companionSurface()
     }
 
     /// One supporting line: a glyph, then text that is free to wrap as far as it needs to.

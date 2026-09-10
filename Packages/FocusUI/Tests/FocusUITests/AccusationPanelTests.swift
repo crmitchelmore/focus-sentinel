@@ -198,12 +198,11 @@ struct AccusationPanelTests {
         #expect(AccusationFixture.mixed.primaryAction == .returnToTask)
     }
 
-    // MARK: - The snooze spans are the policy's, not the view's
+    // MARK: - Owner-selected snooze shortcuts
 
-    @Test("the snooze spans offered are InterventionPolicy's own three")
-    func snoozeSpansComeFromThePolicy() {
-        #expect(AccusationFixture.rungTwo().snoozeDurations == InterventionPolicy.snoozeDurations)
-        #expect(InterventionPolicy.snoozeDurations.count == 3)
+    @Test("the snooze shortcuts are one, five and twenty minutes")
+    func snoozeSpansMatchTheShortcuts() {
+        #expect(AccusationFixture.rungTwo().snoozeDurations == [.seconds(60), .seconds(300), .seconds(1_200)])
     }
 
     @Test("a running snooze is drawn as a countdown in the fixed mm:ss form")

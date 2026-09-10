@@ -100,6 +100,11 @@ public enum ShellRenderedField: String, Sendable, CaseIterable, Codable, Hashabl
     /// tells somebody their history is being kept for a week when it is being kept for a
     /// quarter. Reported by the pane for `privacyStorePath`'s reason.
     case retentionWindow
+    /// The Privacy pane's observer switches (focus-exdi.3): the pause, the away threshold, the
+    /// microphone rule and the launch-context switch, digested whole.
+    case sensingSettings
+    /// Which grants the person switched on (focus-exdi.4). "none" on a default install.
+    case grantOptIns
     /// The band the verdict inspector drew, or `"none"`.
     case verdictBand
     /// The whole verdict, as `ShellValueDigest`. The band is one field: a verdict about a
@@ -127,6 +132,9 @@ public enum ShellRenderedField: String, Sendable, CaseIterable, Codable, Hashabl
     case presentationExclusions
     /// Today's spend over the cap, as the pane drew it (D-01: information, never a score).
     case interruptionUsage
+    /// The Intervention pane's dials (focus-exdi): every policy tuning the person has turned,
+    /// digested, so a pane that dropped one reads as a different value.
+    case policyTunings
     /// **The notch companion's row, as the geometry decided it** (e08a). The named refusal, or
     /// `landed` — never the preference, because the row is a reading of the display and a row
     /// rendered from a switch would say a surface is real on a Mac that has no built-in panel.

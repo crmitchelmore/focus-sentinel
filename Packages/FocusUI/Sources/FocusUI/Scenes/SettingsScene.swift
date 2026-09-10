@@ -111,6 +111,10 @@ public struct ShellSettingsConnection {
     /// control answering from its own memory would go on saying *90 days* after a
     /// delete-everything, and this is a promise rather than a decoration.
     public let retention: RetentionWindow
+    /// The observer switches the Privacy pane draws (focus-exdi.3).
+    public let sensing: SensingSettingsValue
+    /// Which macOS grants the person switched on (focus-exdi.4).
+    public let grants: GrantOptIns
     /// What the Privacy pane's one destructive control reaches (e07a, focus-6pr.3). A sink like
     /// the two above, and unlike them **never driven by a lane**: it deletes the person's store.
     ///
@@ -167,6 +171,8 @@ public struct ShellSettingsConnection {
         onLaunchAtLogin: @escaping @MainActor (LaunchAtLoginAction) -> Void = { _ in },
         onCaptureAction: @escaping @MainActor (CaptureSettingsAction) -> Void = { _ in },
         retention: RetentionWindow = .committedDefault,
+        sensing: SensingSettingsValue = .defaults,
+        grants: GrantOptIns = .none,
         onPrivacyAction: @escaping @MainActor (PrivacySettingsAction) -> Void = { _ in },
         selectedTab: SettingsTab = .general,
         selectTab: @escaping @MainActor (SettingsTab) -> Void = { _ in },
@@ -189,6 +195,8 @@ public struct ShellSettingsConnection {
         self.onLaunchAtLogin = onLaunchAtLogin
         self.onCaptureAction = onCaptureAction
         self.retention = retention
+        self.sensing = sensing
+        self.grants = grants
         self.onPrivacyAction = onPrivacyAction
         self.selectedTab = selectedTab
         self.selectTab = selectTab
@@ -224,6 +232,14 @@ extension ShellSettingsConnection: ShellDrawnConnection {
             "quickCaptureShortcut.modifierFlags": .drawn([.quickCaptureShortcut]),
             "onCaptureAction": .undrawn(.sink),
             "retention": .drawn([.retentionWindow]),
+            "sensing": .drawn([.sensingSettings]),
+            "sensing.sensingPaused": .drawn([.sensingSettings]),
+            "sensing.idleThresholdSeconds": .drawn([.sensingSettings]),
+            "sensing.corroborationTickSeconds": .drawn([.sensingSettings]),
+            "sensing.launchContextOnSessionStart": .drawn([.sensingSettings]),
+            "sensing.mediaSuppressionEnabled": .drawn([.sensingSettings]),
+            "grants": .drawn([.grantOptIns]),
+            "grants.enabled": .drawn([.grantOptIns]),
             "onPrivacyAction": .undrawn(.sink),
             "summary": .drawn([.privacySummary, .sensingDetail]),
             "capabilities": .drawn([.privacyCapabilities]),
@@ -246,6 +262,7 @@ extension ShellSettingsConnection: ShellDrawnConnection {
             "intervention.notchRefusal": .drawn([.notchCompanion]),
             "intervention.presentationExclusions": .drawn([.presentationExclusions]),
             "intervention.addableApplications": .drawn([.presentationExclusions]),
+            "intervention.tunings": .drawn([.policyTunings]),
 
             // --- one level down, and then to the leaves (focus-cxs) ------------------------
             //
@@ -324,7 +341,8 @@ extension ShellSettingsConnection: ShellDrawnConnection {
             // `ShellRenderedField.interruptionUsage`, which `ShellRenderFidelity` still compares,
             // and the two counters the fourth row is computed from are mapped immediately above
             // and below.
-            "intervention.usage.accusationsToday": .drawn([.interruptionUsage])
+            "intervention.usage.accusationsToday": .drawn([.interruptionUsage]),
+            "intervention.tunings.overrides": .drawn([.policyTunings])
         ]
     }
 }
@@ -400,6 +418,8 @@ public struct ShellSettingsView: View {
     private let onInterventionAction: (InterventionSettingsAction) -> Void
     /// How long the app keeps what it wrote down, as the store holds it (F-115, focus-l7n).
     private let retention: RetentionWindow
+    private let sensing: SensingSettingsValue
+    private let grants: GrantOptIns
     private let onPrivacyAction: (PrivacySettingsAction) -> Void
     /// Which pane is on screen. A `Binding` over the composition root's own value, never a
     /// `@State`: the root drives it so each pane can be made to draw and report (focus-7ow).
@@ -428,6 +448,8 @@ public struct ShellSettingsView: View {
         intervention: InterventionSettings = InterventionSettings(),
         onInterventionAction: @escaping (InterventionSettingsAction) -> Void = { _ in },
         retention: RetentionWindow = .committedDefault,
+        sensing: SensingSettingsValue = .defaults,
+        grants: GrantOptIns = .none,
         onPrivacyAction: @escaping (PrivacySettingsAction) -> Void = { _ in },
         selectedTab: Binding<SettingsTab> = .constant(.general)
     ) {
@@ -445,6 +467,8 @@ public struct ShellSettingsView: View {
         self.intervention = intervention
         self.onInterventionAction = onInterventionAction
         self.retention = retention
+        self.sensing = sensing
+        self.grants = grants
         self.onPrivacyAction = onPrivacyAction
         self._selectedTab = selectedTab
         self.didRender = nil
@@ -476,6 +500,8 @@ public struct ShellSettingsView: View {
         self.intervention = connection.intervention
         self.onInterventionAction = connection.onInterventionAction
         self.retention = connection.retention
+        self.sensing = connection.sensing
+        self.grants = connection.grants
         self.onPrivacyAction = connection.onPrivacyAction
         self._selectedTab = Binding(
             get: { connection.selectedTab },
@@ -492,7 +518,14 @@ public struct ShellSettingsView: View {
         // fail the same assertion as one that never asked.
         let _ = didRender?()
         TabView(selection: $selectedTab) {
-            GeneralSettingsView(
+            BoundedSurface(
+                width: ShellSurfaceBounds.settingsWidth,
+                ceiling: ShellSurfaceBounds.settingsCeiling()
+            ) {
+              VStack(spacing: 0) {
+                CompanionHeader { ShellText(.cockpitWindowTitle, role: .title2) }
+                    .padding(.horizontal, 16)
+                GeneralSettingsView(
                 preference: $preference,
                 appVersion: appVersion,
                 launchAtLogin: launchAtLogin,
@@ -500,7 +533,10 @@ public struct ShellSettingsView: View {
                 ritualEnabled: ritualEnabled,
                 quickCaptureShortcut: quickCaptureShortcut,
                 onCaptureAction: onCaptureAction
-            )
+                )
+              }
+              .padding(.top, 12)
+            }
                 .tabItem { tabLabel(.general) }
                 .tag(SettingsTab.general)
 
@@ -517,6 +553,8 @@ public struct ShellSettingsView: View {
                 capabilities: capabilities,
                 verdict: verdict,
                 retention: retention,
+                sensing: sensing,
+                grants: grants,
                 onAction: onPrivacyAction
             )
             .tabItem { tabLabel(.privacy) }
@@ -530,6 +568,8 @@ public struct ShellSettingsView: View {
         // panes bound themselves now — each is a `BoundedSurface` at the same width and the same
         // display-derived ceiling — and what is left here is the window agreeing to those
         // numbers rather than contradicting them.
+        .background(DesignTokens.Palette.role(.inlay, for: traits))
+        .buttonStyle(CompanionButtonStyle())
         .frame(width: ShellSurfaceBounds.settingsWidth)
         .frame(maxHeight: ShellSurfaceBounds.settingsCeiling().map { CGFloat($0) })
         // The same `fixedSize` the panes use, and for the same measured reason: a `maxHeight`

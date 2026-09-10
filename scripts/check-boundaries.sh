@@ -16,7 +16,8 @@
 #   FocusUI        SwiftUI, AppKit, Observation, QuickLook,     SwiftData, networking, Sensing, Classify, Rules
 #                  UniformTypeIdentifiers, FocusCore
 #   FocusHost      Foundation, AppKit, SwiftData, Observation,   SwiftUI, networking
-#                  ApplicationServices, os, ALL FIVE siblings
+#                  ApplicationServices, CoreGraphics, os,
+#                  ALL FIVE siblings
 #
 # The sixth row is the composition layer, and it is the one row that may import every sibling
 # at once — because that is the whole of its job. It used to be the app target, where the same
@@ -29,6 +30,16 @@
 # one would be a second place surfaces are written. `ApplicationServices` is the self-check's,
 # and only the read-only half: it is how `--focus-self-check` reports whether Accessibility has
 # been granted without ever asking for it.
+#
+# `CoreGraphics` is `SystemGrantRequester`'s, and it is the narrowest grant in this matrix
+# (focus-exdi.4). Since the zero-grant doctrine became conditional the programme has exactly one
+# file allowed to raise a TCC prompt, it is registered by path in `Config/grant-request-sites.txt`,
+# and it must reach both grants from one place — Accessibility through `ApplicationServices` and
+# Screen Recording through `CGRequestScreenCaptureAccess`, which is a CoreGraphics symbol. No
+# other package permits both, so splitting the door in two to satisfy this table would trade the
+# property that matters for the shape of the table. It opens nothing on its own: `check-grants.sh`
+# still bans every *use* selector from the built binary whatever package it came from, and still
+# refuses a request selector found outside that one registered file.
 #
 # The three e02 additions are rulings, not conveniences (plan R-14):
 #
@@ -195,7 +206,7 @@ ALLOWED_FRAMEWORKS[FocusEvaluate]="Foundation os"
 ALLOWED_FRAMEWORKS[FocusModel]="Foundation FoundationModels os"
 ALLOWED_FRAMEWORKS[FocusSensing]="Foundation AppKit CoreGraphics IOKit Carbon.HIToolbox CoreAudio CoreMediaIO ServiceManagement os"
 ALLOWED_FRAMEWORKS[FocusUI]="Foundation SwiftUI AppKit Observation QuickLook UniformTypeIdentifiers UserNotifications os"
-ALLOWED_FRAMEWORKS[FocusHost]="Foundation AppKit SwiftData Observation ApplicationServices os"
+ALLOWED_FRAMEWORKS[FocusHost]="Foundation AppKit SwiftData Observation ApplicationServices CoreGraphics os"
 
 PACKAGES=(FocusCore FocusRules FocusClassify FocusEvaluate FocusModel FocusSensing FocusUI FocusHost)
 

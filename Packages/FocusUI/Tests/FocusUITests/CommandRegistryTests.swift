@@ -417,15 +417,15 @@ struct CommandRegistryTests {
             #expect(!resolved.isEmpty)
             #expect(resolved != action.titleKey.rawValue)
         }
-        #expect(ShellStrings.string(.commandCloseWindow) == "Close Window")
+        #expect(ShellStrings.string(.commandCloseWindow) == "Close window")
         #expect(ShellStrings.string(.commandHelp) == "Focus Sentinel Help")
-        #expect(ShellStrings.string(.commandNewPriority) == "New Priority")
-        #expect(ShellStrings.string(.commandAddFilesToContext) == "Add Files to Context…")
-        #expect(ShellStrings.string(.priorityActionComplete) == "Complete Priority")
-        #expect(ShellStrings.string(.sessionActionStart) == "Start Session")
-        #expect(ShellStrings.string(.sessionActionPause) == "Pause Session")
-        #expect(ShellStrings.string(.sessionActionComplete) == "Finish Session")
-        #expect(ShellStrings.string(.commandPauseSensing) == "Pause Watching")
+        #expect(ShellStrings.string(.commandNewPriority) == "New priority")
+        #expect(ShellStrings.string(.commandAddFilesToContext) == "Add files to context…")
+        #expect(ShellStrings.string(.priorityActionComplete) == "Complete priority")
+        #expect(ShellStrings.string(.sessionActionStart) == "Start session")
+        #expect(ShellStrings.string(.sessionActionPause) == "Pause session")
+        #expect(ShellStrings.string(.sessionActionComplete) == "Finish session")
+        #expect(ShellStrings.string(.commandPauseSensing) == "Pause watching")
     }
 
     @Test("the e03 verbs are bound where a stray Return cannot reach them")

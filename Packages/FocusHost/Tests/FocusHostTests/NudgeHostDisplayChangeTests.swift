@@ -78,15 +78,36 @@ struct NudgeHostDisplayChangeTests {
         )
     ]
 
-    /// A display that cannot hold a panel `height` points tall, however it is placed: its usable
-    /// height is one panel margin short of what the content needs.
+    /// A display that cannot hold this panel's **actions**, however the panel is placed.
     ///
-    /// Derived from the panel's own measurement rather than written down, because the height of
-    /// the shipping accusation at the shipping text size is not this suite's business to know —
-    /// what it needs is a display too small for whatever that turns out to be.
-    static func displayTooSmall(for height: Double) -> [DisplayGeometry] {
-        let usable = height + NudgePanelController.edgeMargin
-        return [
+    /// Derived from the panel's own arithmetic rather than written down, because the height of the
+    /// shipping accusation at the shipping text size is not this suite's business to know — what
+    /// it needs is a display too small for whatever that turns out to be.
+    ///
+    /// **A fixed shortfall is not what "too small" means any more** (focus-din). This took one
+    /// panel margin off the panel's measured height, and that was a display it was stranded on
+    /// back when a surface that overflowed scrolled whole. A surface that overflows now gives way
+    /// in whichever of three ways its numbers permit, and the middle one — the context scrolls and
+    /// the actions stay in the viewport — is a display the panel *handles*: every action is still
+    /// reachable, so nothing is withdrawn and nothing should be. The stranded case is the residual
+    /// one, `everythingScrolls`, and the only honest way to name a display in it is to ask the
+    /// panel. So this shrinks a display one margin at a time until the panel says the actions
+    /// themselves no longer fit, which is the situation R-81's withdrawal exists for and the one
+    /// this suite is about.
+    static func displayTooSmall(for panel: NudgePanelController) -> [DisplayGeometry] {
+        let margin = NudgePanelController.edgeMargin
+        var usable = panel.contentSize.height + margin
+        var candidate = shortDisplay(usable: usable)
+        while usable > margin * 2, panel.overflowIfPlaced(on: candidate) != .everythingScrolls {
+            usable -= margin
+            candidate = shortDisplay(usable: usable)
+        }
+        return candidate
+    }
+
+    /// One display `usable` points tall in its visible frame, and a menu bar above that.
+    private static func shortDisplay(usable: Double) -> [DisplayGeometry] {
+        [
             DisplayGeometry(
                 displayID: 3,
                 screenIndex: 0,
@@ -221,9 +242,9 @@ struct NudgeHostDisplayChangeTests {
         )
         #expect(spendBefore.accusationsToday >= 1, "nothing was ever charged to the budget")
 
-        // A display that cannot hold this panel however it is placed.
-        let needed = fixture.panel.contentSize.height
-        fixture.panel.displays = { Self.displayTooSmall(for: needed) }
+        // A display that cannot hold this panel's actions however it is placed.
+        let stranding = Self.displayTooSmall(for: fixture.panel)
+        fixture.panel.displays = { stranding }
         Self.theDisplayConfigurationChanges()
 
         #expect(
@@ -313,8 +334,8 @@ struct NudgeHostDisplayChangeTests {
             ).queriesForPriorityToday == 1
         )
 
-        let needed = fixture.panel.contentSize.height
-        fixture.panel.displays = { Self.displayTooSmall(for: needed) }
+        let stranding = Self.displayTooSmall(for: fixture.panel)
+        fixture.panel.displays = { stranding }
         Self.theDisplayConfigurationChanges()
 
         #expect(!fixture.panel.isVisible, "the question was left on a surface nobody could answer")

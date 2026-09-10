@@ -8,7 +8,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ends the session that is running."
+            "value" : "Finish the current session."
           }
         }
       }
@@ -20,7 +20,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Finish Focus Session"
+            "value" : "Finish Focus session"
           }
         }
       }
@@ -32,7 +32,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Makes this the one thing you are working on."
+            "value" : "Set your current priority."
           }
         }
       }
@@ -56,7 +56,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Set Focus Priority"
+            "value" : "Set Focus priority"
           }
         }
       }
@@ -68,7 +68,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Starts a session on your current priority."
+            "value" : "Start a session on your current priority."
           }
         }
       }
@@ -80,7 +80,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Start Focus Session"
+            "value" : "Start Focus session"
           }
         }
       }

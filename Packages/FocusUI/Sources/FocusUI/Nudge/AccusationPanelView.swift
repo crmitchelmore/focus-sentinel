@@ -48,7 +48,13 @@ public struct AccusationPresentation: Sendable, Equatable {
     /// It has **no default**. Every construction of this value states it, because a default is
     /// what would let the next surface inherit the wrong half of the answer in silence.
     public let hasOpenSession: Bool
-    /// The snooze spans on offer. `InterventionPolicy.snoozeDurations` in the shipping app.
+    /// The shortcuts the panel offers; a custom duration uses the same snooze action.
+    ///
+    /// Read from `InterventionPolicy`, which is where the spans live and where the person's
+    /// dials override them (focus-oqsx). Injected rather than fixed, so the panel a person sees
+    /// offers the spans they set — the identity round chose one minute, five and twenty, and
+    /// those are what the policy ships.
+    public static var snoozeShortcuts: [Duration] { InterventionPolicy.snoozeDurations }
     public let snoozeDurations: [Duration]
 
     public init(
@@ -60,7 +66,7 @@ public struct AccusationPresentation: Sendable, Equatable {
         returnTarget: String? = nil,
         snoozeRemaining: Duration? = nil,
         hasOpenSession: Bool,
-        snoozeDurations: [Duration] = InterventionPolicy.snoozeDurations
+        snoozeDurations: [Duration] = AccusationPresentation.snoozeShortcuts
     ) {
         self.rung = rung
         self.voice = voice
@@ -69,8 +75,8 @@ public struct AccusationPresentation: Sendable, Equatable {
         self.dwelled = dwelled
         self.returnTarget = returnTarget
         self.snoozeRemaining = snoozeRemaining
-        self.hasOpenSession = hasOpenSession
         self.snoozeDurations = snoozeDurations
+        self.hasOpenSession = hasOpenSession
     }
 
     /// Whether a rule-writing action has a subject to be about.
@@ -191,6 +197,8 @@ public struct AccusationPanelView: DecisionSurfaceContent {
     @Environment(\.appearanceTraits) private var traits
     @Environment(\.shellTextScale) private var textScale
     @ScaledMetric(relativeTo: .body) private var spacing: CGFloat = 12
+    @State private var showsCustomSnooze = false
+    @State private var customMinutes = "5"
 
     public init(
         presentation: AccusationPresentation,
@@ -280,6 +288,9 @@ public struct AccusationPanelView: DecisionSurfaceContent {
 
     @ViewBuilder
     private var context: some View {
+        if provenance == .uninvited && textScale == .standard {
+            CompanionHeader { ShellText(.cockpitWindowTitle, role: .title2) }
+        }
         header
         if let subject = presentation.subject {
             NudgeText(
@@ -509,9 +520,9 @@ public struct AccusationPanelView: DecisionSurfaceContent {
             // every Return no focused field claimed — so the moment a person clicked this panel
             // and made it key, a bare Return would perform "Back to …". The panel exists to take
             // nothing; emphasis is a colour, not a key equivalent.
-            plainActionButton(action).buttonStyle(.borderedProminent)
+            plainActionButton(action).buttonStyle(CompanionButtonStyle(prominent: true))
         } else {
-            plainActionButton(action).buttonStyle(.bordered)
+            plainActionButton(action).buttonStyle(CompanionButtonStyle())
         }
     }
 
@@ -524,17 +535,7 @@ public struct AccusationPanelView: DecisionSurfaceContent {
         }
     }
 
-    /// The snooze row: one button per span, so the choice is one click rather than two.
-    ///
-    /// F-61's own three figures, read from `InterventionPolicy.snoozeDurations` rather than
-    /// written here — the panel offers what the policy declares, and a fourth span would appear
-    /// without an edit to this file.
-    ///
-    /// **Three layouts, and the reason is a measured defect.** At the accessibility text size
-    /// the one-line arrangement rendered "5 mi…", "10 mi…", "15 mi…" — and an action whose span
-    /// a person cannot read is an action they cannot choose, which is the same defect as not
-    /// offering it. Every span label is `fixedSize`, so overflow is real rather than silently
-    /// truncated, and `ViewThatFits` takes the widest arrangement that actually fits.
+    /// Three one-click shortcuts and a custom editor, with a stacked fallback at large text sizes.
     private var snoozeRow: some View {
         let gap = DesignTokens.spacing(spacing / 2, scale: textScale)
         return ViewThatFits(in: .horizontal) {
@@ -545,6 +546,22 @@ public struct AccusationPanelView: DecisionSurfaceContent {
             VStack(alignment: .leading, spacing: gap) {
                 snoozeLabel(wraps: false)
                 snoozeButtons(gap: gap)
+            }
+            // Keep the four choices compact in the narrow popover before falling back
+            // to one per line for larger text. Each row reports its full intrinsic width.
+            VStack(alignment: .leading, spacing: gap) {
+                snoozeLabel(wraps: false)
+                HStack(spacing: gap) {
+                    ForEach(Array(presentation.snoozeDurations.prefix(2)), id: \.self) { span in
+                        snoozeButton(span, wraps: false)
+                    }
+                }
+                HStack(spacing: gap) {
+                    if let span = presentation.snoozeDurations.last {
+                        snoozeButton(span, wraps: false)
+                    }
+                    customSnoozeButton(wraps: false)
+                }
             }
             // **The fallback, and it is the one arrangement that must not be honest about
             // overflowing** (focus-vpu). The first two candidates are `fixedSize` so that "this
@@ -561,7 +578,11 @@ public struct AccusationPanelView: DecisionSurfaceContent {
                     snoozeButton(span, wraps: true)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
+                customSnoozeButton(wraps: true)
             }
+        }
+        .popover(isPresented: $showsCustomSnooze) {
+            customSnoozeEditor
         }
     }
 
@@ -577,14 +598,72 @@ public struct AccusationPanelView: DecisionSurfaceContent {
             ForEach(presentation.snoozeDurations, id: \.self) { span in
                 snoozeButton(span, wraps: false)
             }
+            customSnoozeButton(wraps: false)
         }
+    }
+
+    private func customSnoozeButton(wraps: Bool) -> some View {
+        Button {
+            showsCustomSnooze = true
+        } label: {
+            ShellText(.nudgeSnoozeCustom, role: .callout)
+                .fixedSize(horizontal: !wraps, vertical: wraps)
+        }
+        .buttonStyle(CompanionButtonStyle())
+        .accessibilityIdentifier("nudge-snooze-custom")
+    }
+
+    /// Limit the editor to a positive whole number of minutes, up to one day.
+    private var customSnoozeDuration: Duration? {
+        guard let minutes = Int(customMinutes.trimmingCharacters(in: .whitespacesAndNewlines)),
+              (1...1_440).contains(minutes) else { return nil }
+        return .seconds(minutes * 60)
+    }
+
+    private var customSnoozeEditor: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            ShellText(.nudgeSnoozeCustomMinutes, role: .callout)
+            TextField(ShellStrings.string(.nudgeSnoozeCustomMinutes), text: $customMinutes)
+                .textFieldStyle(.roundedBorder)
+                .accessibilityIdentifier("nudge-snooze-custom-minutes")
+                .onSubmit { applyCustomSnooze() }
+            HStack {
+                Button { showsCustomSnooze = false } label: {
+                    ShellText(.priorityCompleteActionCancel, role: .callout)
+                }
+                .buttonStyle(CompanionButtonStyle())
+                .accessibilityIdentifier("nudge-snooze-custom-cancel")
+                Spacer()
+                Button { applyCustomSnooze() } label: {
+                    HStack(spacing: 4) {
+                        NudgeText(.accusationActionSnooze, voice: presentation.voice, role: .callout)
+                        if let span = customSnoozeDuration {
+                            Text(verbatim: NudgeCopy.duration(span))
+                        }
+                    }
+                    .fixedSize(horizontal: true, vertical: false)
+                }
+                .buttonStyle(CompanionButtonStyle(prominent: true))
+                .disabled(customSnoozeDuration == nil)
+                .accessibilityIdentifier("nudge-snooze-custom-apply")
+            }
+        }
+        .font(DesignTokens.font(.callout, scale: textScale))
+        .padding(16)
+        .frame(minWidth: 260)
+    }
+
+    private func applyCustomSnooze() {
+        guard let span = customSnoozeDuration else { return }
+        showsCustomSnooze = false
+        onAction(.snooze, span)
     }
 
     private func snoozeButton(_ span: Duration, wraps: Bool) -> some View {
         Button {
             onAction(.snooze, span)
         } label: {
-            Text(verbatim: NudgeCopy.duration(span))
+            Text(verbatim: NudgeCopy.shortDuration(span))
                 .font(DesignTokens.font(.callout, scale: textScale))
                 // Never truncated: `ViewThatFits` can only choose a layout that fits if the
                 // arrangement that does not fit says so instead of shrinking its own text. The
@@ -592,7 +671,8 @@ public struct AccusationPanelView: DecisionSurfaceContent {
                 .lineLimit(wraps ? nil : 1)
                 .fixedSize(horizontal: !wraps, vertical: wraps)
         }
-        .buttonStyle(.bordered)
+        .buttonStyle(CompanionButtonStyle())
+        .accessibilityLabel(Text(verbatim: NudgeCopy.duration(span)))
     }
 
     @ViewBuilder

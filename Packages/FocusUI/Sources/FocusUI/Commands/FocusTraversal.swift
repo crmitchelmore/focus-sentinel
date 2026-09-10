@@ -37,6 +37,9 @@ public enum FocusField: String, Sendable, CaseIterable, Hashable, Identifiable {
     case cockpitCaptureField
     /// The cockpit's Set Priority button.
     case cockpitSetPriority
+    /// The cockpit's tab bar (focus-1rj7): one identity for the three tabs, carried by the
+    /// selected one, the way the timebox's four presets share `cockpitTimebox`.
+    case cockpitTabs
     /// The definition-of-done field, directly under the priority hero.
     case cockpitDoneWhen
     /// The timebox control. One identity for the control, not one per preset button.
@@ -55,6 +58,10 @@ public enum FocusField: String, Sendable, CaseIterable, Hashable, Identifiable {
     case cockpitSessionPrimary
     /// The cockpit's primary action: finish the current priority.
     case cockpitComplete
+    /// A new priority that keeps this one's desk (focus-1rj7).
+    case cockpitSameContext
+    /// The Recent tab's route to the day's full history (focus-1rj7).
+    case cockpitOpenHistory
     /// F-119's switch, in the cockpit. The same stored value the menu item drives.
     case cockpitSensingPause
     /// The cockpit's route to Settings.
@@ -141,9 +148,14 @@ public enum FocusTraversal {
                 // they act on the commitment, so they are reached before the machinery that
                 // serves it rather than after the rules pane.
                 .cockpitComplete,
+                // A new priority on the same desk sits with the verb it varies (focus-1rj7).
+                .cockpitSameContext,
                 // Change Priority opens capture below the current commitment's verbs.
                 .cockpitCaptureField,
                 .cockpitSetPriority,
+                // The tab bar comes after the commitment and before anything a tab holds
+                // (focus-1rj7), so it is reached before the first field of any tab.
+                .cockpitTabs,
                 .cockpitTimebox,
                 // The session sits directly under the timebox: both are about how the time is
                 // being spent, and a person who has just chosen a box is one Tab from starting
@@ -152,6 +164,8 @@ public enum FocusTraversal {
                 .cockpitContextKeyword,
                 .cockpitContextAddFiles,
                 .cockpitRuleSubject,
+                // The Recent tab's one control after its rows (focus-1rj7).
+                .cockpitOpenHistory,
                 // The footer, in the order it reads: what is being watched, then the way out to
                 // Settings.
                 .cockpitSensingPause,

@@ -37,6 +37,8 @@ struct NudgePresentationBuilder {
     /// What is snoozed, and the clock the countdown is read against.
     let snoozes: SnoozeBook
     let monotonicClock: any MonotonicClock
+    /// The dials the panel draws from (focus-exdi): the three snooze spans.
+    let tunings: PolicyTunings
 
     /// **Whether the two session-scoped actions have anything to act on** (focus-rdw). Evaluated
     /// only where it is drawn, so a question's redraw asks nothing of the session host.
@@ -80,7 +82,8 @@ struct NudgePresentationBuilder {
             // The same wire `apply(_:…)` reads before writing a session rule, asked *before* the
             // buttons are drawn rather than after one is pressed: an action that would be dropped
             // in a `guard` is an action this panel must not offer.
-            hasOpenSession: hasOpenSession()
+            hasOpenSession: hasOpenSession(),
+            snoozeDurations: tunings.snoozeDurations
         )
     }
 }

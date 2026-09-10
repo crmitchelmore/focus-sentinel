@@ -62,11 +62,13 @@ Packages/FocusUI/Sources/FocusUI/MenuBar/MenuBarPopoverView.swift | presentation
 Packages/FocusUI/Sources/FocusUI/MenuBar/MenuBarPopoverView.swift | NudgeCopy.countdown(snooze.remaining)) | NUMBER what is left of a snooze
 Packages/FocusUI/Sources/FocusUI/Nudge/AccusationPanelView.swift | NudgeCopy.countdown(remaining)) | NUMBER what is left of the snooze the panel is under
 Packages/FocusUI/Sources/FocusUI/Nudge/AccusationPanelView.swift | NudgeCopy.duration(span)) | NUMBER a snooze button's span
+Packages/FocusUI/Sources/FocusUI/Nudge/AccusationPanelView.swift | NudgeCopy.shortDuration(span)) | NUMBER a compact snooze button's span
+Packages/FocusUI/Sources/FocusUI/Nudge/AccusationPanelView.swift | NudgeCopy.duration(span))) | NUMBER the full spoken duration of a compact snooze button
 Packages/FocusUI/Sources/FocusUI/Relevance/CascadePrecedenceView.swift | (rung.rank + 1).formatted(.number)) | NUMBER the rung's place in the cascade, from `rank` itself
 Packages/FocusUI/Sources/FocusUI/Relevance/VerdictInspectorView.swift | verdict.drift.accumulated.formatted( | NUMBER how long the drift clock has been running
 Packages/FocusUI/Sources/FocusUI/Scenes/InterventionSettingsView.swift | "\(used.formatted()) / \(cap.formatted())") | NUMBER today's spend over its cap. The " / " is authored punctuation
-Packages/FocusUI/Sources/FocusUI/Scenes/InterventionSettingsView.swift | NudgeCopy.duration(span)) | NUMBER one threshold from `InterventionPolicy`
-Packages/FocusUI/Sources/FocusUI/Scenes/InterventionSettingsView.swift | InterventionPolicy.snoozeDurations | NUMBER every snooze span on offer, joined
+Packages/FocusUI/Sources/FocusUI/Scenes/InterventionSettingsView.swift | Int(value.rounded()).formatted()) | NUMBER a count dial's value (focus-exdi)
+Packages/FocusUI/Sources/FocusUI/Scenes/InterventionSettingsView.swift | value.formatted(.number.precision(.fractionLength(2)))) | NUMBER a ratio dial's value, two places (focus-exdi)
 Packages/FocusUI/Sources/FocusUI/Scenes/RecentPrioritiesView.swift | row.contextItemCount.formatted()) | NUMBER how many context items a past priority had
 Packages/FocusUI/Sources/FocusUI/Sensing/SensingStatusView.swift | value.formatted()) | NUMBER one sensing reading
 Packages/FocusUI/Sources/FocusUI/Scenes/TimeboxControl.swift | Self.formatPreset(.seconds(seconds))) | NUMBER a timebox preset's length
@@ -88,3 +90,5 @@ Packages/FocusUI/Sources/FocusUI/Scenes/GeneralSettingsView.swift | option.glyph
 Packages/FocusUI/Sources/FocusUI/Scenes/PresentationExclusionSection.swift | entry.displayName) | NAME — one excluded application, in the row that removes it
 Packages/FocusUI/Sources/FocusUI/Scenes/PresentationExclusionSection.swift | entry.displayName)) | NAME — the same name, as that row's accessibility label
 Packages/FocusUI/Sources/FocusUI/Scenes/PresentationExclusionSection.swift | candidate.displayName) | NAME — one running application the add row offers
+
+Packages/FocusUI/Sources/FocusUI/Session/SessionControls.swift | Self.format(elapsedSeconds)) | NUMBER elapsed session duration formatted with locale-aware units; the full sentence remains the accessibility label

@@ -8,7 +8,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "falls back to \u201c%@\u201d and carries on."
+            "value" : "uses \"%@\" instead."
           }
         }
       }
@@ -32,7 +32,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "carries on unchanged."
+            "value" : "continues unchanged."
           }
         }
       }
@@ -44,7 +44,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "has nothing to fall back to, and says so."
+            "value" : "is unavailable."
           }
         }
       }
@@ -56,7 +56,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "does less, never more."
+            "value" : "limits interruptions."
           }
         }
       }
@@ -68,7 +68,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The record of what was in front"
+            "value" : "App activity history"
           }
         }
       }
@@ -92,7 +92,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Fairness across displays"
+            "value" : "Nudge placement across displays"
           }
         }
       }
@@ -104,7 +104,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Standing down while you present"
+            "value" : "Quiet during presentations"
           }
         }
       }
@@ -116,7 +116,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Standing down while a mic is live"
+            "value" : "Quiet while the microphone is in use"
           }
         }
       }
@@ -152,7 +152,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Judging what belongs to your priority"
+            "value" : "Checking relevance to your priority"
           }
         }
       }
@@ -236,7 +236,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Which app is in front"
+            "value" : "The active app"
           }
         }
       }
@@ -332,7 +332,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Where windows sit on screen"
+            "value" : "Window positions"
           }
         }
       }
@@ -344,7 +344,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nothing on this page asks you for anything. The app reads what it already may, and says plainly what it cannot."
+            "value" : "This page shows what Focus can read. It does not request permissions."
           }
         }
       }
@@ -356,7 +356,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "What this Mac lets the app do"
+            "value" : "Available on this Mac"
           }
         }
       }
@@ -380,7 +380,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "You said no"
+            "value" : "Permission denied"
           }
         }
       }
@@ -392,7 +392,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Never asked for"
+            "value" : "Not requested"
           }
         }
       }
@@ -404,7 +404,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Not yours to change"
+            "value" : "Restricted by macOS"
           }
         }
       }
@@ -416,7 +416,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Not offered here"
+            "value" : "Unavailable"
           }
         }
       }
@@ -440,7 +440,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Set Priority"
+            "value" : "Set priority"
           }
         }
       }
@@ -464,7 +464,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Say what you are trying to do, in one sentence"
+            "value" : "What are you working on?"
           }
         }
       }
@@ -476,7 +476,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "That describes a state rather than naming a job."
+            "value" : "Start with what you need to do."
           }
         }
       }
@@ -488,7 +488,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "That names an action but not what it will produce."
+            "value" : "Add what you want to finish or produce."
           }
         }
       }
@@ -500,7 +500,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "That names a topic rather than something to do."
+            "value" : "Say what you want to do with this topic."
           }
         }
       }
@@ -512,7 +512,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "There is not much here to work from."
+            "value" : "Add a little more detail."
           }
         }
       }
@@ -524,7 +524,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Return sets it · ⌘Return sets it and returns you to what you were doing · Escape closes"
+            "value" : "Return sets the priority. Command-Return also returns to your previous app. Escape closes this window."
           }
         }
       }
@@ -536,7 +536,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Quick Capture"
+            "value" : "Quick capture"
           }
         }
       }
@@ -548,7 +548,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "A suggestion, made of your own words"
+            "value" : "Suggested wording"
           }
         }
       }
@@ -572,7 +572,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Suggested definition of done"
+            "value" : "Suggested completion goal"
           }
         }
       }
@@ -584,7 +584,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Keep My Words"
+            "value" : "Keep my words"
           }
         }
       }
@@ -596,7 +596,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Name what it will produce: “%@”"
+            "value" : "Say what you want to finish. Try \"%@\"."
           }
         }
       }
@@ -608,7 +608,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Say a little more than “%@”"
+            "value" : "Add more detail to \"%@\"."
           }
         }
       }
@@ -620,7 +620,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Start with a verb: “%@”"
+            "value" : "Start with an action. Try \"%@\"."
           }
         }
       }
@@ -632,7 +632,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Use This"
+            "value" : "Use this"
           }
         }
       }
@@ -644,7 +644,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Add Files…"
+            "value" : "Add files…"
           }
         }
       }
@@ -812,7 +812,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Keep Mine"
+            "value" : "Keep mine"
           }
         }
       }
@@ -824,7 +824,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Replace Priority"
+            "value" : "Replace priority"
           }
         }
       }
@@ -860,7 +860,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Something outside Focus Sentinel asked to change what you are working on. Nothing has changed yet."
+            "value" : "Another app asked to change your priority. Review it before replacing your current one."
           }
         }
       }
@@ -884,7 +884,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Asked for"
+            "value" : "Requested priority"
           }
         }
       }
@@ -896,7 +896,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Control characters were removed from the incoming text."
+            "value" : "Removed control characters from the incoming text."
           }
         }
       }
@@ -908,7 +908,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The incoming definition of done was %@ characters and was cut to fit."
+            "value" : "Shortened the completion goal from %@ characters to fit."
           }
         }
       }
@@ -920,7 +920,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Repeated values were ignored for %@; the first of each was used."
+            "value" : "Ignored duplicate values for %@ and used the first value for each."
           }
         }
       }
@@ -932,7 +932,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The incoming task was %@ characters and was cut to fit."
+            "value" : "Shortened the task from %@ characters to fit."
           }
         }
       }
@@ -944,7 +944,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "These parts of the link were not understood and were ignored: %@."
+            "value" : "Ignored unrecognised parts of the link: %@."
           }
         }
       }
@@ -956,7 +956,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Change Priority…"
+            "value" : "Change priority…"
           }
         }
       }
@@ -968,7 +968,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Clear Priority"
+            "value" : "Clear priority"
           }
         }
       }
@@ -980,7 +980,19 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Complete Priority"
+            "value" : "Complete priority"
+          }
+        }
+      }
+    },
+    "priority.action.sameContext" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Cockpit verb that captures a new priority and copies the current one’s context items and rules onto it (focus-1rj7).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New Priority, Same Context…"
           }
         }
       }
@@ -992,7 +1004,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Fix Wording…"
+            "value" : "Fix wording…"
           }
         }
       }
@@ -1040,7 +1052,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Both are optional. Completing works with them empty."
+            "value" : "You can leave both fields blank."
           }
         }
       }
@@ -1076,7 +1088,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "What shipped"
+            "value" : "What you finished"
           }
         }
       }
@@ -1088,7 +1100,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Anything worth remembering about what you finished"
+            "value" : "What would you like to remember?"
           }
         }
       }
@@ -1112,7 +1124,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "What will be true when it is finished?"
+            "value" : "How will you know it is finished?"
           }
         }
       }
@@ -1124,7 +1136,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "What is the one thing?"
+            "value" : "What are you working on?"
           }
         }
       }
@@ -1148,7 +1160,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Fix the wording of the one thing"
+            "value" : "Edit your priority"
           }
         }
       }
@@ -1160,7 +1172,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Work on This Again"
+            "value" : "Work on this again"
           }
         }
       }
@@ -1208,7 +1220,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Not Today"
+            "value" : "Not today"
           }
         }
       }
@@ -1220,7 +1232,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Answer Now"
+            "value" : "Answer now"
           }
         }
       }
@@ -1244,7 +1256,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Add as Related"
+            "value" : "Add as related"
           }
         }
       }
@@ -1256,7 +1268,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Add as Unrelated"
+            "value" : "Add as unrelated"
           }
         }
       }
@@ -1268,7 +1280,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Remove Rule"
+            "value" : "Remove rule"
           }
         }
       }
@@ -1280,7 +1292,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nothing is ruled in or out for this priority yet."
+            "value" : "No rules for this priority yet."
           }
         }
       }
@@ -1304,7 +1316,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Application"
+            "value" : "App"
           }
         }
       }
@@ -1316,7 +1328,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Website"
+            "value" : "Site"
           }
         }
       }
@@ -1328,7 +1340,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "No longer read"
+            "value" : "No longer supported"
           }
         }
       }
@@ -1424,7 +1436,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "No Timebox"
+            "value" : "No timebox"
           }
         }
       }
@@ -1484,7 +1496,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Observers attached"
+            "value" : "Active observers"
           }
         }
       }
@@ -1556,7 +1568,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "This Mac is awake and unlocked, as far as macOS tells us."
+            "value" : "macOS reports that this Mac is awake and unlocked."
           }
         }
       }
@@ -1568,7 +1580,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The display looks asleep, as far as macOS tells us."
+            "value" : "macOS reports that the display is asleep."
           }
         }
       }
@@ -1592,7 +1604,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The screen looks locked, as far as macOS tells us."
+            "value" : "macOS reports that the screen is locked."
           }
         }
       }
@@ -1604,7 +1616,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Someone else appears to be signed in."
+            "value" : "macOS reports that this user session is inactive."
           }
         }
       }
@@ -1616,7 +1628,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "This Mac looks asleep, as far as macOS tells us."
+            "value" : "macOS reports that this Mac is asleep."
           }
         }
       }
@@ -1628,7 +1640,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Working over Screen Sharing produces no hardware input, so this app will treat you as away and will not interrupt you."
+            "value" : "Focus cannot detect keyboard or mouse activity through Screen Sharing. It may treat you as away and keep quiet."
           }
         }
       }
@@ -1652,7 +1664,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "A microphone is running somewhere"
+            "value" : "A microphone is in use"
           }
         }
       }
@@ -1676,7 +1688,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Switching this off detaches every observer rather than merely ignoring them."
+            "value" : "Turning this off stops all activity monitoring."
           }
         }
       }
@@ -1700,7 +1712,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The app in front is in a window"
+            "value" : "The active app is windowed"
           }
         }
       }
@@ -1712,7 +1724,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The app in front has taken over the screen"
+            "value" : "The active app is full screen"
           }
         }
       }
@@ -1724,7 +1736,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Not watching. Nothing is attached to observe with."
+            "value" : "Activity monitoring is off."
           }
         }
       }
@@ -1736,7 +1748,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Not watching. You switched this off, so every observer is detached."
+            "value" : "Activity monitoring is off. You can turn it back on here."
           }
         }
       }
@@ -1748,7 +1760,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Watching which app is in front. No window titles, no screenshots, nothing you type."
+            "value" : "Watching the active app. Focus does not read window titles, take screenshots or record what you type."
           }
         }
       }
@@ -1760,7 +1772,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Back to Work"
+            "value" : "Back to work"
           }
         }
       }
@@ -1772,7 +1784,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Take a Break"
+            "value" : "Take a break"
           }
         }
       }
@@ -1784,7 +1796,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Finish Session"
+            "value" : "Finish session"
           }
         }
       }
@@ -1796,7 +1808,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "End the Detour"
+            "value" : "End the detour"
           }
         }
       }
@@ -1808,7 +1820,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Start a Detour"
+            "value" : "Start a detour"
           }
         }
       }
@@ -1820,7 +1832,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Stop and Say Why…"
+            "value" : "Stop with a note…"
           }
         }
       }
@@ -1832,7 +1844,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pause Session"
+            "value" : "Pause session"
           }
         }
       }
@@ -1844,7 +1856,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Resume Session"
+            "value" : "Resume session"
           }
         }
       }
@@ -1856,7 +1868,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Start Session"
+            "value" : "Start session"
           }
         }
       }
@@ -1940,7 +1952,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "the display went to sleep, as far as macOS tells us"
+            "value" : "macOS reported that the display went to sleep"
           }
         }
       }
@@ -1976,7 +1988,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "the app was away for a while"
+            "value" : "Focus was closed for a while"
           }
         }
       }
@@ -1988,7 +2000,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "the screen locked, as far as macOS tells us"
+            "value" : "macOS reported that the screen locked"
           }
         }
       }
@@ -2024,7 +2036,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "this Mac went to sleep, as far as macOS tells us"
+            "value" : "macOS reported that this Mac went to sleep"
           }
         }
       }
@@ -2060,7 +2072,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Keep Going"
+            "value" : "Keep going"
           }
         }
       }
@@ -2072,7 +2084,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Stop Session"
+            "value" : "Stop session"
           }
         }
       }
@@ -2084,7 +2096,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Say what pulled you away, if you want to. None of it is required."
+            "value" : "You can add a reason or a note before stopping. Both are optional."
           }
         }
       }
@@ -2096,7 +2108,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Stopping this session"
+            "value" : "Stop this session"
           }
         }
       }
@@ -2108,7 +2120,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Last app in front"
+            "value" : "Last active app"
           }
         }
       }
@@ -2228,7 +2240,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The clock changed while this ran, so the elapsed figure may be off."
+            "value" : "The clock changed during this session. The elapsed time may be inaccurate."
           }
         }
       }
@@ -2252,7 +2264,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The app was away for more than fifteen minutes, so the session came back paused."
+            "value" : "More than 15 minutes passed before Focus restored this session. It resumed paused."
           }
         }
       }
@@ -2300,7 +2312,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Resume becomes available once every reason above has cleared."
+            "value" : "You can resume once all the reasons above have cleared."
           }
         }
       }
@@ -2348,7 +2360,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Match System"
+            "value" : "Match system"
           }
         }
       }
@@ -2360,7 +2372,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Focus Sentinel follows your Mac's accent colour and your Accessibility display settings — Increase Contrast, Reduce Transparency, Reduce Motion and Differentiate Without Colour — automatically."
+            "value" : "Focus follows your Mac's accessibility display settings, including Increase Contrast, Reduce Transparency and Reduce Motion."
           }
         }
       }
@@ -2384,7 +2396,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pick a different combination if something else on your Mac already uses this one. macOS will not warn you about a clash, so Focus offers only combinations it can bind."
+            "value" : "Choose a different shortcut if another app uses this one. Focus only offers shortcuts it can register."
           }
         }
       }
@@ -2396,7 +2408,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ask what today’s priority is"
+            "value" : "Ask what today's priority is"
           }
         }
       }
@@ -2408,7 +2420,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Once a day, when you first open Focus. Turning this off never hides anything else."
+            "value" : "Ask once a day when you first open Focus."
           }
         }
       }
@@ -2432,7 +2444,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The system cannot find this copy of Focus Sentinel to open at login."
+            "value" : "macOS cannot find this copy of Focus to open at login."
           }
         }
       }
@@ -2444,7 +2456,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Open Login Items Settings"
+            "value" : "Open Login Items settings"
           }
         }
       }
@@ -2456,7 +2468,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Focus Sentinel is waiting for your approval in Login Items. Only you can give it, in System Settings."
+            "value" : "Approve Focus in System Settings under Login Items."
           }
         }
       }
@@ -2504,7 +2516,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Questions and nudges share one daily budget, and the last of it is kept for a nudge."
+            "value" : "Questions and nudges share a daily limit. Focus reserves the last interruption for a nudge."
           }
         }
       }
@@ -2558,13 +2570,13 @@
       }
     },
     "settings.intervention.notch.explanation" : {
-      "comment" : "APPROVED BY USER (D-11, 2026-09-08): new copy, reviewed and approved by the user. The second sentence of the notch row, the same in every case: the ambient state is on the menu-bar glyph whatever the display can do.",
+      "comment" : "Revised at the owner's request on 2026-09-09 using the Unslop guidance. Earlier D-11 approval covered the previous wording.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The menu-bar glyph carries the ambient state either way."
+            "value" : "The menu bar icon shows your focus status whether this is on or off."
           }
         }
       }
@@ -2594,37 +2606,37 @@
       }
     },
     "settings.intervention.notch.noBuiltInDisplay" : {
-      "comment" : "APPROVED BY USER (D-11, 2026-09-08): new copy, reviewed and approved by the user. Why the companion is unavailable on a Mac with no built-in display at all — deliberately NOT the same sentence as the notchless one.",
+      "comment" : "Revised at the owner's request on 2026-09-09 using the Unslop guidance. Earlier D-11 approval covered the previous wording.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Not available: this Mac has no built-in display."
+            "value" : "This Mac has no built-in display."
           }
         }
       }
     },
     "settings.intervention.notch.noNotch" : {
-      "comment" : "APPROVED BY USER (D-11, 2026-09-08): new copy, reviewed and approved by the user. Why the companion is unavailable on a built-in display that has no notch.",
+      "comment" : "Revised at the owner's request on 2026-09-09 using the Unslop guidance. Earlier D-11 approval covered the previous wording.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Not available: this Mac's built-in display has no notch."
+            "value" : "This Mac's built-in display has no notch."
           }
         }
       }
     },
     "settings.intervention.notch.unreadable" : {
-      "comment" : "APPROVED BY USER (D-11, 2026-09-08): new copy, reviewed and approved by the user. Why the companion is unavailable when the built-in display reported a notch shape the app could not place a line under.",
+      "comment" : "Revised at the owner's request on 2026-09-09 using the Unslop guidance. Earlier D-11 approval covered the previous wording.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Not available: this Mac's built-in display did not report a notch Focus could draw under."
+            "value" : "Focus could not locate the notch on this Mac's built-in display."
           }
         }
       }
@@ -2660,7 +2672,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "This is Focus's own window, not your Mac's Focus mode — Focus cannot read that and does not claim to."
+            "value" : "These hours apply to this app. Focus cannot read your Mac's Focus mode."
           }
         }
       }
@@ -2684,7 +2696,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Off. Focus has no opinion about your evenings."
+            "value" : "Quiet hours are off."
           }
         }
       }
@@ -2720,7 +2732,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$@ \u2013 %2$@"
+            "value" : "%1$@ to %2$@"
           }
         }
       }
@@ -2744,7 +2756,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Set a window"
+            "value" : "Set quiet hours"
           }
         }
       }
@@ -2756,7 +2768,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Panels become menu-bar badges and questions wait in the menu bar."
+            "value" : "Show nudges and questions in the menu bar instead of opening panels."
           }
         }
       }
@@ -2768,7 +2780,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Reduce Motion is on, so this stays on."
+            "value" : "Required while Reduce Motion is on."
           }
         }
       }
@@ -2792,7 +2804,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Every step of a nudge appears inside Focus. It never sends a notification, and never asks for permission to."
+            "value" : "Nudges stay inside Focus. The app does not send system notifications or request notification permission."
           }
         }
       }
@@ -2804,7 +2816,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Where each step appears"
+            "value" : "Where nudges appear"
           }
         }
       }
@@ -2840,79 +2852,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The menu-bar popover"
-          }
-        }
-      }
-    },
-    "settings.intervention.thresholds.accusationCooldown" : {
-      "comment" : "Threshold row label.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Between nudges"
-          }
-        }
-      }
-    },
-    "settings.intervention.thresholds.escalation" : {
-      "comment" : "Threshold row label.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Before the next step"
-          }
-        }
-      }
-    },
-    "settings.intervention.thresholds.heading" : {
-      "comment" : "Heading above the read-only threshold mirrors.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Timings"
-          }
-        }
-      }
-    },
-    "settings.intervention.thresholds.queryCooldown" : {
-      "comment" : "Threshold row label.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Between questions"
-          }
-        }
-      }
-    },
-    "settings.intervention.thresholds.queryDwell" : {
-      "comment" : "Threshold row label.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Before a question"
-          }
-        }
-      }
-    },
-    "settings.intervention.thresholds.snooze" : {
-      "comment" : "Threshold row label.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Snooze lengths"
+            "value" : "Menu bar popover"
           }
         }
       }
@@ -2924,7 +2864,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Intervention"
+            "value" : "Nudges"
           }
         }
       }
@@ -2948,7 +2888,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "How it speaks"
+            "value" : "Voice"
           }
         }
       }
@@ -2996,7 +2936,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Delete Everything\u2026"
+            "value" : "Delete everything…"
           }
         }
       }
@@ -3008,7 +2948,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Delete Everything"
+            "value" : "Delete everything"
           }
         }
       }
@@ -3020,7 +2960,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Every priority, session, rule, question and record Focus Sentinel holds about you is removed, and the file they lived in is destroyed and rebuilt empty. The app then restarts. This cannot be undone."
+            "value" : "This deletes all priorities, sessions, rules, questions and activity records from this Mac. Focus replaces its data file with an empty one and restarts. You cannot undo this."
           }
         }
       }
@@ -3032,7 +2972,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Keep My Data"
+            "value" : "Keep my data"
           }
         }
       }
@@ -3044,7 +2984,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Delete everything Focus Sentinel knows?"
+            "value" : "Delete all Focus data?"
           }
         }
       }
@@ -3056,7 +2996,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Removes everything the app has stored about you, destroys the file it lived in, and starts again with an empty one. The app restarts to do it."
+            "value" : "Delete all saved Focus data and restart with an empty data file. You cannot undo this."
           }
         }
       }
@@ -3080,7 +3020,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Applications running now"
+            "value" : "Running apps"
           }
         }
       }
@@ -3092,7 +3032,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nothing is on this list."
+            "value" : "No apps added."
           }
         }
       }
@@ -3104,7 +3044,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Focus treats a full-screen window as a presentation and stays quiet. Put an app here when that is wrong for it."
+            "value" : "Focus stays quiet when an app is full screen. Add apps here if you still want nudges while they are full screen."
           }
         }
       }
@@ -3116,7 +3056,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Not presentations"
+            "value" : "Allow nudges in full screen"
           }
         }
       }
@@ -3176,7 +3116,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Two files: your data, and your settings."
+            "value" : "Export your activity data and settings as separate files."
           }
         }
       }
@@ -3188,7 +3128,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Export My Data…"
+            "value" : "Export my data…"
           }
         }
       }
@@ -3200,7 +3140,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Export Settings…"
+            "value" : "Export settings…"
           }
         }
       }
@@ -3212,7 +3152,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Take it with you"
+            "value" : "Export and import"
           }
         }
       }
@@ -3236,7 +3176,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Import Settings…"
+            "value" : "Import settings…"
           }
         }
       }
@@ -3248,7 +3188,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Anything older is deleted once a day."
+            "value" : "Focus checks once a day and deletes records older than this limit."
           }
         }
       }
@@ -3272,7 +3212,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "How long Focus keeps this"
+            "value" : "Keep records for"
           }
         }
       }
@@ -3320,7 +3260,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Reveal Data Store in Finder"
+            "value" : "Show data file in Finder"
           }
         }
       }
@@ -3332,7 +3272,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Everything Focus Sentinel knows about you stays on this Mac. There is no account, no sync, no telemetry and no analytics, and the app ships with no network entitlement at all. Your priorities, sessions and rules live in one local file:"
+            "value" : "Your data stays on this Mac. Focus has no account or sync and sends no usage reports. Your priorities, sessions and rules are stored here:"
           }
         }
       }
@@ -3344,7 +3284,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Data store"
+            "value" : "Data file"
           }
         }
       }
@@ -3404,7 +3344,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Focus works this out on your Mac, from the app in front and the rules you wrote. What you read here is the same judgement it acts on."
+            "value" : "Focus checks the active app against your rules on this Mac. This is the result it uses to decide whether to nudge you."
           }
         }
       }
@@ -3416,7 +3356,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "What Focus thinks right now"
+            "value" : "Current assessment"
           }
         }
       }
@@ -3428,7 +3368,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nothing is holding Focus back. It starts with the quiet menu-bar signal and only opens a panel if the drift keeps up."
+            "value" : "Focus can nudge you now. It starts with the menu bar icon and opens a panel if unrelated activity continues."
           }
         }
       }
@@ -3440,7 +3380,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nothing judged yet."
+            "value" : "No assessment yet."
           }
         }
       }
@@ -3488,7 +3428,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Focus needs something to work on."
+            "value" : "Enter a priority first."
           }
         }
       }
@@ -3541,6 +3481,1062 @@
         }
       }
     },
+    "settings.tunings.heading" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. The Intervention pane section holding every dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Timings and thresholds"
+          }
+        }
+      }
+    },
+    "settings.tunings.explanation" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Explanation under the tunings heading.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Every number Focus decides with. The shipped value is shown beside each one; a dial you have turned is marked."
+          }
+        }
+      }
+    },
+    "settings.tunings.family.interventions" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Tunings subsection: questions, nudges, budgets.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Interruptions"
+          }
+        }
+      }
+    },
+    "settings.tunings.family.drift" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Tunings subsection: drift timing.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drift and return"
+          }
+        }
+      }
+    },
+    "settings.tunings.family.relevance" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Tunings subsection: text comparison thresholds.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Relevance"
+          }
+        }
+      }
+    },
+    "settings.tunings.shipped" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. The shipped value beside a dial, with the value substituted.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shipped: %@"
+          }
+        }
+      }
+    },
+    "settings.tunings.resetAll" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Button that deletes every override.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reset All to Shipped Values"
+          }
+        }
+      }
+    },
+    "settings.privacy.grant.accessibility" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Switch that lets the app ask macOS for Accessibility (focus-exdi.4).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let Focus ask for Accessibility"
+          }
+        }
+      }
+    },
+    "settings.privacy.grant.accessibility.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the Accessibility switch.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Accessibility would let Focus read window titles and the address of the page you are on. Switching this on asks macOS; macOS asks you."
+          }
+        }
+      }
+    },
+    "settings.privacy.grant.screenCapture" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Switch that lets the app ask macOS for Screen Recording.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let Focus ask for Screen Recording"
+          }
+        }
+      }
+    },
+    "settings.privacy.grant.screenCapture.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the Screen Recording switch.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Screen Recording would let Focus read the pixels of what is in front of you. Switching this on asks macOS; macOS asks you."
+          }
+        }
+      }
+    },
+    "settings.privacy.grant.unused" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Warning beside a switch whose grant nothing in this build reads.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing in this version reads what this would unlock."
+          }
+        }
+      }
+    },
+    "settings.privacy.grants.explanation" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Explanation under the grants heading.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus asks macOS for nothing unless you switch it on here. Everything above works without any of these, and switching one off stops Focus using it."
+          }
+        }
+      }
+    },
+    "settings.privacy.grants.heading" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Heading of the opt-in grants section on the Privacy pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permissions you can give Focus"
+          }
+        }
+      }
+    },
+    "settings.privacy.watching.awayAfter" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Privacy pane dial: the idle threshold (focus-exdi.3).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Treat me as away after"
+          }
+        }
+      }
+    },
+    "settings.privacy.watching.awayAfter.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the away dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No keyboard or mouse for this long, and Focus stops counting time and stays quiet until you are back."
+          }
+        }
+      }
+    },
+    "settings.privacy.watching.microphone" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Privacy pane switch: microphone suppression.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A running microphone keeps Focus quiet"
+          }
+        }
+      }
+    },
+    "settings.privacy.watching.microphone.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the microphone switch.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A call is not a distraction. Switch this off and a nudge may arrive mid-call."
+          }
+        }
+      }
+    },
+    "settings.privacy.watching.launchContext" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Privacy pane switch: open the context pack on session start.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open the context pack when a session starts"
+          }
+        }
+      }
+    },
+    "settings.privacy.watching.launchContext.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the launch-context switch.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The apps, sites and files on the priority’s list open with the session."
+          }
+        }
+      }
+    },
+    "settings.tunings.lower" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Accessibility label of the minus button beside a dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lower"
+          }
+        }
+      }
+    },
+    "settings.tunings.raise" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Accessibility label of the plus button beside a dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Raise"
+          }
+        }
+      }
+    },
+    "settings.tunings.resetOne" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Button beside one dial that returns it to the shipped value.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reset"
+          }
+        }
+      }
+    },
+    "settings.tunings.unit.seconds" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. A span in seconds, with the number substituted.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ s"
+          }
+        }
+      }
+    },
+    "settings.tunings.unit.minutes" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. A span in whole minutes, with the number substituted.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ min"
+          }
+        }
+      }
+    },
+    "settings.tuning.queryDwellThreshold" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the queryDwellThreshold dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Before a question"
+          }
+        }
+      }
+    },
+    "settings.tuning.queryDwellThreshold.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the queryDwellThreshold dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How long an app has to be in front before Focus may ask about it."
+          }
+        }
+      }
+    },
+    "settings.tuning.queryCooldown" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the queryCooldown dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Between questions"
+          }
+        }
+      }
+    },
+    "settings.tuning.queryCooldown.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the queryCooldown dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The shortest gap between two questions."
+          }
+        }
+      }
+    },
+    "settings.tuning.mandateCooldown" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the mandateCooldown dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Between nudges"
+          }
+        }
+      }
+    },
+    "settings.tuning.mandateCooldown.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the mandateCooldown dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The shortest gap between two nudges about the same app."
+          }
+        }
+      }
+    },
+    "settings.tuning.escalationDwell" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the escalationDwell dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Before the next step"
+          }
+        }
+      }
+    },
+    "settings.tuning.escalationDwell.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the escalationDwell dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How long a nudge stands before the next rung may follow it."
+          }
+        }
+      }
+    },
+    "settings.tuning.snoozeFirst" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the snoozeFirst dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "First snooze length"
+          }
+        }
+      }
+    },
+    "settings.tuning.snoozeFirst.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the snoozeFirst dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The shortest of the three snooze buttons."
+          }
+        }
+      }
+    },
+    "settings.tuning.snoozeSecond" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the snoozeSecond dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Second snooze length"
+          }
+        }
+      }
+    },
+    "settings.tuning.snoozeSecond.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the snoozeSecond dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The middle snooze button."
+          }
+        }
+      }
+    },
+    "settings.tuning.snoozeThird" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the snoozeThird dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Third snooze length"
+          }
+        }
+      }
+    },
+    "settings.tuning.snoozeThird.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the snoozeThird dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The longest snooze button."
+          }
+        }
+      }
+    },
+    "settings.tuning.dailyQueryCap" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the dailyQueryCap dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Questions about one task, per day"
+          }
+        }
+      }
+    },
+    "settings.tuning.dailyQueryCap.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the dailyQueryCap dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "After this many, Focus stops asking about that task until tomorrow."
+          }
+        }
+      }
+    },
+    "settings.tuning.dailyQueryCapAllPriorities" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the dailyQueryCapAllPriorities dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Questions per day"
+          }
+        }
+      }
+    },
+    "settings.tuning.dailyQueryCapAllPriorities.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the dailyQueryCapAllPriorities dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Across every task."
+          }
+        }
+      }
+    },
+    "settings.tuning.dailyAccusationCap" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the dailyAccusationCap dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nudges per day"
+          }
+        }
+      }
+    },
+    "settings.tuning.dailyAccusationCap.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the dailyAccusationCap dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "After this many, Focus stays quiet until tomorrow."
+          }
+        }
+      }
+    },
+    "settings.tuning.dailyInterruptionCap" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the dailyInterruptionCap dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Interruptions per day"
+          }
+        }
+      }
+    },
+    "settings.tuning.dailyInterruptionCap.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the dailyInterruptionCap dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Questions and nudges share this one budget."
+          }
+        }
+      }
+    },
+    "settings.tuning.reservedAccusationUnits" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the reservedAccusationUnits dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Budget kept back for a nudge"
+          }
+        }
+      }
+    },
+    "settings.tuning.reservedAccusationUnits.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the reservedAccusationUnits dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Interruptions a question may never spend, so the last one is always a nudge."
+          }
+        }
+      }
+    },
+    "settings.tuning.ignoredQueryBackoff" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the ignoredQueryBackoff dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unanswered questions before a pause"
+          }
+        }
+      }
+    },
+    "settings.tuning.ignoredQueryBackoff.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the ignoredQueryBackoff dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "After this many go unanswered, questions stop for a while."
+          }
+        }
+      }
+    },
+    "settings.tuning.ignoredAccusationBackoff" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the ignoredAccusationBackoff dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ignored nudges before a pause"
+          }
+        }
+      }
+    },
+    "settings.tuning.ignoredAccusationBackoff.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the ignoredAccusationBackoff dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "After this many are ignored, the ladder drops back to the menu bar."
+          }
+        }
+      }
+    },
+    "settings.tuning.backoffSpan" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the backoffSpan dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Length of that pause"
+          }
+        }
+      }
+    },
+    "settings.tuning.backoffSpan.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the backoffSpan dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How long questions or nudges stay off after being ignored."
+          }
+        }
+      }
+    },
+    "settings.tuning.pausePreset" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the pausePreset dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pause preset"
+          }
+        }
+      }
+    },
+    "settings.tuning.pausePreset.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the pausePreset dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The fixed span the Pause action offers."
+          }
+        }
+      }
+    },
+    "settings.tuning.sustainedDriftThreshold" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the sustainedDriftThreshold dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drift counts after"
+          }
+        }
+      }
+    },
+    "settings.tuning.sustainedDriftThreshold.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the sustainedDriftThreshold dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How long an unrelated app has to be in front before it counts as drift."
+          }
+        }
+      }
+    },
+    "settings.tuning.driftResetGrace" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the driftResetGrace dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Return counts after"
+          }
+        }
+      }
+    },
+    "settings.tuning.driftResetGrace.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the driftResetGrace dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How long you have to be back before a return counts."
+          }
+        }
+      }
+    },
+    "settings.tuning.lookBackSpan" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the lookBackSpan dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Look-back window"
+          }
+        }
+      }
+    },
+    "settings.tuning.lookBackSpan.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the lookBackSpan dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How far back Focus looks when it decides what you were doing."
+          }
+        }
+      }
+    },
+    "settings.tuning.maximumLookBackEvents" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the maximumLookBackEvents dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Events kept in the look-back"
+          }
+        }
+      }
+    },
+    "settings.tuning.maximumLookBackEvents.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the maximumLookBackEvents dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How many app switches the look-back window holds."
+          }
+        }
+      }
+    },
+    "settings.tuning.returnAnchorDwell" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the returnAnchorDwell dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "An app becomes an anchor after"
+          }
+        }
+      }
+    },
+    "settings.tuning.returnAnchorDwell.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the returnAnchorDwell dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Time in an app before a detour from it is measured against it."
+          }
+        }
+      }
+    },
+    "settings.tuning.detourExtension" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the detourExtension dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Extra grace on an anchored detour"
+          }
+        }
+      }
+    },
+    "settings.tuning.detourExtension.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the detourExtension dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Added to the drift threshold when you leave an anchor."
+          }
+        }
+      }
+    },
+    "settings.tuning.minimumTokenLength" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the minimumTokenLength dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shortest word Focus reads"
+          }
+        }
+      }
+    },
+    "settings.tuning.minimumTokenLength.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the minimumTokenLength dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Words shorter than this are ignored when comparing text."
+          }
+        }
+      }
+    },
+    "settings.tuning.minimumStrongTokenLength" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the minimumStrongTokenLength dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shortest strong word"
+          }
+        }
+      }
+    },
+    "settings.tuning.minimumStrongTokenLength.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the minimumStrongTokenLength dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A match on a word this long counts as a medium signal."
+          }
+        }
+      }
+    },
+    "settings.tuning.minimumOverlapTokens" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the minimumOverlapTokens dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Words that must overlap"
+          }
+        }
+      }
+    },
+    "settings.tuning.minimumOverlapTokens.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the minimumOverlapTokens dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How many words your priority and the app must share."
+          }
+        }
+      }
+    },
+    "settings.tuning.minimumPriorityContentTokens" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the minimumPriorityContentTokens dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Words a priority needs"
+          }
+        }
+      }
+    },
+    "settings.tuning.minimumPriorityContentTokens.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the minimumPriorityContentTokens dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A priority shorter than this is not judged at all."
+          }
+        }
+      }
+    },
+    "settings.tuning.minimumNegativeBasisItems" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the minimumNegativeBasisItems dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Context items before absence counts"
+          }
+        }
+      }
+    },
+    "settings.tuning.minimumNegativeBasisItems.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the minimumNegativeBasisItems dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How many apps or sites you must have named before not being on the list means anything."
+          }
+        }
+      }
+    },
+    "settings.tuning.maximumExplanationTokens" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the maximumExplanationTokens dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Words in an explanation"
+          }
+        }
+      }
+    },
+    "settings.tuning.maximumExplanationTokens.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the maximumExplanationTokens dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The most words a verdict explains itself with."
+          }
+        }
+      }
+    },
+    "settings.tuning.similarityRelevantCeiling" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the similarityRelevantCeiling dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Similarity that counts as related"
+          }
+        }
+      }
+    },
+    "settings.tuning.similarityRelevantCeiling.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the similarityRelevantCeiling dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Closer than this and the on-device comparison may back a related verdict."
+          }
+        }
+      }
+    },
+    "settings.tuning.languageConfidenceFloor" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the languageConfidenceFloor dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confidence the text is English"
+          }
+        }
+      }
+    },
+    "settings.tuning.languageConfidenceFloor.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the languageConfidenceFloor dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Below this, the similarity comparison does not run."
+          }
+        }
+      }
+    },
+    "settings.tuning.similarityCacheCapacity" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Label of the similarityCacheCapacity dial on the Intervention pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Similarity cache size"
+          }
+        }
+      }
+    },
+    "settings.tuning.similarityCacheCapacity.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the similarityCacheCapacity dial.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How many comparisons are kept in memory."
+          }
+        }
+      }
+    },
+    "shell.cockpit.openHistory" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Button on the cockpit’s Recent tab that opens the History window (focus-1rj7).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show Today’s History…"
+          }
+        }
+      }
+    },
     "shell.cockpit.openSettings" : {
       "comment" : "Cockpit button that opens the Settings window.",
       "extractionState" : "manual",
@@ -3548,7 +4544,43 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Open Settings"
+            "value" : "Open settings"
+          }
+        }
+      }
+    },
+    "shell.cockpit.tab.details" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. The cockpit’s second tab: the session in full, context and rules (focus-1rj7).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Details"
+          }
+        }
+      }
+    },
+    "shell.cockpit.tab.now" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. The cockpit’s first tab: what needs doing and how long (focus-1rj7).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Now"
+          }
+        }
+      }
+    },
+    "shell.cockpit.tab.recent" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. The cockpit’s third tab: recent priorities (focus-1rj7).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recent"
           }
         }
       }
@@ -3560,7 +4592,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Local data store is open and versioned at schema 1.0.0."
+            "value" : "Data file is open."
           }
         }
       }
@@ -3572,7 +4604,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Local data store could not be opened. Nothing will be saved this session."
+            "value" : "Focus could not open your data file. Changes will not be saved."
           }
         }
       }
@@ -3596,7 +4628,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Anything you capture now — priorities, sessions, rules — is lost when you quit. Quit and reopen once the file is reachable again."
+            "value" : "Changes to priorities, sessions and rules will be lost when you quit. Reopen Focus once the data file is accessible."
           }
         }
       }
@@ -3608,7 +4640,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "It tried to open %@"
+            "value" : "Data file: %@"
           }
         }
       }
@@ -3632,7 +4664,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Focus Sentinel could not open its local data store, so it is running on a temporary one held in memory."
+            "value" : "Focus could not open your data file. It is using temporary storage for this session."
           }
         }
       }
@@ -3644,7 +4676,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The last change could not be saved. Your earlier work is still on disk."
+            "value" : "Focus could not save the last change. Earlier changes are still saved."
           }
         }
       }
@@ -3656,7 +4688,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Show History"
+            "value" : "Show history"
           }
         }
       }
@@ -3680,7 +4712,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Everything it records stays on this Mac, here:"
+            "value" : "Focus stores your data on this Mac:"
           }
         }
       }
@@ -3692,7 +4724,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "It asks for no permissions. Nothing here needs Screen Recording or Accessibility."
+            "value" : "Focus does not request Screen Recording or Accessibility permission in this version."
           }
         }
       }
@@ -3704,7 +4736,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "It never reads window titles, web addresses, file paths, document names, or anything typed."
+            "value" : "Focus does not read window titles, full web addresses, file paths, document names or anything you type."
           }
         }
       }
@@ -3716,7 +4748,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "It reads which application is in front. When a browser offers it without asking for a permission, it also reads the site \u2014 as its host name, and nothing more."
+            "value" : "Focus reads which app is active. If a browser shares its site without a permission request, Focus reads the host name only."
           }
         }
       }
@@ -3740,7 +4772,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Not Now"
+            "value" : "Not now"
           }
         }
       }
@@ -3752,7 +4784,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Open at Login"
+            "value" : "Open at login"
           }
         }
       }
@@ -3776,7 +4808,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Focus Sentinel keeps one commitment in front of you and speaks up when the screen stops matching it. It reads which application is frontmost and nothing else \u2014 no window titles, no addresses, no file names, nothing typed \u2014 it asks for no permissions, and everything it records stays on this Mac."
+            "value" : "Focus keeps track of your current priority and nudges you when the active app appears unrelated. It reads the active app and, when available without a permission request, the browser site's host name. It does not read window titles, full web addresses, file paths or anything you type. Your data stays on this Mac."
           }
         }
       }
@@ -3788,7 +4820,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Add Files to Context…"
+            "value" : "Add files to context…"
           }
         }
       }
@@ -3812,7 +4844,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Close Window"
+            "value" : "Close window"
           }
         }
       }
@@ -3836,7 +4868,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Answer No, Unrelated"
+            "value" : "Answer no, unrelated"
           }
         }
       }
@@ -3848,7 +4880,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Answer Not Now"
+            "value" : "Answer not now"
           }
         }
       }
@@ -3860,7 +4892,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Answer Yes, Add It"
+            "value" : "Answer yes, add it"
           }
         }
       }
@@ -3872,7 +4904,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hide All Overlays"
+            "value" : "Hide all overlays"
           }
         }
       }
@@ -3884,7 +4916,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "New Priority"
+            "value" : "New priority"
           }
         }
       }
@@ -3896,7 +4928,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pause Watching"
+            "value" : "Pause watching"
           }
         }
       }
@@ -3908,7 +4940,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Show Focus in the Menu Bar"
+            "value" : "Show Focus in the menu bar"
           }
         }
       }
@@ -3920,7 +4952,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Snooze Nudge"
+            "value" : "Snooze nudge"
           }
         }
       }
@@ -3932,7 +4964,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mark as Relevant"
+            "value" : "Mark as relevant"
           }
         }
       }
@@ -3968,7 +5000,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "File Menu"
+            "value" : "File menu"
           }
         }
       }
@@ -3980,7 +5012,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Help Menu"
+            "value" : "Help menu"
           }
         }
       }
@@ -3992,7 +5024,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "View Menu"
+            "value" : "View menu"
           }
         }
       }
@@ -4004,7 +5036,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Keyboard Shortcuts"
+            "value" : "Keyboard shortcuts"
           }
         }
       }
@@ -4016,7 +5048,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "These are the shortcuts Focus Sentinel adds. Everything else in the menu bar is the standard Mac set."
+            "value" : "Focus adds these shortcuts to the standard Mac shortcuts."
           }
         }
       }
@@ -4052,7 +5084,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Added to this priority’s rules."
+            "value" : "Added to this priority's rules."
           }
         }
       }
@@ -4064,7 +5096,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nothing has happened yet today."
+            "value" : "No activity recorded today."
           }
         }
       }
@@ -4088,7 +5120,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Every interruption, every question, and every app Focus watched go past without saying anything."
+            "value" : "Today's nudges, questions and recorded activity, including times when Focus stayed quiet."
           }
         }
       }
@@ -4124,7 +5156,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Said you had drifted"
+            "value" : "Flagged unrelated activity"
           }
         }
       }
@@ -4160,7 +5192,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Watched, said nothing"
+            "value" : "No nudge"
           }
         }
       }
@@ -4184,7 +5216,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Priorities are shown in the words they carry now. Editing a priority does not keep the earlier wording."
+            "value" : "History uses the current wording of each priority. Earlier wording is not saved."
           }
         }
       }
@@ -4244,7 +5276,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Resume Watching"
+            "value" : "Resume watching"
           }
         }
       }
@@ -4309,6 +5341,28 @@
         }
       }
     },
+    "shell.nudge.snoozeCustom" : {
+      "comment": "Custom quiet duration control, requested by the owner on 9 September 2026.",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Custom…"
+          }
+        }
+      }
+    },
+    "shell.nudge.snoozeCustomMinutes" : {
+      "comment": "Custom quiet duration control, requested by the owner on 9 September 2026.",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Minutes, 1 to 1,440"
+          }
+        }
+      }
+    },
     "shell.nudge.snoozeCountdown" : {
       "comment" : "Spoken form of the nudge panel's snooze countdown. %@ is a rendered duration.",
       "extractionState" : "manual",
@@ -4340,7 +5394,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Keyboard Shortcuts"
+            "value" : "Keyboard shortcuts"
           }
         }
       }

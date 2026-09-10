@@ -70,7 +70,7 @@ APP="$DD/Build/Products/Debug/FocusSentinel.app"
 # here and in the run summary; until it is fixed, clicking by title is impossible and every
 # selection below is verified by reading the radio button's value back.
 typeset -a APPEARANCE_OPTIONS
-APPEARANCE_OPTIONS=("Match System" "Light" "Dark")
+APPEARANCE_OPTIONS=("Match system" "Light" "Dark")
 
 mkdir -p -- "$EVIDENCE_DIR" "$LOG_DIR" || exit 1
 
@@ -382,8 +382,8 @@ fi
 # that it was replaced by a real destination rather than merely renamed.
 
 note "Help → Focus Sentinel Help"
-if click_menu_item "Help" "Focus Sentinel Help" && await_window "Keyboard Shortcuts"; then
-    capture_front "help-shortcuts.png" "Keyboard Shortcuts"
+if click_menu_item "Help" "Focus Sentinel Help" && await_window "Keyboard shortcuts"; then
+    capture_front "help-shortcuts.png" "Keyboard shortcuts"
     close_front_window
 else
     NOTES+=("the Help item did not open the Keyboard Shortcuts window")
@@ -410,7 +410,7 @@ fi
 # --- 9 · leave the app as it was found -----------------------------------------------------------
 
 note "restoring the appearance preference to Match System"
-set_appearance "Match System" || NOTES+=("could not restore the Match System appearance")
+set_appearance "Match system" || NOTES+=("could not restore the Match System appearance")
 
 cleanup
 

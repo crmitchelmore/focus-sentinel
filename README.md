@@ -176,9 +176,33 @@ microphone, input monitoring, location, contacts, calendar — and each row carr
 that would mean the app can ask, the grant-free reading it really does make (the control, without
 which "no request selector" is the same green a binary that dropped the framework would produce),
 the capability it publishes, and the states that capability may be in. Five of the ten families
-the app touches in no way at all; `microphoneActivity` is the one capability allowed to read
-`available`, because `kAudioDevicePropertyDeviceIsRunningSomewhere` is a device property any
-process may read and it yields no audio.
+the app touches in no way at all; `microphoneActivity` reads `available` because
+`kAudioDevicePropertyDeviceIsRunningSomewhere` is a device property any process may read and it
+yields no audio.
+
+**The doctrine became conditional on 2026-09-09** (`focus-exdi.4`, the owner's ruling of the day
+before). PD-1's absolute form — *this app asks for no permission of any kind* — is replaced by:
+
+> **The app asks for nothing unless the person switched that ask on.** On a default install
+> nothing is asked, nothing prompts, and the capability table reads exactly as it did before.
+> The only route from "not asked" to "asked" is a control the person operated.
+
+Two grants may be switched on, in Settings ▸ Privacy: Accessibility and Screen Recording. Neither
+is read by anything in this build — `titleToken` rules are retired and pixel capture is parked —
+and the pane says so beside each switch, because a switch that takes a permission and spends it
+on nothing is the worst version of this change. What replaced the ban, rather than merely
+lifting it:
+
+- the two families' `banned` columns now name their **use** selectors only, which are still
+  absent from both configurations' Mach-O, because nothing reads what the grants unlock;
+- their **request** selectors moved to `Config/grant-request-sites.txt`, which confines them to
+  one named file — `SystemGrantRequester.swift` — and `check-grants.sh` proves that confinement
+  from the source side while `check-forbidden.sh`'s R-33 proves it from the other, exempting that
+  one path and nothing wider;
+- the running-app reading is unchanged and still says what it always said: on a default install
+  the request counter is zero and no consent dialog arrived while the app was up;
+- `GrantGate` in `FocusCore` is the single place the rule lives, so "asked for something nobody
+  switched on" is one function's behaviour rather than a property of every call site.
 
 `release-artefact` is the D-09 disk image, and it is described under **Distribution posture**
 below.

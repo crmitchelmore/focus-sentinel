@@ -135,6 +135,67 @@ bd prime                # Refresh Beads context
 Driver notes from the work itself, newest first. `CLAUDE.md` points here; keep the two files
 mirrored for anything substantive.
 
+### 2026-09-09 — merging the companion identity into the settings branch (focus-oqsx)
+
+- **A size-derived test fixture rots silently when the surface it measures changes shape.**
+  `NudgeHostDisplayChangeTests.displayTooSmall` built "a display too small" by taking one panel
+  margin off the panel's measured height. That was a stranded display when an overflowing
+  surface scrolled whole; under focus-din's three-way overflow the middle answer keeps the
+  actions in the viewport, so the identity round's taller context moved the boundary and the
+  suite began asserting a withdrawal that correctly no longer happens. Derive such a fixture
+  from the production arithmetic — `NudgePanelController.overflowIfPlaced(on:)` — rather than
+  from a number that was once one margin.
+- **When a merge brings two spellings of one product decision, put it in the file the digest
+  covers.** The snooze spans arrived spelled in the panel and spelled in the policy; the policy
+  wins, because that file is where a reader looks for a threshold and where `PolicyTuning`
+  offers it as a dial.
+- **A self-hosted macOS runner installed as a service cannot see the screen.** `svc.sh install`
+  writes `SessionCreate` into the LaunchAgent, which puts every job in its own security session
+  with no window server: `CGWindowListCopyWindowInfo` answers zero rows where an ordinary shell
+  in the desktop session answers dozens. Five self-check assertions depend on real windows —
+  the grant-free window list, the authorisation-surface scan and its export, and the sensing
+  cascade — so the gate cannot pass as a service. Removing that one key and reloading the agent
+  fixes it, at the cost of CI jobs sharing the logged-in desktop; Chris approved that on
+  10 September 2026, and the original plist is backed up at
+  `/Volumes/Memory/archive/focus-runner-plist.backup`. Reloading needs `svc.sh stop`/`start`,
+  not `launchctl bootstrap`, and the server holds the old session for a minute or two afterwards
+  — "a session for this runner already exists" is that, and it clears on its own.
+- **The snapshot lane needs gigabytes of scratch and fails quietly without them.** Every render
+  is written to `$TMPDIR/focus-snapshots/<checkout path>` as well as compared, so one pass leaves
+  around a gigabyte per checkout. On a full disk the writes fail with `NSCocoaErrorDomain
+  Code=640` and the run reports them as test issues — 99 of them in one pass here — which reads
+  like a hundred broken pictures rather than a full volume. Run `~/bin/disk-cleanup.sh` before a
+  recording pass, and check `df -h /` when a lane fails in a way that makes no sense.
+- **A red suite after a merge is not automatically a regression.** Prove which side moved
+  before changing either: this one passed at the pre-merge commit, reproduced alone, and the
+  other branch had touched neither file — the shape of the surface had changed, not its
+  behaviour.
+
+### 2026-09-09 — settings, dials and the conditional grant doctrine (focus-exdi)
+
+- **A `Toggle`, a `Picker` and a columns-style `Form` all rasterise wrong.** Under
+  `ImageRenderer` a switch draws SwiftUI's yellow "unrenderable view" placeholder, so a new
+  switch on a snapshot-covered pane turns every baseline into yellow bars; and a columns `Form`
+  at a committed width pushes its label gutter off the left edge. Draw a switch as a bordered
+  button carrying its own glyph, and a settings pane as a column of sections.
+- **Adding a case to a settings action enum touches six places**, and the compiler finds only
+  four: the pane's `verb`/`vocabulary`/`allDeclared`, `AppComposition.perform`,
+  `DataPortability.performPortability`'s exhaustive switch, the two total switches in
+  `InterventionSettingsTests`, `RetentionControlTests`' vocabulary list, **and**
+  `scripts/self-check.sh`'s `privacyActionsDeclared` — that last one only fails at gate time.
+- **A new stored preference costs a schema version**, and the count is pinned in four places:
+  `StoreTests` (entities, twice), `MigrationV<n>Tests`, `StoreExportTests`' manifest version,
+  and `Config/export-field-classification.txt`'s `SCHEMA`/`ENTITIES` header plus a row per
+  column. Prefer a new entity in a new version that re-declares nothing.
+- **The zero-grant doctrine is now conditional** (owner's ruling): the app may ask for
+  Accessibility and Screen Recording, and only where the person switched that ask on. The ban
+  was replaced rather than lifted — use selectors still banned, request selectors confined to
+  one registered file, runtime reading unchanged. See README under `grants`, and never add a
+  second request site: two lints fail on it, from opposite directions.
+- **A lint that greps source must strip comments first.** Three files explain in prose why the
+  app does not call the request APIs; a confinement check that could not tell prose from code
+  made the honest explanation the violation.
+
 ### 2026-09-08 — e11c cockpit hierarchy and colour (focus-6uya)
 
 - **Re-recording snapshot baselines.** `FOCUS_SNAPSHOT_RECORD=1 swift test` is a dead route on

@@ -58,7 +58,12 @@ public struct NudgeJudgement: Sendable, Equatable {
     /// — a question may come at half the dwell an accusation needs, because it is cheaper, but
     /// never instantly. A question the moment somebody opens an application is a question about
     /// a keystroke, not about their work.
-    public var dwellSatisfied: Bool { dwelled >= InterventionPolicy.queryDwellThreshold }
+    public var dwellSatisfied: Bool { dwellSatisfied(tunings: .shipped) }
+
+    /// The same reading under a person's dials (focus-exdi).
+    public func dwellSatisfied(tunings: PolicyTunings) -> Bool {
+        dwelled >= tunings.duration(.queryDwellThreshold)
+    }
 }
 
 /// **What the world is doing**, at the moment the app is deciding whether to speak.
@@ -445,7 +450,8 @@ public struct NudgeDecider: Sendable {
         _ judgement: NudgeJudgement,
         surroundings: NudgeSurroundings,
         memory: NudgeMemory,
-        preferences: NudgePreferences
+        preferences: NudgePreferences,
+        tunings: PolicyTunings = .shipped
     ) -> NudgeDecision {
         if let mandate = judgement.eligibility.mandate {
             return accuse(
@@ -453,14 +459,16 @@ public struct NudgeDecider: Sendable {
                 judgement: judgement,
                 surroundings: surroundings,
                 memory: memory,
-                preferences: preferences
+                preferences: preferences,
+                tunings: tunings
             )
         }
         return ask(
             judgement: judgement,
             surroundings: surroundings,
             memory: memory,
-            preferences: preferences
+            preferences: preferences,
+            tunings: tunings
         )
     }
 
@@ -483,10 +491,11 @@ public struct NudgeDecider: Sendable {
         judgement: NudgeJudgement,
         surroundings: NudgeSurroundings,
         memory: NudgeMemory,
-        preferences: NudgePreferences
+        preferences: NudgePreferences,
+        tunings: PolicyTunings
     ) -> NudgeDecision {
         var ladder = memory.ladder
-        ladder.reduce(.mandate(mandate), now: surroundings.monotonic)
+        ladder.reduce(.mandate(mandate), now: surroundings.monotonic, tunings: tunings)
 
         // `budgetPermits: true` here, deliberately: the ladder is being asked *which* rung is
         // next, and the fatigue controller's answer depends on the rung — a held ladder still
@@ -501,7 +510,7 @@ public struct NudgeDecider: Sendable {
         // **speaking** passes a rung that says nothing; `LadderSilence` is that vocabulary and
         // `retainsTheAmbientRung` is where the rule is applied to it.
         var rung: LadderRung
-        switch ladder.step(at: surroundings.monotonic, budgetPermits: true) {
+        switch ladder.step(at: surroundings.monotonic, budgetPermits: true, tunings: tunings) {
         case .rung(let climbing):
             rung = climbing
         case .silent(let silence):
@@ -528,7 +537,8 @@ public struct NudgeDecider: Sendable {
             fatigue: memory.fatigue,
             snoozes: memory.snoozes,
             correctedSubjects: memory.correctedSubjects,
-            now: surroundings.monotonic
+            now: surroundings.monotonic,
+            tunings: tunings
         )
 
         // **The refusal was read against the rung the ladder wanted to CLIMB to, and nobody asked
@@ -559,7 +569,8 @@ public struct NudgeDecider: Sendable {
                 fatigue: memory.fatigue,
                 snoozes: memory.snoozes,
                 correctedSubjects: memory.correctedSubjects,
-                now: surroundings.monotonic
+                now: surroundings.monotonic,
+                tunings: tunings
             )
         }
 
@@ -627,7 +638,8 @@ public struct NudgeDecider: Sendable {
         judgement: NudgeJudgement,
         surroundings: NudgeSurroundings,
         memory: NudgeMemory,
-        preferences: NudgePreferences
+        preferences: NudgePreferences,
+        tunings: PolicyTunings
     ) -> NudgeDecision {
         let subject = querySubject(for: judgement)
 
@@ -639,7 +651,8 @@ public struct NudgeDecider: Sendable {
             fatigue: memory.fatigue,
             snoozes: memory.snoozes,
             correctedSubjects: memory.correctedSubjects,
-            now: surroundings.monotonic
+            now: surroundings.monotonic,
+            tunings: tunings
         )
 
         // The slot's answer does not depend on which question is offered — anything already
@@ -652,7 +665,7 @@ public struct NudgeDecider: Sendable {
             uncertainty: judgement.uncertainty,
             drift: judgement.drift,
             dwelled: judgement.dwelled,
-            dwellSatisfied: judgement.dwellSatisfied,
+            dwellSatisfied: judgement.dwellSatisfied(tunings: tunings),
             phase: surroundings.phase,
             status: judgement.status,
             isUserIdle: surroundings.isUserIdle,

@@ -24,7 +24,12 @@ import Foundation
 /// yields a **non-empty** clause list: an explanation nobody can read is an explanation that
 /// will be deleted the first time somebody tidies up.
 public struct ExplanationBuilder: Sendable {
-    public init() {}
+    /// The dials the builder reads (focus-exdi): the words an explanation may spend.
+    public var tunings: PolicyTunings
+
+    public init(tunings: PolicyTunings = .shipped) {
+        self.tunings = tunings
+    }
 
     /// - Parameter mixedSubjectCount: how many *distinct* unrelated subjects the drift
     ///   accumulated across, counted by the caller from the transition window. `DriftSubject`
@@ -65,7 +70,8 @@ public struct ExplanationBuilder: Sendable {
             stage: resolution.stage,
             band: resolution.band,
             clauses: clauses,
-            stamp: stamp
+            stamp: stamp,
+            tunings: tunings
         )
     }
 

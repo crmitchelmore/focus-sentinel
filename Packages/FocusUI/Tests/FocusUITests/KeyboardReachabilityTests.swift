@@ -333,7 +333,8 @@ struct KeyboardReachabilityTests {
         // The ritual banner sits above everything else while it is shown, so it comes first
         // in the order. The hero is the top of the column under it, so correcting the
         // priority's wording comes next, then its definition of done and completion action.
-        // Change Priority opens capture below those existing-commitment controls.
+        // Keeping the context and Change Priority open capture below those existing-commitment
+        // controls.
         #expect(FocusTraversal.firstField(in: .cockpit) == .cockpitRitualDismiss)
         #expect(
             FocusTraversal.next(after: .cockpitRitualDismiss, in: .cockpit) == .cockpitEditIntent
@@ -341,7 +342,12 @@ struct KeyboardReachabilityTests {
         #expect(
             FocusTraversal.next(after: .cockpitEditIntent, in: .cockpit) == .cockpitDoneWhen
         )
-        #expect(FocusTraversal.next(after: .cockpitComplete, in: .cockpit) == .cockpitCaptureField)
+        // A new timebox on the same desk sits with the verb it varies (focus-1rj7), so it is
+        // reached between completing the commitment and replacing it.
+        #expect(FocusTraversal.next(after: .cockpitComplete, in: .cockpit) == .cockpitSameContext)
+        #expect(
+            FocusTraversal.next(after: .cockpitSameContext, in: .cockpit) == .cockpitCaptureField
+        )
         #expect(FocusTraversal.firstField(in: .quickCapture) == .quickCaptureField)
         #expect(FocusTraversal.firstField(in: .completionSheet) == .completionShipped)
         #expect(FocusTraversal.firstField(in: .settingsGeneral) == .generalAppearancePicker)

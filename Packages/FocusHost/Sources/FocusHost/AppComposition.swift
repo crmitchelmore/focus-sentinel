@@ -494,6 +494,12 @@ public final class AppComposition {
             // second is what lets the loop refuse a press on a rung that is over.
             notifications?.handle(actionIdentifier: identifier, requestIdentifier: request)
         }
+
+        // **The switches, read before anything can be drawn** (focus-exdi.4). Here rather than in
+        // `startNudgeLoop()`, because the capability table is read by the settings window and the
+        // popover, which a person can open before a loop is running — and a table that said
+        // "not asked for" about a grant they gave would be the app forgetting an answer.
+        applyStoredGrantOptIns()
     }
 
     /// Seed the sensitive-application list and read both lists back.
@@ -685,6 +691,7 @@ public final class AppComposition {
         nudgeHost.observe(reduceMotion: appearance.traits.reduceMotion)
         // **And what the person set, read at launch too** (focus-z7g). Same moment, same reason.
         applyStoredInterventionPreferences()
+        applyStoredPolicyTunings()
         nudgeHost.currentSessionID = { [weak self] in self?.sessionHost.snapshot?.sessionID }
         nudgeHost.onCorrection = { [weak self] outcome, priorityID in
             self?.perform(outcome, priorityID: priorityID)
@@ -860,7 +867,7 @@ public final class AppComposition {
             idle: sensingHost.idleReading,
             idleThresholdSeconds: sensingHost.settings.idleThresholdInterval,
             media: sensingHost.mediaActivity,
-            mediaSuppressionEnabled: true,
+            mediaSuppressionEnabled: sensingHost.settings.mediaSuppressionEnabled,
             presentation: sensingHost.presentationState,
             // **Two facts, and the second one had no reading at all** (focus-zeq, P-131).
             //
@@ -1259,7 +1266,57 @@ public final class AppComposition {
             setRetentionWindow(window)
         case .exportData, .exportSettings, .importSettings:
             performPortability(action)
+        case .setSensingPaused(let paused):
+            sessionHost.setSensingPaused(paused)
+        case .setIdleThreshold(let seconds):
+            updateSensingSettings { $0.idleThresholdSeconds = seconds }
+        case .setMediaSuppression(let enabled):
+            updateSensingSettings { $0.mediaSuppressionEnabled = enabled }
+        case .setLaunchContextOnSessionStart(let enabled):
+            updateSensingSettings { $0.launchContextOnSessionStart = enabled }
+        case .setGrantOptIn(let grant, let isEnabled):
+            setGrantOptIn(grant, to: isEnabled)
         }
+    }
+
+    /// **Switch one grant's ask on or off** (focus-exdi.4).
+    ///
+    /// The row first, then the ask: a switch that failed to store must not leave a Mac holding a
+    /// grant the app has no record of having been given permission to want. Switching on asks
+    /// once, here, so the person sees macOS's dialog as the answer to the switch they just
+    /// operated rather than at some later moment they cannot connect to anything.
+    private func setGrantOptIn(_ grant: GrantOptIn, to isEnabled: Bool) {
+        do {
+            try FocusStore.setGrantOptIn(
+                grant,
+                to: isEnabled,
+                in: modelContainer.mainContext,
+                now: dateProvider.now
+            )
+        } catch {
+            logger.error("a grant switch could not be stored: \(error, privacy: .public)")
+            return
+        }
+        applyStoredGrantOptIns()
+        if isEnabled {
+            GrantGate.request(grant, optIns: grantOptIns, using: grantRequester)
+        }
+        refreshCockpit()
+    }
+
+    /// **One observer setting changed** (focus-exdi.3): the row first, then the running host,
+    /// so a write that fails leaves the host on what the store still says.
+    private func updateSensingSettings(_ change: (inout SensingSettingsValue) -> Void) {
+        var settings = sensingHost.settings
+        change(&settings)
+        do {
+            try FocusStore.setSensingSettings(settings, in: modelContainer.mainContext, now: dateProvider.now)
+        } catch {
+            logger.error("an observer setting could not be stored: \(error, privacy: .public)")
+            return
+        }
+        sensingHost.update(settings: settings)
+        refreshCockpit()
     }
 
     /// **Write the window, and sweep to it now** (F-115, focus-l7n).
@@ -1726,8 +1783,41 @@ public final class AppComposition {
         return disagreements
     }
 
-    /// What this Mac lets the app do, as the probe read it.
-    public var capabilities: CapabilityMatrix { sensingHost.capabilities }
+    /// **The one object allowed to ask macOS for a grant** (focus-exdi.4). Reached only through
+    /// `GrantGate`, which refuses unless the person switched that ask on.
+    let grantRequester = SystemGrantRequester()
+
+    /// **Which grants the person switched on**, held rather than re-read.
+    ///
+    /// A stored property, not a computed one: `capabilities` is read by the cockpit, the popover
+    /// and the settings window, and a SwiftData fetch on every read is a fetch on every frame
+    /// those surfaces draw. Loaded at launch and rewritten by the switch, which are the only two
+    /// moments it can change — the same shape `applyStoredPolicyTunings()` uses.
+    public private(set) var grantOptIns: GrantOptIns = .none
+
+    /// Read the switches from the store. At launch, and after one is operated.
+    func applyStoredGrantOptIns() {
+        grantOptIns = FocusStore.grantOptIns(in: modelContainer.mainContext)
+    }
+
+    /// What this Mac lets the app do, as the probe read it — with the two opt-in capabilities
+    /// answered by the gate rather than by the probe (focus-exdi.4). With nothing switched on
+    /// they read `notRequested`, which is exactly what the probe said before this existed.
+    public var capabilities: CapabilityMatrix {
+        let probed = sensingHost.capabilities
+        let optIns = grantOptIns
+        guard !optIns.asksForNothing else { return probed }
+        var matrix = probed
+        let now = dateProvider.now
+        for grant in GrantOptIn.allCases where optIns.isEnabled(grant) {
+            matrix = matrix.recording(
+                grant.capability,
+                as: GrantGate.state(of: grant, optIns: optIns, using: grantRequester),
+                at: now
+            )
+        }
+        return matrix
+    }
 
     /// What the engine actually concluded, for the verdict inspector (R-71).
     public var verdict: VerdictSnapshot? { relevanceHost.verdict }
@@ -2148,6 +2238,14 @@ public final class AppComposition {
     /// field is the shape that resets the other two to whatever that caller last saw, which is
     /// exactly why `setSensingPaused(_:in:now:)` exists as a named verb rather than as a
     /// read-modify-write at each call site.
+    /// **Every dial, read from the store and handed to both engines** (focus-exdi). At launch
+    /// and after every turn of a dial; the shipped constants when no row exists.
+    func applyStoredPolicyTunings() {
+        let tunings = FocusStore.policyTunings(in: modelContainer.mainContext)
+        relevanceHost.adopt(tunings)
+        nudgeHost.tunings = tunings
+    }
+
     private func persistInterventionPreferences() {
         do {
             try FocusStore.setInterventionPreferences(
@@ -2225,7 +2323,8 @@ public final class AppComposition {
             // row somebody had just removed, and a list of running applications is out of date
             // the moment an app quits.
             presentationExclusions: presentationExclusions(),
-            addableApplications: addablePresentationExclusions()
+            addableApplications: addablePresentationExclusions(),
+            tunings: nudgeHost.tunings
         )
     }
 
@@ -2297,6 +2396,25 @@ public final class AppComposition {
         // the store's own verbs, which are idempotent and tombstone-aware: adding twice is one
         // row, and removing a built-in leaves a tombstone rather than a gap the next launch
         // would re-seed. `SensitiveAppSeed.add` had **no shipping call site at all** before this.
+        case .setPolicyTuning(let tuning, let value):
+            do {
+                try FocusStore.setPolicyTuning(
+                    tuning,
+                    to: value,
+                    in: modelContainer.mainContext,
+                    now: dateProvider.now
+                )
+            } catch {
+                logger.error("a policy dial could not be stored: \(error, privacy: .public)")
+            }
+            applyStoredPolicyTunings()
+        case .resetPolicyTunings:
+            do {
+                try FocusStore.resetPolicyTunings(in: modelContainer.mainContext)
+            } catch {
+                logger.error("the policy dials could not be reset: \(error, privacy: .public)")
+            }
+            applyStoredPolicyTunings()
         case .addPresentationExclusion(let bundleID):
             writeExclusion { context, now in
                 _ = try SensitiveAppSeed.add(

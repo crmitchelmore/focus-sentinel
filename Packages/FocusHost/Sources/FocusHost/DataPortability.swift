@@ -188,7 +188,8 @@ extension AppComposition {
         case .importSettings:
             guard let url = chooseSettingsFile() else { return }
             outcome = readSettingsImport(from: url)
-        case .deleteEverything, .setRetentionWindow:
+        case .deleteEverything, .setRetentionWindow, .setSensingPaused, .setIdleThreshold,
+             .setMediaSuppression, .setLaunchContextOnSessionStart, .setGrantOptIn:
             return
         }
         lastPortabilityOutcome = outcome

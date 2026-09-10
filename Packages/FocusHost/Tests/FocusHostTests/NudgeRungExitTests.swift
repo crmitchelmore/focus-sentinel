@@ -273,12 +273,13 @@ struct NudgeRungExitTests {
             fixture.host.consider(NudgeHostFixture.unrelatedJudgement(subject: Self.drifted))
 
         case .displayStranded:
-            // The display is replaced by one that cannot hold the panel however it is placed, and
-            // the notification AppKit really posts is the thing that carries it in. The height is
-            // taken from the panel's own measurement rather than written down: what this row needs
-            // is a display too small for whatever the shipping accusation turns out to be.
-            let needed = fixture.panel.contentSize.height
-            fixture.panel.displays = { NudgeHostDisplayChangeTests.displayTooSmall(for: needed) }
+            // The display is replaced by one that cannot hold the panel's actions however it is
+            // placed, and the notification AppKit really posts is the thing that carries it in.
+            // The display is derived from the panel's own arithmetic rather than written down:
+            // what this row needs is one too small for whatever the shipping accusation turns out
+            // to be.
+            let stranding = NudgeHostDisplayChangeTests.displayTooSmall(for: fixture.panel)
+            fixture.panel.displays = { stranding }
             NudgeHostDisplayChangeTests.theDisplayConfigurationChanges()
 
         case .worldMovedOn:

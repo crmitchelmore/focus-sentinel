@@ -13,6 +13,14 @@
 #
 #     <family> · <banned> · <controls> · <capability> · <allowed states> · <note>
 #
+# AMENDED 2026-09-09 (focus-exdi.4, owner's ruling). Two families — accessibility and
+# screenRecording — may now be ASKED for, where the person switched the ask on in Settings. Their
+# `banned` columns therefore name the *use* selectors only, which are still banned because nothing
+# in this build reads what either grant unlocks; the request selectors moved to
+# `Config/grant-request-sites.txt`, which confines them to one named file and which
+# `check-grants.sh` folds over beside this table. The doctrine is now conditional and is stated in
+# `GrantOptIn`: the app asks for nothing unless the person switched that ask on.
+#
 #   family          one of the ten names below. The vocabulary is closed: `check-grants.sh`
 #                   carries the same ten and fails if the table names a different set, so a row
 #                   cannot be deleted, renamed or quietly merged into its neighbour.
@@ -42,8 +50,8 @@
 # device object, readable by any process, and it says only that *somebody* on this Mac is
 # recording. Capturing audio would need `AVCaptureDevice`, which is in this row's banned column.
 
-accessibility · AXIsProcessTrustedWithOptions,kAXTrustedCheckOptionPrompt,AXUIElementCopyAttributeValue,AXUIElementCreateApplication · _AXIsProcessTrusted · accessibilityWindowContext · notRequested,denied,restricted,unavailable · The app reads whether it is trusted and never asks to become trusted; the window title and tab address D-02 wanted are parked under PD-1.
-screenRecording · CGRequestScreenCaptureAccess,CGPreflightScreenCaptureAccess,SCShareableContent,CGWindowListCreateImage,CGDisplayStream · _CGWindowListCopyWindowInfo · screenCapture · notRequested,denied,restricted,unavailable · The window list gives geometry, layer and owner name without a grant; the one key in it that would need one is banned by SC-1, repository-wide and in seven build products, which is a stronger reading than this row could take and is why it is not repeated here.
+accessibility · AXUIElementCopyAttributeValue,AXUIElementCreateApplication,AXUIElementSetAttributeValue,AXObserverCreate,AXUIElementCopyAttributeValues · _AXIsProcessTrusted · accessibilityWindowContext · notRequested,denied,restricted,unavailable,available · The app reads whether it is trusted, and asks to become trusted only where the person switched that ask on in Settings (focus-exdi.4): available here means the person said yes and macOS agreed, never that the app took it. The window title and tab address D-02 wanted are still parked — nothing in this build reads them — so every USE selector above stays banned.
+screenRecording · SCShareableContent,CGWindowListCreateImage,CGDisplayStream,SCStreamConfiguration,CGDisplayCreateImage · _CGWindowListCopyWindowInfo · screenCapture · notRequested,denied,restricted,unavailable,available · The window list gives geometry, layer and owner name without a grant, and the one key in it that would need one is banned by SC-1 repository-wide and in seven build products. Pixel capture is asked for only where the person switched that ask on (focus-exdi.4) and is still read by nothing, so every capture selector above stays banned.
 automation · NSAppleScript,NSAppleEventDescriptor,AEDeterminePermissionToAutomateTarget,AESendMessage,OSAScript · NONE · NONE · NONE · The app drives no other application, so there is nothing to be automated and no Apple Event to send.
 notifications · requestAuthorizationWithOptions,addNotificationRequest,setNotificationCategories,UNNotificationRequest,UNMutableNotificationContent · currentNotificationCenter,getNotificationSettingsWithCompletionHandler · notifications · notRequested,denied,restricted,unavailable · U-2 took the notification rung off the ladder; what is left is reading the settings the person already chose, which prompts nobody.
 camera · AVCaptureDevice,AVCaptureSession,requestAccessForMediaType · _CMIOObjectGetPropertyData · cameraActivity · notRequested,denied,restricted,unavailable · CMIO property reads say whether a camera is running; opening one would need the grant and the app never opens one.

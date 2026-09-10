@@ -84,6 +84,10 @@ public struct Emphasis: Sendable, Equatable, Hashable {
 ///    developer's own System Settings. Injected, the snapshot lane sets each variant in one
 ///    line and the running app behaves identically.
 public enum DesignTokens {
+    /// White lettering on the fixed dark companion illustration. Increased Contrast uses
+    /// the adaptive Slate/Bench pair instead (CompanionHeader).
+    static let companionLettering = Color(nsColor: .white)
+
     // MARK: - Surfaces
 
     /// The fill a raised surface should use, given who raised it and under these traits.
@@ -273,37 +277,15 @@ public enum DesignTokens {
         /// role does, so that a call site's own `.fontWeight(_:)` still wins.
         var weight: Font.Weight? {
             switch self {
-            case .priorityHero: .medium
+            case .priorityHero: .semibold
             case .sectionHeading: .semibold
             default: nil
             }
         }
 
-        /// **The face this role is drawn in** (focus-w41, e11 direction §1.2).
-        ///
-        /// `.default` — SF Pro — everywhere but one place. System faces only, throughout: a
-        /// licensed face on an uninvited window reads as adware, and this app needs the
-        /// platform's borrowed authority far more than it needs a wordmark.
-        ///
-        /// **The exception, and why its boundary is the whole point.** The cockpit's priority
-        /// hero is the person's *own sentence*, standing alone, uncomposed — the one place in the
-        /// app where their words are not embedded in the app's. `.serif` resolves to New York, and
-        /// the change of face reads as a change of speaker with no inline mixing anywhere. It is
-        /// paired with `.medium` rather than the semibold this role used to force, because New
-        /// York carries at a weight where SF would look thin: the hero's prominence is already
-        /// guaranteed by being 1.6× the largest system role, so the weight is free to be the one
-        /// the face actually wants.
-        ///
-        /// Everywhere the task is quoted *inside* an app sentence it stays SF in curly quotes.
-        /// The boundary is load-bearing rather than a compromise — a semantic type system that
-        /// gave the person a face wherever they appear would put a serif inside the accusation
-        /// panel, and an uninvited window has no right to a voice of its own (§6).
-        var design: Font.Design {
-            switch self {
-            case .priorityHero: .serif
-            default: .default
-            }
-        }
+        /// The owner chose the companion direction's crisp system sans-serif across
+        /// surfaces. The priority keeps its larger size and stronger weight.
+        var design: Font.Design { .default }
 
         /// Whether this role is drawn semibold or heavier.
         ///
@@ -408,7 +390,7 @@ public enum DesignTokens {
 
         /// The window's own background.
         public static func windowBackground(for traits: AppearanceTraits) -> Color {
-            Color(nsColor: NSColor.windowBackgroundColor.resolved(for: traits))
+            role(.bench, for: traits)
         }
 
         /// The system separator.
@@ -427,11 +409,9 @@ public enum DesignTokens {
         /// `controlAccentColor` (see `accent(for:)`), because it is the person's colour and not
         /// the app's, and a Color Set would freeze it.
         ///
-        /// The neutral is biased cool, about five degrees toward green. Warm neutrals flatter,
-        /// and a *friend* who accuses you forty times a day is a bad friend where an *instrument*
-        /// that reports forty times is just an instrument. macOS chrome is itself a cool grey, so
-        /// a cool-green ground lets an uninvited panel read as furniture of the operating system
-        /// rather than as a third-party skin.
+        /// The owner-selected companion identity uses warm ivory grounds (focus-gl3x).
+        /// Spruce still identifies a question; Kiln identifies drift. Appearance variants
+        /// keep every label legible, including the high-contrast and dark surfaces.
         public enum Role: String, Sendable, CaseIterable, Hashable {
             /// The ground: window and panel backgrounds.
             case bench
@@ -498,12 +478,12 @@ public enum DesignTokens {
             /// The light value.
             public var lightValue: PaletteValue {
                 switch self {
-                case .bench: PaletteValue(0xF2, 0xF4, 0xF3)
+                case .bench: PaletteValue(0xFA, 0xF7, 0xF0)
                 case .slate: PaletteValue(0x1E, 0x24, 0x27)
                 case .mist: PaletteValue(0x5E, 0x68, 0x66)
                 case .spruce: PaletteValue(0x17, 0x6B, 0x73)
                 case .kiln: PaletteValue(0xB0, 0x6A, 0x10)
-                case .inlay: PaletteValue(0xE3, 0xE7, 0xE5)
+                case .inlay: PaletteValue(0xEB, 0xE7, 0xDF)
                 }
             }
 
@@ -522,12 +502,12 @@ public enum DesignTokens {
             /// The light value under Increase Contrast.
             public var lightHighContrastValue: PaletteValue {
                 switch self {
-                case .bench: PaletteValue(0xF4, 0xF6, 0xF5)
+                case .bench: PaletteValue(0xFF, 0xFD, 0xF7)
                 case .slate: PaletteValue(0x19, 0x1E, 0x20)
                 case .mist: PaletteValue(0x4D, 0x55, 0x54)
                 case .spruce: PaletteValue(0x13, 0x58, 0x5E)
                 case .kiln: PaletteValue(0x90, 0x57, 0x0D)
-                case .inlay: PaletteValue(0xE8, 0xEB, 0xEA)
+                case .inlay: PaletteValue(0xF0, 0xEC, 0xE4)
                 }
             }
 
@@ -785,8 +765,7 @@ extension View {
     /// actually drawn. It reaches both kinds of opacity on purpose: an uninvited panel is opaque
     /// because it landed over whatever the person was doing, and a summoned surface goes opaque
     /// because the person asked for Reduce Transparency — and in both cases what should appear
-    /// underneath the app's words is the app's own ground, cool-biased so it reads as furniture
-    /// of the operating system rather than as a third-party skin.
+    /// underneath the app's words is the app's own ground, shared with the companion identity in the other windows.
     @ViewBuilder
     public func shellSurface(
         _ fill: SurfaceFill,

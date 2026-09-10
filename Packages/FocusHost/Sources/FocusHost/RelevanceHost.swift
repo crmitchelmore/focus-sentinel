@@ -103,7 +103,8 @@ final class RelevanceHost {
     /// composed.
     var modelRungIsComposed: Bool { engine.ladder.canExecute(.onDeviceModel) }
 
-    private let builder: RuleSnapshotBuilder
+    private var builder: RuleSnapshotBuilder
+    private let scorer: SimilarityScorer
     private let priorities: PriorityStore
     private let ruleStore: any RuleStore
     private let monotonicClock: any MonotonicClock
@@ -205,8 +206,12 @@ final class RelevanceHost {
         monotonicClock: any MonotonicClock,
         normalizer: TokenNormalizer = TokenNormalizer(),
         scorer: SimilarityScorer = SimilarityScorer(),
-        modelRung: FocusModelRung? = FocusModelRung()
+        modelRung: FocusModelRung? = FocusModelRung(),
+        tunings: PolicyTunings = .shipped
     ) {
+        var normalizer = normalizer
+        normalizer.tunings = tunings
+        scorer.adopt(tunings)
         let availability = modelRung?.availability ?? .unknown
         // **Two gates, and the second is a measurement.** Availability is what this Mac can do;
         // `ModelTierRelease.composesTheRung` is whether the tier has earned a place in the
@@ -221,13 +226,15 @@ final class RelevanceHost {
             normalizer: normalizer,
             scorer: scorer,
             model: composed,
-            ladder: CascadeLadder(modelAvailable: composed != nil)
+            ladder: CascadeLadder(modelAvailable: composed != nil),
+            tunings: tunings
         )
         self.engine = engine
         self.ruleStore = ruleStore
         self.monotonicClock = monotonicClock
         self.priorities = PriorityStore(context: context)
         self.builder = RuleSnapshotBuilder(normalizer: normalizer, scorer: scorer)
+        self.scorer = scorer
         self.subjectSince = monotonicClock.elapsed
         self.snapshot = RuleSnapshot.empty(stamp: engine.stamp)
 
@@ -252,6 +259,16 @@ final class RelevanceHost {
     /// process and stage 7d asserts of the evaluation report — three legs, one set of committed
     /// literals (R-75.4).
     var policyDigest: String { RelevancePolicy.digestHex }
+
+    /// The dials the engine runs on (focus-exdi).
+    var tunings: PolicyTunings { engine.tunings }
+
+    /// Take a person's dials: the engine everywhere it reads one, and the snapshot builder,
+    /// whose normaliser holds the shortest-word dial by value.
+    func adopt(_ tunings: PolicyTunings) {
+        engine.adopt(tunings)
+        builder = RuleSnapshotBuilder(normalizer: TokenNormalizer(tunings: tunings), scorer: scorer)
+    }
 
     /// Stored rows this build declined to promote to a rung — legacy `scopeRaw == "session"`
     /// rows, which have no subject kind at all, and retired `scopeRaw == "titleToken"` rows, which

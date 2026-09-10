@@ -250,7 +250,7 @@ struct StoreExportTests {
         #expect(document.manifest.format == "focus-sentinel.data")
         #expect(document.manifest.version == StoreExport.formatVersion)
         #expect(document.manifest.generatedAt == Self.reference)
-        #expect(document.manifest.schemaVersion == 8)
+        #expect(document.manifest.schemaVersion == 10)
         #expect(document.manifest.fields == StoreExport.fields)
     }
 

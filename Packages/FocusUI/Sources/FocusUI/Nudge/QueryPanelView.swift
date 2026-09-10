@@ -223,11 +223,17 @@ public struct QueryPanelView: DecisionSurfaceContent {
 
     @ViewBuilder
     private var question: some View {
+        if provenance == .uninvited && textScale == .standard {
+            CompanionHeader {
+                NudgeText(.queryPanelHeading, voice: presentation.voice, role: .title2)
+            }
+        }
+
         NudgeText(
             .queryPanelTitle,
             voice: presentation.voice,
             arguments: [presentation.subject.displayName, presentation.task],
-            role: .headline
+            role: provenance == .uninvited ? .title2 : .headline
         )
         .foregroundStyle(DesignTokens.Palette.primaryText)
         .lineLimit(nil)
@@ -235,17 +241,21 @@ public struct QueryPanelView: DecisionSurfaceContent {
 
         // Why the app is asking. Not an apology and not a justification — a fact about what
         // it knows, which is the only thing that makes "I cannot tell" trustworthy.
-        ShellText(resource: presentation.reason.copyResource, role: .footnote)
+        ShellText(resource: presentation.reason.copyResource, role: supportingRole)
             .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
             .lineLimit(nil)
             .fixedSize(horizontal: false, vertical: true)
 
         // The scope, **before** the answer. A person who clicks "Yes" has been told what
         // the click writes.
-        NudgeText(.queryPanelScopeApp, voice: presentation.voice, role: .footnote)
+        NudgeText(.queryPanelScopeApp, voice: presentation.voice, role: supportingRole)
             .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
             .lineLimit(nil)
             .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var supportingRole: DesignTokens.FontRole {
+        provenance == .uninvited ? .callout : .footnote
     }
 
     private var answers: some View {
@@ -281,11 +291,12 @@ public struct QueryPanelView: DecisionSurfaceContent {
         // counting a question as asked that nobody could answer.
         if answer == presentation.primaryAnswer {
             plainAnswerButton(answer, wraps: wraps)
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(CompanionButtonStyle(prominent: true))
+                .tint(DesignTokens.Palette.role(.spruce, for: traits))
                 .nudgeActionTarget(answer.rawValue)
         } else {
             plainAnswerButton(answer, wraps: wraps)
-                .buttonStyle(.bordered)
+                .buttonStyle(CompanionButtonStyle())
                 .nudgeActionTarget(answer.rawValue)
         }
     }
@@ -300,6 +311,8 @@ public struct QueryPanelView: DecisionSurfaceContent {
                 // because an answer drawn past the edge of the panel is one they cannot click.
                 .lineLimit(wraps ? nil : 1)
                 .fixedSize(horizontal: !wraps, vertical: wraps)
+                .padding(.vertical, provenance == .uninvited ? 7 : 0)
+                .frame(maxWidth: .infinity)
         }
     }
 }
