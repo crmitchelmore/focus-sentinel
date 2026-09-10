@@ -105,6 +105,52 @@ jobs:
           FOCUS_UPDATER_CONFIG="$XCODE_CONFIGURATION" scripts/check-boundaries.sh
           scripts/entitlement-check.sh "$APP" Release
 
+      # **Signing material, two ways.** The runner's own login keychain (a Developer ID identity
+      # and a notarytool profile named in Config/ReleasePipeline.json), or the same five secrets
+      # justspeaktoit's release workflow uses — a base64 .p12, its password, and an App Store
+      # Connect API key with its id and issuer — imported into a temporary keychain for this job
+      # and deleted afterwards. With no secrets set, the steps fall through to the keychain.
+      - name: Import signing material from secrets, if provided
+        if: steps.receipt.outputs.status != 'verified' && env.HAS_P12 == 'true'
+        shell: zsh {0}
+        env:
+          HAS_P12: ${{ secrets.APPLE_DEVELOPER_ID_APPLICATION != '' }}
+          APPLE_DEVELOPER_ID_APPLICATION: ${{ secrets.APPLE_DEVELOPER_ID_APPLICATION }}
+          APPLE_DEVELOPER_ID_APPLICATION_PASSWORD: ${{ secrets.APPLE_DEVELOPER_ID_APPLICATION_PASSWORD }}
+        run: |
+          KEYCHAIN_PATH="$RUNNER_TEMP/focus-signing.keychain-db"
+          KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          CERT="$RUNNER_TEMP/developer-id.p12"
+          print -rn -- "$APPLE_DEVELOPER_ID_APPLICATION" | base64 --decode > "$CERT"
+          security import "$CERT" -P "$APPLE_DEVELOPER_ID_APPLICATION_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH" >/dev/null
+          rm -f -- "$CERT"
+          # The temporary keychain joins the search list in front of the login keychain, so
+          # `codesign --sign "Developer ID Application"` finds the imported identity first.
+          security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | tr -d '"')
+          echo "FOCUS_SIGNING_KEYCHAIN=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
+
+      - name: Install the notarisation API key from secrets, if provided
+        if: steps.receipt.outputs.status != 'verified' && env.HAS_KEY == 'true'
+        shell: zsh {0}
+        env:
+          HAS_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY != '' }}
+          APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          umask 077
+          KEY_PATH="$RUNNER_TEMP/notary.p8"
+          print -rn -- "$APP_STORE_CONNECT_API_KEY" | base64 --decode > "$KEY_PATH"
+          {
+            echo "FOCUS_NOTARY_KEY_PATH=$KEY_PATH"
+            echo "FOCUS_NOTARY_KEY_ID=$APP_STORE_CONNECT_KEY_ID"
+            echo "FOCUS_NOTARY_ISSUER_ID=$APP_STORE_CONNECT_ISSUER_ID"
+          } >> "$GITHUB_ENV"
+
       - name: Sign with Developer ID, notarise, staple
         if: steps.receipt.outputs.status != 'verified'
         shell: zsh {0}
@@ -142,6 +188,15 @@ jobs:
         if: env.RELEASE_TRAIN == 'alpha'
         shell: zsh {0}
         run: python3 scripts/release-train.py publish-alpha --tag "${{ inputs.manifest }}"
+
+      - name: Remove the temporary keychain and key
+        if: always()
+        shell: zsh {0}
+        run: |
+          if [[ -n "${FOCUS_SIGNING_KEYCHAIN:-}" ]]; then
+            security delete-keychain "$FOCUS_SIGNING_KEYCHAIN" || true
+          fi
+          rm -f -- "$RUNNER_TEMP/notary.p8"
 
       - name: Free the build directory
         if: always()

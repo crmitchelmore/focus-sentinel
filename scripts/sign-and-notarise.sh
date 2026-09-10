@@ -4,10 +4,16 @@
 #   scripts/sign-and-notarise.sh <FocusSentinel.app> [<identity>] [<notarytool keychain profile>]
 #
 # The identity and the profile default to Config/ReleasePipeline.json's `signing` block. Both
-# must already be in the login keychain of the Mac this runs on: the identity as a Developer ID
-# Application certificate with its private key, the profile stored by
+# must already be in a keychain on the search list of the Mac this runs on: the identity as a
+# Developer ID Application certificate with its private key, the profile stored by
 # `xcrun notarytool store-credentials <profile>`. This script asks for neither and stores
 # nothing; a Mac without them fails at the first step, by name.
+#
+# The notarisation credentials may instead arrive as an App Store Connect API key, the way
+# justspeaktoit's release workflow supplies them: FOCUS_NOTARY_KEY_PATH (a .p8 file),
+# FOCUS_NOTARY_KEY_ID and FOCUS_NOTARY_ISSUER_ID. When all three are set they are used in place
+# of the keychain profile. `release-mac.yml` sets them from the repository's secrets when those
+# secrets exist, and leaves them unset otherwise.
 #
 # THE ORDER IS SPARKLE'S. The framework carries its own executables — Autoupdate and the
 # Updater app, and XPC services where the distribution includes them — and every one of them has
@@ -71,8 +77,16 @@ print "== notarytool submit --wait"
 ZIP="${APP%.app}.zip"
 rm -f -- "$ZIP"
 ditto -c -k --keepParent -- "$APP" "$ZIP" || exit 1
-xcrun notarytool submit "$ZIP" --keychain-profile "$PROFILE" --wait || {
-    print -u2 "FAIL notarisation was not accepted; the log is at: xcrun notarytool log <id> --keychain-profile $PROFILE"
+typeset -a NOTARY_AUTH
+if [[ -n "${FOCUS_NOTARY_KEY_PATH:-}" && -n "${FOCUS_NOTARY_KEY_ID:-}" && -n "${FOCUS_NOTARY_ISSUER_ID:-}" ]]; then
+    NOTARY_AUTH=(--key "$FOCUS_NOTARY_KEY_PATH" --key-id "$FOCUS_NOTARY_KEY_ID" --issuer "$FOCUS_NOTARY_ISSUER_ID")
+    print "notarising with the App Store Connect API key $FOCUS_NOTARY_KEY_ID"
+else
+    NOTARY_AUTH=(--keychain-profile "$PROFILE")
+    print "notarising with the keychain profile $PROFILE"
+fi
+xcrun notarytool submit "$ZIP" "${NOTARY_AUTH[@]}" --wait || {
+    print -u2 "FAIL notarisation was not accepted; read the log with: xcrun notarytool log <id> <the same credentials>"
     exit 1
 }
 rm -f -- "$ZIP"

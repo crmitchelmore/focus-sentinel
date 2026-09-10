@@ -1368,11 +1368,15 @@ repository.
 Nothing in the flow signs with the gate's ad-hoc identity or claims Gatekeeper acceptance for
 it. What the runner needs before either train can ship is in "What still gates the trains".
 
-**What still gates the trains.** Two things the repository cannot supply: a *Developer ID
-Application* identity in the runner's login keychain, with a `notarytool` keychain profile named
-`focus-notary` (`Config/ReleasePipeline.json` names both), and a public route to the feed — the
-feed URLs above are GitHub release assets, which are only fetchable without credentials while
-the repository is public, or from a public mirror that carries the same release tags.
+**What still gates the trains.** One thing the repository cannot supply: signing material.
+`release-mac.yml` takes it either from the runner's login keychain — a *Developer ID Application*
+identity plus a `notarytool` keychain profile named `focus-notary`, both named in
+`Config/ReleasePipeline.json` — or from the same five repository secrets justspeaktoit's release
+workflow uses (`APPLE_DEVELOPER_ID_APPLICATION` as a base64 `.p12`,
+`APPLE_DEVELOPER_ID_APPLICATION_PASSWORD`, `APP_STORE_CONNECT_API_KEY` as a base64 `.p8`,
+`APP_STORE_CONNECT_KEY_ID`, `APP_STORE_CONNECT_ISSUER_ID`), imported into a temporary keychain
+for the job and deleted afterwards. The feed URLs above are GitHub release assets, which are
+fetchable without credentials because the repository is public.
 
 ## Privacy posture
 
