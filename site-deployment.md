@@ -4,6 +4,11 @@ The static marketing site lives in `site/`. No build step is required. The inten
 Cloudflare Pages project is `focus-sentinel`, with production branch `main` and
 custom domain `focus-sentinel.win`.
 
+Cloudflare account: `761de6a0aa83a8ad709981bd30d9b03f`. The first deployment was
+uploaded from a local ZIP through the Cloudflare dashboard on 12 September 2026.
+Chris prefers API credentials for future deployments; use an API token for local
+CLI and CI deployment. CI credentials have not yet been provisioned.
+
 Authenticate locally with Wrangler or supply `CLOUDFLARE_API_TOKEN` and
 `CLOUDFLARE_ACCOUNT_ID` through the environment. Never commit credentials.
 
