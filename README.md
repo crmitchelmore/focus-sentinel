@@ -449,6 +449,34 @@ sentences among the strings it draws and both resolve to real text, and — read
 process on a default store — that the stored choice is off and the updater was never started
 (`softwareUpdateChecksStored`, `softwareUpdaterStarted`).
 
+## The walkthrough (focus-u6de)
+
+The first-run sheet is page one and says what the app watches; nothing else was ever on it.
+Its *Continue* opens a tour of eleven steps on the real cockpit rather than a description of
+one: a floating panel (`WalkthroughPanelController`) sits beside the control each step is
+about, a borderless window (`WalkthroughHighlightWindow`) outlines the control with a nub
+toward the panel, and the instruction asks the person to do the thing there — type the
+priority and press Return, choose a timebox, press Start, open Details, click the Focus mark
+in the menu bar, press Open Settings. The cockpit's sections report where they were laid out
+through `.walkthroughAnchor(_:)`, most specific first, so the priority step points at the
+capture field while it is open and at *Change priority* while it is not.
+
+A step is done when the app's state says so, not when a button was pressed:
+`FocusHost.WalkthroughTour` takes a reading on entering the step and compares it with the
+priority host's state, the session host's snapshot, the popover's showing and the Settings
+window's drawing on every later change. *Do it for me* performs the same host call the control
+would, for somebody who would rather watch; the two nudge steps draw an accusation and a
+question on a panel of the tour's own, whose buttons close it and write nothing. The demo
+priority is a real task and stays in Recent; finishing — the last step's button, the panel's
+close box or Escape — completes the session the tour started, if it started one, and
+re-activates the priority that was active before, or clears.
+
+Replay from Help ▸ Show walkthrough (⇧⌘T) or Settings ▸ General. The snapshot lane
+photographs the sheet and every step at both text sizes (`walkthrough*.png`);
+`WalkthroughTests` holds the step order, the anchors and the catalog bijection;
+`WalkthroughTourTests` drives the tour through the composition root and holds that the
+person's own action, not the tour's, is what marks a step done.
+
 ## Taking it away
 
 Two documents, and they are deliberately not one scope of the same thing (F-110, F-134).

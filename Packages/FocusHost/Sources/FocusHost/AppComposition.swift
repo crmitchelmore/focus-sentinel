@@ -682,7 +682,10 @@ public final class AppComposition {
         // difference between a nudge somebody read and a nudge sitting behind a click — and it is
         // **one** wire for both kinds: it was `popoverPresentedTheQuestion()`, so the accusation
         // half of the badge had no moment at which it could learn it had been looked at.
-        menuBar.onPopoverDidShow = { [weak self] in self?.nudgeHost.popoverPresented() }
+        menuBar.onPopoverDidShow = { [weak self] in
+            self?.nudgeHost.popoverPresented()
+            self?.runningTour?.popoverShown()
+        }
         // **The charge is a consequence of the write** (focus-1b5, focus-nrl).
         //
         // The third wire, and the one whose absence is the shape three rounds of this defect
@@ -751,6 +754,12 @@ public final class AppComposition {
             guard let self else { return }
             self.relevanceHost.invalidateSnapshot()
             self.noticeLifecycleTransitions()
+        }
+        // **The tour reads every priority change** (focus-u6de): a step is done when the state
+        // says so, and the definition of done and the timebox change the state without changing
+        // the snapshot key, so the invalidation above would not carry them.
+        priorityHost.onStateChanged = { [weak self] in
+            self?.runningTour?.noticeChange()
         }
 
         // Every command reaches the nudge loop as well as the cockpit, through **one** queue in
@@ -1263,6 +1272,47 @@ public final class AppComposition {
         refreshCockpit()
     }
 
+    // MARK: - The walkthrough's tour (focus-u6de)
+
+    /// **The interactive half of the walkthrough**, built on first use: a launch that never
+    /// presses Continue never builds a panel for it. It performs against the hosts this object
+    /// already holds, so a demo is the product rather than a picture of it.
+    private(set) lazy var walkthroughTour: WalkthroughTour = {
+        walkthroughTourBuilt = true
+        return WalkthroughTour(
+            priorityHost: priorityHost,
+            sessionHost: sessionHost,
+            menuBar: menuBar,
+            traits: { [weak self] in self?.appearanceTraits(for: .cockpit) ?? .systemDefault },
+            voice: { [weak self] in self?.interventionSettings.voice ?? .standard },
+            openSettings: { [weak self] tab in
+                guard let self else { return }
+                self.selectSettingsTab(tab)
+                self.settingsOpenRequests += 1
+                self.settingsMenuItemFound = ShellSettingsMenu.open()
+            }
+        )
+    }()
+
+    /// Whether the tour has ever been built, so the notices below can ask it without building
+    /// it: reading a `lazy var` to check a flag would create the panel on the first refresh.
+    private var walkthroughTourBuilt = false
+
+    /// What the walkthrough sheet's Continue performs: bring the cockpit forward and open the
+    /// tour beside it.
+    public func startWalkthroughTour() {
+        guard !hasDeletedEverything else { return }
+        _ = FocusCommandCenter.shared.requestCockpit()
+        walkthroughTour.start()
+        refreshCockpit()
+    }
+
+    /// The tour, if one is running: the three notices below report to it and nothing else does.
+    private var runningTour: WalkthroughTour? {
+        guard walkthroughTourBuilt, walkthroughTour.isRunning else { return nil }
+        return walkthroughTour
+    }
+
     // MARK: - Opening at login (D-12, focus-odz.4)
 
     /// **What the launch-at-login controls perform.**
@@ -1383,6 +1433,7 @@ public final class AppComposition {
         nudgeHost.stopForStoreDeletion()
         sessionHost.onChange = nil
         priorityHost.onSnapshotInvalidated = nil
+        priorityHost.onStateChanged = nil
         menuBar.onAction = nil
         menuBar.onPopoverDidShow = nil
         menuBar.onGlyphWritten = nil
@@ -2032,6 +2083,7 @@ public final class AppComposition {
     /// reason `note(_:)` exists (focus-tzj.6).
     func noteSettingsRendering(_ rendering: ShellSettingsRendering) {
         settingsSinks = rendering
+        runningTour?.settingsRendered()
     }
 
     /// **What the Settings window's controls will actually reach**, as the window handed it back
@@ -2602,6 +2654,8 @@ public final class AppComposition {
                 showsFirstRunExplanation: showsFirstRunExplanation
             )
         )
+        // **The tour reads every refresh** (focus-u6de): a step is done when the state says so.
+        runningTour?.noticeChange()
     }
 
     /// Hand the engine one observation, if there is anything to observe.

@@ -151,6 +151,9 @@ enum ShellConnectionFactory {
             onFirstRunExplanationDismissed: { [weak root] in
                 root?.dismissFirstRunScreen()
             },
+            onWalkthroughContinued: { [weak root] in
+                root?.startWalkthroughTour()
+            },
             generation: generation,
             didRender: { [weak root] in root?.note(.cockpitRendered) },
             didDraw: { [weak root] values in root?.record(values, for: .cockpit) }

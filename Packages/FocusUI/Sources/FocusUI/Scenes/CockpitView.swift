@@ -127,6 +127,9 @@ public struct CockpitView: View {
     private let onLaunchAtLoginOffer: (LaunchAtLoginOfferAction) -> Void
     /// What the first-run explanation's one button performs (focus-odz.7).
     private let onFirstRunExplanationDismissed: () -> Void
+    /// What the walkthrough sheet's Continue performs after the sheet is down (focus-u6de): the
+    /// root opens the tour panel beside this window.
+    private let onWalkthroughContinued: () -> Void
 
     public init(
         state: CockpitState,
@@ -136,6 +139,7 @@ public struct CockpitView: View {
         lastActiveBundleID: String? = nil,
         onLaunchAtLoginOffer: @escaping (LaunchAtLoginOfferAction) -> Void = { _ in },
         onFirstRunExplanationDismissed: @escaping () -> Void = {},
+        onWalkthroughContinued: @escaping () -> Void = {},
         commandCenter: FocusCommandCenter = .shared,
         tab: CockpitTab = .now
     ) {
@@ -146,6 +150,7 @@ public struct CockpitView: View {
         self.lastActiveBundleID = lastActiveBundleID
         self.onLaunchAtLoginOffer = onLaunchAtLoginOffer
         self.onFirstRunExplanationDismissed = onFirstRunExplanationDismissed
+        self.onWalkthroughContinued = onWalkthroughContinued
         self.commandCenter = commandCenter
         self.didRender = nil
         self.generation = 0
@@ -169,6 +174,7 @@ public struct CockpitView: View {
         self.lastActiveBundleID = connection.lastActiveBundleID
         self.onLaunchAtLoginOffer = connection.onLaunchAtLoginOffer
         self.onFirstRunExplanationDismissed = connection.onFirstRunExplanationDismissed
+        self.onWalkthroughContinued = connection.onWalkthroughContinued
         self.commandCenter = commandCenter
         self.didRender = connection.didRender
         self.generation = connection.generation
@@ -224,6 +230,7 @@ public struct CockpitView: View {
 
             if showsCapture {
                 capture
+                    .walkthroughAnchor(.captureField)
                     .transition(traits.reduceMotion ? .identity : .opacity.combined(with: .move(edge: .top)))
             }
 
@@ -358,8 +365,14 @@ public struct CockpitView: View {
         .sheet(isPresented: walkthroughPresentation) {
             WalkthroughSheet(
                 storeLocation: state.storeLocation,
-                dismiss: dismissWalkthrough,
-                escapeDismisses: !state.showsFirstRunExplanation
+                // Continue: the sheet goes down and the tour comes up beside the window.
+                dismiss: {
+                    dismissWalkthrough()
+                    onWalkthroughContinued()
+                },
+                escapeDismisses: !state.showsFirstRunExplanation,
+                // Escape on a replay: down, and no tour.
+                cancel: dismissWalkthrough
             )
         }
         .sheet(isPresented: $isCompleting) {
@@ -680,6 +693,7 @@ public struct CockpitView: View {
                     if newValue != .cockpitDoneWhen { commitDoneWhen(priority) }
                 }
                 .accessibilityLabel(Text(ShellStrings.resource(.priorityDoneWhenLabel)))
+                .walkthroughAnchor(.doneWhenField)
             }
         }
         // **The definition of done, reported from the section that draws it** (focus-7ow, F-08).
@@ -714,6 +728,7 @@ public struct CockpitView: View {
             choose: wiring.setTimebox,
             focus: $focus
         )
+        .walkthroughAnchor(.timeboxControl)
     }
 
     // MARK: - The session (F-98, F-99, F-101)
@@ -748,6 +763,7 @@ public struct CockpitView: View {
         // session, started at another time and with another timebox, is the same phase
         // (focus-7ow).
         .shellRendered(.sessionDetail, ShellValueDigest.describe(state.session))
+        .walkthroughAnchor(.sessionControls)
     }
 
     // MARK: - Per-task rules (F-11)
@@ -760,6 +776,7 @@ public struct CockpitView: View {
             remove: wiring.removeRule,
             focus: $focus
         )
+        .walkthroughAnchor(.rules)
     }
 
     // MARK: - Context pack (F-09)
@@ -776,6 +793,7 @@ public struct CockpitView: View {
             importFilesToken: fileImportToken,
             focus: $focus
         )
+        .walkthroughAnchor(.contextPack)
     }
 
     /// The capture field is always open when there is nothing to work on — that is the only
@@ -916,6 +934,7 @@ public struct CockpitView: View {
                 ShellText(.priorityActionChange)
             }
             .disabled(actions == nil)
+            .walkthroughAnchor(.changePriorityButton)
         }
     }
 
@@ -1074,6 +1093,7 @@ public struct CockpitView: View {
             // SwiftUI's yellow "unrenderable view" placeholder — so a link here would mean
             // committing a picture of a broken render and calling it a baseline.
             .focused($focus, equals: .cockpitOpenSettings)
+            .walkthroughAnchor(.openSettingsButton)
         }
     }
 
@@ -1164,8 +1184,11 @@ public struct CockpitView: View {
         .buttonStyle(.plain)
         .accessibilityAddTraits(isOpen ? [.isSelected] : [])
         // One focus identity for the bar, carried by the open tab (see `FocusField.cockpitTabs`).
+        // The Details tab is also where the tour points when the desk is a tab away (focus-u6de).
         if isOpen {
             button.focused($focus, equals: .cockpitTabs)
+        } else if candidate == .details {
+            button.walkthroughAnchor(.detailsTab)
         } else {
             button
         }

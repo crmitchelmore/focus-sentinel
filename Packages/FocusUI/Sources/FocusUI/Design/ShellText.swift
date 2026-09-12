@@ -135,7 +135,42 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case settingsShowWalkthroughNote = "settings.general.showWalkthroughNote"
     case walkthroughBack = "shell.walkthrough.back"
     case walkthroughNext = "shell.walkthrough.next"
-    case walkthroughDone = "shell.walkthrough.done"
+    /// The sheet's one button: close it and open the tour.
+    case walkthroughContinue = "shell.walkthrough.continue"
+    /// The sentence above it that says what Continue opens.
+    case walkthroughContinueNote = "shell.walkthrough.continueNote"
+    /// The floating tour panel's window title.
+    case walkthroughPanelTitle = "shell.walkthrough.panel.title"
+    // The tour's steps (focus-u6de): one instruction and one "what changed" sentence each, and
+    // the two fallback buttons every step shares.
+    case walkthroughDoItForMe = "shell.walkthrough.doItForMe"
+    case walkthroughShowItAgain = "shell.walkthrough.showItAgain"
+    case walkthroughActionFinishDemo = "shell.walkthrough.action.finishDemo"
+    case walkthroughStepSetPriority = "shell.walkthrough.step.setPriority"
+    case walkthroughDoneSetPriority = "shell.walkthrough.done.setPriority"
+    case walkthroughStepDoneWhen = "shell.walkthrough.step.doneWhen"
+    case walkthroughDoneDoneWhen = "shell.walkthrough.done.doneWhen"
+    case walkthroughStepTimebox = "shell.walkthrough.step.timebox"
+    case walkthroughDoneTimebox = "shell.walkthrough.done.timebox"
+    case walkthroughStepStartSession = "shell.walkthrough.step.startSession"
+    case walkthroughDoneStartSession = "shell.walkthrough.done.startSession"
+    case walkthroughStepDesk = "shell.walkthrough.step.desk"
+    case walkthroughDoneDesk = "shell.walkthrough.done.desk"
+    case walkthroughStepRules = "shell.walkthrough.step.rules"
+    case walkthroughDoneRules = "shell.walkthrough.done.rules"
+    case walkthroughStepNudge = "shell.walkthrough.step.nudge"
+    case walkthroughDoneNudge = "shell.walkthrough.done.nudge"
+    case walkthroughStepQuestion = "shell.walkthrough.step.question"
+    case walkthroughDoneQuestion = "shell.walkthrough.done.question"
+    case walkthroughStepMenuBar = "shell.walkthrough.step.menuBar"
+    case walkthroughDoneMenuBar = "shell.walkthrough.done.menuBar"
+    case walkthroughStepSettings = "shell.walkthrough.step.settings"
+    case walkthroughDoneSettings = "shell.walkthrough.done.settings"
+    case walkthroughStepFinish = "shell.walkthrough.step.finish"
+    /// The demo priority's own words. Authored here so they read in the person's language, then
+    /// stored as a task's intent like any sentence a person typed.
+    case walkthroughDemoIntent = "shell.walkthrough.demo.intent"
+    case walkthroughDemoDoneWhen = "shell.walkthrough.demo.doneWhen"
     /// `%1$@ of %2$@`: the page's ordinal and the page count, each already formatted for the
     /// person's locale. Only the word between them is authored here.
     case walkthroughPosition = "shell.walkthrough.position"

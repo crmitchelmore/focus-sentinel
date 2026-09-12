@@ -166,9 +166,40 @@ mirrored for anything substantive.
   Not diagnosed; the walkthrough's lane-gated string assertions were checked by compiling the
   catalog with `xcrun xcstringstool compile` and reading the entries instead. Do not read an
   "Executed 0 tests" FocusUITests run as green.
-- **The snapshot lane records a missing baseline and then fails.** The seven walkthrough pages
-  replace `firstRunSheet`, so their eleven-variant baselines do not exist until somebody runs
-  the snapshot lane, which is a UI-test lane and needs the owner's confirmation first.
+- **The snapshot lane records one missing size per pass.** A component's test case stops at
+  its first missing baseline, and each component has a standard and an accessibilityLarge
+  picture, so twelve new components took three passes of
+  `xcodebuild -scheme FocusUnitTests -only-testing:FocusUITests test`: the first wrote the
+  standard sizes and failed, the second wrote the large sizes and failed, the third was green.
+  Read the failure text — "no committed baseline … the candidate has been written" is progress,
+  a pixel mismatch is not.
+- **The walkthrough is a coach-mark tour on the real cockpit, and a step is done when the state
+  says so** (focus-u6de). The sheet's Continue opens `WalkthroughPanelController`, a floating
+  panel that `WalkthroughPlacement` puts beside the control the step is about and
+  `WalkthroughHighlightWindow` outlines; the controls report their frames through
+  `.walkthroughAnchor(_:)` into `WalkthroughAnchorRegistry`, most specific first (the capture
+  field, else *Change priority*; the context pack, else the Details tab). `FocusHost.WalkthroughTour`
+  takes a baseline reading on entering a step and reads completion off `PriorityHost.state`,
+  `SessionHost.snapshot`, the popover's `onPopoverDidShow` and `noteSettingsRendering` — never
+  off the button. The reading arrives through `PriorityHost.onStateChanged`, added because
+  `onSnapshotInvalidated` fires only for the four snapshot-key facts and a definition of done
+  or a timebox changes neither. *Do it for me* performs the same host call the control would.
+- **Three things a floating tour panel must do, each measured on this machine.** (1) Only move
+  when the step, the target or the done state changed — `refreshCockpit()` runs every five
+  seconds and a panel re-placed on each tick snapped back under the person's drag and put a
+  click meant for *Next* into Safari. (2) `hidesOnDeactivate = true` on the panel and the ring:
+  with it `false`, a Safari click left the Spruce ring drawn over Safari's page where the
+  timebox had been. Same-application windows (Settings, the popover) do not deactivate, so the
+  panel stays through those steps. (3) Re-place on `NSWindow.didResizeNotification`:
+  `NSHostingView.fittingSize` read in `present` is the previous step's, the content grows when
+  the done sentence appears, and `setContentSize` keeps the top-left, which walked the footer
+  under the Dock.
+- **Driving the live app from a shell.** `osascript` menu clicks work (`click menu item "Show
+  walkthrough" of menu "Help"`); `System Events` button clicks on SwiftUI sheets and `set
+  position of window 1` do not (the latter moved the tour panel, which was `window 1`). Use
+  `cliclick c:x,y` at screen points scaled from a `screencapture` — 1920 wide here — and read
+  the picture back before the next click; a floating overlay from another application can sit
+  over the button you meant.
 
 ### 2026-09-09 — merging the companion identity into the settings branch (focus-oqsx)
 

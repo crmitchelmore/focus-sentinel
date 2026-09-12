@@ -4849,18 +4849,6 @@
         }
       }
     },
-    "shell.walkthrough.done" : {
-      "comment" : "Walkthrough sheet: the button on the last page that closes it. Return presses it.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Done"
-          }
-        }
-      }
-    },
     "shell.walkthrough.menuBar.capture" : {
       "comment" : "Walkthrough page 6: the quick-capture hot key. The combination is not spelled here because General settings lets the person change it.",
       "extractionState" : "manual",
@@ -4917,6 +4905,354 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Next"
+          }
+        }
+      }
+    },
+    "shell.walkthrough.doItForMe" : {
+      "comment" : "Tour: the button that performs the current step for the person.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Do it for me"
+          }
+        }
+      }
+    },
+    "shell.walkthrough.showItAgain" : {
+      "comment" : "Tour: the button that shows the demo nudge or question again.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show it again"
+          }
+        }
+      }
+    },
+    "shell.walkthrough.action.finishDemo" : {
+      "comment" : "Tour button on the last step: end the demo and restore.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Finish the demo and put my priority back"
+          }
+        }
+      }
+    },
+    "shell.walkthrough.step.setPriority" : {
+      "comment" : "Tour step setPriority: what the person is asked to do in the real app.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Type what you are working on in the field, then press Return. If a priority is already set, press Change priority first."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.done.setPriority" : {
+      "comment" : "Tour step setPriority: what changed once it was done, and what a real one does.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "That sentence is your priority. The hero shows it and everything below acts on it."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.step.doneWhen" : {
+      "comment" : "Tour step doneWhen: what the person is asked to do in the real app.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Under the priority, write how you will know it is finished, then press Return."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.done.doneWhen" : {
+      "comment" : "Tour step doneWhen: what changed once it was done, and what a real one does.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Done when is saved with the priority. On real work you can leave it blank."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.step.timebox" : {
+      "comment" : "Tour step timebox: what the person is asked to do in the real app.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose a timebox. 25 minutes is enough for this tour."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.done.timebox" : {
+      "comment" : "Tour step timebox: what changed once it was done, and what a real one does.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The timebox shows the time left, then the time over. It never stops you working."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.step.startSession" : {
+      "comment" : "Tour step startSession: what the person is asked to do in the real app.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Press Start to begin a session."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.done.startSession" : {
+      "comment" : "Tour step startSession: what changed once it was done, and what a real one does.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The session is running. The menu bar shows its timer."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.step.desk" : {
+      "comment" : "Tour step desk: what the person is asked to do in the real app.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open the Details tab and add a keyword or an app to the desk."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.done.desk" : {
+      "comment" : "Tour step desk: what changed once it was done, and what a real one does.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The desk holds what belongs to this priority. Files and links can be dropped onto the window too."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.step.rules" : {
+      "comment" : "Tour step rules: what the person is asked to do in the real app.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Under Rules, name an app or a site and mark it related or unrelated."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.done.rules" : {
+      "comment" : "Tour step rules: what changed once it was done, and what a real one does.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A rule settles that case for good. A rule for this session only ends with the session."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.step.nudge" : {
+      "comment" : "Tour step nudge: what the person is asked to do in the real app.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This is a nudge, drawn where a real one appears. Press any of its buttons to close it."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.done.nudge" : {
+      "comment" : "Tour step nudge: what changed once it was done, and what a real one does.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A real nudge writes your answer down. Hide all overlays, in the View menu, clears the screen without answering."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.step.question" : {
+      "comment" : "Tour step question: what the person is asked to do in the real app.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This is a question. Answer it to close it."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.done.question" : {
+      "comment" : "Tour step question: what changed once it was done, and what a real one does.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A real question remembers your answer and stops asking."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.step.menuBar" : {
+      "comment" : "Tour step menuBar: what the person is asked to do in the real app.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Click the Focus mark in the menu bar."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.done.menuBar" : {
+      "comment" : "Tour step menuBar: what changed once it was done, and what a real one does.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The popover shows the priority, the timer, any open question and the session controls."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.step.settings" : {
+      "comment" : "Tour step settings: what the person is asked to do in the real app.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Press Open Settings at the bottom of the window and choose Privacy."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.done.settings" : {
+      "comment" : "Tour step settings: what changed once it was done, and what a real one does.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Privacy settings list every signal Focus reads. General has the update switch and this walkthrough."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.step.finish" : {
+      "comment" : "Tour's last step: what finishing does, and what stays.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Finishing ends the demo session and puts back the priority you had before. The demo priority stays in Recent."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.continue" : {
+      "comment" : "Walkthrough sheet: the one button. Closes the privacy page and opens the floating tour.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continue"
+          }
+        }
+      }
+    },
+    "shell.walkthrough.continueNote" : {
+      "comment" : "Walkthrough sheet: the sentence above Continue saying what it opens, so the tour panel is not a surprise.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continue opens a short tour beside this window. Each step has a button that does the thing in the app, and the last step puts your own priority back."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.panel.title" : {
+      "comment" : "The floating tour panel's window title.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Walkthrough"
+          }
+        }
+      }
+    },
+    "shell.walkthrough.demo.intent" : {
+      "comment" : "The demo priority the tour sets: stored as a task intent, so it reads as a sentence a person might type.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Try Focus Sentinel"
+          }
+        }
+      }
+    },
+    "shell.walkthrough.demo.doneWhen" : {
+      "comment" : "The demo priority's definition of done.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I have seen the cockpit, a nudge and a question"
           }
         }
       }

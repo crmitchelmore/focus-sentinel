@@ -11,7 +11,9 @@ import SwiftUI
 ///
 /// The order is the declaration order. It reads the way a person meets the app: what it looks
 /// at, the one priority, the time around it, the desk and the rules, how the app speaks, where
-/// it lives in the menu bar, and where the settings and the data are.
+/// it lives in the menu bar, and where the settings and the data are. The first page is the
+/// sheet's; the rest are the floating tour's, and each of those carries the `actions` that do
+/// its subject in the real app (`WalkthroughAction`).
 public enum WalkthroughPage: String, Sendable, CaseIterable, Hashable, Identifiable {
     /// What the app observes and what it never observes. The first-run explanation, unchanged.
     case watches
@@ -140,70 +142,64 @@ public struct WalkthroughParagraph: Sendable, Equatable, Hashable, Identifiable 
     }
 }
 
-/// **The walkthrough: what this app looks at, and then what it does** (focus-u6de).
+/// **The walkthrough's first page: what this app looks at, before it has looked at anything**
+/// (focus-odz.7, focus-u6de).
 ///
 /// ## What it is for
 ///
-/// `FirstRunSheet` (focus-odz.7) was one screen shown once, and it said what the app observes.
-/// That claim is still the first page, word for word. What it never said was what the app *is*:
-/// a person who had read it knew the app reads the frontmost application and nothing else, and
-/// still had to discover the timebox, the sessions, the context pack, the rules, the two rungs,
-/// the question, the popover and the three Settings panes by finding them. This is the same
-/// sheet with the rest of the product behind the first page.
+/// `FirstRunSheet` was one screen shown once, and it said what the app observes. That claim is
+/// still this sheet, word for word: it is read before anything is touched, on a first launch
+/// against a store the app has never opened, and again whenever the walkthrough is asked for.
+/// Its one button, *Continue*, closes it and opens the **tour** — a floating panel beside the
+/// cockpit that walks the other six pages and does each one in the real app
+/// (`WalkthroughPanelController`, `WalkthroughAction`). The pages themselves are one
+/// vocabulary, `WalkthroughPage`; this sheet draws its first member and the panel draws the rest.
 ///
 /// ## Shown on the first launch, and again whenever it is asked for
 ///
 /// The first showing is the host's decision, exactly as before: `CockpitState.showsFirstRunExplanation`
 /// is `true` on a launch that opened a store the app has never opened, the showing is written
-/// down at that moment, and every route out goes through `onFirstRunExplanationDismissed`.
-///
-/// The replay is the cockpit's: `PriorityCommand.showWalkthrough` arrives from the Help menu or
-/// from Settings ▸ General, brings the cockpit forward like ⌘N does, and sets a local flag that
-/// presents this same sheet. Nothing is written for a replay, because nothing about the store
-/// has changed. Both showings start on the first page, so the privacy statement is read again
-/// every time.
-///
-/// ## Still a sheet on the cockpit, and still never on the nudge path
-///
-/// It can only ever appear over the window a person opened or asked for. A panel that
-/// interrupted somebody to explain itself would be the opposite of what U-1 and F-81 are for.
+/// down at that moment, and every route out goes through `onFirstRunExplanationDismissed`. A
+/// replay is the cockpit's: `PriorityCommand.showWalkthrough` arrives from the Help menu or from
+/// Settings ▸ General and sets a local flag that presents this same sheet. Nothing is written for
+/// a replay.
 ///
 /// ## Return and Escape
 ///
-/// Return is Next, and on the last page it is Done. There is nothing to lose by pressing it:
-/// the sheet holds no field and changes nothing. Escape does nothing on a first showing, for
-/// `StoreUnavailableSheet`'s reason, and closes a replay, because a person who asked for the
-/// walkthrough and pressed Escape has changed their mind rather than missed the point.
+/// Return is Continue. There is nothing to lose by pressing it: the sheet holds no field and
+/// changes nothing, and the tour it opens does nothing until one of its own buttons is pressed.
+/// Escape does nothing on a first showing, for `StoreUnavailableSheet`'s reason, and closes a
+/// replay without opening the tour.
 public struct WalkthroughSheet: View {
     /// Where this app's store lives. The same path the Privacy pane draws.
     public let storeLocation: String
-    /// What Done does, and what Escape does on a replay. The one caller is the cockpit, which
-    /// routes a first showing to the composition root's own verb and a replay to its own state.
+    /// What Continue does after closing the sheet: opens the tour. Escape on a replay does not.
     public let dismiss: () -> Void
     /// Whether Escape closes the sheet. `false` on a first showing, `true` on a replay.
     public let escapeDismisses: Bool
+    /// What Escape performs on a replay: the same route out as `dismiss`, without the tour.
+    public let cancel: () -> Void
     /// The displays this sheet bounds itself against; `nil` for the live ones.
     private let screens: ShellScreens
 
     @Environment(\.appearanceTraits) private var traits
     @ScaledMetric(relativeTo: .body) private var spacing: CGFloat = 12
 
-    /// The page on screen. The initial value is the view's argument, so the snapshot lane can
-    /// photograph each page; the app always opens on the first.
-    @State private var page: WalkthroughPage
+    /// The page this sheet draws: the first, always.
+    public static let page: WalkthroughPage = .first
 
     public init(
         storeLocation: String,
         dismiss: @escaping () -> Void,
         escapeDismisses: Bool = false,
-        screens: ShellScreens = nil,
-        page: WalkthroughPage = .first
+        cancel: (() -> Void)? = nil,
+        screens: ShellScreens = nil
     ) {
         self.storeLocation = storeLocation
         self.dismiss = dismiss
         self.escapeDismisses = escapeDismisses
+        self.cancel = cancel ?? dismiss
         self.screens = screens
-        self._page = State(initialValue: page)
     }
 
     public var body: some View {
@@ -211,110 +207,52 @@ public struct WalkthroughSheet: View {
     }
 
     private var content: some View {
-        VStack(alignment: .leading, spacing: spacing) {
+        let page = Self.page
+        return VStack(alignment: .leading, spacing: spacing) {
             CompanionHeader { ShellText(page.titleKey, role: .title2) }
 
             ForEach(page.paragraphs) { paragraph in
                 self.paragraph(paragraph)
             }
 
-            if page.showsStoreLocation {
-                ShellText(.firstRunStoreLabel, role: .callout)
-                    .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
-                    .lineLimit(nil)
-                    .fixedSize(horizontal: false, vertical: true)
+            ShellText(.firstRunStoreLabel, role: .callout)
+                .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+                .lineLimit(nil)
+                .fixedSize(horizontal: false, vertical: true)
 
-                // **The path, drawn as a value and never as prose**, the same decision the
-                // Privacy pane and the store-failure sheet make, and it is the same path.
-                // Monospaced because it is a path, and selectable because somebody being told
-                // where their data lives will want to go and look at it.
-                Text(verbatim: storeLocation)
-                    .font(.system(.footnote, design: .monospaced))
-                    .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
-                    .lineLimit(nil)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .textSelection(.enabled)
+            // **The path, drawn as a value and never as prose**, the same decision the Privacy
+            // pane and the store-failure sheet make, and it is the same path. Monospaced because
+            // it is a path, and selectable because somebody being told where their data lives
+            // will want to go and look at it.
+            Text(verbatim: storeLocation)
+                .font(.system(.footnote, design: .monospaced))
+                .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+                .lineLimit(nil)
+                .fixedSize(horizontal: false, vertical: true)
+                .textSelection(.enabled)
+
+            ShellText(.walkthroughContinueNote, role: .footnote)
+                .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+                .lineLimit(nil)
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: spacing) {
+                Spacer(minLength: 0)
+                Button(action: dismiss) {
+                    ShellText(.walkthroughContinue)
+                }
+                .buttonStyle(CompanionButtonStyle(prominent: true))
+                .keyboardShortcut(.defaultAction)
             }
-
-            footer
         }
         .padding(spacing * 2)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(DesignTokens.Palette.windowBackground(for: traits))
-        .animation(DesignTokens.animation(for: traits), value: page)
         .onExitCommand {
-            if escapeDismisses { dismiss() }
+            if escapeDismisses { cancel() }
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text(ShellStrings.resource(page.titleKey)))
-    }
-
-    /// Back, the position, and Next or Done.
-    ///
-    /// Back is drawn disabled on the first page rather than hidden, so the row keeps its shape
-    /// from page to page and the Next button does not move under the pointer.
-    private var footer: some View {
-        HStack(spacing: spacing) {
-            Button {
-                if let previous = page.previous { page = previous }
-            } label: {
-                ShellText(.walkthroughBack)
-            }
-            .buttonStyle(CompanionButtonStyle())
-            .disabled(page.previous == nil)
-
-            Spacer(minLength: 0)
-
-            position
-
-            Spacer(minLength: 0)
-
-            if let next = page.next {
-                Button {
-                    page = next
-                } label: {
-                    ShellText(.walkthroughNext)
-                }
-                .buttonStyle(CompanionButtonStyle(prominent: true))
-                .keyboardShortcut(.defaultAction)
-            } else {
-                Button(action: dismiss) {
-                    ShellText(.walkthroughDone)
-                }
-                .buttonStyle(CompanionButtonStyle(prominent: true))
-                .keyboardShortcut(.defaultAction)
-            }
-        }
-        .padding(.top, spacing)
-    }
-
-    /// "2 of 7", through the locale's own digits, with one dot per page under it.
-    ///
-    /// The numbers go through `formatted()` rather than interpolation, for `verbatim-sites.txt`'s
-    /// NUMBER rule: an interpolated `Int` draws Western Arabic digits in every locale.
-    private var position: some View {
-        VStack(spacing: spacing / 2) {
-            HStack(spacing: spacing / 2) {
-                ForEach(WalkthroughPage.allCases) { candidate in
-                    Circle()
-                        .fill(
-                            candidate == page
-                                ? DesignTokens.Palette.role(.spruce, for: traits)
-                                : DesignTokens.Palette.role(.mist, for: traits).opacity(0.4)
-                        )
-                        .frame(width: 7, height: 7)
-                }
-            }
-            .accessibilityHidden(true)
-
-            ShellText(
-                .walkthroughPosition,
-                role: .caption,
-                arguments: [page.ordinal.formatted(), WalkthroughPage.allCases.count.formatted()]
-            )
-            .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
-            .monospacedDigit()
-        }
     }
 
     private func paragraph(_ paragraph: WalkthroughParagraph) -> some View {
