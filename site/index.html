@@ -1,0 +1,470 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="canonical" href="https://focus-sentinel.win/">
+<title>Focus Sentinel</title>
+<meta name="description" content="Focus Sentinel is a local-only macOS companion that keeps one priority in view, watches which app is in front, and asks instead of accusing.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+  :root {
+    --bench: #FAF7F0;
+    --slate: #1E2427;
+    --mist: #5E6866;
+    --spruce: #176B73;
+    --spruce-ink: #FAF7F0;
+    --kiln: #B06A10;
+    --inlay: #EBE7DF;
+    --line: rgba(30, 36, 39, 0.14);
+    --deep: #155B60;
+    --deep-ink: #F4F1E8;
+    --deep-mist: #B9D3D4;
+    --beam: rgba(233, 186, 79, 0.28);
+    --card: #FFFDF8;
+    --shadow: 0 18px 50px rgba(30, 36, 39, 0.12);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bench: #191D1F;
+      --slate: #EDF1F0;
+      --mist: #98A2A0;
+      --spruce: #57A9AF;
+      --spruce-ink: #101A1B;
+      --kiln: #E39A2E;
+      --inlay: #2A3033;
+      --line: rgba(237, 241, 240, 0.14);
+      --deep: #155B60;
+      --deep-ink: #F4F1E8;
+      --deep-mist: #B9D3D4;
+      --beam: rgba(233, 186, 79, 0.22);
+      --card: #202628;
+      --shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bench: #191D1F;
+    --slate: #EDF1F0;
+    --mist: #98A2A0;
+    --spruce: #57A9AF;
+    --spruce-ink: #101A1B;
+    --kiln: #E39A2E;
+    --inlay: #2A3033;
+    --line: rgba(237, 241, 240, 0.14);
+    --deep: #155B60;
+    --deep-ink: #F4F1E8;
+    --deep-mist: #B9D3D4;
+    --beam: rgba(233, 186, 79, 0.22);
+    --card: #202628;
+    --shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  body {
+    margin: 0;
+    background: var(--bench);
+    color: var(--slate);
+    font-family: "Instrument Sans", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+    font-size: 17px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--spruce); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--kiln); outline-offset: 3px; }
+  img { max-width: 100%; display: block; }
+  h1, h2, h3 {
+    font-family: "Bricolage Grotesque", "Instrument Sans", -apple-system, "Helvetica Neue", Arial, sans-serif;
+    font-weight: 600;
+    line-height: 1.08;
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+    margin: 0;
+  }
+  h1 { font-size: clamp(2.4rem, 5.6vw, 4.2rem); font-weight: 700; }
+  h2 { font-size: clamp(1.7rem, 3.2vw, 2.4rem); }
+  h3 { font-size: 1.15rem; font-weight: 600; line-height: 1.3; }
+  p { margin: 0; }
+  .measure { max-width: 34em; }
+
+  .wrap { width: min(1120px, 100%); margin-inline: auto; padding-inline: clamp(16px, 4vw, 40px); }
+
+  /* Top bar */
+  .bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-block: 18px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-family: "Bricolage Grotesque", sans-serif; font-weight: 700; font-size: 1.15rem; color: var(--slate); text-decoration: none; }
+  .brand .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--kiln); box-shadow: 0 0 0 3px var(--inlay); }
+  .bar nav { display: flex; gap: 22px; font-size: 0.95rem; }
+  .bar nav a { color: var(--mist); text-decoration: none; }
+  .bar nav a:hover { color: var(--slate); }
+  @media (max-width: 640px) { .bar nav { display: none; } }
+
+  /* Hero */
+  .hero { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: clamp(28px, 5vw, 64px); align-items: center; padding-block: clamp(32px, 6vw, 72px) clamp(40px, 7vw, 88px); }
+  @media (max-width: 860px) { .hero { grid-template-columns: 1fr; } }
+  .eyebrow { font-size: 0.78rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--mist); }
+  .hero .eyebrow { margin-bottom: 18px; }
+  .lede { font-size: clamp(1.1rem, 1.6vw, 1.3rem); color: var(--mist); margin-top: 22px; max-width: 30em; text-wrap: pretty; }
+  .ctas { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 30px; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 12px; font-weight: 600; font-size: 0.98rem; text-decoration: none; border: 1px solid transparent; transition: transform 160ms ease, background 160ms ease; }
+  .btn:active { transform: scale(0.985); }
+  .btn.primary { background: var(--spruce); color: var(--spruce-ink); }
+  .btn.quiet { background: var(--inlay); color: var(--slate); border-color: var(--line); }
+  .btn.quiet:hover { border-color: var(--spruce); }
+  .req { margin-top: 18px; font-size: 0.9rem; color: var(--mist); }
+  .req b { color: var(--slate); font-weight: 600; }
+
+  /* The cockpit card */
+  .cockpit { background: var(--card); border-radius: 22px; box-shadow: var(--shadow); border: 1px solid var(--line); overflow: hidden; max-width: 460px; justify-self: end; width: 100%; }
+  @media (max-width: 860px) { .cockpit { justify-self: start; } }
+  .band { background: var(--deep); color: var(--deep-ink); position: relative; padding: 18px 22px; display: flex; align-items: center; gap: 14px; overflow: hidden; min-height: 96px; }
+  .band .beam { position: absolute; right: -40px; top: -140px; width: 320px; height: 320px; background: conic-gradient(from 200deg at 100% 50%, transparent 0deg, var(--beam) 18deg, transparent 40deg); pointer-events: none; }
+  .band .lamp { position: absolute; right: 26px; top: 16px; width: 22px; height: 22px; border-radius: 50%; background: #E9BA4F; box-shadow: 0 0 0 6px rgba(233,186,79,0.18); }
+  .band img { width: 64px; height: 64px; border-radius: 16px; flex: none; }
+  .band .title { font-family: "Bricolage Grotesque", sans-serif; font-weight: 700; font-size: 1.6rem; letter-spacing: -0.01em; }
+  .lights { position: absolute; left: 14px; top: 12px; display: flex; gap: 6px; }
+  .lights i { width: 10px; height: 10px; border-radius: 50%; display: block; background: #E5504B; }
+  .lights i:nth-child(2) { background: #E7B23E; } .lights i:nth-child(3) { background: #5CB865; }
+  .cockpit .body { padding: 22px 22px 24px; display: grid; gap: 18px; }
+  .field .eyebrow { font-size: 0.7rem; margin-bottom: 6px; }
+  .priority { font-family: "Bricolage Grotesque", sans-serif; font-weight: 700; font-size: 1.5rem; line-height: 1.15; display: flex; gap: 12px; align-items: flex-start; }
+  .priority .kiln { width: 14px; height: 14px; border-radius: 50%; background: var(--kiln); flex: none; margin-top: 8px; }
+  .done .k { font-size: 0.85rem; font-weight: 600; }
+  .done .v { color: var(--mist); }
+  .rule { height: 1px; background: var(--line); }
+  .session { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 12px; }
+  .clock { font-family: "Bricolage Grotesque", sans-serif; font-weight: 700; font-size: 2.6rem; line-height: 1; font-variant-numeric: tabular-nums; color: var(--spruce); }
+  .phase { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: var(--inlay); color: var(--slate); font-size: 0.8rem; font-weight: 600; }
+  .phase i { width: 8px; height: 8px; border-radius: 50%; background: var(--spruce); display: block; }
+  .verbs { display: flex; gap: 8px; }
+  .verb { width: 46px; height: 40px; border-radius: 11px; border: 1px solid var(--line); background: var(--inlay); display: grid; place-items: center; color: var(--slate); }
+  .verb.primary { background: var(--spruce); color: var(--spruce-ink); border-color: transparent; }
+  .verb svg { width: 16px; height: 16px; fill: currentColor; }
+  .verb.link { background: transparent; color: var(--spruce); }
+  .caption { font-size: 0.82rem; color: var(--mist); }
+
+  /* Sections with a label gutter */
+  section { padding-block: clamp(40px, 7vw, 88px); border-top: 1px solid var(--line); }
+  .split { display: grid; grid-template-columns: 200px 1fr; gap: clamp(20px, 4vw, 56px); }
+  @media (max-width: 760px) { .split { grid-template-columns: 1fr; } }
+  .split > .eyebrow { padding-top: 10px; }
+  .intro { margin-top: 14px; color: var(--mist); font-size: 1.08rem; text-wrap: pretty; }
+
+  /* A day */
+  .day { list-style: none; margin: 34px 0 0; padding: 0; display: grid; gap: 0; counter-reset: step; border-top: 1px solid var(--line); }
+  .day li { counter-increment: step; display: grid; grid-template-columns: 56px 1fr; gap: 16px; padding-block: 22px; border-bottom: 1px solid var(--line); }
+  .day li::before { content: counter(step, decimal-leading-zero); font-family: "Bricolage Grotesque", sans-serif; font-weight: 600; font-size: 1.1rem; color: var(--spruce); font-variant-numeric: tabular-nums; padding-top: 3px; }
+  .day p { color: var(--mist); margin-top: 6px; max-width: 40em; }
+  .day .example { margin-top: 12px; display: inline-block; background: var(--inlay); border-radius: 10px; padding: 8px 12px; font-size: 0.92rem; color: var(--slate); }
+  .day .example b { font-weight: 600; }
+
+  /* Question card, used in the day section */
+  .question { margin-top: 14px; max-width: 420px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; box-shadow: var(--shadow); }
+  .question .band { min-height: 0; padding: 12px 16px; }
+  .question .band .title { font-size: 1.15rem; }
+  .question .qbody { padding: 16px; display: grid; gap: 10px; }
+  .question .q { font-weight: 600; font-size: 1.02rem; line-height: 1.3; }
+  .question .why { color: var(--mist); font-size: 0.92rem; }
+  .answers { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+  .answers span { padding: 8px 12px; border-radius: 9px; background: var(--inlay); font-size: 0.9rem; font-weight: 600; }
+  .answers span.primary { background: var(--spruce); color: var(--spruce-ink); }
+
+  /* Features */
+  .features { list-style: none; margin: 34px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+  .features li { background: var(--bench); padding: 22px 22px 24px; display: grid; gap: 8px; align-content: start; }
+  .features li p { color: var(--mist); font-size: 0.97rem; }
+  .features .glyph { width: 30px; height: 30px; border-radius: 9px; background: var(--inlay); color: var(--spruce); display: grid; place-items: center; margin-bottom: 6px; }
+  .features .glyph svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* Privacy band */
+  .privacy { background: var(--deep); color: var(--deep-ink); border-top: 0; position: relative; overflow: hidden; }
+  .privacy .beam { position: absolute; right: -120px; top: -260px; width: 720px; height: 720px; background: conic-gradient(from 205deg at 100% 50%, transparent 0deg, var(--beam) 14deg, transparent 32deg); pointer-events: none; }
+  .privacy .eyebrow, .privacy .intro { color: var(--deep-mist); }
+  .privacy h2 { color: var(--deep-ink); }
+  .promises { list-style: none; margin: 30px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 22px 32px; }
+  .promises li { display: grid; gap: 6px; border-top: 1px solid rgba(244, 241, 232, 0.25); padding-top: 14px; }
+  .promises h3 { color: var(--deep-ink); }
+  .promises p { color: var(--deep-mist); font-size: 0.96rem; }
+  .privacy .companion { display: flex; align-items: center; gap: 18px; margin-top: 36px; }
+  .privacy .companion img { width: 88px; height: 88px; border-radius: 22px; }
+  .privacy .companion p { color: var(--deep-mist); font-size: 0.95rem; max-width: 34em; }
+  .privacy a { color: var(--deep-ink); }
+
+  /* Who */
+  .who { list-style: none; margin: 26px 0 0; padding: 0; display: grid; gap: 14px; max-width: 40em; }
+  .who li { display: grid; grid-template-columns: 18px 1fr; gap: 12px; color: var(--mist); }
+  .who li::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--spruce); margin-top: 8px; }
+  .who b { color: var(--slate); font-weight: 600; }
+
+  /* FAQ */
+  .faq { margin-top: 26px; display: grid; border-top: 1px solid var(--line); }
+  details { border-bottom: 1px solid var(--line); }
+  summary { cursor: pointer; padding-block: 16px; font-weight: 600; font-size: 1.05rem; list-style: none; display: flex; justify-content: space-between; gap: 16px; align-items: center; }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: "+"; font-family: "Bricolage Grotesque", sans-serif; color: var(--spruce); font-size: 1.4rem; line-height: 1; flex: none; }
+  details[open] summary::after { content: "−"; }
+  details p { color: var(--mist); padding-bottom: 18px; max-width: 42em; }
+
+  /* Footer */
+  footer { border-top: 1px solid var(--line); padding-block: 28px 40px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px 24px; font-size: 0.9rem; color: var(--mist); }
+  footer a { color: var(--mist); }
+  footer a:hover { color: var(--slate); }
+</style>
+</head>
+<body>
+
+<header class="wrap bar">
+  <a class="brand" href="#top"><span class="dot"></span>Focus Sentinel</a>
+  <nav aria-label="Sections">
+    <a href="#day">A day</a>
+    <a href="#features">What it does</a>
+    <a href="#privacy">Privacy</a>
+    <a href="#faq">Questions</a>
+  </nav>
+</header>
+
+<main id="top">
+  <div class="wrap hero">
+    <div>
+      <p class="eyebrow">A local-only companion for the Mac</p>
+      <h1>One priority. A steady bearing. No score.</h1>
+      <p class="lede">Focus Sentinel keeps the one thing you are working on in view, notices when the app in front stops belonging to it, and asks before it assumes. Everything it knows stays on your Mac.</p>
+      <div class="ctas">
+        <a class="btn primary" href="https://github.com/crmitchelmore/focus-sentinel/issues/12">Follow the release on GitHub</a>
+        <a class="btn quiet" href="https://github.com/crmitchelmore/focus-sentinel">Read the source</a>
+      </div>
+      <p class="req"><b>Requires</b> macOS 26 or later on Apple silicon. Not yet released; the first build ships through the release tracker above.</p>
+    </div>
+
+    <div class="cockpit" aria-label="The Focus Sentinel window, as an illustration">
+      <div class="band">
+        <div class="lights" aria-hidden="true"><i></i><i></i><i></i></div>
+        <div class="beam" aria-hidden="true"></div>
+        <div class="lamp" aria-hidden="true"></div>
+        <img src="companion.png" alt="The Focus companion: a small white lens with a yellow lamp on a stalk" width="64" height="64">
+        <div class="title">Focus</div>
+      </div>
+      <div class="body">
+        <div class="field">
+          <p class="eyebrow">Priority</p>
+          <div class="priority"><span class="kiln" aria-hidden="true"></span><span>Resolve unfinished LLM threads</span></div>
+        </div>
+        <div class="field done">
+          <p class="k">Done when</p>
+          <p class="v">Each thread has a clear next step.</p>
+        </div>
+        <div class="rule"></div>
+        <div class="field">
+          <p class="eyebrow">Session</p>
+          <div class="session">
+            <div>
+              <div class="clock">24 min</div>
+              <span class="phase"><i></i>Focus</span>
+            </div>
+            <div class="verbs" aria-label="Session controls">
+              <span class="verb primary" title="Pause session"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="2" width="4" height="12" rx="1"/><rect x="9" y="2" width="4" height="12" rx="1"/></svg></span>
+              <span class="verb" title="Take a break"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 5h9v4a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V5zm9 1h1.5a1.5 1.5 0 0 1 0 3H11z"/><rect x="2" y="14" width="10" height="1.2"/></svg></span>
+              <span class="verb link" title="Finish session"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 8.5l3.2 3.2L13.5 4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            </div>
+          </div>
+        </div>
+        <p class="caption">The timebox shows the time left, then the time over. It never stops you working.</p>
+      </div>
+    </div>
+  </div>
+
+  <section id="day">
+    <div class="wrap split">
+      <p class="eyebrow">How a day goes</p>
+      <div>
+        <h2>Four moments, in order.</h2>
+        <p class="intro measure">There is no dashboard to tend. You write a sentence, start a session, answer the occasional question, and read the record when you want to.</p>
+        <ol class="day">
+          <li>
+            <div>
+              <h3>Write the priority as one sentence.</h3>
+              <p>Focus keeps one priority. Setting a new one replaces it and moves the old one to Recent. If the sentence has no verb or no outcome, Focus suggests a rewrite; you can keep your own wording. Add a Done when line so you know what finished looks like.</p>
+              <span class="example"><b>Priority</b> Draft the grant budget &nbsp;·&nbsp; <b>Done when</b> Every line has a number</span>
+            </div>
+          </li>
+          <li>
+            <div>
+              <h3>Start a session, with a timebox if you want one.</h3>
+              <p>Pause it, take a break, log a detour when you leave the work on purpose, and finish it when you stop. Stopping early asks why; every field on that form is optional. The menu bar shows the timer.</p>
+            </div>
+          </li>
+          <li>
+            <div>
+              <h3>Get a question, not a verdict.</h3>
+              <p>Focus compares the app in front with the priority's context pack. When you drift for a while, the mark in the menu bar changes and nothing else happens. If the drift continues, a small panel names the app and offers a way back. When Focus cannot tell, it asks whether the app is part of the work. Your answer becomes a rule, and it stops asking.</p>
+              <div class="question" aria-label="A question panel, as an illustration">
+                <div class="band"><div class="title">A small question.</div></div>
+                <div class="qbody">
+                  <p class="q">Is Numbers part of Draft the grant budget?</p>
+                  <p class="why">Focus has not been told which apps this task lives in. One answer covers this whole app, for this priority.</p>
+                  <div class="answers"><span class="primary">Yes, add it</span><span>No, it isn't</span><span>Not now</span></div>
+                </div>
+              </div>
+            </div>
+          </li>
+          <li>
+            <div>
+              <h3>Read the record.</h3>
+              <p>History lists what Focus did today and why: each nudge, where it was shown, what you answered. If it should have spoken up and did not, you can say so there. Records older than the retention limit you choose are deleted once a day.</p>
+            </div>
+          </li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <section id="features">
+    <div class="wrap split">
+      <p class="eyebrow">What it does</p>
+      <div>
+        <h2>Small instruments, each with one job.</h2>
+        <ul class="features">
+          <li>
+            <span class="glyph"><svg viewBox="0 0 16 16"><path d="M3 4h10M3 8h7M3 12h5"/></svg></span>
+            <h3>The context pack</h3>
+            <p>Apps, sites, keywords and files that belong to the priority. Add them on the Details tab, or drop files and links onto the window. Recent priorities come back with their pack and rules.</p>
+          </li>
+          <li>
+            <span class="glyph"><svg viewBox="0 0 16 16"><path d="M2 8h12M8 2v12"/></svg></span>
+            <h3>Rules you can read</h3>
+            <p>Mark an app or a site as related or unrelated, for this priority or for this session only. A rule settles that case for good. The rules are deterministic, so the same facts always get the same answer.</p>
+          </li>
+          <li>
+            <span class="glyph"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5"/><path d="M8 5v3l2 1.5"/></svg></span>
+            <h3>Timeboxes that never stop you</h3>
+            <p>Give the priority a limit and Focus shows the time left, then the time over. Sessions keep the wall clock: a Mac that slept for an hour has spent that hour, and the app says so.</p>
+          </li>
+          <li>
+            <span class="glyph"><svg viewBox="0 0 16 16"><path d="M8 2.5l1.7 3.5 3.8.5-2.8 2.7.7 3.8L8 11.2 4.6 13l.7-3.8L2.5 6.5l3.8-.5z"/></svg></span>
+            <h3>A menu-bar mark</h3>
+            <p>The mark shows what Focus currently believes. Click it for the priority, the timer, any open question and the session controls. A global shortcut sets a new priority from inside any app.</p>
+          </li>
+          <li>
+            <span class="glyph"><svg viewBox="0 0 16 16"><path d="M3 10.5a5 5 0 0 1 10-4.5c0 4-3 6-5 6"/><path d="M13 3l-1.5 1.5"/></svg></span>
+            <h3>Quiet when it should be</h3>
+            <p>Focus caps how often it interrupts each day and stays quiet while you present, while a microphone is in use, while you are away from the keyboard, and during the quiet hours you set.</p>
+          </li>
+          <li>
+            <span class="glyph"><svg viewBox="0 0 16 16"><rect x="2.5" y="3" width="11" height="9" rx="1.5"/><path d="M5.5 14h5"/></svg></span>
+            <h3>Interrupt me less</h3>
+            <p>One switch sends nudges and questions to the menu bar instead of opening panels. Reduce Motion turns it on for you. Every panel can be answered, snoozed or closed.</p>
+          </li>
+          <li>
+            <span class="glyph"><svg viewBox="0 0 16 16"><path d="M3 13V5l5-2.5L13 5v8"/><path d="M6 13V9h4v4"/></svg></span>
+            <h3>A tour on the real window</h3>
+            <p>The walkthrough takes you to each control in turn, highlights it, and offers to do the step for you. Replay it any time from Help.</p>
+          </li>
+          <li>
+            <span class="glyph"><svg viewBox="0 0 16 16"><path d="M8 2v8M5 7l3 3 3-3"/><path d="M3 13h10"/></svg></span>
+            <h3>Yours to export or delete</h3>
+            <p>Export your activity data or your settings as separate files. Delete everything from Privacy settings, and Focus restarts with an empty data file.</p>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="privacy" class="privacy">
+    <div class="beam" aria-hidden="true"></div>
+    <div class="wrap split">
+      <p class="eyebrow">Privacy</p>
+      <div>
+        <h2>Your data stays on this Mac.</h2>
+        <p class="intro measure">Focus has no account or sync and sends no usage reports. What follows is the app's own wording from its Privacy settings, and the build gate checks the shipped binary against it.</p>
+        <ul class="promises">
+          <li>
+            <h3>What it reads</h3>
+            <p>Which app is active. If a browser shares its site without a permission request, Focus reads the host name only.</p>
+          </li>
+          <li>
+            <h3>What it never reads</h3>
+            <p>Window titles, full web addresses, file paths, document names, or anything you type.</p>
+          </li>
+          <li>
+            <h3>No network</h3>
+            <p>Focus never connects to the internet unless you turn on update checks. When it checks, it sends its name and version and nothing about you.</p>
+          </li>
+          <li>
+            <h3>Permissions are yours to give</h3>
+            <p>Focus asks macOS for nothing unless you switch it on in Privacy settings. Accessibility and Screen Recording are listed there, off, with a plain note of what each would let it read.</p>
+          </li>
+          <li>
+            <h3>Away means quiet</h3>
+            <p>No keyboard or mouse for a minute, or as long as you choose, and Focus stops counting time and stays quiet until you are back.</p>
+          </li>
+          <li>
+            <h3>You can check</h3>
+            <p>The source is public under the MIT licence. The data file is one folder in Application Support, and Privacy settings show it in the Finder.</p>
+          </li>
+        </ul>
+        <div class="companion">
+          <img src="companion.png" alt="" width="88" height="88">
+          <p>The companion is decoration, not an indicator of surveillance. Nothing in the app praises, scores or scolds; a nudge describes the activity, and a question is a real question.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="who">
+    <div class="wrap split">
+      <p class="eyebrow">Who it is for</p>
+      <div>
+        <h2>People whose work lives across many apps.</h2>
+        <ul class="who">
+          <li><span><b>Writers and researchers</b> who keep one question open for a day and drift into a browser without noticing.</span></li>
+          <li><span><b>Engineers and designers</b> whose task spans an editor, a terminal, a few sites and a handful of files, and who want the app to know that list rather than guess.</span></li>
+          <li><span><b>Anyone on calls</b> who needs an app that stays quiet while a microphone is live, while presenting, and after hours.</span></li>
+          <li><span><b>People who read the privacy page first.</b> Every signal is listed, every permission is off until you switch it on, and the record can be inspected, exported or deleted.</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq">
+    <div class="wrap split">
+      <p class="eyebrow">Questions</p>
+      <div>
+        <h2>Straight answers.</h2>
+        <div class="faq">
+          <details>
+            <summary>Does it read my screen?</summary>
+            <p>No. Focus does not request Screen Recording or Accessibility permission in this version, and nothing in this version reads what those would unlock. It reads which app is active and, where a browser shares it freely, the site's host name only.</p>
+          </details>
+          <details>
+            <summary>Does it phone home?</summary>
+            <p>Focus never connects to the internet unless you turn on update checks in General settings. Those are off until you turn them on, and a check carries the app's name and version and nothing about you.</p>
+          </details>
+          <details>
+            <summary>Does it block apps or sites?</summary>
+            <p>No. Focus does not block, hide or close anything, and a timebox never stops you working. It notices, it asks, and it offers a way back.</p>
+          </details>
+          <details>
+            <summary>What happens on a call or a presentation?</summary>
+            <p>A running microphone keeps Focus quiet, because a call is not a distraction. It also stays quiet while you present, while you are away, and during quiet hours. You can switch the microphone rule off, and then a nudge may arrive mid-call.</p>
+          </details>
+          <details>
+            <summary>Where is my data, and can I take it with me?</summary>
+            <p>In one folder under Application Support on your Mac; Privacy settings show it in the Finder. Export your activity data and your settings as separate files from the File menu. Delete everything from Privacy settings; that cannot be undone.</p>
+          </details>
+          <details>
+            <summary>When can I download it?</summary>
+            <p>There is no public build yet. The release tracker on GitHub lists what remains before the first signed, notarised build: <a href="https://github.com/crmitchelmore/focus-sentinel/issues/12">crmitchelmore/focus-sentinel, issue 12</a>. Updates, once shipped, arrive only if you switch update checks on.</p>
+          </details>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="wrap">
+  <span>Focus Sentinel · MIT licence · macOS 26 or later, Apple silicon</span>
+  <span><a href="https://github.com/crmitchelmore/focus-sentinel">Source on GitHub</a> · <a href="https://github.com/crmitchelmore/focus-sentinel/issues/12">Release tracker</a> · <a href="https://github.com/crmitchelmore/focus-sentinel/security/advisories/new">Report a security issue</a></span>
+</footer>
+</body>
+</html>
