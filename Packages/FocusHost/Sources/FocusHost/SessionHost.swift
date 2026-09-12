@@ -158,8 +158,19 @@ final class SessionHost: SessionActing {
         apply(.paused(cause: .user))
     }
 
+    /// The person's resume.
+    ///
+    /// One `resumed(cause:)` per cause the person is entitled to lift — their own pause, and
+    /// the `.relaunch` or `.systemRestart` a restoration raised (focus-mmty). The machine takes
+    /// one cause per event and moves the phase only when the set is empty, so a session that
+    /// was paused by the person *and* then survived a reboot takes two events here and lands
+    /// once, on its `resumeTo`. With no snapshot to read, the plain `.user` resume is sent so
+    /// the machine can answer with its own rejection.
     func resumeSession() {
-        apply(.resumed(cause: .user))
+        let causes = snapshot?.causesTheUserMayClear ?? []
+        for cause in causes.isEmpty ? [.user] : causes {
+            apply(.resumed(cause: cause))
+        }
     }
 
     func startDetour(reason: DetourReason = .user) {

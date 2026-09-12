@@ -101,6 +101,8 @@ public struct RecentPrioritiesView: View {
                     ShellText(.priorityRecentActionAgain, role: .callout)
                 }
                 .disabled(activate == nil)
+                // Tooltip from the catalog (focus-8ski).
+                .shellHelp(.priorityRecentActionAgainHelp)
             }
         }
     }

@@ -24,3 +24,7 @@ Examples of the resulting wording:
 Privacy wording describes this branch's current implementation. It must be checked again when the separate opt-in permission work is integrated. Destructive confirmations retain their scope, restart requirements and inability to undo. Revised catalogue comments distinguish this owner-requested edit from approval of the earlier wording.
 
 The copy assertions and accessibility-driving scripts use the revised labels. Source checks preserve localisation coverage and format arguments. Native layout and accessibility validation remain subject to the owner's standing requirement to confirm each UI test batch.
+
+## Tooltips (12 September 2026, focus-8ski)
+
+Every control carries a tooltip from the catalog, drawn only through `View.shellHelp`. One sentence, six to fourteen words: for a session verb the verb first, then what it changes ("Pause session. The clock stops and nudges stay quiet until you resume."); for any other control what pressing changes; for a disabled control why it is off and what would enable it ("Type a priority first.", "This tuning is already at its highest allowed value."). Facts in tooltips were checked against the code they describe (daily update checks, one-minute away steps, half-hour quiet-hours steps, the once-a-day retention sweep). Nudge-panel tooltips follow the nudge rules: no praise, no blame, no claim about attention.

@@ -121,7 +121,8 @@ struct HistoryContent: View {
 
             Spacer(minLength: 0)
         }
-        .padding(spacing * 2)
+        // The one dialog margin (focus-udn9).
+        .dialogInset()
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
@@ -304,6 +305,8 @@ struct HistoryRow: View {
             }
             .buttonStyle(.bordered)
             .disabled(correct == nil)
+            // Tooltip from the catalog (focus-8ski).
+            .shellHelp(.historyCorrectActionHelp)
         }
     }
 

@@ -89,6 +89,8 @@ struct PriorityIntentEditor: View {
         .onSubmit(commit)
         .onExitCommand(perform: cancel)
         .accessibilityLabel(Text(ShellStrings.resource(.priorityIntentEditLabel)))
+        // Tooltip from the catalog (focus-8ski).
+        .shellHelp(.priorityIntentEditLabelHelp)
     }
 }
 

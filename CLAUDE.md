@@ -87,6 +87,59 @@ snapshot baselines, running the FocusUITests lane beside another agent's builds,
 type role or a palette hue. `AGENTS.md` and `CLAUDE.md` are independent files; mirror anything
 substantive across both.
 
+### 2026-09-12 — tooltips on everything, glyph verbs, one dialog margin, and the Resume that could never clear (focus-mmty, focus-8ski, focus-udn9)
+
+- **A restoration pause is the person's to clear, and the code said otherwise for months.**
+  `SessionRestoration.reconcile` pauses a restored session with `.systemRestart` or `.relaunch`
+  and documents it as "one click puts the person back where they were" — but `resumeSession()`
+  sent only `resumed(cause: .user)` and `userMayResume` required `pauseCauses == [.user]`, so
+  the cockpit showed "Paused because this Mac restarted" over a disabled Resume and a footnote
+  promising it would clear. Nothing ever clears those two causes but the person. The rule now
+  lives in `PauseReason.isClearedByThePerson` (`.user`, `.relaunch`, `.systemRestart`); the
+  snapshot's `causesTheUserCannotClear` / `causesTheUserMayClear` read it, and the host sends one
+  `resumed(cause:)` per person-clearable cause, so a session paused by the person *and* then
+  rebooted takes one click. `.poweringOff` maps to `.systemRestart` on purpose and is exempt in
+  the exhaustiveness test. `RestorationResumeTests` in FocusHost is the end-to-end witness.
+- **Tooltips are catalog entries, drawn only through `View.shellHelp`** (`Design/ShellHelp.swift`).
+  `check-strings.sh` bans `.help("…")`, so a tooltip is a `ShellStringKey` case plus a catalog row
+  like any other sentence; 128 keys sit under the `Tooltips (focus-8ski)` MARK. The two-key form
+  `shellHelp(_:disabled:when:)` shows *why* a control is off. **Put `.shellHelp` after
+  `.disabled(…)`**: `.help` attaches to the view it modifies, and a tooltip inside a disabled
+  view is one AppKit does not show. Verified live on this machine with `cliclick m:x,y`, a 2.5 s
+  wait and `screencapture -R`: the enabled Resume glyph showed "Resume session. Picks up where it
+  was paused." and the disabled *Open at login* row showed its reason sentence (evidence in
+  `/Volumes/Memory/archive/focus-tooltips-evidence/`). The catalog is edited by script with
+  `json.dumps(d, indent=2, ensure_ascii=False, separators=(",", " : "))` and insertion order
+  kept — that reproduces the file byte for byte; `sort_keys=True` rewrites the whole file.
+- **The session verbs are glyphs; the verb is the accessibility label.** `SessionControls` and
+  the menu-bar popover draw `play.fill` / `pause.fill` / `cup.and.saucer.fill` /
+  `arrow.triangle.branch` / `arrow.uturn.left` / `stop.fill` / `checkmark`, with
+  `.accessibilityLabel(Text(ShellStrings.resource(key)))` carrying the catalog verb, so the
+  registry, the shortcuts help and the label-driven tests are unchanged and the tooltip carries
+  the verb *and* what it changes. The three registers (filled primary, bordered reversible,
+  accent-tinted endings) are kept.
+- **One dialog margin, and it does not grow with the text.** `DesignTokens.dialogInset = 24`
+  and `popoverInset = 16`, reached through `.dialogInset()` / `.popoverInset()`
+  (`Design/DialogInset.swift`). Before: sheets 24, General pane 12, Intervention pane 12,
+  popover 10, custom-snooze 16. The first cut scaled the margin with `shellTextScale`; at
+  `.accessibilityLarge` (×2) that is 48 a side on a 460-wide pane, the Privacy capability slice
+  grew from 10 034 to 11 458 rows and its pseudo-localised pass crossed the ~16 000-row ceiling
+  where CoreGraphics hands back an empty buffer — `PseudoLocalizationTests` reported "rendered
+  no ink: 11458 and 19122 rows". A margin is a frame, not text; it stays fixed.
+- **A SwiftPM store can carry a stale plan.** After adding two new files to `FocusUI`, the
+  FocusHost package's first build of the dependency reported "no member 'shellHelp'" in thirty
+  places and one "unable to type-check in reasonable time" while `swift build` of FocusUI alone
+  was green; the second `swift build --package-path Packages/FocusHost` compiled the new files and
+  passed with no source change. Rebuild once before reading a dependency's cascade as real.
+- **Re-recording by export took four lane passes for 108 baselines, and the count is the
+  lesson.** Pass 1 compares; export its candidates with `xcrun xcresulttool export attachments`
+  and match `suggestedHumanReadableName` against `<name>.candidate_<n>_<uuid>.png` (the
+  `isAssociatedWithFailure` flag is false on every attachment, so do not filter on it); copy
+  them over the baselines. But a component test stops at its first mismatching *size*, so pass 1
+  only yields the standard candidates; pass 2 yields the accessibilityLarge ones; pass 3 is
+  green. Add one more pass for any fix made along the way. Quiet-ish machine (a Pasta CI runner
+  was building beside it): 296 s, 214 s, 213 s.
+
 ### 2026-09-10 — the walkthrough and the release trains (focus-u6de, focus-h8jf)
 
 - **A shared SwiftPM repository cache is a shared lock, and Xcode.app holds it.** Every

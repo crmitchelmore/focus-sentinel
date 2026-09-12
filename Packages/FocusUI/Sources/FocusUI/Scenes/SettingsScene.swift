@@ -424,6 +424,7 @@ public struct ShellSettingsView: View {
     /// (focus-h7h). Read from the environment rather than from the connection, because the
     /// injection is a separate wire from the connection and is separately guttable.
     @Environment(\.appearanceTraits) private var traits
+    @Environment(\.shellTextScale) private var textScale
 
     @Binding private var preference: AppearancePreference
     private let storeURL: URL
@@ -562,7 +563,8 @@ public struct ShellSettingsView: View {
             ) {
               VStack(spacing: 0) {
                 CompanionHeader { ShellText(.cockpitWindowTitle, role: .title2) }
-                    .padding(.horizontal, 16)
+                    // Aligned with the pane content below it, on the same margin (focus-udn9).
+                    .padding(.horizontal, DesignTokens.dialogInset)
                 GeneralSettingsView(
                 preference: $preference,
                 appVersion: appVersion,

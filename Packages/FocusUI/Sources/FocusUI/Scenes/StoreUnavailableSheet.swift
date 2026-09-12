@@ -90,13 +90,14 @@ public struct StoreUnavailableSheet: View {
                 Button(action: acknowledge) {
                     ShellText(.cockpitStoreSheetAcknowledge)
                 }
+                .shellHelp(.cockpitStoreSheetAcknowledgeHelp)
                 .buttonStyle(.borderedProminent)
                 // The only action, and therefore the default one — but note what the default is
                 // doing here: Return means "I have read this", never "throw my work away".
                 .keyboardShortcut(.defaultAction)
             }
         }
-        .padding(spacing * 2)
+        .dialogInset()
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(DesignTokens.Palette.windowBackground(for: traits))
         // **No `onExitCommand`.** Escape must not dismiss this: the dismissal is what lifts the

@@ -242,10 +242,11 @@ public struct WalkthroughSheet: View {
                     ShellText(.walkthroughContinue)
                 }
                 .buttonStyle(CompanionButtonStyle(prominent: true))
+                .shellHelp(.walkthroughContinueHelp)
                 .keyboardShortcut(.defaultAction)
             }
         }
-        .padding(spacing * 2)
+        .dialogInset()
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(DesignTokens.Palette.windowBackground(for: traits))
         .onExitCommand {

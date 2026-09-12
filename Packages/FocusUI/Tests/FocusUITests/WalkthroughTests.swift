@@ -211,6 +211,13 @@ struct WalkthroughTests {
             .walkthroughBack, .walkthroughNext, .walkthroughContinue, .walkthroughContinueNote,
             .walkthroughPosition, .walkthroughPanelTitle
         ]
+        // The tooltips the panel's three buttons and the sheet's Continue carry (focus-8ski):
+        // drawn through `shellHelp`, never by a page or a step, so they are chrome for this count.
+        let tooltips: Set<ShellStringKey> = [
+            .walkthroughBackHelp, .walkthroughBackDisabledHelp, .walkthroughNextHelp,
+            .walkthroughContinueHelp, .walkthroughDoItForMeHelp, .walkthroughDoItForMeDisabledHelp,
+            .walkthroughShowItAgainHelp, .walkthroughActionFinishDemoHelp
+        ]
         let buttons: Set<ShellStringKey> = [
             .walkthroughDoItForMe, .walkthroughShowItAgain, .walkthroughActionFinishDemo
         ]
@@ -240,7 +247,7 @@ struct WalkthroughTests {
         #expect(drawnByPages.isDisjoint(with: chrome))
         #expect(drawnByPages.isDisjoint(with: drawnBySteps))
         let accounted = drawnByPages.subtracting(carriedOver).union(drawnBySteps).union(buttons)
-        #expect(accounted == inNamespace.subtracting(chrome).subtracting(demo))
+        #expect(accounted == inNamespace.subtracting(chrome).subtracting(tooltips).subtracting(demo))
     }
 
     @Test("next and previous walk the whole list and stop at both ends")

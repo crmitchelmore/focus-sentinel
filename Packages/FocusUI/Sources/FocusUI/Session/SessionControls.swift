@@ -52,6 +52,8 @@ public struct SessionControls: View {
     @Environment(\.shellTextScale) private var textScale
     @FocusState.Binding private var focus: FocusField?
     @ScaledMetric(relativeTo: .body) private var spacing: CGFloat = 8
+    /// The least width a verb glyph claims, so "play" and "pause" make buttons of one size.
+    @ScaledMetric(relativeTo: .body) private var glyphWidth: CGFloat = 20
 
     /// Whether the interruption sheet is up. Stopping is a deliberate act with something worth
     /// recording, so it gets a sheet rather than happening under the pointer.
@@ -257,8 +259,12 @@ public struct SessionControls: View {
     @ViewBuilder
     private var endings: some View {
         HStack(spacing: spacing) {
-            linkButton(.sessionActionInterrupt) { isInterrupting = true }
-            linkButton(.sessionActionComplete) { actions?.completeSession() }
+            linkButton(.sessionActionInterrupt, symbol: "stop.fill", help: .sessionActionInterruptHelp) {
+                isInterrupting = true
+            }
+            linkButton(.sessionActionComplete, symbol: "checkmark", help: .sessionActionCompleteHelp) {
+                actions?.completeSession()
+            }
         }
     }
 
@@ -266,25 +272,48 @@ public struct SessionControls: View {
     private func verbButtons(_ session: SessionSnapshot) -> some View {
         switch session.phase {
         case .focus:
-            primaryButton(.sessionActionPause) { actions?.pauseSession() }
-            button(.sessionActionBreakStart) { actions?.startBreak(reason: .user) }
-            button(.sessionActionDetourStart) { actions?.startDetour(reason: .user) }
+            primaryButton(.sessionActionPause, symbol: "pause.fill", help: .sessionActionPauseHelp) {
+                actions?.pauseSession()
+            }
+            button(.sessionActionBreakStart, symbol: "cup.and.saucer.fill", help: .sessionActionBreakStartHelp) {
+                actions?.startBreak(reason: .user)
+            }
+            button(.sessionActionDetourStart, symbol: "arrow.triangle.branch", help: .sessionActionDetourStartHelp) {
+                actions?.startDetour(reason: .user)
+            }
 
         case .intentionalDetour:
-            primaryButton(.sessionActionPause) { actions?.pauseSession() }
-            button(.sessionActionDetourEnd) { actions?.endDetour() }
+            primaryButton(.sessionActionPause, symbol: "pause.fill", help: .sessionActionPauseHelp) {
+                actions?.pauseSession()
+            }
+            button(.sessionActionDetourEnd, symbol: "arrow.uturn.left", help: .sessionActionDetourEndHelp) {
+                actions?.endDetour()
+            }
             // Legal only from focus, so the host ends the detour first and the machine records
             // two transitions — which is what keeps the timeline honest about what happened.
-            button(.sessionActionBreakStart) { actions?.startBreak(reason: .user) }
+            button(.sessionActionBreakStart, symbol: "cup.and.saucer.fill", help: .sessionActionBreakStartHelp) {
+                actions?.startBreak(reason: .user)
+            }
 
         case .onBreak:
-            primaryButton(.sessionActionPause) { actions?.pauseSession() }
-            button(.sessionActionBreakEnd) { actions?.endBreak() }
+            primaryButton(.sessionActionPause, symbol: "pause.fill", help: .sessionActionPauseHelp) {
+                actions?.pauseSession()
+            }
+            button(.sessionActionBreakEnd, symbol: "arrow.uturn.left", help: .sessionActionBreakEndHelp) {
+                actions?.endBreak()
+            }
 
         case .paused:
             // Disabled, with the reasons listed above it, whenever a cause the person did not
-            // set is still held — because the machine would reject the resume.
-            primaryButton(.sessionActionResume, isEnabled: session.userMayResume) {
+            // set is still held — because the machine would reject the resume. The tooltip on
+            // the disabled control says the same thing the footnote does (focus-8ski).
+            primaryButton(
+                .sessionActionResume,
+                symbol: "play.fill",
+                help: .sessionActionResumeHelp,
+                disabledHelp: .sessionResumeBlocked,
+                isEnabled: session.userMayResume
+            ) {
                 actions?.resumeSession()
             }
 
@@ -295,9 +324,23 @@ public struct SessionControls: View {
     }
 
     private var startButton: some View {
-        primaryButton(.sessionActionStart) {
+        primaryButton(.sessionActionStart, symbol: "play.fill", help: .sessionActionStartHelp) {
             actions?.startSession(kind: .openEnded, plannedSeconds: nil, deadlineAt: nil)
         }
+    }
+
+    /// **The verbs are glyphs, and the sentence is in the tooltip** (focus-8ski).
+    ///
+    /// Each button draws an SF Symbol and nothing else; the catalog label the button used to
+    /// draw is now its accessibility label, so VoiceOver and the keyboard-reachability tests
+    /// read the same verb they always did, and the tooltip carries the label *and* what
+    /// pressing it changes. The glyph is drawn at the callout size the label was, so the
+    /// buttons keep the height of the row they sit in.
+    private func glyph(_ symbol: String, labelled key: ShellStringKey) -> some View {
+        Image(systemName: symbol)
+            .font(DesignTokens.font(.callout, scale: textScale).weight(.semibold))
+            .frame(minWidth: glyphWidth)
+            .accessibilityLabel(Text(ShellStrings.resource(key)))
     }
 
     /// The one button in this section that carries the surface's declared focus identity.
@@ -307,11 +350,14 @@ public struct SessionControls: View {
     /// in — Start, Pause or Resume.
     private func primaryButton(
         _ key: ShellStringKey,
+        symbol: String,
+        help: ShellStringKey,
+        disabledHelp: ShellStringKey? = nil,
         isEnabled: Bool = true,
         perform: @escaping () -> Void
     ) -> some View {
         Button(action: perform) {
-            ShellText(key, role: .callout)
+            glyph(symbol, labelled: key)
         }
         // **Filled, not merely tinted** (focus-w41). `.bordered` with a tint drew the primary
         // verb as the same object as the four beside it in a slightly different colour, which is
@@ -321,35 +367,42 @@ public struct SessionControls: View {
         .tint(DesignTokens.Palette.accent(for: traits))
         .focused($focus, equals: .cockpitSessionPrimary)
         .disabled(actions == nil || !isEnabled)
+        .shellHelp(help, disabled: disabledHelp ?? help, when: !isEnabled)
     }
 
     private func button(
         _ key: ShellStringKey,
+        symbol: String,
+        help: ShellStringKey,
         perform: @escaping () -> Void
     ) -> some View {
         Button(action: perform) {
-            ShellText(key, role: .callout)
+            glyph(symbol, labelled: key)
         }
         .buttonStyle(CompanionButtonStyle())
         .disabled(actions == nil)
+        .shellHelp(help)
     }
 
-    /// A verb that ends the session: drawn as a link, in the person's accent, with no border.
+    /// A verb that ends the session: drawn in the person's accent, at the trailing edge.
     ///
-    /// Not a *lesser* control. A link does not invite the pointer the way a lozenge does, and the
-    /// two verbs it draws — stop and say why, and finish — are the two that cannot be undone.
-    /// They stay full-sized, full-contrast and fully keyboard-reachable; what they lose is the
-    /// visual claim on being pressed next.
+    /// Not a *lesser* control. It does not invite the pointer the way the primary lozenge does,
+    /// and the two verbs it draws — stop and say why, and finish — are the two that cannot be
+    /// undone. They stay full-sized, full-contrast and fully keyboard-reachable; what they lose
+    /// is the visual claim on being pressed next.
     private func linkButton(
         _ key: ShellStringKey,
+        symbol: String,
+        help: ShellStringKey,
         perform: @escaping () -> Void
     ) -> some View {
         Button(action: perform) {
-            ShellText(key, role: .callout)
+            glyph(symbol, labelled: key)
         }
         .buttonStyle(CompanionButtonStyle())
         .tint(DesignTokens.Palette.accent(for: traits))
         .disabled(actions == nil)
+        .shellHelp(help)
     }
 
     // MARK: - Formatting

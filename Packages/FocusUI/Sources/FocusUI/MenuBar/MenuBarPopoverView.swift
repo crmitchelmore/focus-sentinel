@@ -178,7 +178,8 @@ public struct MenuBarPopoverView: DecisionSurfaceContent {
                 view(of: section)
             }
         }
-        .padding(DesignTokens.spacing(spacing, scale: textScale))
+        // The one popover margin (focus-udn9), rather than this view's own row spacing.
+        .popoverInset()
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .contain)
     }
@@ -227,6 +228,7 @@ public struct MenuBarPopoverView: DecisionSurfaceContent {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             .buttonStyle(CompanionButtonStyle())
+            .shellHelp(.menuBarOpenCockpitHelp)
         }
     }
 
@@ -438,6 +440,7 @@ public struct MenuBarPopoverView: DecisionSurfaceContent {
                             .foregroundStyle(DesignTokens.Palette.accent(for: traits))
                     }
                     .buttonStyle(.plain)
+                    .shellHelp(.menuBarCancelSnoozeHelp)
                 }
             }
         }
@@ -460,20 +463,28 @@ public struct MenuBarPopoverView: DecisionSurfaceContent {
 
     @ViewBuilder
     private var sessionButtons: some View {
-        sessionButton(.sessionActionStart) { onAction(.startSession) }
-        sessionButton(.sessionActionPause) { onAction(.pauseSession) }
-        sessionButton(.sessionActionComplete) { onAction(.completeSession) }
+        sessionButton(.sessionActionStart, symbol: "play.fill", help: .sessionActionStartHelp) { onAction(.startSession) }
+        sessionButton(.sessionActionPause, symbol: "pause.fill", help: .sessionActionPauseHelp) { onAction(.pauseSession) }
+        sessionButton(.sessionActionComplete, symbol: "checkmark", help: .sessionActionCompleteHelp) { onAction(.completeSession) }
     }
 
+    /// **The same glyphs the cockpit draws, with the same tooltips** (focus-8ski). The catalog
+    /// verb is the accessibility label, so the popover still announces "Start session" and the
+    /// snapshot lane's label inventory is unchanged.
     private func sessionButton(
         _ key: ShellStringKey,
+        symbol: String,
+        help: ShellStringKey,
         perform: @escaping () -> Void
     ) -> some View {
         Button(action: perform) {
-            ShellText(key, role: .callout)
-                .fixedSize(horizontal: true, vertical: false)
+            Image(systemName: symbol)
+                .font(DesignTokens.font(.callout, scale: textScale).weight(.semibold))
+                .frame(minWidth: DesignTokens.spacing(spacing * 2, scale: textScale))
+                .accessibilityLabel(Text(ShellStrings.resource(key)))
         }
         .buttonStyle(CompanionButtonStyle())
+        .shellHelp(help)
     }
 
     /// F-119's one global switch, reachable without opening a window.
@@ -514,5 +525,6 @@ public struct MenuBarPopoverView: DecisionSurfaceContent {
         .buttonStyle(CompanionButtonStyle())
         .accessibilityLabel(Text(ShellStrings.resource(.sensingPauseLabel)))
         .accessibilityAddTraits(isWatching ? [.isSelected] : [])
+        .shellHelp(isWatching ? .sensingPauseSwitchOffHelp : .sensingPauseSwitchOnHelp)
     }
 }

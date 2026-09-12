@@ -314,5 +314,17 @@ public struct QueryPanelView: DecisionSurfaceContent {
                 .padding(.vertical, provenance == .uninvited ? 7 : 0)
                 .frame(maxWidth: .infinity)
         }
+        // Every control carries a tooltip (focus-8ski): what answering records, per answer.
+        .shellHelp(Self.helpKey(for: answer))
+    }
+
+    /// What each answer records, for its tooltip — matching the semantics `QueryAnswer`
+    /// documents: a rule for the two that write one, and no rule for "Not now".
+    static func helpKey(for answer: QueryAnswer) -> ShellStringKey {
+        switch answer {
+        case .yesAddIt: .nudgeAnswerYesAddItHelp
+        case .no: .nudgeAnswerNoHelp
+        case .notNow: .nudgeAnswerNotNowHelp
+        }
     }
 }

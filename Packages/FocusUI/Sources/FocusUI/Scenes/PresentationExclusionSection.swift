@@ -159,6 +159,8 @@ public struct PresentationExclusionSection: View {
                             ShellText(.interventionExclusionRemove)
                         }
                         .accessibilityLabel(Text(verbatim: entry.displayName))
+                        // Every control carries a tooltip (focus-8ski).
+                        .shellHelp(.interventionExclusionRemoveHelp)
                     }
                 }
             }
@@ -177,6 +179,7 @@ public struct PresentationExclusionSection: View {
                             .font(DesignTokens.font(.callout, scale: textScale))
                     }
                     .buttonStyle(.link)
+                    .shellHelp(.interventionExclusionAddHelp)
                 }
             }
         }

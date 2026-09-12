@@ -199,8 +199,10 @@ public protocol SessionActing: AnyObject {
     /// The person's own pause. Sends `paused(cause: .user)`, and only a `.user` resume lifts it.
     func pauseSession()
 
-    /// The person's own resume. Sends `resumed(cause: .user)` — which the machine rejects
-    /// `notPausedForThatCause` if the pause belongs to the screen lock or the global switch.
+    /// The person's own resume. Sends `resumed(cause:)` for each cause the person may clear —
+    /// their own, and a restoration's `.relaunch` or `.systemRestart` (focus-mmty). The machine
+    /// rejects `notPausedForThatCause` for a pause that belongs to the screen lock or the
+    /// global switch, which is why the surface disables the control first.
     func resumeSession()
 
     func startDetour(reason: DetourReason)

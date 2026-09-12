@@ -80,15 +80,26 @@ public struct SessionSnapshot: Sendable, Equatable, Hashable {
     /// The causes the person cannot clear themselves.
     ///
     /// The Resume control is disabled, with a named explanation, while any of these is still
-    /// held — because `resumed(cause: .user)` will be rejected `notPausedForThatCause` for
-    /// anything the user did not set, and a button that silently does nothing is worse than a
-    /// button that says why.
+    /// held — because a resume the machine would reject `notPausedForThatCause` is a button
+    /// that silently does nothing, which is worse than a button that says why. Which causes
+    /// are the person's to clear is `PauseReason.isClearedByThePerson`'s to say: their own
+    /// pause, and the two a relaunch raises (focus-mmty).
     public var causesTheUserCannotClear: Set<PauseReason> {
-        pauseCauses.subtracting([.user])
+        pauseCauses.filter { !$0.isClearedByThePerson }
     }
 
-    /// Whether pressing Resume would actually resume anything.
+    /// The causes the person may clear, in the order `resumeSession` sends them.
+    ///
+    /// Sorted so the host sends the same sequence for the same set; the machine removes one
+    /// cause per event and moves the phase only when the set empties, so the order changes
+    /// nothing about where the session lands.
+    public var causesTheUserMayClear: [PauseReason] {
+        pauseCauses.filter(\.isClearedByThePerson).sorted()
+    }
+
+    /// Whether pressing Resume would actually resume anything: paused, and every held cause
+    /// one the person is entitled to lift.
     public var userMayResume: Bool {
-        phase == .paused && pauseCauses == [.user]
+        phase == .paused && !pauseCauses.isEmpty && causesTheUserCannotClear.isEmpty
     }
 }

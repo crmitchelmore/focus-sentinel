@@ -59,7 +59,8 @@ public struct WalkthroughStepView: View {
 
             footer
         }
-        .padding(spacing * 2)
+        // The one dialog margin (focus-udn9).
+        .dialogInset()
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(DesignTokens.Palette.windowBackground(for: traits))
         .animation(DesignTokens.animation(for: traits), value: isDone)
@@ -100,6 +101,12 @@ public struct WalkthroughStepView: View {
                 .buttonStyle(CompanionButtonStyle(prominent: step == .finishDemo))
                 .disabled(isDone && !step.performsOnArrival && step != .finishDemo)
                 .focused($focus, equals: .walkthroughAction)
+                // Every control carries a tooltip (focus-8ski); a disabled one says why.
+                .shellHelp(
+                    Self.fallbackHelpKey(for: step),
+                    disabled: .walkthroughDoItForMeDisabledHelp,
+                    when: isDone && !step.performsOnArrival && step != .finishDemo
+                )
             }
 
             HStack(spacing: spacing) {
@@ -111,6 +118,7 @@ public struct WalkthroughStepView: View {
                 .buttonStyle(CompanionButtonStyle())
                 .disabled(step.previousStep == nil)
                 .focused($focus, equals: .walkthroughBack)
+                .shellHelp(.walkthroughBackHelp, disabled: .walkthroughBackDisabledHelp, when: step.previousStep == nil)
 
                 Spacer(minLength: 0)
 
@@ -126,10 +134,20 @@ public struct WalkthroughStepView: View {
                     }
                     .buttonStyle(CompanionButtonStyle(prominent: isDone))
                     .focused($focus, equals: .walkthroughNext)
+                    .shellHelp(.walkthroughNextHelp)
                 }
             }
         }
         .padding(.top, spacing)
+    }
+
+    /// The tooltip for the fallback button, one per label it can carry.
+    static func fallbackHelpKey(for step: WalkthroughAction) -> ShellStringKey {
+        switch step.fallbackTitleKey {
+        case .walkthroughShowItAgain: .walkthroughShowItAgainHelp
+        case .walkthroughActionFinishDemo: .walkthroughActionFinishDemoHelp
+        default: .walkthroughDoItForMeHelp
+        }
     }
 
     /// "3 of 11" through the locale's own digits, with one dot per step under it.

@@ -693,6 +693,7 @@ public struct CockpitView: View {
                     if newValue != .cockpitDoneWhen { commitDoneWhen(priority) }
                 }
                 .accessibilityLabel(Text(ShellStrings.resource(.priorityDoneWhenLabel)))
+                .shellHelp(.priorityDoneWhenLabelHelp)
                 .walkthroughAnchor(.doneWhenField)
             }
         }
@@ -922,6 +923,8 @@ public struct CockpitView: View {
         }
         .focused($focus, equals: .cockpitComplete)
         .disabled(actions == nil)
+        // Every control carries a tooltip from the catalog (focus-8ski); see `ShellHelp`.
+        .shellHelp(.priorityActionCompleteHelp)
     }
 
     /// Replace the commitment with a new one, through the capture field.
@@ -934,6 +937,7 @@ public struct CockpitView: View {
                 ShellText(.priorityActionChange)
             }
             .disabled(actions == nil)
+            .shellHelp(.priorityActionChangeHelp)
             .walkthroughAnchor(.changePriorityButton)
         }
     }
@@ -951,6 +955,7 @@ public struct CockpitView: View {
             }
             .focused($focus, equals: .cockpitSameContext)
             .disabled(wiring.setPriorityKeepingContext == nil)
+            .shellHelp(.priorityActionSameContextHelp)
         }
     }
 
@@ -986,6 +991,7 @@ public struct CockpitView: View {
                 ShellText(.priorityActionEditIntent)
             }
             .disabled(wiring.editIntent == nil)
+            .shellHelp(.priorityActionEditIntentHelp)
         }
     }
 
@@ -997,6 +1003,7 @@ public struct CockpitView: View {
             ShellText(.priorityActionClear)
         }
         .disabled(actions == nil)
+        .shellHelp(.priorityActionClearHelp)
     }
 
     // MARK: - What the app can honestly say about itself
@@ -1093,6 +1100,7 @@ public struct CockpitView: View {
             // SwiftUI's yellow "unrenderable view" placeholder — so a link here would mean
             // committing a picture of a broken render and calling it a baseline.
             .focused($focus, equals: .cockpitOpenSettings)
+            .shellHelp(.cockpitOpenSettingsHelp)
             .walkthroughAnchor(.openSettingsButton)
         }
     }
@@ -1125,12 +1133,14 @@ public struct CockpitView: View {
                 } label: {
                     ShellText(.cockpitLaunchAtLoginAccept, role: .footnote)
                 }
+                .shellHelp(.cockpitLaunchAtLoginAcceptHelp)
 
                 Button {
                     onLaunchAtLoginOffer(.dismiss)
                 } label: {
                     ShellText(.cockpitLaunchAtLoginDismiss, role: .footnote)
                 }
+                .shellHelp(.cockpitLaunchAtLoginDismissHelp)
             }
         }
     }
@@ -1183,6 +1193,7 @@ public struct CockpitView: View {
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isOpen ? [.isSelected] : [])
+        .shellHelp(Self.tabHelpKey(candidate))
         // One focus identity for the bar, carried by the open tab (see `FocusField.cockpitTabs`).
         // The Details tab is also where the tour points when the desk is a tab away (focus-u6de).
         if isOpen {
@@ -1194,6 +1205,15 @@ public struct CockpitView: View {
         }
     }
 
+    /// What each tab's tooltip says it holds (focus-8ski).
+    private static func tabHelpKey(_ tab: CockpitTab) -> ShellStringKey {
+        switch tab {
+        case .now: .cockpitTabNowHelp
+        case .details: .cockpitTabDetailsHelp
+        case .recent: .cockpitTabRecentHelp
+        }
+    }
+
     /// The Recent tab's route to the day's history: the window `HistoryView` draws.
     private var openHistoryButton: some View {
         Button {
@@ -1202,6 +1222,7 @@ public struct CockpitView: View {
             ShellText(.cockpitOpenHistory, role: .callout)
         }
         .focused($focus, equals: .cockpitOpenHistory)
+        .shellHelp(.cockpitOpenHistoryHelp)
     }
 
     /// The receipts of the sections that are on the tabs that are not open (focus-1rj7).

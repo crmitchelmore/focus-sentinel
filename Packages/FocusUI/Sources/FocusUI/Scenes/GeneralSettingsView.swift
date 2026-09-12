@@ -128,7 +128,8 @@ public struct GeneralSettingsView: View {
                     .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
             }
         }
-        .padding(spacing)
+        // The one dialog margin every pane and sheet draws (focus-udn9).
+        .dialogInset()
         .frame(maxWidth: .infinity, alignment: .leading)
         .buttonStyle(CompanionButtonStyle())
         .defaultFocus($focus, .generalAppearancePicker)
@@ -172,12 +173,19 @@ public struct GeneralSettingsView: View {
         .buttonStyle(CompanionButtonStyle(selected: softwareUpdates.checksAutomatically))
         .accessibilityAddTraits(softwareUpdates.checksAutomatically ? .isSelected : [])
         .focused($focus, equals: .generalSoftwareUpdates)
+        // Every control carries a tooltip, and a disabled one says why (focus-8ski).
+        .shellHelp(.settingsUpdatesAutomaticHelp)
 
         Button { onSoftwareUpdateAction(.checkNow) } label: {
             ShellText(.settingsUpdatesCheckNow, role: .callout)
         }
         .disabled(!softwareUpdates.canCheckNow)
         .focused($focus, equals: .generalCheckForUpdates)
+        .shellHelp(
+            .settingsUpdatesCheckNowHelp,
+            disabled: .settingsUpdatesCheckNowDisabledHelp,
+            when: !softwareUpdates.canCheckNow
+        )
 
         ShellText(.settingsUpdatesNote, role: .footnote)
             .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
@@ -209,9 +217,20 @@ public struct GeneralSettingsView: View {
             }
             .buttonStyle(CompanionButtonStyle(selected: preference == option))
             .accessibilityAddTraits(preference == option ? .isSelected : [])
+            .shellHelp(Self.helpKey(option))
             if option == Self.options.first {
                 button.focused($focus, equals: .generalAppearancePicker)
             } else { button }
+        }
+    }
+
+    /// Each appearance choice's tooltip: a total switch, so a fourth option is a compile error
+    /// here rather than a button with nothing to say.
+    nonisolated static func helpKey(_ option: AppearancePreference) -> ShellStringKey {
+        switch option {
+        case .matchSystem: .settingsAppearanceMatchSystemHelp
+        case .light: .settingsAppearanceLightHelp
+        case .dark: .settingsAppearanceDarkHelp
         }
     }
 
@@ -223,6 +242,7 @@ public struct GeneralSettingsView: View {
             }
             .buttonStyle(CompanionButtonStyle(selected: quickCaptureShortcut == option))
             .accessibilityAddTraits(quickCaptureShortcut == option ? .isSelected : [])
+            .shellHelp(.settingsQuickCaptureShortcutHelp)
             if option == HotKeySpec.quickCaptureChoices.first {
                 button.focused($focus, equals: .generalQuickCaptureShortcut)
             } else { button }
@@ -249,6 +269,7 @@ public struct GeneralSettingsView: View {
         .buttonStyle(CompanionButtonStyle(selected: ritualEnabled))
         .accessibilityAddTraits(ritualEnabled ? .isSelected : [])
         .focused($focus, equals: .generalRitualEnabled)
+        .shellHelp(.settingsRitualEnabledHelp)
 
         ShellText(.settingsRitualEnabledNote, role: .footnote)
             .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
@@ -299,6 +320,7 @@ public struct GeneralSettingsView: View {
             }
         }
         .focused($focus, equals: .generalShowWalkthrough)
+        .shellHelp(.commandShowWalkthroughHelp)
 
         ShellText(.settingsShowWalkthroughNote, role: .footnote)
             .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
@@ -328,6 +350,16 @@ public struct GeneralSettingsView: View {
         .accessibilityAddTraits(launchAtLogin.isOn ? .isSelected : [])
         .disabled(!launchAtLogin.isAdjustable)
         .focused($focus, equals: .generalLaunchAtLogin)
+        // The disabled reason is the footnote's own sentence: the two states that disable the
+        // switch are exactly the two that draw one, so the tooltip and the footnote cannot
+        // disagree.
+        .shellHelp(
+            .settingsLaunchAtLoginHelp,
+            disabled: launchAtLogin.footnote == .approval
+                ? .settingsLaunchAtLoginApproval
+                : .settingsLaunchAtLoginUnavailable,
+            when: !launchAtLogin.isAdjustable
+        )
 
         // The footnote is a value on `LaunchAtLogin` rather than a chain of `if`s here, so that
         // "the four statuses draw four distinct things" (H7.3) is a fold somebody can run rather
@@ -344,6 +376,7 @@ public struct GeneralSettingsView: View {
             } label: {
                 ShellText(.settingsLaunchAtLoginOpenSettings)
             }
+            .shellHelp(.settingsLaunchAtLoginOpenSettingsHelp)
         case .unavailable:
             ShellText(.settingsLaunchAtLoginUnavailable, role: .footnote)
                 .foregroundStyle(DesignTokens.supportingTextColor(for: traits))

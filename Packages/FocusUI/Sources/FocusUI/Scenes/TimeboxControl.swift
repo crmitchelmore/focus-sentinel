@@ -74,6 +74,12 @@ public struct TimeboxControl: View {
                 }
                 .buttonStyle(CompanionButtonStyle())
                 .disabled(choose == nil || timeboxSeconds == nil)
+                // Tooltips from the catalog (focus-8ski); a disabled control says why.
+                .shellHelp(
+                    .priorityTimeboxNoneHelp,
+                    disabled: .priorityTimeboxNoneDisabledHelp,
+                    when: choose == nil || timeboxSeconds == nil
+                )
 
                 Spacer(minLength: 0)
             }
@@ -97,6 +103,7 @@ public struct TimeboxControl: View {
         .buttonStyle(CompanionButtonStyle())
         .tint(timeboxSeconds == seconds ? DesignTokens.Palette.accent(for: traits) : nil)
         .disabled(choose == nil)
+        .shellHelp(.priorityTimeboxPresetHelp)
 
         if isFirst {
             button.focused($focus, equals: .cockpitTimebox)

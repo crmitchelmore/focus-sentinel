@@ -51,6 +51,8 @@ public struct PauseSwitch: View {
             .focused($focus, equals: .cockpitSensingPause)
             .disabled(setWatching == nil)
             .accessibilityLabel(Text(ShellStrings.resource(.sensingPauseLabel)))
+            // The sentence beneath, as the tooltip as well (focus-8ski): one key, one truth.
+            .shellHelp(.sensingPauseExplanation)
 
             ShellText(.sensingPauseExplanation, role: .footnote)
                 .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
