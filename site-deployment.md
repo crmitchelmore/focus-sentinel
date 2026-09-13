@@ -24,6 +24,9 @@ Verified 13 September 2026:
   `761de6a0aa83a8ad709981bd30d9b03f`; no DNS permissions or expiry was configured.
   This account-level scope can edit Pages projects across that account.
   An authenticated read of the `focus-sentinel` Pages project succeeded.
+  A local API-token deployment also succeeded on 13 September 2026:
+  https://faa85c64.focus-sentinel.pages.dev. Production HTML and image matched
+  the source byte for byte after deployment.
 - Previous deployments used a browser session. Do not extract browser cookies
   or use browser-session authentication for CI; use the saved API token.
 
