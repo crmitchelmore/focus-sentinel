@@ -42,3 +42,4 @@ Tools/*/.swiftpm/
 
 # Local Cloudflare deployment credentials
 /.env.cloudflare
+/.wrangler/
