@@ -1,89 +1,69 @@
 # Marketing site deployment
 
-The static marketing site lives in `site/`. No build step is required. The intended
-Cloudflare Pages project is `focus-sentinel`, with production branch `main` and
-custom domain `focus-sentinel.win`.
+The static marketing site lives in `site/`. No build step is required. It is served by
+the Cloudflare Pages project `focus-sentinel` (account `761de6a0aa83a8ad709981bd30d9b03f`),
+production branch `main`, custom domain `focus-sentinel.win`.
 
-Cloudflare account: `761de6a0aa83a8ad709981bd30d9b03f`. The first deployment was
-uploaded from a local ZIP through the Cloudflare dashboard on 12 September 2026.
-Chris prefers API credentials for future deployments; use an API token for local
-CLI and CI deployment. Both GitHub Actions repository secrets are provisioned.
+## How a change reaches production
+
+Merging to `main` deploys. `.github/workflows/deploy-site.yml` runs on every push to
+`main` that changes `site/**`, `wrangler.toml` or the workflow itself, and can also be
+dispatched by hand from `main`. Changes on any other branch are not deployed until
+they are merged.
+
+The job runs serially on the existing `bravo-mini-local` macOS ARM64 runner, checks out
+current `main` when it starts (so a queued run cannot roll the site back), requires both
+repository secrets, uploads only `site/` with Wrangler, and then fetches the public HTML
+and `companion.png` over HTTPS and compares them byte for byte with the source. No macOS
+builds or UI tests run. GitHub-hosted runners were blocked by account billing limits on
+13 September 2026, which is why the local runner is used.
+
+To deploy from this Mac without waiting for CI, from the repository root:
+
+```sh
+npx --yes wrangler@4.129.1 pages deploy site --project-name=focus-sentinel --branch=main --env-file .env.cloudflare
+```
 
 ## Credential locations for agents
 
 Verified 13 September 2026:
 
 - Local file: `/Users/bravostation/work/focus/.env.cloudflare`, ignored by Git,
-  permissions `0600`. Both `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`
-  are populated. This file is machine-local and is not included in checkouts.
-- CI: GitHub repository `crmitchelmore/focus-sentinel` → Settings →
-  Secrets and variables → Actions → repository secrets. Both names above were
-  securely provisioned via standard input and verified in the secret listing.
+  permissions `0600`. Both `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` are
+  populated. The file is machine-local and is not part of any checkout.
+- CI: GitHub repository `crmitchelmore/focus-sentinel` → Settings → Secrets and
+  variables → Actions → repository secrets `CLOUDFLARE_API_TOKEN` and
+  `CLOUDFLARE_ACCOUNT_ID`, the same names Pasta and Just Speak to It use.
 - Token name: **Focus Sentinel Pages deployment**, created with Chris's explicit
-  confirmation on 13 September 2026. Scope: Cloudflare Pages:Edit on account
-  `761de6a0aa83a8ad709981bd30d9b03f`; no DNS permissions or expiry was configured.
-  This account-level scope can edit Pages projects across that account.
-  An authenticated read of the `focus-sentinel` Pages project succeeded.
-  A local API-token deployment also succeeded on 13 September 2026:
-  https://faa85c64.focus-sentinel.pages.dev. Production HTML and image matched
-  the source byte for byte after deployment.
-- Previous deployments used a browser session. Do not extract browser cookies
-  or use browser-session authentication for CI; use the saved API token.
+  confirmation on 13 September 2026. Scope: Cloudflare Pages:Edit on the account above;
+  no DNS permission and no expiry. That scope can edit every Pages project in the account.
 
-Keep the local file outside `site/` and out of upload ZIPs. Never print its
-contents, use shell tracing (`set -x`), put tokens on command lines, or copy
-values into Git, Notion, PR descriptions or chat. Preserve permissions `0600`.
-Use a scoped API token for this account with Cloudflare Pages edit permission;
-routine site deploys do not need DNS edit or a global API key.
+Keep the local file outside `site/`. Never print its contents, use shell tracing
+(`set -x`), put the token on a command line, or copy values into Git, Notion, PR
+descriptions or chat. Preserve permissions `0600`. Do not use browser-session
+authentication or extracted cookies for deployment; use the saved token.
 
-Wrangler can read the local credential file without sourcing
-it as shell code:
+To rotate: create a new scoped token in Cloudflare, update `.env.cloudflare`, then
+`gh secret set CLOUDFLARE_API_TOKEN --repo crmitchelmore/focus-sentinel` with the value
+on standard input. GitHub cannot return a saved secret value, and Wrangler's local
+OAuth login is not a CI credential.
 
-```sh
-npx --yes wrangler@4.129.1 pages deploy site --project-name=focus-sentinel --branch=main --env-file .env.cloudflare
-```
+## One-time setup, already done
 
-Provision GitHub secrets using `gh secret set NAME` with each value passed via
-standard input from a parser of this file, never `--body TOKEN`. Verify only
-secret names with `gh secret list --repo crmitchelmore/focus-sentinel`, then
-verify an actual deployment. GitHub does not return saved secret values.
+Recorded for reference; none of this needs repeating.
 
-## Automatic deployment
+- Pages project created: `npx --yes wrangler@4.129.1 pages project create focus-sentinel --production-branch=main`.
+- `focus-sentinel.win` associated under Custom domains in Cloudflare Pages, with the
+  apex CNAME to `focus-sentinel.pages.dev` created afterwards. Adding DNS alone does not
+  associate a hostname with Pages.
 
-`.github/workflows/deploy-site.yml` deploys on pushes to `main` that change
-`site/**`, `wrangler.toml` or that workflow. It also supports manual dispatch
-from main. Jobs run serially on the existing `bravo-mini-local` macOS ARM64
-runner, check out current main when starting,
-require both repository secrets, upload only `site/`, and compare the public
-HTML and image with source over HTTPS. No macOS builds or UI tests run.
-GitHub-hosted runners were blocked by account billing/spending limits on
-13 September 2026, so deployment uses the existing local runner.
+## History
 
-Authenticate locally with Wrangler or supply `CLOUDFLARE_API_TOKEN` and
-`CLOUDFLARE_ACCOUNT_ID` through the environment. Never commit credentials.
+- 12 September 2026: first deployment uploaded as a ZIP through the Cloudflare dashboard.
+  The site itself came from commit `c4b6517` on `feat/release-trains` (PR #13).
+- 13 September 2026: API token created, secrets provisioned, a local token deployment
+  verified (`https://faa85c64.focus-sentinel.pages.dev`), and the automatic workflow
+  landed on `main`.
 
-Create the Pages project once, if it does not already exist:
-
-```sh
-npx --yes wrangler@4.129.1 pages project create focus-sentinel --production-branch=main
-```
-
-Deploy from the repository root:
-
-```sh
-npx --yes wrangler@4.129.1 pages deploy site --project-name=focus-sentinel --branch=main
-```
-
-Associate `focus-sentinel.win` with the project under Custom domains in Cloudflare
-Pages, then create the DNS record Cloudflare requests. Adding DNS alone does not
-associate the hostname with Pages. Verify HTTPS serves the page and
-`/companion.png` after certificate activation.
-
-CI uses the same deploy command with GitHub Actions secrets named
-`CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`, matching Pasta and Just Speak To
-It. GitHub cannot return existing secret values; provisioning requires the
-original token or a new scoped token. Local Wrangler OAuth is not a CI token.
-
-The original site came from commit `c4b6517` on `feat/release-trains` (PR #13).
-Its GitHub source, release and security links require repository access while
+The site's GitHub source, release and security links require repository access while
 the repository remains private.
