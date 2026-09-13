@@ -39,3 +39,6 @@ Tools/*/.swiftpm/
 
 # --- macOS noise ---
 .DS_Store
+
+# Local Cloudflare deployment credentials
+/.env.cloudflare
