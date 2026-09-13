@@ -49,9 +49,12 @@ verify an actual deployment. GitHub does not return saved secret values.
 
 `.github/workflows/deploy-site.yml` deploys on pushes to `main` that change
 `site/**`, `wrangler.toml` or that workflow. It also supports manual dispatch
-from main. Jobs run serially on Ubuntu, check out current main when starting,
+from main. Jobs run serially on the existing `bravo-mini-local` macOS ARM64
+runner, check out current main when starting,
 require both repository secrets, upload only `site/`, and compare the public
 HTML and image with source over HTTPS. No macOS builds or UI tests run.
+GitHub-hosted runners were blocked by account billing/spending limits on
+13 September 2026, so deployment uses the existing local runner.
 
 Authenticate locally with Wrangler or supply `CLOUDFLARE_API_TOKEN` and
 `CLOUDFLARE_ACCOUNT_ID` through the environment. Never commit credentials.
