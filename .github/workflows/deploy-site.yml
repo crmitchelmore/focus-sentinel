@@ -19,7 +19,7 @@ concurrency:
 jobs:
   deploy:
     if: github.ref == 'refs/heads/main'
-    runs-on: [self-hosted, bravo-mini-local, macOS, ARM64]
+    runs-on: [bravo-mini-local, macOS, ARM64]
     timeout-minutes: 10
     permissions:
       contents: read
