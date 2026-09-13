@@ -20,6 +20,9 @@ Verified 13 September 2026:
   Secrets and variables → Actions → repository secrets. Required names are
   `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`. Neither repository secret
   was present at verification. Do not assume Pasta/JSTI secrets are shared.
+  Subsequent attempts to save the account-ID secret returned GitHub HTTP 502
+  and 500, and the follow-up listing returned 500. Its final presence is
+  unverified; recheck before provisioning. No API token was submitted.
 - Deployments so far use the signed-in Codex in-app browser session. It is not
   an API token, cannot authenticate CI, and must not be extracted into a file.
 
@@ -50,6 +53,8 @@ require both repository secrets, upload only `site/`, and compare the public
 HTML and image with source over HTTPS. No macOS builds or UI tests run.
 The workflow cannot deploy until its API token is provisioned. Track that
 remaining setup in `focus-g7ju`.
+The workflow is currently on `codex/marketing-cloudflare`; it must be merged
+to main after credentials are provisioned for automatic pushes to take effect.
 
 Authenticate locally with Wrangler or supply `CLOUDFLARE_API_TOKEN` and
 `CLOUDFLARE_ACCOUNT_ID` through the environment. Never commit credentials.
