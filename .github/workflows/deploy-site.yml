@@ -20,7 +20,8 @@ jobs:
   deploy:
     if: github.ref == 'refs/heads/main'
     runs-on: [bravo-mini-local, macOS, ARM64]
-    timeout-minutes: 10
+    # The shared runner admission hook may wait up to one hour for its lease.
+    timeout-minutes: 70
     permissions:
       contents: read
       deployments: write
