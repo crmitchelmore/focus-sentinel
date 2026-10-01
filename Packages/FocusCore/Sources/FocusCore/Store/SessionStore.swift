@@ -545,7 +545,11 @@ public final class SessionStore {
         record.pauseCauses = restored.pauseCauses
         record.resumeTo = restored.resumeTo
         // The anchor now belongs to this launch, whatever it belonged to before — which is
-        // exactly what makes a reboot's discarded anchor stop being compared against.
+        // exactly what makes a reboot's discarded anchor stop being compared against. The
+        // wall-clock half of the pair moves with it: the next relaunch differences
+        // `phaseChangedAt` against this anchor, and an old one would read the whole gap before
+        // this restoration as a clock anomaly.
+        record.phaseChangedAt = dateProvider.now
         record.uptimeAnchorSeconds = uptimeClock.uptimeSeconds
         record.bootIdentity = bootIdentity.isEmpty ? nil : bootIdentity
 
