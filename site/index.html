@@ -4,11 +4,47 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="canonical" href="https://focus-sentinel.win/">
-<title>Focus Sentinel</title>
-<meta name="description" content="Focus Sentinel is a local-only macOS companion that keeps one priority in view, watches which app is in front, and asks instead of accusing.">
-<meta property="og:title" content="Focus Sentinel">
-<meta property="og:description" content="One priority, kept in view. A local-only Mac companion that asks before it assumes.">
-<meta property="og:image" content="https://focus-sentinel.win/companion.png">
+<title>Focus Sentinel — one priority, kept in view</title>
+<meta name="description" content="Focus Sentinel is a local-only macOS companion that keeps one priority in view, watches which app is in front, and asks instead of accusing. It blocks nothing and never connects to the internet.">
+<meta name="theme-color" content="#FAF7F0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#191D1F" media="(prefers-color-scheme: dark)">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Focus Sentinel">
+<meta property="og:url" content="https://focus-sentinel.win/">
+<meta property="og:locale" content="en_GB">
+<meta property="og:title" content="Focus Sentinel — one priority, kept in view">
+<meta property="og:description" content="A local-only Mac companion that notices when you drift from your priority and asks before it assumes. It blocks nothing and never connects to the internet.">
+<meta property="og:image" content="https://focus-sentinel.win/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Focus Sentinel: One priority, kept in view. A local-only Mac companion that asks before it assumes.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Focus Sentinel — one priority, kept in view">
+<meta name="twitter:description" content="A local-only Mac companion that notices when you drift from your priority and asks before it assumes. It blocks nothing and never connects to the internet.">
+<meta name="twitter:image" content="https://focus-sentinel.win/og.png">
+<meta name="twitter:image:alt" content="Focus Sentinel: One priority, kept in view. A local-only Mac companion that asks before it assumes.">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Focus Sentinel",
+  "description": "A local-only macOS companion that keeps one priority in view, notices when the app in front drifts from it, and asks before it assumes. It blocks nothing and never connects to the internet.",
+  "url": "https://focus-sentinel.win/",
+  "image": "https://focus-sentinel.win/og.png",
+  "operatingSystem": "macOS 26",
+  "applicationCategory": "ProductivityApplication",
+  "license": "https://opensource.org/licenses/MIT",
+  "inLanguage": "en-GB",
+  "author": {
+    "@type": "Person",
+    "name": "Chris Mitchelmore",
+    "url": "https://mitchelmore.uk/"
+  }
+}
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
 <script>document.documentElement.classList.add("js");</script>
@@ -108,7 +144,7 @@
   @media (max-width: 640px) { .bar nav { display: none; } }
 
   /* Hero */
-  .hero { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: clamp(28px, 5vw, 64px); align-items: center; padding-block: clamp(32px, 6vw, 72px) clamp(40px, 7vw, 88px); }
+  .hero { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: clamp(28px, 5vw, 64px); align-items: center; padding-block: clamp(32px, 6vw, 72px) clamp(28px, 4vw, 48px); }
   @media (max-width: 860px) { .hero { grid-template-columns: 1fr; } }
   .eyebrow { font-size: 0.78rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--mist); }
   .hero .eyebrow { margin-bottom: 18px; }
@@ -122,6 +158,20 @@
   .btn.quiet:hover { border-color: var(--spruce); }
   .req { margin-top: 18px; font-size: 0.9rem; color: var(--mist); }
   .req b { color: var(--slate); font-weight: 600; }
+  .btn svg { width: 16px; height: 16px; flex: none; fill: currentColor; }
+
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+  /* Skip link: off-screen until focused */
+  .skip { position: absolute; left: 16px; top: -60px; z-index: 10; padding: 10px 16px; border-radius: 10px; background: var(--slate); color: var(--bench); font-weight: 600; text-decoration: none; transition: top 160ms var(--ease); }
+  .skip:focus { top: 12px; }
+
+  /* Trust strip: the four facts people check first */
+  .trust { list-style: none; margin: 0; padding: 18px 0 clamp(32px, 5vw, 56px); display: flex; flex-wrap: wrap; gap: 10px 28px; font-size: 0.92rem; color: var(--mist); animation: rise 700ms var(--ease) 420ms both; }
+  .trust li { display: inline-flex; align-items: center; gap: 8px; }
+  .trust svg { width: 14px; height: 14px; flex: none; fill: none; stroke: var(--spruce); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+  .trust b { color: var(--slate); font-weight: 600; }
+  @media (max-width: 520px) { .trust { display: grid; grid-template-columns: 1fr; gap: 10px; } }
 
   /* Hero entrance: one orchestrated reveal, then nothing */
   @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
@@ -141,7 +191,8 @@
   .band .lamp { position: absolute; right: 26px; top: 16px; width: 22px; height: 22px; border-radius: 50%; background: #E9BA4F; box-shadow: 0 0 0 6px rgba(233,186,79,0.18); animation: glow 6s ease-in-out infinite; }
   @keyframes glow { 50% { box-shadow: 0 0 0 10px rgba(233,186,79,0.10); } }
   .band img { width: 64px; height: 64px; border-radius: 16px; flex: none; }
-  .band .title { font-family: "Bricolage Grotesque", sans-serif; font-weight: 700; font-size: 1.6rem; letter-spacing: -0.01em; }
+  .band .title { font-family: "Bricolage Grotesque", sans-serif; font-weight: 700; font-size: 1.6rem; line-height: 1.1; letter-spacing: -0.01em; position: relative; padding-right: 34px; }
+  @media (max-width: 400px) { .cockpit .band .title { font-size: 1.3rem; } }
   .lights { position: absolute; left: 14px; top: 12px; display: flex; gap: 6px; }
   .lights i { width: 10px; height: 10px; border-radius: 50%; display: block; background: #E5504B; }
   .lights i:nth-child(2) { background: #E7B23E; } .lights i:nth-child(3) { background: #5CB865; }
@@ -166,6 +217,8 @@
   .verb svg { width: 16px; height: 16px; fill: currentColor; }
   .verb.link { background: transparent; color: var(--spruce); }
   .caption { font-size: 0.82rem; color: var(--mist); }
+  .cockpit .body { grid-template-columns: minmax(0, 1fr); }
+  @media (max-width: 360px) { .cockpit .body { padding-inline: 18px; } .clock { font-size: 2.2rem; } .verbs { gap: 6px; } .verb { width: 40px; height: 38px; } }
 
   /* Sections with a label gutter */
   section { padding-block: clamp(40px, 7vw, 88px); border-top: 1px solid var(--line); }
@@ -214,7 +267,7 @@
   .privacy .eyebrow, .privacy .intro { color: var(--deep-mist); }
   .privacy h2 { color: var(--deep-ink); }
   .promises { list-style: none; margin: 30px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 22px 32px; }
-  .promises li { display: grid; gap: 6px; border-top: 1px solid rgba(244, 241, 232, 0.25); padding-top: 14px; }
+  .promises li { display: grid; gap: 6px; align-content: start; border-top: 1px solid rgba(244, 241, 232, 0.25); padding-top: 14px; }
   .promises h3 { color: var(--deep-ink); }
   .promises p { color: var(--deep-mist); font-size: 0.96rem; }
   .privacy .companion { display: flex; align-items: center; gap: 18px; margin-top: 36px; }
@@ -239,6 +292,39 @@
   details p { color: var(--mist); padding-bottom: 18px; max-width: 42em; }
   details[open] p { animation: rise 360ms var(--ease) both; }
 
+  /* Comparison: categories, not products */
+  .compare { width: 100%; margin-top: 34px; border-collapse: separate; border-spacing: 0; font-size: 0.95rem; }
+  .compare th, .compare td { text-align: left; vertical-align: top; padding: 16px 16px; border-bottom: 1px solid var(--line); }
+  .compare thead th { font-family: "Bricolage Grotesque", sans-serif; font-weight: 600; font-size: 1rem; line-height: 1.25; padding-top: 18px; color: var(--slate); }
+  .compare tbody th { font-weight: 600; color: var(--slate); width: 17%; }
+  .compare thead th.us { width: 27%; }
+  .compare td { color: var(--mist); }
+  .compare .us { background: var(--card); color: var(--slate); }
+  .compare thead .us { border-top: 3px solid var(--spruce); border-radius: 12px 12px 0 0; }
+  .compare tbody tr:last-child .us { border-radius: 0 0 12px 12px; }
+  .compare .us-mark { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--kiln); margin-right: 8px; vertical-align: 1px; }
+  .compare-note { margin-top: 16px; font-size: 0.88rem; color: var(--mist); max-width: 46em; }
+  @media (max-width: 860px) {
+    .compare, .compare tbody, .compare tr, .compare th, .compare td { display: block; width: auto; }
+    .compare thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+    .compare tbody tr { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; margin-bottom: 14px; background: var(--bench); }
+    .compare tbody th { width: auto; padding: 14px 16px 10px; border-bottom: 1px solid var(--line); font-family: "Bricolage Grotesque", sans-serif; font-size: 1.05rem; }
+    .compare td { display: grid; grid-template-columns: 8.5em 1fr; gap: 12px; padding: 10px 16px; }
+    .compare td::before { content: attr(data-label); font-weight: 600; font-size: 0.85rem; color: var(--slate); }
+    .compare tbody tr:last-child .us, .compare .us { border-radius: 0; box-shadow: inset 3px 0 0 var(--spruce); }
+    .compare tr > :last-child { border-bottom: 0; }
+  }
+  @media (max-width: 420px) { .compare td { grid-template-columns: 1fr; gap: 2px; } }
+
+  /* Closing call to action */
+  .closing .card { background: var(--card); border: 1px solid var(--line); border-radius: 22px; box-shadow: var(--shadow); padding: clamp(24px, 4vw, 44px); display: grid; grid-template-columns: auto 1fr; gap: clamp(18px, 3vw, 36px); align-items: center; }
+  .closing img { width: 96px; height: 96px; border-radius: 24px; }
+  .closing .intro { margin-top: 10px; }
+  .closing .ctas { margin-top: 22px; }
+  .closing .req { margin-top: 14px; }
+  @media (max-width: 480px) { .ctas .btn { width: 100%; justify-content: center; text-align: center; } }
+  @media (max-width: 560px) { .closing .card { grid-template-columns: 1fr; } .closing img { width: 72px; height: 72px; border-radius: 18px; } }
+
   /* Footer */
   footer { border-top: 1px solid var(--line); padding-block: 28px 40px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px 24px; font-size: 0.9rem; color: var(--mist); }
   footer a { color: var(--mist); }
@@ -254,38 +340,41 @@
 </head>
 <body>
 
-<header class="wrap bar">
-  <a class="brand" href="#top"><span class="dot"></span>Focus Sentinel</a>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="wrap bar" id="top">
+  <a class="brand" href="#top"><span class="dot" aria-hidden="true"></span>Focus Sentinel</a>
   <nav aria-label="Sections">
     <a href="#day">A day</a>
     <a href="#features">What it does</a>
+    <a href="#compare">Compared</a>
     <a href="#privacy">Privacy</a>
     <a href="#faq">Questions</a>
   </nav>
 </header>
 
-<main id="top">
+<main id="main" tabindex="-1">
   <div class="wrap hero">
     <div>
-      <p class="eyebrow">A local-only companion for the Mac</p>
+      <p class="eyebrow">A local-only focus companion for the Mac</p>
       <h1>One priority, kept in view.</h1>
-      <p class="lede">Focus Sentinel watches which app is in front, notices when it drifts from the work, and asks before it assumes. It keeps no score. Nothing it learns leaves your Mac.</p>
+      <p class="lede">Write down the one thing that matters today. Focus Sentinel watches which app is in front, notices when you drift from it, and asks before it assumes. It keeps no score, and nothing it learns leaves your Mac.</p>
       <div class="ctas">
-        <a class="btn primary" href="https://github.com/crmitchelmore/focus-sentinel/issues/12">Follow the release on GitHub</a>
-        <a class="btn quiet" href="https://github.com/crmitchelmore/focus-sentinel">Read the source</a>
+        <a class="btn primary" href="https://github.com/crmitchelmore/focus-sentinel/releases"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5a4.5 4.5 0 0 0-4.5 4.5v2.6L2.2 11a.6.6 0 0 0 .5.9h10.6a.6.6 0 0 0 .5-.9l-1.3-2.4V6A4.5 4.5 0 0 0 8 1.5zM6.2 13a1.9 1.9 0 0 0 3.6 0z"/></svg>Watch releases on GitHub</a>
+        <a class="btn quiet" href="https://github.com/crmitchelmore/focus-sentinel/issues/12">See what is left to ship</a>
       </div>
-      <p class="req"><b>Requires</b> macOS 26 or later on Apple silicon. Not released yet; the first build ships through the tracker above.</p>
+      <p class="req"><b>Not released yet.</b> On GitHub, choose Watch, then Custom, then Releases, and GitHub tells you when the first signed build is out. Needs macOS 26 or later; built and tested on Apple silicon.</p>
     </div>
 
-    <div class="cockpit" aria-label="The Focus Sentinel window, as an illustration">
-      <div class="band">
+    <div class="cockpit" role="img" aria-label="Illustration of the Focus Sentinel window. Priority: Resolve unfinished LLM threads. Done when: each thread has a clear next step. A focus session with 24 minutes left, and controls to pause, take a break or finish. The timebox shows time left, then time over; it never stops you working.">
+      <div class="band" aria-hidden="true">
         <div class="lights" aria-hidden="true"><i></i><i></i><i></i></div>
         <div class="beam" aria-hidden="true"></div>
         <div class="lamp" aria-hidden="true"></div>
-        <img src="companion.png" alt="The Focus companion: a small white lens with a yellow lamp on a stalk" width="64" height="64">
-        <div class="title">Focus</div>
+        <img src="companion.png" alt="" width="64" height="64">
+        <div class="title">Focus Sentinel</div>
       </div>
-      <div class="body">
+      <div class="body" aria-hidden="true">
         <div class="field">
           <p class="eyebrow">Priority</p>
           <div class="priority"><span class="kiln" aria-hidden="true"></span><span>Resolve unfinished LLM threads</span></div>
@@ -314,6 +403,15 @@
     </div>
   </div>
 
+  <div class="wrap">
+    <ul class="trust" aria-label="At a glance">
+      <li><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3 3L13 4.5"/></svg><span><b>No account</b>, no sync</span></li>
+      <li><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3 3L13 4.5"/></svg><span><b>Never goes online</b>, not even for updates</span></li>
+      <li><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3 3L13 4.5"/></svg><span><b>Blocks nothing</b>, closes nothing</span></li>
+      <li><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3 3L13 4.5"/></svg><span><b>MIT licence</b>, source published at release</span></li>
+    </ul>
+  </div>
+
   <section id="day">
     <div class="wrap split">
       <p class="eyebrow reveal">How a day goes</p>
@@ -324,26 +422,27 @@
           <li class="reveal" style="--i:2">
             <div>
               <h3>Write the priority as one sentence.</h3>
-              <p>Focus keeps one. A new one replaces it and the old one moves to Recent. If the sentence has no verb or no outcome, Focus offers a rewrite; your wording still wins. Add a Done when line so finished is clear.</p>
+              <p>Focus keeps one. A new one replaces it and the old one moves to Recent. If the sentence has no verb or no outcome, Focus offers a rewrite; your wording still wins. Add a Done when line so finished is clear. Focus can also ask once a day, when it first opens: what is the one thing today?</p>
               <span class="example"><b>Priority</b> Draft the grant budget &nbsp;·&nbsp; <b>Done when</b> Every line has a number</span>
             </div>
           </li>
           <li class="reveal" style="--i:3">
             <div>
               <h3>Start a session, timeboxed if you like.</h3>
-              <p>Pause it, take a break, log a detour when you leave on purpose, and finish when you stop. Stopping early asks why; every field is optional. The timer lives in the menu bar.</p>
+              <p>Pause it, take a break, log a detour when you leave on purpose, and finish when you stop. Stop with a note to record what happened and where to pick up; every field is optional. The timer lives in the menu bar.</p>
             </div>
           </li>
           <li class="reveal" style="--i:4">
             <div>
               <h3>Get a question, not a verdict.</h3>
-              <p>Focus compares the app in front with the priority's context pack. Drift for a while and the menu-bar mark changes; nothing else happens. Drift longer and a small panel names the app and offers a way back. When Focus cannot tell, it asks. Your answer becomes a rule, and it stops asking.</p>
-              <div class="question" aria-label="A question panel, as an illustration">
+              <p>Focus checks the app in front against the priority and the rules you have made for it. Drift for a while and the menu-bar mark changes; nothing else happens. Drift longer and a small panel names the app and offers a way back. When Focus cannot tell, it asks. Your answer becomes a rule, and it stops asking.</p>
+              <div class="question" role="figure" aria-label="A question panel, as an illustration">
                 <div class="band"><div class="beam" aria-hidden="true"></div><div class="title">A small question.</div></div>
                 <div class="qbody">
                   <p class="q">Is Numbers part of Draft the grant budget?</p>
-                  <p class="why">Focus has not been told which apps this task lives in. One answer covers the whole app, for this priority.</p>
-                  <div class="answers"><span class="primary">Yes, add it</span><span>No, it isn't</span><span>Not now</span></div>
+                  <p class="why">No apps have been added to this priority yet.</p>
+                  <div class="answers"><span class="primary">Yes, add it</span><span>No, it isn't</span><span>Ask later</span></div>
+                  <p class="why">Applies to this whole app for this priority.</p>
                 </div>
               </div>
             </div>
@@ -366,46 +465,111 @@
         <h2 class="reveal">Small instruments, one job each.</h2>
         <ul class="features">
           <li class="reveal" style="--i:1">
-            <span class="glyph"><svg viewBox="0 0 16 16"><path d="M3 4h10M3 8h7M3 12h5"/></svg></span>
+            <span class="glyph" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M3 4h10M3 8h7M3 12h5"/></svg></span>
             <h3>The context pack</h3>
-            <p>Apps, sites, keywords and files that belong to the priority. Add them on Details or drop them onto the window. Recent priorities return with their pack and rules.</p>
+            <p>Keywords, sites and files that belong to the priority. Add them in Context on the Details tab, and Focus can open them when a session starts. Recent priorities return with their pack and rules.</p>
           </li>
           <li class="reveal" style="--i:2">
-            <span class="glyph"><svg viewBox="0 0 16 16"><path d="M2 8h12M8 2v12"/></svg></span>
+            <span class="glyph" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M2 8h12M8 2v12"/></svg></span>
             <h3>Rules you can read</h3>
-            <p>Mark an app or site related or unrelated, for this priority or this session only. Same facts, same answer, every time.</p>
+            <p>Mark an app related or unrelated, for this priority or for this session only. Same facts, same answer, every time.</p>
           </li>
           <li class="reveal" style="--i:3">
-            <span class="glyph"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5"/><path d="M8 5v3l2 1.5"/></svg></span>
+            <span class="glyph" aria-hidden="true"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5"/><path d="M8 5v3l2 1.5"/></svg></span>
             <h3>Timeboxes that never stop you</h3>
             <p>Set a limit and Focus shows time left, then time over. Sessions keep wall-clock time: an hour asleep is an hour spent, and the app says so.</p>
           </li>
           <li class="reveal" style="--i:4">
-            <span class="glyph"><svg viewBox="0 0 16 16"><path d="M8 2.5l1.7 3.5 3.8.5-2.8 2.7.7 3.8L8 11.2 4.6 13l.7-3.8L2.5 6.5l3.8-.5z"/></svg></span>
+            <span class="glyph" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M8 2.5l1.7 3.5 3.8.5-2.8 2.7.7 3.8L8 11.2 4.6 13l.7-3.8L2.5 6.5l3.8-.5z"/></svg></span>
             <h3>A menu-bar mark</h3>
             <p>The mark shows what Focus believes right now. Click it for the priority, the timer, open questions and session controls. A global shortcut sets a new priority from any app.</p>
           </li>
           <li class="reveal" style="--i:1">
-            <span class="glyph"><svg viewBox="0 0 16 16"><path d="M3 10.5a5 5 0 0 1 10-4.5c0 4-3 6-5 6"/><path d="M13 3l-1.5 1.5"/></svg></span>
+            <span class="glyph" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M3 10.5a5 5 0 0 1 10-4.5c0 4-3 6-5 6"/><path d="M13 3l-1.5 1.5"/></svg></span>
             <h3>Quiet when it should be</h3>
-            <p>A daily cap on interruptions. Silence while you present, while a microphone is live, while you are away, and in the quiet hours you set.</p>
+            <p>A daily cap on interruptions. Silence while an app is full screen, such as a presentation, while a microphone is live, while you are away, and in the quiet hours you set.</p>
           </li>
           <li class="reveal" style="--i:2">
-            <span class="glyph"><svg viewBox="0 0 16 16"><rect x="2.5" y="3" width="11" height="9" rx="1.5"/><path d="M5.5 14h5"/></svg></span>
+            <span class="glyph" aria-hidden="true"><svg viewBox="0 0 16 16"><rect x="2.5" y="3" width="11" height="9" rx="1.5"/><path d="M5.5 14h5"/></svg></span>
             <h3>Interrupt me less</h3>
             <p>One switch sends nudges and questions to the menu bar instead of panels. Reduce Motion turns it on for you. Every panel can be answered, snoozed or closed.</p>
           </li>
           <li class="reveal" style="--i:3">
-            <span class="glyph"><svg viewBox="0 0 16 16"><path d="M3 13V5l5-2.5L13 5v8"/><path d="M6 13V9h4v4"/></svg></span>
-            <h3>A tour on the real window</h3>
-            <p>The walkthrough highlights each control in turn and offers to do the step for you. Replay it from Help.</p>
+            <span class="glyph" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M3 13V5l5-2.5L13 5v8"/><path d="M6 13V9h4v4"/></svg></span>
+            <h3>It tells you first</h3>
+            <p>On first launch, one page says what Focus reads, what it never reads, and where your data is kept. Help lists every keyboard shortcut.</p>
           </li>
           <li class="reveal" style="--i:4">
-            <span class="glyph"><svg viewBox="0 0 16 16"><path d="M8 2v8M5 7l3 3 3-3"/><path d="M3 13h10"/></svg></span>
+            <span class="glyph" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M8 2v8M5 7l3 3 3-3"/><path d="M3 13h10"/></svg></span>
             <h3>Yours to export or delete</h3>
             <p>Export your activity and your settings as separate files. Delete everything from Privacy settings, and Focus restarts empty.</p>
           </li>
+          <li class="reveal" style="--i:1">
+            <span class="glyph" aria-hidden="true"><svg viewBox="0 0 16 16"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/></svg></span>
+            <h3>Private apps stay private</h3>
+            <p>Password managers, banking, health and private messaging apps are never judged. When one comes to the front, Focus stops looking and the session pauses.</p>
+          </li>
         </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="compare">
+    <div class="wrap split">
+      <p class="eyebrow reveal">How it is different</p>
+      <div>
+        <h2 class="reveal">Not a blocker, not a tracker, not a timer.</h2>
+        <p class="intro measure reveal" style="--i:1">Each of those does one job well. Focus Sentinel does a different one: it knows what you meant to be doing, and checks in when the app in front does not fit.</p>
+        <table class="compare reveal" style="--i:2" role="table">
+          <caption class="sr-only">Focus Sentinel compared with app blockers, time trackers and plain timers</caption>
+          <thead role="rowgroup">
+            <tr role="row">
+              <td role="cell"></td>
+              <th scope="col" role="columnheader" class="us"><span class="us-mark" aria-hidden="true"></span>Focus Sentinel</th>
+              <th scope="col" role="columnheader">App blockers</th>
+              <th scope="col" role="columnheader">Time trackers</th>
+              <th scope="col" role="columnheader">Plain timers</th>
+            </tr>
+          </thead>
+          <tbody role="rowgroup">
+            <tr role="row">
+              <th scope="row" role="rowheader">What it knows</th>
+              <td role="cell" class="us" data-label="Focus Sentinel">Your one priority, in your words, and which apps belong to it.</td>
+              <td role="cell" data-label="App blockers">A list of what to keep out.</td>
+              <td role="cell" data-label="Time trackers">Where the time went, sorted afterwards.</td>
+              <td role="cell" data-label="Plain timers">How many minutes are left.</td>
+            </tr>
+            <tr role="row">
+              <th scope="row" role="rowheader">When you drift</th>
+              <td role="cell" class="us" data-label="Focus Sentinel">Changes the menu-bar mark, then names the app and offers a way back.</td>
+              <td role="cell" data-label="App blockers">Stops you.</td>
+              <td role="cell" data-label="Time trackers">Logs it for a report.</td>
+              <td role="cell" data-label="Plain timers">Keeps counting.</td>
+            </tr>
+            <tr role="row">
+              <th scope="row" role="rowheader">When it cannot tell</th>
+              <td role="cell" class="us" data-label="Focus Sentinel">Asks. Your answer becomes a rule, and it stops asking.</td>
+              <td role="cell" data-label="App blockers">Follows the list.</td>
+              <td role="cell" data-label="Time trackers">Guesses a category, or leaves it for you.</td>
+              <td role="cell" data-label="Plain timers">Does not need to know.</td>
+            </tr>
+            <tr role="row">
+              <th scope="row" role="rowheader">When time is up</th>
+              <td role="cell" class="us" data-label="Focus Sentinel">Shows time over. It never stops you working.</td>
+              <td role="cell" data-label="App blockers">Often holds the lock until then.</td>
+              <td role="cell" data-label="Time trackers">Keeps recording.</td>
+              <td role="cell" data-label="Plain timers">Rings.</td>
+            </tr>
+            <tr role="row">
+              <th scope="row" role="rowheader">Where the record lives</th>
+              <td role="cell" class="us" data-label="Focus Sentinel">One folder on this Mac. No account, and it never goes online.</td>
+              <td role="cell" data-label="App blockers">Varies; some sync lists between devices.</td>
+              <td role="cell" data-label="Time trackers">Often a cloud account.</td>
+              <td role="cell" data-label="Plain timers">Usually nowhere; there is no record.</td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="compare-note reveal" style="--i:3">The other columns describe typical tools in each category, not any particular product.</p>
       </div>
     </div>
   </section>
@@ -420,7 +584,7 @@
         <ul class="promises">
           <li class="reveal" style="--i:2">
             <h3>What it reads</h3>
-            <p>Which app is active. If a browser shares its site without a permission prompt, the host name only.</p>
+            <p>Which app is active: its name, never its windows. This version does not read which website a browser is showing.</p>
           </li>
           <li class="reveal" style="--i:3">
             <h3>What it never reads</h3>
@@ -428,19 +592,19 @@
           </li>
           <li class="reveal" style="--i:4">
             <h3>No network</h3>
-            <p>Focus goes online only if you turn on update checks. A check sends the app's name and version and nothing about you.</p>
+            <p>Focus never connects to the internet and has no updater. Its Privacy settings say so in as many words.</p>
           </li>
           <li class="reveal" style="--i:2">
             <h3>Permissions are yours to give</h3>
-            <p>Focus asks macOS for nothing until you switch it on in Privacy settings. Accessibility and Screen Recording are listed there, off, with a note of what each would let it read.</p>
+            <p>Focus asks for Screen Recording or Accessibility only if you switch that on in Privacy settings, and nothing in this version uses them. Each is listed there, off, with a note of what it would let Focus read.</p>
           </li>
           <li class="reveal" style="--i:3">
             <h3>Away means quiet</h3>
-            <p>A minute without keyboard or mouse, or longer if you choose, and Focus stops counting and stays quiet until you are back.</p>
+            <p>Three minutes without keyboard or mouse (anything from one to thirty, if you choose), and Focus stops counting and stays quiet until you are back.</p>
           </li>
           <li class="reveal" style="--i:4">
             <h3>You can check</h3>
-            <p>The source is public under the MIT licence. The data file is one folder in Application Support; Privacy settings show it in the Finder.</p>
+            <p>The source will be published under the MIT licence with the first release. The data file is one folder in Application Support; Privacy settings show it in the Finder.</p>
           </li>
         </ul>
         <div class="companion reveal" style="--i:2">
@@ -474,19 +638,23 @@
         <div class="faq reveal" style="--i:1">
           <details>
             <summary>Does it read my screen?<span class="plus" aria-hidden="true"><svg viewBox="0 0 18 18"><path d="M9 3v12M3 9h12"/></svg></span></summary>
-            <p>No. This version requests neither Screen Recording nor Accessibility, and nothing in it reads what those would unlock. It reads which app is active and, where a browser shares it freely, the site's host name.</p>
+            <p>No. Focus asks macOS for Screen Recording or Accessibility only if you switch that on in Privacy settings, and nothing in this version reads what either would unlock. It reads which app is active. It does not read which website a browser is showing.</p>
           </details>
           <details>
-            <summary>Does it phone home?<span class="plus" aria-hidden="true"><svg viewBox="0 0 18 18"><path d="M9 3v12M3 9h12"/></svg></span></summary>
-            <p>Only if you turn on update checks in General settings. They are off until you do, and a check carries the app's name and version and nothing about you.</p>
+            <summary>Does it need the internet, or phone home?<span class="plus" aria-hidden="true"><svg viewBox="0 0 18 18"><path d="M9 3v12M3 9h12"/></svg></span></summary>
+            <p>No, and no. Focus never connects to the internet and has no updater, so everything works offline. The build gate checks the shipped app for networking code on every run. When a new version is out, you download it from the release page yourself.</p>
           </details>
           <details>
             <summary>Does it block apps or sites?<span class="plus" aria-hidden="true"><svg viewBox="0 0 18 18"><path d="M9 3v12M3 9h12"/></svg></span></summary>
             <p>No. Focus blocks, hides and closes nothing, and a timebox never stops you working. It notices, asks, and offers a way back.</p>
           </details>
           <details>
+            <summary>Does it work with Shortcuts?<span class="plus" aria-hidden="true"><svg viewBox="0 0 18 18"><path d="M9 3v12M3 9h12"/></svg></span></summary>
+            <p>Yes. It offers three actions: Set Focus priority, Start Focus session and Finish Focus session. Each opens Focus and makes the same change the window would. If it cannot, it says why, for example that a session is already running.</p>
+          </details>
+          <details>
             <summary>What happens on a call or a presentation?<span class="plus" aria-hidden="true"><svg viewBox="0 0 18 18"><path d="M9 3v12M3 9h12"/></svg></span></summary>
-            <p>A live microphone keeps Focus quiet, because a call is not a distraction. The same goes while you present, while you are away, and in quiet hours. Switch the microphone rule off and a nudge may arrive mid-call.</p>
+            <p>A live microphone keeps Focus quiet, because a call is not a distraction. The same goes while an app is full screen, such as a presentation, while you are away, and in quiet hours. Switch the microphone rule off and a nudge may arrive mid-call.</p>
           </details>
           <details>
             <summary>Where is my data, and can I take it with me?<span class="plus" aria-hidden="true"><svg viewBox="0 0 18 18"><path d="M9 3v12M3 9h12"/></svg></span></summary>
@@ -494,8 +662,29 @@
           </details>
           <details>
             <summary>When can I download it?<span class="plus" aria-hidden="true"><svg viewBox="0 0 18 18"><path d="M9 3v12M3 9h12"/></svg></span></summary>
-            <p>There is no public build yet. The release tracker lists what remains before the first signed, notarised build: <a href="https://github.com/crmitchelmore/focus-sentinel/issues/12">crmitchelmore/focus-sentinel, issue 12</a>. Updates arrive only if you switch update checks on.</p>
+            <p>There is no public build yet. The release tracker lists what remains before the first signed, notarised build: <a href="https://github.com/crmitchelmore/focus-sentinel/issues/12">crmitchelmore/focus-sentinel, issue 12</a>. To hear when it is out, <a href="https://github.com/crmitchelmore/focus-sentinel/releases">watch the repository's releases on GitHub</a>.</p>
           </details>
+          <details>
+            <summary>What will it cost?<span class="plus" aria-hidden="true"><svg viewBox="0 0 18 18"><path d="M9 3v12M3 9h12"/></svg></span></summary>
+            <p>Not announced yet. The source will be published under the MIT licence with the first release, so you will be able to build it yourself. How the signed build is offered will appear on the release tracker.</p>
+          </details>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="get" class="closing" aria-labelledby="get-heading">
+    <div class="wrap">
+      <div class="card reveal">
+        <img src="companion.png" alt="" width="96" height="96">
+        <div>
+          <h2 id="get-heading">Hear when the first build is out.</h2>
+          <p class="intro measure">Focus Sentinel is not released yet. Watch the repository's releases on GitHub and you will be told when a signed, notarised build is published. There is no mailing list and nothing to sign up for here.</p>
+          <div class="ctas">
+            <a class="btn primary" href="https://github.com/crmitchelmore/focus-sentinel/releases"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5a4.5 4.5 0 0 0-4.5 4.5v2.6L2.2 11a.6.6 0 0 0 .5.9h10.6a.6.6 0 0 0 .5-.9l-1.3-2.4V6A4.5 4.5 0 0 0 8 1.5zM6.2 13a1.9 1.9 0 0 0 3.6 0z"/></svg>Watch releases on GitHub</a>
+            <a class="btn quiet" href="https://github.com/crmitchelmore/focus-sentinel">Read the source</a>
+          </div>
+          <p class="req">On the repository page, choose Watch, then Custom, then Releases. Needs macOS 26 or later; built and tested on Apple silicon.</p>
         </div>
       </div>
     </div>
@@ -503,8 +692,8 @@
 </main>
 
 <footer class="wrap">
-  <span>Focus Sentinel · MIT licence · macOS 26 or later, Apple silicon</span>
-  <span><a href="https://github.com/crmitchelmore/focus-sentinel">Source on GitHub</a> · <a href="https://github.com/crmitchelmore/focus-sentinel/issues/12">Release tracker</a> · <a href="https://github.com/crmitchelmore/focus-sentinel/security/advisories/new">Report a security issue</a></span>
+  <span>Focus Sentinel · MIT licence · macOS 26 or later</span>
+  <span><a href="https://github.com/crmitchelmore/focus-sentinel">Source on GitHub</a> · <a href="https://github.com/crmitchelmore/focus-sentinel/issues/12">Release tracker</a> · <a href="https://github.com/crmitchelmore/focus-sentinel/security/advisories/new">Report a security issue</a> · <a href="/press">Press kit</a></span>
   <span class="elsewhere">Made by Chris Mitchelmore · <a href="https://github.com/crmitchelmore">GitHub</a> · <a href="https://mitchelmore.uk/">Blog</a></span>
   <span class="elsewhere">More open source apps: <a href="https://pasta-app.com/">Pasta</a> (<a href="https://github.com/crmitchelmore/pasta">source</a>) · <a href="https://justspeaktoit.com/">Just Speak to It</a> (<a href="https://github.com/crmitchelmore/justspeaktoit">source</a>)</span>
 </footer>
