@@ -273,7 +273,10 @@ they are part of the pass/fail contract rather than evidence:
   within two seconds of 5 400, `phase == paused`, `pauseCauses == ["relaunch"]`,
   `resumeTo == "focus"`, the same non-empty boot identity in both, and — the one thing no unit
   test can reach, because it cannot span a process boundary — the uptime anchor's difference
-  between the two launches matching their wall-clock difference to within a second.
+  between the two launches matching their wall-clock difference to within a second. Neither
+  launch's composition root opens the person's store: a seed or restore launch gets an
+  in-memory root, with or without `--focus-self-check`, unless `--focus-store` names a fixture
+  (focus-k2in).
 * **The key-equivalent probes changed nothing they do not own.** The stored watching switch is
   read before and after and asserted equal. That assertion is not decorative: it is what caught
   `Pause Watching` on ⇧⌘W being reached by a synthesised plain ⌘W and flipping the switch on
