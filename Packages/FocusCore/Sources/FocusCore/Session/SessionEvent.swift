@@ -37,6 +37,27 @@ public enum PauseReason: String, Sendable, CaseIterable, Codable, Hashable, Comp
     public static func < (lhs: PauseReason, rhs: PauseReason) -> Bool {
         lhs.rawValue < rhs.rawValue
     }
+
+    /// **Whether the person may lift this pause from the cockpit** (focus-mmty).
+    ///
+    /// Three causes are theirs to clear. `.user` because they set it. `.relaunch` and
+    /// `.systemRestart` because nothing else ever will: they are raised by
+    /// `SessionRestoration.reconcile` on the launch that found the session, and the whole point
+    /// of that pause is that *one click puts the person back where they were*. Before this
+    /// property the Resume control sent `resumed(cause: .user)` and nothing else, so a session
+    /// that came back from a reboot sat under "Paused because this Mac restarted" with a
+    /// disabled Resume and a sentence promising it would clear — which it never could.
+    ///
+    /// The other five belong to the lifecycle: the lock, the displays, the Mac's sleep, the
+    /// login session and the global switch each lift their own pause when their condition
+    /// ends, and a person pressing Resume against one of those would be the app letting them
+    /// overrule a fact about the machine.
+    public var isClearedByThePerson: Bool {
+        switch self {
+        case .user, .relaunch, .systemRestart: true
+        case .sensitiveApp, .globalPause, .screenLocked, .displaysAsleep, .systemAsleep, .sessionInactive: false
+        }
+    }
 }
 
 /// Why a break was started.

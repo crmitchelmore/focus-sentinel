@@ -1,0 +1,71 @@
+name: Alpha release
+run-name: Alpha ${{ inputs.source || github.sha }}
+
+# Cuts an immutable `alpha-build-N` from a `main` commit and hands it to the train worker
+# (focus-h8jf). Allocation is idempotent — a commit that already has a build reuses it unless
+# `rebuild` is set — and it is gated: while Config/ReleasePipeline.json says `"enabled": false`
+# only the repository owner may dispatch it, by naming a commit. Once the owner flips the flag,
+# every push to `main` allocates.
+#
+# Nothing here runs UI tests: the worker builds, lints the product and signs. The gate that runs
+# tests is build.yml, and it still requires the owner's approval to start.
+
+on:
+  workflow_dispatch:
+    inputs:
+      source:
+        description: Full main SHA to build (blank builds the dispatched ref)
+        type: string
+        default: ""
+      rebuild:
+        description: Allocate a new build number even if this commit already has one
+        type: boolean
+        default: false
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: focus-release-allocation
+  cancel-in-progress: false
+
+jobs:
+  allocate:
+    name: Allocate alpha-build-N
+    runs-on: [bravo-mini-local, macOS, ARM64]
+    timeout-minutes: 15
+    outputs:
+      tag: ${{ steps.allocate.outputs.tag }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Allocate
+        id: allocate
+        shell: zsh {0}
+        env:
+          SOURCE: ${{ inputs.source || github.sha }}
+          REBUILD: ${{ inputs.rebuild || false }}
+          OWNER_DISPATCH: ${{ github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner }}
+        run: |
+          if ! python3 -c 'import json,os,sys; sys.exit(0 if json.load(open("Config/ReleasePipeline.json"))["enabled"] or os.environ["OWNER_DISPATCH"] == "true" else 1)'; then
+            echo "Alpha allocation is off (Config/ReleasePipeline.json enabled=false) and this was not the owner's dispatch."
+            exit 0
+          fi
+          ARGS=(--source "$SOURCE")
+          [[ "$REBUILD" == "true" ]] && ARGS+=(--rebuild)
+          python3 scripts/release-train.py allocate "${ARGS[@]}"
+
+  mac-direct:
+    needs: allocate
+    if: needs.allocate.outputs.tag != ''
+    uses: ./.github/workflows/release-mac.yml
+    with:
+      manifest: ${{ needs.allocate.outputs.tag }}
+    secrets: inherit

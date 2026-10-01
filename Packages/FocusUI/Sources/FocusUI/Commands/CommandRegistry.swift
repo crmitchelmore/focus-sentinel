@@ -244,9 +244,12 @@ extension PriorityCommand {
     ///   is on their screen, and a panic key that greys itself out when the app believes nothing
     ///   is showing would be unavailable in precisely the case where the app is wrong.
     /// * `showMenuBar` opens the popover, which exists for the life of the process.
+    /// * `showWalkthrough` opens a sheet that reads nothing and writes nothing, so there is no
+    ///   state in which it could be refused.
     public func isAvailable(in world: ShellCommandWorld) -> Bool {
         switch self {
-        case .newPriority, .addFilesToContext, .pauseSensing, .hideOverlays, .showMenuBar:
+        case .newPriority, .addFilesToContext, .pauseSensing, .hideOverlays, .showMenuBar,
+             .showWalkthrough:
             true
         case .completePriority:
             world.hasPriority
@@ -579,6 +582,21 @@ public struct CommandRegistry: Sendable, Equatable {
             shortcut: Shortcut("?", modifiers: .command),
             placement: .help,
             effect: .openWindow(.help)
+        ),
+        // --- focus-u6de: the walkthrough, replayable ----------------------------------------
+        //
+        // In the Help menu beside the shortcut reference, because that is where a person looks
+        // for "explain this to me". A cockpit command rather than a window: the walkthrough is
+        // the first-run sheet, which is presented over the cockpit, and `opensCockpit` is what
+        // brings the window forward first. ⇧⌘T because T is a base character no other action
+        // uses, which is the rule the ⇧⌘W defect taught, and because `KeyboardReachabilityTests`
+        // holds that every action the shell ships carries a key equivalent.
+        ShellAction(
+            id: "help.walkthrough",
+            titleKey: .commandShowWalkthrough,
+            shortcut: Shortcut("t", modifiers: [.shift, .command]),
+            placement: .help,
+            effect: .priority(.showWalkthrough)
         )
     ])
 

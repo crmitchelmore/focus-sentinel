@@ -245,7 +245,8 @@ public struct InterventionSettingsView: View {
             Divider()
             thresholdsSection
         }
-        .padding(DesignTokens.spacing(spacing, scale: textScale))
+        // The one dialog margin every pane and sheet draws (focus-udn9).
+        .dialogInset()
         .background(DesignTokens.Palette.role(.inlay, for: traits))
         .buttonStyle(CompanionButtonStyle())
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -276,6 +277,8 @@ public struct InterventionSettingsView: View {
                 .buttonStyle(CompanionButtonStyle(selected: voice == settings.voice))
                 .accessibilityLabel(Text(ShellStrings.resource(Self.voiceKey(voice))))
                 .accessibilityAddTraits(voice == settings.voice ? [.isSelected] : [])
+                // Every control carries a tooltip, and a disabled one says why (focus-8ski).
+                .shellHelp(.interventionVoiceHelp)
             }
         }
     }
@@ -315,6 +318,12 @@ public struct InterventionSettingsView: View {
             .disabled(settings.reducedInterruptionIsForced)
             .accessibilityLabel(Text(ShellStrings.resource(.interventionReducedLabel)))
             .accessibilityAddTraits(settings.reducedInterruption ? [.isSelected] : [])
+            // The disabled reason is the footnote's own sentence, so the two cannot disagree.
+            .shellHelp(
+                .interventionReducedHelp,
+                disabled: .interventionReducedForced,
+                when: settings.reducedInterruptionIsForced
+            )
 
             ShellText(
                 settings.reducedInterruptionIsForced
@@ -347,6 +356,11 @@ public struct InterventionSettingsView: View {
                     .fixedSize(horizontal: true, vertical: false)
                 }
                 .buttonStyle(CompanionButtonStyle())
+                .shellHelp(
+                    settings.quietHours == nil
+                        ? .interventionQuietHoursTurnOnHelp
+                        : .interventionQuietHoursTurnOffHelp
+                )
             }
 
             if let window = settings.quietHours {
@@ -400,18 +414,18 @@ public struct InterventionSettingsView: View {
     private func boundaryButtons(_ window: QuietHoursWindow, stacked: Bool = false) -> some View {
         let gap = DesignTokens.spacing(spacing / 2, scale: textScale)
         let start = HStack(spacing: gap) {
-            adjust(.interventionQuietHoursStartEarlier) {
+            adjust(.interventionQuietHoursStartEarlier, help: .interventionQuietHoursStartEarlierHelp) {
                 onAction(.setQuietHours(Self.moved(window, startBy: -Self.quietHoursStep)))
             }
-            adjust(.interventionQuietHoursStartLater) {
+            adjust(.interventionQuietHoursStartLater, help: .interventionQuietHoursStartLaterHelp) {
                 onAction(.setQuietHours(Self.moved(window, startBy: Self.quietHoursStep)))
             }
         }
         let end = HStack(spacing: gap) {
-            adjust(.interventionQuietHoursEndEarlier) {
+            adjust(.interventionQuietHoursEndEarlier, help: .interventionQuietHoursEndEarlierHelp) {
                 onAction(.setQuietHours(Self.moved(window, endBy: -Self.quietHoursStep)))
             }
-            adjust(.interventionQuietHoursEndLater) {
+            adjust(.interventionQuietHoursEndLater, help: .interventionQuietHoursEndLaterHelp) {
                 onAction(.setQuietHours(Self.moved(window, endBy: Self.quietHoursStep)))
             }
         }
@@ -430,6 +444,7 @@ public struct InterventionSettingsView: View {
 
     private func adjust(
         _ key: ShellStringKey,
+        help: ShellStringKey,
         perform: @escaping () -> Void
     ) -> some View {
         Button(action: perform) {
@@ -437,6 +452,7 @@ public struct InterventionSettingsView: View {
                 .fixedSize(horizontal: true, vertical: false)
         }
         .buttonStyle(CompanionButtonStyle())
+        .shellHelp(help)
     }
 
     /// The window a person gets when they first switch quiet hours on.
@@ -747,6 +763,11 @@ public struct InterventionSettingsView: View {
             }
             .buttonStyle(.bordered)
             .disabled(settings.tunings.isShipped)
+            .shellHelp(
+                .settingsTuningsResetAllHelp,
+                disabled: .settingsTuningsResetAllDisabledHelp,
+                when: settings.tunings.isShipped
+            )
         }
         .shellRendered(.policyTunings, ShellValueDigest.describe(settings.tunings))
     }
@@ -766,12 +787,22 @@ public struct InterventionSettingsView: View {
                         onAction(.setPolicyTuning(tuning, value - tuning.step))
                     }
                     .disabled(value <= tuning.range.lowerBound)
+                    .shellHelp(
+                        .settingsTuningsLowerHelp,
+                        disabled: .settingsTuningsLowerDisabledHelp,
+                        when: value <= tuning.range.lowerBound
+                    )
                     valueText(tuning, value)
                         .frame(minWidth: DesignTokens.spacing(Self.valueColumnWidth, scale: textScale), alignment: .trailing)
                     dialButton(systemImage: "plus", label: .settingsTuningsRaise) {
                         onAction(.setPolicyTuning(tuning, value + tuning.step))
                     }
                     .disabled(value >= tuning.range.upperBound)
+                    .shellHelp(
+                        .settingsTuningsRaiseHelp,
+                        disabled: .settingsTuningsRaiseDisabledHelp,
+                        when: value >= tuning.range.upperBound
+                    )
                 }
             }
             HStack(alignment: .firstTextBaseline, spacing: gap) {
@@ -794,6 +825,7 @@ public struct InterventionSettingsView: View {
                         ShellText(.settingsTuningsResetOne, role: .footnote)
                     }
                     .buttonStyle(.bordered)
+                    .shellHelp(.settingsTuningsResetOneHelp)
                 }
             }
         }

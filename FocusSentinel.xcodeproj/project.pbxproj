@@ -13,6 +13,8 @@
 		B00000000000000000000004 /* FocusSensing in Frameworks */ = {isa = PBXBuildFile; productRef = A00000000000000000000004 /* FocusSensing */; };
 		B00000000000000000000005 /* FocusUI in Frameworks */ = {isa = PBXBuildFile; productRef = A00000000000000000000005 /* FocusUI */; };
 		B00000000000000000000006 /* FocusHost in Frameworks */ = {isa = PBXBuildFile; productRef = A00000000000000000000006 /* FocusHost */; };
+		B00000000000000000000007 /* FocusUpdates in Frameworks */ = {isa = PBXBuildFile; productRef = A00000000000000000000007 /* FocusUpdates */; };
+		B00000000000000000000008 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = A00000000000000000000008 /* Sparkle */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -34,6 +36,8 @@
 				B00000000000000000000004 /* FocusSensing in Frameworks */,
 				B00000000000000000000005 /* FocusUI in Frameworks */,
 				B00000000000000000000006 /* FocusHost in Frameworks */,
+				B00000000000000000000007 /* FocusUpdates in Frameworks */,
+				B00000000000000000000008 /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -82,6 +86,8 @@
 				A00000000000000000000004 /* FocusSensing */,
 				A00000000000000000000005 /* FocusUI */,
 				A00000000000000000000006 /* FocusHost */,
+				A00000000000000000000007 /* FocusUpdates */,
+				A00000000000000000000008 /* Sparkle */,
 			);
 			productName = FocusSentinel;
 			productReference = 500000000000000000000001 /* FocusSentinel.app */;
@@ -118,6 +124,8 @@
 				900000000000000000000004 /* XCLocalSwiftPackageReference "Packages/FocusSensing" */,
 				900000000000000000000005 /* XCLocalSwiftPackageReference "Packages/FocusUI" */,
 				900000000000000000000006 /* XCLocalSwiftPackageReference "Packages/FocusHost" */,
+				900000000000000000000007 /* XCLocalSwiftPackageReference "Packages/FocusUpdates" */,
+				900000000000000000000008 /* XCRemoteSwiftPackageReference "Sparkle" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 200000000000000000000002 /* Products */;
@@ -199,6 +207,8 @@
 				ENABLE_HARDENED_RUNTIME = NO;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				FOCUS_GIT_HASH = "";
+				FOCUS_RELEASE_TRAIN = stable;
+				FOCUS_URL_SCHEME = focus;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Config/FocusSentinel-Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Focus Sentinel";
@@ -230,6 +240,8 @@
 				ENABLE_HARDENED_RUNTIME = NO;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				FOCUS_GIT_HASH = "";
+				FOCUS_RELEASE_TRAIN = stable;
+				FOCUS_URL_SCHEME = focus;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Config/FocusSentinel-Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Focus Sentinel";
@@ -247,6 +259,55 @@
 			};
 			name = Release;
 		};
+		800000000000000000000005 /* Alpha */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Alpha;
+		};
+		800000000000000000000006 /* Alpha */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIconAlpha;
+				CODE_SIGN_ENTITLEMENTS = App/FocusSentinel.entitlements;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_HARDENED_RUNTIME = NO;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				FOCUS_GIT_HASH = "";
+				FOCUS_RELEASE_TRAIN = alpha;
+				FOCUS_URL_SCHEME = "focus-alpha";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Config/FocusSentinel-Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Focus Sentinel Alpha";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.chrismitchelmore.FocusSentinel.alpha;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+			};
+			name = Alpha;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -255,6 +316,7 @@
 			buildConfigurations = (
 				800000000000000000000001 /* Debug */,
 				800000000000000000000002 /* Release */,
+				800000000000000000000005 /* Alpha */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -264,6 +326,7 @@
 			buildConfigurations = (
 				800000000000000000000003 /* Debug */,
 				800000000000000000000004 /* Release */,
+				800000000000000000000006 /* Alpha */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -295,7 +358,22 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/FocusHost;
 		};
+		900000000000000000000007 /* XCLocalSwiftPackageReference "Packages/FocusUpdates" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/FocusUpdates;
+		};
 /* End XCLocalSwiftPackageReference section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		900000000000000000000008 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.9.6;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
 		A00000000000000000000001 /* FocusCore */ = {
@@ -321,6 +399,15 @@
 		A00000000000000000000006 /* FocusHost */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = FocusHost;
+		};
+		A00000000000000000000007 /* FocusUpdates */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = FocusUpdates;
+		};
+		A00000000000000000000008 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 900000000000000000000008 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

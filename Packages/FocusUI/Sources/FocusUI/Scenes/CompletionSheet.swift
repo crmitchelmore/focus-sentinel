@@ -79,6 +79,7 @@ public struct CompletionSheet: View {
                     ShellText(.priorityCompleteActionCancel)
                 }
                 .keyboardShortcut(.cancelAction)
+                .shellHelp(.priorityCompleteActionCancelHelp)
 
                 Button {
                     let reflection = Self.reflection(shipped: shipped, restartPoint: restartPoint)
@@ -94,9 +95,10 @@ public struct CompletionSheet: View {
                 // later "just require what shipped" has to change a documented rule and fail a
                 // test, rather than adding a condition here that nobody notices.
                 .disabled(!Self.isCompleteEnabled(shipped: shipped, restartPoint: restartPoint))
+                .shellHelp(.priorityCompleteActionConfirmHelp)
             }
         }
-        .padding(spacing * 2)
+        .dialogInset()
         .buttonStyle(CompanionButtonStyle())
         .boundedSheet(width: ShellSurfaceBounds.completionSheetWidth, screens: screens)
         .background(DesignTokens.Palette.windowBackground(for: traits))

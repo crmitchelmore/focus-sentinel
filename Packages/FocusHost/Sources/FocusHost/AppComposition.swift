@@ -4,6 +4,7 @@ import FocusModel
 import FocusRules
 import FocusSensing
 import FocusUI
+import FocusUpdates
 import Foundation
 import SwiftData
 import os
@@ -259,6 +260,12 @@ public final class AppComposition {
     /// ever holds the real one, because registering writes into the person's Login Items.
     let loginItem: any LoginItemControlling
 
+    /// **The updater, as something that can be doubled** (focus-h8jf). The shipping value is
+    /// `SparkleUpdater`, built inert; the unit lane's is `NoSoftwareUpdater`, because a started
+    /// updater opens a socket and no test may. Read by the self-check, which publishes whether it
+    /// was ever started on a default store.
+    public let softwareUpdater: any SoftwareUpdating
+
     /// - Parameter storeKind: where the data lives. `applicationSupport` is the application's
     ///   own store and is the default; the unit lane passes `inMemory`, because a test that
     ///   opened the real store would be a test that could change what the person sees. It is a
@@ -274,7 +281,8 @@ public final class AppComposition {
         storeKind: FocusStore.Kind = .applicationSupport,
         notificationCentre: (any NotificationCentring)? = nil,
         ruleStoreOverride: (any RuleStore)? = nil,
-        loginItem: (any LoginItemControlling)? = nil
+        loginItem: (any LoginItemControlling)? = nil,
+        softwareUpdater: (any SoftwareUpdating)? = nil
     ) {
         // **Injectable, and every lane in this programme injects** (D-12, focus-odz.4).
         //
@@ -320,6 +328,24 @@ public final class AppComposition {
 
         let context = container.mainContext
         self.ruleStore = ruleStoreOverride ?? SwiftDataRuleStore(context: context)
+
+        // **The updater, inert unless the store says otherwise** (focus-h8jf).
+        //
+        // An in-memory store is a unit process, and a unit process gets the updater that never
+        // starts: the shipping one is `SparkleUpdater`, whose only two routes to a socket are the
+        // two verbs on `SoftwareUpdating`, and the only caller that starts it here is a stored
+        // choice the person made on an earlier launch. A default store holds no such row, so a
+        // default install builds the framework and opens nothing.
+        if let softwareUpdater {
+            self.softwareUpdater = softwareUpdater
+        } else if case .inMemory = storeKind {
+            self.softwareUpdater = NoSoftwareUpdater()
+        } else {
+            self.softwareUpdater = SparkleUpdater(
+                train: .current,
+                checksAutomatically: FocusStore.softwareUpdateChecksEnabled(in: context)
+            )
+        }
 
         // The seed runs before the gate is built, and it is idempotent across launches: a
         // built-in the person removed is a tombstone row, and the seed refuses to insert a
@@ -656,7 +682,10 @@ public final class AppComposition {
         // difference between a nudge somebody read and a nudge sitting behind a click — and it is
         // **one** wire for both kinds: it was `popoverPresentedTheQuestion()`, so the accusation
         // half of the badge had no moment at which it could learn it had been looked at.
-        menuBar.onPopoverDidShow = { [weak self] in self?.nudgeHost.popoverPresented() }
+        menuBar.onPopoverDidShow = { [weak self] in
+            self?.nudgeHost.popoverPresented()
+            self?.runningTour?.popoverShown()
+        }
         // **The charge is a consequence of the write** (focus-1b5, focus-nrl).
         //
         // The third wire, and the one whose absence is the shape three rounds of this defect
@@ -725,6 +754,12 @@ public final class AppComposition {
             guard let self else { return }
             self.relevanceHost.invalidateSnapshot()
             self.noticeLifecycleTransitions()
+        }
+        // **The tour reads every priority change** (focus-u6de): a step is done when the state
+        // says so, and the definition of done and the timebox change the state without changing
+        // the snapshot key, so the invalidation above would not carry them.
+        priorityHost.onStateChanged = { [weak self] in
+            self?.runningTour?.noticeChange()
         }
 
         // Every command reaches the nudge loop as well as the cockpit, through **one** queue in
@@ -1237,6 +1272,47 @@ public final class AppComposition {
         refreshCockpit()
     }
 
+    // MARK: - The walkthrough's tour (focus-u6de)
+
+    /// **The interactive half of the walkthrough**, built on first use: a launch that never
+    /// presses Continue never builds a panel for it. It performs against the hosts this object
+    /// already holds, so a demo is the product rather than a picture of it.
+    private(set) lazy var walkthroughTour: WalkthroughTour = {
+        walkthroughTourBuilt = true
+        return WalkthroughTour(
+            priorityHost: priorityHost,
+            sessionHost: sessionHost,
+            menuBar: menuBar,
+            traits: { [weak self] in self?.appearanceTraits(for: .cockpit) ?? .systemDefault },
+            voice: { [weak self] in self?.interventionSettings.voice ?? .standard },
+            openSettings: { [weak self] tab in
+                guard let self else { return }
+                self.selectSettingsTab(tab)
+                self.settingsOpenRequests += 1
+                self.settingsMenuItemFound = ShellSettingsMenu.open()
+            }
+        )
+    }()
+
+    /// Whether the tour has ever been built, so the notices below can ask it without building
+    /// it: reading a `lazy var` to check a flag would create the panel on the first refresh.
+    private var walkthroughTourBuilt = false
+
+    /// What the walkthrough sheet's Continue performs: bring the cockpit forward and open the
+    /// tour beside it.
+    public func startWalkthroughTour() {
+        guard !hasDeletedEverything else { return }
+        _ = FocusCommandCenter.shared.requestCockpit()
+        walkthroughTour.start()
+        refreshCockpit()
+    }
+
+    /// The tour, if one is running: the three notices below report to it and nothing else does.
+    private var runningTour: WalkthroughTour? {
+        guard walkthroughTourBuilt, walkthroughTour.isRunning else { return nil }
+        return walkthroughTour
+    }
+
     // MARK: - Opening at login (D-12, focus-odz.4)
 
     /// **What the launch-at-login controls perform.**
@@ -1357,6 +1433,7 @@ public final class AppComposition {
         nudgeHost.stopForStoreDeletion()
         sessionHost.onChange = nil
         priorityHost.onSnapshotInvalidated = nil
+        priorityHost.onStateChanged = nil
         menuBar.onAction = nil
         menuBar.onPopoverDidShow = nil
         menuBar.onGlyphWritten = nil
@@ -1399,6 +1476,46 @@ public final class AppComposition {
         case .setQuickCaptureShortcut(let spec):
             setQuickCaptureShortcut(spec)
         }
+    }
+
+    /// **What the General pane's two update controls perform** (focus-h8jf).
+    ///
+    /// The row first, then the updater: a switch that failed to store must not leave an updater
+    /// running that the next launch will read as off. `checkNow` stores nothing, because pressing
+    /// a button once is not a choice about every day after it.
+    public func perform(_ action: SoftwareUpdateSettingsAction) {
+        guard !hasDeletedEverything else { return }
+        switch action {
+        case .setAutomaticChecks(let enabled):
+            // The state they asked **for**, not a toggle, for the rule every other switch states.
+            do {
+                try FocusStore.setSoftwareUpdateChecksEnabled(
+                    enabled,
+                    in: modelContainer.mainContext,
+                    now: dateProvider.now
+                )
+            } catch {
+                logger.error("the update-check choice could not be stored: \(error, privacy: .public)")
+                return
+            }
+            softwareUpdater.setAutomaticChecks(enabled)
+        case .checkNow:
+            softwareUpdater.checkForUpdates()
+        }
+        refreshCockpit()
+    }
+
+    /// **What the General pane draws about software updates**, read from the store and the
+    /// updater every time it is asked (focus-h8jf).
+    public var softwareUpdateStatus: SoftwareUpdateStatus {
+        SoftwareUpdateStatus(
+            train: .current,
+            checksAutomatically: hasDeletedEverything
+                ? false
+                : FocusStore.softwareUpdateChecksEnabled(in: modelContainer.mainContext),
+            canCheckNow: softwareUpdater.canCheckForUpdates,
+            lastCheckAt: softwareUpdater.lastCheckDate
+        )
     }
 
     public func perform(_ action: LaunchAtLoginAction) {
@@ -1966,6 +2083,7 @@ public final class AppComposition {
     /// reason `note(_:)` exists (focus-tzj.6).
     func noteSettingsRendering(_ rendering: ShellSettingsRendering) {
         settingsSinks = rendering
+        runningTour?.settingsRendered()
     }
 
     /// **What the Settings window's controls will actually reach**, as the window handed it back
@@ -2536,6 +2654,8 @@ public final class AppComposition {
                 showsFirstRunExplanation: showsFirstRunExplanation
             )
         )
+        // **The tour reads every refresh** (focus-u6de): a step is done when the state says so.
+        runningTour?.noticeChange()
     }
 
     /// Hand the engine one observation, if there is anything to observe.

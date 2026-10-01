@@ -9,18 +9,37 @@
 	     BEFORE signing, so nothing here edits a signed artefact. -->
 	<key>FocusGitHash</key>
 	<string>$(FOCUS_GIT_HASH)</string>
+	<!-- Which train this build is (focus-h8jf). Substituted from FOCUS_RELEASE_TRAIN the way the
+	     hash is; `stable` in both committed configurations, `alpha` in the Alpha one. ReleaseTrain
+	     reads it and refuses an Alpha identity that claims Stable. -->
+	<key>FocusReleaseTrain</key>
+	<string>$(FOCUS_RELEASE_TRAIN)</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
 			<key>CFBundleURLName</key>
-			<string>com.chrismitchelmore.FocusSentinel.focus</string>
+			<string>$(PRODUCT_BUNDLE_IDENTIFIER).focus</string>
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>focus</string>
+				<!-- The train's scheme, from FOCUS_URL_SCHEME: `focus` for Stable, `focus-alpha`
+				     for Alpha, so macOS routes a handoff to the train that made it. -->
+				<string>$(FOCUS_URL_SCHEME)</string>
 			</array>
 		</dict>
 	</array>
+	<!-- Sparkle, opt-in (focus-h8jf). Automatic checks are OFF here so the framework neither
+	     prompts nor schedules on its own; the General pane's switch is the only thing that turns
+	     them on, and it stores the choice. There is deliberately no SUFeedURL: the feed is the
+	     train's, answered by SparkleUpdater's delegate, so an Alpha build cannot be offered a
+	     Stable update. The public key verifies every enclosure; the private half is never in this
+	     repository (see README, "Release trains"). -->
+	<key>SUEnableAutomaticChecks</key>
+	<false/>
+	<key>SUScheduledCheckInterval</key>
+	<integer>86400</integer>
+	<key>SUPublicEDKey</key>
+	<string>jGXZIXVtOh5K01XvEEo3LMbJgJUcigibEMCXAcUHPwk=</string>
 </dict>
 </plist>

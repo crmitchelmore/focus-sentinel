@@ -68,12 +68,12 @@ public enum FocusMigrationPlan: SchemaMigrationPlan {
         [
             FocusSchemaV1.self, FocusSchemaV2.self, FocusSchemaV3.self, FocusSchemaV4.self,
             FocusSchemaV5.self, FocusSchemaV6.self, FocusSchemaV7.self, FocusSchemaV8.self,
-            FocusSchemaV9.self, FocusSchemaV10.self
+            FocusSchemaV9.self, FocusSchemaV10.self, FocusSchemaV11.self
         ]
     }
 
     public static var stages: [MigrationStage] {
-        [v1ToV2, v2ToV3, v3ToV4, v4ToV5, v5ToV6, v6ToV7, v7ToV8, v8ToV9, v9ToV10]
+        [v1ToV2, v2ToV3, v3ToV4, v4ToV5, v5ToV6, v6ToV7, v7ToV8, v8ToV9, v9ToV10, v10ToV11]
     }
 
     /// **v7 → v8: lightweight, and additive in the strictest sense** (F-115, focus-l7n).
@@ -107,6 +107,16 @@ public enum FocusMigrationPlan: SchemaMigrationPlan {
         MigrationStage.lightweight(
             fromVersion: FocusSchemaV9.self,
             toVersion: FocusSchemaV10.self
+        )
+    }
+
+    /// v10 → v11 adds `SoftwareUpdatePreferenceRecord` and re-declares nothing (focus-h8jf). A
+    /// store that migrates arrives with no row, which reads as "update checks off": the state
+    /// every earlier build promised, kept across the upgrade.
+    static var v10ToV11: MigrationStage {
+        MigrationStage.lightweight(
+            fromVersion: FocusSchemaV10.self,
+            toVersion: FocusSchemaV11.self
         )
     }
 

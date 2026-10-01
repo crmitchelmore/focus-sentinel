@@ -43,8 +43,8 @@
 # text, image data of any kind, keystroke or input content, security-scoped bookmark blobs,
 # machine identifiers, Keychain material, and any similarity number.
 
-SCHEMA 10
-ENTITIES 17
+SCHEMA 11
+ENTITIES 18
 
 # ---------------------------------------------------------------- the commitment
 
@@ -187,6 +187,9 @@ PolicyTuningRecord | touchedAt | MEASURE | When they last turned it
 GrantOptInRecord | id | KEY | The row's identifier
 GrantOptInRecord | key | TOKEN | Which macOS grant they allowed the app to ask for: a GrantOptIn raw value, re-derived on the way out
 GrantOptInRecord | touchedAt | MEASURE | When they switched it on
+SoftwareUpdatePreferenceRecord | id | KEY | The row's identifier
+SoftwareUpdatePreferenceRecord | checksAutomatically | MEASURE | Whether they switched automatic update checks on (focus-h8jf)
+SoftwareUpdatePreferenceRecord | touchedAt | MEASURE | When they last chose
 PrivacyPreferencesRecord | id | KEY | The row's identifier
 PrivacyPreferencesRecord | retentionDays | MEASURE | How long they asked the app to keep things: 7, 30, 90, or 0 for forever
 PrivacyPreferencesRecord | touchedAt | MEASURE | When they last chose a window

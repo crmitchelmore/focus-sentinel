@@ -1,0 +1,204 @@
+name: Release macOS (train worker)
+run-name: Build ${{ inputs.manifest }}
+
+# The one worker both trains share (focus-h8jf). It reads an immutable manifest — an
+# `alpha-build-N` or a `stable-candidate-N` release carrying release-manifest.json — builds the
+# configuration the manifest names from the source it names, signs with the Developer ID identity
+# in the runner's login keychain, notarises, packages with scripts/package-release.sh, signs the
+# appcast with the Sparkle key in the same keychain, uploads everything to that release, and
+# writes a receipt with the digests. It never decides what to build: allocation and approval are
+# the two dispatch workflows' jobs.
+#
+# It runs on the owner's Mac (the self-hosted runner) because that is where the identity and the
+# Sparkle key live; no signing material is in a GitHub secret.
+
+on:
+  workflow_call:
+    inputs:
+      manifest:
+        description: The immutable tag whose release carries release-manifest.json
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: focus-release-mac
+  cancel-in-progress: false
+
+jobs:
+  build-sign-publish:
+    name: Build, sign, notarise and upload
+    runs-on: [bravo-mini-local, macOS, ARM64]
+    timeout-minutes: 120
+    env:
+      DEVELOPER_DIR: /Applications/Xcode.app/Contents/Developer
+      GH_TOKEN: ${{ github.token }}
+      # Bulk build output lives on the external SSD on this Mac (see the machine notes); the
+      # package cache is private to this repository so another process's SwiftPM lock cannot
+      # stall a release.
+      FOCUS_DERIVED_DATA: /Volumes/Memory/cache/xcode-derived/focus-release-${{ inputs.manifest }}
+      FOCUS_PACKAGE_CACHE: /Volumes/Memory/cache/swiftpm-cache-focus
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ inputs.manifest }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Read the frozen manifest
+        shell: zsh {0}
+        run: python3 scripts/release-train.py configure --tag "${{ inputs.manifest }}"
+
+      - name: Is this tag already delivered?
+        id: receipt
+        shell: zsh {0}
+        run: python3 scripts/release-train.py status --tag "${{ inputs.manifest }}"
+
+      - name: The source is the manifest's
+        if: steps.receipt.outputs.status != 'verified'
+        shell: zsh {0}
+        run: |
+          test "$(git rev-parse HEAD)" = "$RELEASE_SOURCE" || {
+            echo "::error::checked out $(git rev-parse HEAD), manifest names $RELEASE_SOURCE"; exit 1; }
+
+      - name: Source lints
+        if: steps.receipt.outputs.status != 'verified'
+        shell: zsh {0}
+        run: |
+          scripts/verify-project.sh
+          scripts/check-boundaries.sh
+          scripts/check-forbidden.sh
+          scripts/check-strings.sh
+
+      - name: Build the train's configuration
+        if: steps.receipt.outputs.status != 'verified'
+        shell: zsh {0}
+        run: |
+          mkdir -p "$FOCUS_DERIVED_DATA" "$FOCUS_PACKAGE_CACHE"
+          xcodebuild -workspace Focus.xcworkspace -scheme FocusSentinel \
+            -configuration "$XCODE_CONFIGURATION" \
+            -destination 'platform=macOS,arch=arm64' \
+            -derivedDataPath "$FOCUS_DERIVED_DATA" \
+            -packageCachePath "$FOCUS_PACKAGE_CACHE" \
+            FOCUS_GIT_HASH="$(git rev-parse --short HEAD)" \
+            MARKETING_VERSION="$RELEASE_VERSION" \
+            CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
+            build > "$RUNNER_TEMP/build.log" 2>&1; rc=$?
+          tail -40 "$RUNNER_TEMP/build.log"
+          exit $rc
+
+      - name: The product is the train it claims
+        if: steps.receipt.outputs.status != 'verified'
+        shell: zsh {0}
+        run: |
+          APP="$FOCUS_DERIVED_DATA/Build/Products/$XCODE_CONFIGURATION/FocusSentinel.app"
+          echo "APP=$APP" >> "$GITHUB_ENV"
+          PLIST="$APP/Contents/Info.plist"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :FocusReleaseTrain' "$PLIST")" = "$RELEASE_TRAIN"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$PLIST")" = "$BUILD_NUMBER"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$PLIST")" = "$RELEASE_VERSION"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :SUEnableAutomaticChecks' "$PLIST")" = "false"
+          # The binary half of the boundaries lint, read off the one configuration this run
+          # built: the updater is present and opt-in, and the plist says so.
+          FOCUS_UPDATER_CONFIG="$XCODE_CONFIGURATION" scripts/check-boundaries.sh
+          scripts/entitlement-check.sh "$APP" Release
+
+      # **Signing material, two ways.** The runner's own login keychain (a Developer ID identity
+      # and a notarytool profile named in Config/ReleasePipeline.json), or the same five secrets
+      # justspeaktoit's release workflow uses — a base64 .p12, its password, and an App Store
+      # Connect API key with its id and issuer — imported into a temporary keychain for this job
+      # and deleted afterwards. With no secrets set, the steps fall through to the keychain.
+      - name: Import signing material from secrets, if provided
+        if: steps.receipt.outputs.status != 'verified' && env.HAS_P12 == 'true'
+        shell: zsh {0}
+        env:
+          HAS_P12: ${{ secrets.APPLE_DEVELOPER_ID_APPLICATION != '' }}
+          APPLE_DEVELOPER_ID_APPLICATION: ${{ secrets.APPLE_DEVELOPER_ID_APPLICATION }}
+          APPLE_DEVELOPER_ID_APPLICATION_PASSWORD: ${{ secrets.APPLE_DEVELOPER_ID_APPLICATION_PASSWORD }}
+        run: |
+          KEYCHAIN_PATH="$RUNNER_TEMP/focus-signing.keychain-db"
+          KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          CERT="$RUNNER_TEMP/developer-id.p12"
+          print -rn -- "$APPLE_DEVELOPER_ID_APPLICATION" | base64 --decode > "$CERT"
+          security import "$CERT" -P "$APPLE_DEVELOPER_ID_APPLICATION_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH" >/dev/null
+          rm -f -- "$CERT"
+          # The temporary keychain joins the search list in front of the login keychain, so
+          # `codesign --sign "Developer ID Application"` finds the imported identity first.
+          security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | tr -d '"')
+          echo "FOCUS_SIGNING_KEYCHAIN=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
+
+      - name: Install the notarisation API key from secrets, if provided
+        if: steps.receipt.outputs.status != 'verified' && env.HAS_KEY == 'true'
+        shell: zsh {0}
+        env:
+          HAS_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY != '' }}
+          APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          umask 077
+          KEY_PATH="$RUNNER_TEMP/notary.p8"
+          print -rn -- "$APP_STORE_CONNECT_API_KEY" | base64 --decode > "$KEY_PATH"
+          {
+            echo "FOCUS_NOTARY_KEY_PATH=$KEY_PATH"
+            echo "FOCUS_NOTARY_KEY_ID=$APP_STORE_CONNECT_KEY_ID"
+            echo "FOCUS_NOTARY_ISSUER_ID=$APP_STORE_CONNECT_ISSUER_ID"
+          } >> "$GITHUB_ENV"
+
+      - name: Sign with Developer ID, notarise, staple
+        if: steps.receipt.outputs.status != 'verified'
+        shell: zsh {0}
+        run: scripts/sign-and-notarise.sh "$APP"
+
+      - name: Package the disk image
+        if: steps.receipt.outputs.status != 'verified'
+        shell: zsh {0}
+        run: |
+          scripts/package-release.sh "$APP" "$RUNNER_TEMP/out" --developer-id
+          DMG=$(ls "$RUNNER_TEMP"/out/FocusSentinel-*.dmg)
+          test -f "$DMG"
+          echo "DMG=$DMG" >> "$GITHUB_ENV"
+
+      - name: Sign the appcast
+        if: steps.receipt.outputs.status != 'verified'
+        shell: zsh {0}
+        run: |
+          DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/${DOWNLOAD_TAG}/$(basename "$DMG")"
+          scripts/generate-appcast.sh "$RELEASE_VERSION" "$BUILD_NUMBER" "$DMG" "$FEED_URL" "$DOWNLOAD_URL" \
+            > "$RUNNER_TEMP/out/appcast.xml"
+          grep -q "$(basename "$DMG")" "$RUNNER_TEMP/out/appcast.xml"
+          grep -q "<sparkle:version>$BUILD_NUMBER</sparkle:version>" "$RUNNER_TEMP/out/appcast.xml"
+          cat "$RUNNER_TEMP/out/appcast.xml"
+
+      - name: Upload and write the receipt
+        if: steps.receipt.outputs.status != 'verified'
+        shell: zsh {0}
+        run: |
+          gh release upload "${{ inputs.manifest }}" "$DMG" "$RUNNER_TEMP/out/appcast.xml" --clobber -R "${{ github.repository }}"
+          python3 scripts/release-train.py receipt --tag "${{ inputs.manifest }}" --status verified \
+            --asset "$DMG" --asset "$RUNNER_TEMP/out/appcast.xml"
+
+      - name: Advance the Alpha pointer
+        if: env.RELEASE_TRAIN == 'alpha'
+        shell: zsh {0}
+        run: python3 scripts/release-train.py publish-alpha --tag "${{ inputs.manifest }}"
+
+      - name: Remove the temporary keychain and key
+        if: always()
+        shell: zsh {0}
+        run: |
+          if [[ -n "${FOCUS_SIGNING_KEYCHAIN:-}" ]]; then
+            security delete-keychain "$FOCUS_SIGNING_KEYCHAIN" || true
+          fi
+          rm -f -- "$RUNNER_TEMP/notary.p8"
+
+      - name: Free the build directory
+        if: always()
+        shell: zsh {0}
+        run: rm -rf -- "$FOCUS_DERIVED_DATA"

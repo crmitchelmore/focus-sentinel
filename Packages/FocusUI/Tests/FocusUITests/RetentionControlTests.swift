@@ -35,9 +35,13 @@ struct RetentionControlTests {
         let claimed =
             Set(RetentionWindow.allCases.map(\.titleKey))
             .union([.settingsPrivacyRetentionHeading, .settingsPrivacyRetentionExplanation])
+            // The tooltip every window button carries (focus-8ski): one sentence for the
+            // family, drawn by `retentionButtons` and `retentionChoices` through `shellHelp`.
+            .union([.settingsPrivacyRetentionHelp])
         #expect(Set(family) == claimed, "the retention string family and its readers disagree")
-        // Four windows, a heading and a sentence — a count that moves when either side does.
-        #expect(family.count == 6)
+        // Four windows, a heading, a sentence and a tooltip — a count that moves when either
+        // side does.
+        #expect(family.count == 7)
     }
 
     /// The pane draws all six, so `StringCatalogTests` and the reachability lint both see them.
@@ -83,9 +87,9 @@ struct RetentionControlTests {
     func theContentKeysCarryTheDisclosures() {
         let keys = Set(PrivacySettingsView.contentKeys)
         #expect(keys.contains(.settingsPrivacyNoNetwork))
-        #expect(keys.contains(.settingsPrivacyNoUpdateCheck))
+        #expect(keys.contains(.settingsPrivacyUpdateChecks))
         // And they are two sentences, not one said twice.
-        #expect(ShellStringKey.settingsPrivacyNoNetwork != .settingsPrivacyNoUpdateCheck)
+        #expect(ShellStringKey.settingsPrivacyNoNetwork != .settingsPrivacyUpdateChecks)
     }
 
     /// The order the pane draws is the order the type commits to, shortest first.

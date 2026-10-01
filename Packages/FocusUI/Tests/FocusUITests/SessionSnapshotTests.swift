@@ -305,6 +305,17 @@ struct SessionSnapshotTests {
             resumeTo: .focus
         )
         #expect(!lockOnly.userMayResume)
+
+        // A session a relaunch paused is the person's to resume: nothing else ever lifts a
+        // restoration pause, so a disabled Resume there was a promise that could not clear
+        // (focus-mmty).
+        let restarted = SessionFixture.session(
+            phase: .paused,
+            pauseCauses: [.systemRestart],
+            resumeTo: .focus
+        )
+        #expect(restarted.userMayResume)
+        #expect(restarted.causesTheUserCannotClear.isEmpty)
     }
 
     /// The elapsed figure is a formatted `Duration`, never minutes interpolated into a sentence.

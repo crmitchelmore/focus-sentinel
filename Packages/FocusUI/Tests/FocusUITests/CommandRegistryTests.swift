@@ -34,7 +34,9 @@ struct CommandRegistryTests {
         // a Mac user looks for export and import (F-110, F-134). `deleteEverything` is
         // deliberately **not** among them: a destructive verb one keystroke from ⌘W is a verb
         // somebody presses by mistake, and its confirmation sheet is the point.
-        #expect(registry.actions.count == 20)
+        // Twenty-one since focus-u6de: the walkthrough, in the Help menu beside the shortcut
+        // reference, because it is the other thing a person looks for under Help.
+        #expect(registry.actions.count == 21)
         #expect(registry.actions.map(\.id) == [
             "priority.new",
             "context.addFiles",
@@ -55,8 +57,27 @@ struct CommandRegistryTests {
             "nudge.answerNo",
             "nudge.answerNotNow",
             "shell.history",
-            "shell.help"
+            "shell.help",
+            "help.walkthrough"
         ])
+    }
+
+    /// **The walkthrough is a Help-menu command that opens the cockpit** (focus-u6de).
+    ///
+    /// A cockpit command rather than a window, because the walkthrough is the first-run sheet
+    /// and that sheet is presented over the cockpit. T is a base character no other action uses.
+    @Test("the walkthrough is a Help-menu command on its own base character, and it raises the cockpit")
+    func theWalkthroughIsAHelpCommand() throws {
+        let action = try #require(registry.action(id: "help.walkthrough"))
+        #expect(action.placement == .help)
+        #expect(action.shortcut == Shortcut("t", modifiers: [.shift, .command]))
+        #expect(action.shortcut?.glyphs == "⇧⌘T")
+        #expect(action.effect == .priority(.showWalkthrough))
+        #expect(action.titleKey == .commandShowWalkthrough)
+        #expect(PriorityCommand.showWalkthrough.opensCockpit)
+        #expect(PriorityCommand.showWalkthrough.queryAnswer == nil)
+        // Nothing to refuse: the sheet reads nothing and writes nothing.
+        #expect(PriorityCommand.showWalkthrough.isAvailable(in: .nothingIsCommitted))
     }
 
     // MARK: - e05: the nudge verbs
@@ -202,7 +223,7 @@ struct CommandRegistryTests {
             "settings.import",
             "shell.closeWindow"
         ])
-        #expect(registry.actions(in: .help).map(\.id) == ["shell.help"])
+        #expect(registry.actions(in: .help).map(\.id) == ["shell.help", "help.walkthrough"])
         #expect(registry.actions(in: .view).count == 8)
     }
 

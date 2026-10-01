@@ -115,12 +115,19 @@ public struct RefinementStrip: View {
                 ShellText(.captureSuggestionUse)
             }
             .disabled(suggestion.rewrite.isEmpty)
+            // Tooltips from the catalog (focus-8ski); a disabled control says why.
+            .shellHelp(
+                .captureSuggestionUseHelp,
+                disabled: .captureSuggestionUseDisabledHelp,
+                when: suggestion.rewrite.isEmpty
+            )
 
             Button {
                 dismiss()
             } label: {
                 ShellText(.captureSuggestionKeep)
             }
+            .shellHelp(.captureSuggestionKeepHelp)
 
             Spacer(minLength: 0)
         }

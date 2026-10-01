@@ -85,6 +85,7 @@ public struct InterruptionSheet: View {
                 }
                 .keyboardShortcut(.cancelAction)
                 .focused($focus, equals: .interruptCancel)
+                .shellHelp(.sessionInterruptCancelHelp)
 
                 Button {
                     let trimmed = note.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -95,9 +96,10 @@ public struct InterruptionSheet: View {
                 // Enabled with every field empty. Reflection is offered, never extracted.
                 .keyboardShortcut(.defaultAction)
                 .focused($focus, equals: .interruptConfirm)
+                .shellHelp(.sessionInterruptConfirmHelp)
             }
         }
-        .padding(spacing * 2)
+        .dialogInset()
         .boundedSheet(width: ShellSurfaceBounds.interruptionSheetWidth, screens: screens)
         .defaultFocus($focus, .interruptReason)
         .accessibilityElement(children: .contain)

@@ -2923,7 +2923,8 @@ final class NudgeHost {
                 guard let queryAnswer = command.queryAnswer else { return }
                 answer(queryAnswer)
             case .newPriority, .completePriority, .addFilesToContext,
-                 .startSession, .pauseSession, .completeSession, .pauseSensing:
+                 .startSession, .pauseSession, .completeSession, .pauseSensing,
+                 .showWalkthrough:
                 break
             }
         }

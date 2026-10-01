@@ -135,6 +135,125 @@ bd prime                # Refresh Beads context
 Driver notes from the work itself, newest first. `CLAUDE.md` points here; keep the two files
 mirrored for anything substantive.
 
+
+### 2026-09-12 — tooltips on everything, glyph verbs, one dialog margin, and the Resume that could never clear (focus-mmty, focus-8ski, focus-udn9)
+
+- **A restoration pause is the person's to clear, and the code said otherwise for months.**
+  `SessionRestoration.reconcile` pauses a restored session with `.systemRestart` or `.relaunch`
+  and documents it as "one click puts the person back where they were" — but `resumeSession()`
+  sent only `resumed(cause: .user)` and `userMayResume` required `pauseCauses == [.user]`, so
+  the cockpit showed "Paused because this Mac restarted" over a disabled Resume and a footnote
+  promising it would clear. Nothing ever clears those two causes but the person. The rule now
+  lives in `PauseReason.isClearedByThePerson` (`.user`, `.relaunch`, `.systemRestart`); the
+  snapshot's `causesTheUserCannotClear` / `causesTheUserMayClear` read it, and the host sends one
+  `resumed(cause:)` per person-clearable cause, so a session paused by the person *and* then
+  rebooted takes one click. `.poweringOff` maps to `.systemRestart` on purpose and is exempt in
+  the exhaustiveness test. `RestorationResumeTests` in FocusHost is the end-to-end witness.
+- **Tooltips are catalog entries, drawn only through `View.shellHelp`** (`Design/ShellHelp.swift`).
+  `check-strings.sh` bans `.help("…")`, so a tooltip is a `ShellStringKey` case plus a catalog row
+  like any other sentence; 128 keys sit under the `Tooltips (focus-8ski)` MARK. The two-key form
+  `shellHelp(_:disabled:when:)` shows *why* a control is off. **Put `.shellHelp` after
+  `.disabled(…)`**: `.help` attaches to the view it modifies, and a tooltip inside a disabled
+  view is one AppKit does not show. Verified live on this machine with `cliclick m:x,y`, a 2.5 s
+  wait and `screencapture -R`: the enabled Resume glyph showed "Resume session. Picks up where it
+  was paused." and the disabled *Open at login* row showed its reason sentence (evidence in
+  `/Volumes/Memory/archive/focus-tooltips-evidence/`). The catalog is edited by script with
+  `json.dumps(d, indent=2, ensure_ascii=False, separators=(",", " : "))` and insertion order
+  kept — that reproduces the file byte for byte; `sort_keys=True` rewrites the whole file.
+- **The session verbs are glyphs; the verb is the accessibility label.** `SessionControls` and
+  the menu-bar popover draw `play.fill` / `pause.fill` / `cup.and.saucer.fill` /
+  `arrow.triangle.branch` / `arrow.uturn.left` / `stop.fill` / `checkmark`, with
+  `.accessibilityLabel(Text(ShellStrings.resource(key)))` carrying the catalog verb, so the
+  registry, the shortcuts help and the label-driven tests are unchanged and the tooltip carries
+  the verb *and* what it changes. The three registers (filled primary, bordered reversible,
+  accent-tinted endings) are kept.
+- **One dialog margin, and it does not grow with the text.** `DesignTokens.dialogInset = 24`
+  and `popoverInset = 16`, reached through `.dialogInset()` / `.popoverInset()`
+  (`Design/DialogInset.swift`). Before: sheets 24, General pane 12, Intervention pane 12,
+  popover 10, custom-snooze 16. The first cut scaled the margin with `shellTextScale`; at
+  `.accessibilityLarge` (×2) that is 48 a side on a 460-wide pane, the Privacy capability slice
+  grew from 10 034 to 11 458 rows and its pseudo-localised pass crossed the ~16 000-row ceiling
+  where CoreGraphics hands back an empty buffer — `PseudoLocalizationTests` reported "rendered
+  no ink: 11458 and 19122 rows". A margin is a frame, not text; it stays fixed.
+- **A SwiftPM store can carry a stale plan.** After adding two new files to `FocusUI`, the
+  FocusHost package's first build of the dependency reported "no member 'shellHelp'" in thirty
+  places and one "unable to type-check in reasonable time" while `swift build` of FocusUI alone
+  was green; the second `swift build --package-path Packages/FocusHost` compiled the new files and
+  passed with no source change. Rebuild once before reading a dependency's cascade as real.
+- **Re-recording by export took four lane passes for 108 baselines, and the count is the
+  lesson.** Pass 1 compares; export its candidates with `xcrun xcresulttool export attachments`
+  and match `suggestedHumanReadableName` against `<name>.candidate_<n>_<uuid>.png` (the
+  `isAssociatedWithFailure` flag is false on every attachment, so do not filter on it); copy
+  them over the baselines. But a component test stops at its first mismatching *size*, so pass 1
+  only yields the standard candidates; pass 2 yields the accessibilityLarge ones; pass 3 is
+  green. Add one more pass for any fix made along the way. Quiet-ish machine (a Pasta CI runner
+  was building beside it): 296 s, 214 s, 213 s.
+
+### 2026-09-10 — the walkthrough and the release trains (focus-u6de, focus-h8jf)
+
+- **A shared SwiftPM repository cache is a shared lock, and Xcode.app holds it.** Every
+  `swift package resolve` and every `xcodebuild` that resolves a remote package takes
+  `~/Library/Caches/org.swift.swiftpm/repositories/<pkg>.lock`. With Xcode.app open on another
+  project that also depends on Sparkle, and two other sessions' `swift-package resolve` runs
+  waiting on the same lock, this repository's first resolve of Sparkle hung for forty minutes
+  with no child process and nothing in `-v`. Plain `git ls-remote` of the same URL answered at
+  once, which is how the network was ruled out. The fix is a private cache:
+  `swift package resolve --cache-path /Volumes/Memory/cache/swiftpm-cache-focus` and
+  `xcodebuild … -packageCachePath /Volumes/Memory/cache/swiftpm-cache-focus`; `release-mac.yml`
+  passes it. `lsof <lockfile>` names the holders; `sample` on the waiter shows nothing useful.
+- **Sparkle is the one third-party package, and the gate reads it the opposite way round.**
+  `check-boundaries.sh` used to prove *no* updater (no Sparkle symbol, no `SUFeedURL`); it now
+  proves the updater is *opt-in*: the Release binary names `SPUStandardUpdaterController` (the
+  control — a claim about a framework that is really there), the merged plist carries
+  `SUEnableAutomaticChecks = false` and `SUPublicEDKey` and no `SUFeedURL`, and the self-check
+  publishes `softwareUpdaterStarted = false` and `softwareUpdateChecksStored = false` on a default
+  store. `FocusUpdates` is the only package allowed a remote dependency, and it must declare
+  exactly `sparkle`. Adding a second remote dependency anywhere fails the gate by name.
+- **R-96q gained a second allowed caller, for the rule's own reason.** The General pane's
+  *Show walkthrough* button sends `.showWalkthrough`, whose `opensCockpit` is `true`, so the
+  centre raises the window and buffers the command — the exact property the six silent controls
+  the rule was written about lacked. `CommandRegistryTests.theWalkthroughIsAHelpCommand` pins
+  `opensCockpit`; if that flips, the allowance in `check-forbidden.sh` loses its argument.
+- **`-only-testing:FocusUITests/<Suite>` matched nothing for Swift Testing suites in that
+  bundle under `xcodebuild test`**, while the same shape matched `FocusHostTests/FirstRunExplanationTests`.
+  Not diagnosed; the walkthrough's lane-gated string assertions were checked by compiling the
+  catalog with `xcrun xcstringstool compile` and reading the entries instead. Do not read an
+  "Executed 0 tests" FocusUITests run as green.
+- **The snapshot lane records one missing size per pass.** A component's test case stops at
+  its first missing baseline, and each component has a standard and an accessibilityLarge
+  picture, so twelve new components took three passes of
+  `xcodebuild -scheme FocusUnitTests -only-testing:FocusUITests test`: the first wrote the
+  standard sizes and failed, the second wrote the large sizes and failed, the third was green.
+  Read the failure text — "no committed baseline … the candidate has been written" is progress,
+  a pixel mismatch is not.
+- **The walkthrough is a coach-mark tour on the real cockpit, and a step is done when the state
+  says so** (focus-u6de). The sheet's Continue opens `WalkthroughPanelController`, a floating
+  panel that `WalkthroughPlacement` puts beside the control the step is about and
+  `WalkthroughHighlightWindow` outlines; the controls report their frames through
+  `.walkthroughAnchor(_:)` into `WalkthroughAnchorRegistry`, most specific first (the capture
+  field, else *Change priority*; the context pack, else the Details tab). `FocusHost.WalkthroughTour`
+  takes a baseline reading on entering a step and reads completion off `PriorityHost.state`,
+  `SessionHost.snapshot`, the popover's `onPopoverDidShow` and `noteSettingsRendering` — never
+  off the button. The reading arrives through `PriorityHost.onStateChanged`, added because
+  `onSnapshotInvalidated` fires only for the four snapshot-key facts and a definition of done
+  or a timebox changes neither. *Do it for me* performs the same host call the control would.
+- **Three things a floating tour panel must do, each measured on this machine.** (1) Only move
+  when the step, the target or the done state changed — `refreshCockpit()` runs every five
+  seconds and a panel re-placed on each tick snapped back under the person's drag and put a
+  click meant for *Next* into Safari. (2) `hidesOnDeactivate = true` on the panel and the ring:
+  with it `false`, a Safari click left the Spruce ring drawn over Safari's page where the
+  timebox had been. Same-application windows (Settings, the popover) do not deactivate, so the
+  panel stays through those steps. (3) Re-place on `NSWindow.didResizeNotification`:
+  `NSHostingView.fittingSize` read in `present` is the previous step's, the content grows when
+  the done sentence appears, and `setContentSize` keeps the top-left, which walked the footer
+  under the Dock.
+- **Driving the live app from a shell.** `osascript` menu clicks work (`click menu item "Show
+  walkthrough" of menu "Help"`); `System Events` button clicks on SwiftUI sheets and `set
+  position of window 1` do not (the latter moved the tour panel, which was `window 1`). Use
+  `cliclick c:x,y` at screen points scaled from a `screencapture` — 1920 wide here — and read
+  the picture back before the next click; a floating overlay from another application can sit
+  over the button you meant.
+
 ### 2026-09-09 — merging the companion identity into the settings branch (focus-oqsx)
 
 - **A size-derived test fixture rots silently when the surface it measures changes shape.**

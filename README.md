@@ -22,6 +22,7 @@ and `tuist` is not used.
 | `Packages/FocusEvaluate` | the evaluation lane: `FocusEvaluateCore` and the `FocusEvaluate` product, test-lane only, which no application target links. It sat inside `FocusClassify` until e06, which needed a model package that depends on the engine *and* an evaluation lane that depends on the model — a cycle, because SwiftPM dependencies are package-level |
 | `Packages/FocusSensing` | macOS observation adapters |
 | `Packages/FocusUI` | every SwiftUI view, scene, command and design token |
+| `Packages/FocusUpdates` | the updater (focus-h8jf): `SparkleUpdater`, the one package that may import the one third-party framework this repository ships. Inert until the person switches update checks on in Settings ▸ General; see "Release trains" |
 | `Packages/FocusHost` | the composition layer — `AppComposition` and the five hosts. The only module that imports more than one sibling package, and the reason it is a package rather than the app target is that `App/` is not one: no test bundle could import it, so every claim about the wiring in it was a source scan (see "Why the composition layer is a package" below) |
 | `Config/` | the partial app plist, test-count floors, performance budgets and verification contracts. The plist lives here rather than in `App/` — see "The project file" below |
 | `scripts/` | the build gate and its twenty-seven stages, plus the six live evidence lanes |
@@ -424,19 +425,57 @@ person's own list is exactly as it was found.
 Two sentences in Settings ▸ Privacy, directly under the statement about where the data lives and
 with no heading of their own — a section headed *"what we do not do"* invites the list to grow,
 and a list of denials reads as defensive rather than plain. *"Focus never connects to the
-internet."* (F-122) and *"It never checks for updates."* (F-137, D-09: this programme has no
-server, no remote and no deployment lane, so a Sparkle feed would point at nothing).
+internet unless you turn on update checks in General settings."* (F-122) and *"Update checks are
+off until you turn them on. When Focus checks, it sends its name and version and nothing about
+you."* (F-137, focus-h8jf).
+
+Until focus-h8jf the second sentence read *"It never checks for updates."* D-09 parked Sparkle
+because this programme had no server, no remote and no deployment lane, so a feed would have
+pointed at nothing. The release trains below give it a feed per train, and the sentence changed
+with the product rather than ahead of it.
 
 **Neither is a promise.** The first is linted of the shipped product by the gate's `boundaries`
-stage — no networking symbol in any package source, and `nm -u FocusClassify.o` naming none,
-with the object's seven NaturalLanguage symbols as the control that stops an empty table passing.
-The second is linted the same way and in the same place: `nm -u` over the Release app's own
-binary names no Sparkle symbol out of 1 783 undefined ones — the count is the control, because
-the Debug product is a preview shim with 31 — and its merged `Info.plist` declares no
-`SUFeedURL`, because a feed URL with no framework behind it is still an app announcing where it
-would phone. The self-check adds the half a lint cannot see: that the pane declares both
-sentences among the strings it draws, and that both resolve to real text in the compiled catalog
-rather than to their own key names.
+stage — no networking symbol in any package source (Sparkle's own socket is Sparkle's, inside
+`Sparkle.framework`, and `FocusUpdates` names no networking API of its own), and
+`nm -u FocusClassify.o` naming none, with the object's seven NaturalLanguage symbols as the
+control that stops an empty table passing. The second is linted in the same place, in the
+opposite direction from before: `nm -u` over the Release app's own binary **names** the Sparkle
+updater controller — the control, because "opt-in" is a claim about a framework that is really
+there — while the merged `Info.plist` carries `SUEnableAutomaticChecks = false`, so Sparkle
+neither prompts nor schedules on its own, carries `SUPublicEDKey`, so nothing unsigned can be
+installed, and carries **no** `SUFeedURL`, because the feed is the train's and is answered by the
+updater's delegate. The self-check adds the halves a lint cannot see: that the pane declares both
+sentences among the strings it draws and both resolve to real text, and — read off the running
+process on a default store — that the stored choice is off and the updater was never started
+(`softwareUpdateChecksStored`, `softwareUpdaterStarted`).
+
+## The walkthrough (focus-u6de)
+
+The first-run sheet is page one and says what the app watches; nothing else was ever on it.
+Its *Continue* opens a tour of eleven steps on the real cockpit rather than a description of
+one: a floating panel (`WalkthroughPanelController`) sits beside the control each step is
+about, a borderless window (`WalkthroughHighlightWindow`) outlines the control with a nub
+toward the panel, and the instruction asks the person to do the thing there — type the
+priority and press Return, choose a timebox, press Start, open Details, click the Focus mark
+in the menu bar, press Open Settings. The cockpit's sections report where they were laid out
+through `.walkthroughAnchor(_:)`, most specific first, so the priority step points at the
+capture field while it is open and at *Change priority* while it is not.
+
+A step is done when the app's state says so, not when a button was pressed:
+`FocusHost.WalkthroughTour` takes a reading on entering the step and compares it with the
+priority host's state, the session host's snapshot, the popover's showing and the Settings
+window's drawing on every later change. *Do it for me* performs the same host call the control
+would, for somebody who would rather watch; the two nudge steps draw an accusation and a
+question on a panel of the tour's own, whose buttons close it and write nothing. The demo
+priority is a real task and stays in Recent; finishing — the last step's button, the panel's
+close box or Escape — completes the session the tour started, if it started one, and
+re-activates the priority that was active before, or clears.
+
+Replay from Help ▸ Show walkthrough (⇧⌘T) or Settings ▸ General. The snapshot lane
+photographs the sheet and every step at both text sizes (`walkthrough*.png`);
+`WalkthroughTests` holds the step order, the anchors and the catalog bijection;
+`WalkthroughTourTests` drives the tour through the composition root and holds that the
+person's own action, not the tour's, is what marks a step done.
 
 ## Taking it away
 
@@ -1303,11 +1342,77 @@ be about macOS's copy rather than about this artefact. A Gatekeeper that *accept
 a failure, because it would mean either a local rule has made the reading meaningless or the
 artefact is not the posture the README describes.
 
+## Release trains (Alpha and Stable)
+
+Two trains, modelled on the justspeaktoit release trains (focus-h8jf). Every fact that keeps them
+apart is a row in `Config/ReleaseTrains.json`, and `scripts/generate-release-train-config.py`
+renders it into `FocusCore`'s `ReleaseTrainCatalogue.swift`, which the `boundaries` stage checks
+against the JSON so the app and the release scripts read one table:
+
+| | Stable | Alpha |
+|---|---|---|
+| bundle identifier | `com.chrismitchelmore.FocusSentinel` | `com.chrismitchelmore.FocusSentinel.alpha` |
+| display name | Focus Sentinel | Focus Sentinel Alpha |
+| store directory | `~/Library/Application Support/com.chrismitchelmore.FocusSentinel` | `…/com.chrismitchelmore.FocusSentinel.alpha` |
+| URL scheme | `focus://` | `focus-alpha://` |
+| Sparkle feed | `releases/latest/download/appcast.xml` | `releases/download/alpha-latest/appcast.xml` |
+| icon | `AppIcon` | `AppIconAlpha`, the Stable icon with its hue turned by `scripts/make-alpha-icon.swift` |
+
+**How a build knows which it is.** The project has three configurations: `Debug` and `Release`
+are Stable, and `Alpha` is the Release settings with the train's identity. `FOCUS_RELEASE_TRAIN`
+and `FOCUS_URL_SCHEME` are build settings substituted into `Config/FocusSentinel-Info.plist` the
+way `FOCUS_GIT_HASH` is, and `ReleaseTrain.current` reads the plist key back, refusing an Alpha
+bundle identifier that claims Stable. A process with no train metadata — a unit process, a
+preview, a plain Xcode.app build — is Stable, which is what every build before this one was.
+`xcodebuild … -configuration Alpha` is the whole of building the other train.
+
+**The updater is opt-in, per install.** `SparkleUpdater` (`Packages/FocusUpdates`) builds
+Sparkle's standard controller with `startingUpdater: false` and starts it from exactly two verbs,
+both reached from a control in Settings ▸ General: the *Check for updates automatically* switch,
+which stores the choice in `SoftwareUpdatePreferenceRecord` (schema v11) and is read back at the
+next launch, and *Check for updates now*. Off is the shipped state, and no row is off. The feed
+is `ReleaseTrain.current.feedURL`, answered by the delegate, so there is no `SUFeedURL` in the
+plist and an Alpha install is never offered a Stable build or the reverse. Every enclosure is
+verified against `SUPublicEDKey`; the private half of that key lives in the login keychain of the
+Mac that signs releases under the Sparkle account `Focus Sentinel`, and is in no file in this
+repository.
+
+**The flow**, in `scripts/release-train.py` and four workflows on the self-hosted runner:
+
+1. **Alpha.** `alpha-release.yml` allocates an immutable `alpha-build-N` tag with a manifest from
+   a `main` commit (on dispatch while `Config/ReleasePipeline.json` says `"enabled": false`;
+   on every green push to `main` once the owner flips it), then `release-mac.yml` builds the
+   `Alpha` configuration, signs it with the Developer ID identity on the runner, notarises it,
+   packages the DMG with `scripts/package-release.sh`, signs the appcast with `sign_update`, and
+   uploads everything to a GitHub **prerelease**. Only then does the `alpha-latest` pointer
+   release advance, which is what the Alpha feed reads.
+2. **Prepare Stable.** `prepare-stable.yml` takes a tested `alpha-build-N` and a version, freezes
+   them as a `stable-candidate-N` manifest, and rebuilds the `Release` configuration from the
+   same source under the Stable identity into a **draft** release.
+3. **Publish Stable.** `publish-stable.yml` takes the candidate and the SHA-256 of its reviewed
+   manifest, and only the repository owner may run it. It publishes the draft as `vX.Y.Z`, marks
+   it Latest — which is what the Stable feed reads — and records a receipt on the candidate.
+
+Nothing in the flow signs with the gate's ad-hoc identity or claims Gatekeeper acceptance for
+it. What the runner needs before either train can ship is in "What still gates the trains".
+
+**What still gates the trains.** One thing the repository cannot supply: signing material.
+`release-mac.yml` takes it either from the runner's login keychain — a *Developer ID Application*
+identity plus a `notarytool` keychain profile named `focus-notary`, both named in
+`Config/ReleasePipeline.json` — or from the same five repository secrets justspeaktoit's release
+workflow uses (`APPLE_DEVELOPER_ID_APPLICATION` as a base64 `.p12`,
+`APPLE_DEVELOPER_ID_APPLICATION_PASSWORD`, `APP_STORE_CONNECT_API_KEY` as a base64 `.p8`,
+`APP_STORE_CONNECT_KEY_ID`, `APP_STORE_CONNECT_ISSUER_ID`), imported into a temporary keychain
+for the job and deleted afterwards. The feed URLs above are GitHub release assets, which are
+fetchable without credentials because the repository is public.
+
 ## Privacy posture
 
-No accounts, no telemetry, no analytics, no third-party packages: every `Package.swift` in this
-repository declares an empty `dependencies` array, and the check that asserts it is a gate
-stage. The app ships with no network entitlement, and `FocusClassify` carries a
+No accounts, no telemetry, no analytics, and one third-party package: every `Package.swift` in
+this repository declares local siblings only, except `Packages/FocusUpdates`, which declares
+Sparkle and nothing else, and the gate's `boundaries` stage asserts both halves — a remote
+dependency anywhere else fails, and that package declaring anything but Sparkle fails
+(focus-h8jf). The app ships with no network entitlement, and `FocusClassify` carries a
 zero-networking assertion that fails closed.
 
 That assertion now has a fourth form and a companion. `nm -u FocusClassify.o` names no
@@ -1335,3 +1440,8 @@ rejects whitespace, control characters and every ASCII punctuation mark but `.`,
 so a window title, a full URL, a document name or an absolute path is *unrepresentable* in an
 explanation rather than forbidden. `ClassificationInput.origin` and `.titleTokens` exist, are
 exercised by the golden corpus, and are **empty in every shipping code path in this version**.
+
+## License
+
+MIT. See [LICENSE](LICENSE). Sparkle, the one third-party framework the app ships, is
+distributed under its own MIT licence by the Sparkle Project.

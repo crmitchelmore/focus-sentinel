@@ -87,6 +87,10 @@ public struct CockpitConnection {
     /// **What the first-run explanation's one button performs** (focus-odz.7). A sink for
     /// `onLaunchAtLoginOffer`'s reason and driven the same way: only a click reaches it.
     public let onFirstRunExplanationDismissed: @MainActor () -> Void
+    /// **What the walkthrough sheet's Continue performs after closing it** (focus-u6de): the
+    /// composition root opens the floating tour beside the cockpit. A sink like the one above,
+    /// for its reason; driven by `WalkthroughTourTests` rather than clicked.
+    public let onWalkthroughContinued: @MainActor () -> Void
 
     /// Called from the view's body: the far end of the one wire this type leaves in `App/`.
     ///
@@ -111,6 +115,7 @@ public struct CockpitConnection {
         lastActiveBundleID: String?,
         onLaunchAtLoginOffer: @escaping @MainActor (LaunchAtLoginOfferAction) -> Void = { _ in },
         onFirstRunExplanationDismissed: @escaping @MainActor () -> Void = {},
+        onWalkthroughContinued: @escaping @MainActor () -> Void = {},
         generation: Int = 0,
         didRender: @escaping @MainActor () -> Void = {},
         didDraw: @escaping @MainActor (ShellRenderedValues) -> Void = { _ in }
@@ -122,6 +127,7 @@ public struct CockpitConnection {
         self.lastActiveBundleID = lastActiveBundleID
         self.onLaunchAtLoginOffer = onLaunchAtLoginOffer
         self.onFirstRunExplanationDismissed = onFirstRunExplanationDismissed
+        self.onWalkthroughContinued = onWalkthroughContinued
         self.generation = generation
         self.didRender = didRender
         self.didDraw = didDraw
@@ -155,6 +161,7 @@ extension CockpitConnection: ShellDrawnConnection {
             "lastActiveBundleID": .drawn([.lastActiveApp]),
             "onLaunchAtLoginOffer": .undrawn(.sink),
             "onFirstRunExplanationDismissed": .undrawn(.sink),
+            "onWalkthroughContinued": .undrawn(.sink),
             "didRender": .undrawn(.receipt),
             "didDraw": .undrawn(.receipt),
 

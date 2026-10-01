@@ -108,7 +108,14 @@ struct ExportRegistryTests {
         Row(entity: "SensitiveAppEntry", column: "bundleID", classification: "KEY"),
         Row(entity: "SensitiveAppEntry", column: "kindRaw", classification: "TOKEN"),
         Row(entity: "SensitiveAppEntry", column: "isBuiltIn", classification: "MEASURE"),
-        Row(entity: "SensitiveAppEntry", column: "addedAt", classification: "MEASURE")
+        Row(entity: "SensitiveAppEntry", column: "addedAt", classification: "MEASURE"),
+        // Whether *this* install may ask its update feed (focus-h8jf): a consent about this Mac,
+        // like the grant opt-ins and the capability rows, and it means nothing anywhere else. It
+        // is deliberately in neither document — a settings import must not switch a network ask
+        // on for a Mac whose owner never did.
+        Row(entity: "SoftwareUpdatePreferenceRecord", column: "id", classification: "KEY"),
+        Row(entity: "SoftwareUpdatePreferenceRecord", column: "checksAutomatically", classification: "MEASURE"),
+        Row(entity: "SoftwareUpdatePreferenceRecord", column: "touchedAt", classification: "MEASURE")
     ]
 
     /// Settings rows, which belong to `SettingsDocument` rather than to the data export. Named by

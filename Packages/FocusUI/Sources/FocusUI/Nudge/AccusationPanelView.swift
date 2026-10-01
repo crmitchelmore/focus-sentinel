@@ -467,6 +467,8 @@ public struct AccusationPanelView: DecisionSurfaceContent {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(Text(ShellStrings.resource(.nudgeDismiss)))
+        // Every control carries a tooltip (focus-8ski); the close affordance says it writes nothing.
+        .shellHelp(.nudgeDismissHelp)
     }
 
     private func snoozeCountdown(_ remaining: Duration) -> some View {
@@ -532,6 +534,21 @@ public struct AccusationPanelView: DecisionSurfaceContent {
         } label: {
             actionLabel(action)
                 .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .shellHelp(Self.helpKey(for: action))
+    }
+
+    /// What each correction does, for its tooltip — one sentence per verb, matching the
+    /// semantics `CorrectionAction` documents rather than restating its label.
+    static func helpKey(for action: CorrectionAction) -> ShellStringKey {
+        switch action {
+        case .thisIsRelevant: .nudgeActionThisIsRelevantHelp
+        case .notThisTime: .nudgeActionNotThisTimeHelp
+        case .snooze: .nudgeSnoozeHelp
+        case .changePriority: .nudgeActionChangePriorityHelp
+        case .pause: .nudgeActionPauseHelp
+        case .returnToTask: .nudgeActionReturnToTaskHelp
+        case .dismiss: .nudgeDismissHelp
         }
     }
 
@@ -611,6 +628,7 @@ public struct AccusationPanelView: DecisionSurfaceContent {
         }
         .buttonStyle(CompanionButtonStyle())
         .accessibilityIdentifier("nudge-snooze-custom")
+        .shellHelp(.nudgeSnoozeCustomHelp)
     }
 
     /// Limit the editor to a positive whole number of minutes, up to one day.
@@ -627,12 +645,14 @@ public struct AccusationPanelView: DecisionSurfaceContent {
                 .textFieldStyle(.roundedBorder)
                 .accessibilityIdentifier("nudge-snooze-custom-minutes")
                 .onSubmit { applyCustomSnooze() }
+                .shellHelp(.nudgeSnoozeCustomMinutesHelp)
             HStack {
                 Button { showsCustomSnooze = false } label: {
                     ShellText(.priorityCompleteActionCancel, role: .callout)
                 }
                 .buttonStyle(CompanionButtonStyle())
                 .accessibilityIdentifier("nudge-snooze-custom-cancel")
+                .shellHelp(.nudgeSnoozeCustomCancelHelp)
                 Spacer()
                 Button { applyCustomSnooze() } label: {
                     HStack(spacing: 4) {
@@ -646,10 +666,16 @@ public struct AccusationPanelView: DecisionSurfaceContent {
                 .buttonStyle(CompanionButtonStyle(prominent: true))
                 .disabled(customSnoozeDuration == nil)
                 .accessibilityIdentifier("nudge-snooze-custom-apply")
+                .shellHelp(
+                    .nudgeSnoozeCustomApplyHelp,
+                    disabled: .nudgeSnoozeCustomApplyDisabledHelp,
+                    when: customSnoozeDuration == nil
+                )
             }
         }
         .font(DesignTokens.font(.callout, scale: textScale))
-        .padding(16)
+        // The one popover margin (focus-udn9).
+        .popoverInset()
         .frame(minWidth: 260)
     }
 
@@ -673,6 +699,7 @@ public struct AccusationPanelView: DecisionSurfaceContent {
         }
         .buttonStyle(CompanionButtonStyle())
         .accessibilityLabel(Text(verbatim: NudgeCopy.duration(span)))
+        .shellHelp(.nudgeSnoozeHelp)
     }
 
     @ViewBuilder

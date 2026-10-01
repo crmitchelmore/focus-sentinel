@@ -2449,6 +2449,66 @@
         }
       }
     },
+    "settings.general.updates.heading" : {
+      "comment" : "General settings: the heading over the software-update controls (focus-h8jf).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Software updates"
+          }
+        }
+      }
+    },
+    "settings.general.updates.automatic" : {
+      "comment" : "General settings: the switch that turns automatic update checks on. Off is the shipped state.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check for updates automatically"
+          }
+        }
+      }
+    },
+    "settings.general.updates.checkNow" : {
+      "comment" : "General settings: the button that asks the update feed once, now.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check for updates now"
+          }
+        }
+      }
+    },
+    "settings.general.updates.note" : {
+      "comment" : "Footnote under the update controls: what turning checks on costs, and what off means. The claim about the request is the whole of what Sparkle sends without system profiling, which is off.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "When this is on, Focus asks its update feed once a day whether a newer build exists. The request carries the app's name and version and nothing about you. When it is off, Focus never connects to the internet."
+          }
+        }
+      }
+    },
+    "settings.general.updates.alpha" : {
+      "comment" : "Footnote drawn only in an Alpha build: which feed it follows.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This is an Alpha build. It updates from the Alpha feed, ahead of Stable."
+          }
+        }
+      }
+    },
     "settings.general.launchAtLoginOpenSettings" : {
       "comment" : "General settings: the button beside that footnote, which opens Login Items in System Settings.",
       "extractionState" : "manual",
@@ -3086,25 +3146,25 @@
       }
     },
     "settings.privacy.noNetwork" : {
-      "comment" : "Privacy pane disclosure: this app opens no network connection, ever.",
+      "comment" : "Privacy pane disclosure: the app reaches the network for one thing only, and only when the person switched it on in General settings (F-122, focus-h8jf). Linted of the product by the boundaries stage.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Focus never connects to the internet."
+            "value" : "Focus never connects to the internet unless you turn on update checks in General settings."
           }
         }
       }
     },
-    "settings.privacy.noUpdateCheck" : {
-      "comment" : "Privacy pane disclosure: this app has no updater and phones nobody to ask about versions.",
+    "settings.privacy.updateChecks" : {
+      "comment" : "Privacy pane disclosure: update checks are opt-in, and what a check sends (F-137, focus-h8jf). Replaces the sentence that said the app never checks; the gate reads the updater unstarted on a default store.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "It never checks for updates."
+            "value" : "Update checks are off until you turn them on. When Focus checks, it sends its name and version and nothing about you."
           }
         }
       }
@@ -4693,8 +4753,452 @@
         }
       }
     },
-    "shell.firstRun.dismiss" : {
-      "comment" : "First-run sheet: the one button, which puts it away for good.",
+    "shell.firstRun.storeLabel" : {
+      "comment" : "First-run sheet: the label above the path where the local store lives. The same path Settings > Privacy shows.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus stores your data on this Mac:"
+          }
+        }
+      }
+    },
+    "settings.general.showWalkthroughNote" : {
+      "comment" : "Footnote under the Show walkthrough button in General settings.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A few short pages on what Focus watches and what it does."
+          }
+        }
+      }
+    },
+    "shell.command.showWalkthrough" : {
+      "comment" : "Help menu item and Settings > General button: open the walkthrough again. It is the same sheet the first launch shows, from its first page.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show walkthrough"
+          }
+        }
+      }
+    },
+    "shell.walkthrough.back" : {
+      "comment" : "Walkthrough sheet: the button that goes to the previous page. Disabled on the first page.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Back"
+          }
+        }
+      }
+    },
+    "shell.walkthrough.desk.judgement" : {
+      "comment" : "Walkthrough page 4: what the relevance engine compares. It reads the app in front and, where a browser offers it, the site's host name; nothing else.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus compares the app in front with the context pack to decide whether it is part of the work."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.desk.pack" : {
+      "comment" : "Walkthrough page 4: the context pack (F-09), added on the Details tab or by drag and drop onto the cockpit.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The context pack is what belongs to the priority: apps, sites, keywords and files. Add them on the Details tab, or drop files and links onto the window."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.desk.rules" : {
+      "comment" : "Walkthrough page 4: per-task rules (F-11). Task-scoped rules last with the priority; session-scoped ones end with the session.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A rule settles a case for good. Mark an app or a site as related or unrelated, for this priority or for this session only."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.desk.title" : {
+      "comment" : "Walkthrough page 4: the heading. The context pack and the rules.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The desk and the rules"
+          }
+        }
+      }
+    },
+    "shell.walkthrough.menuBar.capture" : {
+      "comment" : "Walkthrough page 6: the quick-capture hot key. The combination is not spelled here because General settings lets the person change it.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A global shortcut sets a new priority from inside any app. Choose the combination in Settings, General."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.menuBar.mark" : {
+      "comment" : "Walkthrough page 6: the status item and its popover (F-82). The popover shows facts about right now and no score.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The mark in the menu bar shows what Focus currently believes. Click it for the priority, the timer, any open question and the session controls."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.menuBar.shortcuts" : {
+      "comment" : "Walkthrough page 6: the Keyboard Shortcuts window (F-145). Shortcuts are not spelled here because the registry is their one source.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Every command has a menu item. The Help menu lists each one with its shortcut."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.menuBar.title" : {
+      "comment" : "Walkthrough page 6: the heading. The status item and the keyboard.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The menu bar and the keyboard"
+          }
+        }
+      }
+    },
+    "shell.walkthrough.next" : {
+      "comment" : "Walkthrough sheet: the button that goes to the next page. Return presses it.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next"
+          }
+        }
+      }
+    },
+    "shell.walkthrough.doItForMe" : {
+      "comment" : "Tour: the button that performs the current step for the person.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Do it for me"
+          }
+        }
+      }
+    },
+    "shell.walkthrough.showItAgain" : {
+      "comment" : "Tour: the button that shows the demo nudge or question again.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show it again"
+          }
+        }
+      }
+    },
+    "shell.walkthrough.action.finishDemo" : {
+      "comment" : "Tour button on the last step: end the demo and restore.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Finish the demo and put my priority back"
+          }
+        }
+      }
+    },
+    "shell.walkthrough.step.setPriority" : {
+      "comment" : "Tour step setPriority: what the person is asked to do in the real app.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Type what you are working on in the field, then press Return. If a priority is already set, press Change priority first."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.done.setPriority" : {
+      "comment" : "Tour step setPriority: what changed once it was done, and what a real one does.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "That sentence is your priority. The hero shows it and everything below acts on it."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.step.doneWhen" : {
+      "comment" : "Tour step doneWhen: what the person is asked to do in the real app.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Under the priority, write how you will know it is finished, then press Return."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.done.doneWhen" : {
+      "comment" : "Tour step doneWhen: what changed once it was done, and what a real one does.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Done when is saved with the priority. On real work you can leave it blank."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.step.timebox" : {
+      "comment" : "Tour step timebox: what the person is asked to do in the real app.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose a timebox. 25 minutes is enough for this tour."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.done.timebox" : {
+      "comment" : "Tour step timebox: what changed once it was done, and what a real one does.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The timebox shows the time left, then the time over. It never stops you working."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.step.startSession" : {
+      "comment" : "Tour step startSession: what the person is asked to do in the real app.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Press Start to begin a session."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.done.startSession" : {
+      "comment" : "Tour step startSession: what changed once it was done, and what a real one does.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The session is running. The menu bar shows its timer."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.step.desk" : {
+      "comment" : "Tour step desk: what the person is asked to do in the real app.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open the Details tab and add a keyword or an app to the desk."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.done.desk" : {
+      "comment" : "Tour step desk: what changed once it was done, and what a real one does.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The desk holds what belongs to this priority. Files and links can be dropped onto the window too."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.step.rules" : {
+      "comment" : "Tour step rules: what the person is asked to do in the real app.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Under Rules, name an app or a site and mark it related or unrelated."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.done.rules" : {
+      "comment" : "Tour step rules: what changed once it was done, and what a real one does.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A rule settles that case for good. A rule for this session only ends with the session."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.step.nudge" : {
+      "comment" : "Tour step nudge: what the person is asked to do in the real app.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This is a nudge, drawn where a real one appears. Press any of its buttons to close it."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.done.nudge" : {
+      "comment" : "Tour step nudge: what changed once it was done, and what a real one does.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A real nudge writes your answer down. Hide all overlays, in the View menu, clears the screen without answering."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.step.question" : {
+      "comment" : "Tour step question: what the person is asked to do in the real app.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This is a question. Answer it to close it."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.done.question" : {
+      "comment" : "Tour step question: what changed once it was done, and what a real one does.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A real question remembers your answer and stops asking."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.step.menuBar" : {
+      "comment" : "Tour step menuBar: what the person is asked to do in the real app.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Click the Focus mark in the menu bar."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.done.menuBar" : {
+      "comment" : "Tour step menuBar: what changed once it was done, and what a real one does.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The popover shows the priority, the timer, any open question and the session controls."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.step.settings" : {
+      "comment" : "Tour step settings: what the person is asked to do in the real app.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Press Open Settings at the bottom of the window and choose Privacy."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.done.settings" : {
+      "comment" : "Tour step settings: what changed once it was done, and what a real one does.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Privacy settings list every signal Focus reads. General has the update switch and this walkthrough."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.step.finish" : {
+      "comment" : "Tour's last step: what finishing does, and what stays.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Finishing ends the demo session and puts back the priority you had before. The demo priority stays in Recent."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.continue" : {
+      "comment" : "Walkthrough sheet: the one button. Closes the privacy page and opens the floating tour.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -4705,14 +5209,314 @@
         }
       }
     },
-    "shell.firstRun.storeLabel" : {
-      "comment" : "First-run sheet: the label above the path where the local store lives. The same path Settings > Privacy shows.",
+    "shell.walkthrough.continueNote" : {
+      "comment" : "Walkthrough sheet: the sentence above Continue saying what it opens, so the tour panel is not a surprise.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Focus stores your data on this Mac:"
+            "value" : "Continue opens a short tour beside this window. Each step has a button that does the thing in the app, and the last step puts your own priority back."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.panel.title" : {
+      "comment" : "The floating tour panel's window title.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Walkthrough"
+          }
+        }
+      }
+    },
+    "shell.walkthrough.demo.intent" : {
+      "comment" : "The demo priority the tour sets: stored as a task intent, so it reads as a sentence a person might type.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Try Focus Sentinel"
+          }
+        }
+      }
+    },
+    "shell.walkthrough.demo.doneWhen" : {
+      "comment" : "The demo priority's definition of done.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I have seen the cockpit, a nudge and a question"
+          }
+        }
+      }
+    },
+    "shell.walkthrough.nudges.answers" : {
+      "comment" : "Walkthrough page 5: the correction economy on a panel, and F-81's Hide all overlays, which writes nothing.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Every panel can be answered, snoozed or closed. Hide all overlays, in the View menu, clears the screen without answering."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.nudges.glyph" : {
+      "comment" : "Walkthrough page 5: the ambient rung. The status-item mark changes and nothing else happens (U-2).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "When you drift for a while, the mark in the menu bar changes. Nothing else happens."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.nudges.limits" : {
+      "comment" : "Walkthrough page 5: the daily caps, the presentation and microphone suppression, and quiet hours.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus caps how often it interrupts each day and stays quiet while you present, while a microphone is in use, and during quiet hours."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.nudges.panel" : {
+      "comment" : "Walkthrough page 5: the panel rung. A non-activating panel that never takes key focus from the person's work.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "If the drift continues, a small panel names the app and offers a way back. It never takes the keyboard from your work."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.nudges.question" : {
+      "comment" : "Walkthrough page 5: the query (U-1). An uncertain verdict asks instead of accusing; the three answers are yes, no and not now.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "When Focus cannot tell, it asks whether the app is part of the work instead of accusing. Answer yes, no or not now."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.nudges.title" : {
+      "comment" : "Walkthrough page 5: the heading. The two rungs and the question.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How Focus speaks"
+          }
+        }
+      }
+    },
+    "shell.walkthrough.position" : {
+      "comment" : "Walkthrough sheet: where the person is. %1$@ is the page number and %2$@ the page count, both already formatted for the locale; only the word between them is authored here.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ of %2$@"
+          }
+        }
+      }
+    },
+    "shell.walkthrough.priority.doneWhen" : {
+      "comment" : "Walkthrough page 2: the definition of done (F-08). Optional at capture and optional forever.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add a Done when line so you know what finished looks like. You can edit both lines later."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.priority.one" : {
+      "comment" : "Walkthrough page 2: capture. A new priority replaces the current one and the old one stays in Recent (F-02, F-15).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Type what you are working on as one sentence. Focus keeps one priority. Setting a new one replaces it and moves the old one to Recent."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.priority.refine" : {
+      "comment" : "Walkthrough page 2: the deterministic refinement strip (F-18). The suggestion is offered, never applied.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "If the sentence has no verb or no outcome, Focus suggests a rewrite. You can keep your own wording."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.priority.ritual" : {
+      "comment" : "Walkthrough page 2: the daily ritual banner (F-19), which asks once per local day and can be switched off in General settings.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Once a day, the window asks what today's priority is. Turn that prompt off in Settings, General."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.priority.title" : {
+      "comment" : "Walkthrough page 2: the heading. The one priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "One priority at a time"
+          }
+        }
+      }
+    },
+    "shell.walkthrough.settings.data" : {
+      "comment" : "Walkthrough page 7: portability (F-110, F-134) and Delete everything.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Export your data or your settings from the File menu. Delete everything from Privacy settings."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.settings.intervention" : {
+      "comment" : "Walkthrough page 7: the Intervention pane (voice, quiet hours, caps, routing).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Intervention settings choose the voice, quiet hours, the daily caps and where each nudge appears."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.settings.privacy" : {
+      "comment" : "Walkthrough page 7: the Privacy pane (capability table, retention, the two opt-in grants). The last sentence is the conditional zero-grant rule of focus-exdi.4.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Privacy settings list every signal Focus reads, how long it keeps activity, and two permissions you can switch on. Focus asks for nothing unless you switch it on."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.settings.replay" : {
+      "comment" : "Walkthrough page 7: how to read the walkthrough again. Names the Help menu item by its title.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Read this again any time from Help, Show walkthrough."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.settings.title" : {
+      "comment" : "Walkthrough page 7: the heading. Settings and the data.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Settings and your data"
+          }
+        }
+      }
+    },
+    "shell.walkthrough.time.recent" : {
+      "comment" : "Walkthrough page 3: the Recent tab (F-15). Re-activating a task brings its context pack and rules back.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recent lists earlier priorities. Choose one to make it current again, with its files and rules."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.time.session" : {
+      "comment" : "Walkthrough page 3: the session (F-98). Start, pause, detour, break and finish are the cockpit's own verbs.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start a session when you begin. You can pause it, log a detour or a break, and finish it when you stop."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.time.stop" : {
+      "comment" : "Walkthrough page 3: the interruption sheet (F-101). Every field on it is optional.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stopping a session early asks why. Every field on that form is optional."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.time.timebox" : {
+      "comment" : "Walkthrough page 3: the timebox (F-12). Time remaining, then time over; never a deadline the app enforces.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Give the priority a timebox. Focus shows the time left and, after it ends, the time over."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.time.title" : {
+      "comment" : "Walkthrough page 3: the heading. The timebox and the session.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Time and sessions"
           }
         }
       }
@@ -5288,7 +6092,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Settings\u2026"
+            "value" : "Settings…"
           }
         }
       }
@@ -5342,23 +6146,23 @@
       }
     },
     "shell.nudge.snoozeCustom" : {
-      "comment": "Custom quiet duration control, requested by the owner on 9 September 2026.",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Custom…"
+      "comment" : "Custom quiet duration control, requested by the owner on 9 September 2026.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Custom…"
           }
         }
       }
     },
     "shell.nudge.snoozeCustomMinutes" : {
-      "comment": "Custom quiet duration control, requested by the owner on 9 September 2026.",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Minutes, 1 to 1,440"
+      "comment" : "Custom quiet duration control, requested by the owner on 9 September 2026.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Minutes, 1 to 1,440"
           }
         }
       }
@@ -5407,6 +6211,1542 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "History"
+          }
+        }
+      }
+    },
+    "priority.action.complete.help" : {
+      "comment" : "Tooltip on the cockpit's Complete button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mark this priority done and note how it went."
+          }
+        }
+      }
+    },
+    "priority.action.change.help" : {
+      "comment" : "Tooltip on the Change priority button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Write a new priority; this one goes into history."
+          }
+        }
+      }
+    },
+    "priority.action.sameContext.help" : {
+      "comment" : "Tooltip on the New priority, same context button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start a new priority that keeps these apps, sites, files and rules."
+          }
+        }
+      }
+    },
+    "priority.action.editIntent.help" : {
+      "comment" : "Tooltip on the Fix wording button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reword this priority; its context and rules stay as they are."
+          }
+        }
+      }
+    },
+    "priority.action.clear.help" : {
+      "comment" : "Tooltip on the Clear button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Put this priority down without finishing or deleting it."
+          }
+        }
+      }
+    },
+    "shell.cockpit.openSettings.help" : {
+      "comment" : "Tooltip on the footer's Open Settings button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Settings for appearance, nudges and privacy."
+          }
+        }
+      }
+    },
+    "shell.cockpit.launchAtLogin.accept.help" : {
+      "comment" : "Tooltip on the one-time launch-at-login offer's accept button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add Focus to Login Items so it opens with your Mac."
+          }
+        }
+      }
+    },
+    "shell.cockpit.launchAtLogin.dismiss.help" : {
+      "comment" : "Tooltip on the launch-at-login offer's dismiss button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep Focus out of Login Items; the offer is not repeated."
+          }
+        }
+      }
+    },
+    "shell.cockpit.tab.now.help" : {
+      "comment" : "Tooltip on the Now tab.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show the priority, the session and the timebox."
+          }
+        }
+      }
+    },
+    "shell.cockpit.tab.details.help" : {
+      "comment" : "Tooltip on the Details tab.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show the context pack, the rules and the session notes."
+          }
+        }
+      }
+    },
+    "shell.cockpit.tab.recent.help" : {
+      "comment" : "Tooltip on the Recent tab.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show earlier priorities and the way to today's history."
+          }
+        }
+      }
+    },
+    "shell.cockpit.openHistory.help" : {
+      "comment" : "Tooltip on the Show today's history button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open today's record of what Focus did and why."
+          }
+        }
+      }
+    },
+    "priority.doneWhen.label.help" : {
+      "comment" : "Tooltip on the definition-of-done field.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Describe what finished looks like; Return saves it."
+          }
+        }
+      }
+    },
+    "priority.intent.edit.label.help" : {
+      "comment" : "Tooltip on the in-place priority wording editor.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Return saves the new wording; Escape keeps the old one."
+          }
+        }
+      }
+    },
+    "priority.timebox.none.help" : {
+      "comment" : "Tooltip on the No timebox button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove the time limit from this priority."
+          }
+        }
+      }
+    },
+    "priority.timebox.none.disabledHelp" : {
+      "comment" : "Tooltip on the No timebox button while it is disabled.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "There is no time limit to remove."
+          }
+        }
+      }
+    },
+    "priority.timebox.preset.help" : {
+      "comment" : "Tooltip on each timebox preset button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Give this priority a time limit; choose it again to clear it."
+          }
+        }
+      }
+    },
+    "priority.ritual.action.set.help" : {
+      "comment" : "Tooltip on the morning ritual's Answer now button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Go to the capture field and write today's priority."
+          }
+        }
+      }
+    },
+    "priority.ritual.action.dismiss.help" : {
+      "comment" : "Tooltip on the morning ritual's dismiss button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Close this reminder for today."
+          }
+        }
+      }
+    },
+    "context.action.preview.help" : {
+      "comment" : "Tooltip on a context chip that can be previewed.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open a Quick Look preview of this item."
+          }
+        }
+      }
+    },
+    "context.action.locate.help" : {
+      "comment" : "Tooltip on a missing chip's Locate button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Find this file again after it moved or was renamed."
+          }
+        }
+      }
+    },
+    "context.action.remove.help" : {
+      "comment" : "Tooltip on a chip's remove button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Take this item out of the priority's context."
+          }
+        }
+      }
+    },
+    "context.keyword.prompt.help" : {
+      "comment" : "Tooltip on the keyword field.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A word or phrase to watch for; Return adds it."
+          }
+        }
+      }
+    },
+    "context.action.addKeyword.help" : {
+      "comment" : "Tooltip on the Add keyword button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add this keyword to the priority's context."
+          }
+        }
+      }
+    },
+    "context.action.addKeyword.disabledHelp" : {
+      "comment" : "Tooltip on the Add keyword button while it is disabled.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Type a keyword first."
+          }
+        }
+      }
+    },
+    "context.action.addFiles.help" : {
+      "comment" : "Tooltip on the Add files button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose files or folders to add to the context."
+          }
+        }
+      }
+    },
+    "priority.rules.scope.help" : {
+      "comment" : "Tooltip on the rule composer's scope buttons.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose whether the rule names an app or a site."
+          }
+        }
+      }
+    },
+    "priority.rules.subject.prompt.help" : {
+      "comment" : "Tooltip on the rule subject field.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Name the app or site; Return adds it as related."
+          }
+        }
+      }
+    },
+    "priority.rules.action.addRelated.help" : {
+      "comment" : "Tooltip on the Add related rule button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Treat this subject as part of the priority."
+          }
+        }
+      }
+    },
+    "priority.rules.action.addUnrelated.help" : {
+      "comment" : "Tooltip on the Add unrelated rule button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Treat this subject as a distraction from the priority."
+          }
+        }
+      }
+    },
+    "priority.rules.subject.disabledHelp" : {
+      "comment" : "Tooltip on both add-rule buttons while the subject is empty.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Type a subject first."
+          }
+        }
+      }
+    },
+    "capture.field.label.help" : {
+      "comment" : "Tooltip on the capture field.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Write the priority in one sentence; Return sets it."
+          }
+        }
+      }
+    },
+    "capture.action.refine.help" : {
+      "comment" : "Tooltip on the Refine button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "See suggestions for a clearer wording."
+          }
+        }
+      }
+    },
+    "capture.action.set.help" : {
+      "comment" : "Tooltip on the Set button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set this sentence as the priority."
+          }
+        }
+      }
+    },
+    "capture.action.set.disabledHelp" : {
+      "comment" : "Tooltip on the Set button while it is disabled.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Type a priority first."
+          }
+        }
+      }
+    },
+    "capture.suggestion.use.help" : {
+      "comment" : "Tooltip on the suggestion's Use button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Replace your wording with this suggestion."
+          }
+        }
+      }
+    },
+    "capture.suggestion.use.disabledHelp" : {
+      "comment" : "Tooltip on the Use button while it is disabled.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "There is no rewording to use."
+          }
+        }
+      }
+    },
+    "capture.suggestion.keep.help" : {
+      "comment" : "Tooltip on the suggestion's Keep button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep your own wording and close the suggestions."
+          }
+        }
+      }
+    },
+    "priority.recent.action.again.help" : {
+      "comment" : "Tooltip on the Work on this again button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Make this earlier priority the current one again."
+          }
+        }
+      }
+    },
+    "shell.history.correctAction.help" : {
+      "comment" : "Tooltip on a history row's correction button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Record that Focus should have spoken up here."
+          }
+        }
+      }
+    },
+    "session.action.start.help" : {
+      "comment" : "Tooltip on the Start glyph. Names the verb, then what it changes.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start session. Begins a session on the current priority and starts the clock."
+          }
+        }
+      }
+    },
+    "session.action.pause.help" : {
+      "comment" : "Tooltip on the Pause glyph. A paused session permits no intervention.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pause session. The clock stops and nudges stay quiet until you resume."
+          }
+        }
+      }
+    },
+    "session.action.resume.help" : {
+      "comment" : "Tooltip on the Resume glyph while it is enabled; session.resume.blocked is shown while it is not.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Resume session. Picks up where it was paused."
+          }
+        }
+      }
+    },
+    "session.action.breakStart.help" : {
+      "comment" : "Tooltip on the break glyph.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Take a break. The session stays open and nudges wait until you are back."
+          }
+        }
+      }
+    },
+    "session.action.breakEnd.help" : {
+      "comment" : "Tooltip on the end-break glyph.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Back to work. Ends the break and returns the session to focus."
+          }
+        }
+      }
+    },
+    "session.action.detourStart.help" : {
+      "comment" : "Tooltip on the detour glyph.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start a detour. Marks this deviation as deliberate, so it is not counted as drift."
+          }
+        }
+      }
+    },
+    "session.action.detourEnd.help" : {
+      "comment" : "Tooltip on the end-detour glyph.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "End the detour. Returns the session to focus."
+          }
+        }
+      }
+    },
+    "session.action.interrupt.help" : {
+      "comment" : "Tooltip on the stop glyph. Opens the interruption sheet.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stop with a note. Ends the session and asks why. This cannot be undone."
+          }
+        }
+      }
+    },
+    "session.action.complete.help" : {
+      "comment" : "Tooltip on the finish glyph.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Finish session. Ends it and records it as complete. This cannot be undone."
+          }
+        }
+      }
+    },
+    "shell.menuBar.openCockpit.help" : {
+      "comment" : "Tooltip on the popover's Open Cockpit row.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opens the main window, where the priority, context and session live."
+          }
+        }
+      }
+    },
+    "shell.menuBar.cancelSnooze.help" : {
+      "comment" : "Tooltip on the Cancel control beside a snoozed subject.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ends this snooze now, so nudges about it can resume."
+          }
+        }
+      }
+    },
+    "sensing.pause.switch.offHelp" : {
+      "comment" : "Tooltip on the global switch while watching is on. Describes the state, then the action.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watching is on. Press to stop observing until you switch it back on."
+          }
+        }
+      }
+    },
+    "sensing.pause.switch.onHelp" : {
+      "comment" : "Tooltip on the global switch while watching is off.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watching is off. Press to start observing what is in front again."
+          }
+        }
+      }
+    },
+    "handoff.confirm.action.cancel.help" : {
+      "comment" : "Tooltip on the handoff sheet's Cancel.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keeps the current priority and closes this sheet."
+          }
+        }
+      }
+    },
+    "handoff.confirm.action.replace.help" : {
+      "comment" : "Tooltip on the handoff sheet's Replace.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Replaces the current priority with the one shown here."
+          }
+        }
+      }
+    },
+    "shell.cockpit.store.sheet.acknowledge.help" : {
+      "comment" : "Tooltip on the store-unavailable sheet's only button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Closes this notice. The app keeps running without saving until the data file opens."
+          }
+        }
+      }
+    },
+    "priority.complete.action.cancel.help" : {
+      "comment" : "Tooltip on the completion sheet's Cancel.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Closes this sheet. The priority stays as it is."
+          }
+        }
+      }
+    },
+    "priority.complete.action.confirm.help" : {
+      "comment" : "Tooltip on the completion sheet's Complete. The button is never disabled; CockpitActionsTests holds it to that.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Marks the priority complete and keeps both notes with it. Both may be blank."
+          }
+        }
+      }
+    },
+    "session.interrupt.action.cancel.help" : {
+      "comment" : "Tooltip on the interruption sheet's Cancel.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Closes this sheet. The session keeps running."
+          }
+        }
+      }
+    },
+    "session.interrupt.action.confirm.help" : {
+      "comment" : "Tooltip on the interruption sheet's Stop.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stops the session now and records the reason and note. This cannot be undone."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.continue.help" : {
+      "comment" : "Tooltip on the first-run sheet's Continue.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Closes this explanation and starts the tour of the main window."
+          }
+        }
+      }
+    },
+    "settings.appearance.matchSystem.help" : {
+      "comment" : "Tooltip on the Match System appearance button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Follows the Mac's own light or dark setting as it changes."
+          }
+        }
+      }
+    },
+    "settings.appearance.light.help" : {
+      "comment" : "Tooltip on the Light appearance button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Draws the app in the light appearance whatever the Mac is set to."
+          }
+        }
+      }
+    },
+    "settings.appearance.dark.help" : {
+      "comment" : "Tooltip on the Dark appearance button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Draws the app in the dark appearance whatever the Mac is set to."
+          }
+        }
+      }
+    },
+    "settings.general.updates.automatic.help" : {
+      "comment" : "Tooltip on the automatic update checks switch.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lets Focus ask its update feed once a day; off, it checks only when you press Check Now."
+          }
+        }
+      }
+    },
+    "settings.general.updates.checkNow.help" : {
+      "comment" : "Tooltip on the Check Now button while it is live.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Asks the update feed once, now, and tells you what it finds."
+          }
+        }
+      }
+    },
+    "settings.general.updates.checkNow.disabledHelp" : {
+      "comment" : "Tooltip on the Check Now button while a check is in progress and it is disabled.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A check is already running; this button returns when it finishes."
+          }
+        }
+      }
+    },
+    "settings.general.quickCaptureShortcut.help" : {
+      "comment" : "Tooltip on each quick-capture shortcut choice button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Makes this key combination open quick capture from any app."
+          }
+        }
+      }
+    },
+    "settings.general.ritualEnabled.help" : {
+      "comment" : "Tooltip on the morning ritual switch.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shows or hides the once-a-day question when you first open Focus."
+          }
+        }
+      }
+    },
+    "shell.command.showWalkthrough.help" : {
+      "comment" : "Tooltip on the Show walkthrough button in General settings.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opens the main window and walks through each control again."
+          }
+        }
+      }
+    },
+    "settings.general.launchAtLogin.help" : {
+      "comment" : "Tooltip on the launch-at-login switch while it can be moved. Its disabled reasons reuse the approval and unavailable footnotes.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opens the app with your Mac, so watching starts without you launching it."
+          }
+        }
+      }
+    },
+    "settings.general.launchAtLoginOpenSettings.help" : {
+      "comment" : "Tooltip on the button that opens System Settings for launch-at-login approval.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opens the Login Items pane where you can approve this app."
+          }
+        }
+      }
+    },
+    "settings.intervention.voice.help" : {
+      "comment" : "Tooltip on each voice choice button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chooses the wording every nudge and question uses from now on."
+          }
+        }
+      }
+    },
+    "settings.intervention.reduced.help" : {
+      "comment" : "Tooltip on the Interrupt me less switch while it can be moved. Its disabled reason reuses the Reduce Motion footnote.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sends nudges and questions to the menu bar instead of opening panels."
+          }
+        }
+      }
+    },
+    "settings.intervention.quietHours.turnOn.help" : {
+      "comment" : "Tooltip on the quiet-hours button while quiet hours are off.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sets a nightly window in which the app stays silent."
+          }
+        }
+      }
+    },
+    "settings.intervention.quietHours.turnOff.help" : {
+      "comment" : "Tooltip on the quiet-hours button while quiet hours are on.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Removes the quiet window, so nudges can arrive at any hour."
+          }
+        }
+      }
+    },
+    "settings.intervention.quietHours.startEarlier.help" : {
+      "comment" : "Tooltip on the quiet-hours start-earlier button. The step is InterventionSettingsView.quietHoursStep, 30 minutes.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Moves the start of quiet hours half an hour earlier."
+          }
+        }
+      }
+    },
+    "settings.intervention.quietHours.startLater.help" : {
+      "comment" : "Tooltip on the quiet-hours start-later button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Moves the start of quiet hours half an hour later."
+          }
+        }
+      }
+    },
+    "settings.intervention.quietHours.endEarlier.help" : {
+      "comment" : "Tooltip on the quiet-hours end-earlier button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Moves the end of quiet hours half an hour earlier."
+          }
+        }
+      }
+    },
+    "settings.intervention.quietHours.endLater.help" : {
+      "comment" : "Tooltip on the quiet-hours end-later button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Moves the end of quiet hours half an hour later."
+          }
+        }
+      }
+    },
+    "settings.tunings.resetAll.help" : {
+      "comment" : "Tooltip on the Reset All to Shipped Values button while any tuning is changed.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Puts every tuning back to the value the app shipped with."
+          }
+        }
+      }
+    },
+    "settings.tunings.resetAll.disabledHelp" : {
+      "comment" : "Tooltip on the Reset All button while it is disabled because nothing is overridden.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Every tuning is already at its shipped value."
+          }
+        }
+      }
+    },
+    "settings.tunings.lower.help" : {
+      "comment" : "Tooltip on a tuning's minus button while it can move.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lowers this tuning by one step."
+          }
+        }
+      }
+    },
+    "settings.tunings.lower.disabledHelp" : {
+      "comment" : "Tooltip on a tuning's minus button while it is at the bottom of its range.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This tuning is already at its lowest allowed value."
+          }
+        }
+      }
+    },
+    "settings.tunings.raise.help" : {
+      "comment" : "Tooltip on a tuning's plus button while it can move.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Raises this tuning by one step."
+          }
+        }
+      }
+    },
+    "settings.tunings.raise.disabledHelp" : {
+      "comment" : "Tooltip on a tuning's plus button while it is at the top of its range.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This tuning is already at its highest allowed value."
+          }
+        }
+      }
+    },
+    "settings.tunings.resetOne.help" : {
+      "comment" : "Tooltip on a single tuning's Reset button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Puts this one tuning back to its shipped value."
+          }
+        }
+      }
+    },
+    "settings.intervention.exclusion.remove.help" : {
+      "comment" : "Tooltip on the Remove button beside an excluded presentation app.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stops nudges while this app is full screen again."
+          }
+        }
+      }
+    },
+    "settings.intervention.exclusion.add.help" : {
+      "comment" : "Tooltip on each running app offered for exclusion.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keeps nudging while this app is full screen."
+          }
+        }
+      }
+    },
+    "sensing.pause.help" : {
+      "comment" : "Tooltip on the Watch what I am working on switch in Privacy settings.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turns all activity monitoring on or off."
+          }
+        }
+      }
+    },
+    "settings.privacy.watching.awayAfter.lower.help" : {
+      "comment" : "Tooltip on the away-after minus button while it can move.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Counts you as away one minute sooner."
+          }
+        }
+      }
+    },
+    "settings.privacy.watching.awayAfter.lower.disabledHelp" : {
+      "comment" : "Tooltip on the away-after minus button at the one-minute floor.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "One minute is the shortest away time."
+          }
+        }
+      }
+    },
+    "settings.privacy.watching.awayAfter.raise.help" : {
+      "comment" : "Tooltip on the away-after plus button while it can move.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Counts you as away one minute later."
+          }
+        }
+      }
+    },
+    "settings.privacy.watching.awayAfter.raise.disabledHelp" : {
+      "comment" : "Tooltip on the away-after plus button at the thirty-minute ceiling.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thirty minutes is the longest away time."
+          }
+        }
+      }
+    },
+    "settings.privacy.watching.microphone.help" : {
+      "comment" : "Tooltip on the microphone suppression switch.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Holds every nudge while another app is using the microphone."
+          }
+        }
+      }
+    },
+    "settings.privacy.watching.launchContext.help" : {
+      "comment" : "Tooltip on the launch-context switch.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opens the priority's apps, sites and files when a session starts."
+          }
+        }
+      }
+    },
+    "settings.privacy.grant.accessibility.help" : {
+      "comment" : "Tooltip on the Accessibility grant opt-in switch. Describes only the asking; nothing in this build reads the grant.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Allows the app to ask macOS for Accessibility access; macOS then asks you."
+          }
+        }
+      }
+    },
+    "settings.privacy.grant.screenCapture.help" : {
+      "comment" : "Tooltip on the Screen Recording grant opt-in switch. Describes only the asking; nothing in this build reads the grant.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Allows the app to ask macOS for Screen Recording access; macOS then asks you."
+          }
+        }
+      }
+    },
+    "settings.privacy.reveal.help" : {
+      "comment" : "Tooltip on the Reveal in Finder button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shows the data file in the Finder."
+          }
+        }
+      }
+    },
+    "settings.privacy.retention.help" : {
+      "comment" : "Tooltip on each retention window button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keeps records this long; once a day, older ones are deleted."
+          }
+        }
+      }
+    },
+    "settings.privacy.delete.button.help" : {
+      "comment" : "Tooltip on the Delete Everything button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Asks you to confirm, then removes every record the app holds."
+          }
+        }
+      }
+    },
+    "settings.privacy.delete.confirm.cancel.help" : {
+      "comment" : "Tooltip on the delete confirmation's Cancel button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Closes this sheet and deletes nothing."
+          }
+        }
+      }
+    },
+    "settings.privacy.delete.confirm.action.help" : {
+      "comment" : "Tooltip on the delete confirmation's destructive button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deletes every record now; this cannot be undone."
+          }
+        }
+      }
+    },
+    "settings.privacy.portability.exportData.help" : {
+      "comment" : "Tooltip on the Export My Data button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saves your activity data to a file you choose."
+          }
+        }
+      }
+    },
+    "settings.privacy.portability.exportSettings.help" : {
+      "comment" : "Tooltip on the Export Settings button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saves your settings alone to a file you choose."
+          }
+        }
+      }
+    },
+    "settings.privacy.portability.importSettings.help" : {
+      "comment" : "Tooltip on the Import Settings button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reads settings from a file you choose and applies them."
+          }
+        }
+      }
+    },
+    "shell.nudge.dismiss.help" : {
+      "comment" : "Tooltip on the nudge panel's close affordance. Dismiss records no rule and no answer.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Closes this panel and writes nothing down."
+          }
+        }
+      }
+    },
+    "shell.nudge.action.thisIsRelevant.help" : {
+      "comment" : "Tooltip on the nudge panel's 'This is relevant' correction: a stored task rule that removes the subject from the accusable set.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keeps this app as part of the work, so it is not nudged about again."
+          }
+        }
+      }
+    },
+    "shell.nudge.action.notThisTime.help" : {
+      "comment" : "Tooltip on the nudge panel's 'Not this time' correction: a session-lived rule that is never persisted.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Allows this app until the session or the priority changes."
+          }
+        }
+      }
+    },
+    "shell.nudge.action.changePriority.help" : {
+      "comment" : "Tooltip on the nudge panel's 'Change priority' correction: opens the capture confirm surface, never a silent replacement.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opens quick capture to set a different priority."
+          }
+        }
+      }
+    },
+    "shell.nudge.action.pause.help" : {
+      "comment" : "Tooltip on the nudge panel's 'Pause' correction: the session machine's own pause, cause user.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pauses the session until it is resumed from the cockpit."
+          }
+        }
+      }
+    },
+    "shell.nudge.action.returnToTask.help" : {
+      "comment" : "Tooltip on the nudge panel's 'Back to …' correction: activates the stored return target.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Brings the app named here back to the front."
+          }
+        }
+      }
+    },
+    "shell.nudge.snooze.help" : {
+      "comment" : "Tooltip on the nudge panel's snooze span buttons. Subject-scoped, in memory; the ambient rung is not stopped.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quiets nudges about this app for the chosen time; the menu-bar mark still shows drift."
+          }
+        }
+      }
+    },
+    "shell.nudge.snoozeCustom.help" : {
+      "comment" : "Tooltip on the nudge panel's 'Custom…' snooze button, which opens the minutes editor.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose how many minutes to quiet nudges about this app."
+          }
+        }
+      }
+    },
+    "shell.nudge.snoozeCustomMinutes.help" : {
+      "comment" : "Tooltip on the custom snooze minutes field. The field accepts 1 to 1,440.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Type a whole number of minutes, up to one day."
+          }
+        }
+      }
+    },
+    "shell.nudge.snoozeCustomCancel.help" : {
+      "comment" : "Tooltip on the custom snooze editor's Cancel button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Closes the editor without snoozing."
+          }
+        }
+      }
+    },
+    "shell.nudge.snoozeCustomApply.help" : {
+      "comment" : "Tooltip on the custom snooze editor's apply button while a valid number is entered.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quiets nudges about this app for the minutes entered."
+          }
+        }
+      }
+    },
+    "shell.nudge.snoozeCustomApply.disabledHelp" : {
+      "comment" : "Tooltip on the custom snooze editor's apply button while it is disabled: the field is empty or out of range.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter a whole number of minutes from 1 to 1,440 first."
+          }
+        }
+      }
+    },
+    "shell.nudge.answer.yesAddIt.help" : {
+      "comment" : "Tooltip on the question panel's 'Yes, add it' answer: a task rule with verdict relevant.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Records this app as part of the work on this priority."
+          }
+        }
+      }
+    },
+    "shell.nudge.answer.no.help" : {
+      "comment" : "Tooltip on the question panel's 'No' answer: a task rule with verdict unrelated.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Records this app as unrelated to this priority."
+          }
+        }
+      }
+    },
+    "shell.nudge.answer.notNow.help" : {
+      "comment" : "Tooltip on the question panel's 'Not now' answer: no rule is written, and the question is not asked again after a relaunch.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Closes the question without recording an answer."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.doItForMe.help" : {
+      "comment" : "Tooltip on the tour's 'Do it for me' button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Performs this step in the app for you."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.showItAgain.help" : {
+      "comment" : "Tooltip on the tour's 'Show it again' button on the nudge and question steps.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shows the demo panel again."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.action.finishDemo.help" : {
+      "comment" : "Tooltip on the tour's last-step button that finishes the demo.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ends the demo and restores the priority you had before."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.doItForMe.disabledHelp" : {
+      "comment" : "Tooltip on the tour's 'Do it for me' button while it is disabled because the step's state says it is done.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This step is already done."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.back.help" : {
+      "comment" : "Tooltip on the tour's Back button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Goes back to the previous step."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.back.disabledHelp" : {
+      "comment" : "Tooltip on the tour's Back button while it is disabled on the first step.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This is the first step."
+          }
+        }
+      }
+    },
+    "shell.walkthrough.next.help" : {
+      "comment" : "Tooltip on the tour's Next button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Goes on to the next step."
           }
         }
       }

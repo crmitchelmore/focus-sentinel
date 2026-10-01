@@ -1,0 +1,48 @@
+name: Publish Stable
+run-name: Publish ${{ inputs.candidate }}
+
+# The owner's approval, as a workflow (focus-h8jf). It takes a frozen `stable-candidate-N` and
+# the SHA-256 of the manifest the owner reviewed, refuses if they disagree, checks every asset
+# against the receipt's digests, and publishes `vX.Y.Z` as Latest — which is what the Stable
+# Sparkle feed reads. A failure records a withdrawal on the candidate rather than leaving a half
+# release standing.
+
+on:
+  workflow_dispatch:
+    inputs:
+      candidate:
+        description: The stable-candidate-N you tested
+        required: true
+        type: string
+      approved_manifest_sha256:
+        description: SHA-256 of the candidate's release-manifest.json, from Prepare Stable's log
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: focus-publish-stable
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish as Latest
+    if: github.actor == github.repository_owner
+    runs-on: [bravo-mini-local, macOS, ARM64]
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Publish the approved candidate
+        shell: zsh {0}
+        run: python3 scripts/release-train.py publish --tag "${{ inputs.candidate }}" --approved-hash "${{ inputs.approved_manifest_sha256 }}"
+      - name: Record a withdrawal on failure
+        if: failure() || cancelled()
+        shell: zsh {0}
+        run: python3 scripts/release-train.py withdraw --tag "${{ inputs.candidate }}" --reason "publish workflow ${{ github.run_id }} did not complete"

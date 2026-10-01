@@ -27,11 +27,24 @@ enum SnapshotComponent: String, CaseIterable, Sendable {
     /// because `ImageRenderer` cannot rasterise a `.sheet` presentation — what is photographed
     /// is the sheet's own content, which is what the presentation shows.
     case cockpitStoreUnavailableSheet
-    /// **The one screen that says what this app looks at** (focus-odz.7). Rendered on its own for
-    /// `cockpitStoreUnavailableSheet`'s reason: `ImageRenderer` cannot rasterise a `.sheet`
-    /// presentation, so what is photographed is the sheet's own content, which is what the
-    /// presentation shows.
-    case firstRunSheet
+    /// **The walkthrough, one picture per page** (focus-odz.7, focus-u6de). The first page is the
+    /// sheet, rendered on its own for `cockpitStoreUnavailableSheet`'s reason: `ImageRenderer`
+    /// cannot rasterise a `.sheet` presentation, so what is photographed is the sheet's own
+    /// content. The other eleven are the floating tour's steps, drawn as the person first meets
+    /// them, nothing done yet. Every step, because every step is different text and the lane's
+    /// whole question is whether that text grows rather than clips.
+    case walkthroughWatches
+    case walkthroughSetPriority
+    case walkthroughDoneWhen
+    case walkthroughTimebox
+    case walkthroughStartSession
+    case walkthroughDesk
+    case walkthroughRules
+    case walkthroughNudge
+    case walkthroughQuestion
+    case walkthroughMenuBar
+    case walkthroughSettings
+    case walkthroughFinish
     case shortcutsHelp
     /// **The day's ledger** (e09a). Rendered from a fixed value with one of every row type —
     /// an accusation, a question, a session, a correctable silent interval and a withdrawn one —
@@ -82,6 +95,26 @@ enum SnapshotComponent: String, CaseIterable, Sendable {
         }
     }
 
+    /// The tour step a walkthrough component photographs. One component per step, plus the
+    /// sheet, so the mapping is exhaustive in both directions: `WalkthroughTests` holds that
+    /// every step has a component.
+    var walkthroughStep: WalkthroughAction {
+        switch self {
+        case .walkthroughSetPriority: .setDemoPriority
+        case .walkthroughDoneWhen: .setDemoDoneWhen
+        case .walkthroughTimebox: .setDemoTimebox
+        case .walkthroughStartSession: .startDemoSession
+        case .walkthroughDesk: .addDemoDesk
+        case .walkthroughRules: .addDemoRule
+        case .walkthroughNudge: .showDemoNudge
+        case .walkthroughQuestion: .showDemoQuestion
+        case .walkthroughMenuBar: .openMenuBar
+        case .walkthroughSettings: .openPrivacySettings
+        case .walkthroughFinish: .finishDemo
+        default: preconditionFailure("\(rawValue) is not a walkthrough step")
+        }
+    }
+
     var status: FocusStatus? {
         switch self {
         case .statusRelevant: .relevant
@@ -116,17 +149,23 @@ enum SnapshotComponent: String, CaseIterable, Sendable {
                     screens: []
                 )
             )
-        case .firstRunSheet:
+        case .walkthroughWatches:
             // `screens: []` for the store-failure sheet's reason: the bounded sheet derives its
             // ceiling from the live display, and a baseline whose dimensions depend on the monitor
             // that recorded it is not a baseline.
             return AnyView(
-                FirstRunSheet(
+                WalkthroughSheet(
                     storeLocation: Self.storeURL.path(percentEncoded: false),
                     dismiss: {},
                     screens: []
                 )
             )
+        case .walkthroughSetPriority, .walkthroughDoneWhen, .walkthroughTimebox, .walkthroughStartSession,
+             .walkthroughDesk, .walkthroughRules, .walkthroughNudge, .walkthroughQuestion,
+             .walkthroughMenuBar, .walkthroughSettings, .walkthroughFinish:
+            // The step as the person first meets it, not yet done, at the panel's own width: a
+            // surface that commits a width is photographed at it.
+            return AnyView(WalkthroughStepView(step: walkthroughStep).frame(width: WalkthroughPanelController.width))
         case .shortcutsHelp:
             return AnyView(ShortcutsHelpContent(registry: .shell))
         case .history:

@@ -71,6 +71,14 @@ public enum PriorityCommand: String, Sendable, CaseIterable, Hashable {
     /// "Not now" — no rule, one receipt; the asking is remembered and not repeated.
     case answerNotNow
 
+    /// **Open the walkthrough again** (focus-u6de).
+    ///
+    /// The first launch shows it as a sheet on the cockpit because the store owes it; this is
+    /// the same sheet, asked for. It is a cockpit command rather than a `ShellWindow` because the
+    /// sheet is presented over the cockpit, and a command that opens the cockpit first is
+    /// exactly what ⌘N already is. The Help menu sends it; so does Settings ▸ General.
+    case showWalkthrough
+
     /// Whether this command needs the cockpit window in front of it.
     ///
     /// The three capture-and-context verbs and the four session verbs all land **in** the
@@ -78,10 +86,13 @@ public enum PriorityCommand: String, Sendable, CaseIterable, Hashable {
     /// cursor in the capture field. The e05 verbs do not: hiding an overlay by opening a window
     /// on top of the person's work would be the opposite of what they asked for — and neither do
     /// the three answers, which are a sentence about the application the person is *in*.
+    ///
+    /// The walkthrough opens it too: it is a sheet on the cockpit, and a sheet needs its window.
     public var opensCockpit: Bool {
         switch self {
         case .newPriority, .completePriority, .addFilesToContext,
-             .startSession, .pauseSession, .completeSession, .pauseSensing:
+             .startSession, .pauseSession, .completeSession, .pauseSensing,
+             .showWalkthrough:
             true
         case .thisIsRelevant, .snoozeNudge, .hideOverlays, .showMenuBar,
              .answerYes, .answerNo, .answerNotNow:
@@ -102,7 +113,8 @@ public enum PriorityCommand: String, Sendable, CaseIterable, Hashable {
         case .answerNotNow: .notNow
         case .newPriority, .completePriority, .addFilesToContext,
              .startSession, .pauseSession, .completeSession, .pauseSensing,
-             .thisIsRelevant, .snoozeNudge, .hideOverlays, .showMenuBar:
+             .thisIsRelevant, .snoozeNudge, .hideOverlays, .showMenuBar,
+             .showWalkthrough:
             nil
         }
     }

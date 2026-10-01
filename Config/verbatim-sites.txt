@@ -73,7 +73,7 @@ Packages/FocusUI/Sources/FocusUI/Scenes/RecentPrioritiesView.swift | row.context
 Packages/FocusUI/Sources/FocusUI/Sensing/SensingStatusView.swift | value.formatted()) | NUMBER one sensing reading
 Packages/FocusUI/Sources/FocusUI/Scenes/TimeboxControl.swift | Self.formatPreset(.seconds(seconds))) | NUMBER a timebox preset's length
 Packages/FocusUI/Sources/FocusUI/Scenes/GeneralSettingsView.swift | appVersion) | NUMBER the version and build this copy was made from, selectable so it can be quoted in a defect report (focus-odz.3)
-Packages/FocusUI/Sources/FocusUI/Scenes/FirstRunSheet.swift | storeLocation) | OWN the path their store is at, on the one screen that says where it is (focus-odz.7)
+Packages/FocusUI/Sources/FocusUI/Scenes/WalkthroughSheet.swift | storeLocation) | OWN the path their store is at, on the walkthrough's first page, which is the one screen that says where it is (focus-odz.7, focus-u6de)
 
 # --- e09a: the ledger's three verbatim draws -------------------------------------------------
 Packages/FocusUI/Sources/FocusUI/Scenes/HistoryView.swift | Self.time.string(from: entry.at)) | NUMBER the time of day a row happened, through a locale-aware DateFormatter

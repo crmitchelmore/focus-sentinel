@@ -94,6 +94,14 @@ public struct CockpitView: View {
     /// belongs to a subview.
     @State private var fileImportToken: Int = 0
 
+    /// **Whether the walkthrough was asked for** (focus-u6de).
+    ///
+    /// Local rather than a host fact, and that is the difference between the two showings. The
+    /// first one is owed by the store and written into it; this one is a person pressing a
+    /// button, changes nothing, and is forgotten with the window. The sheet is the same view
+    /// either way, presented from `walkthroughPresentation`, which reads both.
+    @State private var isReplayingWalkthrough: Bool = false
+
     @ScaledMetric(relativeTo: .body) private var rowSpacing: CGFloat = 12
     @ScaledMetric(relativeTo: .largeTitle) private var sectionSpacing: CGFloat = 20
     /// The inset of a well's content from its edge, and the radius of that edge.
@@ -119,6 +127,9 @@ public struct CockpitView: View {
     private let onLaunchAtLoginOffer: (LaunchAtLoginOfferAction) -> Void
     /// What the first-run explanation's one button performs (focus-odz.7).
     private let onFirstRunExplanationDismissed: () -> Void
+    /// What the walkthrough sheet's Continue performs after the sheet is down (focus-u6de): the
+    /// root opens the tour panel beside this window.
+    private let onWalkthroughContinued: () -> Void
 
     public init(
         state: CockpitState,
@@ -128,6 +139,7 @@ public struct CockpitView: View {
         lastActiveBundleID: String? = nil,
         onLaunchAtLoginOffer: @escaping (LaunchAtLoginOfferAction) -> Void = { _ in },
         onFirstRunExplanationDismissed: @escaping () -> Void = {},
+        onWalkthroughContinued: @escaping () -> Void = {},
         commandCenter: FocusCommandCenter = .shared,
         tab: CockpitTab = .now
     ) {
@@ -138,6 +150,7 @@ public struct CockpitView: View {
         self.lastActiveBundleID = lastActiveBundleID
         self.onLaunchAtLoginOffer = onLaunchAtLoginOffer
         self.onFirstRunExplanationDismissed = onFirstRunExplanationDismissed
+        self.onWalkthroughContinued = onWalkthroughContinued
         self.commandCenter = commandCenter
         self.didRender = nil
         self.generation = 0
@@ -161,6 +174,7 @@ public struct CockpitView: View {
         self.lastActiveBundleID = connection.lastActiveBundleID
         self.onLaunchAtLoginOffer = connection.onLaunchAtLoginOffer
         self.onFirstRunExplanationDismissed = connection.onFirstRunExplanationDismissed
+        self.onWalkthroughContinued = connection.onWalkthroughContinued
         self.commandCenter = commandCenter
         self.didRender = connection.didRender
         self.generation = connection.generation
@@ -216,6 +230,7 @@ public struct CockpitView: View {
 
             if showsCapture {
                 capture
+                    .walkthroughAnchor(.captureField)
                     .transition(traits.reduceMotion ? .identity : .opacity.combined(with: .move(edge: .top)))
             }
 
@@ -338,17 +353,26 @@ public struct CockpitView: View {
                 acknowledge: { wiring.acknowledgeStoreFailure?() }
             )
         }
-        // **The one screen that says what this app looks at** (focus-odz.7).
+        // **The one screen that says what this app looks at, and then what it does**
+        // (focus-odz.7, focus-u6de).
         //
-        // Presented from the state rather than from a local `@State`, for `storeFailurePresentation`'s
-        // reason: whether it is owed is the host's fact, written into the store, and a local mirror
-        // could disagree with it. It is a sheet on the cockpit, so it can only ever appear over a
-        // window somebody opened — nothing on the nudge path can raise it, which is what keeps an
-        // explanation from becoming an interruption.
-        .sheet(isPresented: firstRunPresentation) {
-            FirstRunSheet(
+        // The first showing is presented from the state rather than from a local `@State`, for
+        // `storeFailurePresentation`'s reason: whether it is owed is the host's fact, written into
+        // the store, and a local mirror could disagree with it. A replay is the local flag, because
+        // a replay is owed by nobody. It is a sheet on the cockpit either way, so it can only ever
+        // appear over a window somebody opened or asked for — nothing on the nudge path can raise
+        // it, which is what keeps an explanation from becoming an interruption.
+        .sheet(isPresented: walkthroughPresentation) {
+            WalkthroughSheet(
                 storeLocation: state.storeLocation,
-                dismiss: onFirstRunExplanationDismissed
+                // Continue: the sheet goes down and the tour comes up beside the window.
+                dismiss: {
+                    dismissWalkthrough()
+                    onWalkthroughContinued()
+                },
+                escapeDismisses: !state.showsFirstRunExplanation,
+                // Escape on a replay: down, and no tour.
+                cancel: dismissWalkthrough
             )
         }
         .sheet(isPresented: $isCompleting) {
@@ -453,6 +477,11 @@ public struct CockpitView: View {
         case .pauseSensing:
             sessionActions?.setSensingPaused(!state.sensing.isPausedByUser)
 
+        // The walkthrough, asked for (focus-u6de). The centre has already brought this window
+        // forward; the sheet goes up over it, on its first page, and writes nothing.
+        case .showWalkthrough:
+            isReplayingWalkthrough = true
+
         // The four e05 verbs are not the cockpit's. They act on whatever nudge surface is on
         // screen, which the cockpit knows nothing about and should not: `FocusCommandCenter`
         // delivers every command to the nudge loop as well, and that is where they land.
@@ -486,18 +515,26 @@ public struct CockpitView: View {
         )
     }
 
-    /// **The first-run explanation's presentation** (focus-odz.7).
+    /// **The walkthrough's presentation** (focus-odz.7, focus-u6de).
     ///
     /// The same shape as the store-failure sheet's, and for the same reason: every route out of
     /// the sheet — the button, a click outside, a system dismissal — goes through the one verb, so
-    /// the app cannot end up believing it has explained itself when nobody saw the screen.
-    private var firstRunPresentation: Binding<Bool> {
+    /// the app cannot end up believing it has explained itself when nobody saw the screen. Up
+    /// while either showing is owed; a way out settles both.
+    private var walkthroughPresentation: Binding<Bool> {
         Binding(
-            get: { state.showsFirstRunExplanation },
+            get: { state.showsFirstRunExplanation || isReplayingWalkthrough },
             set: { presented in
-                if !presented { onFirstRunExplanationDismissed() }
+                if !presented { dismissWalkthrough() }
             }
         )
+    }
+
+    /// Every route out of the walkthrough. The first showing's dismissal is the host's verb; a
+    /// replay's is this window's own flag. Both, when both are up, so nothing is left owing.
+    private func dismissWalkthrough() {
+        isReplayingWalkthrough = false
+        if state.showsFirstRunExplanation { onFirstRunExplanationDismissed() }
     }
 
     private var handoffPresentation: Binding<Bool> {
@@ -656,6 +693,8 @@ public struct CockpitView: View {
                     if newValue != .cockpitDoneWhen { commitDoneWhen(priority) }
                 }
                 .accessibilityLabel(Text(ShellStrings.resource(.priorityDoneWhenLabel)))
+                .shellHelp(.priorityDoneWhenLabelHelp)
+                .walkthroughAnchor(.doneWhenField)
             }
         }
         // **The definition of done, reported from the section that draws it** (focus-7ow, F-08).
@@ -690,6 +729,7 @@ public struct CockpitView: View {
             choose: wiring.setTimebox,
             focus: $focus
         )
+        .walkthroughAnchor(.timeboxControl)
     }
 
     // MARK: - The session (F-98, F-99, F-101)
@@ -724,6 +764,7 @@ public struct CockpitView: View {
         // session, started at another time and with another timebox, is the same phase
         // (focus-7ow).
         .shellRendered(.sessionDetail, ShellValueDigest.describe(state.session))
+        .walkthroughAnchor(.sessionControls)
     }
 
     // MARK: - Per-task rules (F-11)
@@ -736,6 +777,7 @@ public struct CockpitView: View {
             remove: wiring.removeRule,
             focus: $focus
         )
+        .walkthroughAnchor(.rules)
     }
 
     // MARK: - Context pack (F-09)
@@ -752,6 +794,7 @@ public struct CockpitView: View {
             importFilesToken: fileImportToken,
             focus: $focus
         )
+        .walkthroughAnchor(.contextPack)
     }
 
     /// The capture field is always open when there is nothing to work on — that is the only
@@ -880,6 +923,8 @@ public struct CockpitView: View {
         }
         .focused($focus, equals: .cockpitComplete)
         .disabled(actions == nil)
+        // Every control carries a tooltip from the catalog (focus-8ski); see `ShellHelp`.
+        .shellHelp(.priorityActionCompleteHelp)
     }
 
     /// Replace the commitment with a new one, through the capture field.
@@ -892,6 +937,8 @@ public struct CockpitView: View {
                 ShellText(.priorityActionChange)
             }
             .disabled(actions == nil)
+            .shellHelp(.priorityActionChangeHelp)
+            .walkthroughAnchor(.changePriorityButton)
         }
     }
 
@@ -908,6 +955,7 @@ public struct CockpitView: View {
             }
             .focused($focus, equals: .cockpitSameContext)
             .disabled(wiring.setPriorityKeepingContext == nil)
+            .shellHelp(.priorityActionSameContextHelp)
         }
     }
 
@@ -943,6 +991,7 @@ public struct CockpitView: View {
                 ShellText(.priorityActionEditIntent)
             }
             .disabled(wiring.editIntent == nil)
+            .shellHelp(.priorityActionEditIntentHelp)
         }
     }
 
@@ -954,6 +1003,7 @@ public struct CockpitView: View {
             ShellText(.priorityActionClear)
         }
         .disabled(actions == nil)
+        .shellHelp(.priorityActionClearHelp)
     }
 
     // MARK: - What the app can honestly say about itself
@@ -1050,6 +1100,8 @@ public struct CockpitView: View {
             // SwiftUI's yellow "unrenderable view" placeholder — so a link here would mean
             // committing a picture of a broken render and calling it a baseline.
             .focused($focus, equals: .cockpitOpenSettings)
+            .shellHelp(.cockpitOpenSettingsHelp)
+            .walkthroughAnchor(.openSettingsButton)
         }
     }
 
@@ -1081,12 +1133,14 @@ public struct CockpitView: View {
                 } label: {
                     ShellText(.cockpitLaunchAtLoginAccept, role: .footnote)
                 }
+                .shellHelp(.cockpitLaunchAtLoginAcceptHelp)
 
                 Button {
                     onLaunchAtLoginOffer(.dismiss)
                 } label: {
                     ShellText(.cockpitLaunchAtLoginDismiss, role: .footnote)
                 }
+                .shellHelp(.cockpitLaunchAtLoginDismissHelp)
             }
         }
     }
@@ -1139,11 +1193,24 @@ public struct CockpitView: View {
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isOpen ? [.isSelected] : [])
+        .shellHelp(Self.tabHelpKey(candidate))
         // One focus identity for the bar, carried by the open tab (see `FocusField.cockpitTabs`).
+        // The Details tab is also where the tour points when the desk is a tab away (focus-u6de).
         if isOpen {
             button.focused($focus, equals: .cockpitTabs)
+        } else if candidate == .details {
+            button.walkthroughAnchor(.detailsTab)
         } else {
             button
+        }
+    }
+
+    /// What each tab's tooltip says it holds (focus-8ski).
+    private static func tabHelpKey(_ tab: CockpitTab) -> ShellStringKey {
+        switch tab {
+        case .now: .cockpitTabNowHelp
+        case .details: .cockpitTabDetailsHelp
+        case .recent: .cockpitTabRecentHelp
         }
     }
 
@@ -1155,6 +1222,7 @@ public struct CockpitView: View {
             ShellText(.cockpitOpenHistory, role: .callout)
         }
         .focused($focus, equals: .cockpitOpenHistory)
+        .shellHelp(.cockpitOpenHistoryHelp)
     }
 
     /// The receipts of the sections that are on the tabs that are not open (focus-1rj7).

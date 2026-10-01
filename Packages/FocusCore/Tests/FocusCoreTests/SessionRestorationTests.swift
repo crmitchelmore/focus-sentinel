@@ -471,6 +471,63 @@ struct SessionNoTimerTests {
         #expect(alsoLocked.causesTheUserCannotClear == [.screenLocked])
         #expect(!alsoLocked.permitsIntervention)
     }
+
+    /// **The restoration pauses are the person's to clear** (focus-mmty).
+    ///
+    /// A reboot or a stale relaunch pauses the restored session so that one click puts the
+    /// person back where they were. Nothing else will ever lift those two causes, so a rule that
+    /// counted them as "cannot clear" left Resume disabled for ever under a sentence promising
+    /// it would clear — which is what the owner saw on 2026-09-12.
+    @Test("a restoration pause is resumable by the person, alone or beside their own")
+    func restorationPausesAreThePersonsToClear() {
+        for cause in [PauseReason.systemRestart, .relaunch] {
+            let alone = SessionSnapshot(
+                sessionID: sessionID,
+                phase: .paused,
+                pauseCauses: [cause],
+                startedAt: start
+            )
+            #expect(alone.userMayResume, "\(cause.rawValue) alone")
+            #expect(alone.causesTheUserCannotClear.isEmpty)
+            #expect(alone.causesTheUserMayClear == [cause])
+
+            let besideTheirOwn = SessionSnapshot(
+                sessionID: sessionID,
+                phase: .paused,
+                pauseCauses: [.user, cause],
+                startedAt: start
+            )
+            #expect(besideTheirOwn.userMayResume, "\(cause.rawValue) beside .user")
+            #expect(besideTheirOwn.causesTheUserMayClear == [cause, .user].sorted())
+
+            let besideTheLock = SessionSnapshot(
+                sessionID: sessionID,
+                phase: .paused,
+                pauseCauses: [.screenLocked, cause],
+                startedAt: start
+            )
+            #expect(!besideTheLock.userMayResume, "\(cause.rawValue) beside the lock")
+            #expect(besideTheLock.causesTheUserCannotClear == [.screenLocked])
+        }
+
+        // Not paused at all: nothing to resume, whatever the (empty) set says.
+        let running = SessionSnapshot(sessionID: sessionID, phase: .focus, startedAt: start)
+        #expect(!running.userMayResume)
+    }
+
+    /// The rule is closed over the enum: exactly three causes are the person's, and every
+    /// lifecycle cause is lifted by its own condition and not by a button.
+    @Test("exactly the person's pause and the two restoration pauses are theirs to clear")
+    func thePersonClearsExactlyThreeCauses() {
+        let theirs = Set(PauseReason.allCases.filter(\.isClearedByThePerson))
+        #expect(theirs == [.user, .relaunch, .systemRestart])
+        // `.poweringOff` shares `.systemRestart` with the reboot restoration on purpose: it is
+        // the cause the *next* launch finds and reconciles against. A person who clears it in
+        // the seconds before the Mac goes down changes nothing about that launch.
+        for condition in LifecycleCondition.allCases where condition != .poweringOff {
+            #expect(!condition.pauseCause.isClearedByThePerson, "\(condition) is the lifecycle's")
+        }
+    }
 }
 
 // MARK: - The kind decoder

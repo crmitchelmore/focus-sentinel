@@ -751,6 +751,9 @@ def expected_availability(action_id, world):
         # The popover exists for the life of the process.
         "nudge.menuBar": True,
         "shell.help": True,
+        # focus-u6de. The walkthrough reads nothing and writes nothing, so there is no state
+        # in which it could be refused.
+        "help.walkthrough": True,
         # e09a. The ledger draws whatever the day holds, including nothing — a window that
         # refused to open on a quiet day would withhold exactly the page a person wants after a
         # day the app said nothing on.
@@ -806,6 +809,7 @@ KNOWN_COMMAND_IDS = {
     "nudge.hideOverlays", "nudge.menuBar", "nudge.answerYes", "nudge.answerNo",
     "nudge.answerNotNow", "shell.help", "shell.history",
     "data.export", "settings.export", "settings.import",
+    "help.walkthrough",
 }
 check(
     set(reported_ids) == KNOWN_COMMAND_IDS,
@@ -813,8 +817,8 @@ check(
     sorted(set(reported_ids) ^ KNOWN_COMMAND_IDS),
 )
 check(
-    len(reported_ids) == len(set(reported_ids)) and len(reported_ids) == 20,
-    "all twenty of the app's own actions were reported, once each",
+    len(reported_ids) == len(set(reported_ids)) and len(reported_ids) == 21,
+    "all twenty-one of the app's own actions were reported, once each",
     reported_ids,
 )
 
@@ -4984,25 +4988,35 @@ check(
 # in its merged Info.plist.
 check(
     rendering.get("privacyDeclaresNoNetwork") is True
-    and rendering.get("privacyDeclaresNoUpdateCheck") is True,
+    and rendering.get("privacyDeclaresUpdateChecks") is True,
     "the Privacy pane declares both disclosure sentences among the strings it draws",
     (
         rendering.get("privacyDeclaresNoNetwork"),
-        rendering.get("privacyDeclaresNoUpdateCheck"),
+        rendering.get("privacyDeclaresUpdateChecks"),
     ),
 )
 check(
     isinstance(rendering.get("privacyNoNetworkSentence"), str)
     and len(rendering["privacyNoNetworkSentence"]) > 0
     and rendering["privacyNoNetworkSentence"] != "settings.privacy.noNetwork"
-    and isinstance(rendering.get("privacyNoUpdateCheckSentence"), str)
-    and len(rendering["privacyNoUpdateCheckSentence"]) > 0
-    and rendering["privacyNoUpdateCheckSentence"] != "settings.privacy.noUpdateCheck",
+    and isinstance(rendering.get("privacyUpdateChecksSentence"), str)
+    and len(rendering["privacyUpdateChecksSentence"]) > 0
+    and rendering["privacyUpdateChecksSentence"] != "settings.privacy.updateChecks",
     "both disclosure sentences resolve to real text in this binary",
     (
         rendering.get("privacyNoNetworkSentence"),
-        rendering.get("privacyNoUpdateCheckSentence"),
+        rendering.get("privacyUpdateChecksSentence"),
     ),
+)
+# **The disclosures are true of the process that drew them** (focus-h8jf). A default store holds
+# no update-check choice, and the updater was built and never started — so the app that says
+# "off until you turn them on" has, in this run, opened nothing. Both must be False: a True in
+# either is an updater running on a store nobody switched on.
+check(
+    rendering.get("softwareUpdateChecksStored") is False
+    and rendering.get("softwareUpdaterStarted") is False,
+    "on a default store the update-check choice is off and the updater was never started",
+    (rendering.get("softwareUpdateChecksStored"), rendering.get("softwareUpdaterStarted")),
 )
 check(
     rendering.get("privacySinkHeld") is True,

@@ -16,6 +16,8 @@ public enum FocusSurface: String, Sendable, CaseIterable, Hashable, Identifiable
     case interruptionSheet
     case settingsGeneral
     case settingsPrivacy
+    /// The floating tour panel (focus-u6de): a button per action, then Back and Next.
+    case walkthroughTour
 
     public var id: String { rawValue }
 }
@@ -76,8 +78,20 @@ public enum FocusField: String, Sendable, CaseIterable, Hashable, Identifiable {
     case generalRitualEnabled
     /// The quick-capture shortcut picker in General settings (focus-d3g).
     case generalQuickCaptureShortcut
+    /// The button in General settings that opens the walkthrough again (focus-u6de).
+    case generalShowWalkthrough
+    /// The automatic-update-checks switch in General settings (focus-h8jf). A switch a person
+    /// cannot reach from the keyboard is a switch somebody cannot turn off.
+    case generalSoftwareUpdates
+    /// The check-now button beside it.
+    case generalCheckForUpdates
     /// The "Reveal Data Store in Finder" button in Privacy settings.
     case privacyRevealStore
+    /// The tour panel's action button, then its Back and Next (focus-u6de). One identity for the
+    /// action buttons, carried by whichever the step draws, the way the timebox presets share one.
+    case walkthroughAction
+    case walkthroughBack
+    case walkthroughNext
     /// The quick-capture panel's field and its Set Priority button. Separate cases from the
     /// cockpit's, because the panel is its own surface with its own Tab order and its own
     /// Escape behaviour.
@@ -220,7 +234,8 @@ public enum FocusTraversal {
             surface: .settingsGeneral,
             order: [
                 .generalAppearancePicker, .generalLaunchAtLogin,
-                .generalRitualEnabled, .generalQuickCaptureShortcut
+                .generalRitualEnabled, .generalQuickCaptureShortcut,
+                .generalShowWalkthrough, .generalSoftwareUpdates, .generalCheckForUpdates
             ],
             defaultField: nil,
             cancel: .dismissWindow
@@ -229,6 +244,15 @@ public enum FocusTraversal {
             surface: .settingsPrivacy,
             order: [.privacyRevealStore],
             defaultField: .privacyRevealStore,
+            cancel: .dismissWindow
+        ),
+        // The tour panel (focus-u6de). No default field: Return must not perform a demo action a
+        // person has not read, and the panel is not modal. Escape closes it, which finishes the
+        // demo and puts the person's own priority back.
+        SurfaceFocus(
+            surface: .walkthroughTour,
+            order: [.walkthroughAction, .walkthroughBack, .walkthroughNext],
+            defaultField: nil,
             cancel: .dismissWindow
         )
     ]
@@ -250,7 +274,7 @@ public enum FocusTraversal {
     public static func contract(for surface: FocusSurface) -> SurfaceFocus {
         switch surface {
         case .cockpit, .quickCapture, .completionSheet, .handoffConfirm,
-             .interruptionSheet, .settingsGeneral, .settingsPrivacy:
+             .interruptionSheet, .settingsGeneral, .settingsPrivacy, .walkthroughTour:
             surfaces.first { $0.surface == surface }
                 ?? SurfaceFocus(surface: surface, order: [], defaultField: nil, cancel: .none)
         }

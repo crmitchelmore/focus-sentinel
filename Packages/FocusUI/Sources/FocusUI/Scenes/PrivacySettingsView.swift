@@ -197,7 +197,7 @@ public struct PrivacySettingsView: View {
         [
             .settingsPrivacyStatement,
             .settingsPrivacyNoNetwork,
-            .settingsPrivacyNoUpdateCheck,
+            .settingsPrivacyUpdateChecks,
             .settingsPrivacyStoreLabel,
             .settingsPrivacyReveal,
             .settingsPrivacyRetentionHeading,
@@ -251,7 +251,10 @@ public struct PrivacySettingsView: View {
             // status line draw: `SensingSummary.isPausedByUser` is what the running host says,
             // where the stored flag is what it was told at launch.
             switchRow(
-                .sensingPauseLabel, note: .sensingPauseExplanation, isOn: !summary.isPausedByUser
+                .sensingPauseLabel,
+                note: .sensingPauseExplanation,
+                help: .sensingPauseHelp,
+                isOn: !summary.isPausedByUser
             ) { onAction(.setSensingPaused(!$0)) }
             HStack(alignment: .firstTextBaseline, spacing: spacing / 2) {
                 ShellText(.settingsPrivacyAwayAfter, role: .callout)
@@ -267,6 +270,12 @@ public struct PrivacySettingsView: View {
                     .buttonStyle(.bordered)
                     .accessibilityLabel(Text(ShellStrings.resource(.settingsTuningsLower)))
                     .disabled(sensing.idleThresholdSeconds <= Self.awayFloor)
+                    // Every control carries a tooltip, and a disabled one says why (focus-8ski).
+                    .shellHelp(
+                        .settingsPrivacyAwayLowerHelp,
+                        disabled: .settingsPrivacyAwayLowerDisabledHelp,
+                        when: sensing.idleThresholdSeconds <= Self.awayFloor
+                    )
                     ShellText(
                         .settingsTuningsUnitMinutes,
                         role: .callout,
@@ -282,6 +291,11 @@ public struct PrivacySettingsView: View {
                     .buttonStyle(.bordered)
                     .accessibilityLabel(Text(ShellStrings.resource(.settingsTuningsRaise)))
                     .disabled(sensing.idleThresholdSeconds >= Self.awayCeiling)
+                    .shellHelp(
+                        .settingsPrivacyAwayRaiseHelp,
+                        disabled: .settingsPrivacyAwayRaiseDisabledHelp,
+                        when: sensing.idleThresholdSeconds >= Self.awayCeiling
+                    )
                 }
             }
             ShellText(.settingsPrivacyAwayAfterNote, role: .footnote)
@@ -291,11 +305,13 @@ public struct PrivacySettingsView: View {
             switchRow(
                 .settingsPrivacyMicrophoneSuppression,
                 note: .settingsPrivacyMicrophoneSuppressionNote,
+                help: .settingsPrivacyMicrophoneSuppressionHelp,
                 isOn: sensing.mediaSuppressionEnabled
             ) { onAction(.setMediaSuppression($0)) }
             switchRow(
                 .settingsPrivacyLaunchContext,
                 note: .settingsPrivacyLaunchContextNote,
+                help: .settingsPrivacyLaunchContextHelp,
                 isOn: sensing.launchContextOnSessionStart
             ) { onAction(.setLaunchContextOnSessionStart($0)) }
         }
@@ -321,6 +337,7 @@ public struct PrivacySettingsView: View {
                     switchRow(
                         Self.labelKey(grant),
                         note: Self.noteKey(grant),
+                        help: Self.helpKey(grant),
                         isOn: grants.isEnabled(grant)
                     ) { onAction(.setGrantOptIn(grant, $0)) }
                     if !grant.isConsumedByThisBuild {
@@ -349,6 +366,14 @@ public struct PrivacySettingsView: View {
         }
     }
 
+    /// Each grant switch's tooltip, total for the same reason the two above are.
+    static func helpKey(_ grant: GrantOptIn) -> ShellStringKey {
+        switch grant {
+        case .accessibilityWindowContext: .settingsPrivacyGrantAccessibilityHelp
+        case .screenCapture: .settingsPrivacyGrantScreenCaptureHelp
+        }
+    }
+
     /// One switch: its name beside a check glyph, its note under it.
     ///
     /// A bordered button carrying its own state rather than a `Toggle`: a switch is AppKit-backed
@@ -358,6 +383,7 @@ public struct PrivacySettingsView: View {
     private func switchRow(
         _ label: ShellStringKey,
         note: ShellStringKey,
+        help: ShellStringKey,
         isOn: Bool,
         set: @escaping (Bool) -> Void
     ) -> some View {
@@ -380,6 +406,7 @@ public struct PrivacySettingsView: View {
             }
             .buttonStyle(.bordered)
             .accessibilityAddTraits(isOn ? [.isSelected] : [])
+            .shellHelp(help)
             ShellText(note, role: .footnote)
                 .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
                 .lineLimit(nil)
@@ -406,6 +433,7 @@ public struct PrivacySettingsView: View {
             // colour cannot (F-146, F-144).
             .tint(window == retention ? DesignTokens.Palette.accent(for: traits) : nil)
             .accessibilityAddTraits(window == retention ? [.isSelected] : [])
+            .shellHelp(.settingsPrivacyRetentionHelp)
         }
     }
 
@@ -417,7 +445,8 @@ public struct PrivacySettingsView: View {
             if half != .ownership { insightContent.companionSurface() }
             Spacer(minLength: 0)
         }
-        .padding(spacing * 2)
+        // The one dialog margin every pane and sheet draws (focus-udn9).
+        .dialogInset()
         .background(DesignTokens.Palette.role(.inlay, for: traits))
         .buttonStyle(CompanionButtonStyle())
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -457,19 +486,21 @@ public struct PrivacySettingsView: View {
                 .lineLimit(nil)
                 .fixedSize(horizontal: false, vertical: true)
 
-            // **The two things this app does not do** (F-122, F-137, focus-6n2). Directly under
-            // the statement, because they are the same claim narrowed twice, and with no heading
-            // of their own: a section for *"what we do not do"* invites the list to grow, and a
-            // list of denials is a surface that reads as defensive rather than plain.
+            // **The two things this app does not do unless asked** (F-122, F-137, focus-6n2,
+            // focus-h8jf). Directly under the statement, because they are the same claim
+            // narrowed twice, and with no heading of their own: a section for *"what we do not
+            // do"* invites the list to grow, and a list of denials reads as defensive.
             //
             // Neither is a promise. The first is linted of the shipped binary by the gate's
             // `boundaries` and `boundaries-binary` stages — no networking symbol in any package
-            // source, and none in `FocusClassify.o`. The second is linted the same way: no
-            // Sparkle symbol, no `SUFeedURL` in the merged Info.plist, and `nm -u` over the
-            // product naming neither. D-09 parked Sparkle for the reason this sentence states.
+            // source but `FocusUpdates`, and none in `FocusClassify.o`. The second is linted the
+            // same way: the merged Info.plist carries `SUEnableAutomaticChecks = false` and no
+            // `SUFeedURL`, and the self-check reads the updater unstarted on a default store.
+            // D-09 parked Sparkle while there was no feed for it to point at; focus-h8jf gives it
+            // one and keeps the ask behind the switch in General settings.
             VStack(alignment: .leading, spacing: spacing / 4) {
                 ShellText(.settingsPrivacyNoNetwork, role: .footnote)
-                ShellText(.settingsPrivacyNoUpdateCheck, role: .footnote)
+                ShellText(.settingsPrivacyUpdateChecks, role: .footnote)
             }
             .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
             .lineLimit(nil)
@@ -520,6 +551,7 @@ public struct PrivacySettingsView: View {
             }
             .keyboardShortcut(.defaultAction)
             .focused($focus, equals: .privacyRevealStore)
+            .shellHelp(.settingsPrivacyRevealHelp)
 
             Divider()
 
@@ -585,6 +617,7 @@ public struct PrivacySettingsView: View {
                 } label: {
                     ShellText(.settingsPrivacyDeleteEverything)
                 }
+                .shellHelp(.settingsPrivacyDeleteEverythingHelp)
             }
             .sheet(isPresented: $isConfirmingDeletion) {
                 DeleteEverythingSheet(
@@ -655,6 +688,7 @@ public struct PrivacySettingsView: View {
             }
             .buttonStyle(CompanionButtonStyle(selected: window == retention))
             .accessibilityAddTraits(window == retention ? [.isSelected] : [])
+            .shellHelp(.settingsPrivacyRetentionHelp)
         }
     }
 
@@ -701,12 +735,15 @@ public struct DeleteEverythingSheet: View {
                     ShellText(.settingsPrivacyDeleteCancel)
                 }
                 .keyboardShortcut(.cancelAction)
+                .shellHelp(.settingsPrivacyDeleteCancelHelp)
                 Button(role: .destructive, action: confirm) {
                     ShellText(.settingsPrivacyDeleteConfirm)
                 }
+                .shellHelp(.settingsPrivacyDeleteConfirmHelp)
             }
         }
-        .padding(spacing * 2)
+        // The one dialog margin every pane and sheet draws (focus-udn9).
+        .dialogInset()
         .frame(width: ShellSurfaceBounds.settingsWidth)
         .fixedSize(horizontal: false, vertical: true)
         .accessibilityElement(children: .contain)
@@ -731,14 +768,17 @@ struct PortabilityRow: View {
 
     private var exportData: some View {
         Button { onAction(.exportData) } label: { ShellText(.settingsPrivacyExportData) }
+            .shellHelp(.settingsPrivacyExportDataHelp)
     }
 
     private var exportSettings: some View {
         Button { onAction(.exportSettings) } label: { ShellText(.settingsPrivacyExportSettings) }
+            .shellHelp(.settingsPrivacyExportSettingsHelp)
     }
 
     private var importSettings: some View {
         Button { onAction(.importSettings) } label: { ShellText(.settingsPrivacyImportSettings) }
+            .shellHelp(.settingsPrivacyImportSettingsHelp)
     }
 
     var body: some View {

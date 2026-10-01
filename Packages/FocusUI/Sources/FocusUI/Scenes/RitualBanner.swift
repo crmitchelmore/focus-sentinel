@@ -48,11 +48,14 @@ public struct RitualBanner: View {
             Button(action: answer) {
                 ShellText(.priorityRitualActionSet, role: .callout)
             }
+            // Tooltips from the catalog (focus-8ski).
+            .shellHelp(.priorityRitualActionSetHelp)
 
             Button(action: dismiss) {
                 ShellText(.priorityRitualActionDismiss, role: .callout)
             }
             .focused($focus, equals: .cockpitRitualDismiss)
+            .shellHelp(.priorityRitualActionDismissHelp)
         }
         // **A quiet inset strip, not a raised card** (focus-w41, direction §5.1).
         //

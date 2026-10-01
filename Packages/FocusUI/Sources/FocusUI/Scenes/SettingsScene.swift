@@ -48,6 +48,18 @@ public enum CaptureSettingsAction: Sendable, Equatable, Hashable {
     case setQuickCaptureShortcut(HotKeySpec)
 }
 
+/// **What the General pane's two update controls perform** (focus-h8jf).
+///
+/// A sink in `CaptureSettingsAction`'s shape and for its reason. `setAutomaticChecks` is the
+/// state they asked **for**, never a toggle, and it is the only route by which the updater is
+/// ever started on a schedule; `checkNow` is the only other route by which it is started at all.
+public enum SoftwareUpdateSettingsAction: Sendable, Equatable, Hashable {
+    /// Turn automatic update checks on or off, and store the choice.
+    case setAutomaticChecks(Bool)
+    /// Ask the feed now, once, because the person pressed the button.
+    case checkNow
+}
+
 /// **Everything the Settings scene hands the Settings window, as one value** (focus-2er).
 ///
 /// The scene passed seven separate arguments and built a `Binding` by hand, all inside a view
@@ -154,6 +166,11 @@ public struct ShellSettingsConnection {
     /// holding, and the composition root drives them itself and watches its own graph move. A
     /// sink that was replaced with a no-op reaches nothing, and the graph does not move.
     public let didDraw: @MainActor (ShellSettingsRendering) -> Void
+    /// **What the General pane draws about software updates** (focus-h8jf). Read from the store
+    /// and the updater every time this value is built, for `ritualEnabled`'s reason.
+    public let softwareUpdates: SoftwareUpdateStatus
+    /// What the General pane's two update controls reach.
+    public let onSoftwareUpdateAction: @MainActor (SoftwareUpdateSettingsAction) -> Void
 
     public init(
         preference: AppearancePreference,
@@ -178,7 +195,9 @@ public struct ShellSettingsConnection {
         selectTab: @escaping @MainActor (SettingsTab) -> Void = { _ in },
         generation: Int = 0,
         didRender: @escaping @MainActor () -> Void = {},
-        didDraw: @escaping @MainActor (ShellSettingsRendering) -> Void = { _ in }
+        didDraw: @escaping @MainActor (ShellSettingsRendering) -> Void = { _ in },
+        softwareUpdates: SoftwareUpdateStatus = .off,
+        onSoftwareUpdateAction: @escaping @MainActor (SoftwareUpdateSettingsAction) -> Void = { _ in }
     ) {
         self.preference = preference
         self.setPreference = setPreference
@@ -203,6 +222,8 @@ public struct ShellSettingsConnection {
         self.generation = generation
         self.didRender = didRender
         self.didDraw = didDraw
+        self.softwareUpdates = softwareUpdates
+        self.onSoftwareUpdateAction = onSoftwareUpdateAction
     }
 }
 
@@ -231,6 +252,13 @@ extension ShellSettingsConnection: ShellDrawnConnection {
             "quickCaptureShortcut.keyCode": .drawn([.quickCaptureShortcut]),
             "quickCaptureShortcut.modifierFlags": .drawn([.quickCaptureShortcut]),
             "onCaptureAction": .undrawn(.sink),
+            // focus-h8jf. The whole status descends to one receipt, which carries the digest.
+            "softwareUpdates": .drawn([.softwareUpdates]),
+            "softwareUpdates.train": .drawn([.softwareUpdates]),
+            "softwareUpdates.checksAutomatically": .drawn([.softwareUpdates]),
+            "softwareUpdates.canCheckNow": .drawn([.softwareUpdates]),
+            "softwareUpdates.lastCheckAt": .drawn([.softwareUpdates]),
+            "onSoftwareUpdateAction": .undrawn(.sink),
             "retention": .drawn([.retentionWindow]),
             "sensing": .drawn([.sensingSettings]),
             "sensing.sensingPaused": .drawn([.sensingSettings]),
@@ -396,6 +424,7 @@ public struct ShellSettingsView: View {
     /// (focus-h7h). Read from the environment rather than from the connection, because the
     /// injection is a separate wire from the connection and is separately guttable.
     @Environment(\.appearanceTraits) private var traits
+    @Environment(\.shellTextScale) private var textScale
 
     @Binding private var preference: AppearancePreference
     private let storeURL: URL
@@ -414,6 +443,10 @@ public struct ShellSettingsView: View {
     private let quickCaptureShortcut: HotKeySpec
     /// What the General pane's two capture controls reach.
     private let onCaptureAction: (CaptureSettingsAction) -> Void
+    /// What the General pane draws about software updates, and what its controls reach
+    /// (focus-h8jf).
+    private let softwareUpdates: SoftwareUpdateStatus
+    private let onSoftwareUpdateAction: (SoftwareUpdateSettingsAction) -> Void
     private let intervention: InterventionSettings
     private let onInterventionAction: (InterventionSettingsAction) -> Void
     /// How long the app keeps what it wrote down, as the store holds it (F-115, focus-l7n).
@@ -451,7 +484,9 @@ public struct ShellSettingsView: View {
         sensing: SensingSettingsValue = .defaults,
         grants: GrantOptIns = .none,
         onPrivacyAction: @escaping (PrivacySettingsAction) -> Void = { _ in },
-        selectedTab: Binding<SettingsTab> = .constant(.general)
+        selectedTab: Binding<SettingsTab> = .constant(.general),
+        softwareUpdates: SoftwareUpdateStatus = .off,
+        onSoftwareUpdateAction: @escaping (SoftwareUpdateSettingsAction) -> Void = { _ in }
     ) {
         self._preference = preference
         self.storeURL = storeURL
@@ -470,6 +505,8 @@ public struct ShellSettingsView: View {
         self.sensing = sensing
         self.grants = grants
         self.onPrivacyAction = onPrivacyAction
+        self.softwareUpdates = softwareUpdates
+        self.onSoftwareUpdateAction = onSoftwareUpdateAction
         self._selectedTab = selectedTab
         self.didRender = nil
         self.generation = 0
@@ -503,6 +540,8 @@ public struct ShellSettingsView: View {
         self.sensing = connection.sensing
         self.grants = connection.grants
         self.onPrivacyAction = connection.onPrivacyAction
+        self.softwareUpdates = connection.softwareUpdates
+        self.onSoftwareUpdateAction = connection.onSoftwareUpdateAction
         self._selectedTab = Binding(
             get: { connection.selectedTab },
             set: { connection.selectTab($0) }
@@ -524,7 +563,8 @@ public struct ShellSettingsView: View {
             ) {
               VStack(spacing: 0) {
                 CompanionHeader { ShellText(.cockpitWindowTitle, role: .title2) }
-                    .padding(.horizontal, 16)
+                    // Aligned with the pane content below it, on the same margin (focus-udn9).
+                    .padding(.horizontal, DesignTokens.dialogInset)
                 GeneralSettingsView(
                 preference: $preference,
                 appVersion: appVersion,
@@ -532,7 +572,9 @@ public struct ShellSettingsView: View {
                 onLaunchAtLogin: onLaunchAtLogin,
                 ritualEnabled: ritualEnabled,
                 quickCaptureShortcut: quickCaptureShortcut,
-                onCaptureAction: onCaptureAction
+                onCaptureAction: onCaptureAction,
+                softwareUpdates: softwareUpdates,
+                onSoftwareUpdateAction: onSoftwareUpdateAction
                 )
               }
               .padding(.top, 12)

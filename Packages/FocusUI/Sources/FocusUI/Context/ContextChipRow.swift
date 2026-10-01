@@ -119,11 +119,18 @@ public struct ContextChipRow: View {
             .focused($focus, equals: .cockpitContextKeyword)
             .onSubmit(addKeyword)
             .accessibilityLabel(Text(ShellStrings.resource(.contextKeywordPrompt)))
+            // Tooltips from the catalog (focus-8ski); a disabled control says why.
+            .shellHelp(.contextKeywordPromptHelp)
 
             Button(action: addKeyword) {
                 ShellText(.contextActionAddKeyword)
             }
             .disabled(keyword.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            .shellHelp(
+                .contextActionAddKeywordHelp,
+                disabled: .contextActionAddKeywordDisabledHelp,
+                when: keyword.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            )
 
             Button {
                 relocating = nil
@@ -132,6 +139,7 @@ public struct ContextChipRow: View {
                 ShellText(.contextActionAddFiles)
             }
             .focused($focus, equals: .cockpitContextAddFiles)
+            .shellHelp(.contextActionAddFilesHelp)
 
             Spacer(minLength: 0)
         }

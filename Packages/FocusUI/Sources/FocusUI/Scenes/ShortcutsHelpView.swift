@@ -178,7 +178,7 @@ struct ShortcutsHelpContent: View {
 
             Spacer(minLength: 0)
         }
-        .padding(spacing * 2)
+        .dialogInset()
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 }

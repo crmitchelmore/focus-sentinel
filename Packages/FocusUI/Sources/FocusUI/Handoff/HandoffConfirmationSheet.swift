@@ -89,6 +89,7 @@ public struct HandoffConfirmationSheet: View {
                 Button(action: cancel) {
                     ShellText(.handoffActionCancel)
                 }
+                .shellHelp(.handoffActionCancelHelp)
                 // Cancel is the default action, deliberately. Return must never be the key
                 // that gives away the thing the user was working on.
                 .keyboardShortcut(.defaultAction)
@@ -97,12 +98,13 @@ public struct HandoffConfirmationSheet: View {
                 Button(action: replace) {
                     ShellText(.handoffActionReplace)
                 }
+                .shellHelp(.handoffActionReplaceHelp)
                 .buttonStyle(.borderedProminent)
                 .tint(Color(nsColor: .systemRed))
                 .focused($focus, equals: .handoffReplace)
             }
         }
-        .padding(spacing * 2)
+        .dialogInset()
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(DesignTokens.Palette.windowBackground(for: traits))
         .defaultFocus($focus, .handoffCancel)

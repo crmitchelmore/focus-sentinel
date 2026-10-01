@@ -351,6 +351,28 @@ public enum DesignTokens {
         base * scale.multiplier
     }
 
+    /// **The margin between a dialog's edge and its content** (focus-udn9).
+    ///
+    /// One number for every sheet, floating panel and Settings pane, so the surfaces the app
+    /// puts in front of a person read as one family. Before this token the sheets used
+    /// `spacing * 2` (24), the General pane used single `spacing` (12), the menu-bar popover 10,
+    /// and the custom-snooze popover a literal 16 — four margins for one idea.
+    ///
+    /// **Deliberately not scaled with the text.** The first cut went through
+    /// `spacing(_:scale:)`, and at `.accessibilityLarge` (×2) a 48-point margin on each side
+    /// of a 460-point pane took the Privacy capability slice from 10 034 to 11 458 rows and its
+    /// pseudo-localised pass past the ~16 000-row ceiling where CoreGraphics returns an empty
+    /// buffer (`PseudoLocalizationTests`, focus-u3w). A margin is a frame around the text, not
+    /// part of it; the text grows, the frame does not.
+    public static let dialogInset: CGFloat = 24
+
+    /// **The margin inside a popover** — the menu-bar popover and the custom-snooze popover.
+    ///
+    /// Two thirds of the dialog margin: a popover is anchored to the control that opened it and
+    /// already carries the system's own chrome, so the full dialog margin would put its first
+    /// line an arrow-height away from the thing it is about.
+    public static let popoverInset: CGFloat = 16
+
     // MARK: - Colour
 
     /// Semantic colours, resolved from the system.

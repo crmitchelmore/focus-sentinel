@@ -117,6 +117,8 @@ public struct CaptureFieldView: View {
                 .disabled(!isEnabled)
                 .onSubmit(attemptCommit)
                 .accessibilityLabel(Text(ShellStrings.resource(.captureFieldLabel)))
+                // Tooltips from the catalog (focus-8ski); a disabled control says why.
+                .shellHelp(.captureFieldLabelHelp)
 
                 if hasAdviceToOffer && !showsRefinement {
                     Button {
@@ -125,6 +127,7 @@ public struct CaptureFieldView: View {
                     } label: {
                         ShellText(.captureActionRefine)
                     }
+                    .shellHelp(.captureActionRefineHelp)
                 }
 
                 Button(action: attemptCommit) {
@@ -134,6 +137,11 @@ public struct CaptureFieldView: View {
                 .focused($focus, equals: buttonFocus)
                 // Emptiness, and nothing else. A vague sentence is explained, never blocked.
                 .disabled(!isEnabled || trimmed.isEmpty)
+                .shellHelp(
+                    .captureActionSetHelp,
+                    disabled: .captureActionSetDisabledHelp,
+                    when: !isEnabled || trimmed.isEmpty
+                )
             }
 
             if showsRefinement {

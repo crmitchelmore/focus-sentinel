@@ -20,20 +20,28 @@ public enum FocusStore {
         case applicationSupport
     }
 
-    /// The bundle identifier the store directory is named for. It is stable for the whole
-    /// programme: TCC state in later epics keys on it, so it must not change after e01.
-    public static let bundleIdentifier = "com.chrismitchelmore.FocusSentinel"
+    /// The bundle identifier this process runs under, and the identity every logger, every
+    /// self-recognition in sensing and every TCC row keys on. It was a literal for the whole
+    /// programme; since focus-h8jf it is the train's, so an Alpha build recognises itself as
+    /// `…FocusSentinel.alpha` rather than mistaking the Stable install beside it for itself.
+    /// A process with no train metadata is Stable, which is the literal this replaced.
+    public static var bundleIdentifier: String { ReleaseTrain.current.bundleIdentifier }
 
     /// The store file's name. The `-wal` and `-shm` sidecars sit beside it.
     public static let storeFileName = "FocusSentinel.store"
 
-    /// `~/Library/Application Support/com.chrismitchelmore.FocusSentinel`.
+    /// `~/Library/Application Support/com.chrismitchelmore.FocusSentinel` for Stable, and the
+    /// train's own directory for Alpha (focus-h8jf): two trains on one Mac never open one
+    /// another's store.
     public static var applicationSupportDirectoryURL: URL {
         let base = FileManager.default
             .urls(for: .applicationSupportDirectory, in: .userDomainMask)
             .first
             ?? URL.homeDirectory.appending(path: "Library/Application Support")
-        return base.appending(path: bundleIdentifier, directoryHint: .isDirectory)
+        return base.appending(
+            path: ReleaseTrain.current.applicationSupportDirectory,
+            directoryHint: .isDirectory
+        )
     }
 
     /// The full path of the live store file. This is what the Privacy settings tab reveals
@@ -54,7 +62,7 @@ public enum FocusStore {
     /// existing call site keeps fetching the entities it already knew and the version bump
     /// costs the rest of the programme nothing.
     public static var schema: Schema {
-        Schema(versionedSchema: FocusSchemaV10.self)
+        Schema(versionedSchema: FocusSchemaV11.self)
     }
 
     /// Build a container for the given kind of storage.

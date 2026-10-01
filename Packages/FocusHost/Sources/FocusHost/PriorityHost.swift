@@ -136,6 +136,13 @@ final class PriorityHost: PriorityActing {
     /// would put a SwiftData fetch on every tick.
     var onSnapshotInvalidated: (() -> Void)?
 
+    /// **The projection changed**, in any of its fields — fired after `state` is reassigned, so an
+    /// observer reads the new value (focus-u6de). Broader than `onSnapshotInvalidated`, which is
+    /// the engine's and fires only for the four facts the snapshot key carries: a definition of
+    /// done or a timebox changes the state and not the key, and the walkthrough's tour reads
+    /// those. The cockpit itself does not need this; it observes `state` directly.
+    var onStateChanged: (() -> Void)?
+
     private let context: ModelContext
     private let store: PriorityStore
     private let dateProvider: any DateProvider
@@ -559,7 +566,8 @@ final class PriorityHost: PriorityActing {
         // five-second corroboration tick as well as on every mutation, and `@Observable` reports
         // a write rather than a difference — so an unconditional assignment would redraw the
         // window twelve times a minute to show the same picture.
-        if next != state { state = next }
+        let stateChanged = next != state
+        if stateChanged { state = next }
 
         // **Everything is assigned before anything is announced** (focus-zrs). The invalidation
         // used to fire *between* moving `snapshotKey` and assigning `state`, which left a window —
@@ -576,6 +584,7 @@ final class PriorityHost: PriorityActing {
             snapshotKey = nextKey
             onSnapshotInvalidated?()
         }
+        if stateChanged { onStateChanged?() }
     }
 
     /// **Every way this host states the active commitment, and whether they agree** — and it is

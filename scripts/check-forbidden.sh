@@ -1320,10 +1320,19 @@ fi
 # matched. `requestCockpit()` is deliberately NOT matched: it is the verb a surface uses to ask
 # for the window by name, it opens one rather than storing a command against one, and it reports
 # whether anything could.
-check_outside "R-96q" "only the menu bar sends a command down the cockpit's channel" \
+#
+# **One more caller since focus-u6de, and it is allowed for the reason the rule gives, not in
+# spite of it.** The General pane's *Show walkthrough* button sends `.showWalkthrough`, whose
+# `opensCockpit` is `true` — so the centre raises the window itself and holds the command for it,
+# which is the raise focus-mwm moved into `send` and the exact property the six silent controls
+# lacked. The Settings window, like the menu bar, is reachable only while this application is
+# active. `CommandRegistryTests.theWalkthroughIsAHelpCommand` pins `opensCockpit`, so the day it
+# stops opening the cockpit is the day this allowance stops being justified, and the test says so.
+check_outside "R-96q" "only the menu bar and the General pane's walkthrough button send a command down the cockpit's channel" \
     '(FocusCommandCenter\.shared|[Cc]ommandCenter)\.send\(' \
     App Packages/*/Sources \
-    --allow Packages/FocusUI/Sources/FocusUI/Commands/FocusCommands.swift
+    --allow Packages/FocusUI/Sources/FocusUI/Commands/FocusCommands.swift \
+    --allow Packages/FocusUI/Sources/FocusUI/Scenes/GeneralSettingsView.swift
 
 # R-96d — no shared abstraction over the two authorisations, and no retroactive conformance
 # added to either of them. The elegant refactor is the one that would destroy the guarantee.

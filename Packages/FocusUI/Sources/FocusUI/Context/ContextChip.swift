@@ -51,6 +51,8 @@ public struct ContextChip: View {
                 Button(action: preview) { chipBody }
                     .buttonStyle(.plain)
                     .accessibilityLabel(Text(verbatim: accessibilityDescription))
+                    // Tooltips from the catalog (focus-8ski).
+                    .shellHelp(.contextActionPreviewHelp)
             } else {
                 chipBody
             }
@@ -59,6 +61,7 @@ public struct ContextChip: View {
                 Button(action: locate) {
                     ShellText(.contextActionLocate, role: .caption)
                 }
+                .shellHelp(.contextActionLocateHelp)
             }
 
             if let remove {
@@ -68,6 +71,7 @@ public struct ContextChip: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(Text(ShellStrings.resource(.contextActionRemove)))
+                .shellHelp(.contextActionRemoveHelp)
             }
         }
         .padding(.horizontal, spacing)

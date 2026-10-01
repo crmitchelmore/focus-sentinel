@@ -40,6 +40,13 @@ public struct GeneralSettingsView: View {
     /// **The combination quick capture is bound to** (focus-d3g).
     private let quickCaptureShortcut: HotKeySpec
     private let onCaptureAction: (CaptureSettingsAction) -> Void
+    /// Where the walkthrough button's command goes (focus-u6de). The shared centre in the app;
+    /// injectable so a test can watch the command arrive without a menu bar.
+    private let commandCenter: FocusCommandCenter
+    /// **What the pane draws about software updates** (focus-h8jf). Handed in, never read from
+    /// an updater here: the pane renders a value and the composition root owns the updater.
+    private let softwareUpdates: SoftwareUpdateStatus
+    private let onSoftwareUpdateAction: (SoftwareUpdateSettingsAction) -> Void
 
     @Environment(\.appearanceTraits) private var traits
     @Environment(\.shellTextScale) private var textScale
@@ -53,7 +60,10 @@ public struct GeneralSettingsView: View {
         onLaunchAtLogin: @escaping (LaunchAtLoginAction) -> Void = { _ in },
         ritualEnabled: Bool = true,
         quickCaptureShortcut: HotKeySpec = .quickCaptureDefault,
-        onCaptureAction: @escaping (CaptureSettingsAction) -> Void = { _ in }
+        onCaptureAction: @escaping (CaptureSettingsAction) -> Void = { _ in },
+        commandCenter: FocusCommandCenter = .shared,
+        softwareUpdates: SoftwareUpdateStatus = .off,
+        onSoftwareUpdateAction: @escaping (SoftwareUpdateSettingsAction) -> Void = { _ in }
     ) {
         self._preference = preference
         self.appVersion = appVersion
@@ -62,6 +72,9 @@ public struct GeneralSettingsView: View {
         self.ritualEnabled = ritualEnabled
         self.quickCaptureShortcut = quickCaptureShortcut
         self.onCaptureAction = onCaptureAction
+        self.commandCenter = commandCenter
+        self.softwareUpdates = softwareUpdates
+        self.onSoftwareUpdateAction = onSoftwareUpdateAction
     }
 
     /// Every option the picker offers, in the order it offers them.
@@ -96,6 +109,16 @@ public struct GeneralSettingsView: View {
             }
             .companionSurface()
 
+            VStack(alignment: .leading, spacing: spacing) {
+                walkthroughRow
+            }
+            .companionSurface()
+
+            VStack(alignment: .leading, spacing: spacing) {
+                softwareUpdatesSection
+            }
+            .companionSurface()
+
             LabeledContent {
                 Text(verbatim: appVersion)
                     .font(DesignTokens.font(.footnote, scale: textScale))
@@ -105,7 +128,8 @@ public struct GeneralSettingsView: View {
                     .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
             }
         }
-        .padding(spacing)
+        // The one dialog margin every pane and sheet draws (focus-udn9).
+        .dialogInset()
         .frame(maxWidth: .infinity, alignment: .leading)
         .buttonStyle(CompanionButtonStyle())
         .defaultFocus($focus, .generalAppearancePicker)
@@ -123,6 +147,57 @@ public struct GeneralSettingsView: View {
         // constant (focus-7ow, focus-d3g).
         .shellRendered(.ritualEnabled, ritualEnabled ? "on" : "off")
         .shellRendered(.quickCaptureShortcut, quickCaptureShortcut.glyphs)
+        // **The whole update status, as the pane drew it** (focus-h8jf). The digest rather than
+        // the switch position: the train and the manual-check availability are drawn too, and a
+        // pane handed the other train's status draws the same switch.
+        .shellRendered(.softwareUpdates, ShellValueDigest.describe(softwareUpdates))
+    }
+
+    /// **Software updates, opt-in** (focus-h8jf).
+    ///
+    /// The switch is the only route by which the updater is ever started on a schedule, and the
+    /// button is the only other route by which it is started at all. Off is the shipped state,
+    /// and the footnote says what on costs: one request a day carrying the app's name and
+    /// version. The Privacy pane's two disclosure sentences point here.
+    @ViewBuilder
+    private var softwareUpdatesSection: some View {
+        CompanionSectionHeading(key: .settingsUpdatesHeading, symbol: "arrow.down.circle")
+
+        Button { onSoftwareUpdateAction(.setAutomaticChecks(!softwareUpdates.checksAutomatically)) } label: {
+            settingToggleLabel(
+                .settingsUpdatesAutomatic,
+                isOn: softwareUpdates.checksAutomatically,
+                symbol: "clock.arrow.2.circlepath"
+            )
+        }
+        .buttonStyle(CompanionButtonStyle(selected: softwareUpdates.checksAutomatically))
+        .accessibilityAddTraits(softwareUpdates.checksAutomatically ? .isSelected : [])
+        .focused($focus, equals: .generalSoftwareUpdates)
+        // Every control carries a tooltip, and a disabled one says why (focus-8ski).
+        .shellHelp(.settingsUpdatesAutomaticHelp)
+
+        Button { onSoftwareUpdateAction(.checkNow) } label: {
+            ShellText(.settingsUpdatesCheckNow, role: .callout)
+        }
+        .disabled(!softwareUpdates.canCheckNow)
+        .focused($focus, equals: .generalCheckForUpdates)
+        .shellHelp(
+            .settingsUpdatesCheckNowHelp,
+            disabled: .settingsUpdatesCheckNowDisabledHelp,
+            when: !softwareUpdates.canCheckNow
+        )
+
+        ShellText(.settingsUpdatesNote, role: .footnote)
+            .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+            .lineLimit(nil)
+            .fixedSize(horizontal: false, vertical: true)
+
+        if softwareUpdates.train == .alpha {
+            ShellText(.settingsUpdatesAlpha, role: .footnote)
+                .foregroundStyle(DesignTokens.Palette.role(.kiln, for: traits))
+                .lineLimit(nil)
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 
     /// **The daily ritual banner's switch** (focus-d3g).
@@ -142,9 +217,20 @@ public struct GeneralSettingsView: View {
             }
             .buttonStyle(CompanionButtonStyle(selected: preference == option))
             .accessibilityAddTraits(preference == option ? .isSelected : [])
+            .shellHelp(Self.helpKey(option))
             if option == Self.options.first {
                 button.focused($focus, equals: .generalAppearancePicker)
             } else { button }
+        }
+    }
+
+    /// Each appearance choice's tooltip: a total switch, so a fourth option is a compile error
+    /// here rather than a button with nothing to say.
+    nonisolated static func helpKey(_ option: AppearancePreference) -> ShellStringKey {
+        switch option {
+        case .matchSystem: .settingsAppearanceMatchSystemHelp
+        case .light: .settingsAppearanceLightHelp
+        case .dark: .settingsAppearanceDarkHelp
         }
     }
 
@@ -156,6 +242,7 @@ public struct GeneralSettingsView: View {
             }
             .buttonStyle(CompanionButtonStyle(selected: quickCaptureShortcut == option))
             .accessibilityAddTraits(quickCaptureShortcut == option ? .isSelected : [])
+            .shellHelp(.settingsQuickCaptureShortcutHelp)
             if option == HotKeySpec.quickCaptureChoices.first {
                 button.focused($focus, equals: .generalQuickCaptureShortcut)
             } else { button }
@@ -182,6 +269,7 @@ public struct GeneralSettingsView: View {
         .buttonStyle(CompanionButtonStyle(selected: ritualEnabled))
         .accessibilityAddTraits(ritualEnabled ? .isSelected : [])
         .focused($focus, equals: .generalRitualEnabled)
+        .shellHelp(.settingsRitualEnabledHelp)
 
         ShellText(.settingsRitualEnabledNote, role: .footnote)
             .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
@@ -213,6 +301,33 @@ public struct GeneralSettingsView: View {
             .fixedSize(horizontal: false, vertical: true)
     }
 
+    /// **The walkthrough, on demand** (focus-u6de).
+    ///
+    /// The same command the Help menu sends, so the button and the menu item are one act with
+    /// one title key. The centre brings the cockpit forward and the cockpit presents the sheet;
+    /// this pane holds no state about it. The delivery result is discarded for the reason
+    /// `ShellCommands.perform` discards it: `showWalkthrough` opens the cockpit, and a process
+    /// with nothing able to open one is a unit process.
+    @ViewBuilder
+    private var walkthroughRow: some View {
+        Button {
+            _ = commandCenter.send(.showWalkthrough)
+        } label: {
+            Label {
+                ShellText(.commandShowWalkthrough, role: .callout)
+            } icon: {
+                Image(systemName: "book")
+            }
+        }
+        .focused($focus, equals: .generalShowWalkthrough)
+        .shellHelp(.commandShowWalkthroughHelp)
+
+        ShellText(.settingsShowWalkthroughNote, role: .footnote)
+            .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+            .lineLimit(nil)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
     /// **Opening at login, opt-in and read from the service** (D-12, focus-odz.4).
     ///
     /// Three things about this row are decisions rather than layout.
@@ -235,6 +350,16 @@ public struct GeneralSettingsView: View {
         .accessibilityAddTraits(launchAtLogin.isOn ? .isSelected : [])
         .disabled(!launchAtLogin.isAdjustable)
         .focused($focus, equals: .generalLaunchAtLogin)
+        // The disabled reason is the footnote's own sentence: the two states that disable the
+        // switch are exactly the two that draw one, so the tooltip and the footnote cannot
+        // disagree.
+        .shellHelp(
+            .settingsLaunchAtLoginHelp,
+            disabled: launchAtLogin.footnote == .approval
+                ? .settingsLaunchAtLoginApproval
+                : .settingsLaunchAtLoginUnavailable,
+            when: !launchAtLogin.isAdjustable
+        )
 
         // The footnote is a value on `LaunchAtLogin` rather than a chain of `if`s here, so that
         // "the four statuses draw four distinct things" (H7.3) is a fold somebody can run rather
@@ -251,6 +376,7 @@ public struct GeneralSettingsView: View {
             } label: {
                 ShellText(.settingsLaunchAtLoginOpenSettings)
             }
+            .shellHelp(.settingsLaunchAtLoginOpenSettingsHelp)
         case .unavailable:
             ShellText(.settingsLaunchAtLoginUnavailable, role: .footnote)
                 .foregroundStyle(DesignTokens.supportingTextColor(for: traits))

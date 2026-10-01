@@ -64,7 +64,7 @@ public struct QuickCaptureView: View {
                 .lineLimit(nil)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(spacing * 2)
+        .dialogInset()
         .frame(minWidth: 520, alignment: .leading)
         .background(DesignTokens.Palette.windowBackground(for: model.traits))
         .appearanceTraits(model.traits)

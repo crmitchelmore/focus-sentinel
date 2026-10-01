@@ -172,6 +172,9 @@ public struct TaskRulesView: View {
                     }
                     .buttonStyle(.bordered)
                     .tint(scope == candidate ? DesignTokens.Palette.accent(for: traits) : nil)
+                    // Tooltips from the catalog (focus-8ski); the verdict glyphs above carry
+                    // `FocusCore`'s disposition names and are left as they are.
+                    .shellHelp(.priorityRulesScopeHelp)
                 }
 
                 Spacer(minLength: 0)
@@ -189,16 +192,27 @@ public struct TaskRulesView: View {
                 .focused($focus, equals: .cockpitRuleSubject)
                 .onSubmit { addRule(.relevant) }
                 .accessibilityLabel(Text(ShellStrings.resource(.priorityRulesSubjectPrompt)))
+                .shellHelp(.priorityRulesSubjectPromptHelp)
 
                 Button { addRule(.relevant) } label: {
                     ShellText(.priorityRulesActionAddRelated, role: .callout)
                 }
                 .disabled(trimmedSubject.isEmpty)
+                .shellHelp(
+                    .priorityRulesActionAddRelatedHelp,
+                    disabled: .priorityRulesSubjectDisabledHelp,
+                    when: trimmedSubject.isEmpty
+                )
 
                 Button { addRule(.unrelated) } label: {
                     ShellText(.priorityRulesActionAddUnrelated, role: .callout)
                 }
                 .disabled(trimmedSubject.isEmpty)
+                .shellHelp(
+                    .priorityRulesActionAddUnrelatedHelp,
+                    disabled: .priorityRulesSubjectDisabledHelp,
+                    when: trimmedSubject.isEmpty
+                )
 
                 Spacer(minLength: 0)
             }
