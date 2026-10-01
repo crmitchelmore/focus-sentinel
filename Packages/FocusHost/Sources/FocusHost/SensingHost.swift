@@ -243,6 +243,11 @@ final class SensingHost {
 
         idle.forgetTransitions()
         attach()
+        // `attach()` seeds only an observer that holds nothing, and a paused one still holds the
+        // application that was frontmost when the switch went off. The front may have moved
+        // while nothing was watching — onto a sensitive application, even — so the subject is
+        // re-read here rather than believed.
+        if let seed = WorkspaceActivityObserver.frontmostPayload() { activity.reseed(with: seed) }
         refreshCapabilities()
         sample()
 
