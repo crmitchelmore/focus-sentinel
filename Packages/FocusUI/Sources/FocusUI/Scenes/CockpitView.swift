@@ -299,7 +299,10 @@ public struct CockpitView: View {
         // has landed in before reading the priority out of it.
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text(ShellStrings.resource(.cockpitHeading)))
-        .onAppear { commandCenter.register(perform(_:)) }
+        // `perform(_:)` captures this view value, and with it `state` as it was when registered.
+        // Re-registered on every new state (and, via `initial: true`, on appear) so a menu
+        // command is judged against what is on screen rather than the cockpit as it first appeared.
+        .onChange(of: state, initial: true) { commandCenter.register(perform(_:)) }
         .onDisappear { commandCenter.unregister() }
         // **One statement, not an `.onAppear` beside an `.onChange` doing the same thing**
         // (focus-zrs). The draft is an edit buffer — a second representation of

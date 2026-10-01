@@ -198,7 +198,12 @@ public final class QuickCapturePanelController {
     /// Everything here is a state change on objects that already exist. Nothing is allocated,
     /// laid out for the first time, or loaded from a nib.
     public func show() {
-        interruptedApplication = NSWorkspace.shared.frontmostApplication
+        // Only when the panel is not already up. A second summon while it is showing finds this
+        // app frontmost (the first `show()` activated it), and adopting that would make ⌘Return
+        // "return" to the panel's own app instead of the one the first press interrupted.
+        if !panel.isVisible {
+            interruptedApplication = NSWorkspace.shared.frontmostApplication
+        }
         layOutContent()
         if !hasBeenPositioned {
             panel.center()

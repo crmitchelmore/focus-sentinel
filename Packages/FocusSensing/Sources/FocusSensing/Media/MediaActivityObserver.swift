@@ -309,6 +309,12 @@ public final class MediaActivityObserver {
     /// `mediaActivityChanged` row per transition rather than one per read.
     public var onChange: ((MediaActivity) -> Void)?
 
+    /// The devices a running-state listener was last installed on. `devices` is replaced by
+    /// every `refresh()` — including one a device listener triggers — so it can already have
+    /// lost a device that was unplugged by the time the device-list listener runs `reattach()`.
+    /// Detaching from this set as well means that device's listener is removed, not stranded.
+    private var attachedDeviceIDs: Set<AudioDeviceIdentifier> = []
+
     public init(enumerator: any AudioDeviceEnumerating = SystemAudioDeviceEnumerator()) {
         self.enumerator = enumerator
     }
@@ -368,6 +374,7 @@ public final class MediaActivityObserver {
             enumerator.addListener(to: device.id) { [weak self] in
                 Self.onMainActor { _ = self?.refresh() }
             }
+            attachedDeviceIDs.insert(device.id)
         }
         enumerator.addDeviceListListener { [weak self] in
             Self.onMainActor { self?.reattach() }
@@ -397,9 +404,10 @@ public final class MediaActivityObserver {
 
     /// Remove every listener this observer installed.
     public func detachListeners() {
-        for device in devices {
-            enumerator.removeListener(from: device.id)
+        for identifier in attachedDeviceIDs.union(devices.map(\.id)) {
+            enumerator.removeListener(from: identifier)
         }
+        attachedDeviceIDs.removeAll()
         enumerator.removeDeviceListListener()
     }
 
