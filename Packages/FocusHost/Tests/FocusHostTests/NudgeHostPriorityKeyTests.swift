@@ -213,4 +213,27 @@ struct NudgeHostPriorityKeyTests {
             "a commitment nobody was accused under inherited an excuse"
         )
     }
+
+    // MARK: - The way back
+
+    /// "Back to …" offers the last subject judged relevant, and that judgement was about the
+    /// commitment that was left. A new commitment starts with no anchor rather than the old one.
+    @Test("a priority change clears the return anchor")
+    func aPriorityChangeClearsTheReturnAnchor() throws {
+        let fixture = try NudgeHostFixture()
+        defer { fixture.tearDown() }
+
+        fixture.host.consider(NudgeHostFixture.alignedJudgement(subject: Self.subject))
+        NudgeHostFixture.settle()
+        try #require(fixture.host.returnAnchor == Self.subject)
+
+        let committed = try fixture.priorities.setPriority(intent: "Review the Acme contract")
+        try #require(committed != fixture.priorityID)
+        fixture.host.priorityChanged()
+
+        #expect(
+            fixture.host.returnAnchor == nil,
+            "\"Back to\" would offer the old commitment's anchor as the way back to the new one"
+        )
+    }
 }

@@ -323,4 +323,24 @@ struct TransitionWindowTests {
         #expect(!driver.window.hasReturned(to: nil, at: driver.clock.elapsed))
         #expect(driver.window.anchorToken(at: driver.clock.elapsed)?.value == Self.ide.lowercased())
     }
+
+    /// A truncated window built on the shipped tunings would quietly undo a person's override
+    /// of the threshold the bounded run is compared against.
+    @Test("truncation keeps the window's tunings")
+    func truncationKeepsTheTunings() throws {
+        var tunings = PolicyTunings()
+        tunings.set(
+            .sustainedDriftThreshold,
+            to: PolicyTuning.sustainedDriftThreshold.shippedValue + 60
+        )
+        try #require(!tunings.isShipped)
+        var window = TransitionWindow(tunings: tunings)
+        let clock = TestClock()
+        window.record(DriftObservation(now: clock.elapsed, verdict: .relevant, subject: Self.ide))
+
+        let truncated = window.truncated(to: 1)
+
+        #expect(truncated.tunings == tunings)
+        #expect(truncated.effectiveThreshold(at: clock.elapsed) == window.effectiveThreshold(at: clock.elapsed))
+    }
 }

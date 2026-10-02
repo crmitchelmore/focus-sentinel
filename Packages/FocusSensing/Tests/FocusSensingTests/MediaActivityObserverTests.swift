@@ -300,6 +300,40 @@ struct MediaActivityObserverTests {
         #expect(observer.listenerCount == 2)
     }
 
+    /// The unplugged device's own listener can refresh before the device-list listener runs, so
+    /// `devices` has already forgotten it by the time anything detaches.
+    @Test("An unplugged microphone's listener is removed after a refresh has forgotten it")
+    func anUnpluggedDevicesListenerIsNotStranded() {
+        let devices = QueueChoosingAudioDevices(devices: [QueueChoosingAudioDevices.microphone])
+        let observer = MediaActivityObserver(enumerator: devices)
+        observer.start()
+        #expect(observer.listenerCount == 2)
+
+        devices.replaceDevices(with: [])
+        observer.refresh()
+        observer.reattach()
+
+        // Only the device-list listener: nothing left can hear.
+        #expect(observer.listenerCount == 1)
+        #expect(devices.box.handler(for: QueueChoosingAudioDevices.microphone.id) == nil)
+
+        observer.pause()
+        #expect(observer.listenerCount == 0)
+    }
+
+    @Test("pause() removes a listener whose device a refresh has already forgotten")
+    func pauseRemovesAForgottenDevicesListener() {
+        let devices = QueueChoosingAudioDevices(devices: [QueueChoosingAudioDevices.microphone])
+        let observer = MediaActivityObserver(enumerator: devices)
+        observer.start()
+
+        devices.replaceDevices(with: [])
+        observer.refresh()
+        observer.pause()
+
+        #expect(observer.listenerCount == 0)
+    }
+
     // MARK: - What the type may never say
 
     @Test("MediaActivity exposes nothing a nudge could quote")
