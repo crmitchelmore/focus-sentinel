@@ -179,7 +179,7 @@ public struct TransitionWindow: Sendable, Equatable {
     /// every fixture against a window that keeps everything and compares the transcript byte for
     /// byte with the bounded run.
     public func truncated(to count: Int) -> TransitionWindow {
-        var copy = TransitionWindow(capacity: count)
+        var copy = TransitionWindow(capacity: count, tunings: tunings)
         copy.observations = observations
         if copy.observations.count > count {
             copy.observations.removeFirst(copy.observations.count - count)

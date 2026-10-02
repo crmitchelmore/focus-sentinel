@@ -1,0 +1,441 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="canonical" href="https://focus-sentinel.win/press">
+<title>Press and media · Focus Sentinel</title>
+<meta name="description" content="Fact sheet, boilerplate and images for writing about Focus Sentinel, a local-only macOS companion that keeps one priority in view.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Focus Sentinel">
+<meta property="og:url" content="https://focus-sentinel.win/press">
+<meta property="og:title" content="Focus Sentinel: press and media">
+<meta property="og:description" content="Fact sheet, boilerplate and images for writing about Focus Sentinel.">
+<meta property="og:image" content="https://focus-sentinel.win/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Focus Sentinel: One priority, kept in view. A local-only Mac companion that asks before it assumes.">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#FAF7F0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#191D1F" media="(prefers-color-scheme: dark)">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<script>document.documentElement.classList.add("js");</script>
+<style>
+  :root {
+    --bench: #FAF7F0;
+    --slate: #1E2427;
+    --mist: #5E6866;
+    --spruce: #176B73;
+    --spruce-ink: #FAF7F0;
+    --kiln: #B06A10;
+    --inlay: #EBE7DF;
+    --line: rgba(30, 36, 39, 0.14);
+    --deep: #155B60;
+    --deep-ink: #F4F1E8;
+    --deep-mist: #B9D3D4;
+    --beam: rgba(233, 186, 79, 0.28);
+    --card: #FFFDF8;
+    --shadow: 0 18px 50px rgba(30, 36, 39, 0.12);
+    --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bench: #191D1F;
+      --slate: #EDF1F0;
+      --mist: #98A2A0;
+      --spruce: #57A9AF;
+      --spruce-ink: #101A1B;
+      --kiln: #E39A2E;
+      --inlay: #2A3033;
+      --line: rgba(237, 241, 240, 0.14);
+      --deep: #155B60;
+      --deep-ink: #F4F1E8;
+      --deep-mist: #B9D3D4;
+      --beam: rgba(233, 186, 79, 0.22);
+      --card: #202628;
+      --shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bench: #191D1F;
+    --slate: #EDF1F0;
+    --mist: #98A2A0;
+    --spruce: #57A9AF;
+    --spruce-ink: #101A1B;
+    --kiln: #E39A2E;
+    --inlay: #2A3033;
+    --line: rgba(237, 241, 240, 0.14);
+    --deep: #155B60;
+    --deep-ink: #F4F1E8;
+    --deep-mist: #B9D3D4;
+    --beam: rgba(233, 186, 79, 0.22);
+    --card: #202628;
+    --shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bench);
+    color: var(--slate);
+    font-family: "Instrument Sans", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+    font-size: 17px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--spruce); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--kiln); outline-offset: 3px; }
+  img { max-width: 100%; display: block; }
+  h1, h2, h3 {
+    font-family: "Bricolage Grotesque", "Instrument Sans", -apple-system, "Helvetica Neue", Arial, sans-serif;
+    font-weight: 600;
+    line-height: 1.08;
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+    margin: 0;
+  }
+  h1 { font-size: clamp(2.4rem, 5.6vw, 4.2rem); font-weight: 700; }
+  h2 { font-size: clamp(1.7rem, 3.2vw, 2.4rem); }
+  h3 { font-size: 1.15rem; font-weight: 600; line-height: 1.3; }
+  p { margin: 0; }
+  .measure { max-width: 34em; }
+
+  .wrap { width: min(1120px, 100%); margin-inline: auto; padding-inline: clamp(16px, 4vw, 40px); }
+
+  /* Top bar, as on the home page */
+  .bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-block: 18px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-family: "Bricolage Grotesque", sans-serif; font-weight: 700; font-size: 1.15rem; color: var(--slate); text-decoration: none; }
+  .brand .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--kiln); box-shadow: 0 0 0 3px var(--inlay); transition: transform 300ms var(--ease); }
+  .brand:hover .dot { transform: scale(1.18); }
+  .bar nav { display: flex; gap: 22px; font-size: 0.95rem; }
+  .bar nav a { color: var(--mist); text-decoration: none; position: relative; padding-block: 4px; transition: color 200ms; }
+  .bar nav a::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1.5px; background: var(--spruce); transform: scaleX(0); transform-origin: left; transition: transform 260ms var(--ease); }
+  .bar nav a:hover { color: var(--slate); }
+  .bar nav a:hover::after { transform: scaleX(1); }
+  @media (max-width: 640px) { .bar nav { display: none; } }
+
+  /* Opening */
+  .opening { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: clamp(28px, 5vw, 64px); align-items: center; padding-block: clamp(32px, 6vw, 72px) clamp(40px, 7vw, 80px); }
+  @media (max-width: 860px) { .opening { grid-template-columns: 1fr; } }
+  .eyebrow { font-size: 0.78rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--mist); }
+  .opening .eyebrow { margin-bottom: 18px; }
+  .lede { font-size: clamp(1.1rem, 1.6vw, 1.3rem); color: var(--mist); margin-top: 22px; max-width: 30em; text-wrap: pretty; }
+  .status { display: inline-flex; align-items: center; gap: 8px; margin-top: 26px; padding: 6px 12px; border-radius: 999px; background: var(--inlay); font-size: 0.88rem; font-weight: 600; }
+  .status i { width: 8px; height: 8px; border-radius: 50%; background: var(--kiln); display: block; flex: none; }
+  .status a { color: inherit; }
+
+  @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  .opening > div:first-child > * { animation: rise 700ms var(--ease) both; }
+  .opening > div:first-child > :nth-child(2) { animation-delay: 80ms; }
+  .opening > div:first-child > :nth-child(3) { animation-delay: 160ms; }
+  .opening > div:first-child > :nth-child(4) { animation-delay: 240ms; }
+  .plate { animation: rise 800ms var(--ease) 220ms both; }
+
+  /* The name plate: a band like the app window's */
+  .plate { background: var(--card); border-radius: 22px; box-shadow: var(--shadow); border: 1px solid var(--line); overflow: hidden; max-width: 420px; justify-self: end; width: 100%; }
+  @media (max-width: 860px) { .plate { justify-self: start; } }
+  .band { background: var(--deep); color: var(--deep-ink); position: relative; padding: 18px 22px; display: flex; align-items: center; gap: 14px; overflow: hidden; min-height: 96px; }
+  .band .beam { position: absolute; right: -40px; top: -140px; width: 320px; height: 320px; background: conic-gradient(from 200deg at 100% 50%, transparent 0deg, var(--beam) 18deg, transparent 40deg); pointer-events: none; transform-origin: 100% 50%; animation: sweep 14s ease-in-out infinite alternate; }
+  @keyframes sweep { from { transform: rotate(-7deg); } to { transform: rotate(7deg); } }
+  .band .lamp { position: absolute; right: 26px; top: 16px; width: 22px; height: 22px; border-radius: 50%; background: #E9BA4F; box-shadow: 0 0 0 6px rgba(233,186,79,0.18); animation: glow 6s ease-in-out infinite; }
+  @keyframes glow { 50% { box-shadow: 0 0 0 10px rgba(233,186,79,0.10); } }
+  .band img { width: 64px; height: 64px; border-radius: 16px; flex: none; }
+  .band .title { font-family: "Bricolage Grotesque", sans-serif; font-weight: 700; font-size: 1.6rem; letter-spacing: -0.01em; position: relative; }
+  .plate .body { padding: 20px 22px 22px; display: grid; gap: 14px; }
+  .plate .line { display: grid; grid-template-columns: 92px 1fr; gap: 12px; font-size: 0.95rem; }
+  .plate .line span:first-child { color: var(--mist); }
+  .plate .rule { height: 1px; background: var(--line); }
+
+  /* Sections with a label gutter */
+  section { padding-block: clamp(40px, 7vw, 88px); border-top: 1px solid var(--line); }
+  .split { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: clamp(20px, 4vw, 56px); }
+  @media (max-width: 760px) { .split { grid-template-columns: minmax(0, 1fr); } }
+  .split > .eyebrow { padding-top: 10px; }
+  .intro { margin-top: 14px; color: var(--mist); font-size: 1.08rem; text-wrap: pretty; }
+
+  .js .reveal { opacity: 0; transform: translateY(14px); transition: opacity 640ms var(--ease), transform 640ms var(--ease); transition-delay: calc(var(--i, 0) * 70ms); }
+  .js .reveal.in { opacity: 1; transform: none; }
+
+  /* Fact sheet */
+  .facts { margin: 30px 0 0; border-top: 1px solid var(--line); }
+  .facts > div { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 16px; padding-block: 14px; border-bottom: 1px solid var(--line); }
+  @media (max-width: 560px) { .facts > div { grid-template-columns: minmax(0, 1fr); gap: 2px; } }
+  .facts dt { font-weight: 600; font-size: 0.95rem; }
+  .facts dd { margin: 0; color: var(--mist); overflow-wrap: anywhere; }
+  .facts dd b { color: var(--slate); font-weight: 600; }
+
+  /* Boilerplate */
+  .copyblocks { margin-top: 30px; display: grid; gap: 18px; }
+  .copyblock { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px 22px 22px; }
+  .copyblock header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+  .copyblock .eyebrow { font-size: 0.72rem; }
+  .copyblock .words { display: grid; gap: 12px; max-width: 42em; text-wrap: pretty; }
+  .copy { display: none; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 9px; border: 1px solid var(--line); background: var(--inlay); color: var(--slate); font: inherit; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: border-color 200ms, transform 200ms var(--ease); }
+  .copy:hover { border-color: var(--spruce); transform: translateY(-1px); }
+  .copy:active { transform: scale(0.985); }
+  .copy svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .can-copy .copy { display: inline-flex; }
+  .copy.done { border-color: var(--spruce); color: var(--spruce); }
+  .naming { margin-top: 18px; font-size: 0.95rem; color: var(--mist); max-width: 42em; }
+  .naming b { color: var(--slate); font-weight: 600; }
+
+  /* Assets */
+  .assets { list-style: none; margin: 30px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; }
+  .assets li { background: var(--card); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; display: grid; grid-template-rows: auto 1fr; transition: transform 300ms var(--ease), box-shadow 300ms var(--ease); }
+  .assets li:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+  .assets .preview { aspect-ratio: 40 / 21; background: var(--deep); position: relative; overflow: hidden; }
+  .assets .preview img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .assets .preview.square { background: #08525A; }
+  .assets .preview.square img { object-fit: contain; }
+  .assets .preview.mark { background: var(--inlay); }
+  .assets .preview.mark img { inset: 0; margin: auto; width: 64px; height: 64px; }
+  .assets .meta { padding: 16px 18px 18px; display: grid; gap: 4px; align-content: start; }
+  .assets .meta p { color: var(--mist); font-size: 0.9rem; }
+  .assets .dl { margin-top: 8px; display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 0.92rem; text-decoration: none; }
+  .assets .dl svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .assets .dl:hover { text-decoration: underline; }
+  .note { margin-top: 18px; font-size: 0.95rem; color: var(--mist); max-width: 42em; }
+
+  /* Privacy band */
+  .privacy { background: var(--deep); color: var(--deep-ink); border-top: 0; position: relative; overflow: hidden; }
+  .privacy .beam { position: absolute; right: -120px; top: -260px; width: 720px; height: 720px; background: conic-gradient(from 205deg at 100% 50%, transparent 0deg, var(--beam) 14deg, transparent 32deg); pointer-events: none; transform-origin: 100% 50%; animation: sweep 22s ease-in-out infinite alternate; }
+  .privacy .eyebrow, .privacy .intro { color: var(--deep-mist); }
+  .privacy h2 { color: var(--deep-ink); }
+  .promises { list-style: none; margin: 30px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 22px 32px; position: relative; }
+  .promises li { display: grid; gap: 6px; align-content: start; border-top: 1px solid rgba(244, 241, 232, 0.25); padding-top: 14px; }
+  .promises h3 { color: var(--deep-ink); }
+  .promises p { color: var(--deep-mist); font-size: 0.96rem; }
+  .privacy a { color: var(--deep-ink); }
+
+  /* Contact */
+  .ways { list-style: none; margin: 26px 0 0; padding: 0; display: grid; gap: 14px; max-width: 40em; }
+  .ways li { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 12px; color: var(--mist); }
+  .ways li::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--spruce); margin-top: 8px; }
+  .ways b { color: var(--slate); font-weight: 600; }
+
+  /* Footer */
+  footer { border-top: 1px solid var(--line); padding-block: 28px 40px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px 24px; font-size: 0.9rem; color: var(--mist); }
+  footer a { color: var(--mist); }
+  footer a:hover { color: var(--slate); }
+  footer .elsewhere { flex-basis: 100%; }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+    .js .reveal { opacity: 1; transform: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="wrap bar">
+  <a class="brand" href="/"><span class="dot"></span>Focus Sentinel</a>
+  <nav aria-label="Sections">
+    <a href="#facts">Fact sheet</a>
+    <a href="#boilerplate">Boilerplate</a>
+    <a href="#assets">Assets</a>
+    <a href="#privacy">Privacy</a>
+    <a href="#contact">Contact</a>
+  </nav>
+</header>
+
+<main id="top">
+  <div class="wrap opening">
+    <div>
+      <p class="eyebrow">Press and media</p>
+      <h1>Focus Sentinel, in brief.</h1>
+      <p class="lede">Facts, wording and images for anyone writing about Focus Sentinel. Each fact here matches the app and its source.</p>
+      <p class="status"><i aria-hidden="true"></i>Not yet released · <a href="https://github.com/crmitchelmore/focus-sentinel/issues/12">follow the tracker</a></p>
+    </div>
+
+    <div class="plate" role="group" aria-label="Focus Sentinel at a glance">
+      <div class="band">
+        <div class="beam" aria-hidden="true"></div>
+        <div class="lamp" aria-hidden="true"></div>
+        <img src="companion.png" alt="The Focus companion: a small white lens with a yellow lamp on a stalk" width="64" height="64">
+        <div class="title">Focus Sentinel</div>
+      </div>
+      <div class="body">
+        <p class="line"><span>Platform</span><span>macOS 26 or later</span></p>
+        <div class="rule"></div>
+        <p class="line"><span>Data</span><span>Stays on the Mac</span></p>
+        <div class="rule"></div>
+        <p class="line"><span>Licence</span><span>MIT, source published at release</span></p>
+      </div>
+    </div>
+  </div>
+
+  <section id="facts">
+    <div class="wrap split">
+      <p class="eyebrow reveal">Fact sheet</p>
+      <div>
+        <h2 class="reveal">The facts, in one place.</h2>
+        <dl class="facts reveal" style="--i:1">
+          <div><dt>Name</dt><dd><b>Focus Sentinel</b>. In the app and in running text after first mention, <b>Focus</b>.</dd></div>
+          <div><dt>What it is</dt><dd>A local-only macOS companion that keeps one priority in view, notices when the app in front drifts from it, and asks before it assumes.</dd></div>
+          <div><dt>Platform</dt><dd>macOS 26 or later. Built and tested on Apple silicon.</dd></div>
+          <div><dt>Status</dt><dd>Not yet released. The first signed, notarised build ships through the <a href="https://github.com/crmitchelmore/focus-sentinel/issues/12">release tracker, issue 12</a>.</dd></div>
+          <div><dt>Data</dt><dd>Local only. No account, no sync, no usage reports. Focus never connects to the internet and has no updater.</dd></div>
+          <div><dt>Licence</dt><dd>MIT. The source is published with the first release.</dd></div>
+          <div><dt>Source</dt><dd><a href="https://github.com/crmitchelmore/focus-sentinel">github.com/crmitchelmore/focus-sentinel</a></dd></div>
+          <div><dt>Website</dt><dd><a href="https://focus-sentinel.win/">focus-sentinel.win</a></dd></div>
+          <div><dt>Maker</dt><dd>Chris Mitchelmore · <a href="https://mitchelmore.uk/">mitchelmore.uk</a></dd></div>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <section id="boilerplate">
+    <div class="wrap split">
+      <p class="eyebrow reveal">Boilerplate</p>
+      <div>
+        <h2 class="reveal">Wording you can use.</h2>
+        <p class="intro measure reveal" style="--i:1">Use either version as it stands, or trim it. Please keep the privacy sentences intact if you quote them.</p>
+        <div class="copyblocks">
+          <article class="copyblock reveal" style="--i:2">
+            <header><p class="eyebrow">Short · 36 words</p><button class="copy" type="button" data-copy="short"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="5" y="5" width="8.5" height="8.5" rx="1.5"/><path d="M3 10.5V3.8C3 3.3 3.3 3 3.8 3h6.7"/></svg><span>Copy</span></button></header>
+            <div class="words" id="short">
+              <p>Focus Sentinel is a local-only Mac companion that keeps one priority in view, notices when work drifts, and asks before it assumes. It will be open source under the MIT licence and requires macOS 26 or later.</p>
+            </div>
+          </article>
+          <article class="copyblock reveal" style="--i:3">
+            <header><p class="eyebrow">Long · 149 words</p><button class="copy" type="button" data-copy="long"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="5" y="5" width="8.5" height="8.5" rx="1.5"/><path d="M3 10.5V3.8C3 3.3 3.3 3 3.8 3h6.7"/></svg><span>Copy</span></button></header>
+            <div class="words" id="long">
+              <p>Focus Sentinel is a macOS companion that keeps one priority in view. You write the priority as one sentence, start a session, timeboxed if you like, and Focus watches which app is in front. When the work drifts, its menu-bar mark changes; drift longer and a small panel names the app and offers a way back. When Focus cannot tell, it asks, and the answer becomes a rule, so it stops asking.</p>
+              <p>It blocks nothing and keeps no score. It stays quiet on calls, while an app is full screen, while you are away and in the quiet hours you set. Everything stays on the Mac: no account, no sync, no usage reports, and no network at all. Focus never connects to the internet and has no updater.</p>
+              <p>Focus Sentinel will be open source under the MIT licence and requires macOS 26 or later. It is made by Chris Mitchelmore.</p>
+            </div>
+          </article>
+        </div>
+        <p class="naming reveal" style="--i:2"><b>On the name.</b> Write Focus Sentinel in full the first time, then Focus. It is not yet released, so please do not describe it as available to download.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="assets">
+    <div class="wrap split">
+      <p class="eyebrow reveal">Assets</p>
+      <div>
+        <h2 class="reveal">Images to download.</h2>
+        <ul class="assets">
+          <li class="reveal" style="--i:1">
+            <div class="preview square"><img src="companion.png" alt="The Focus companion on a spruce background" width="640" height="640" loading="lazy"></div>
+            <div class="meta">
+              <h3>The companion</h3>
+              <p>PNG, 640 × 640, about 395 KB. Square, on its own spruce background.</p>
+              <a class="dl" href="companion.png" download="focus-sentinel-companion.png"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v8M5 7l3 3 3-3"/><path d="M3 13h10"/></svg>Download</a>
+            </div>
+          </li>
+          <li class="reveal" style="--i:2">
+            <div class="preview"><img src="og.png" alt="Social card: One priority, kept in view. A local-only Mac companion that asks before it assumes." width="1200" height="630" loading="lazy"></div>
+            <div class="meta">
+              <h3>Social card</h3>
+              <p>PNG, 1200 × 630, about 160 KB. Headline, line and companion.</p>
+              <a class="dl" href="og.png" download="focus-sentinel-card.png"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v8M5 7l3 3 3-3"/><path d="M3 13h10"/></svg>Download</a>
+            </div>
+          </li>
+          <li class="reveal" style="--i:3">
+            <div class="preview mark"><img src="favicon.svg" alt="The Focus Sentinel mark: an amber dot in a pale ring" width="64" height="64" loading="lazy"></div>
+            <div class="meta">
+              <h3>The mark</h3>
+              <p>SVG. The amber dot from the site header, for small sizes.</p>
+              <a class="dl" href="favicon.svg" download="focus-sentinel-mark.svg"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v8M5 7l3 3 3-3"/><path d="M3 13h10"/></svg>Download</a>
+            </div>
+          </li>
+        </ul>
+        <p class="note reveal" style="--i:2">App screenshots are not published yet. They will follow the first release.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="privacy" class="privacy">
+    <div class="beam" aria-hidden="true"></div>
+    <div class="wrap split">
+      <p class="eyebrow reveal">Privacy</p>
+      <div>
+        <h2 class="reveal">What it reads, and what it never does.</h2>
+        <p class="intro measure reveal" style="--i:1">Drawn from the app's own Privacy settings. The build gate checks the shipped binary for networking code on every run.</p>
+        <ul class="promises">
+          <li class="reveal" style="--i:2">
+            <h3>What it reads</h3>
+            <p>Which app is active: its name, never its windows. This version does not read which website a browser is showing.</p>
+          </li>
+          <li class="reveal" style="--i:3">
+            <h3>What it never reads</h3>
+            <p>Window titles, full web addresses, file paths, document names, or anything you type.</p>
+          </li>
+          <li class="reveal" style="--i:4">
+            <h3>No network</h3>
+            <p>Focus never connects to the internet and has no updater. When a new version is out, people download it themselves.</p>
+          </li>
+          <li class="reveal" style="--i:2">
+            <h3>Nothing leaves the Mac</h3>
+            <p>No account, no sync, no usage reports. Export the record from the File menu; delete everything from Privacy settings.</p>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="contact">
+    <div class="wrap split">
+      <p class="eyebrow reveal">Contact</p>
+      <div>
+        <h2 class="reveal">Questions go through GitHub.</h2>
+        <ul class="ways">
+          <li class="reveal" style="--i:1"><span><b>Press and general questions.</b> <a href="https://github.com/crmitchelmore/focus-sentinel/issues/new">Open an issue</a> on the repository; replies are public.</span></li>
+          <li class="reveal" style="--i:2"><span><b>Release timing.</b> Watch the <a href="https://github.com/crmitchelmore/focus-sentinel/issues/12">release tracker</a> for what remains before the first build.</span></li>
+          <li class="reveal" style="--i:3"><span><b>Security.</b> Report privately through a <a href="https://github.com/crmitchelmore/focus-sentinel/security/advisories/new">security advisory</a>, not a public issue.</span></li>
+          <li class="reveal" style="--i:4"><span><b>The maker.</b> Chris Mitchelmore, on <a href="https://github.com/crmitchelmore">GitHub</a> and at <a href="https://mitchelmore.uk/">mitchelmore.uk</a>.</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="wrap">
+  <span>Focus Sentinel · MIT licence · macOS 26 or later</span>
+  <span><a href="/">Home</a> · <a href="https://github.com/crmitchelmore/focus-sentinel">Source on GitHub</a> · <a href="https://github.com/crmitchelmore/focus-sentinel/issues/12">Release tracker</a> · <a href="https://github.com/crmitchelmore/focus-sentinel/security/advisories/new">Report a security issue</a></span>
+  <span class="elsewhere">Made by Chris Mitchelmore · <a href="https://github.com/crmitchelmore">GitHub</a> · <a href="https://mitchelmore.uk/">Blog</a></span>
+</footer>
+
+<script>
+(function () {
+  var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // Reveal sections as they scroll into view. Without IntersectionObserver, show everything.
+  var items = document.querySelectorAll(".reveal");
+  if (reduce || !("IntersectionObserver" in window)) {
+    items.forEach(function (el) { el.classList.add("in"); });
+  } else {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
+      });
+    }, { rootMargin: "0px 0px -8% 0px", threshold: 0.1 });
+    items.forEach(function (el) { io.observe(el); });
+  }
+
+  // Copy buttons appear only where the clipboard is available.
+  if (navigator.clipboard && window.isSecureContext) {
+    document.documentElement.classList.add("can-copy");
+    document.querySelectorAll(".copy").forEach(function (btn) {
+      var label = btn.querySelector("span");
+      btn.addEventListener("click", function () {
+        var source = document.getElementById(btn.getAttribute("data-copy"));
+        var text = Array.prototype.map.call(source.querySelectorAll("p"), function (p) { return p.textContent.trim(); }).join("\n\n");
+        navigator.clipboard.writeText(text).then(function () {
+          btn.classList.add("done"); label.textContent = "Copied";
+          setTimeout(function () { btn.classList.remove("done"); label.textContent = "Copy"; }, 1800);
+        }, function () { label.textContent = "Select and copy"; });
+      });
+    });
+  }
+})();
+</script>
+</body>
+</html>
