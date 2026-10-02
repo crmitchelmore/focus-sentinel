@@ -31,27 +31,25 @@ public enum DroppedContext: Transferable, Sendable, Equatable, Hashable {
 public enum ContextDecoder {
     /// The rules, in order:
     ///
-    /// * a **file** URL becomes a file item, bookmarked at the moment it was dropped;
-    /// * any other URL becomes a **domain** item, normalised to `scheme://host[:port]` —
-    ///   there is no route from a dropped link to a stored path, query or credential;
-    /// * **text** that parses as a URL with a scheme and a host takes the domain path too,
-    ///   because a pasted link is a link whatever pasteboard flavour carried it;
-    /// * anything else becomes a **keyword**, trimmed and lowercased;
-    /// * and anything that survives none of that — an empty string, a URL with no host —
-    ///   yields `nil` rather than an empty chip.
+    /// * a **file** URL becomes a file item, bookmarked at the moment it was dropped — unless
+    ///   it is an **application**, which becomes an app item keyed by its bundle identifier,
+    ///   because that is the only thing the engine can match an application by (focus-6ji4);
+    /// * any other URL is a **site**, normalised to `scheme://host[:port]` — and while the
+    ///   shipping app reads no site it yields `nil`, not a chip that does nothing;
+    /// * **text** shaped like a location — a link, a path, a `file:` or `mailto:` URL — takes
+    ///   the site path too, or yields `nil`; it is never stored verbatim as a keyword, so a
+    ///   paste cannot put a file path in the store that a dropped `.url` could not;
+    /// * any other text becomes a **keyword**, trimmed and lowercased;
+    /// * and anything that survives none of that yields `nil` rather than an empty chip.
+    ///
+    /// The rules themselves live on `ContextItemDraft` in `FocusCore`, where the file picker
+    /// shares them and a test can hold them still without this package.
     public static func decode(_ dropped: DroppedContext) -> ContextItemDraft? {
         switch dropped {
         case .url(let url):
-            return url.isFileURL ? ContextItemDraft.file(url: url) : ContextItemDraft.domain(from: url)
+            return url.isFileURL ? ContextItemDraft.attachment(url: url) : ContextItemDraft.site(from: url)
         case .text(let text):
-            let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmed.isEmpty else { return nil }
-            if let url = URL(string: trimmed),
-               url.scheme != nil,
-               let draft = ContextItemDraft.domain(from: url) {
-                return draft
-            }
-            return ContextItemDraft.keyword(trimmed)
+            return ContextItemDraft.pasted(text)
         }
     }
 

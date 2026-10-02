@@ -95,6 +95,14 @@ public struct TaskRulesView: View {
                 ShellText(.priorityRulesScopeRetired, role: .caption)
                     .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
                     .lineLimit(1)
+            } else if !rule.scope.isObserved {
+                // **A site rule is not retired, but this version cannot see a site**
+                // (focus-6ji4). Kept, deletable, and drawn inert for the same reason, in
+                // different words: it is waiting on an origin producer, not given up.
+                ShellText(.priorityRulesScopeUnobserved, role: .caption)
+                    .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+                    .lineLimit(1)
+                    .shellHelp(.priorityRulesScopeUnobservedHelp)
             }
 
             Spacer(minLength: spacing)
@@ -125,11 +133,11 @@ public struct TaskRulesView: View {
                         ? DesignTokens.Palette.primaryText
                         : DesignTokens.supportingTextColor(for: traits)
                 )
-                .disabled(change == nil || rule.scope.isRetired)
+                .disabled(change == nil || Self.isInert(rule.scope))
                 // A `.plain` button draws no disabled state of its own, and a control that looks
                 // live and does nothing is the silent nothing this pane exists to avoid — so a
                 // retired row's controls are dimmed as well as withdrawn.
-                .opacity(rule.scope.isRetired ? 0.35 : 1)
+                .opacity(Self.isInert(rule.scope) ? 0.35 : 1)
                 .accessibilityLabel(Text(ShellStrings.resource(Self.verdictKey(verdict))))
                 // The checkmark symbol supplies a selected trait even when its rule is not
                 // related. Override that inferred state before announcing the actual verdict.
@@ -163,21 +171,9 @@ public struct TaskRulesView: View {
 
     private var composer: some View {
         VStack(alignment: .leading, spacing: spacing / 2) {
-            HStack(spacing: spacing / 2) {
-                ForEach(Self.authorableScopes) { candidate in
-                    Button {
-                        scope = candidate
-                    } label: {
-                        ShellText(Self.scopeKey(candidate), role: .caption)
-                    }
-                    .buttonStyle(.bordered)
-                    .tint(scope == candidate ? DesignTokens.Palette.accent(for: traits) : nil)
-                    // Tooltips from the catalog (focus-8ski); the verdict glyphs above carry
-                    // `FocusCore`'s disposition names and are left as they are.
-                    .shellHelp(.priorityRulesScopeHelp)
-                }
-
-                Spacer(minLength: 0)
+            // One scope is not a choice, so a lone scope draws no picker (focus-6ji4).
+            if Self.authorableScopes.count > 1 {
+                scopePicker
             }
 
             HStack(spacing: spacing) {
@@ -219,6 +215,25 @@ public struct TaskRulesView: View {
         }
     }
 
+    private var scopePicker: some View {
+        HStack(spacing: spacing / 2) {
+            ForEach(Self.authorableScopes) { candidate in
+                Button {
+                    scope = candidate
+                } label: {
+                    ShellText(Self.scopeKey(candidate), role: .caption)
+                }
+                .buttonStyle(.bordered)
+                .tint(scope == candidate ? DesignTokens.Palette.accent(for: traits) : nil)
+                // Tooltips from the catalog (focus-8ski); the verdict glyphs above carry
+                // `FocusCore`'s disposition names and are left as they are.
+                .shellHelp(.priorityRulesScopeHelp)
+            }
+
+            Spacer(minLength: 0)
+        }
+    }
+
     private var trimmedSubject: String {
         subject.trimmingCharacters(in: .whitespacesAndNewlines)
     }
@@ -251,8 +266,18 @@ public struct TaskRulesView: View {
     /// could never match, because nothing in the shipping app produces a title token (PD-1) — an
     /// authoring affordance for a rule nothing reads is a lie in a button. Derived from the
     /// vocabulary rather than written out, so a scope that retires leaves this list the same day.
+    ///
+    /// `.domain` is withdrawn on the same argument while the shipping app reads no site
+    /// (focus-6ji4, `ShippingObservation`): a site rule is stored and can never match. It comes
+    /// back by itself the day `isObserved` says it can.
     static let authorableScopes: [PriorityRuleScope] = PriorityRuleScope.allCases.filter {
-        $0 != .session && !$0.isRetired
+        $0 != .session && !$0.isRetired && $0.isObserved
+    }
+
+    /// Whether a stored rule of this scope is drawn read-only: retired, or not observable in
+    /// this version. Its verdict controls are withdrawn; its remove control stays.
+    static func isInert(_ scope: PriorityRuleScope) -> Bool {
+        scope.isRetired || !scope.isObserved
     }
 
     /// The dispositions that are a stored row, in `AppRuleDisposition.allCases` order.

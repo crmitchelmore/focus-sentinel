@@ -136,6 +136,24 @@ Driver notes from the work itself, newest first. `CLAUDE.md` points here; keep t
 mirrored for anything substantive.
 
 
+### 2026-10-02 — dropped apps, paths pasted as keywords, and site entry hidden (focus-6ji4)
+
+- **What the app can observe is one named fact.** `ShippingObservation.readsBrowserSite`
+  (`FocusCore/Context/ShippingObservation.swift`) is `false` because `RelevanceHost` judges
+  with `ClassificationInput(bundleIdentifier:)` alone. `PriorityRuleScope.isObserved` and
+  `ContextItemKind.isObserved` read it; the rules pane's `authorableScopes`, its inert rows, the
+  site chip's caption and `ContextItemDraft.site(from:)` read those. This is *not* a retirement:
+  the engine still reads stored `.domain` rows, and the day an origin producer ships is one line.
+  Chris chose hiding over a footnote (2026-10-02).
+- **Drop, paste and ⌘O decode in `FocusCore`, on `ContextItemDraft`.** `attachment(url:)` turns
+  an `.app` into an app item by `Bundle(url:)?.bundleIdentifier`; `pasted(_:)` refuses any text
+  shaped like a location (path, `file:`/hierarchical URL, `mailto:`-family, scheme-less
+  host/path) as a keyword. `FocusCore` may not import `UniformTypeIdentifiers`
+  (`check-boundaries.sh`), so the app test is `URLResourceValues.isApplication`.
+- **`swift test --package-path Packages/FocusUI --filter <PureSuite>` runs no snapshot case**
+  ("Executed 0 tests" on the XCTest side). `StringCatalogTests` is lane-gated and *skips* under
+  `swift test`; its duplicate-value pin was checked by reading the catalog instead.
+
 ### 2026-09-12 — tooltips on everything, glyph verbs, one dialog margin, and the Resume that could never clear (focus-mmty, focus-8ski, focus-udn9)
 
 - **A restoration pause is the person's to clear, and the code said otherwise for months.**
