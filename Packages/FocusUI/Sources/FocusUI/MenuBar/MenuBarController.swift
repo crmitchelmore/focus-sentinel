@@ -252,6 +252,9 @@ public final class MenuBarController {
     /// Take it out again. A quit is not a state change the person made.
     public func remove() {
         guard let statusItem else { return }
+        // A popover left showing would stay anchored to a button that no longer exists, and
+        // nothing could reach it to close it: the click that toggles it is on that button.
+        if popover.isShown { popover.performClose(nil) }
         NSStatusBar.system.removeStatusItem(statusItem)
         self.statusItem = nil
         drawnTitle = nil

@@ -152,6 +152,10 @@ final class SessionHost: SessionActing {
             )
             launchContext(for: task)
         }
+        // A session started from the menu bar or an App Intent leaves whatever was in front where
+        // it was — a password manager, even — and no activation arrives to say so. The graph
+        // already knows what is in front; this asks it to apply that to the session just opened.
+        sensing?.reconcileSensitivePause()
     }
 
     func pauseSession() {
@@ -204,14 +208,17 @@ final class SessionHost: SessionActing {
     /// identifier and **nothing else** — never a window title, never a document.
     func interruptSession(reason: InterruptionReason = .user, note: String? = nil) {
         perform {
-            // The frontmost application's bundle identifier, read straight off `NSWorkspace` —
-            // no window read, no Accessibility call, no grant (probe P-79). A bundle identifier
-            // and nothing else: the sheet resolves it to a name and an icon for the eye, and
-            // the store keeps only the identifier.
+            // The last application the sensitivity gate cleared that was not this one — the
+            // same value the sheet showed the person (`lastActiveBundleID` on the composition
+            // root). It used to be read straight off `NSWorkspace` here, which disagreed with
+            // the sheet twice over: pressing *Stop* in the cockpit made this app the frontmost
+            // one, so the store kept Focus's own identifier, and a Stop from the menu bar over a
+            // password manager kept the identifier the gate exists to decline to record. A
+            // bundle identifier and nothing else: the store keeps only the identifier.
             let transition = try store.interrupt(
                 reason: reason,
                 note: note,
-                lastActiveBundleID: WorkspaceActivityObserver.frontmostPayload()?.bundleIdentifier,
+                lastActiveBundleID: sensing?.lastForeignBundleIdentifier,
                 undo: undo
             )
             lastRejection = transition.rejection
