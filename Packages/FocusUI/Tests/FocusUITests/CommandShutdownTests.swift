@@ -15,6 +15,7 @@ struct CommandShutdownTests {
         #expect(calls == 1)
         centre.observe { _ in calls += 1 }
         centre.registerPrivacyPerformer { _ in calls += 1 }
+        centre.registerSoftwareUpdatePerformer(canCheck: true) { _ in calls += 1 }
         centre.registerPriorityWriter { _ in calls += 1; return true }
         centre.shutDown()
         calls = 0
@@ -24,6 +25,8 @@ struct CommandShutdownTests {
         centre.registerCockpitOpener { calls += 1 }
         centre.registerWindowOpener { _ in calls += 1 }
         centre.registerPrivacyPerformer { _ in calls += 1 }
+        centre.registerSoftwareUpdatePerformer(canCheck: true) { _ in calls += 1 }
+        centre.updateSoftwareUpdateAvailability(true)
         centre.registerPriorityWriter { _ in calls += 1; return true }
         centre.registerIntentSessionPerformer { _ in calls += 1; return true }
 
@@ -31,6 +34,8 @@ struct CommandShutdownTests {
         #expect(centre.send(.pauseSession) == .undeliverable)
         #expect(!centre.commitPriority("Late commitment"))
         #expect(!centre.perform(.exportData))
+        #expect(!centre.canCheckForUpdates)
+        #expect(!centre.checkForUpdates())
         #expect(!centre.performIntentSession(.startSession))
         #expect(!centre.requestCockpit())
         #expect(!centre.open(.history))

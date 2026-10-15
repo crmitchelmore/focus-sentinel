@@ -1,6 +1,28 @@
 import AppKit
 import FocusCore
 import Sparkle
+import os
+
+@MainActor
+protocol SparkleControlling: AnyObject {
+    var canCheckForUpdates: Bool { get }
+    var lastCheckDate: Date? { get }
+    var automaticallyChecksForUpdates: Bool { get set }
+    func start() throws
+    func checkForUpdates()
+}
+
+extension SPUStandardUpdaterController: SparkleControlling {
+    var canCheckForUpdates: Bool { updater.canCheckForUpdates }
+    var lastCheckDate: Date? { updater.lastUpdateCheckDate }
+    var automaticallyChecksForUpdates: Bool {
+        get { updater.automaticallyChecksForUpdates }
+        set { updater.automaticallyChecksForUpdates = newValue }
+    }
+
+    func start() throws { try updater.start() }
+    func checkForUpdates() { checkForUpdates(nil) }
+}
 
 /// **The Sparkle-backed updater, inert until asked** (focus-h8jf).
 ///
@@ -10,8 +32,8 @@ import Sparkle
 /// is called Sparkle schedules nothing, reads no feed and opens no socket; it is a framework in
 /// memory. The two verbs on `SoftwareUpdating` are the only two callers of `startUpdater()` in
 /// this repository, and both are reached from a control the person operated: the General pane's
-/// switch and its *Check for updates now* button. That is the shape the owner's ruling on grants
-/// gave (focus-exdi.4), applied to the network: **the app asks for nothing unless the person
+/// switch and the manual check in Settings or the File menu. That is the shape the owner's
+/// ruling on grants gave (focus-exdi.4), applied to the network: **the app asks for nothing unless the person
 /// switched that ask on.**
 ///
 /// ## The feed is the train's
@@ -30,15 +52,43 @@ import Sparkle
 @MainActor
 public final class SparkleUpdater: NSObject, SoftwareUpdating {
     private let train: ReleaseTrain
-    private var controller: SPUStandardUpdaterController?
+    private let makeController: (any SPUUpdaterDelegate) -> any SparkleControlling
+    private let reportStartupError: (Error) -> Void
+    private let logger = Logger(subsystem: "com.chrismitchelmore.FocusSentinel", category: "updates")
+    private var controller: (any SparkleControlling)?
+    private var automaticChecks = false
     public private(set) var isStarted = false
+    public private(set) var lastFailure: SoftwareUpdateFailure?
+    public var onStatusChange: (@MainActor () -> Void)?
 
     /// - Parameters:
     ///   - train: the feed this build updates from.
     ///   - checksAutomatically: the stored choice. `true` starts the updater at once, because
     ///     that is what the person asked for on an earlier launch; `false` builds it and stops.
-    public init(train: ReleaseTrain, checksAutomatically: Bool) {
+    public convenience init(train: ReleaseTrain, checksAutomatically: Bool) {
+        self.init(
+            train: train,
+            checksAutomatically: checksAutomatically,
+            makeController: {
+                SPUStandardUpdaterController(
+                    startingUpdater: false, updaterDelegate: $0, userDriverDelegate: nil
+                )
+            },
+            reportStartupError: { error in
+                Task { @MainActor in NSAlert(error: error).runModal() }
+            }
+        )
+    }
+
+    init(
+        train: ReleaseTrain,
+        checksAutomatically: Bool,
+        makeController: @escaping (any SPUUpdaterDelegate) -> any SparkleControlling,
+        reportStartupError: @escaping (Error) -> Void
+    ) {
         self.train = train
+        self.makeController = makeController
+        self.reportStartupError = reportStartupError
         super.init()
         if checksAutomatically {
             setAutomaticChecks(true)
@@ -47,44 +97,101 @@ public final class SparkleUpdater: NSObject, SoftwareUpdating {
 
     public var canCheckForUpdates: Bool {
         // Before the first start a manual check is possible: `checkForUpdates()` starts it.
-        controller?.updater.canCheckForUpdates ?? true
+        !isStarted || controller?.canCheckForUpdates == true
     }
 
     public var lastCheckDate: Date? {
-        controller?.updater.lastUpdateCheckDate
+        controller?.lastCheckDate
     }
 
     public func setAutomaticChecks(_ enabled: Bool) {
+        automaticChecks = enabled
         if enabled {
-            start()
-            controller?.updater.automaticallyChecksForUpdates = true
+            _ = start()
         } else if let controller {
             // Never started: there is nothing to switch off, and starting it in order to say so
             // would be the one thing "off" must not do.
-            controller.updater.automaticallyChecksForUpdates = false
+            controller.automaticallyChecksForUpdates = false
         }
+        onStatusChange?()
     }
 
     public func checkForUpdates() {
-        start()
-        controller?.checkForUpdates(nil)
+        guard canCheckForUpdates, start() else { return }
+        lastFailure = nil
+        controller?.checkForUpdates()
+        onStatusChange?()
     }
 
     /// Build and start the controller, once.
-    private func start() {
-        guard !isStarted else { return }
-        let controller = SPUStandardUpdaterController(
-            startingUpdater: false,
-            updaterDelegate: self,
-            userDriverDelegate: nil
-        )
+    private func start() -> Bool {
+        if isStarted {
+            controller?.automaticallyChecksForUpdates = automaticChecks
+            return true
+        }
+        let controller = controller ?? makeController(self)
         self.controller = controller
-        controller.startUpdater()
-        isStarted = true
+        // Apply the store's choice BEFORE starting: Sparkle may remember a different choice.
+        controller.automaticallyChecksForUpdates = automaticChecks
+        do {
+            try controller.start()
+            isStarted = true
+            lastFailure = nil
+            return true
+        } catch {
+            lastFailure = .configuration
+            logger.error("the updater could not start: \(error, privacy: .public)")
+            onStatusChange?()
+            reportStartupError(error)
+            return false
+        }
+    }
+
+    func finishUpdateCheck(error: Error?) {
+        lastFailure = error.flatMap(Self.failure)
+        if let error, lastFailure != nil {
+            logger.error("the update check failed: \(error, privacy: .public)")
+        }
+        onStatusChange?()
+    }
+
+    static func failure(for error: Error) -> SoftwareUpdateFailure? {
+        let error = error as NSError
+        if error.domain == SUSparkleErrorDomain {
+            switch error.code {
+            case Int(SUError.noUpdateError.rawValue), Int(SUError.installationCanceledError.rawValue),
+                 Int(SUError.installationAuthorizeLaterError.rawValue):
+                return nil
+            default:
+                break
+            }
+        }
+        if let underlying = error.userInfo[NSUnderlyingErrorKey] as? NSError {
+            return failure(for: underlying)
+        }
+        if error.domain == NSURLErrorDomain {
+            return .network
+        }
+        if error.domain == SUSparkleErrorDomain,
+           [SUError.downloadError, .appcastError, .appcastParseError].contains(where: {
+               Int($0.rawValue) == error.code
+           }) {
+            return .feedUnavailable
+        }
+        return .other
     }
 }
 
 extension SparkleUpdater: SPUUpdaterDelegate {
+    public func updater(
+        _ updater: SPUUpdater,
+        didFinishUpdateCycleFor updateCheck: SPUUpdateCheck,
+        error: Error?
+    ) {
+        // Sparkle finishes resetting availability after this delegate returns.
+        Task { @MainActor [weak self] in self?.finishUpdateCheck(error: error) }
+    }
+
     /// The train's feed, and never a plist key: an Alpha build asks the Alpha feed.
     public nonisolated func feedURLString(for updater: SPUUpdater) -> String? {
         // `train` is a `let` of a `Sendable` value, which Swift lets a nonisolated context read;

@@ -2816,7 +2816,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "When this is on, Focus asks its update feed once a day whether a newer build exists. The request carries the app's name and version and nothing about you. When it is off, Focus never connects to the internet."
+            "value" : "When this is on, Focus asks its update feed once a day whether a newer build exists. The request carries the app's name and version and nothing about you. When it is off, Focus connects only when you choose Check for updates now."
           }
         }
       }
@@ -2829,6 +2829,54 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "This is an Alpha build. It updates from the Alpha feed, ahead of Stable."
+          }
+        }
+      }
+    },
+    "settings.general.updates.configurationError" : {
+      "comment" : "The updater failed to start; retry remains available.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The updater could not start. Try again, or contact the developer if this continues."
+          }
+        }
+      }
+    },
+    "settings.general.updates.feedUnavailable" : {
+      "comment" : "The update feed could not be downloaded or parsed. A private or unpublished GitHub release feed is a known cause.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The update feed is unavailable. It may be private or not yet published. The developer must publish a publicly readable feed before updates can be checked."
+          }
+        }
+      }
+    },
+    "settings.general.updates.networkError" : {
+      "comment" : "A connection error while checking for updates.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not connect to the update service. Check your internet connection and try again."
+          }
+        }
+      }
+    },
+    "settings.general.updates.error" : {
+      "comment" : "An update failure not explained by connection or feed configuration.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The update could not finish. Try again, or contact the developer if this continues."
           }
         }
       }

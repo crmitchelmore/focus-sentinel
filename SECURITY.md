@@ -2,8 +2,9 @@
 
 Focus Sentinel is a local-only macOS app. It keeps its data in
 `~/Library/Application Support/com.chrismitchelmore.FocusSentinel` and connects to the
-internet only to check for an update, only after the person has switched that on in
-Settings, General. The build gate proves both claims on the shipped binary; see the README
+internet only for software updates, after the person enables automatic checks in
+Settings, General or explicitly checks from Settings or the File menu. A manual check does
+not enable automatic checks. The build gate proves the default-off updater boundary; see the README
 sections "What it says it does not do" and "Release trains".
 
 ## Reporting a vulnerability
@@ -17,7 +18,9 @@ commit are on the About panel and in Settings, General.
 
 - No signing material. The Sparkle EdDSA private key and the Developer ID identity live in
   the login keychain of the Mac that cuts releases. Only the public key is committed.
-- No accounts, no analytics, no telemetry. The workflows use the repository's own
-  `GITHUB_TOKEN` and nothing else.
+- No app accounts, no analytics, no telemetry. Release workflows use the repository's
+  `GITHUB_TOKEN` and the runner's signing keychain, or optional encrypted Apple signing
+  secrets imported temporarily for the job. The marketing-site workflow uses encrypted
+  Cloudflare deployment secrets. None of these credentials are bundled in the app.
 - The self-hosted runner accepts jobs only from the repository owner's actors
   (`.github/runner/runner-policy.py`), and no workflow runs on pull requests from forks.

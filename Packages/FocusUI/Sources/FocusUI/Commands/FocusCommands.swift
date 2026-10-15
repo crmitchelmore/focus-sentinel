@@ -78,6 +78,14 @@ public struct ShellCommands: Commands {
             // again, and before this nothing in the application could ask for it by id.
             let _ = commandCenter.registerWindowOpener { openWindow(id: $0) }
             actionButtons(in: .file)
+            Divider()
+            // Like About, this unbound application command is not a keyboard-reference row.
+            Button {
+                commandCenter.checkForUpdates()
+            } label: {
+                Text(ShellStrings.resource(.settingsUpdatesCheckNow))
+            }
+            .disabled(!commandCenter.canCheckForUpdates)
         }
 
         // The View menu, materialised the same way the File menu is. `after: .sidebar` puts the

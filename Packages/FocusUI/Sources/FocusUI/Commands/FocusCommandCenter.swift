@@ -1,5 +1,12 @@
 import FocusCore
+import Observation
 import SwiftUI
+
+@MainActor
+@Observable
+private final class UpdateCommandState {
+    var canCheck = false
+}
 
 /// Something the menu bar asks the cockpit to do.
 ///
@@ -227,6 +234,8 @@ public final class FocusCommandCenter {
         observers.removeAll()
         worldProvider = nil
         privacyPerformer = nil
+        softwareUpdatePerformer = nil
+        updateCommandState.canCheck = false
         priorityWriter = nil
         intentSessionPerformer = nil
         cockpitOpener = nil
@@ -363,6 +372,32 @@ public final class FocusCommandCenter {
     }
 
     private var privacyPerformer: ((PrivacySettingsAction) -> Void)?
+
+    private var softwareUpdatePerformer: ((SoftwareUpdateSettingsAction) -> Void)?
+    private let updateCommandState = UpdateCommandState()
+
+    public var canCheckForUpdates: Bool { updateCommandState.canCheck }
+
+    public func registerSoftwareUpdatePerformer(
+        canCheck: Bool,
+        perform: @escaping (SoftwareUpdateSettingsAction) -> Void
+    ) {
+        guard !isShutDown else { return }
+        softwareUpdatePerformer = perform
+        updateCommandState.canCheck = canCheck
+    }
+
+    public func updateSoftwareUpdateAvailability(_ canCheck: Bool) {
+        guard !isShutDown else { return }
+        updateCommandState.canCheck = softwareUpdatePerformer != nil && canCheck
+    }
+
+    @discardableResult
+    public func checkForUpdates() -> Bool {
+        guard canCheckForUpdates, let softwareUpdatePerformer else { return false }
+        softwareUpdatePerformer(.checkNow)
+        return true
+    }
 
     /// Take the window route away again, for a test that installed one.
     public func unregisterWindowOpener() {

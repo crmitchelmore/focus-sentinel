@@ -156,7 +156,8 @@ public struct GeneralSettingsView: View {
     /// **Software updates, opt-in** (focus-h8jf).
     ///
     /// The switch is the only route by which the updater is ever started on a schedule, and the
-    /// button is the only other route by which it is started at all. Off is the shipped state,
+    /// manual check (here or in File) is the only other route by which it is started at all.
+    /// Off is the shipped state,
     /// and the footnote says what on costs: one request a day carrying the app's name and
     /// version. The Privacy pane's two disclosure sentences point here.
     @ViewBuilder
@@ -187,6 +188,12 @@ public struct GeneralSettingsView: View {
             when: !softwareUpdates.canCheckNow
         )
 
+        if let failure = softwareUpdates.failure {
+            ShellText(Self.updateFailureKey(failure), role: .footnote)
+                .foregroundStyle(DesignTokens.Palette.role(.kiln, for: traits))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+
         ShellText(.settingsUpdatesNote, role: .footnote)
             .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
             .lineLimit(nil)
@@ -197,6 +204,15 @@ public struct GeneralSettingsView: View {
                 .foregroundStyle(DesignTokens.Palette.role(.kiln, for: traits))
                 .lineLimit(nil)
                 .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    nonisolated static func updateFailureKey(_ failure: SoftwareUpdateFailure) -> ShellStringKey {
+        switch failure {
+        case .configuration: .settingsUpdatesConfigurationError
+        case .feedUnavailable: .settingsUpdatesFeedUnavailable
+        case .network: .settingsUpdatesNetworkError
+        case .other: .settingsUpdatesError
         }
     }
 

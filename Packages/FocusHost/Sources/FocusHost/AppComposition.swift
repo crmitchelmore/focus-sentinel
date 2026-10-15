@@ -6,8 +6,15 @@ import FocusSensing
 import FocusUI
 import FocusUpdates
 import Foundation
+import Observation
 import SwiftData
 import os
+
+@MainActor
+@Observable
+private final class SoftwareUpdateChanges {
+    var revision = 0
+}
 
 /// The composition root.
 ///
@@ -278,6 +285,7 @@ public final class AppComposition {
     /// updater opens a socket and no test may. Read by the self-check, which publishes whether it
     /// was ever started on a default store.
     public let softwareUpdater: any SoftwareUpdating
+    private let softwareUpdateChanges = SoftwareUpdateChanges()
 
     /// - Parameter storeKind: where the data lives. `applicationSupport` is the application's
     ///   own store and is the default; the unit lane passes `inMemory`, because a test that
@@ -638,6 +646,7 @@ public final class AppComposition {
     /// host re-projects it, and the projection is pushed into the value the cockpit draws —
     /// which is assigned only when it actually differs, so nothing here can oscillate.
     func joinHosts() {
+        registerSoftwareUpdatePerformer(on: .shared)
         // **The offer's first reading, at launch** (D-12, focus-odz.4). One of the three moments
         // it can move; the other two are a session's state changing and the offer being answered.
         refreshLaunchAtLoginOffer()
@@ -1268,6 +1277,7 @@ public final class AppComposition {
     /// Quitting is not a pause the person took: a `sensingPaused` row at termination would be a
     /// fact about the app closing rather than about their day.
     public func stop() {
+        softwareUpdater.onStatusChange = nil
         sensingHost.stop()
         // The strip goes with the graph that fed it. A borderless window left on screen after the
         // app stopped watching is the picture of a claim the app is no longer making.
@@ -1559,21 +1569,38 @@ public final class AppComposition {
             }
             softwareUpdater.setAutomaticChecks(enabled)
         case .checkNow:
+            guard softwareUpdater.canCheckForUpdates else { return }
             softwareUpdater.checkForUpdates()
         }
+        softwareUpdateChanges.revision += 1
         refreshCockpit()
+    }
+
+    func registerSoftwareUpdatePerformer(on center: FocusCommandCenter) {
+        center.registerSoftwareUpdatePerformer(canCheck: softwareUpdateStatus.canCheckNow) { [weak self] action in
+            self?.perform(action)
+        }
+        softwareUpdater.onStatusChange = { [weak self, weak center] in
+            guard let self else { return }
+            softwareUpdateChanges.revision += 1
+            center?.updateSoftwareUpdateAvailability(softwareUpdateStatus.canCheckNow)
+            refreshCockpit()
+        }
     }
 
     /// **What the General pane draws about software updates**, read from the store and the
     /// updater every time it is asked (focus-h8jf).
     public var softwareUpdateStatus: SoftwareUpdateStatus {
-        SoftwareUpdateStatus(
+        // The updater is not observable; its callback invalidates this read in Settings.
+        _ = softwareUpdateChanges.revision
+        return SoftwareUpdateStatus(
             train: .current,
             checksAutomatically: hasDeletedEverything
                 ? false
                 : FocusStore.softwareUpdateChecksEnabled(in: modelContainer.mainContext),
-            canCheckNow: softwareUpdater.canCheckForUpdates,
-            lastCheckAt: softwareUpdater.lastCheckDate
+            canCheckNow: !hasDeletedEverything && softwareUpdater.canCheckForUpdates,
+            lastCheckAt: softwareUpdater.lastCheckDate,
+            failure: softwareUpdater.lastFailure
         )
     }
 

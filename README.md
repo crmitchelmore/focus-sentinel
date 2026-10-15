@@ -1459,10 +1459,14 @@ preview, a plain Xcode.app build — is Stable, which is what every build before
 `xcodebuild … -configuration Alpha` is the whole of building the other train.
 
 **The updater is opt-in, per install.** `SparkleUpdater` (`Packages/FocusUpdates`) builds
-Sparkle's standard controller with `startingUpdater: false` and starts it from exactly two verbs,
-both reached from a control in Settings ▸ General: the *Check for updates automatically* switch,
+Sparkle's standard controller with `startingUpdater: false` and starts it from exactly two verbs:
+the *Check for updates automatically* switch in Settings ▸ General,
 which stores the choice in `SoftwareUpdatePreferenceRecord` (schema v11) and is read back at the
-next launch, and *Check for updates now*. Off is the shipped state, and no row is off. The feed
+next launch, and *Check for updates now* in Settings or the File menu. The manual check does not
+enable automatic checks, including when Sparkle remembers an older opt-in. Off is the shipped
+state, and no stored preference means off. A failed startup remains retryable rather than marking the updater as
+started. Settings reports configuration, connection and unavailable-feed failures separately.
+The feed
 is `ReleaseTrain.current.feedURL`, answered by the delegate, so there is no `SUFeedURL` in the
 plist and an Alpha install is never offered a Stable build or the reverse. Every enclosure is
 verified against `SUPublicEDKey`; the private half of that key lives in the login keychain of the
@@ -1495,8 +1499,15 @@ identity plus a `notarytool` keychain profile named `focus-notary`, both named i
 workflow uses (`APPLE_DEVELOPER_ID_APPLICATION` as a base64 `.p12`,
 `APPLE_DEVELOPER_ID_APPLICATION_PASSWORD`, `APP_STORE_CONNECT_API_KEY` as a base64 `.p8`,
 `APP_STORE_CONNECT_KEY_ID`, `APP_STORE_CONNECT_ISSUER_ID`), imported into a temporary keychain
-for the job and deleted afterwards. The feed URLs above are GitHub release assets, which are
-fetchable without credentials because the repository is public.
+for the job and deleted afterwards.
+
+**Release hosting is public.** The feed and every enclosure must be readable over HTTPS
+without GitHub credentials. The repository and its signed release assets are publicly hosted at
+`crmitchelmore/focus-sentinel`; the Stable download is on
+[the latest release](https://github.com/crmitchelmore/focus-sentinel/releases/latest).
+A train's feed becomes available only after its first signed release is published. Signing in
+to GitHub in a browser does not authenticate Sparkle. Never embed a GitHub token in the app,
+and do not treat an unavailable feed as “you’re up to date”.
 
 ## Privacy posture
 

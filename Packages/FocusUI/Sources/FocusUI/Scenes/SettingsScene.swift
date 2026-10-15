@@ -259,6 +259,7 @@ extension ShellSettingsConnection: ShellDrawnConnection {
             "softwareUpdates.checksAutomatically": .drawn([.softwareUpdates]),
             "softwareUpdates.canCheckNow": .drawn([.softwareUpdates]),
             "softwareUpdates.lastCheckAt": .drawn([.softwareUpdates]),
+            "softwareUpdates.failure": .drawn([.softwareUpdates]),
             "onSoftwareUpdateAction": .undrawn(.sink),
             "retention": .drawn([.retentionWindow]),
             "sensing": .drawn([.sensingSettings]),

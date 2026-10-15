@@ -1,5 +1,12 @@
 import Foundation
 
+public enum SoftwareUpdateFailure: String, Sendable, Equatable, Hashable {
+    case configuration
+    case feedUnavailable
+    case network
+    case other
+}
+
 /// **What the General pane draws about software updates**, as one value (focus-h8jf).
 ///
 /// Carried on the settings connection rather than read by the pane, like everything else the
@@ -18,17 +25,20 @@ public struct SoftwareUpdateStatus: Sendable, Equatable, Hashable {
     public var canCheckNow: Bool
     /// When the updater last asked the feed, or `nil` if it never has.
     public var lastCheckAt: Date?
+    public var failure: SoftwareUpdateFailure?
 
     public init(
         train: ReleaseTrain = .stable,
         checksAutomatically: Bool = false,
         canCheckNow: Bool = true,
-        lastCheckAt: Date? = nil
+        lastCheckAt: Date? = nil,
+        failure: SoftwareUpdateFailure? = nil
     ) {
         self.train = train
         self.checksAutomatically = checksAutomatically
         self.canCheckNow = canCheckNow
         self.lastCheckAt = lastCheckAt
+        self.failure = failure
     }
 
     /// The shipped state: Stable, checks off, a manual check available, never asked.
@@ -52,6 +62,8 @@ public protocol SoftwareUpdating: AnyObject {
     var canCheckForUpdates: Bool { get }
     /// When the feed was last asked, or `nil`.
     var lastCheckDate: Date? { get }
+    var lastFailure: SoftwareUpdateFailure? { get }
+    var onStatusChange: (@MainActor () -> Void)? { get set }
     /// Turn automatic checks on or off. On starts the updater if it is not started.
     func setAutomaticChecks(_ enabled: Bool)
     /// A person-initiated check. Starts the updater if it is not started.
@@ -65,6 +77,8 @@ public final class NoSoftwareUpdater: SoftwareUpdating {
     public private(set) var isStarted = false
     public var canCheckForUpdates: Bool { false }
     public var lastCheckDate: Date? { nil }
+    public var lastFailure: SoftwareUpdateFailure? { nil }
+    public var onStatusChange: (@MainActor () -> Void)?
     /// How many times either verb was called, so a test can prove the root never called one.
     public private(set) var requests = 0
 

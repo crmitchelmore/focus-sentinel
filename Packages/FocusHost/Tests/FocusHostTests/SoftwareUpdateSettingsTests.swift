@@ -1,7 +1,9 @@
 import FocusCore
 import FocusUI
 import Foundation
+import Observation
 import SwiftData
+import Synchronization
 import Testing
 
 @testable import FocusHost
@@ -15,6 +17,8 @@ final class SoftwareUpdaterDouble: SoftwareUpdating {
     private(set) var manualChecks = 0
     var canCheckForUpdates = true
     var lastCheckDate: Date?
+    var lastFailure: SoftwareUpdateFailure?
+    var onStatusChange: (@MainActor () -> Void)?
 
     func setAutomaticChecks(_ enabled: Bool) {
         automaticChecks.append(enabled)
@@ -80,6 +84,57 @@ struct SoftwareUpdateSettingsTests {
         #expect(updater.manualChecks == 1)
         #expect(updater.automaticChecks.isEmpty)
         #expect(!FocusStore.softwareUpdateChecksEnabled(in: root.modelContainer.mainContext))
+    }
+
+    @Test("the File menu reaches the same updater without opening the cockpit or enabling automatic checks")
+    func fileMenuChecksOnce() {
+        let updater = SoftwareUpdaterDouble()
+        let root = Self.root(updater: updater)
+        defer { CompositionRootWireTests.tearDown(root) }
+        let center = FocusCommandCenter()
+        root.registerSoftwareUpdatePerformer(on: center)
+
+        #expect(center.canCheckForUpdates)
+        #expect(center.checkForUpdates())
+        #expect(updater.manualChecks == 1)
+        #expect(updater.automaticChecks.isEmpty)
+        #expect(!root.softwareUpdateStatus.checksAutomatically)
+        #expect(center.cockpitRequests == 0)
+
+        updater.canCheckForUpdates = false
+        updater.onStatusChange?()
+        #expect(!center.canCheckForUpdates)
+        #expect(!center.checkForUpdates())
+        root.perform(SoftwareUpdateSettingsAction.checkNow)
+        #expect(updater.manualChecks == 1)
+
+        updater.canCheckForUpdates = true
+        updater.lastFailure = .feedUnavailable
+        updater.onStatusChange?()
+        #expect(center.canCheckForUpdates)
+        #expect(root.settingsConnection().softwareUpdates.failure == .feedUnavailable)
+        #expect(center.checkForUpdates())
+        #expect(updater.manualChecks == 2)
+    }
+
+    @Test("an asynchronous updater result invalidates the Settings connection")
+    func updaterResultsAreObservable() {
+        let updater = SoftwareUpdaterDouble()
+        let root = Self.root(updater: updater)
+        defer { CompositionRootWireTests.tearDown(root) }
+        let center = FocusCommandCenter()
+        root.registerSoftwareUpdatePerformer(on: center)
+        let changed = Mutex(false)
+        withObservationTracking {
+            _ = root.settingsConnection().softwareUpdates
+        } onChange: {
+            changed.withLock { $0 = true }
+        }
+
+        updater.lastFailure = .feedUnavailable
+        updater.onStatusChange?()
+        #expect(changed.withLock { $0 })
+        #expect(root.settingsConnection().softwareUpdates.failure == .feedUnavailable)
     }
 
     /// **The settings connection carries the status and the sink, and the sink reaches the root.**
