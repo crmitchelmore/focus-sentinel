@@ -48,6 +48,7 @@ cd "$REPO_ROOT" || exit 1
 
 TABLE="Config/tcc-families.txt"
 SITES="Config/grant-request-sites.txt"
+USE_SITES="Config/grant-use-sites.txt"
 DERIVED_DATA="${FOCUS_DERIVED_DATA:-$HOME/Library/Developer/Xcode/DerivedData/Focus-default}"
 
 if (( $# < 1 )); then
@@ -102,10 +103,11 @@ done
 print "== I-3: the ten TCC families, in the artefact and in the running application"
 print "table:        $TABLE"
 print "request sites: $SITES"
+print "use sites:     $USE_SITES"
 print "derived data: $DERIVED_DATA"
 print
 
-python3 - "$TABLE" "$SITES" "$MANIFEST" "$@" <<'PYTHON'
+python3 - "$TABLE" "$SITES" "$USE_SITES" "$MANIFEST" "$@" <<'PYTHON'
 import json
 import os
 import re
@@ -116,8 +118,8 @@ import sys
 sys.path.insert(0, os.environ["FOCUS_SCRIPTS_DIR"])
 import keyreads
 
-table_path, sites_path, manifest_path = sys.argv[1], sys.argv[2], sys.argv[3]
-report_paths = sys.argv[4:]
+table_path, sites_path, use_sites_path, manifest_path = sys.argv[1:5]
+report_paths = sys.argv[5:]
 
 # The vocabulary, carried here as well as in the file. A table that names a different set is a
 # table somebody edited rather than a family that stopped existing.
@@ -252,29 +254,59 @@ def code_only(text):
     return LINE_COMMENT.sub(" ", text)
 
 
-sites = {}
-sites_malformed = []
-with open(sites_path) as handle:
-    for number, raw in enumerate(handle, start=1):
-        line = raw.rstrip("\n")
-        if not line.strip() or line.lstrip().startswith("#"):
-            continue
-        parts = [part.strip() for part in line.split("·")]
-        if len(parts) != 2 or not all(parts):
-            sites_malformed.append((number, line))
-            continue
-        path, selectors = parts
-        sites[path] = [s.strip() for s in selectors.split(",") if s.strip()]
+def read_registry(registry_path):
+    found = {}
+    malformed = []
+    with open(registry_path) as handle:
+        for number, raw in enumerate(handle, start=1):
+            line = raw.rstrip("\n")
+            if not line.strip() or line.lstrip().startswith("#"):
+                continue
+            parts = [part.strip() for part in line.split("·")]
+            if len(parts) != 2 or not all(parts):
+                malformed.append((number, line))
+                continue
+            path, selectors = parts
+            found[path] = [s.strip() for s in selectors.split(",") if s.strip()]
+    return found, malformed
 
+
+request_sites, sites_malformed = read_registry(sites_path)
 check(not sites_malformed, "every row of the request-site registry has two non-empty columns", sites_malformed)
-check(sites, "the registry names at least one request site", sorted(sites))
-
-confined_selectors = sorted({selector for selectors in sites.values() for selector in selectors})
+check(request_sites, "the registry names at least one request site", sorted(request_sites))
+request_selectors = sorted({s for selectors in request_sites.values() for s in selectors})
 check(
-    len(confined_selectors) >= 2,
+    len(request_selectors) >= 2,
     "control: the registry confines at least two request selectors",
-    confined_selectors,
+    request_selectors,
 )
+
+# Issue #24 (owner's ruling 2026-10-15). The accessibility family's READ selectors left the
+# banned column and are confined the same way, to the one reader file the use registry names.
+use_sites, use_malformed = read_registry(use_sites_path)
+check(not use_malformed, "every row of the use-site registry has two non-empty columns", use_malformed)
+check(len(use_sites) == 1, "the use registry names exactly one reader file", sorted(use_sites))
+use_selectors = sorted({s for selectors in use_sites.values() for s in selectors})
+check(
+    {"AXUIElementCreateApplication", "AXUIElementCopyAttributeValue"} <= set(use_selectors),
+    "control: the use registry confines the two Accessibility read selectors",
+    use_selectors,
+)
+# kCGWindowName stays banned by SC-1: the title is read through Accessibility, never the list.
+check(
+    not any("kCGWindow" in s for s in use_selectors),
+    "no window-list key is confined as a use site (SC-1 still bans it)",
+    use_selectors,
+)
+check(
+    not (set(request_selectors) & set(use_selectors))
+    and not (set(request_sites) & set(use_sites)),
+    "the ask and the read live in different files and share no selector",
+    (sorted(set(request_selectors) & set(use_selectors)), sorted(set(request_sites) & set(use_sites))),
+)
+
+sites = {**request_sites, **use_sites}
+confined_selectors = sorted({selector for selectors in sites.values() for selector in selectors})
 # A selector may not be both confined and banned: that would be a family claiming two answers.
 banned_everywhere = {selector for row in rows.values() for selector in row["banned"]}
 check(
@@ -314,7 +346,7 @@ for path, selectors in sorted(sites.items()):
         )
         check(
             not elsewhere,
-            f"{selector} is asked for in one file only, and it is the one the registry names",
+            f"{selector} appears in one file only, and it is the one its registry names",
             elsewhere,
         )
 

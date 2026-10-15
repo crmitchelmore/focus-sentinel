@@ -29,6 +29,9 @@ public struct NudgeJudgement: Sendable, Equatable {
     public let snapshot: VerdictSnapshot
     /// Which engine said so.
     public let stamp: EngineStamp
+    /// The item selected inside `subject`'s application, already reduced to a label (issue #24).
+    /// `nil` unless the person switched the Accessibility reading on.
+    public let selectedItem: SelectedItem?
 
     public init(
         outcome: ClassificationOutcome,
@@ -36,7 +39,8 @@ public struct NudgeJudgement: Sendable, Equatable {
         subject: String?,
         dwelled: Duration,
         snapshot: VerdictSnapshot,
-        stamp: EngineStamp
+        stamp: EngineStamp,
+        selectedItem: SelectedItem? = nil
     ) {
         self.outcome = outcome
         self.uncertainty = uncertainty
@@ -44,6 +48,7 @@ public struct NudgeJudgement: Sendable, Equatable {
         self.dwelled = dwelled
         self.snapshot = snapshot
         self.stamp = stamp
+        self.selectedItem = selectedItem
     }
 
     public var verdict: Verdict { outcome.verdict }
@@ -488,7 +493,8 @@ public struct NudgeDecider: Sendable {
     public static func querySubject(for judgement: NudgeJudgement) -> QuerySubject? {
         QuerySubject.derive(
             judgedSubject: judgement.subject,
-            explanation: judgement.explanation
+            explanation: judgement.explanation,
+            selectedItem: judgement.selectedItem
         )
     }
 
@@ -683,6 +689,7 @@ public struct NudgeDecider: Sendable {
             budgetPermits: fatigue.isPermitted,
             interruptionInFlight: interruptionInFlight,
             judgedSubject: judgement.subject,
+            selectedItem: judgement.selectedItem,
             explanation: judgement.explanation,
             stamp: judgement.stamp
         )

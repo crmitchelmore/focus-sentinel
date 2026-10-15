@@ -37,9 +37,14 @@ struct TaskRulesViewTests {
     }
 
     @Test("a stored rule the app cannot read is drawn inert, and one it can read is not")
-    func inertRowsAreTheUnreadableOnes() {
-        #expect(TaskRulesView.isInert(.titleToken))
-        #expect(TaskRulesView.isInert(.domain) == !ShippingObservation.readsBrowserSite)
-        #expect(!TaskRulesView.isInert(.app))
+    func inertRowsAreTheUnreadableOnes() throws {
+        func rule(_ scope: PriorityRuleScope, _ subject: String) -> PriorityRuleValue {
+            PriorityRuleValue(scope: scope, subject: subject, verdict: .relevant, createdAt: .distantPast)
+        }
+        let item = try #require(SelectedItem(bundleIdentifier: "com.github.copilot", label: "Release notes"))
+        #expect(TaskRulesView.isInert(rule(.titleToken, "invoice")))
+        #expect(!TaskRulesView.isInert(rule(.titleToken, item.subject)))
+        #expect(TaskRulesView.isInert(rule(.domain, "example.com")) == !ShippingObservation.readsBrowserSite)
+        #expect(!TaskRulesView.isInert(rule(.app, "com.apple.dt.Xcode")))
     }
 }

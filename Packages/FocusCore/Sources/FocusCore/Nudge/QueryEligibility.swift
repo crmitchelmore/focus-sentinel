@@ -209,6 +209,8 @@ public enum QueryEligibility: Sendable, Equatable, Hashable {
     ///   - interruptionInFlight: whether a mandate already owns the single interruption slot.
     ///   - judgedSubject: the bundle identifier or normalised origin the classification was
     ///     about. `nil` when the activation carried none, which is unaskable.
+    ///   - selectedItem: the item selected inside that application, when the person switched
+    ///     the Accessibility reading on (issue #24). Narrows the subject; never supplies one.
     ///   - explanation: the judgement's own reasoning, carried onto the warrant.
     ///   - stamp: which engine said so.
     public static func decide(
@@ -225,6 +227,7 @@ public enum QueryEligibility: Sendable, Equatable, Hashable {
         budgetPermits: Bool,
         interruptionInFlight: Bool,
         judgedSubject: String?,
+        selectedItem: SelectedItem? = nil,
         explanation: Explanation,
         stamp: EngineStamp
     ) -> QueryEligibility {
@@ -259,7 +262,8 @@ public enum QueryEligibility: Sendable, Equatable, Hashable {
         guard !drift.isMixed else { return .withheld(.noSingleSubject) }
         guard let subject = QuerySubject.derive(
             judgedSubject: judgedSubject,
-            explanation: explanation
+            explanation: explanation,
+            selectedItem: selectedItem
         ) else { return .withheld(.noSingleSubject) }
         guard dwellSatisfied else { return .withheld(.withinDwellGrace) }
 

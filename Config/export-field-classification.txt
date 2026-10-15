@@ -76,7 +76,7 @@ ContextItem | task | EXCLUDED | A relationship; the priority's identifier is the
 
 RelevanceRule | id | KEY | The rule's identifier
 RelevanceRule | scopeRaw | TOKEN | PriorityRuleScope — closed vocabulary, retired cases included
-RelevanceRule | subject | KEY | A bundle identifier or a normalised scheme://host[:port]
+RelevanceRule | subject | KEY | A bundle identifier or a normalised scheme://host[:port]; or <bundle>::<label> for a selected item (issue #24), whose label an export replaces with "selected-item"
 RelevanceRule | verdictRaw | TOKEN | RelevanceVerdict — closed vocabulary
 RelevanceRule | createdAt | MEASURE | When the rule was written
 RelevanceRule | task | EXCLUDED | A relationship; the priority's identifier is the fact
@@ -140,7 +140,7 @@ InterventionRecord | at | MEASURE | When the app spoke, or stayed quiet on purpo
 InterventionRecord | localDayKey | MEASURE | The person's own local day, yyyy-MM-dd
 InterventionRecord | kindRaw | TOKEN | InterruptionKind — query or accusation
 InterventionRecord | rungRaw | TOKEN | LadderRung.Kind — closed vocabulary
-InterventionRecord | subject | KEY | A bundle identifier or a normalised origin; empty when it named nobody
+InterventionRecord | subject | KEY | A bundle identifier or a normalised origin; empty when it named nobody; or <bundle>::<label> for a selected item (issue #24), whose label an export replaces with "selected-item"
 InterventionRecord | subjectKindRaw | TOKEN | RuleSubjectKind, read off the subject rather than assumed (focus-tee.2)
 InterventionRecord | priorityID | KEY | The priority the judgement ran under
 InterventionRecord | surfaceRaw | TOKEN | NudgeSurface, or the empty string when it reached none
@@ -152,7 +152,7 @@ InterventionRecord | explanationKindsRaw | TOKEN | ExplanationClauseKind values,
 AskedQuestion | id | KEY | The receipt's identifier
 AskedQuestion | priorityID | KEY | The priority the question was asked under
 AskedQuestion | subjectKindRaw | TOKEN | RuleSubjectKind — part of the never-ask-twice key
-AskedQuestion | subject | KEY | A bundle identifier or a normalised origin
+AskedQuestion | subject | KEY | A bundle identifier or a normalised origin; or <bundle>::<label> for a selected item (issue #24), whose label an export replaces with "selected-item"
 AskedQuestion | reasonRaw | TOKEN | QueryableUncertainty — the app's own reason for asking
 AskedQuestion | askedAt | MEASURE | When it was asked
 AskedQuestion | outcomeRaw | TOKEN | AskedQuestionOutcome — what the person answered

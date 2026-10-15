@@ -3,7 +3,7 @@ import Testing
 
 @testable import FocusCore
 
-/// Four static decks, fourteen lines each, and no generated copy (R-90, F-65, F-66,
+/// Four static decks, sixteen lines each, and no generated copy (R-90, F-65, F-66,
 /// D-11, SC-4).
 @Suite("Nudge voices")
 struct NudgeVoiceTests {
@@ -32,21 +32,21 @@ struct NudgeVoiceTests {
         return values
     }
 
-    @Test("there are four decks and thirteen lines, and the matrix is fifty-two keys")
+    @Test("there are four decks and sixteen lines, and the matrix is sixty-four keys")
     func theMatrixIsFiveByThirteen() {
         #expect(NudgeVoice.allCases.count == 4)
         #expect(
             Set(NudgeVoice.allCases) == [.neutral, .warm, .direct, .silentVisual],
             "`playful` is retired by the ruling on focus-0nm; a fifth deck is a new ruling"
         )
-        #expect(NudgeCopyKey.allCases.count == 14)
-        #expect(NudgeVoice.matrix.count == 56)
-        #expect(Set(NudgeVoice.matrix).count == 56, "two decks composed the same key")
+        #expect(NudgeCopyKey.allCases.count == 16)
+        #expect(NudgeVoice.matrix.count == 64)
+        #expect(Set(NudgeVoice.matrix).count == 64, "two decks composed the same key")
         #expect(NudgeVoice.standard == .neutral, "the Court's adopted default deck moved")
     }
 
     /// **Completeness.** A missing deck entry is an untranslated nudge shipped to somebody at
-    /// their most sensitive moment, so every one of the fifty-six is asserted present, with a
+    /// their most sensitive moment, so every one of the sixty-four is asserted present, with a
     /// non-empty English value, in the committed catalog.
     @Test("every deck has every line, in the committed catalog")
     func everyDeckHasEveryLine() throws {
@@ -194,7 +194,7 @@ struct NudgeVoiceTests {
         ]
 
         let queryLines = NudgeCopyKey.allCases.filter(\.isQueryLine)
-        #expect(queryLines.count == 6, "the question grew or lost a line")
+        #expect(queryLines.count == 8, "the question grew or lost a line")
 
         for voice in NudgeVoice.allCases {
             for line in queryLines {

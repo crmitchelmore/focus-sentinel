@@ -136,6 +136,62 @@ Driver notes from the work itself, newest first. `CLAUDE.md` points here; keep t
 mirrored for anything substantive.
 
 
+### 2026-10-15 — the owner's ruling: read the selected item through Accessibility, on device (issue #24)
+
+- **Accuracy needs more than a bundle identifier, so the Accessibility grant is now spent.** In
+  a mixed-use application (GitHub Copilot, a terminal, an editor, a browser) the bundle
+  identifier is the same for the task and for the distraction, so the question cannot say what
+  the person is actually doing. Chris ruled on 15 October 2026 that reading the selected item —
+  the focused window's title, the chat session, the project folder — is essential and is to be
+  built now. This replaces "nothing reads what the grant unlocks" from the 2026-09-09 ruling; it
+  does not replace "the app asks for nothing unless the person switched that ask on".
+- **The privacy shape is fixed:** opt-in through the existing Settings ▸ Privacy switch; on
+  device only (no network, no export of raw titles); read at nudge time from the frontmost
+  application only; reduced to a short normalised subject before storage, never persisting the
+  raw title; the AX use selectors confined to one registered reader file and proven from both
+  sides, as `SystemGrantRequester.swift` is for the request selectors. README ▸ `grants` carries
+  the ruling. Until the work lands, a lint that still bans the use selectors is describing the
+  shipped build, not a mistake.
+- **Landed:** `FocusCore/Sensing/SelectedItem.swift` reduces a title to a `<bundle>::<label>`
+  `titleToken` subject (≤48 characters, raw title dropped); `FocusHost/SelectedItemReader.swift`
+  is the one AX use file (`Config/grant-use-sites.txt`, `check-grants.sh`, R-33b). A `titleToken`
+  row in item form is live; a legacy single-word row stays retired (`PriorityRuleValue.isRetired`).
+  The store export writes every item label as `selected-item`. A bare `RelevanceHost` in a test
+  has no active task until `host.activeCommitment` is set, so its snapshot carries no task rules.
+- **Every app, not an allowlist (owner's follow-up).** In practice every app is mixed-use, so
+  the reader takes any frontmost app `SensitivityGate` cleared. A live AX diagnostic on the
+  owner's Mac decided the shape: the Copilot app's window title is just "GitHub Copilot" and its
+  web sidebar marks no row selected, but the first `AXHeading` under the main landmark reads
+  "Session: …"; native apps (Mail, Finder, Outlook) report `AXSelectedRows`. So: title first,
+  then a walk of that one window for a selected row or else the first main-region heading **in
+  document order** — a breadth-first walk alone picks the shallowest heading, which is the
+  wrong one, so `SelectedItemSearch` carries child-index paths and compares them. One app's full
+  tree took 10.6 s to walk; the walk is capped at 400 elements, depth 14 and 150 ms.
+- **AX attribute names are `String` constants, bridged `as CFString` at the call.** A
+  `static let x: CFString` fails Swift 6's Sendable check on a global.
+- **This shell is AX-trusted.** A unit test that drives the real reader with the opt-in on reads
+  real windows on the machine running it. Test the reader's logic through `SelectedItemSearch`
+  over fake nodes, and the host through a fake `SelectedItemReading`.
+- **Grant state needs an observable home.** `AppComposition` is a plain class, so a stored
+  `grantOptIns` changed by the Privacy switch redrew nothing. `GrantAccessWatch` (`@Observable`)
+  holds the switches and what macOS says, is re-read when the app becomes active and polled
+  for two minutes after the person is sent to System Settings — the pattern Pasta and Just
+  Speak to It use — and the pane's *Open System Settings* takes an injectable opener so the
+  unit lane never opens a window.
+
+### 2026-10-15 — the nudge panel lost its bottom inset to the hidden titlebar
+
+- **A `.titled` + `.fullSizeContentView` window hands SwiftUI a top safe-area inset even when
+  the titlebar is transparent, hidden and empty.** The nudge panel's `NSHostingView` reported
+  `safeAreaInsets.top == 32`. The panel's height is measured off-window by `SurfaceMeasurer`,
+  which never sees that inset, so the live layout squeezed content sized for the whole window
+  into 32 points less. The person saw the answers sitting on the panel's bottom edge. Every
+  published reading (action frames, reachability, hit tests) is relative to the content's own
+  coordinate space, so none of them could see it. The fix is `.ignoresSafeArea()` on the live
+  root view in `NudgePanelController.layOutContent()`.
+  `NudgePanelTests.contentKeepsItsInsetFromTheWindowEdges` reads the content's frame in
+  `.global` space to catch this.
+
 ### 2026-10-02 — dropped apps, paths pasted as keywords, and site entry hidden (focus-6ji4)
 
 - **What the app can observe is one named fact.** `ShippingObservation.readsBrowserSite`

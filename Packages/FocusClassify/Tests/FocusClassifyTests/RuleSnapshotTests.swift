@@ -243,6 +243,25 @@ struct RuleSnapshotTests {
         #expect(measured.rules.map(\.subjectKind) == [.titleToken])
     }
 
+    /// **An item rule is live, a word rule is not** (issue #24). Both are stored `.titleToken`;
+    /// only the shape the Accessibility reader writes — `<bundle>::<label>` — becomes a rung.
+    @Test("a stored item rule becomes a rung, while a legacy word rule stays retired")
+    func aStoredItemRuleIsLive() {
+        let item = SelectedItem(bundleIdentifier: "com.github.githubapp", label: "Plan the holiday")!
+        let snapshot = RuleSnapshotBuilder().build(
+            priority: Self.priority(),
+            storedRules: [
+                Self.stored(.titleToken, item.subject, .unrelated, task: true),
+                Self.stored(.titleToken, "proposal", .relevant, task: true),
+                Self.stored(.titleToken, "com.github.githubapp::Not: normalised", .relevant),
+            ]
+        )
+        #expect(snapshot.skippedRuleCount == 2)
+        #expect(snapshot.rules.map(\.subject) == [item.subject])
+        #expect(snapshot.rules.map(\.subjectKind) == [.titleToken])
+        #expect(snapshot.rules.map(\.authority) == [.task])
+    }
+
     /// Ties on authority and narrowness are broken by age and then by identity, so a snapshot
     /// never depends on the order the store happened to return rows in.
     @Test("ties break by age and then by identity")

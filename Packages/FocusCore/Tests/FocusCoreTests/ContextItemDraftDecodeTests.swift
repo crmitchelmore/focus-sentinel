@@ -172,7 +172,7 @@ struct ContextItemDraftDecodeTests {
         #expect(PriorityRuleScope.domain.isObserved == ShippingObservation.readsBrowserSite)
         #expect(ContextItemKind.domain.isObserved == ShippingObservation.readsBrowserSite)
         #expect(PriorityRuleScope.app.isObserved)
-        #expect(!PriorityRuleScope.titleToken.isObserved)
+        #expect(PriorityRuleScope.titleToken.isObserved)
         #expect(ContextItemKind.app.isObserved)
         #expect(ContextItemKind.keyword.isObserved)
         #expect(ContextItemKind.file.isObserved)

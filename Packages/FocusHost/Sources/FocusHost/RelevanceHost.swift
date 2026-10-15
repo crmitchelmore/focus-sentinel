@@ -20,13 +20,28 @@ import os
 ///   (six of ninety-two on this Mac, e03's P-83). There is nothing to write a rule *about* one,
 ///   so there is nothing to conclude either.
 ///
-/// There is no fourth field. A window title, an origin and a document name are all absent by
-/// construction: `ClassificationInput.origin` and `.titleTokens` are exercised by the golden
-/// corpus and **empty in every shipping path in this epic** (F-03 is baseline-only, e07 turns
-/// them on), and this type is where that promise is kept in the app.
+/// A raw window title, an origin and a document name are all absent by construction:
+/// `ClassificationInput.origin` is exercised by the golden corpus and **empty in every shipping
+/// path** (F-03 is baseline-only), and this type is where that promise is kept in the app.
+///
+/// **The one addition is `selectedItem`** (issue #24): the item selected inside the frontmost
+/// application, read through Accessibility only where the person switched that on, and already
+/// reduced to a short label by `SelectedItem.normalise` — never the title it came from. It is
+/// `nil` on a default install, for a suppressed subject, and wherever the window names nothing.
+/// Its label is also the one source of `titleTokens` a shipping path fills (issue #27): the
+/// person's own name for the item, as prose, for the heuristic to corroborate against.
 struct JudgeableSubject: Sendable, Equatable {
     var bundleIdentifier: String?
     var isSuppressed: Bool
+    var selectedItem: SelectedItem?
+
+    init(bundleIdentifier: String?, isSuppressed: Bool, selectedItem: SelectedItem? = nil) {
+        self.bundleIdentifier = bundleIdentifier
+        self.isSuppressed = isSuppressed
+        // An item belongs to the application it was read from; one that does not is dropped
+        // rather than allowed to describe somebody else's window.
+        self.selectedItem = selectedItem?.bundleIdentifier == bundleIdentifier ? selectedItem : nil
+    }
 
     /// Nothing has come forward yet.
     static let none = JudgeableSubject(bundleIdentifier: nil, isSuppressed: false)
@@ -36,7 +51,11 @@ struct JudgeableSubject: Sendable, Equatable {
     /// Two *different* absences must not share a clock: a stand-down for a password manager and
     /// an unbundled helper are different observations, and letting one continue the other's
     /// dwell would be inventing continuity across a boundary the gate drew.
+    ///
+    /// Another chat in the same application is another subject (issue #24), so an item is part
+    /// of the key: moving from the task's chat to an unrelated one starts a new dwell.
     var dwellKey: String {
+        if let selectedItem { return selectedItem.subject }
         if let bundleIdentifier { return bundleIdentifier }
         return isSuppressed ? "\u{0000}suppressed" : "\u{0000}unbundled"
     }
@@ -444,7 +463,13 @@ final class RelevanceHost {
 
         let dwell = now - subjectSince
         let judgement = engine.judge(
-            input: ClassificationInput(bundleIdentifier: subject.bundleIdentifier),
+            input: ClassificationInput(
+                bundleIdentifier: subject.bundleIdentifier,
+                // The label is prose — a name the person gave a chat or a folder — so it may be
+                // handed to the similarity signal (R-57), which can only corroborate `relevant`.
+                titleTokens: subject.selectedItem.map { [$0.label] } ?? [],
+                selectedItem: subject.selectedItem
+            ),
             snapshot: snapshot,
             now: now,
             dwell: dwell,
@@ -465,7 +490,8 @@ final class RelevanceHost {
                 subject: subject.bundleIdentifier,
                 dwelled: dwell,
                 snapshot: published,
-                stamp: engine.stamp
+                stamp: engine.stamp,
+                selectedItem: subject.selectedItem
             )
         )
     }

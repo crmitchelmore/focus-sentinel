@@ -712,6 +712,13 @@ public final class NudgePanelController {
             // The live layout fills the window it was sized for; the measurement above must not,
             // or an unbounded height proposal would come back unbounded.
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            // The style mask is `.titled` + `.fullSizeContentView`, so the hosting view reports
+            // the hidden titlebar (32 points here) as a top safe-area inset. The measurement above
+            // is taken outside any window and never sees it, so honouring it squeezed the content
+            // into 32 points less than it was sized for and the bottom inset went: the answers sat
+            // on the panel's bottom edge. The titlebar is transparent and empty, so the content
+            // owns the whole window and the inset is the only margin.
+            .ignoresSafeArea()
         )
 
         currentOverflow = overflow

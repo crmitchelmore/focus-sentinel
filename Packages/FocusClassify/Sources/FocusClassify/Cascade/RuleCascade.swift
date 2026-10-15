@@ -4,10 +4,11 @@ import Foundation
 /// One activation, normalised — everything a rung is allowed to look at.
 ///
 /// Built once per classification and handed to every rung, so no rung can normalise the same
-/// string twice or normalise it differently. `origin` and `titleTokens` are **plumbed and
-/// exercised by the golden corpus, and empty in every shipping code path in e04** (F-03 is
-/// baseline-only); e07 turns them on by supplying a capability probe and a reader, and nothing
-/// in this type changes when it does.
+/// string twice or normalise it differently. `origin` is **plumbed and exercised by the golden
+/// corpus, and empty in every shipping code path** (F-03 is baseline-only). `selectedItem` is
+/// the exception (issue #24): an already-normalised label read through Accessibility, opt-in,
+/// matched by item rules for equality — and its label, as prose, is the only thing a shipping
+/// path puts in `titleTokens` (issue #27), where the similarity signal may corroborate it.
 ///
 /// The two kinds of token are kept apart here as well as at the normaliser (R-57): `identifier`
 /// and `originHost` may only ever be compared for equality, while `title` is prose and is the
@@ -19,10 +20,15 @@ public struct ClassificationEvidence: Sendable, Equatable {
     public let identifier: IdentifierTokenSet
     /// Tokens decomposed from the origin's host. Never reach a similarity function either.
     public let originHost: IdentifierTokenSet
-    /// The window or tab title, as prose. Empty in every shipping path in this epic.
+    /// The window or tab title, as prose. In a shipping path, the selected item's label and
+    /// nothing else (issue #27); empty unless the person switched the Accessibility ask on.
     public let title: ProseTokenSet
     /// How long this subject has held, from the monotonic clock.
     public let dwell: Duration
+    /// The item selected inside a mixed-use application, already reduced to a label (issue #24).
+    /// Item rules match it for equality. Its label reaches the similarity signal only as `title`
+    /// prose, never as an identifier token (R-57).
+    public let selectedItem: SelectedItem?
 
     public init(
         bundleIdentifier: String?,
@@ -30,7 +36,8 @@ public struct ClassificationEvidence: Sendable, Equatable {
         identifier: IdentifierTokenSet,
         originHost: IdentifierTokenSet,
         title: ProseTokenSet,
-        dwell: Duration
+        dwell: Duration,
+        selectedItem: SelectedItem? = nil
     ) {
         self.bundleIdentifier = bundleIdentifier
         self.origin = origin
@@ -38,6 +45,7 @@ public struct ClassificationEvidence: Sendable, Equatable {
         self.originHost = originHost
         self.title = title
         self.dwell = dwell
+        self.selectedItem = selectedItem
     }
 
     /// Normalise an input once, for every rung.
@@ -54,7 +62,8 @@ public struct ClassificationEvidence: Sendable, Equatable {
             title: input.titleTokens.isEmpty
                 ? .empty
                 : normalizer.tokens(fromProse: input.titleTokens.joined(separator: " ")),
-            dwell: dwell
+            dwell: dwell,
+            selectedItem: input.selectedItem
         )
     }
 
@@ -402,8 +411,14 @@ public struct RuleCascade: Sendable {
         case .domain:
             return rule.subject == evidence.origin
         case .titleToken:
-            // Empty in every shipping path in this epic (F-03 is baseline-only), and exercised
-            // by the corpus so that e07 turns a capability on rather than writing a rung.
+            // An item rule (issue #24) names one selected item inside one application, and
+            // matches that item and nothing else: the same application with another chat open
+            // is a different subject.
+            if let item = SelectedItem.parse(rule.subject) {
+                return evidence.selectedItem.map(item.matches) ?? false
+            }
+            // A legacy word. Retired (`PriorityRuleValue.isRetired`), so never in a shipping
+            // snapshot; exercised by the corpus, which still pins how a word would match.
             return evidence.title.values.contains(rule.subject.lowercased())
         }
     }
@@ -417,7 +432,10 @@ public struct RuleCascade: Sendable {
     /// empty.
     func subjectToken(for rule: ScopedRuleValue) -> NormalisedToken? {
         switch rule.subjectKind {
-        case .app, .titleToken: NormalisedToken.normalised(rule.subject.lowercased())
+        case .titleToken:
+            SelectedItem.parse(rule.subject)?.slug
+                ?? NormalisedToken.normalised(rule.subject.lowercased())
+        case .app: NormalisedToken.normalised(rule.subject.lowercased())
         case .domain: NormalisedToken.normalised(TokenNormalizer.host(of: rule.subject).lowercased())
         }
     }

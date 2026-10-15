@@ -8,11 +8,11 @@ import Foundation
 /// `RelevanceHost` judges with `ClassificationInput(bundleIdentifier:)` alone. A site rule or a
 /// site chip therefore can never match, and offering to make one is a control wired to nothing.
 ///
-/// This is not a retirement. `PriorityRuleScope.titleToken` is retired because the product
-/// gave the idea up; a site is still in scope (PD-1 keeps the normalised origin) and is waiting
-/// on an origin producer. So the authoring surfaces read *this* fact rather than `isRetired`,
-/// the engine keeps reading stored rows as it always has, and the day an origin producer ships
-/// is one line here.
+/// This is not a retirement. A word-shaped `PriorityRuleScope.titleToken` row is retired because
+/// the product gave the idea up (an item-form one is live, issue #24); a site is still in scope
+/// (PD-1 keeps the normalised origin) and is waiting on an origin producer. So the authoring
+/// surfaces read *this* fact rather than `isRetired`, the engine keeps reading stored rows as it
+/// always has, and the day an origin producer ships is one line here.
 public enum ShippingObservation {
     /// Whether anything in the shipping app reads which site a browser is showing.
     public static let readsBrowserSite = false
@@ -24,7 +24,10 @@ extension PriorityRuleScope {
         switch self {
         case .app, .session: true
         case .domain: ShippingObservation.readsBrowserSite
-        case .titleToken: false
+        // An item-form title-token row (issue #24) is matched against the selected item the
+        // Accessibility reader produces; a word-shaped one is retired, which
+        // `PriorityRuleValue.isRetired` — not this — answers.
+        case .titleToken: true
         }
     }
 }

@@ -188,14 +188,16 @@ before). PD-1's absolute form — *this app asks for no permission of any kind* 
 > nothing is asked, nothing prompts, and the capability table reads exactly as it did before.
 > The only route from "not asked" to "asked" is a control the person operated.
 
-Two grants may be switched on, in Settings ▸ Privacy: Accessibility and Screen Recording. Neither
-is read by anything in this build — `titleToken` rules are retired and pixel capture is parked —
-and the pane says so beside each switch, because a switch that takes a permission and spends it
-on nothing is the worst version of this change. What replaced the ban, rather than merely
-lifting it:
+Two grants may be switched on, in Settings ▸ Privacy: Accessibility and Screen Recording. Screen
+Recording is read by nothing in this build — pixel capture is parked — and the pane says so beside
+its switch, because a switch that takes a permission and spends it on nothing is the worst version
+of this change. Accessibility is spent on one thing, described in the next paragraph. What
+replaced the ban, rather than merely lifting it:
 
-- the two families' `banned` columns now name their **use** selectors only, which are still
-  absent from both configurations' Mach-O, because nothing reads what the grants unlock;
+- the Screen Recording family's `banned` column names its **use** selectors, which are still
+  absent from both configurations' Mach-O, because nothing reads what that grant unlocks; the
+  Accessibility family's `banned` column now names only the write, act, observe and bulk-read selectors,
+  and its use selectors are confined like the request selectors (next paragraph);
 - their **request** selectors moved to `Config/grant-request-sites.txt`, which confines them to
   one named file — `SystemGrantRequester.swift` — and `check-grants.sh` proves that confinement
   from the source side while `check-forbidden.sh`'s R-33 proves it from the other, exempting that
@@ -228,6 +230,69 @@ hardened-runtime build needs `com.apple.security.personal-information.calendars`
 committed entitlement set carries it, and `NSCalendarsFullAccessUsageDescription` says in one
 sentence what is read. On a default install nothing changes: the capability reads
 `notRequested`, the request counter is zero.
+
+**The Accessibility grant is now spent, on device, from 2026-10-15** (owner's ruling, issue #24).
+A bundle identifier cannot tell one task from another inside a mixed-use application — GitHub
+Copilot, a terminal, an editor, a browser — so a nudge that can only say "you are in Copilot" is
+not accurate enough to be worth asking. Reading the *selected item* (the focused window's title,
+the chat session, the project folder) is essential to accuracy, so the "nothing reads what the
+grant unlocks" clause above is being replaced. What the replacement keeps:
+
+- **still opt-in**: nothing is read unless the person switched Accessibility on in Settings ▸
+  Privacy and macOS granted it; on a default install the capability table is unchanged;
+- **on device only**: whatever is read stays on this Mac — no network, no export of raw titles,
+  no telemetry; the socket readings above stay exactly as strict;
+- **minimal and ephemeral**: only the focused window's title (and, where an app needs it, the
+  selected row of its sidebar) of the frontmost application, read at nudge time, reduced to a
+  short normalised subject before anything is stored; raw titles are never persisted;
+- **confined**: the AX *use* selectors move out of `banned` into one registered reader file,
+  proven by the same two-sided confinement the request selectors already have.
+
+How it is built:
+
+- `SelectedItemReader.swift` in `FocusHost` is the one file that calls
+  `AXUIElementCreateApplication`, `AXUIElementCopyAttributeValue` and
+  `AXUIElementSetMessagingTimeout`.
+  `Config/grant-use-sites.txt` registers it; `check-grants.sh` proves the selectors appear there
+  and nowhere else in source, and `check-forbidden.sh`'s R-33b exempts that one path from the
+  ban the rest of the tree is held to;
+- it reads only when the person's Accessibility opt-in is on and macOS reports the process
+  trusted, and only from the frontmost application that e03's `SensitivityGate` already
+  cleared — so a password manager or a private browser window is never read. Any other
+  application may be read (the owner's follow-up widened the first round's short list to every
+  app, because in practice every app is mixed-use);
+- it reads the focused window's `AXTitle` first. When the title names nothing — the Copilot
+  app's is just "GitHub Copilot", a terminal's can be "~" — it looks inside that one window,
+  read-only, for a selected sidebar row (`AXSelectedRows` / `AXSelectedChildren`: a Mail
+  mailbox, a Finder folder, a chat) or else the first heading of the main region (the Copilot
+  app's "Session: …"). The walk is bounded: at most `SelectedItemSearch.maximumElements` (400)
+  elements, depth 14, 150 ms in all, each message capped by a messaging timeout. One app's full
+  tree took ten seconds to walk on the owner's Mac; the budget is why that never stalls a
+  nudge. No other window, no other application; `kCGWindowName` stays banned (SC-1);
+- nothing writes, acts, observes or bulk-reads: an Electron app that exposes no tree until a
+  client writes `AXManualAccessibility` stays unread below its title, by design;
+- `SelectedItem.normalise` reduces the title, row or heading in memory to a label of at most 48
+  characters — the app name, captions and editor decorations stripped, an uninformative text
+  refused — and the raw text is dropped. The label is the `titleToken` subject
+  `<bundle>::<label>` the question asks about and the rule the answer writes; a `titleToken` row
+  in that form is live again, while a legacy single-word row stays retired;
+- the decisions issue #27 asked for: the item is read on **every judgement**, not cached by
+  time, because the dwell key is what notices a switch from one chat to another; a read that
+  fails (a timeout, an exhausted budget) keeps the last item for **12 seconds**
+  (`SelectedItemGrace`), per process, and an empty read or switching the opt-in off clears it;
+  there are **no seed rules** — an item becomes a rule only when the person answers a question
+  about it; and the label also reaches the engine as `titleTokens`, where it can only
+  *corroborate* a relevant verdict (a context-pack keyword in the chat's name), never make one
+  irrelevant (R-57: a label is prose, not evidence of distraction);
+- Settings ▸ Privacy follows the grant once it is switched on: it says whether macOS allows it,
+  offers *Open System Settings* (the exact list), *Check Again* and *Show Focus in Finder*, and
+  explains the one failure macOS never does — a rebuilt or moved copy is a different app and has
+  to be removed and added again. The pane re-reads the grant when the app becomes active and
+  every half-second for two minutes after the person was sent to System Settings
+  (`GrantAccessWatch`), reading without asking;
+- the store export replaces every item subject's label with `selected-item`, so a label never
+  leaves the Mac in an export either; the self-check publishes `accessibilityOptedIn` and
+  `selectedItemReadCount`, and on a default store they read `false` and `0`.
 
 `release-artefact` is the D-09 disk image, and it is described under **Distribution posture**
 below.
@@ -989,7 +1054,7 @@ of `ClassificationInput`'s five fields, and three of them are not in the store:
 | field | why replay cannot have it |
 |---|---|
 | `origin` | `ActivityEvent` has no origin column, and `NormalisedDetail`'s closed vocabulary has no origin token. Storing one would make "this epic records no new observation about a person" false, so it is **not stored**: browser intervals draw as *unattributed*. |
-| `titleTokens` | not stored, and unreachable under PD-1 — the app never reads a window title. |
+| `titleTokens` | not stored. Since issue #24 a window title may be *read* (opt-in, on device), but only its normalised label is kept, and only as a rule's subject — no activity row records which item was in front. |
 | `priorityIntent` / `priorityDoneWhen` | reachable through `priorityID`, but `intent` is mutable and `revision` counts edits without keeping prior text. Replaying Tuesday would silently use **today's** wording. |
 
 So a coloured timeline would be an assertion about the past that the data cannot support. What the
@@ -1465,8 +1530,11 @@ Nothing the engine concludes can carry raw captured content. Every textual paylo
 explanation can hold is a `NormalisedToken`, which has no public `String` initialiser and
 rejects whitespace, control characters and every ASCII punctuation mark but `.`, `-` and `_` —
 so a window title, a full URL, a document name or an absolute path is *unrepresentable* in an
-explanation rather than forbidden. `ClassificationInput.origin` and `.titleTokens` exist, are
-exercised by the golden corpus, and are **empty in every shipping code path in this version**.
+explanation rather than forbidden. `ClassificationInput.origin` is exercised by the golden corpus and **empty in every shipping
+code path in this version**. The window-derived inputs a shipping path supplies are
+`ClassificationInput.selectedItem` and, carrying the same label, `.titleTokens` — an
+already-normalised label read only with the person's Accessibility opt-in (issue #24), which can
+corroborate a relevant verdict and nothing else.
 
 ## License
 

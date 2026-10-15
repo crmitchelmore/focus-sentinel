@@ -23,6 +23,10 @@ public final class FocusAppDelegate: NSObject, NSApplicationDelegate {
     /// opens an alert saying help is not available.
     public func applicationDidBecomeActive(_ notification: Notification) {
         ShellHelpMenu.detachAutomaticItem()
+        // Coming back from System Settings is the likeliest moment a grant changed (issue #24).
+        if AppComposition.isRunning {
+            AppComposition.shared.grantAccessMayHaveChanged()
+        }
     }
 
     public func applicationDidFinishLaunching(_ notification: Notification) {

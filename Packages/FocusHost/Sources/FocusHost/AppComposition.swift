@@ -1029,9 +1029,16 @@ public final class AppComposition {
                 // The nudge's own key. A correction with no commitment to scope to is not a
                 // narrower rule, it is a global one, and it is refused rather than widened.
                 guard let taskID = priorityID else { return }
+                // An item subject (issue #24) is filed under the scope it is matched by, or the
+                // cascade would read `<bundle>::<label>` as a bundle and match nothing.
+                let scope: PriorityRuleScope = switch pending.subjectKind {
+                case .domain: .domain
+                case .titleToken: .titleToken
+                case .app: .app
+                }
                 priorityHost.addRule(
                     taskID: taskID,
-                    scope: pending.subjectKind == .domain ? .domain : .app,
+                    scope: scope,
                     subject: pending.subject,
                     verdict: pending.verdict
                 )
@@ -1265,6 +1272,7 @@ public final class AppComposition {
         // The strip goes with the graph that fed it. A borderless window left on screen after the
         // app stopped watching is the picture of a claim the app is no longer making.
         notchCompanion.remove()
+        grantAccess.stopWatching()
     }
 
     // MARK: - The first-run explanation (focus-odz.7)
@@ -1387,6 +1395,10 @@ public final class AppComposition {
             updateSensingSettings { $0.launchContextOnSessionStart = enabled }
         case .setGrantOptIn(let grant, let isEnabled):
             setGrantOptIn(grant, to: isEnabled)
+        case .openGrantSettings(let grant):
+            openGrantSettings(grant)
+        case .recheckGrants:
+            grantAccess.refresh()
         }
     }
 
@@ -1411,8 +1423,20 @@ public final class AppComposition {
         applyStoredGrantOptIns()
         if isEnabled {
             GrantGate.request(grant, optIns: grantOptIns, using: grantRequester)
+            // macOS's dialog sends the person to System Settings; follow them there.
+            grantAccess.refresh()
+            grantAccess.watchUntilAllowed()
         }
         refreshCockpit()
+    }
+
+    /// **Take the person to the System Settings pane that holds this grant** — only for a
+    /// grant they switched on, so the button cannot become an ask in disguise — and watch for
+    /// the answer, since nothing tells this app when it arrives.
+    private func openGrantSettings(_ grant: GrantOptIn) {
+        guard grantOptIns.isEnabled(grant) else { return }
+        openSystemSettings(GrantAccessWatch.systemSettingsURL(for: grant))
+        grantAccess.watchUntilAllowed()
     }
 
     /// **One observer setting changed** (focus-exdi.3): the row first, then the running host,
@@ -1939,18 +1963,51 @@ public final class AppComposition {
     /// `GrantGate`, which refuses unless the person switched that ask on.
     let grantRequester = SystemGrantRequester()
 
+    /// **The switches and what macOS says about them, where a body can watch them move.** Read
+    /// by `capabilities` and by the Settings connection, so the Privacy pane's "Allowed" line
+    /// follows a grant given in System Settings without the person having to come back and look.
+    public private(set) lazy var grantAccess: GrantAccessWatch = {
+        let watch = GrantAccessWatch(requester: grantRequester)
+        watch.onChange = { [weak self] in self?.grantAccessChanged() }
+        return watch
+    }()
+
+    /// **How System Settings is opened**, replaceable so the unit lane can see the URL without a
+    /// test run opening a window on the person's Mac.
+    var openSystemSettings: @MainActor (URL) -> Void = GrantAccessWatch.openInSystemSettings
+
+    /// **The one object allowed to read what the Accessibility grant unlocks** (issue #24).
+    /// Asked only from `judge(in:)`, only about the application e03's gate cleared, and it
+    /// answers `nil` unless the person switched the Accessibility ask on and macOS agreed.
+    let selectedItemReader: any SelectedItemReading = SystemSelectedItemReader()
+
     /// **Which grants the person switched on**, held rather than re-read.
     ///
-    /// A stored property, not a computed one: `capabilities` is read by the cockpit, the popover
-    /// and the settings window, and a SwiftData fetch on every read is a fetch on every frame
-    /// those surfaces draw. Loaded at launch and rewritten by the switch, which are the only two
-    /// moments it can change — the same shape `applyStoredPolicyTunings()` uses.
-    public private(set) var grantOptIns: GrantOptIns = .none
+    /// Held, not fetched: `capabilities` is read by the cockpit, the popover and the settings
+    /// window, and a SwiftData fetch on every read is a fetch on every frame those surfaces draw.
+    /// Loaded at launch and rewritten by the switch, which are the only two moments it can
+    /// change — the same shape `applyStoredPolicyTunings()` uses. Held in `grantAccess`, which
+    /// is observable, so the switch redraws the pane that operated it.
+    public var grantOptIns: GrantOptIns { grantAccess.optIns }
 
     /// Read the switches from the store. At launch, and after one is operated.
     func applyStoredGrantOptIns() {
-        grantOptIns = FocusStore.grantOptIns(in: modelContainer.mainContext)
+        grantAccess.apply(FocusStore.grantOptIns(in: modelContainer.mainContext))
         applyCalendarReader()
+    }
+
+    /// **The app became active** — the moment a person coming back from System Settings is
+    /// most likely to have changed a grant. Read without asking.
+    public func grantAccessMayHaveChanged() {
+        guard !hasDeletedEverything else { return }
+        grantAccess.refresh()
+    }
+
+    /// A grant moved: redraw what reads it, and let the next judgement read with it.
+    private func grantAccessChanged() {
+        guard !hasDeletedEverything else { return }
+        applyCalendarReader()
+        refreshCockpit()
     }
 
     /// **The person's calendar, read only as busy time** (focus-cal). See `CalendarHost`.
@@ -1984,11 +2041,7 @@ public final class AppComposition {
         var matrix = probed
         let now = dateProvider.now
         for grant in GrantOptIn.allCases where optIns.isEnabled(grant) {
-            matrix = matrix.recording(
-                grant.capability,
-                as: GrantGate.state(of: grant, optIns: optIns, using: grantRequester),
-                at: now
-            )
+            matrix = matrix.recording(grant.capability, as: grantAccess.state(of: grant), at: now)
         }
         return matrix
     }
@@ -2703,6 +2756,9 @@ public final class AppComposition {
         // written down and taken off screen rather than left standing for the next one to
         // inherit (focus-d0a).
         noticeLifecycleTransitions()
+        // A grant taken away in System Settings while the app sat in the menu bar is noticed
+        // here, before the judgement would read with it. Reads nothing when nothing is on.
+        grantAccess.refresh(notify: false)
         judge(in: snapshot)
         refreshMenuBar(session: snapshot)
         priorityHost.update(
@@ -2740,8 +2796,17 @@ public final class AppComposition {
     /// watching.
     private func judge(in session: SessionSnapshot?) {
         guard sensingHost.isRunning else { return }
+        var subject = sensingHost.judgeableSubject
+        if let cleared = sensingHost.clearedFrontmostActivation,
+           cleared.bundleIdentifier == subject.bundleIdentifier {
+            subject = JudgeableSubject(
+                bundleIdentifier: subject.bundleIdentifier,
+                isSuppressed: subject.isSuppressed,
+                selectedItem: selectedItemReader.selectedItem(in: cleared, optIns: grantOptIns)
+            )
+        }
         relevanceHost.observe(
-            sensingHost.judgeableSubject,
+            subject,
             // No open session is not a break: the person can be working with no session
             // started, and `.focus` is the phase that says "nothing forbids a judgement here".
             // What forbids an *intervention* is a separate question, answered by

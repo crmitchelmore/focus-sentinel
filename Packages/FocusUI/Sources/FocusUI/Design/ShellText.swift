@@ -248,6 +248,17 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case settingsPrivacyGrantCalendar = "settings.privacy.grant.calendar"
     case settingsPrivacyGrantCalendarNote = "settings.privacy.grant.calendar.note"
     case settingsPrivacyGrantUnused = "settings.privacy.grant.unused"
+    /// Where a switched-on grant stands, and the way to it (issue #24). Drawn only beside a
+    /// switch the person turned on, so none of it is an ask in disguise.
+    case settingsPrivacyGrantAllowed = "settings.privacy.grant.allowed"
+    case settingsPrivacyGrantWaitingAccessibility = "settings.privacy.grant.waiting.accessibility"
+    case settingsPrivacyGrantWaitingScreenCapture = "settings.privacy.grant.waiting.screenCapture"
+    case settingsPrivacyGrantWaitingCalendar = "settings.privacy.grant.waiting.calendar"
+    case settingsPrivacyGrantRestricted = "settings.privacy.grant.restricted"
+    case settingsPrivacyGrantOpenSettings = "settings.privacy.grant.openSettings"
+    case settingsPrivacyGrantCheckAgain = "settings.privacy.grant.checkAgain"
+    case settingsPrivacyGrantRevealApp = "settings.privacy.grant.revealApp"
+    case settingsPrivacyGrantStaleNote = "settings.privacy.grant.staleNote"
     case settingsTuningsRaise = "settings.tunings.raise"
     case settingsTuningsUnitSeconds = "settings.tunings.unit.seconds"
     case settingsTuningsUnitMinutes = "settings.tunings.unit.minutes"
@@ -342,6 +353,8 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     /// The caption a stored site rule carries while this version reads no site (focus-6ji4).
     case priorityRulesScopeUnobserved = "priority.rules.scope.unobserved"
     case priorityRulesScopeSession = "priority.rules.scope.session"
+    /// A stored row naming one item selected inside an application (issue #24).
+    case priorityRulesScopeSelectedItem = "priority.rules.scope.selectedItem"
     case priorityRulesVerdictRelevant = "priority.rules.verdict.relevant"
     case priorityRulesVerdictUnrelated = "priority.rules.verdict.unrelated"
     case priorityRulesVerdictUncertain = "priority.rules.verdict.uncertain"
@@ -850,6 +863,9 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case settingsPrivacyDeleteConfirmHelp = "settings.privacy.delete.confirm.action.help"
     case settingsPrivacyDeleteCancelHelp = "settings.privacy.delete.confirm.cancel.help"
     case settingsPrivacyGrantAccessibilityHelp = "settings.privacy.grant.accessibility.help"
+    case settingsPrivacyGrantOpenSettingsHelp = "settings.privacy.grant.openSettings.help"
+    case settingsPrivacyGrantCheckAgainHelp = "settings.privacy.grant.checkAgain.help"
+    case settingsPrivacyGrantRevealAppHelp = "settings.privacy.grant.revealApp.help"
     case settingsPrivacyGrantScreenCaptureHelp = "settings.privacy.grant.screenCapture.help"
     case settingsPrivacyGrantCalendarHelp = "settings.privacy.grant.calendar.help"
     case settingsPrivacyExportDataHelp = "settings.privacy.portability.exportData.help"

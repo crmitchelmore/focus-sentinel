@@ -994,6 +994,32 @@ struct NudgePanelTests {
         #expect(!controller.hitTestsEveryAction(offering: [StaleFrameReporter.identifier]))
     }
 
+    /// **The inset is on all four sides of the window, not of some smaller area inside it.**
+    ///
+    /// The panel is `.titled` + `.fullSizeContentView`, so the hosting view carries the hidden
+    /// titlebar as a top safe-area inset that the off-window measurement never sees. Honouring it
+    /// laid content measured for the whole window into 32 points less, and a person saw the
+    /// answers sitting on the panel's bottom edge. Every reading the panel publishes is relative
+    /// to its own content, so this reads the content's frame in the window instead.
+    @Test("the content keeps the inset from the window's top and bottom edges")
+    func contentKeepsItsInsetFromTheWindowEdges() throws {
+        let controller = Self.controller()
+        let probe = WindowFrameProbe.Box()
+        controller.update(showing: .question, undivided: WindowFrameProbe(box: probe))
+        controller.show(presentationIsClear: true, announcement: "")
+        defer { controller.hide() }
+        Self.settle()
+
+        let frame = try #require(probe.frame)
+        let inset = NudgePanelController.contentInset
+        let tolerance = NudgePanelController.sizeTolerance
+        #expect(abs(frame.minY - inset) <= tolerance, "content started at \(frame)")
+        #expect(
+            frame.maxY <= controller.contentSize.height - inset + tolerance,
+            "content ended at \(frame) in a \(controller.contentSize) window"
+        )
+    }
+
     /// Every `NSScrollView` in a view tree. SwiftUI's `ScrollView` is backed by one, and its
     /// presence is the only thing that distinguishes a panel that scrolls from a panel that
     /// clips.
@@ -1044,6 +1070,18 @@ struct NudgePanelTests {
 /// modifier reads the *current* generation out of the environment and the whole point here is a
 /// frame that carries another one. The frame itself is ordinary: 100 x 20, well inside the
 /// content, exactly where a real button would be.
+/// Reports where it was laid out in the hosting view's own space, which is the window's.
+private struct WindowFrameProbe: View {
+    @MainActor final class Box { var frame: CGRect? }
+    let box: Box
+
+    var body: some View {
+        Color.clear
+            .frame(height: 120)
+            .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { box.frame = $0 }
+    }
+}
+
 private struct StaleFrameReporter: View {
     static let identifier = CorrectionAction.pause.rawValue
     static let staleGeneration = 999_999

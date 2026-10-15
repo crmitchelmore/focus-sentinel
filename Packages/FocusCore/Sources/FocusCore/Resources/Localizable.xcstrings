@@ -837,6 +837,16 @@
         }
       }
     },
+    "nudge.direct.query.panel.title.item" : {
+      "comment" : "[direct] Query panel title when the question is about one item selected inside an application (issue #24). %1$@ is the item's short label, %2$@ the priority's intent.",
+      "extractionState" : "manual",
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Is ‘%@’ part of %@?" } } }
+    },
+    "nudge.direct.query.panel.scope.item" : {
+      "comment" : "[direct] Query panel: the scope of the rule an answer writes when the question is about one item selected inside an application (issue #24).",
+      "extractionState" : "manual",
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Applies to this item for this priority." } } }
+    },
     "nudge.direct.query.panel.title" : {
       "comment" : "[direct] Query panel title. %1$@ is the application or origin, %2$@ the priority's intent.",
       "extractionState" : "manual",
@@ -992,6 +1002,16 @@
           }
         }
       }
+    },
+    "nudge.neutral.query.panel.title.item" : {
+      "comment" : "[neutral] Query panel title when the question is about one item selected inside an application (issue #24). %1$@ is the item's short label, %2$@ the priority's intent.",
+      "extractionState" : "manual",
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Is ‘%@’ part of %@?" } } }
+    },
+    "nudge.neutral.query.panel.scope.item" : {
+      "comment" : "[neutral] Query panel: the scope of the rule an answer writes when the question is about one item selected inside an application (issue #24).",
+      "extractionState" : "manual",
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Applies to this item only, not the whole app, for this priority." } } }
     },
     "nudge.neutral.query.panel.title" : {
       "comment" : "[neutral] Query panel title. %1$@ is the application or origin, %2$@ the priority's intent.",
@@ -1221,6 +1241,16 @@
         }
       }
     },
+    "nudge.silentVisual.query.panel.title.item" : {
+      "comment" : "[silentVisual] Query panel title when the question is about one item selected inside an application (issue #24). %1$@ is the item's short label, %2$@ the priority's intent.",
+      "extractionState" : "manual",
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Is ‘%@’ part of %@?" } } }
+    },
+    "nudge.silentVisual.query.panel.scope.item" : {
+      "comment" : "[silentVisual] Query panel: the scope of the rule an answer writes when the question is about one item selected inside an application (issue #24).",
+      "extractionState" : "manual",
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "This item, for this priority." } } }
+    },
     "nudge.silentVisual.query.panel.title" : {
       "comment" : "[silentVisual] Query panel title. %1$@ is the application or origin, %2$@ the priority's intent.",
       "extractionState" : "manual",
@@ -1376,6 +1406,16 @@
           }
         }
       }
+    },
+    "nudge.warm.query.panel.title.item" : {
+      "comment" : "[warm] Query panel title when the question is about one item selected inside an application (issue #24). %1$@ is the item's short label, %2$@ the priority's intent.",
+      "extractionState" : "manual",
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Is ‘%@’ part of %@?" } } }
+    },
+    "nudge.warm.query.panel.scope.item" : {
+      "comment" : "[warm] Query panel: the scope of the rule an answer writes when the question is about one item selected inside an application (issue #24).",
+      "extractionState" : "manual",
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Applies to just this item, not the whole app, for this priority." } } }
     },
     "nudge.warm.query.panel.title" : {
       "comment" : "[warm] Query panel title. %1$@ is the application or origin, %2$@ the priority's intent.",

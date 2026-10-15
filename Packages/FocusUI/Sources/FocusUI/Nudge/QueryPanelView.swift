@@ -67,15 +67,28 @@ public struct QueryPresentation: Sendable, Equatable {
     /// a coercion: the other two are the same size and one keystroke away (D-07).
     public var primaryAnswer: QueryAnswer { .yesAddIt }
 
+    /// The title line: the item form when the subject is one item selected inside an
+    /// application (issue #24), so the question names the chat or the project rather than the
+    /// whole app.
+    public var titleKey: NudgeCopyKey {
+        subject.isSelectedItem ? .queryPanelTitleItem : .queryPanelTitle
+    }
+
+    /// The scope line, chosen by the same fact as the title, so the sentence about what an
+    /// answer writes never disagrees with the rule it writes.
+    public var scopeKey: NudgeCopyKey {
+        subject.isSelectedItem ? .queryPanelScopeItem : .queryPanelScopeApp
+    }
+
     /// What VoiceOver hears: the question and its scope, in the order they are drawn (F-144).
     public func announcement() -> String {
         [
             NudgeCopy.string(
                 voice: voice,
-                .queryPanelTitle,
+                titleKey,
                 arguments: [subject.displayName, task]
             ),
-            NudgeCopy.string(voice: voice, .queryPanelScopeApp)
+            NudgeCopy.string(voice: voice, scopeKey)
         ].joined(separator: " ")
     }
 }
@@ -230,7 +243,7 @@ public struct QueryPanelView: DecisionSurfaceContent {
         }
 
         NudgeText(
-            .queryPanelTitle,
+            presentation.titleKey,
             voice: presentation.voice,
             arguments: [presentation.subject.displayName, presentation.task],
             role: provenance == .uninvited ? .title2 : .headline
@@ -248,7 +261,7 @@ public struct QueryPanelView: DecisionSurfaceContent {
 
         // The scope, **before** the answer. A person who clicks "Yes" has been told what
         // the click writes.
-        NudgeText(.queryPanelScopeApp, voice: presentation.voice, role: supportingRole)
+        NudgeText(presentation.scopeKey, voice: presentation.voice, role: supportingRole)
             .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
             .lineLimit(nil)
             .fixedSize(horizontal: false, vertical: true)

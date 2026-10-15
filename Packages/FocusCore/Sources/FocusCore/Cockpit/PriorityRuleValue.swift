@@ -20,6 +20,10 @@ public enum PriorityRuleScope: String, Sendable, CaseIterable, Hashable, Identif
     /// identity only, and under PD-1 the AX-title depth dial is parked with a named blocker — so a
     /// rule of this scope is a promise the product does not keep. The case stays so a stored row
     /// still decodes; `isRetired` is what the rules pane and the snapshot builder read.
+    ///
+    /// **Except a selected item** (issue #24): a subject in `SelectedItem`'s `<bundle>::<label>`
+    /// form is read again, through Accessibility and only with the person's opt-in, so a row in
+    /// that form is live: `PriorityRuleValue.isRetired` is `false` for it.
     case titleToken
     /// A rule that lasts only until this priority is completed.
     case session
@@ -108,6 +112,22 @@ public struct PriorityRuleValue: Sendable, Equatable, Hashable, Identifiable {
     /// Fails — rather than guessing — when the stored scope or verdict is a string this build
     /// does not know. A rule written by a later version is then *not shown* in the pane, which
     /// is honest; it is never rewritten and never deleted, so it survives the round trip.
+    /// **Whether this row is one the app no longer reads** (e07a, narrowed by issue #24).
+    ///
+    /// The scope alone used to answer this. Since the Accessibility reader landed, a
+    /// `.titleToken` row naming a `SelectedItem` (`<bundle>::<label>`) is live — the cascade
+    /// matches it — and only the word-shaped legacy row is retired. Read this, not
+    /// `scope.isRetired`, wherever a stored row is drawn or copied.
+    public var isRetired: Bool {
+        scope.isRetired && !SelectedItem.isItemSubject(subject)
+    }
+
+    /// Whether this row names an item selected inside an application rather than a whole
+    /// application, site or word.
+    public var isSelectedItem: Bool {
+        scope == .titleToken && SelectedItem.isItemSubject(subject)
+    }
+
     public init?(_ rule: FocusSchemaV3.RelevanceRule) {
         guard let scope = PriorityRuleScope(rawValue: rule.scopeRaw),
               let verdict = PriorityRuleVerdict(rawValue: rule.verdictRaw)

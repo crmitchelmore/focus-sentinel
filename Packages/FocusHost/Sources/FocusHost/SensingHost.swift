@@ -448,9 +448,13 @@ final class SensingHost {
     /// helper are different facts about the person's screen even though the engine's answer to
     /// both is `uncertain`.
     ///
-    /// Nothing deeper is read. There is no origin and no title in this value because there is
-    /// none in this epic: `ClassificationInput.origin` and `.titleTokens` are exercised by the
-    /// golden corpus and empty in every shipping path here, and e07 is what turns them on.
+    /// Nothing deeper is read here. There is no origin and no title in this value:
+    /// `ClassificationInput.origin` is exercised by the golden corpus and empty in every
+    /// shipping path. The selected item (issue #24) — and with it the only `titleTokens` a
+    /// shipping path fills (issue #27) — is attached by the
+    /// composition root through `SystemSelectedItemReader`, from `clearedFrontmostActivation`
+    /// below, so that the gate's decision is made once and the reader can only ever be handed
+    /// an application the gate cleared.
     /// **e03's own answer**, as the value the nudge's suppression stack consumes (R-84 gate 3).
     ///
     /// Exposed rather than reconstructed, because `ClearedActivation`'s initialiser is
@@ -480,6 +484,10 @@ final class SensingHost {
             )
         }
     }
+
+    /// The frontmost application, if the gate cleared it — the only activation the selected-item
+    /// reader is ever handed (issue #24). `nil` for a sensitive application, on purpose.
+    var clearedFrontmostActivation: ClearedActivation? { clearedFrontmost() }
 
     /// The frontmost application, if the gate cleared it. `nil` is the honest answer for a
     /// sensitive application: there is nothing deeper to say about it, on purpose.

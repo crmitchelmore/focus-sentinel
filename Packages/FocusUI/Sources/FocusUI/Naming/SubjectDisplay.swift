@@ -51,7 +51,10 @@ enum SubjectDisplay {
     ) -> String {
         // An origin is refused by shape even when the caller said `true`, because a `.session`
         // rule is scoped by how long it lasts and says nothing about what it is about.
+        // An item selected inside an application (issue #24) is named by its own label, which
+        // `NudgeSubject` reads off the key; LaunchServices knows nothing about a chat.
         let resolved = resolvingApplication && !NudgeSubject.isOrigin(subject)
+            && !SelectedItem.isItemSubject(subject)
             ? installedName(subject)
             : nil
         // Total: `named` answers `nil` only for an unnameable key, and a row exists to draw
@@ -78,8 +81,9 @@ enum SubjectDisplay {
         // Any of the three. `name(of:resolvingApplication:)` refuses origins by shape, which is
         // the most a scope naming no kind can honestly ask for.
         case .session: true
-        // An origin loses its scheme; a title token is already the word the person typed.
-        // Neither is a question for LaunchServices.
+        // An origin loses its scheme; a title token is already the word the person typed, or
+        // an item selected inside an application, named by its own label (issue #24). Neither
+        // is a question for LaunchServices.
         case .domain, .titleToken: false
         }
     }

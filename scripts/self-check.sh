@@ -4946,9 +4946,9 @@ check(
     rendering.get("privacyActionsDeclared") == [
         "deleteEverything", "setRetentionWindow", "exportData", "exportSettings", "importSettings",
         "setSensingPaused", "setIdleThreshold", "setMediaSuppression",
-        "setLaunchContextOnSessionStart", "setGrantOptIn"
+        "setLaunchContextOnSessionStart", "setGrantOptIn", "openGrantSettings", "recheckGrants"
     ],
-    "the Privacy pane's action vocabulary is exactly its ten verbs",
+    "the Privacy pane's action vocabulary is exactly its twelve verbs",
     rendering.get("privacyActionsDeclared"),
 )
 check(
@@ -5021,6 +5021,15 @@ check(
     and rendering.get("softwareUpdaterStarted") is False,
     "on a default store the update-check choice is off and the updater was never started",
     (rendering.get("softwareUpdateChecksStored"), rendering.get("softwareUpdaterStarted")),
+)
+# **The selected-item reader reads nothing unless the person switched it on** (issue #24). On a
+# default store the Accessibility ask is off, so the one file allowed to read what the grant
+# unlocks must report zero reads — however many judgements this run made.
+check(
+    rendering.get("accessibilityOptedIn") is False
+    and rendering.get("selectedItemReadCount") == 0,
+    "on a default store the Accessibility switch is off and the selected-item reader read nothing",
+    (rendering.get("accessibilityOptedIn"), rendering.get("selectedItemReadCount")),
 )
 check(
     rendering.get("privacySinkHeld") is True,

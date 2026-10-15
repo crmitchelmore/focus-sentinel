@@ -647,3 +647,86 @@ struct RuleCascadeTests {
         #expect(resolution.uncertaintyReason != .conflictingRules)
     }
 }
+
+// MARK: - Issue #24: a rule about one selected item inside a mixed-use application
+
+extension RuleCascadeTests {
+    static let copilot = "com.github.githubapp"
+
+    func evidence(bundleID: String, item label: String?) -> ClassificationEvidence {
+        ClassificationEvidence.make(
+            input: ClassificationInput(
+                bundleIdentifier: bundleID,
+                selectedItem: label.flatMap { SelectedItem(bundleIdentifier: bundleID, label: $0) }
+            ),
+            dwell: .zero,
+            normalizer: normalizer
+        )
+    }
+
+    static func itemSubject(_ label: String) -> String {
+        SelectedItem(bundleIdentifier: copilot, label: label)!.subject
+    }
+
+    /// The point of the issue: "Copilot is relevant" and "this chat in Copilot is not" are an
+    /// exception and the general case, so the narrower item rule decides and no conflict is
+    /// reported.
+    @Test("an item rule beats an app rule at the same authority, without a conflict")
+    func anItemRuleIsNarrowerThanItsApplication() {
+        let rules = [
+            Self.rule(.task, .app, Self.copilot, .relevant),
+            Self.rule(.task, .titleToken, Self.itemSubject("Plan the holiday"), .unrelated),
+        ]
+        let onTheItem = cascade.evaluate(
+            evidence: evidence(bundleID: Self.copilot, item: "plan the HOLIDAY"),
+            snapshot: snapshot(rules: rules)
+        )
+        #expect(onTheItem.stage == .taskRule)
+        #expect(onTheItem.verdict == .unrelated)
+        #expect(onTheItem.uncertaintyReason != .conflictingRules)
+
+        let onAnotherItem = cascade.evaluate(
+            evidence: evidence(bundleID: Self.copilot, item: "Fix the login race"),
+            snapshot: snapshot(rules: rules)
+        )
+        #expect(onAnotherItem.stage == .taskRule)
+        #expect(onAnotherItem.verdict == .relevant)
+
+        let unread = cascade.evaluate(
+            evidence: evidence(bundleID: Self.copilot, item: nil),
+            snapshot: snapshot(rules: rules)
+        )
+        #expect(unread.verdict == .relevant, "with nothing read, only the application is known")
+    }
+
+    @Test("an item rule never matches the same label in another application")
+    func anItemRuleIsBoundToItsApplication() {
+        let resolution = cascade.evaluate(
+            evidence: evidence(bundleID: "com.microsoft.VSCode", item: "Plan the holiday"),
+            snapshot: snapshot(rules: [
+                Self.rule(.global, .titleToken, Self.itemSubject("Plan the holiday"), .unrelated)
+            ])
+        )
+        #expect(resolution.stage != .globalRule)
+    }
+
+    @Test("an item rule's explanation names the item by its slug, never by a raw title")
+    func anItemRuleExplainsItself() {
+        let answer = cascade.ruleAnswer(
+            at: .global,
+            evidence: evidence(bundleID: Self.copilot, item: "Plan the holiday"),
+            snapshot: snapshot(rules: [
+                Self.rule(.global, .titleToken, Self.itemSubject("Plan the holiday"), .relevant)
+            ])
+        )
+        #expect(
+            answer?.clauses == [
+                .userRule(
+                    authority: .global,
+                    kind: .titleToken,
+                    subject: NormalisedToken.normalised("plan-the-holiday")!
+                )
+            ]
+        )
+    }
+}

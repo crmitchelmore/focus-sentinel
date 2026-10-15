@@ -23,8 +23,10 @@ import Foundation
 /// binds it — off by default, asked for once at the moment the switch is operated, and read for
 /// busy intervals alone.
 public enum GrantOptIn: String, Sendable, CaseIterable, Hashable, Codable, Identifiable {
-    /// Accessibility: window titles and browser context, which is what `e07` always meant by
-    /// "with consent" (`Capability.accessibilityWindowContext`).
+    /// Accessibility: the front window's title, or the selected row or main heading inside it,
+    /// in the frontmost application, reduced on device to the selected item (issue #24, owner's
+    /// ruling 2026-10-15). What `e07` always meant by "with consent"
+    /// (`Capability.accessibilityWindowContext`).
     case accessibilityWindowContext
     /// Screen Recording: pixel capture, parked by the Feasibility Court as dissent D-04 and
     /// still parked — the switch exists, and nothing yet reads what it would unlock.
@@ -47,16 +49,18 @@ public enum GrantOptIn: String, Sendable, CaseIterable, Hashable, Codable, Ident
 
     /// Whether anything in this build actually reads what the grant unlocks.
     ///
-    /// `false` for the first two: `titleToken` rules are retired and pixel capture is parked.
-    /// The pane says so beside the switch rather than implying a feature that does not exist — a
-    /// switch that asks a person for a permission and then uses it for nothing is the worst
-    /// version of this change, and this is the flag that keeps the copy honest.
-    ///
-    /// `true` for the calendar: the timebox control and the suppression stack both read it.
+    /// Accessibility is read (issue #24): `FocusHost.SystemSelectedItemReader` reads the front
+    /// window's title — or, when that names nothing, the selected row or main heading inside it —
+    /// of the frontmost application, on device, and reduces it to a `SelectedItem` before
+    /// anything keeps it. The calendar is read by the timebox control and the suppression stack
+    /// (focus-cal). Screen Recording is still parked, and the pane says so beside its switch
+    /// rather than implying a feature that does not exist — a switch that asks a person for a
+    /// permission and then uses it for nothing is the worst version of this change, and this is
+    /// the flag that keeps the copy honest.
     public var isConsumedByThisBuild: Bool {
         switch self {
-        case .accessibilityWindowContext, .screenCapture: false
-        case .calendarEvents: true
+        case .accessibilityWindowContext, .calendarEvents: true
+        case .screenCapture: false
         }
     }
 

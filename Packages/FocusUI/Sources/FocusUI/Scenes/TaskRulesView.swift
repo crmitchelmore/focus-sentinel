@@ -74,7 +74,7 @@ public struct TaskRulesView: View {
         HStack(spacing: spacing) {
             Image(systemName: rule.scope.symbolName)
                 .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
-                .accessibilityLabel(Text(ShellStrings.resource(Self.scopeKey(rule.scope))))
+                .accessibilityLabel(Text(ShellStrings.resource(Self.scopeKey(for: rule))))
 
             // The subject is the user's own material — a bundle identifier, an origin, a word —
             // and only the last of those three is already something to read. `rule.subject` is
@@ -86,12 +86,13 @@ public struct TaskRulesView: View {
                 .font(DesignTokens.font(.callout, scale: textScale))
                 .lineLimit(1)
 
-            // **A retired scope says so, in words** (e07a). A title-token rule is a promise the
-            // product does not keep — nothing in the shipping app produces a title token — so a
-            // stored one is drawn as what it is: kept, deletable, and no longer read. Its verdict
+            // **A retired row says so, in words** (e07a). A word-shaped title-token rule is a
+            // promise the product does not keep — nothing in the shipping app produces a title
+            // word — so a stored one is drawn as what it is: kept, deletable, and no longer
+            // read. An item rule (issue #24) is the same scope and is live, so it is not. Its verdict
             // controls are withdrawn below; a picker over a rule nothing reads would be a knob
             // wired to nothing.
-            if rule.scope.isRetired {
+            if rule.isRetired {
                 ShellText(.priorityRulesScopeRetired, role: .caption)
                     .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
                     .lineLimit(1)
@@ -133,11 +134,11 @@ public struct TaskRulesView: View {
                         ? DesignTokens.Palette.primaryText
                         : DesignTokens.supportingTextColor(for: traits)
                 )
-                .disabled(change == nil || Self.isInert(rule.scope))
+                .disabled(change == nil || Self.isInert(rule))
                 // A `.plain` button draws no disabled state of its own, and a control that looks
                 // live and does nothing is the silent nothing this pane exists to avoid — so a
                 // retired row's controls are dimmed as well as withdrawn.
-                .opacity(Self.isInert(rule.scope) ? 0.35 : 1)
+                .opacity(Self.isInert(rule) ? 0.35 : 1)
                 .accessibilityLabel(Text(ShellStrings.resource(Self.verdictKey(verdict))))
                 // The checkmark symbol supplies a selected trait even when its rule is not
                 // related. Override that inferred state before announcing the actual verdict.
@@ -274,10 +275,11 @@ public struct TaskRulesView: View {
         $0 != .session && !$0.isRetired && $0.isObserved
     }
 
-    /// Whether a stored rule of this scope is drawn read-only: retired, or not observable in
-    /// this version. Its verdict controls are withdrawn; its remove control stays.
-    static func isInert(_ scope: PriorityRuleScope) -> Bool {
-        scope.isRetired || !scope.isObserved
+    /// Whether a stored rule is drawn read-only: retired (a word-shaped title-token row, not an
+    /// item one — issue #24), or of a scope not observable in this version. Its verdict controls
+    /// are withdrawn; its remove control stays.
+    static func isInert(_ rule: PriorityRuleValue) -> Bool {
+        rule.isRetired || !rule.scope.isObserved
     }
 
     /// The dispositions that are a stored row, in `AppRuleDisposition.allCases` order.
@@ -312,6 +314,12 @@ public struct TaskRulesView: View {
         case .askEachTime: .uncertain
         case .interpretByContext: .uncertain
         }
+    }
+
+    /// The scope label for one stored row: an item selected inside an application (issue #24)
+    /// is a `.titleToken` row, and is called what it is rather than "word in a title".
+    static func scopeKey(for rule: PriorityRuleValue) -> ShellStringKey {
+        rule.isSelectedItem ? .priorityRulesScopeSelectedItem : scopeKey(rule.scope)
     }
 
     static func scopeKey(_ scope: PriorityRuleScope) -> ShellStringKey {

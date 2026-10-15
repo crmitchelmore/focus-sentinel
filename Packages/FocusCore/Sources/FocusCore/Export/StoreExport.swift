@@ -308,7 +308,7 @@ public enum StoreExport {
                     id: $0.id.uuidString,
                     priorityID: $0.task?.id.uuidString,
                     scopeRaw: $0.scopeRaw,
-                    subject: $0.subject,
+                    subject: SelectedItem.exportedSubject($0.subject),
                     verdictRaw: $0.verdictRaw,
                     createdAt: $0.createdAt
                 )
@@ -375,7 +375,7 @@ public enum StoreExport {
                     localDayKey: $0.localDayKey,
                     kindRaw: $0.kindRaw,
                     rungRaw: $0.rungRaw,
-                    subject: $0.subject,
+                    subject: SelectedItem.exportedSubject($0.subject),
                     subjectKindRaw: $0.subjectKindRaw,
                     priorityID: $0.priorityID?.uuidString,
                     surfaceRaw: $0.surfaceRaw,
@@ -390,7 +390,7 @@ public enum StoreExport {
                     id: $0.id.uuidString,
                     priorityID: $0.priorityID.uuidString,
                     subjectKindRaw: $0.subjectKindRaw,
-                    subject: $0.subject,
+                    subject: SelectedItem.exportedSubject($0.subject),
                     reasonRaw: $0.reasonRaw,
                     askedAt: $0.askedAt,
                     outcomeRaw: $0.outcomeRaw,

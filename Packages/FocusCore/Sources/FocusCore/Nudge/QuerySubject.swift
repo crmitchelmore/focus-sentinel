@@ -25,6 +25,12 @@ import Foundation
 /// | `.explanationClause` | a subject the explanation *names* — a seed default or the mixed-use seed fallback. This is the narrowest, best-evidenced answer and is preferred whenever it exists |
 /// | `.judgedActivation` | the bundle identifier or normalised origin the classification was **about**. The `noNegativeBasis` route to `uncertain` — 32 of the corpus's 72 uncertain verdicts (P-138) — produces an explanation with no subject clause at all, because there was no rule, no seed and no context item to name; what there *was* is the application in front of the person, which is precisely what the judgement was made about |
 ///
+/// **Narrowed, never widened, by the selected item** (issue #24). When the Accessibility reader
+/// supplied a `SelectedItem` for the very application either source named, the subject becomes
+/// that item — kind `.titleToken`, identifier `<bundle>::<label>`, provenance `.selectedItem` —
+/// so the question is about the chat or the project in front of the person and the rule an
+/// answer writes covers that item alone. An item for any other application is ignored.
+///
 /// There is no third source. A correction therefore cannot name a subject the judgement did
 /// not use — which is R-86's rule, stated as a property of this type rather than as a comment
 /// on the call site — and P-140's finding is honoured exactly: an activation carrying **no**
@@ -36,6 +42,8 @@ public struct QuerySubject: Sendable, Equatable, Hashable {
         case explanationClause
         /// The subject the classification was made about.
         case judgedActivation
+        /// The item selected inside the application one of the two above named (issue #24).
+        case selectedItem
     }
 
     /// How narrow the rule an answer writes will be. `.app` at baseline; e07's origin signal
@@ -64,24 +72,36 @@ public struct QuerySubject: Sendable, Equatable, Hashable {
     ///     nothing to write a rule *about* and the answer is `nil`.
     ///   - explanation: the judgement's own reasoning. Consulted first, because a subject the
     ///     explanation names is a subject the engine demonstrably used.
+    ///   - selectedItem: the item the Accessibility reader reduced from the frontmost window's
+    ///     title, when the person switched that reading on. Narrows the subject only when it
+    ///     belongs to the application the subject already names.
     /// - Returns: the subject, or `nil` when there is no single nameable one.
     public static func derive(
         judgedSubject: String?,
-        explanation: Explanation
+        explanation: Explanation,
+        selectedItem: SelectedItem? = nil
     ) -> QuerySubject? {
+        let applicationSubject: QuerySubject
         if let named = explanationSubject(explanation) {
-            return QuerySubject(
+            applicationSubject = QuerySubject(
                 kind: kind(of: named),
                 identifier: named,
                 provenance: .explanationClause
             )
+        } else if let judged = nameable(judgedSubject) {
+            applicationSubject = QuerySubject(
+                kind: kind(of: judged),
+                identifier: judged,
+                provenance: .judgedActivation
+            )
+        } else {
+            return nil
         }
-        guard let judged = nameable(judgedSubject) else { return nil }
-        return QuerySubject(
-            kind: kind(of: judged),
-            identifier: judged,
-            provenance: .judgedActivation
-        )
+        guard let item = selectedItem,
+              applicationSubject.kind == .app,
+              applicationSubject.identifier == item.bundleIdentifier
+        else { return applicationSubject }
+        return QuerySubject(kind: .titleToken, identifier: item.subject, provenance: .selectedItem)
     }
 
     /// The first subject an explanation *names*, in clause order.
@@ -131,7 +151,8 @@ public struct QuerySubject: Sendable, Equatable, Hashable {
     /// whether a display name is *looked up* or *derived* (focus-ebv). Two copies of a
     /// discriminator are two things to keep in step; this is one, called from both.
     private static func kind(of identifier: String) -> RuleSubjectKind {
-        NudgeSubject.isOrigin(identifier) ? .domain : .app
+        if NudgeSubject.isOrigin(identifier) { return .domain }
+        return SelectedItem.isItemSubject(identifier) ? .titleToken : .app
     }
 }
 
