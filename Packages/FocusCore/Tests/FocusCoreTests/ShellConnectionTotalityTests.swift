@@ -334,7 +334,8 @@ struct ShellConnectionTotalityTests {
             verb: .start,
             task: "Draft the incident note",
             doneWhen: "it is posted",
-            flags: []
+            flags: [],
+            context: [HandoffContextItem(kind: .domain, value: "https://status.example.com")]
         ),
         showsRitualPrompt: true,
         session: SessionSnapshot(

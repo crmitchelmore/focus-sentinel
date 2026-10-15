@@ -961,6 +961,90 @@
         }
       }
     },
+    "handoff.flag.contextIgnored" : {
+      "comment" : "Disclosure on the handoff sheet. The argument is how many context items were left out.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Left out %@ context items that could not be read, were files, repeated or were over the limit."
+          }
+        }
+      }
+    },
+    "handoff.confirm.incoming.context.label" : {
+      "comment" : "Caption above the apps, sites and keywords that arrive with a new priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "With this context"
+          }
+        }
+      }
+    },
+    "handoff.context.heading" : {
+      "comment" : "Heading of the sheet shown when another app asks to add context to the current priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add context to your priority?"
+          }
+        }
+      }
+    },
+    "handoff.context.explanation" : {
+      "comment" : "Explanation on the add-context handoff sheet.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Another app asked to add these apps, sites and keywords to your current priority. Nothing is added unless you choose Add."
+          }
+        }
+      }
+    },
+    "handoff.context.label" : {
+      "comment" : "Caption above the list of items an add-context handoff would add.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "To add"
+          }
+        }
+      }
+    },
+    "handoff.context.action.add" : {
+      "comment" : "Button on the add-context handoff sheet that adds the listed items.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add"
+          }
+        }
+      }
+    },
+    "handoff.context.action.add.help" : {
+      "comment" : "Tooltip on the add-context handoff sheet's Add.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adds the items shown here to your current priority. Items it already has are skipped."
+          }
+        }
+      }
+    },
     "handoff.flag.unknownItems" : {
       "comment" : "Disclosure on the handoff sheet. The argument is a list of query-key names.",
       "extractionState" : "manual",

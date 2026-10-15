@@ -410,6 +410,12 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case handoffFlagControlCharacters = "handoff.flag.controlCharacters"
     case handoffFlagDuplicateKeys = "handoff.flag.duplicateKeys"
     case handoffFlagUnknownItems = "handoff.flag.unknownItems"
+    case handoffFlagContextIgnored = "handoff.flag.contextIgnored"
+    case handoffIncomingContextLabel = "handoff.confirm.incoming.context.label"
+    case handoffContextHeading = "handoff.context.heading"
+    case handoffContextExplanation = "handoff.context.explanation"
+    case handoffContextLabel = "handoff.context.label"
+    case handoffContextActionAdd = "handoff.context.action.add"
 
     // The context pack
     case contextHeading = "context.pack.heading"
@@ -801,6 +807,7 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case contextKeywordPromptHelp = "context.keyword.prompt.help"
     case handoffActionCancelHelp = "handoff.confirm.action.cancel.help"
     case handoffActionReplaceHelp = "handoff.confirm.action.replace.help"
+    case handoffContextActionAddHelp = "handoff.context.action.add.help"
     case priorityActionChangeHelp = "priority.action.change.help"
     case priorityActionClearHelp = "priority.action.clear.help"
     case priorityActionCompleteHelp = "priority.action.complete.help"

@@ -22,6 +22,11 @@ import SwiftUI
 ///
 /// Replace is `.destructive`-styled and is **not** the default action: Return does not replace
 /// the user's priority. Cancel is.
+///
+/// A `focus://context` handoff uses the same sheet in a second mode: it names the current
+/// priority, lists the apps, sites and keywords that would be added to it, and offers Add
+/// beside Cancel. Cancel stays the default there too — adding is quieter than replacing, but a
+/// script still does not get to change the desk without a person agreeing.
 public struct HandoffConfirmationSheet: View {
     public let request: HandoffRequest
     /// The displays this sheet bounds itself against; `nil` for the live ones. Injectable for
@@ -58,12 +63,12 @@ public struct HandoffConfirmationSheet: View {
 
     private var content: some View {
         VStack(alignment: .leading, spacing: spacing) {
-            ShellText(.handoffHeading, role: .title3)
+            ShellText(isContext ? .handoffContextHeading : .handoffHeading, role: .title3)
                 .fontWeight(.semibold)
                 .lineLimit(nil)
                 .fixedSize(horizontal: false, vertical: true)
 
-            ShellText(.handoffExplanation, role: .callout)
+            ShellText(isContext ? .handoffContextExplanation : .handoffExplanation, role: .callout)
                 .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
                 .lineLimit(nil)
                 .fixedSize(horizontal: false, vertical: true)
@@ -71,11 +76,11 @@ public struct HandoffConfirmationSheet: View {
             ViewThatFits(in: .horizontal) {
                 HStack(alignment: .top, spacing: spacing * 2) {
                     currentColumn
-                    incomingColumn
+                    if isContext { contextColumn } else { incomingColumn }
                 }
                 VStack(alignment: .leading, spacing: spacing) {
                     currentColumn
-                    incomingColumn
+                    if isContext { contextColumn } else { incomingColumn }
                 }
             }
 
@@ -95,13 +100,23 @@ public struct HandoffConfirmationSheet: View {
                 .keyboardShortcut(.defaultAction)
                 .focused($focus, equals: .handoffCancel)
 
-                Button(action: replace) {
-                    ShellText(.handoffActionReplace)
+                if isContext {
+                    // Same focus slot as Replace: the sheet still has exactly two stops.
+                    Button(action: replace) {
+                        ShellText(.handoffContextActionAdd)
+                    }
+                    .shellHelp(.handoffContextActionAddHelp)
+                    .buttonStyle(.borderedProminent)
+                    .focused($focus, equals: .handoffReplace)
+                } else {
+                    Button(action: replace) {
+                        ShellText(.handoffActionReplace)
+                    }
+                    .shellHelp(.handoffActionReplaceHelp)
+                    .buttonStyle(.borderedProminent)
+                    .tint(Color(nsColor: .systemRed))
+                    .focused($focus, equals: .handoffReplace)
                 }
-                .shellHelp(.handoffActionReplaceHelp)
-                .buttonStyle(.borderedProminent)
-                .tint(Color(nsColor: .systemRed))
-                .focused($focus, equals: .handoffReplace)
             }
         }
         .dialogInset()
@@ -113,6 +128,8 @@ public struct HandoffConfirmationSheet: View {
 
     // MARK: - The two sides
 
+    private var isContext: Bool { request.verb == .context }
+
     private var currentColumn: some View {
         column(
             titleKey: .handoffCurrentLabel,
@@ -123,12 +140,41 @@ public struct HandoffConfirmationSheet: View {
     }
 
     private var incomingColumn: some View {
-        column(
-            titleKey: .handoffIncomingLabel,
-            intent: request.task,
-            doneWhen: request.doneWhen,
-            emptyKey: nil
-        )
+        VStack(alignment: .leading, spacing: spacing / 2) {
+            column(
+                titleKey: .handoffIncomingLabel,
+                intent: request.task,
+                doneWhen: request.doneWhen,
+                emptyKey: nil
+            )
+            if !request.context.isEmpty {
+                contextList(titleKey: .handoffIncomingContextLabel)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var contextColumn: some View {
+        contextList(titleKey: .handoffContextLabel)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// The items a script sent, one line each. Values are data, drawn verbatim.
+    private func contextList(titleKey: ShellStringKey) -> some View {
+        VStack(alignment: .leading, spacing: spacing / 3) {
+            ShellText(titleKey, role: .caption)
+                .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+            ForEach(Array(request.context.enumerated()), id: \.offset) { _, item in
+                Label {
+                    Text(verbatim: item.value)
+                        .font(DesignTokens.font(.callout, scale: textScale))
+                        .lineLimit(nil)
+                        .fixedSize(horizontal: false, vertical: true)
+                } icon: {
+                    Image(systemName: item.kind.symbolName)
+                }
+            }
+        }
     }
 
     @ViewBuilder
@@ -216,6 +262,12 @@ public struct HandoffConfirmationSheet: View {
                 .handoffFlagUnknownItems,
                 role: .caption,
                 argument: keys.formatted(.list(type: .and))
+            )
+        case .contextItemsIgnored(let count):
+            ShellText(
+                .handoffFlagContextIgnored,
+                role: .caption,
+                argument: count.formatted()
             )
         }
     }

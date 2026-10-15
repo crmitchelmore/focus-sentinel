@@ -17,8 +17,10 @@ swift build -c release --product focus-bridge
 BIN="$(swift build -c release --show-bin-path)"
 
 mkdir -p "$DEST" "$PREFIX/bin"
-rm -rf "$DEST/FocusCore_FocusCore.bundle"
-cp -f "$BIN/focus-bridge" "$DEST/focus-bridge"
+# Remove before copying: overwriting a signed Mach-O in place keeps the inode, and the kernel then
+# kills the new binary (SIGKILL) against the old cached code signature.
+rm -rf "$DEST/FocusCore_FocusCore.bundle" "$DEST/focus-bridge"
+cp "$BIN/focus-bridge" "$DEST/focus-bridge"
 cp -Rf "$BIN/FocusCore_FocusCore.bundle" "$DEST/"
 ln -sf "$DEST/focus-bridge" "$PREFIX/bin/focus-bridge"
 

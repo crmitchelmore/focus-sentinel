@@ -107,6 +107,34 @@ struct HandoffTests {
             try Handoff.url(task: String(repeating: "x", count: 501), doneWhen: nil, scheme: "focus")
         }
     }
+
+    @Test func contextRidesAlongAndTheAppReadsItBack() throws {
+        let url = try Handoff.url(
+            task: "#8 Review",
+            doneWhen: nil,
+            context: ["app:com.microsoft.Outlook", "domain:dev.azure.com", "keyword:Sodexo", "keyword:sodexo"],
+            scheme: "focus"
+        )
+        let request = try #require(HandoffRequest.parse(url).request)
+        #expect(request.context.map { "\($0.kind.rawValue):\($0.value)" }
+            == ["app:com.microsoft.Outlook", "domain:https://dev.azure.com", "keyword:sodexo"])
+        #expect(request.flags.isEmpty)
+    }
+
+    @Test(arguments: ["file:/etc/passwd", "nonsense", "app:no dots", "domain:javascript:alert(1)"])
+    func itemsTheAppWouldDropAreErrorsHere(_ item: String) {
+        #expect(throws: BridgeError.self) {
+            try Handoff.contextURL(items: [item], scheme: "focus")
+        }
+    }
+
+    @Test func aContextURLAddsToTheCurrentPriority() throws {
+        let url = try Handoff.contextURL(items: ["app:com.microsoft.teams2"], scheme: "focus")
+        #expect(url.absoluteString == "focus://context?add=app%3Acom.microsoft.teams2")
+        let request = try #require(HandoffRequest.parse(url).request)
+        #expect(request.verb == .context)
+        #expect(throws: BridgeError.self) { try Handoff.contextURL(items: [], scheme: "focus") }
+    }
 }
 
 @MainActor
@@ -137,11 +165,11 @@ struct MCPServerTests {
         #expect(server().handle(#"{"jsonrpc":"2.0","method":"notifications/initialized"}"#) == nil)
     }
 
-    @Test func listsFourTools() throws {
+    @Test func listsFiveTools() throws {
         let reply = try object(server().handle(#"{"jsonrpc":"2.0","id":"a","method":"tools/list"}"#))
         let tools = try #require((reply["result"] as? [String: Any])?["tools"] as? [[String: Any]])
         #expect(tools.compactMap { $0["name"] as? String }
-            == ["focus_status", "focus_sessions", "focus_export", "focus_propose_priority"])
+            == ["focus_status", "focus_sessions", "focus_export", "focus_propose_priority", "focus_add_context"])
         #expect(reply["id"] as? String == "a")
     }
 
@@ -159,6 +187,19 @@ struct MCPServerTests {
             ##"{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"focus_propose_priority","arguments":{"task":"#8 Review","dry_run":true}}}"##
         ))
         #expect((reply["result"] as? [String: Any])?["isError"] as? Bool == false)
+        #expect(opened.isEmpty)
+    }
+
+    @Test func addingContextWithoutAStoreOpensNothing() throws {
+        var opened: [URL] = []
+        let dry = try object(server { opened.append($0) }.handle(
+            #"{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"focus_add_context","arguments":{"items":["keyword:sodexo"],"dry_run":true}}}"#
+        ))
+        #expect((dry["result"] as? [String: Any])?["isError"] as? Bool == false)
+        let live = try object(server { opened.append($0) }.handle(
+            #"{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"focus_add_context","arguments":{"items":["keyword:sodexo"]}}}"#
+        ))
+        #expect((live["result"] as? [String: Any])?["isError"] as? Bool == true)
         #expect(opened.isEmpty)
     }
 

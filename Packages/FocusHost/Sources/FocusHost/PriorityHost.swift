@@ -1,3 +1,4 @@
+import AppKit
 import FocusCore
 import Foundation
 import Observation
@@ -241,6 +242,13 @@ final class PriorityHost: PriorityActing {
     func receive(_ url: URL) {
         switch HandoffRequest.parse(url) {
         case .confirm(let request):
+            // A context handoff adds to the current priority. With none there is nothing for
+            // the sheet to name and nothing to add to, so it goes the way of a rejection: logged,
+            // never drawn, never stored somewhere the person did not choose.
+            if request.verb == .context, state.priority == nil {
+                logger.notice("dropped a focus://context handoff: there is no current priority")
+                return
+            }
             pendingHandoff = request
             refresh()
         case .rejected(let rejection):
@@ -426,12 +434,64 @@ final class PriorityHost: PriorityActing {
         // handoff is a new commitment that arrived through a URL rather than through the field.
         guard !state.capturingIsRefused else { return }
         pendingHandoff = nil
-        perform { store in
-            _ = try store.setPriority(
-                intent: request.task,
-                doneWhen: request.doneWhen,
-                undo: self.undo
-            )
+        let drafts = request.context.compactMap(Self.draft(for:))
+        switch request.verb {
+        case .start:
+            perform { store in
+                let newID = try store.setPriority(
+                    intent: request.task,
+                    doneWhen: request.doneWhen,
+                    undo: self.undo
+                )
+                // No undo of their own, as with a kept desk: undoing the set puts the previous
+                // priority back, and this task keeps its desk for the day it is picked up again.
+                for draft in drafts {
+                    _ = try store.addContextItem(
+                        taskID: newID,
+                        kindRaw: draft.kind.rawValue,
+                        value: draft.value,
+                        displayName: draft.displayName
+                    )
+                }
+            }
+        case .context:
+            // Added to the priority on screen now: the sheet names it, so it is the one the
+            // person agreed to. Items it already holds are skipped rather than doubled.
+            guard let priority = state.priority else {
+                refresh()
+                return
+            }
+            let held = Set(priority.contextItems.map { "\($0.kind.rawValue)|\($0.value)" })
+            let fresh = drafts.filter { !held.contains("\($0.kind.rawValue)|\($0.value)") }
+            perform { store in
+                for draft in fresh {
+                    _ = try store.addContextItem(
+                        taskID: priority.id,
+                        kindRaw: draft.kind.rawValue,
+                        value: draft.value,
+                        displayName: draft.displayName,
+                        undo: self.undo
+                    )
+                }
+            }
+        }
+    }
+
+    /// Turn a parsed handoff item into a draft, naming an app the way Finder would when it is
+    /// installed and falling back to its bundle identifier when it is not.
+    private static func draft(for item: HandoffContextItem) -> ContextItemDraft? {
+        switch item.kind {
+        case .app:
+            let name = NSWorkspace.shared.urlForApplication(withBundleIdentifier: item.value)
+                .map { FileManager.default.displayName(atPath: $0.path) }
+                .map { $0.hasSuffix(".app") ? String($0.dropLast(4)) : $0 }
+            return ContextItemDraft.app(bundleID: item.value, displayName: name ?? item.value)
+        case .domain:
+            return ContextItemDraft.domain(origin: item.value)
+        case .keyword:
+            return ContextItemDraft.keyword(item.value)
+        case .file, .unknown:
+            return nil
         }
     }
 

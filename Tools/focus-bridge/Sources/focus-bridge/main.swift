@@ -8,12 +8,16 @@ let usage = """
       focus-bridge status                                   current priority, running session, today
       focus-bridge sessions [--since YYYY-MM-DD] [--issue N] [--limit N]
       focus-bridge export [--out FILE]                      full 'Export My Data' JSON (stdout by default)
-      focus-bridge propose --task TEXT [--done-when TEXT] [--dry-run]
+      focus-bridge propose --task TEXT [--done-when TEXT] [--context ITEM]... [--dry-run]
+      focus-bridge add-context --item ITEM [--item ITEM]... [--dry-run]
       focus-bridge mcp                                      Model Context Protocol server on stdio
 
+    ITEM is app:<bundle id>, domain:<host> or keyword:<text>, e.g. app:com.microsoft.Outlook,
+    domain:dev.azure.com, keyword:sodexo. add-context adds to the current priority.
+
     The store is read through a private SQLite backup and never opened in place. Set FOCUS_STORE
-    to read another store file. `propose` opens focus://start; Focus Sentinel changes nothing
-    until you press Replace.
+    to read another store file. `propose` opens focus://start and `add-context` opens
+    focus://context; Focus Sentinel changes nothing until you press Replace or Add.
     """
 
 func fail(_ message: String, code: Int32 = 1) -> Never {
@@ -25,6 +29,21 @@ func option(_ name: String, in args: [String]) -> String? {
     guard let i = args.firstIndex(of: name) else { return nil }
     guard i + 1 < args.count else { fail("\(name) needs a value", code: 2) }
     return args[i + 1]
+}
+
+func options(_ name: String, in args: [String]) -> [String] {
+    var values: [String] = []
+    var i = 0
+    while i < args.count {
+        if args[i] == name {
+            guard i + 1 < args.count else { fail("\(name) needs a value", code: 2) }
+            values.append(args[i + 1])
+            i += 2
+        } else {
+            i += 1
+        }
+    }
+    return values
 }
 
 func emit(_ value: some Encodable) throws {
@@ -63,11 +82,25 @@ func main() {
             }
         case "propose":
             guard let task = option("--task", in: rest) else { fail("propose needs --task", code: 2) }
-            let url = try Handoff.url(task: task, doneWhen: option("--done-when", in: rest))
+            let url = try Handoff.url(
+                task: task,
+                doneWhen: option("--done-when", in: rest),
+                context: options("--context", in: rest)
+            )
             print(url.absoluteString)
             if !rest.contains("--dry-run") {
                 try Handoff.open(url)
                 FileHandle.standardError.write(Data("Sent. Press Replace in Focus Sentinel to accept it.\n".utf8))
+            }
+        case "add-context":
+            let url = try Handoff.contextURL(items: options("--item", in: rest))
+            print(url.absoluteString)
+            if !rest.contains("--dry-run") {
+                guard try Snapshot.read(store: store, now: now).activePriorityID != nil else {
+                    fail("there is no current priority to add context to; propose one first")
+                }
+                try Handoff.open(url)
+                FileHandle.standardError.write(Data("Sent. Press Add in Focus Sentinel to accept it.\n".utf8))
             }
         case "mcp":
             MCPServer(read: { try Snapshot.read(store: store) }).run()

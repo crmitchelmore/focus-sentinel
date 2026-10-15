@@ -1,10 +1,67 @@
 import Foundation
 
-/// The verbs `focus://` understands. Exactly one, and an allowlist rather than a switch with a
-/// default, so adding a second is a deliberate act.
+/// The verbs `focus://` understands. An allowlist rather than a switch with a default, so adding
+/// one is a deliberate act.
 public enum HandoffVerb: String, Sendable, CaseIterable, Hashable {
-    /// `focus://start?task=…&doneWhen=…`
+    /// `focus://start?task=…&doneWhen=…&context=app:…` — replace the priority, optionally with
+    /// a context pack.
     case start
+    /// `focus://context?add=app:…&add=domain:…&add=keyword:…` — add to the **current**
+    /// priority's context pack. Names no task, so it can never change which priority is current.
+    case context
+}
+
+/// One context item a handoff asks for, already bounded and normalised.
+///
+/// Only the three kinds a URL can carry honestly: an app (a bundle identifier), a web origin and
+/// a keyword. A `file` item needs a security-scoped bookmark made at the moment a person chose
+/// the file, and a URL cannot be that moment, so `file:` is ignored and disclosed like any other
+/// unreadable item.
+public struct HandoffContextItem: Sendable, Equatable, Hashable {
+    public let kind: ContextItemKind
+    /// A bundle identifier, a `scheme://host[:port]` origin, or a lowercased keyword.
+    public let value: String
+
+    public init(kind: ContextItemKind, value: String) {
+        self.kind = kind
+        self.value = value
+    }
+
+    /// Longest bundle identifier accepted. Launch Services allows more; nobody ships one.
+    public static let maximumBundleIDLength = 255
+
+    /// Parse `app:<bundle id>`, `domain:<origin or host>` or `keyword:<text>`. `nil` for
+    /// anything else, including a well-formed `file:`.
+    public static func parse(_ text: String) -> HandoffContextItem? {
+        guard let colon = text.firstIndex(of: ":") else { return nil }
+        let kind = text[..<colon].lowercased()
+        let rest = String(text[text.index(after: colon)...])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        switch kind {
+        case "app":
+            let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: ".-"))
+            guard !rest.isEmpty, rest.count <= maximumBundleIDLength, rest.contains("."),
+                  rest.unicodeScalars.allSatisfy({ $0.isASCII && allowed.contains($0) })
+            else { return nil }
+            return HandoffContextItem(kind: .app, value: rest)
+        case "domain":
+            // A bare host is read as https; only web origins are accepted, because a domain
+            // item is matched against what a browser reports.
+            let candidate = rest.contains("://") ? rest : "https://\(rest)"
+            guard let origin = OriginNormalizer.normalize(candidate),
+                  origin.hasPrefix("https://") || origin.hasPrefix("http://")
+            else { return nil }
+            return HandoffContextItem(kind: .domain, value: origin)
+        case "keyword":
+            let keyword = rest.lowercased()
+            guard !keyword.isEmpty, keyword.count <= HandoffRequest.maximumFieldLength else {
+                return nil
+            }
+            return HandoffContextItem(kind: .keyword, value: keyword)
+        default:
+            return nil
+        }
+    }
 }
 
 /// Something the confirm surface must tell the user about what arrived.
@@ -23,6 +80,9 @@ public enum HandoffFlag: Sendable, Equatable, Hashable {
     case duplicateKeysIgnored([String])
     /// Query items this build does not understand, named so the sheet can list them.
     case unknownQueryItems([String])
+    /// Context items that could not be read, were of a kind a URL cannot carry, or came after
+    /// the cap. Carries how many, not what: the sheet lists what it *will* add.
+    case contextItemsIgnored(count: Int)
 }
 
 /// Why a URL produced no request at all.
@@ -39,6 +99,8 @@ public enum HandoffRejection: Sendable, Equatable, Hashable {
     case tooLong
     /// No task, or a task that was only whitespace once the control characters were gone.
     case missingTask
+    /// A `context` verb with no readable item to add.
+    case missingContext
 }
 
 /// What a `focus://` URL asked for — **and nothing the app may act on without a person.**
@@ -80,18 +142,30 @@ public enum HandoffParse: Sendable, Equatable, Hashable {
 /// integration test.
 public struct HandoffRequest: Sendable, Equatable, Hashable {
     public let verb: HandoffVerb
-    /// The intent, control-stripped, trimmed and capped. Never empty.
+    /// The intent, control-stripped, trimmed and capped. Never empty for `.start`; always empty
+    /// for `.context`, which names no task.
     public let task: String
-    /// The optional definition of done, under the same treatment.
+    /// The optional definition of done, under the same treatment. Always `nil` for `.context`.
     public let doneWhen: String?
     /// Everything the confirm surface has to disclose about how this was bounded.
     public let flags: [HandoffFlag]
+    /// Context items to add: to the new priority for `.start`, to the current one for
+    /// `.context`. Distinct, in arrival order, at most `maximumContextItems`. Never empty for
+    /// `.context`.
+    public let context: [HandoffContextItem]
 
-    public init(verb: HandoffVerb, task: String, doneWhen: String?, flags: [HandoffFlag]) {
+    public init(
+        verb: HandoffVerb,
+        task: String,
+        doneWhen: String?,
+        flags: [HandoffFlag],
+        context: [HandoffContextItem] = []
+    ) {
         self.verb = verb
         self.task = task
         self.doneWhen = doneWhen
         self.flags = flags
+        self.context = context
     }
 
     // MARK: - Bounds
@@ -104,8 +178,15 @@ public struct HandoffRequest: Sendable, Equatable, Hashable {
     public static let maximumURLLength = 4_096
     /// Each field, after decoding.
     public static let maximumFieldLength = 500
-    /// The query keys this build understands. Anything else is ignored *and named*.
-    public static let knownQueryKeys = ["task", "doneWhen"]
+    /// The query keys each verb understands. Anything else is ignored *and named*.
+    public static let knownQueryKeys: [HandoffVerb: [String]] = [
+        .start: ["task", "doneWhen", "context"],
+        .context: ["add"],
+    ]
+    /// Keys that may repeat, one item each. The first-wins rule does not apply to them.
+    public static let repeatableQueryKeys: Set<String> = ["context", "add"]
+    /// Most context items one handoff may carry. More are ignored and counted.
+    public static let maximumContextItems = 20
 
     // MARK: - The parse
 
@@ -125,12 +206,18 @@ public struct HandoffRequest: Sendable, Equatable, Hashable {
         let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
 
         var firstValues: [String: String] = [:]
+        var repeatedValues: [String] = []
         var duplicateKeys: [String] = []
         var unknownKeys: [String] = []
+        let known = knownQueryKeys[verb] ?? []
 
         for item in items {
-            if !knownQueryKeys.contains(item.name) {
+            if !known.contains(item.name) {
                 if !unknownKeys.contains(item.name) { unknownKeys.append(item.name) }
+                continue
+            }
+            if repeatableQueryKeys.contains(item.name) {
+                repeatedValues.append(item.value ?? "")
                 continue
             }
             if firstValues[item.name] != nil {
@@ -145,6 +232,32 @@ public struct HandoffRequest: Sendable, Equatable, Hashable {
 
         var strippedAnything = false
         var flags: [HandoffFlag] = []
+
+        var context: [HandoffContextItem] = []
+        var ignoredContext = 0
+        for raw in repeatedValues {
+            let cleaned = stripControlCharacters(raw, didStrip: &strippedAnything)
+            guard let item = HandoffContextItem.parse(cleaned) else {
+                ignoredContext += 1
+                continue
+            }
+            if context.contains(item) { continue }
+            guard context.count < maximumContextItems else {
+                ignoredContext += 1
+                continue
+            }
+            context.append(item)
+        }
+
+        if verb == .context {
+            guard !context.isEmpty else { return .rejected(.missingContext) }
+            if strippedAnything { flags.append(.controlCharactersStripped) }
+            if !unknownKeys.isEmpty { flags.append(.unknownQueryItems(unknownKeys)) }
+            if ignoredContext > 0 { flags.append(.contextItemsIgnored(count: ignoredContext)) }
+            return .confirm(
+                HandoffRequest(verb: verb, task: "", doneWhen: nil, flags: flags, context: context)
+            )
+        }
 
         let rawTask = firstValues["task"] ?? ""
         let cleanedTask = stripControlCharacters(rawTask, didStrip: &strippedAnything)
@@ -173,9 +286,16 @@ public struct HandoffRequest: Sendable, Equatable, Hashable {
         if strippedAnything { flags.append(.controlCharactersStripped) }
         if !duplicateKeys.isEmpty { flags.append(.duplicateKeysIgnored(duplicateKeys)) }
         if !unknownKeys.isEmpty { flags.append(.unknownQueryItems(unknownKeys)) }
+        if ignoredContext > 0 { flags.append(.contextItemsIgnored(count: ignoredContext)) }
 
         return .confirm(
-            HandoffRequest(verb: verb, task: task, doneWhen: doneWhen, flags: flags)
+            HandoffRequest(
+                verb: verb,
+                task: task,
+                doneWhen: doneWhen,
+                flags: flags,
+                context: context
+            )
         )
     }
 

@@ -4,14 +4,14 @@ import Foundation
 /// **A Model Context Protocol server over stdio.**
 ///
 /// One JSON-RPC 2.0 message per line in, one per line out, nothing else on stdout. No socket is
-/// opened: the client starts this process and owns both ends of the pipe. Four tools, three of
-/// which only read a snapshot; the fourth proposes a priority the person still has to accept.
+/// opened: the client starts this process and owns both ends of the pipe. Three tools only read
+/// a snapshot; two propose a priority or context that the person still has to accept.
 @MainActor
 public final class MCPServer {
     public typealias Reader = @MainActor () throws -> StoreReading
 
     public static let supportedProtocolVersions = ["2025-06-18", "2025-03-26", "2024-11-05"]
-    public static let serverVersion = "0.1.0"
+    public static let serverVersion = "0.2.0"
 
     private let read: Reader
     private let now: () -> Date
@@ -86,9 +86,20 @@ public final class MCPServer {
         Focus Sentinel is the person's local macOS focus app. It holds ONE current priority and \
         times focus sessions on it. Use focus_status to see what they are focused on now, \
         focus_sessions to read time spent per priority (priorities named '#<n> …' are work-os \
-        issues), and focus_propose_priority to suggest a new priority: the app asks the person \
-        to confirm, so never claim the priority was set.
+        issues), focus_propose_priority to suggest a new priority with its context (apps, \
+        sites, keywords that belong to the work), and focus_add_context to add context to the \
+        current priority. The app asks the person to confirm both, so never claim anything was \
+        set or added.
         """
+
+    static let contextSchema: [String: Any] = [
+        "type": "array",
+        "items": ["type": "string"],
+        "maxItems": HandoffRequest.maximumContextItems,
+        "description": "Apps, sites and keywords that belong to this work, as 'app:<bundle id>' "
+            + "(e.g. app:com.microsoft.Outlook), 'domain:<host>' (e.g. domain:dev.azure.com) or "
+            + "'keyword:<text>'. Files are not accepted."
+    ]
 
     static var tools: [[String: Any]] {
         [
@@ -135,12 +146,28 @@ public final class MCPServer {
                     "properties": [
                         "task": ["type": "string", "description": "The priority, at most 500 characters"],
                         "done_when": ["type": "string", "description": "How the person will know it is done, at most 500 characters"],
+                        "context": contextSchema,
                         "dry_run": ["type": "boolean", "description": "Return the focus:// URL without opening it"]
                     ],
                     "required": ["task"],
                     "additionalProperties": false
                 ],
                 "annotations": ["readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": false]
+            ],
+            [
+                "name": "focus_add_context",
+                "title": "Add context to the current priority",
+                "description": "Ask Focus Sentinel to add apps, sites or keywords to the CURRENT priority's context pack, so it can tell on-task from off-task. The app shows a confirmation sheet and adds nothing until the person presses Add; items already there are skipped. Check focus_status first: with no current priority the app ignores this.",
+                "inputSchema": [
+                    "type": "object",
+                    "properties": [
+                        "items": contextSchema,
+                        "dry_run": ["type": "boolean", "description": "Return the focus:// URL without opening it"]
+                    ],
+                    "required": ["items"],
+                    "additionalProperties": false
+                ],
+                "annotations": ["readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false]
             ]
         ]
     }
@@ -170,7 +197,11 @@ public final class MCPServer {
                 ))
             case "focus_propose_priority":
                 guard let task = arguments["task"] as? String else { throw BridgeError("task is required") }
-                let url = try Handoff.url(task: task, doneWhen: arguments["done_when"] as? String)
+                let url = try Handoff.url(
+                    task: task,
+                    doneWhen: arguments["done_when"] as? String,
+                    context: try Self.strings(arguments["context"], name: "context")
+                )
                 let dryRun = arguments["dry_run"] as? Bool ?? false
                 if !dryRun { try openURL(url) }
                 return try text(ProposalReceipt(
@@ -179,6 +210,22 @@ public final class MCPServer {
                     note: dryRun
                         ? "Not opened (dry run)."
                         : "Focus Sentinel is showing a confirmation sheet. Nothing changes until the person presses Replace."
+                ))
+            case "focus_add_context":
+                let url = try Handoff.contextURL(items: Self.strings(arguments["items"], name: "items"))
+                let dryRun = arguments["dry_run"] as? Bool ?? false
+                if !dryRun {
+                    guard try read().activePriorityID != nil else {
+                        throw BridgeError("there is no current priority to add context to; propose one first")
+                    }
+                    try openURL(url)
+                }
+                return try text(ProposalReceipt(
+                    url: url.absoluteString,
+                    opened: !dryRun,
+                    note: dryRun
+                        ? "Not opened (dry run)."
+                        : "Focus Sentinel is showing a confirmation sheet. Nothing is added until the person presses Add."
                 ))
             default:
                 throw BridgeError("unknown tool: \(name)")
@@ -207,6 +254,14 @@ public final class MCPServer {
             return #"{"jsonrpc":"2.0","id":null,"error":{"code":-32603,"message":"internal error"}}"#
         }
         return String(decoding: data, as: UTF8.self)
+    }
+
+    static func strings(_ value: Any?, name: String) throws -> [String] {
+        guard let value else { return [] }
+        guard let array = value as? [Any], array.allSatisfy({ $0 is String }) else {
+            throw BridgeError("\(name) must be an array of strings")
+        }
+        return array.compactMap { $0 as? String }
     }
 
     static func int(_ value: Any?) -> Int? {

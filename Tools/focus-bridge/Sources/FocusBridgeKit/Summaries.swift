@@ -16,6 +16,9 @@ public struct PrioritySummary: Codable, Sendable, Equatable {
     public let completedAt: Date?
     public let shipped: String?
     public let restartPoint: String?
+    /// The priority's context pack as `kind:value` (`app:com.microsoft.Outlook`,
+    /// `domain:https://dev.azure.com`, `keyword:sodexo`). Present on the current priority only.
+    public var context: [String]? = nil
 }
 
 public struct SessionSummary: Codable, Sendable, Equatable {
@@ -127,7 +130,14 @@ public enum Summaries {
         let document = reading.document
         let priority = reading.activePriorityID
             .flatMap { id in document.priorities.first { $0.id == id } }
-            .map(Self.priority)
+            .map { p -> PrioritySummary in
+                var summary = Self.priority(p)
+                summary.context = document.contextItems
+                    .filter { $0.priorityID == p.id }
+                    .sorted { $0.addedAt < $1.addedAt }
+                    .map { "\($0.kindRaw):\($0.value)" }
+                return summary
+            }
         let all = sessions(in: document, now: now)
         let open = all.last { $0.endedAt == nil }
         let today = all.filter { calendar.isDate($0.startedAt, inSameDayAs: now) }

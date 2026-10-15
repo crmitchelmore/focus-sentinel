@@ -261,7 +261,9 @@ public protocol PriorityActing: AnyObject {
     func removeRule(id: UUID)
 
     /// Accept an incoming `focus://` handoff — **only** ever called from the confirmation
-    /// sheet's Replace button (F-142).
+    /// sheet's Replace (start) or Add (context) button (F-142). A start sets a new priority and
+    /// attaches its context items; a context handoff adds its items to the current priority,
+    /// skipping any it already holds.
     func acceptHandoff(_ request: HandoffRequest)
 
     /// Dismiss the pending handoff without changing anything.

@@ -59,7 +59,18 @@ enum HandoffCorpus {
         "focus://start?task=..%2F..%2F..%2Fetc%2Fpasswd",
         "focus://start?task=ok#fragment",
         "focus://start?task=ok&doneWhen=\(String(repeating: "d", count: 800))",
-        "focus://start?task=\(String(repeating: "b", count: 600))"
+        "focus://start?task=\(String(repeating: "b", count: 600))",
+
+        // --- context items (start and the context verb) ------------------------------------
+        "focus://start?task=ok&context=app:com.microsoft.Outlook&context=domain:dev.azure.com",
+        "focus://start?task=ok&context=file:%2Fetc%2Fpasswd&context=nonsense",
+        "focus://start?task=ok&context=domain:javascript:alert(1)",
+        "focus://start?task=ok&context=app:com.evil%00.app",
+        "focus://context?add=keyword:Sodexo&add=app:com.microsoft.teams2",
+        "focus://context?add=file:%2Ftmp%2Fx",
+        "focus://context",
+        "focus://context?task=Replace%20me&add=keyword:x",
+        "focus://context?add=domain:https%3A%2F%2Fuser:pw@example.com%2Fpath%3Fq%3D1"
     ]
 
     /// The subset that `URL` will accept, as URLs.
@@ -199,6 +210,76 @@ struct HandoffRequestTests {
         #expect(parse.request == nil, "‘\(input)’ produced an actionable request")
     }
 
+    // MARK: - Context items
+
+    @Test("start carries app, domain and keyword items, normalised and in order")
+    func startCarriesContext() throws {
+        let request = try #require(HandoffRequest.parse(
+            "focus://start?task=ok&context=app:com.microsoft.Outlook"
+                + "&context=domain:Dev.Azure.com&context=keyword:%20Sodexo%20"
+                + "&context=domain:https%3A%2F%2Fuser:pw@example.com%3A8443%2Fpath%3Fq%3D1"
+        ).request)
+        #expect(request.context == [
+            HandoffContextItem(kind: .app, value: "com.microsoft.Outlook"),
+            HandoffContextItem(kind: .domain, value: "https://dev.azure.com"),
+            HandoffContextItem(kind: .keyword, value: "sodexo"),
+            HandoffContextItem(kind: .domain, value: "https://example.com:8443"),
+        ])
+        #expect(request.flags.isEmpty)
+    }
+
+    @Test("unreadable, file and non-web items are ignored and counted, never stored as given")
+    func unreadableContextIsCounted() throws {
+        let request = try #require(HandoffRequest.parse(
+            "focus://start?task=ok&context=file:%2Fetc%2Fpasswd&context=nonsense"
+                + "&context=domain:javascript:alert(1)&context=app:no%20dots&context=app:a.b"
+        ).request)
+        #expect(request.context == [HandoffContextItem(kind: .app, value: "a.b")])
+        #expect(request.flags == [.contextItemsIgnored(count: 4)])
+    }
+
+    @Test("duplicates collapse and the cap holds")
+    func contextCap() throws {
+        let items = (0..<25).map { "context=keyword:k\($0)" }.joined(separator: "&")
+        let request = try #require(
+            HandoffRequest.parse("focus://start?task=ok&context=keyword:k0&\(items)").request
+        )
+        #expect(request.context.count == HandoffRequest.maximumContextItems)
+        #expect(request.flags == [.contextItemsIgnored(count: 5)])
+    }
+
+    @Test("the context verb names no task and cannot carry one")
+    func contextVerb() throws {
+        let request = try #require(HandoffRequest.parse(
+            "focus://context?task=Replace%20me&add=keyword:Sodexo&add=app:com.microsoft.teams2"
+        ).request)
+        #expect(request.verb == .context)
+        #expect(request.task.isEmpty)
+        #expect(request.doneWhen == nil)
+        #expect(request.context == [
+            HandoffContextItem(kind: .keyword, value: "sodexo"),
+            HandoffContextItem(kind: .app, value: "com.microsoft.teams2"),
+        ])
+        #expect(request.flags == [.unknownQueryItems(["task"])])
+    }
+
+    @Test(
+        "a context verb with nothing readable to add is rejected",
+        arguments: ["focus://context", "focus://context?add=", "focus://context?add=file:%2Ftmp%2Fx"]
+    )
+    func emptyContextVerb(_ input: String) {
+        #expect(HandoffRequest.parse(input) == .rejected(.missingContext))
+    }
+
+    @Test("context on start is a known key there, and add is not")
+    func keysArePerVerb() throws {
+        let request = try #require(
+            HandoffRequest.parse("focus://start?task=ok&add=keyword:x").request
+        )
+        #expect(request.context.isEmpty)
+        #expect(request.flags == [.unknownQueryItems(["add"])])
+    }
+
     @Test("an empty definition of done is no definition of done")
     func emptyDoneWhen() throws {
         for input in ["focus://start?task=ok&doneWhen=", "focus://start?task=ok&doneWhen=%00"] {
@@ -248,7 +329,14 @@ struct HandoffRequestTests {
         for url in urls {
             switch HandoffRequest.parse(url) {
             case .confirm(let request):
-                #expect(!request.task.isEmpty, "‘\(url)’ confirmed an empty task")
+                // A start always names a task; a context verb never does, and always adds something.
+                #expect(
+                    request.verb == .start ? !request.task.isEmpty : request.task.isEmpty,
+                    "‘\(url)’ confirmed the wrong task shape"
+                )
+                #expect(request.verb == .start || !request.context.isEmpty)
+                #expect(request.context.count <= HandoffRequest.maximumContextItems)
+                #expect(request.context.allSatisfy { $0.kind != .file && !$0.value.isEmpty })
                 #expect(request.task.count <= HandoffRequest.maximumFieldLength)
                 #expect((request.doneWhen?.count ?? 0) <= HandoffRequest.maximumFieldLength)
                 #expect(
@@ -311,7 +399,14 @@ struct HandoffRequestTests {
             switch parse {
             case .confirm(let request):
                 // A confirm is a *request to ask a person*, and it is always within bounds.
-                #expect(!request.task.isEmpty, "‘\(input)’ confirmed an empty task")
+                // A start always names a task; a context verb never does, and always adds something.
+                #expect(
+                    request.verb == .start ? !request.task.isEmpty : request.task.isEmpty,
+                    "‘\(input)’ confirmed the wrong task shape"
+                )
+                #expect(request.verb == .start || !request.context.isEmpty)
+                #expect(request.context.count <= HandoffRequest.maximumContextItems)
+                #expect(request.context.allSatisfy { $0.kind != .file && !$0.value.isEmpty })
                 #expect(request.task.count <= HandoffRequest.maximumFieldLength)
                 #expect((request.doneWhen?.count ?? 0) <= HandoffRequest.maximumFieldLength)
                 #expect(request.doneWhen?.isEmpty != true)

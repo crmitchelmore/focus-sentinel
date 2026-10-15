@@ -228,6 +228,7 @@ extension CockpitConnection: ShellDrawnConnection {
             "state.pendingHandoff.task": .drawn([.handoffTask, .handoffDetail]),
             "state.pendingHandoff.doneWhen": .drawn([.handoffDetail]),
             "state.pendingHandoff.flags": .drawn([.handoffDetail]),
+            "state.pendingHandoff.context": .drawn([.handoffDetail]),
 
             "state.session.sessionID": .drawn([.sessionDetail]),
             "state.session.taskID": .drawn([.sessionDetail]),
