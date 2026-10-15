@@ -16,8 +16,8 @@
 #   FocusUI        SwiftUI, AppKit, Observation, QuickLook,     SwiftData, networking, Sensing, Classify, Rules
 #                  UniformTypeIdentifiers, FocusCore
 #   FocusHost      Foundation, AppKit, SwiftData, Observation,   SwiftUI, networking
-#                  ApplicationServices, CoreGraphics, os,
-#                  ALL SIBLINGS, FocusUpdates included
+#                  ApplicationServices, CoreGraphics, EventKit,
+#                  os, ALL SIBLINGS, FocusUpdates included
 #   FocusUpdates   Foundation, AppKit, Sparkle, FocusCore        SwiftUI, SwiftData, networking of its own,
 #                                                                every other sibling
 #
@@ -215,7 +215,10 @@ ALLOWED_FRAMEWORKS[FocusEvaluate]="Foundation os"
 ALLOWED_FRAMEWORKS[FocusModel]="Foundation FoundationModels os"
 ALLOWED_FRAMEWORKS[FocusSensing]="Foundation AppKit CoreGraphics IOKit Carbon.HIToolbox CoreAudio CoreMediaIO ServiceManagement os"
 ALLOWED_FRAMEWORKS[FocusUI]="Foundation SwiftUI AppKit Observation QuickLook UniformTypeIdentifiers UserNotifications os"
-ALLOWED_FRAMEWORKS[FocusHost]="Foundation AppKit SwiftData Observation ApplicationServices CoreGraphics os"
+# EventKit (focus-cal): the calendar reader and the one confined requester. It reads when events
+# start and end, only where the person switched the ask on, stores nothing and writes nothing;
+# `Config/tcc-families.txt` bans the write and wider-ask selectors from the artefact.
+ALLOWED_FRAMEWORKS[FocusHost]="Foundation AppKit SwiftData Observation ApplicationServices CoreGraphics EventKit os"
 ALLOWED_FRAMEWORKS[FocusUpdates]="Foundation AppKit Sparkle os"
 
 PACKAGES=(FocusCore FocusRules FocusClassify FocusEvaluate FocusModel FocusSensing FocusUI FocusHost FocusUpdates)

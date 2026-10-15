@@ -15,8 +15,13 @@ import Foundation
 /// > nothing is asked, nothing prompts, and the capability table reads exactly as it did under
 /// > PD-1. The only route from "not asked" to "asked" is a control the person operated.
 ///
-/// Two grants, and no more: each one names the reading it would unlock, so a switch is never a
-/// blank cheque. A third case here is a change to the doctrine and has to be argued for.
+/// Three grants, and no more: each one names the reading it would unlock, so a switch is never a
+/// blank cheque. A fourth case here is a change to the doctrine and has to be argued for.
+///
+/// **The third was argued for by the owner** (focus-cal): *"enable the app to understand a
+/// Calendar so that you can't schedule focus blocks during meetings."* The same conditional rule
+/// binds it — off by default, asked for once at the moment the switch is operated, and read for
+/// busy intervals alone.
 public enum GrantOptIn: String, Sendable, CaseIterable, Hashable, Codable, Identifiable {
     /// Accessibility: window titles and browser context, which is what `e07` always meant by
     /// "with consent" (`Capability.accessibilityWindowContext`).
@@ -24,6 +29,10 @@ public enum GrantOptIn: String, Sendable, CaseIterable, Hashable, Codable, Ident
     /// Screen Recording: pixel capture, parked by the Feasibility Court as dissent D-04 and
     /// still parked — the switch exists, and nothing yet reads what it would unlock.
     case screenCapture
+    /// Calendars: full access to events, read for busy intervals alone (focus-cal). macOS has
+    /// no narrower read — write-only access cannot read anything — so the app asks for full
+    /// access and takes from it a start, an end and whether the time is busy.
+    case calendarEvents
 
     public var id: String { rawValue }
 
@@ -32,16 +41,24 @@ public enum GrantOptIn: String, Sendable, CaseIterable, Hashable, Codable, Ident
         switch self {
         case .accessibilityWindowContext: .accessibilityWindowContext
         case .screenCapture: .screenCapture
+        case .calendarEvents: .calendarEvents
         }
     }
 
     /// Whether anything in this build actually reads what the grant unlocks.
     ///
-    /// `false` for both today: `titleToken` rules are retired and pixel capture is parked. The
-    /// pane says so beside the switch rather than implying a feature that does not exist — a
+    /// `false` for the first two: `titleToken` rules are retired and pixel capture is parked.
+    /// The pane says so beside the switch rather than implying a feature that does not exist — a
     /// switch that asks a person for a permission and then uses it for nothing is the worst
     /// version of this change, and this is the flag that keeps the copy honest.
-    public var isConsumedByThisBuild: Bool { false }
+    ///
+    /// `true` for the calendar: the timebox control and the suppression stack both read it.
+    public var isConsumedByThisBuild: Bool {
+        switch self {
+        case .accessibilityWindowContext, .screenCapture: false
+        case .calendarEvents: true
+        }
+    }
 
     /// Total: a stored key this build does not know reads as `nil` rather than throwing (R-45).
     public static func decode(_ raw: String) -> GrantOptIn? {

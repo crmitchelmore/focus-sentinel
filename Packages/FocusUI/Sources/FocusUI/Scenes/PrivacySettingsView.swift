@@ -356,6 +356,7 @@ public struct PrivacySettingsView: View {
         switch grant {
         case .accessibilityWindowContext: .settingsPrivacyGrantAccessibility
         case .screenCapture: .settingsPrivacyGrantScreenCapture
+        case .calendarEvents: .settingsPrivacyGrantCalendar
         }
     }
 
@@ -363,6 +364,7 @@ public struct PrivacySettingsView: View {
         switch grant {
         case .accessibilityWindowContext: .settingsPrivacyGrantAccessibilityNote
         case .screenCapture: .settingsPrivacyGrantScreenCaptureNote
+        case .calendarEvents: .settingsPrivacyGrantCalendarNote
         }
     }
 
@@ -371,6 +373,7 @@ public struct PrivacySettingsView: View {
         switch grant {
         case .accessibilityWindowContext: .settingsPrivacyGrantAccessibilityHelp
         case .screenCapture: .settingsPrivacyGrantScreenCaptureHelp
+        case .calendarEvents: .settingsPrivacyGrantCalendarHelp
         }
     }
 

@@ -17,9 +17,9 @@ struct CapabilityContractTotalityTests {
     /// thirteenth capability or an eleventh consumer stops the **build**. This test is the
     /// belt to that brace: it enumerates all one hundred and twenty pairs and asserts every
     /// one produces a declared answer.
-    @Test("every one of the 120 capability × consumer pairs has a declared fallback")
+    @Test("every one of the 130 capability × consumer pairs has a declared fallback")
     func tableIsTotal() {
-        #expect(Capability.allCases.count == 12)
+        #expect(Capability.allCases.count == 13)
         #expect(SensingConsumer.allCases.count == 10)
 
         var seen: Set<String> = []
@@ -33,8 +33,8 @@ struct CapabilityContractTotalityTests {
                 seen.insert("\(capability.rawValue)|\(consumer.rawValue)")
             }
         }
-        #expect(seen.count == 120)
-        #expect(CapabilityContract.allCells.count == 120)
+        #expect(seen.count == 130)
+        #expect(CapabilityContract.allCells.count == 130)
     }
 
     /// A `degraded` fallback must name a capability that is not the one it is falling back
@@ -246,7 +246,7 @@ struct CapabilityMatrixTests {
         let empty = CapabilityMatrix()
         #expect(empty.state(of: .microphoneActivity) == .notRequested)
         #expect(empty.observation(of: .microphoneActivity) == nil)
-        #expect(empty.allStates.count == 12, "twelve rows, always")
+        #expect(empty.allStates.count == 13, "thirteen rows, always")
 
         let unobserved = CapabilityMatrix.unobserved(at: now)
         for capability in Capability.allCases {

@@ -488,7 +488,7 @@ fails the same way.
 | I3-07 | inputMonitoring | plant `IOHIDRequestAccess` | I3-01's control | **PROVEN** — `FAIL [I-3] inputMonitoring: the artefact carries no IOHIDRequestAccess` |
 | I3-08 | location | plant `CLLocationManager` | I3-01's control | **PROVEN** — `FAIL [I-3] location: the artefact carries no CLLocationManager` |
 | I3-09 | contacts | plant `CNContactStore` | I3-01's control | **PROVEN** — `FAIL [I-3] contacts: the artefact carries no CNContactStore` |
-| I3-10 | calendar | plant `EKEventStore` | I3-01's control | **PROVEN** — `FAIL [I-3] calendar: the artefact carries no EKEventStore` |
+| I3-10 | calendar | plant `requestAccessToEntityType` (focus-cal: `EKEventStore` is now read, behind the opt-in, so the witness plants the older, wider ask that stays banned) | I3-01's control | **PROVEN** for the old row — `FAIL [I-3] calendar: the artefact carries no EKEventStore`; re-run against the new selector pending |
 
 And the four readings that stop the ten above being green for the wrong reason:
 
