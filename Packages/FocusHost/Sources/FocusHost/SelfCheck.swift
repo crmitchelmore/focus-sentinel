@@ -139,9 +139,20 @@ enum SelfCheck {
         storeKind(arguments: CommandLine.arguments)
     }
 
+    /// The store kind a launch with these arguments gets.
+    ///
+    /// Precedence, highest first (focus-k2in): an explicit `--focus-store` fixture; then a seed or
+    /// restore launch, which always gets a disposable in-memory root — with or without
+    /// `--focus-self-check`, and even beside the attended live-store flag, because those modes
+    /// write and read a store of their own and the root must never open the person's on their
+    /// behalf; then the attended live-store reader; then any other self-check; and only then the
+    /// person's own store.
     static func storeKind(arguments: [String]) -> FocusStore.Kind {
         if let path = value(after: storeArgument, in: arguments) {
             return .temporary(URL(fileURLWithPath: path))
+        }
+        if arguments.contains(seedArgument) || arguments.contains(restoreArgument) {
+            return .inMemory
         }
         if arguments.contains(liveStoreArgument) { return .applicationSupport }
         return value(after: argument, in: arguments) == nil ? .applicationSupport : .inMemory

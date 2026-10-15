@@ -178,14 +178,18 @@ final class PriorityHost: PriorityActing {
     private var storeFailureAcknowledged = false
 
     /// Where the store the app tried to open lives, for the sheet that says it did not.
-    static var storeLocation: String { FocusStore.applicationSupportURL.path(percentEncoded: false) }
+    ///
+    /// Handed in by the composition root rather than assumed (focus-k2in): a launch given a
+    /// fixture store that failed to open must name the fixture, not the person's own file.
+    let storeLocation: String
 
     init(
         context: ModelContext,
         dateProvider: any DateProvider,
         calendar: Calendar,
         locale: Locale,
-        environment: Environment
+        environment: Environment,
+        storeLocation: String = FocusStore.applicationSupportURL.path(percentEncoded: false)
     ) {
         self.context = context
         self.store = PriorityStore(context: context, dateProvider: dateProvider)
@@ -193,10 +197,11 @@ final class PriorityHost: PriorityActing {
         self.calendar = calendar
         self.locale = locale
         self.environment = environment
+        self.storeLocation = storeLocation
         self.state = CockpitState(
             status: environment.status,
             storeOpened: environment.storeOpened,
-            storeLocation: Self.storeLocation,
+            storeLocation: storeLocation,
             isObservingActivity: environment.isObservingActivity,
             session: environment.session,
             sensing: environment.sensing,
@@ -568,7 +573,7 @@ final class PriorityHost: PriorityActing {
             storeOpened: environment.storeOpened,
             lastWriteFailed: writeFailure != nil,
             storeFailureAcknowledged: storeFailureAcknowledged,
-            storeLocation: Self.storeLocation,
+            storeLocation: storeLocation,
             isObservingActivity: environment.isObservingActivity,
             priority: priority,
             recent: recent,

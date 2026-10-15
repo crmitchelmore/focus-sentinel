@@ -68,8 +68,21 @@ public final class AppComposition {
     }
 
     public let modelContainer: ModelContainer
-    /// Where `modelContainer` lives, kept so delete-everything can name every file it owns.
+    /// **Where `modelContainer` actually lives**, kept so delete-everything can name every file
+    /// it owns (focus-k2in).
+    ///
+    /// The kind that *opened*, not the kind that was asked for: when the requested store will
+    /// not open the root falls back to memory, and this is then `.inMemory`. Before, it went on
+    /// holding the requested kind, so the Privacy pane named a file nothing was being written to
+    /// and delete-everything removed the very store that had just refused to open — the
+    /// person's data, deleted by a session that never held it.
     let storeKind: FocusStore.Kind
+    /// The kind this root was asked to open. Differs from `storeKind` only after a fallback, and
+    /// is what the unavailable-store sheet names: the file the person should go and look at.
+    let requestedStoreKind: FocusStore.Kind
+    /// The database file the active store lives in, or `nil` when it is memory-only. What the
+    /// Privacy pane draws, what its Reveal button opens and where the export panel starts.
+    var activeStoreURL: URL? { FocusStore.storeURL(for: storeKind) }
     let storeStatus: StoreStatus
 
     /// **The one thing that ever shortens this app's memory** (F-115, focus-tzj.3).
@@ -301,7 +314,7 @@ public final class AppComposition {
         // restarts takes the process with it — so re-reading it would be re-asking a question
         // whose answer is fixed.
         self.bootIdentity = BootIdentity.current()
-        self.storeKind = storeKind
+        self.requestedStoreKind = storeKind
 
         // Every container in this programme is built through `FocusStore.makeContainer`,
         // which always goes through the migration plan. If the on-disk store cannot be
@@ -325,6 +338,7 @@ public final class AppComposition {
         }
         self.modelContainer = container
         self.storeStatus = status
+        self.storeKind = status.isReady ? storeKind : .inMemory
 
         let context = container.mainContext
         self.ruleStore = ruleStoreOverride ?? SwiftDataRuleStore(context: context)
@@ -436,7 +450,10 @@ public final class AppComposition {
                 session: sessions.snapshot,
                 sensing: sensing.summary,
                 capabilities: sensing.capabilities
-            )
+            ),
+            // The store this launch tried to open, which after a fallback is not the one in use:
+            // the sheet that says it did not open must name the file to go and look at.
+            storeLocation: FocusStore.storeURL(for: storeKind)?.path(percentEncoded: false) ?? ""
         )
 
         // The two hosts are one feature seen from two sides: the graph changes the stored
@@ -2082,7 +2099,7 @@ public final class AppComposition {
         guard !hasDeletedEverything else {
             return ShellSettingsConnection(
                 preference: .matchSystem, setPreference: { _ in },
-                storeURL: FocusStore.applicationSupportURL,
+                storeURL: activeStoreURL,
                 summary: .inactive, capabilities: CapabilityMatrix(), verdict: nil,
                 intervention: InterventionSettings(), onInterventionAction: { _ in }
             )

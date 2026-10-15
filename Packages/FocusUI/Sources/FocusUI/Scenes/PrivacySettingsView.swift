@@ -115,7 +115,11 @@ public enum PrivacySettingsAction: Sendable, Equatable, Hashable {
 }
 
 public struct PrivacySettingsView: View {
-    private let storeURL: URL
+    /// The database file this session is writing to, or `nil` when it is writing to memory only
+    /// (focus-k2in) — a store that would not open, or a disposable self-check root. `nil` draws
+    /// the temporary-storage sentence in place of a path and no Reveal button, so the pane never
+    /// names a file nothing is being saved to, nor opens the person's own store on its behalf.
+    private let storeURL: URL?
     /// What the pane's one destructive control reaches. `{ _ in }` in a preview and in the
     /// snapshot lane; the composition root's `perform(_:)` in the shipping window.
     private let onAction: (PrivacySettingsAction) -> Void
@@ -168,7 +172,7 @@ public struct PrivacySettingsView: View {
     @ScaledMetric(relativeTo: .body) private var spacing: CGFloat = 12
 
     public init(
-        storeURL: URL = FocusStore.applicationSupportURL,
+        storeURL: URL? = FocusStore.applicationSupportURL,
         summary: SensingSummary = .inactive,
         capabilities: CapabilityMatrix = CapabilityMatrix(),
         verdict: VerdictSnapshot? = nil,
@@ -521,12 +525,20 @@ public struct PrivacySettingsView: View {
                 // here — with Reveal in Finder wired to open it — was invisible to the whole
                 // nineteen-stage gate, because the only thing reporting a Settings value was the
                 // window, and the window reported its own `storeURL` rather than the pane's.
-                Text(verbatim: storePath)
-                    .font(DesignTokens.font(.footnote, scale: textScale))
-                    .monospaced()
-                    .textSelection(.enabled)
-                    .lineLimit(nil)
-                    .fixedSize(horizontal: false, vertical: true)
+                if storeURL != nil {
+                    Text(verbatim: storePath)
+                        .font(DesignTokens.font(.footnote, scale: textScale))
+                        .monospaced()
+                        .textSelection(.enabled)
+                        .lineLimit(nil)
+                        .fixedSize(horizontal: false, vertical: true)
+                } else {
+                    // **Memory only** (focus-k2in): the sentence the unavailable-store sheet
+                    // uses, because it is the same fact — no file is being written this session.
+                    ShellText(.cockpitStoreSheetWhatHappened, role: .footnote)
+                        .lineLimit(nil)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
             .padding(spacing / 2)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -547,14 +559,18 @@ public struct PrivacySettingsView: View {
                     )
             }
 
-            Button {
-                NSWorkspace.shared.activateFileViewerSelecting([storeURL])
-            } label: {
-                ShellText(.settingsPrivacyReveal)
+            // No file, nothing to reveal: a memory-only session must not open the Finder on a
+            // store it is not using (focus-k2in).
+            if let storeURL {
+                Button {
+                    NSWorkspace.shared.activateFileViewerSelecting([storeURL])
+                } label: {
+                    ShellText(.settingsPrivacyReveal)
+                }
+                .keyboardShortcut(.defaultAction)
+                .focused($focus, equals: .privacyRevealStore)
+                .shellHelp(.settingsPrivacyRevealHelp)
             }
-            .keyboardShortcut(.defaultAction)
-            .focused($focus, equals: .privacyRevealStore)
-            .shellHelp(.settingsPrivacyRevealHelp)
 
             Divider()
 
@@ -696,7 +712,16 @@ public struct PrivacySettingsView: View {
     }
 
     /// The store's location, as one string: what the person reads, and what the receipt reports.
-    private var storePath: String { storeURL.path(percentEncoded: false) }
+    private var storePath: String { Self.renderedStorePath(storeURL) }
+
+    /// What the receipt reports for a memory-only session, which has no path to report.
+    public static let memoryOnlyStorePath = "memory-only"
+
+    /// **The one derivation of the reported store path** (focus-k2in), shared with the
+    /// composition root's expectation so the two cannot disagree about a memory-only session.
+    public static func renderedStorePath(_ storeURL: URL?) -> String {
+        storeURL?.path(percentEncoded: false) ?? memoryOnlyStorePath
+    }
 }
 
 /// **The confirmation for deleting everything** (e07a, focus-6pr.3).

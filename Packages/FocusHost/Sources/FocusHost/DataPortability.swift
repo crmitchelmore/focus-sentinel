@@ -148,6 +148,10 @@ extension AppComposition {
         }
     }
 
+    /// Where the export save panel starts: beside the active store, or `nil` when it is
+    /// memory-only.
+    var exportDirectoryURL: URL? { activeStoreURL?.deletingLastPathComponent() }
+
     /// The save panel for either document. Returns `nil` when the person dismissed it, which is
     /// an answer and not a failure.
     @MainActor
@@ -157,8 +161,10 @@ extension AppComposition {
         panel.allowedContentTypes = [.json]
         panel.canCreateDirectories = true
         // The app's own directory, so somebody who presses Return without looking gets a file
-        // beside their store rather than in whatever folder AppKit last remembered.
-        panel.directoryURL = FocusStore.applicationSupportURL.deletingLastPathComponent()
+        // beside their store rather than in whatever folder AppKit last remembered. The store
+        // this session is using (focus-k2in); a memory-only session has none, and AppKit's own
+        // choice is then the honest one.
+        panel.directoryURL = exportDirectoryURL
         return panel.runModal() == .OK ? panel.url : nil
     }
 
