@@ -136,6 +136,23 @@ Driver notes from the work itself, newest first. `CLAUDE.md` points here; keep t
 mirrored for anything substantive.
 
 
+### 2026-10-15 — the owner's ruling: read the selected item through Accessibility, on device (issue #24)
+
+- **Accuracy needs more than a bundle identifier, so the Accessibility grant is now spent.** In
+  a mixed-use application (GitHub Copilot, a terminal, an editor, a browser) the bundle
+  identifier is the same for the task and for the distraction, so the question cannot say what
+  the person is actually doing. Chris ruled on 15 October 2026 that reading the selected item —
+  the focused window's title, the chat session, the project folder — is essential and is to be
+  built now. This replaces "nothing reads what the grant unlocks" from the 2026-09-09 ruling; it
+  does not replace "the app asks for nothing unless the person switched that ask on".
+- **The privacy shape is fixed:** opt-in through the existing Settings ▸ Privacy switch; on
+  device only (no network, no export of raw titles); read at nudge time from the frontmost
+  application only; reduced to a short normalised subject before storage, never persisting the
+  raw title; the AX use selectors confined to one registered reader file and proven from both
+  sides, as `SystemGrantRequester.swift` is for the request selectors. README ▸ `grants` carries
+  the ruling. Until the work lands, a lint that still bans the use selectors is describing the
+  shipped build, not a mistake.
+
 ### 2026-10-15 — the nudge panel lost its bottom inset to the hidden titlebar
 
 - **A `.titled` + `.fullSizeContentView` window hands SwiftUI a top safe-area inset even when

@@ -205,6 +205,25 @@ lifting it:
 - `GrantGate` in `FocusCore` is the single place the rule lives, so "asked for something nobody
   switched on" is one function's behaviour rather than a property of every call site.
 
+**The Accessibility grant is now spent, on device, from 2026-10-15** (owner's ruling, issue #24).
+A bundle identifier cannot tell one task from another inside a mixed-use application — GitHub
+Copilot, a terminal, an editor, a browser — so a nudge that can only say "you are in Copilot" is
+not accurate enough to be worth asking. Reading the *selected item* (the focused window's title,
+the chat session, the project folder) is essential to accuracy, so the "nothing reads what the
+grant unlocks" clause above is being replaced. What the replacement keeps:
+
+- **still opt-in**: nothing is read unless the person switched Accessibility on in Settings ▸
+  Privacy and macOS granted it; on a default install the capability table is unchanged;
+- **on device only**: whatever is read stays on this Mac — no network, no export of raw titles,
+  no telemetry; the socket readings above stay exactly as strict;
+- **minimal and ephemeral**: only the focused window's title (and, where an app needs it, the
+  selected row of its sidebar) of the frontmost application, read at nudge time, reduced to a
+  short normalised subject before anything is stored; raw titles are never persisted;
+- **confined**: the AX *use* selectors move out of `banned` into one registered reader file,
+  proven by the same two-sided confinement the request selectors already have.
+
+Until that work lands, the paragraph above still describes the shipped build.
+
 `release-artefact` is the D-09 disk image, and it is described under **Distribution posture**
 below.
 
