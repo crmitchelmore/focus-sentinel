@@ -20,6 +20,10 @@ public struct PrioritySnapshot: Sendable, Equatable, Hashable, Identifiable {
     /// Where the timebox has got to, computed from an injected wall clock by whoever built
     /// this value — never from a clock the view reads.
     public var timebox: TimeboxState
+    /// What the person's calendar says about the time from now on (focus-cal), built from the
+    /// same instant as `timebox`. `.unread` unless the person switched the calendar on — and the
+    /// timebox control draws exactly what it always drew for `.unread`.
+    public var calendar: CalendarOutlook
     public var contextItems: [ContextItemValue]
     public var rules: [PriorityRuleValue]
     /// What the deterministic validator makes of the stored sentence, so the cockpit can
@@ -35,6 +39,7 @@ public struct PrioritySnapshot: Sendable, Equatable, Hashable, Identifiable {
         timeboxSeconds: Int? = nil,
         startedAt: Date? = nil,
         timebox: TimeboxState = .none,
+        calendar: CalendarOutlook = .unread,
         contextItems: [ContextItemValue] = [],
         rules: [PriorityRuleValue] = [],
         assessment: IntentAssessment = .notAssessable
@@ -47,6 +52,7 @@ public struct PrioritySnapshot: Sendable, Equatable, Hashable, Identifiable {
         self.timeboxSeconds = timeboxSeconds
         self.startedAt = startedAt
         self.timebox = timebox
+        self.calendar = calendar
         self.contextItems = contextItems
         self.rules = rules
         self.assessment = assessment
@@ -63,7 +69,8 @@ public struct PrioritySnapshot: Sendable, Equatable, Hashable, Identifiable {
         now: Date,
         contextItems: [ContextItemValue],
         rules: [PriorityRuleValue],
-        assessment: IntentAssessment
+        assessment: IntentAssessment,
+        calendar: CalendarOutlook = .unread
     ) {
         self.init(
             id: task.id,
@@ -74,6 +81,7 @@ public struct PrioritySnapshot: Sendable, Equatable, Hashable, Identifiable {
             timeboxSeconds: task.timeboxSeconds,
             startedAt: task.startedAt,
             timebox: TimeboxState.state(for: task, now: now),
+            calendar: calendar,
             contextItems: contextItems,
             rules: rules,
             assessment: assessment

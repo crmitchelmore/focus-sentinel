@@ -525,6 +525,15 @@ public final class AppComposition {
         // `startNudgeLoop()`, because the capability table is read by the settings window and the
         // popover, which a person can open before a loop is running — and a table that said
         // "not asked for" about a grant they gave would be the app forgetting an answer.
+        //
+        // The calendar's ask answers later (focus-cal): EventKit reports the person's decision
+        // after the dialog closes, and the answer is what decides whether there is a calendar to
+        // read at all.
+        grantRequester.onGrantAnswered = { [weak self] _ in
+            guard let self else { return }
+            self.applyCalendarReader()
+            self.refreshCockpit()
+        }
         applyStoredGrantOptIns()
     }
 
@@ -926,6 +935,9 @@ public final class AppComposition {
             // `bySuppressionReason.quietHours == 0` in every run because no run could ever
             // produce one. The gate was implemented, tested and unreachable.
             quietHours: nudgeHost.quietHours,
+            // Gate 13 (focus-cal): a meeting on the person's own calendar. The same cached read
+            // the cockpit draws, so the two cannot disagree about whether one is under way.
+            agenda: calendarHost.agenda(at: dateProvider.now),
             now: dateProvider.now,
             calendar: calendar,
             monotonic: monotonicClock.elapsed
@@ -1915,6 +1927,28 @@ public final class AppComposition {
     /// Read the switches from the store. At launch, and after one is operated.
     func applyStoredGrantOptIns() {
         grantOptIns = FocusStore.grantOptIns(in: modelContainer.mainContext)
+        applyCalendarReader()
+    }
+
+    /// **The person's calendar, read only as busy time** (focus-cal). See `CalendarHost`.
+    let calendarHost = CalendarHost()
+
+    /// Give the calendar host a reader when, and only when, the person switched the calendar on
+    /// and macOS said yes; take it away otherwise. Neither half opens an event store: the gate
+    /// answers `.notRequested` without asking when the switch is off, and the state read is a
+    /// class method.
+    func applyCalendarReader() {
+        let state = GrantGate.state(of: .calendarEvents, optIns: grantOptIns, using: grantRequester)
+        guard state == .available else {
+            if calendarHost.isReading { calendarHost.use(nil) }
+            return
+        }
+        guard !calendarHost.isReading else { return }
+        calendarHost.use(EventKitCalendarReader { [weak self] in
+            guard let self else { return }
+            self.calendarHost.invalidate()
+            self.refreshCockpit()
+        })
     }
 
     /// What this Mac lets the app do, as the probe read it — with the two opt-in capabilities
@@ -2661,7 +2695,9 @@ public final class AppComposition {
                 // (focus-odz.4, focus-odz.7). See `PriorityHost.Environment` for the measurement
                 // that put them here rather than on the projection afterwards.
                 showsLaunchAtLoginOffer: showsLaunchAtLoginOffer,
-                showsFirstRunExplanation: showsFirstRunExplanation
+                showsFirstRunExplanation: showsFirstRunExplanation,
+                // Busy time only, and `.unread` unless the person switched it on (focus-cal).
+                calendarAgenda: calendarHost.agenda(at: dateProvider.now)
             )
         )
         // **The tour reads every refresh** (focus-u6de): a step is done when the state says so.

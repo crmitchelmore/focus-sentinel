@@ -142,12 +142,19 @@ COMMITTED = {
     "Debug": {
         "com.apple.security.app-sandbox": False,
         "com.apple.security.get-task-allow": True,
+        "com.apple.security.personal-information.calendars": True,
     },
-    # Release is the shipped artefact and carries the sandbox declaration alone. A
-    # `get-task-allow` here lets any same-uid process attach a debugger and read the memory of an
-    # app whose entire premise is that what it observes never leaves the machine.
+    # Release is the shipped artefact and carries the sandbox declaration and the calendar
+    # resource. A `get-task-allow` here lets any same-uid process attach a debugger and read the
+    # memory of an app whose entire premise is that what it observes never leaves the machine.
+    #
+    # `personal-information.calendars` (focus-cal) is the hardened-runtime resource entitlement
+    # without which EventKit answers "denied" to a notarised build however the person replied.
+    # It grants nothing on its own: macOS still asks, and the app asks only where the person
+    # switched that ask on (`GrantOptIn.calendarEvents`).
     "Release": {
         "com.apple.security.app-sandbox": False,
+        "com.apple.security.personal-information.calendars": True,
     },
 }
 
