@@ -14,9 +14,17 @@ import SwiftUI
 /// recognise the choice they are being offered.
 ///
 /// The elapsed readout is drawn at `.callout`. Nothing here competes with the hero.
+///
+/// **A focus block may not be scheduled into a meeting** (focus-cal). When the person switched
+/// their calendar on, a preset that would still be running when the next meeting starts is
+/// disabled and says why, every preset is disabled during a meeting, and an *Until the meeting*
+/// choice offers the room that is left. With the calendar unread — every install that did not
+/// switch it on — the control draws exactly what it drew before.
 public struct TimeboxControl: View {
     public let timeboxSeconds: Int?
     public let state: TimeboxState
+    /// What the person's calendar says about the time from now on. `.unread` draws nothing.
+    public let calendar: CalendarOutlook
     /// Choose a timebox, or `nil` for none. `nil` here means "no mutation host attached".
     public let choose: ((Int?) -> Void)?
 
@@ -28,11 +36,13 @@ public struct TimeboxControl: View {
     public init(
         timeboxSeconds: Int?,
         state: TimeboxState,
+        calendar: CalendarOutlook = .unread,
         choose: ((Int?) -> Void)? = nil,
         focus: FocusState<FocusField?>.Binding
     ) {
         self.timeboxSeconds = timeboxSeconds
         self.state = state
+        self.calendar = calendar
         self.choose = choose
         self._focus = focus
     }
@@ -67,6 +77,10 @@ public struct TimeboxControl: View {
                     presetButton(seconds: seconds, isFirst: index == 0)
                 }
 
+                if let room = untilTheMeetingSeconds {
+                    untilTheMeetingButton(seconds: room)
+                }
+
                 Button {
                     choose?(nil)
                 } label: {
@@ -82,6 +96,15 @@ public struct TimeboxControl: View {
                 )
 
                 Spacer(minLength: 0)
+            }
+
+            if let calendarLine {
+                Label {
+                    ShellText(calendarLine.key, role: .footnote, argument: calendarLine.time)
+                } icon: {
+                    Image(systemName: "calendar")
+                }
+                .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
             }
         }
     }
@@ -102,14 +125,73 @@ public struct TimeboxControl: View {
         }
         .buttonStyle(CompanionButtonStyle())
         .tint(timeboxSeconds == seconds ? DesignTokens.Palette.accent(for: traits) : nil)
-        .disabled(choose == nil)
-        .shellHelp(.priorityTimeboxPresetHelp)
+        .disabled(choose == nil || refusal(for: seconds) != nil)
+        // After `.disabled`, so the reason shows on the control that is off (focus-8ski).
+        .shellHelp(
+            .priorityTimeboxPresetHelp,
+            disabled: refusalHelpKey(for: seconds),
+            when: refusal(for: seconds) != nil
+        )
 
         if isFirst {
             button.focused($focus, equals: .cockpitTimebox)
         } else {
             button
         }
+    }
+
+    /// Why choosing `seconds` now would be refused, or `nil`. Choosing the timebox already set
+    /// clears it, and clearing is never refused.
+    private func refusal(for seconds: Int) -> TimeboxRefusal? {
+        guard timeboxSeconds != seconds else { return nil }
+        return calendar.refusal(forTimeboxSeconds: seconds)
+    }
+
+    private func refusalHelpKey(for seconds: Int) -> ShellStringKey {
+        switch refusal(for: seconds) {
+        case .duringMeeting: .priorityTimeboxDuringMeetingHelp
+        case .runsIntoMeeting, nil: .priorityTimeboxRunsIntoMeetingHelp
+        }
+    }
+
+    /// The room before the next meeting, offered when it is worth offering: there is a meeting
+    /// ahead, at least one preset would run into it, and the room is not already a preset.
+    private var untilTheMeetingSeconds: Int? {
+        guard let room = calendar.roomBeforeMeetingSeconds,
+              !TimeboxState.presetSeconds.contains(room),
+              TimeboxState.presetSeconds.contains(where: { refusal(for: $0) != nil })
+        else { return nil }
+        return room
+    }
+
+    private func untilTheMeetingButton(seconds: Int) -> some View {
+        Button {
+            choose?(timeboxSeconds == seconds ? nil : seconds)
+        } label: {
+            ShellText(.priorityTimeboxUntilMeeting, role: .callout)
+        }
+        .buttonStyle(CompanionButtonStyle())
+        .tint(timeboxSeconds == seconds ? DesignTokens.Palette.accent(for: traits) : nil)
+        .disabled(choose == nil)
+        .shellHelp(.priorityTimeboxUntilMeetingHelp)
+    }
+
+    /// The calendar's one line under the presets: when the meeting under way ends, or when the
+    /// next one starts. Nothing when the calendar is unread or clear.
+    private var calendarLine: (key: ShellStringKey, time: String)? {
+        switch calendar {
+        case .unread, .clear:
+            nil
+        case .inMeeting(let endsAt, _):
+            (.priorityTimeboxInMeeting, Self.formatTime(endsAt))
+        case .meetingAhead(let startsAt, _):
+            (.priorityTimeboxNextMeeting, Self.formatTime(startsAt))
+        }
+    }
+
+    /// A clock time in the person's own format — "14:30" or "2:30 PM" — which is data.
+    static func formatTime(_ date: Date) -> String {
+        date.formatted(date: .omitted, time: .shortened)
     }
 
     private var readoutKey: ShellStringKey? {

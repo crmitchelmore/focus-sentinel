@@ -23,7 +23,7 @@ public enum InterruptionKind: String, Sendable, CaseIterable, Codable, Hashable 
 /// because you have no priority set" and "I said nothing because I had already asked you about
 /// this" are both true of the same moment, and only one of them is the answer.
 ///
-/// Twelve cases. Gate 11 — `alreadyAsked` — is the one adversarial review added (finding 3):
+/// Thirteen cases. Gate 11 — `alreadyAsked` — is the one adversarial review added (finding 3):
 /// never-ask-twice is an explicit, ordered, **named** suppression consulted before a warrant is
 /// constructed, not an emergent property of the cascade that a rule deletion could dissolve. It
 /// reads the immutable receipt, never the rule.
@@ -96,6 +96,25 @@ public enum NudgeSuppressionReason: String, Sendable, CaseIterable, Codable, Has
     /// `InterventionEligibility.decide(…)` for an accusation, `QueryEligibility.decide(…)` for
     /// a question, each returning *before* it reads anything else.
     case verdictDoesNotAuthorise
+    /// Gate 13 (focus-cal). **The person's calendar says they are in a meeting.**
+    ///
+    /// Read only when the person switched the calendar on and macOS said yes; otherwise the
+    /// agenda is unread and this gate is open, so a default install is exactly as it was.
+    ///
+    /// **Appended, not slotted in beside quiet hours** where it belongs by kind. Gate numbers
+    /// are derived from declaration order and are quoted — in prose, in tests, in the witness
+    /// tables — as *gate 10*, *gate 11*, *gate 12*; inserting a gate would have silently
+    /// renumbered every one of them. At the end it is reached only when every other gate is open,
+    /// which costs nothing: the outcome is silence either way, and the earlier reason is the one
+    /// a person would give first.
+    ///
+    /// Not gate 6. A running microphone is not a meeting and may never assert one; a calendar
+    /// entry is a separate, explicit statement the person made about their time.
+    ///
+    /// **Subject: the app speaking**, for gate 8's reason. A meeting is a request not to be
+    /// *spoken to*; the glyph goes on telling the truth in the menu bar, which is where it
+    /// always was.
+    case calendarMeeting
 
     /// **What this gate is about, and therefore which rungs it may silence** (focus-0y6,
     /// focus-uru).
@@ -122,6 +141,7 @@ public enum NudgeSuppressionReason: String, Sendable, CaseIterable, Codable, Has
     /// | 10 `budgetExhausted` | legibility | ruled below — this gate deliberately does **not** classify |
     /// | 11 `alreadyAsked` | speaking | a question is a sentence, and this gate is a question's alone |
     /// | 12 `verdictDoesNotAuthorise` | legibility | the verdict authorises nothing, so there is nothing to mark |
+    /// | 13 `calendarMeeting` | **speaking** | gate 8's argument: the person asked not to be spoken to, not to be lied to |
     ///
     /// ## Gate 6, and why it is not gate 7
     ///
@@ -165,7 +185,7 @@ public enum NudgeSuppressionReason: String, Sendable, CaseIterable, Codable, Has
         case .noActivePriority, .sensingPaused, .sensitiveApplication, .sessionPhaseForbids,
              .userIdle, .budgetExhausted, .verdictDoesNotAuthorise:
             .anythingToBeLegibleAbout
-        case .mediaInUse, .quietHours, .interruptionInFlight, .alreadyAsked:
+        case .mediaInUse, .quietHours, .interruptionInFlight, .alreadyAsked, .calendarMeeting:
             .theAppSpeaking
         case .presentationActive:
             .theSurfaceBeingOnScreen(.menuBarHidden)
@@ -242,7 +262,7 @@ public enum SuppressionOutcome: Sendable, Equatable, Hashable {
 /// existing type rather than through a copy, and `check-boundaries.sh` proves on the object
 /// that this module could not have gone and fetched them itself (R-96k).
 public enum SuppressionStack {
-    /// Evaluate the twelve gates in order and return the first answer that is not "permitted".
+    /// Evaluate the thirteen gates in order and return the first answer that is not "permitted".
     ///
     /// - Parameters:
     ///   - kind: which interruption is being considered. Gate 11 is kind-dependent and nothing
@@ -275,6 +295,8 @@ public enum SuppressionStack {
     ///   - verdictAuthorises: gate 12 — whether the kind's own eligibility produced an
     ///     authorisation. `InterventionEligibility` for an accusation, `QueryEligibility` for a
     ///     question; this function never inspects a verdict itself.
+    ///   - inCalendarMeeting: gate 13 — the person's calendar has a busy block under way. `false`
+    ///     whenever the calendar is unread, which is every install that did not switch it on.
     public static func evaluate(
         kind: InterruptionKind,
         rung: LadderRung.Kind?,
@@ -293,7 +315,8 @@ public enum SuppressionStack {
         interruptionInFlight: Bool,
         budgetPermits: Bool,
         hasAsked: Bool,
-        verdictAuthorises: Bool
+        verdictAuthorises: Bool,
+        inCalendarMeeting: Bool
     ) -> SuppressionOutcome {
         // **Every gate is asked the same two questions, in this order: is it closed, and is it
         // about a rung like this one?** (focus-0y6, focus-uru).
@@ -346,7 +369,9 @@ public enum SuppressionStack {
             // which `appliesTo` says and this conjunct spells.
             (.alreadyAsked, kind == .query && hasAsked),
             // 12 — the verdict gate (e04 R-55 / e05 R-76).
-            (.verdictDoesNotAuthorise, !verdictAuthorises)
+            (.verdictDoesNotAuthorise, !verdictAuthorises),
+            // 13 — a meeting on the person's own calendar (focus-cal). Unread is open.
+            (.calendarMeeting, inCalendarMeeting)
         ]
 
         // The declaration order above **is** the evaluation order, and `gateNumber` derives the

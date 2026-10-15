@@ -4,7 +4,7 @@ import Foundation
 ///
 /// The Feasibility Court called this the most charter-critical row in the registry, so it
 /// ships as an artefact a test can prove rather than as a sentence in a document. One hundred
-/// and twenty cells, all of them written out.
+/// and thirty cells, all of them written out.
 ///
 /// ## Why this is a nested exhaustive `switch` and not a dictionary
 ///
@@ -41,7 +41,7 @@ public enum CapabilityContract {
             case .displayGeometry: return .degraded(to: .frontmostApplication)
             case .windowMetadata, .idle, .systemLifecycle, .presentation,
                  .microphoneActivity, .cameraActivity, .accessibilityWindowContext,
-                 .screenCapture, .notifications, .onDeviceModel:
+                 .screenCapture, .notifications, .onDeviceModel, .calendarEvents:
                 return .fullFunction
             }
 
@@ -53,7 +53,7 @@ public enum CapabilityContract {
             case .idle, .systemLifecycle: return .degraded(to: .frontmostApplication)
             case .windowMetadata, .displayGeometry, .presentation, .microphoneActivity,
                  .cameraActivity, .accessibilityWindowContext, .screenCapture,
-                 .notifications, .onDeviceModel:
+                 .notifications, .onDeviceModel, .calendarEvents:
                 return .fullFunction
             }
 
@@ -66,7 +66,7 @@ public enum CapabilityContract {
                 return .featureAbsent
             case .idle, .systemLifecycle, .presentation, .microphoneActivity,
                  .cameraActivity, .accessibilityWindowContext, .screenCapture,
-                 .notifications, .onDeviceModel:
+                 .notifications, .onDeviceModel, .calendarEvents:
                 return .fullFunction
             }
 
@@ -79,7 +79,7 @@ public enum CapabilityContract {
             case .windowMetadata: return .degraded(to: .presentation)
             case .idle, .systemLifecycle, .displayGeometry, .microphoneActivity,
                  .cameraActivity, .accessibilityWindowContext, .screenCapture,
-                 .notifications, .onDeviceModel:
+                 .notifications, .onDeviceModel, .calendarEvents:
                 return .fullFunction
             }
 
@@ -92,7 +92,7 @@ public enum CapabilityContract {
             case .cameraActivity: return .degraded(to: .microphoneActivity)
             case .frontmostApplication, .windowMetadata, .idle, .systemLifecycle,
                  .displayGeometry, .presentation, .accessibilityWindowContext,
-                 .screenCapture, .notifications, .onDeviceModel:
+                 .screenCapture, .notifications, .onDeviceModel, .calendarEvents:
                 return .fullFunction
             }
 
@@ -106,7 +106,7 @@ public enum CapabilityContract {
             case .frontmostApplication: return .showUnavailable
             case .windowMetadata, .idle, .displayGeometry, .presentation,
                  .microphoneActivity, .cameraActivity, .accessibilityWindowContext,
-                 .screenCapture, .notifications, .onDeviceModel:
+                 .screenCapture, .notifications, .onDeviceModel, .calendarEvents:
                 return .fullFunction
             }
 
@@ -115,7 +115,7 @@ public enum CapabilityContract {
             case .idle: return .showUnavailable
             case .frontmostApplication, .windowMetadata, .systemLifecycle, .displayGeometry,
                  .presentation, .microphoneActivity, .cameraActivity,
-                 .accessibilityWindowContext, .screenCapture, .notifications, .onDeviceModel:
+                 .accessibilityWindowContext, .screenCapture, .notifications, .onDeviceModel, .calendarEvents:
                 return .fullFunction
             }
 
@@ -128,7 +128,7 @@ public enum CapabilityContract {
             case .windowMetadata, .onDeviceModel: return .degraded(to: .frontmostApplication)
             case .accessibilityWindowContext: return .degraded(to: .windowMetadata)
             case .idle, .systemLifecycle, .displayGeometry, .presentation,
-                 .microphoneActivity, .cameraActivity, .screenCapture, .notifications:
+                 .microphoneActivity, .cameraActivity, .screenCapture, .notifications, .calendarEvents:
                 return .fullFunction
             }
 
@@ -158,9 +158,16 @@ public enum CapabilityContract {
             case .idle, .systemLifecycle, .displayGeometry, .presentation,
                  .microphoneActivity:
                 return .suppressOnly
-            case .screenCapture, .notifications: return .fullFunction
+            case .screenCapture, .notifications, .calendarEvents: return .fullFunction
             }
 
+        // **`.calendarEvents` is `.fullFunction` in every row** (focus-cal). The calendar is an
+        // enrichment the person switches on: it refuses a timebox that would run into a meeting
+        // and keeps the ladder quiet while one is under way. Without it the app does exactly
+        // what it did before the switch existed — so no consumer degrades, and `.suppressOnly`
+        // would be wrong in the ladder's row: it would quiet the ladder on every default install,
+        // where the capability sits at `.notRequested`.
+        //
         // A T3 nicety, and the one consumer permitted to simply not be there.
         case .analytics:
             switch capability {
@@ -168,7 +175,7 @@ public enum CapabilityContract {
             case .displayGeometry: return .degraded(to: .frontmostApplication)
             case .windowMetadata, .idle, .systemLifecycle, .presentation,
                  .microphoneActivity, .cameraActivity, .accessibilityWindowContext,
-                 .screenCapture, .notifications, .onDeviceModel:
+                 .screenCapture, .notifications, .onDeviceModel, .calendarEvents:
                 return .fullFunction
             }
         }

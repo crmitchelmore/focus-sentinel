@@ -149,6 +149,7 @@ struct NudgeDeciderTests {
         presentation: PresentationState = .notPresenting,
         menuBarVisible: Bool = true,
         quietHours: QuietHours = .off,
+        agenda: CalendarAgenda = .unread,
         now: Date = NudgeDeciderTests.reference,
         monotonic: Duration = .seconds(10_000)
     ) -> NudgeSurroundings {
@@ -166,6 +167,7 @@ struct NudgeDeciderTests {
             presentation: presentation,
             menuBarVisible: menuBarVisible,
             quietHours: quietHours,
+            agenda: agenda,
             now: now,
             calendar: londonCalendar,
             monotonic: monotonic
@@ -520,6 +522,49 @@ struct NudgeDeciderTests {
         // The shipped default is off, with no bundled window: a default 22:00–08:00 would be the
         // app making a claim about a person's life it has no evidence for (R-85).
         #expect(QuietHours.off.isEnabled == false)
+    }
+
+    @Test("gate 13: a meeting on the person's calendar silences what speaks and spares the glyph")
+    func gateThirteen() {
+        let now = Self.reference
+        let meeting = CalendarAgenda(busy: [
+            CalendarBusyBlock(start: now.addingTimeInterval(-600), end: now.addingTimeInterval(1_200))
+        ])
+
+        #expect(
+            Self.decide(
+                Self.judgement(verdict: .uncertain, uncertainty: .noNegativeBasis),
+                surroundings: Self.surroundings(agenda: meeting, now: now)
+            ).silence?.reason == .calendarMeeting
+        )
+
+        let (ladder, later) = Self.standingAtThePanel()
+        let panel = Self.decide(
+            Self.judgement(verdict: .unrelated),
+            surroundings: Self.surroundings(agenda: meeting, now: now, monotonic: later),
+            memory: NudgeMemory(ladder: ladder)
+        )
+        #expect(panel.silence?.reason == .calendarMeeting, "the panel spoke over a meeting")
+
+        let glyph = Self.decide(
+            Self.judgement(verdict: .unrelated),
+            surroundings: Self.surroundings(agenda: meeting, now: now)
+        )
+        #expect(glyph.rung?.kind == .ambient, "a meeting took the status item with it")
+
+        // Non-vacuity: the same ladder, after the meeting ended, reaches the panel; and an
+        // unread calendar — every install that did not switch it on — never closes the gate.
+        let (after, afterLater) = Self.standingAtThePanel()
+        #expect(
+            Self.decide(
+                Self.judgement(verdict: .unrelated),
+                surroundings: Self.surroundings(
+                    agenda: meeting, now: now.addingTimeInterval(1_200), monotonic: afterLater
+                ),
+                memory: NudgeMemory(ladder: after)
+            ).rung?.kind == .panel
+        )
+        #expect(Self.surroundings(agenda: .unread, now: now).isInCalendarMeeting == false)
     }
 
     @Test("gate 9: one open interruption at a time, and a question never takes the slot")

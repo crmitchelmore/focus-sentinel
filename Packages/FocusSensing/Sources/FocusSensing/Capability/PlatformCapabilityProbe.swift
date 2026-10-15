@@ -135,7 +135,12 @@ public final class PlatformCapabilityProbe: CapabilityProbing {
             // only module that sees both, hands the answer down as a `FocusCore` value.
             // `.notRequested` is what a probe built with no answer reports, and it is honest:
             // nothing has been asked, because nothing composed a port to ask with.
-            (.onDeviceModel, onDeviceModel)
+            (.onDeviceModel, onDeviceModel),
+
+            // Opt-in (focus-cal). The probe never reads `EKEventStore.authorizationStatus`: the
+            // grant gate answers this row once the person switches the ask on, and until then
+            // the honest answer is that nothing has been asked.
+            (.calendarEvents, .notRequested)
         ]
     }
 

@@ -79,6 +79,10 @@ final class PriorityHost: PriorityActing {
         /// so a change to either is a change to `state` and the window redraws for it.
         var showsLaunchAtLoginOffer: Bool = false
         var showsFirstRunExplanation: Bool = false
+        /// **The person's calendar, as busy blocks** (focus-cal). `.unread` unless the person
+        /// switched the calendar on in Privacy and macOS said yes — and an unread calendar
+        /// refuses no timebox and draws nothing beside the control.
+        var calendarAgenda: CalendarAgenda = .unread
     }
 
     /// Everything a rule snapshot is built from, as one comparable value (R-65).
@@ -306,7 +310,24 @@ final class PriorityHost: PriorityActing {
         }
     }
 
+    /// **A focus block may not be scheduled into a meeting** (focus-cal).
+    ///
+    /// The control already greys out the presets that would collide, but the refusal lives here
+    /// too: the control's outlook was built on the last refresh, and the command palette and the
+    /// walkthrough's *Do it for me* reach this method without the control. Checked against the
+    /// agenda at the instant of the write, which is the instant `setTimebox` stamps as the start.
     func setTimebox(taskID: UUID, seconds: Int?) {
+        let outlook = environment.calendarAgenda.outlook(at: dateProvider.now)
+        if let refusal = outlook.refusal(forTimeboxSeconds: seconds) {
+            // The kind only: when a person's meetings are is theirs, not the log's.
+            let kind = switch refusal {
+            case .duringMeeting: "during a meeting"
+            case .runsIntoMeeting: "runs into a meeting"
+            }
+            logger.info("refused a timebox: \(kind, privacy: .public)")
+            refresh()
+            return
+        }
         perform { store in
             try store.setTimebox(taskID: taskID, seconds: seconds, undo: self.undo)
         }
@@ -504,7 +525,8 @@ final class PriorityHost: PriorityActing {
                     now: now,
                     contextItems: items,
                     rules: rules,
-                    assessment: IntentValidator.assess(task.intent, locale: locale)
+                    assessment: IntentValidator.assess(task.intent, locale: locale),
+                    calendar: environment.calendarAgenda.outlook(at: now)
                 )
             }
             // One fetch, three derivations. Every one of them takes its identifier from

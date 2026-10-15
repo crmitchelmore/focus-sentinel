@@ -1,5 +1,6 @@
 import ApplicationServices
 import CoreGraphics
+import EventKit
 import FocusCore
 import Foundation
 import os
@@ -28,11 +29,18 @@ final class SystemGrantRequester: GrantRequesting {
     /// and `check-grants.sh` proves through `AXIsProcessTrustedWithOptions` beside it.
     private static let promptKey = "AXTrustedCheckOptionPrompt"
 
+    /// **Called when an asynchronous ask is answered** (focus-cal). The calendar's ask is the
+    /// one that cannot answer synchronously: EventKit returns the person's decision later, so
+    /// the composition root is told then, and re-reads.
+    var onGrantAnswered: (@MainActor (GrantOptIn) -> Void)?
+
     /// Ask the system, and answer with the state the ask left the app in.
     ///
-    /// Both asks are synchronous reads that may raise the system's own consent dialog. Neither
-    /// is retried: a person who dismissed the dialog has answered, and asking again on the next
-    /// launch would be the nagging this app exists not to do.
+    /// Accessibility and Screen Recording are synchronous reads that may raise the system's own
+    /// consent dialog. The calendar's ask is asynchronous: this returns the state as it stands,
+    /// and `onGrantAnswered` reports the answer. None is retried: a person who dismissed the
+    /// dialog has answered, and asking again on the next launch would be the nagging this app
+    /// exists not to do.
     func requestGrant(_ grant: GrantOptIn) -> CapabilityState {
         requestCount += 1
         logger.notice("asking for \(grant.rawValue, privacy: .public), which the person switched on")
@@ -42,6 +50,17 @@ final class SystemGrantRequester: GrantRequesting {
             return AXIsProcessTrustedWithOptions(options) ? .available : .denied
         case .screenCapture:
             return CGRequestScreenCaptureAccess() ? .available : .denied
+        case .calendarEvents:
+            // Full access is the only kind that can read an event's times; write-only access,
+            // the narrower grant, cannot see the calendar at all.
+            let current = grantState(.calendarEvents)
+            guard current == .notRequested else { return current }
+            Task { @MainActor [weak self] in
+                let store = EKEventStore()
+                _ = try? await store.requestFullAccessToEvents()
+                self?.onGrantAnswered?(.calendarEvents)
+            }
+            return current
         }
     }
 
@@ -52,6 +71,15 @@ final class SystemGrantRequester: GrantRequesting {
             return AXIsProcessTrusted() ? .available : .denied
         case .screenCapture:
             return CGPreflightScreenCaptureAccess() ? .available : .denied
+        case .calendarEvents:
+            // A class method: reading the status opens no event store and prompts for nothing.
+            switch EKEventStore.authorizationStatus(for: .event) {
+            case .fullAccess: return .available
+            case .notDetermined: return .notRequested
+            case .restricted: return .restricted
+            case .denied, .writeOnly: return .denied
+            @unknown default: return .unavailable
+            }
         }
     }
 }

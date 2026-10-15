@@ -205,6 +205,30 @@ lifting it:
 - `GrantGate` in `FocusCore` is the single place the rule lives, so "asked for something nobody
   switched on" is one function's behaviour rather than a property of every call site.
 
+**A third grant, and the first this build spends: the calendar** (owner's request, 2026-09-12).
+Settings ▸ Privacy carries a *Calendar* switch; turning it on is the only route to
+`requestFullAccessToEvents`, confined to `SystemGrantRequester.swift` like the other two. Once
+macOS answers yes, `EventKitCalendarReader` (FocusHost, the one package allowed EventKit) reads
+the **start and end** of non-all-day, non-free events in a short window around now — never a
+title, attendee, location or note — and the app stores none of it and writes nothing back. What
+the busy times are spent on:
+
+- **No timebox starts during a meeting or runs into one.** `CalendarAgenda.refusal` is the rule;
+  `PriorityHost.setTimebox` refuses with no write, the timebox control disables the presets that
+  would collide (the tooltip says why) and offers *Until the meeting* when there is room. Clearing
+  a timebox is never refused.
+- **Gate 13, `calendarMeeting`**, appended so gates 1–12 keep their numbers: while a meeting is
+  on, questions and the nudge panel wait; the ambient glyph does not.
+- The cockpit names the next meeting under the timebox, as a time, not a title.
+
+The calendar row of `Config/tcc-families.txt` keeps the banned ways of asking that are not this
+one (`requestAccessToEntityType`, write-only access, reminders) and the event-mutating selectors;
+its `available` state is allowed for the same reason the other two opt-in rows allow it. A
+hardened-runtime build needs `com.apple.security.personal-information.calendars`, so the
+committed entitlement set carries it, and `NSCalendarsFullAccessUsageDescription` says in one
+sentence what is read. On a default install nothing changes: the capability reads
+`notRequested`, the request counter is zero.
+
 `release-artefact` is the D-09 disk image, and it is described under **Distribution posture**
 below.
 

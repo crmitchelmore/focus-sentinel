@@ -2,7 +2,7 @@ import Foundation
 
 /// Something the app might be able to do, and might not.
 ///
-/// Twelve of them, named once here and nowhere else. Four belong to epics that have not landed
+/// Thirteen of them, named once here and nowhere else. Four belong to epics that have not landed
 /// — they are declared now so that turning one on is a change to a probe rather than a change
 /// to a table, and so that the fallback contract is total from the first day rather than from
 /// the day somebody remembers to extend it.
@@ -53,4 +53,16 @@ public enum Capability: String, Sendable, CaseIterable, Codable, Hashable {
     case notifications
     /// Apple's on-device model. e06's.
     case onDeviceModel
+    /// **When the person is busy, from their own calendar** (focus-cal). Opt-in, through the
+    /// Privacy pane's third grant switch, and read for nothing but busy intervals: a start, an
+    /// end, and whether the time is marked busy. Never a title, a location, a note or an
+    /// attendee, and nothing read is stored.
+    ///
+    /// Appended rather than placed beside the other grants, so every persisted raw value and
+    /// every rendered order that already exists keeps its meaning.
+    ///
+    /// Not a call. `microphoneActivity` may never assert a meeting, because a running
+    /// microphone is not one; a calendar entry is a separate, explicit statement the person made
+    /// about their own time, and it is read as exactly that.
+    case calendarEvents
 }
