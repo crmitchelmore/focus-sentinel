@@ -43,8 +43,8 @@
 # text, image data of any kind, keystroke or input content, security-scoped bookmark blobs,
 # machine identifiers, Keychain material, and any similarity number.
 
-SCHEMA 11
-ENTITIES 18
+SCHEMA 12
+ENTITIES 19
 
 # ---------------------------------------------------------------- the commitment
 
@@ -190,6 +190,10 @@ GrantOptInRecord | touchedAt | MEASURE | When they switched it on
 SoftwareUpdatePreferenceRecord | id | KEY | The row's identifier
 SoftwareUpdatePreferenceRecord | checksAutomatically | MEASURE | Whether they switched automatic update checks on (focus-h8jf)
 SoftwareUpdatePreferenceRecord | touchedAt | MEASURE | When they last chose
+StandingPriorityRecord | id | KEY | The row's identifier
+StandingPriorityRecord | slot | MEASURE | Which standing slot: 0 for the main priority, 1 and 2 for the secondary ones
+StandingPriorityRecord | taskID | KEY | The PriorityTask the slot offers
+StandingPriorityRecord | updatedAt | MEASURE | When the standing set was last replaced
 PrivacyPreferencesRecord | id | KEY | The row's identifier
 PrivacyPreferencesRecord | retentionDays | MEASURE | How long they asked the app to keep things: 7, 30, 90, or 0 for forever
 PrivacyPreferencesRecord | touchedAt | MEASURE | When they last chose a window

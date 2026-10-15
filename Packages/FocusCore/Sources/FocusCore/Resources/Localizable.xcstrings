@@ -1861,6 +1861,18 @@
         }
       }
     },
+    "undo.standing.set" : {
+      "comment" : "Undo action name: the standing priorities (one main, two secondary) were replaced.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set priorities"
+          }
+        }
+      }
+    },
     "undo.timebox.set" : {
       "comment" : "Undo action name: the priority's timebox was set or cleared.",
       "extractionState" : "manual",

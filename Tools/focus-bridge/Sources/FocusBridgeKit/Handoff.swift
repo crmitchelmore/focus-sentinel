@@ -43,9 +43,49 @@ public enum Handoff {
         return try build(scheme: scheme, verb: .context, pairs: items.map { ("add", $0) })
     }
 
+    /// One standing priority for `prioritiesURL`: the first is the main one.
+    public struct Slot: Sendable, Equatable {
+        public var task: String
+        public var doneWhen: String?
+        public var context: [String]
+
+        public init(task: String, doneWhen: String? = nil, context: [String] = []) {
+            self.task = task
+            self.doneWhen = doneWhen
+            self.context = context
+        }
+    }
+
+    /// `focus://priorities?primary=…&secondary1=…&secondary2=…`: set the person's standing
+    /// priorities — one main and up to two secondaries — each with its own context. The app
+    /// shows them beside the ones it holds and changes nothing until the person presses Set
+    /// Priorities; the current priority is never touched by it.
+    public static func prioritiesURL(slots: [Slot], scheme: String = HandoffRequest.scheme) throws -> URL {
+        let prefixes = HandoffStandingSlot.keyPrefixes
+        guard !slots.isEmpty else { throw BridgeError("no priorities to set; the first is the main one") }
+        guard slots.count <= prefixes.count else {
+            throw BridgeError("at most \(prefixes.count) priorities: one main and \(prefixes.count - 1) secondary")
+        }
+        var pairs: [(String, String)] = []
+        for (prefix, slot) in zip(prefixes, slots) {
+            let task = slot.task.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !task.isEmpty else { throw BridgeError("\(prefix) is empty") }
+            let doneWhen = slot.doneWhen?.trimmingCharacters(in: .whitespacesAndNewlines)
+            for (name, value) in [(prefix, task), ("\(prefix) done-when", doneWhen ?? "")]
+            where value.count > HandoffRequest.maximumFieldLength {
+                throw BridgeError("\(name) is longer than \(HandoffRequest.maximumFieldLength) characters")
+            }
+            let context = try checked(slot.context, cap: HandoffRequest.maximumContextItemsPerSlot)
+            pairs.append((prefix, task))
+            if let doneWhen, !doneWhen.isEmpty { pairs.append(("\(prefix)DoneWhen", doneWhen)) }
+            pairs += context.map { ("\(prefix)Context", $0) }
+        }
+        return try build(scheme: scheme, verb: .priorities, pairs: pairs)
+    }
+
     /// Every item must survive the app's parser as given, and there must be no more than it
     /// keeps: an item the app would silently leave out is an error here, named.
-    static func checked(_ items: [String]) throws -> [String] {
+    static func checked(_ items: [String], cap: Int = HandoffRequest.maximumContextItems) throws -> [String] {
         var seen = Set<HandoffContextItem>()
         var kept: [String] = []
         for raw in items {
@@ -58,8 +98,8 @@ public enum Handoff {
             }
             if seen.insert(item).inserted { kept.append(text) }
         }
-        guard kept.count <= HandoffRequest.maximumContextItems else {
-            throw BridgeError("at most \(HandoffRequest.maximumContextItems) context items per handoff")
+        guard kept.count <= cap else {
+            throw BridgeError("at most \(cap) context items per \(cap == HandoffRequest.maximumContextItems ? "handoff" : "priority")")
         }
         return kept
     }

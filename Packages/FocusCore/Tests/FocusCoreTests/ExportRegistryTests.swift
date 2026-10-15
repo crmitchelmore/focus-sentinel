@@ -115,7 +115,14 @@ struct ExportRegistryTests {
         // on for a Mac whose owner never did.
         Row(entity: "SoftwareUpdatePreferenceRecord", column: "id", classification: "KEY"),
         Row(entity: "SoftwareUpdatePreferenceRecord", column: "checksAutomatically", classification: "MEASURE"),
-        Row(entity: "SoftwareUpdatePreferenceRecord", column: "touchedAt", classification: "MEASURE")
+        Row(entity: "SoftwareUpdatePreferenceRecord", column: "touchedAt", classification: "MEASURE"),
+        // The standing shortlist (focus-standing) is a pointer into the tasks the export already
+        // carries, set from another tool on this Mac and replaced as a whole. Like the active
+        // pointer, it describes now rather than a day, so the history export leaves it out.
+        Row(entity: "StandingPriorityRecord", column: "id", classification: "KEY"),
+        Row(entity: "StandingPriorityRecord", column: "slot", classification: "MEASURE"),
+        Row(entity: "StandingPriorityRecord", column: "taskID", classification: "KEY"),
+        Row(entity: "StandingPriorityRecord", column: "updatedAt", classification: "MEASURE")
     ]
 
     /// Settings rows, which belong to `SettingsDocument` rather than to the data export. Named by

@@ -33,8 +33,9 @@ struct StoreTests {
         // about itself between launches, and v8's Privacy row carrying the retention window.
         // v7 added none — it re-declared one — which is why fourteen stood for two versions.
         // v9 adds the policy tunings' rows and v10 the grant opt-ins' (focus-exdi): seventeen.
-        #expect(FocusStore.schema.entities.count == 18)
-        #expect(FocusMigrationPlan.schemas.last is FocusSchemaV11.Type)
+        // v12 adds the standing priorities' rows: nineteen.
+        #expect(FocusStore.schema.entities.count == 19)
+        #expect(FocusMigrationPlan.schemas.last is FocusSchemaV12.Type)
     }
 
     @Test("in-memory: insert, save and fetch round-trip")
@@ -105,7 +106,7 @@ struct StoreTests {
         let second = try FocusStore.makeContainer(kind: .inMemory)
 
         #expect(first.schema.entities.count == second.schema.entities.count)
-        #expect(first.schema.entities.count == 18)
+        #expect(first.schema.entities.count == 19)
     }
 
     @Test("every enum-backed field persists as its string raw value")

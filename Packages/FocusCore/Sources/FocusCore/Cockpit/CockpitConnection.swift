@@ -183,6 +183,7 @@ extension CockpitConnection: ShellDrawnConnection {
             "state.isObservingActivity": .undrawn(.notDrawnOnThisSurface),
             "state.priority": .drawn([.priorityIntent, .priorityDoneWhen, .priorityDetail]),
             "state.recent": .drawn([.recentCount, .recentDigest]),
+            "state.standing": .drawn([.standingCount, .standingDigest]),
             "state.pendingHandoff": .drawn([.handoffTask, .handoffDetail]),
             "state.showsRitualPrompt": .drawn([.ritualBanner]),
             "state.session": .drawn([.sessionPhase, .sessionDetail]),
@@ -229,6 +230,7 @@ extension CockpitConnection: ShellDrawnConnection {
             "state.pendingHandoff.doneWhen": .drawn([.handoffDetail]),
             "state.pendingHandoff.flags": .drawn([.handoffDetail]),
             "state.pendingHandoff.context": .drawn([.handoffDetail]),
+            "state.pendingHandoff.standing": .drawn([.handoffDetail]),
 
             "state.session.sessionID": .drawn([.sessionDetail]),
             "state.session.taskID": .drawn([.sessionDetail]),

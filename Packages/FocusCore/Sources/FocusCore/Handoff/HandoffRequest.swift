@@ -9,6 +9,30 @@ public enum HandoffVerb: String, Sendable, CaseIterable, Hashable {
     /// `focus://context?add=app:…&add=domain:…&add=keyword:…` — add to the **current**
     /// priority's context pack. Names no task, so it can never change which priority is current.
     case context
+    /// `focus://priorities?primary=…&primaryDoneWhen=…&primaryContext=app:…&secondary1=…&…` —
+    /// replace the standing shortlist: one main priority and up to two secondary ones. Never
+    /// changes which priority is current; the cockpit offers them to pick from.
+    case priorities
+}
+
+/// One standing slot a `priorities` handoff asks for, already bounded.
+public struct HandoffStandingSlot: Sendable, Equatable, Hashable {
+    /// 0 for the main priority, 1 and 2 for the secondary ones.
+    public let slot: Int
+    public let task: String
+    public let doneWhen: String?
+    /// Distinct, in arrival order, at most `HandoffRequest.maximumContextItemsPerSlot`.
+    public let context: [HandoffContextItem]
+
+    public init(slot: Int, task: String, doneWhen: String?, context: [HandoffContextItem] = []) {
+        self.slot = slot
+        self.task = task
+        self.doneWhen = doneWhen
+        self.context = context
+    }
+
+    /// The query-key prefix for each slot, in slot order.
+    public static let keyPrefixes = ["primary", "secondary1", "secondary2"]
 }
 
 /// One context item a handoff asks for, already bounded and normalised.
@@ -101,6 +125,8 @@ public enum HandoffRejection: Sendable, Equatable, Hashable {
     case missingTask
     /// A `context` verb with no readable item to add.
     case missingContext
+    /// A `priorities` verb with no main priority.
+    case missingPrimary
 }
 
 /// What a `focus://` URL asked for — **and nothing the app may act on without a person.**
@@ -153,19 +179,24 @@ public struct HandoffRequest: Sendable, Equatable, Hashable {
     /// `.context`. Distinct, in arrival order, at most `maximumContextItems`. Never empty for
     /// `.context`.
     public let context: [HandoffContextItem]
+    /// The standing shortlist a `.priorities` handoff asks for, in slot order, the main one
+    /// first. Always empty for the other verbs; never empty for `.priorities`.
+    public let standing: [HandoffStandingSlot]
 
     public init(
         verb: HandoffVerb,
         task: String,
         doneWhen: String?,
         flags: [HandoffFlag],
-        context: [HandoffContextItem] = []
+        context: [HandoffContextItem] = [],
+        standing: [HandoffStandingSlot] = []
     ) {
         self.verb = verb
         self.task = task
         self.doneWhen = doneWhen
         self.flags = flags
         self.context = context
+        self.standing = standing
     }
 
     // MARK: - Bounds
@@ -182,11 +213,16 @@ public struct HandoffRequest: Sendable, Equatable, Hashable {
     public static let knownQueryKeys: [HandoffVerb: [String]] = [
         .start: ["task", "doneWhen", "context"],
         .context: ["add"],
+        .priorities: HandoffStandingSlot.keyPrefixes.flatMap { [$0, "\($0)DoneWhen", "\($0)Context"] },
     ]
     /// Keys that may repeat, one item each. The first-wins rule does not apply to them.
-    public static let repeatableQueryKeys: Set<String> = ["context", "add"]
+    public static let repeatableQueryKeys: Set<String> = Set(
+        ["context", "add"] + HandoffStandingSlot.keyPrefixes.map { "\($0)Context" }
+    )
     /// Most context items one handoff may carry. More are ignored and counted.
     public static let maximumContextItems = 20
+    /// Most context items one standing slot may carry: three slots share one URL.
+    public static let maximumContextItemsPerSlot = 8
 
     // MARK: - The parse
 
@@ -206,7 +242,7 @@ public struct HandoffRequest: Sendable, Equatable, Hashable {
         let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
 
         var firstValues: [String: String] = [:]
-        var repeatedValues: [String] = []
+        var repeatedValues: [(name: String, value: String)] = []
         var duplicateKeys: [String] = []
         var unknownKeys: [String] = []
         let known = knownQueryKeys[verb] ?? []
@@ -217,7 +253,7 @@ public struct HandoffRequest: Sendable, Equatable, Hashable {
                 continue
             }
             if repeatableQueryKeys.contains(item.name) {
-                repeatedValues.append(item.value ?? "")
+                repeatedValues.append((item.name, item.value ?? ""))
                 continue
             }
             if firstValues[item.name] != nil {
@@ -233,21 +269,74 @@ public struct HandoffRequest: Sendable, Equatable, Hashable {
         var strippedAnything = false
         var flags: [HandoffFlag] = []
 
-        var context: [HandoffContextItem] = []
         var ignoredContext = 0
-        for raw in repeatedValues {
-            let cleaned = stripControlCharacters(raw, didStrip: &strippedAnything)
-            guard let item = HandoffContextItem.parse(cleaned) else {
-                ignoredContext += 1
-                continue
+        func contextItems(named name: String, cap: Int) -> [HandoffContextItem] {
+            var context: [HandoffContextItem] = []
+            for raw in repeatedValues where raw.name == name {
+                let cleaned = stripControlCharacters(raw.value, didStrip: &strippedAnything)
+                guard let item = HandoffContextItem.parse(cleaned) else {
+                    ignoredContext += 1
+                    continue
+                }
+                if context.contains(item) { continue }
+                guard context.count < cap else {
+                    ignoredContext += 1
+                    continue
+                }
+                context.append(item)
             }
-            if context.contains(item) { continue }
-            guard context.count < maximumContextItems else {
-                ignoredContext += 1
-                continue
-            }
-            context.append(item)
+            return context
         }
+
+        if verb == .priorities {
+            var standing: [HandoffStandingSlot] = []
+            var truncated: [HandoffFlag] = []
+            for (slot, prefix) in HandoffStandingSlot.keyPrefixes.enumerated() {
+                let rawTask = firstValues[prefix] ?? ""
+                let cleanedTask = stripControlCharacters(rawTask, didStrip: &strippedAnything)
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                let context = contextItems(named: "\(prefix)Context", cap: maximumContextItemsPerSlot)
+                guard !cleanedTask.isEmpty else {
+                    // A slot with no task is no slot, and its context has nowhere to go.
+                    ignoredContext += context.count
+                    continue
+                }
+                let task = capped(cleanedTask)
+                if task.count < cleanedTask.count {
+                    truncated.append(.taskTruncated(originalLength: cleanedTask.count))
+                }
+                var doneWhen: String?
+                if let rawDoneWhen = firstValues["\(prefix)DoneWhen"] {
+                    let cleaned = stripControlCharacters(rawDoneWhen, didStrip: &strippedAnything)
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !cleaned.isEmpty {
+                        let cappedDoneWhen = capped(cleaned)
+                        if cappedDoneWhen.count < cleaned.count {
+                            truncated.append(.doneWhenTruncated(originalLength: cleaned.count))
+                        }
+                        doneWhen = cappedDoneWhen
+                    }
+                }
+                standing.append(
+                    HandoffStandingSlot(slot: slot, task: task, doneWhen: doneWhen, context: context)
+                )
+            }
+            // The main priority is the point of the shortlist; secondaries alone are not one.
+            guard standing.first?.slot == 0 else { return .rejected(.missingPrimary) }
+            flags.append(contentsOf: truncated)
+            if strippedAnything { flags.append(.controlCharactersStripped) }
+            if !duplicateKeys.isEmpty { flags.append(.duplicateKeysIgnored(duplicateKeys)) }
+            if !unknownKeys.isEmpty { flags.append(.unknownQueryItems(unknownKeys)) }
+            if ignoredContext > 0 { flags.append(.contextItemsIgnored(count: ignoredContext)) }
+            return .confirm(
+                HandoffRequest(verb: verb, task: "", doneWhen: nil, flags: flags, standing: standing)
+            )
+        }
+
+        let context = contextItems(
+            named: verb == .context ? "add" : "context",
+            cap: maximumContextItems
+        )
 
         if verb == .context {
             guard !context.isEmpty else { return .rejected(.missingContext) }

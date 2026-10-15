@@ -68,12 +68,12 @@ public enum FocusMigrationPlan: SchemaMigrationPlan {
         [
             FocusSchemaV1.self, FocusSchemaV2.self, FocusSchemaV3.self, FocusSchemaV4.self,
             FocusSchemaV5.self, FocusSchemaV6.self, FocusSchemaV7.self, FocusSchemaV8.self,
-            FocusSchemaV9.self, FocusSchemaV10.self, FocusSchemaV11.self
+            FocusSchemaV9.self, FocusSchemaV10.self, FocusSchemaV11.self, FocusSchemaV12.self
         ]
     }
 
     public static var stages: [MigrationStage] {
-        [v1ToV2, v2ToV3, v3ToV4, v4ToV5, v5ToV6, v6ToV7, v7ToV8, v8ToV9, v9ToV10, v10ToV11]
+        [v1ToV2, v2ToV3, v3ToV4, v4ToV5, v5ToV6, v6ToV7, v7ToV8, v8ToV9, v9ToV10, v10ToV11, v11ToV12]
     }
 
     /// **v7 → v8: lightweight, and additive in the strictest sense** (F-115, focus-l7n).
@@ -117,6 +117,15 @@ public enum FocusMigrationPlan: SchemaMigrationPlan {
         MigrationStage.lightweight(
             fromVersion: FocusSchemaV10.self,
             toVersion: FocusSchemaV11.self
+        )
+    }
+
+    /// v11 → v12 adds `StandingPriorityRecord` and re-declares nothing (focus-standing). A store
+    /// that migrates arrives with no standing priorities, which is what every earlier build had.
+    static var v11ToV12: MigrationStage {
+        MigrationStage.lightweight(
+            fromVersion: FocusSchemaV11.self,
+            toVersion: FocusSchemaV12.self
         )
     }
 

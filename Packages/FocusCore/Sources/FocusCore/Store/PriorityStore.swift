@@ -23,6 +23,7 @@ public enum UndoActionName: String, Sendable, CaseIterable, Hashable {
     case addRule = "undo.rule.add"
     case changeRule = "undo.rule.change"
     case removeRule = "undo.rule.remove"
+    case setStanding = "undo.standing.set"
 
     /// The String Catalog key. Also what the catalog-completeness lint compares against.
     public var key: String { rawValue }
@@ -667,6 +668,82 @@ public final class PriorityStore {
                     rules: redoRules,
                     undo: undo
                 )
+            }
+        )
+    }
+
+    // MARK: - Standing priorities (focus-standing)
+
+    /// How many standing slots there are: one main priority and two secondary ones.
+    public static let standingSlotCount = 3
+
+    /// The standing shortlist, in slot order, each with the task it offers.
+    ///
+    /// A row whose task is gone — deleted, or swept by retention — is skipped rather than
+    /// repaired: the next confirmed set replaces the lot.
+    public func standingPriorities() throws -> [(slot: Int, task: FocusSchemaV3.PriorityTask)] {
+        let rows = try context.countedFetch(
+            FetchDescriptor<FocusSchemaV12.StandingPriorityRecord>(sortBy: [SortDescriptor(\.slot)])
+        )
+        return try rows.compactMap { row in
+            try task(id: row.taskID).map { (slot: row.slot, task: $0) }
+        }
+    }
+
+    /// The task a standing slot should point at: the existing one with exactly this intent, or a
+    /// new one that is **not** activated.
+    ///
+    /// Re-using the existing row is what makes a standing priority carry its desk, rules and
+    /// history with it. A definition of done that differs is replaced, because the person has
+    /// just read the new one on the confirmation sheet. Neither write carries an undo of its own:
+    /// undoing the set puts the previous shortlist back and the task stays in the history, the
+    /// same shape as a handoff's context pack.
+    public func findOrCreateTask(intent: String, doneWhen: String?) throws -> UUID {
+        let trimmed = intent.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { throw PriorityStoreError.emptyIntent }
+        let descriptor = FetchDescriptor<FocusSchemaV3.PriorityTask>(
+            predicate: #Predicate { $0.intent == trimmed },
+            sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
+        )
+        let matches = try context.countedFetch(descriptor)
+        let existing = matches.first { $0.completedAt == nil } ?? matches.first
+        guard let existing else {
+            return try createTask(intent: trimmed, doneWhen: normalised(doneWhen), undo: nil)
+        }
+        if let doneWhen = normalised(doneWhen), existing.doneWhen != doneWhen {
+            try editDoneWhen(taskID: existing.id, to: doneWhen, undo: nil)
+        }
+        return existing.id
+    }
+
+    /// Replace the whole standing shortlist with these tasks, in slot order.
+    ///
+    /// Replaced as a whole, never edited a slot at a time: the shortlist is one answer to one
+    /// question, and a set that was half new and half old would be nobody's answer. Identifiers
+    /// past `standingSlotCount`, repeated ones and ones naming no task are dropped.
+    public func setStandingPriorities(taskIDs: [UUID], undo: UndoManager? = nil) throws {
+        var kept: [UUID] = []
+        for id in taskIDs where !kept.contains(id) && kept.count < Self.standingSlotCount {
+            if try task(id: id) != nil { kept.append(id) }
+        }
+        let previous = try standingPriorities().map(\.task.id)
+        let now = dateProvider.now
+
+        try journal(
+            .setStanding,
+            undo: undo,
+            mutate: {
+                for row in try context.countedFetch(FetchDescriptor<FocusSchemaV12.StandingPriorityRecord>()) {
+                    context.delete(row)
+                }
+                for (slot, id) in kept.enumerated() {
+                    context.insert(
+                        FocusSchemaV12.StandingPriorityRecord(slot: slot, taskID: id, updatedAt: now)
+                    )
+                }
+            },
+            inverse: { store, undo in
+                try? store.setStandingPriorities(taskIDs: previous, undo: undo)
             }
         )
     }

@@ -35,6 +35,30 @@ struct SnapshotTests {
         #expect(before == after)
     }
 
+    @Test func standingPrioritiesComeBackMainFirstWithTheirContext() throws {
+        let dir = FileManager.default.temporaryDirectory.appending(path: "focus-bridge-test-\(UUID())")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = dir.appending(path: "source.store")
+
+        try {
+            let container = try FocusStore.makeContainer(kind: .temporary(store))
+            let priorities = PriorityStore(context: container.mainContext)
+            let main = try priorities.findOrCreateTask(intent: "#9 Qualify Boulanger", doneWhen: "Go/no-go agreed")
+            let second = try priorities.findOrCreateTask(intent: "#62 Fellowship dogfooding", doneWhen: nil)
+            _ = try priorities.addContextItem(taskID: main, kindRaw: "keyword", value: "boulanger", displayName: "boulanger")
+            try priorities.setStandingPriorities(taskIDs: [main, second])
+            try priorities.activate(taskID: second)
+        }()
+
+        let status = Summaries.status(try Snapshot.read(store: store), now: Date())
+        let standing = try #require(status.standing)
+        #expect(standing.map(\.role) == ["main", "secondary"])
+        #expect(standing.map(\.priority.issue) == [9, 62])
+        #expect(standing.map(\.isCurrent) == [false, true])
+        #expect(standing[0].priority.context == ["keyword:boulanger"])
+    }
+
     @Test func aMissingStoreIsANamedError() {
         #expect(throws: BridgeError.self) {
             try Snapshot.read(store: URL(fileURLWithPath: "/nonexistent/FocusSentinel.store"))
@@ -128,6 +152,29 @@ struct HandoffTests {
         }
     }
 
+    @Test func standingPrioritiesRoundTripThroughTheAppsParser() throws {
+        let url = try Handoff.prioritiesURL(slots: [
+            .init(task: "#9 Qualify Boulanger", doneWhen: "Go/no-go agreed", context: ["keyword:boulanger"]),
+            .init(task: "#62 Fellowship & dogfooding"),
+        ], scheme: "focus")
+        let request = try #require(HandoffRequest.parse(url).request)
+        #expect(request.verb == .priorities)
+        #expect(request.standing.map(\.task) == ["#9 Qualify Boulanger", "#62 Fellowship & dogfooding"])
+        #expect(request.standing.map(\.doneWhen) == ["Go/no-go agreed", nil])
+        #expect(request.standing[0].context.map(\.value) == ["boulanger"])
+        #expect(request.flags.isEmpty)
+    }
+
+    @Test func prioritiesNeedAMainOneAndAtMostThree() {
+        #expect(throws: BridgeError.self) { try Handoff.prioritiesURL(slots: [], scheme: "focus") }
+        #expect(throws: BridgeError.self) {
+            try Handoff.prioritiesURL(slots: Array(repeating: .init(task: "x"), count: 4), scheme: "focus")
+        }
+        #expect(throws: BridgeError.self) {
+            try Handoff.prioritiesURL(slots: [.init(task: "x", context: (0..<9).map { "keyword:k\($0)" })], scheme: "focus")
+        }
+    }
+
     @Test func aContextURLAddsToTheCurrentPriority() throws {
         let url = try Handoff.contextURL(items: ["app:com.microsoft.teams2"], scheme: "focus")
         #expect(url.absoluteString == "focus://context?add=app%3Acom.microsoft.teams2")
@@ -165,11 +212,11 @@ struct MCPServerTests {
         #expect(server().handle(#"{"jsonrpc":"2.0","method":"notifications/initialized"}"#) == nil)
     }
 
-    @Test func listsFiveTools() throws {
+    @Test func listsSixTools() throws {
         let reply = try object(server().handle(#"{"jsonrpc":"2.0","id":"a","method":"tools/list"}"#))
         let tools = try #require((reply["result"] as? [String: Any])?["tools"] as? [[String: Any]])
         #expect(tools.compactMap { $0["name"] as? String }
-            == ["focus_status", "focus_sessions", "focus_export", "focus_propose_priority", "focus_add_context"])
+            == ["focus_status", "focus_sessions", "focus_export", "focus_propose_priority", "focus_set_priorities", "focus_add_context"])
         #expect(reply["id"] as? String == "a")
     }
 
@@ -188,6 +235,19 @@ struct MCPServerTests {
         ))
         #expect((reply["result"] as? [String: Any])?["isError"] as? Bool == false)
         #expect(opened.isEmpty)
+    }
+
+    @Test func settingPrioritiesOpensOneURLUnlessDry() throws {
+        var opened: [URL] = []
+        let call = { (dry: Bool) in
+            ##"{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"focus_set_priorities","arguments":{"priorities":[{"task":"#9 Boulanger","done_when":"Go/no-go","context":["keyword:boulanger"]},{"task":"#62 Fellowship"}],"dry_run":\##(dry)}}}"##
+        }
+        let dry = try object(server { opened.append($0) }.handle(call(true)))
+        #expect((dry["result"] as? [String: Any])?["isError"] as? Bool == false)
+        #expect(opened.isEmpty)
+        let live = try object(server { opened.append($0) }.handle(call(false)))
+        #expect((live["result"] as? [String: Any])?["isError"] as? Bool == false)
+        #expect(opened.map(\.host) == ["priorities"])
     }
 
     @Test func addingContextWithoutAStoreOpensNothing() throws {

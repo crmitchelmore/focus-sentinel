@@ -295,6 +295,8 @@ struct ShellConnectionTotalityTests {
             "state.session.phase",
             "state.session.pauseCauses",
             "state.pendingHandoff.flags",
+            "state.pendingHandoff.standing",
+            "state.standing",
             "state.sensing.isOnSecondaryDisplay",
             "state.capabilities.observations"
         ] {
@@ -328,6 +330,15 @@ struct ShellConnectionTotalityTests {
             RecentPriority(
                 id: UUID(uuidString: "70741117-0000-4000-8000-000000000002")!,
                 intent: "Review the compliance pack"
+            )
+        ],
+        standing: [
+            StandingPriority(
+                slot: 0,
+                row: RecentPriority(
+                    id: UUID(uuidString: "70741117-0000-4000-8000-000000000004")!,
+                    intent: "Qualify the retail engagement"
+                )
             )
         ],
         pendingHandoff: HandoffRequest(

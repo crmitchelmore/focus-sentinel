@@ -37,6 +37,10 @@ public enum ShellRenderedField: String, Sendable, CaseIterable, Codable, Hashabl
     /// **What is in those rows** (focus-7ow). `recentCount` alone was satisfied by a list of the
     /// right length holding somebody else's history.
     case recentDigest
+    /// How many standing priorities the cockpit drew.
+    case standingCount
+    /// What is in them, so a list of the right length holding the wrong tasks is caught too.
+    case standingDigest
     /// The elapsed figure the session controls were given, formatted to whole seconds.
     ///
     /// `"none"` when there is no figure. A session timer that reads nothing and one that reads

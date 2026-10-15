@@ -21,6 +21,8 @@ public struct StoreReading: Sendable {
     /// The priority the app's `ActivePriority` pointer names. The export carries every priority
     /// but not the pointer, so it is read alongside.
     public let activePriorityID: String?
+    /// The standing priorities' task ids, main first. Also not in the export.
+    public var standingPriorityIDs: [String] = []
 }
 
 public enum Snapshot {
@@ -48,8 +50,10 @@ public enum Snapshot {
         let container = try FocusStore.makeContainer(kind: .temporary(copy))
         let context = container.mainContext
         let document = try StoreExport.document(in: context, generatedAt: now)
-        let active = try PriorityStore(context: context).activeTask()?.id.uuidString
-        return StoreReading(document: document, activePriorityID: active)
+        let store = PriorityStore(context: context)
+        let active = try store.activeTask()?.id.uuidString
+        let standing = try store.standingPriorities().map { $0.task.id.uuidString }
+        return StoreReading(document: document, activePriorityID: active, standingPriorityIDs: standing)
     }
 
     /// Copy `source` to `destination` with `sqlite3_backup_*`, opening the source read-only.

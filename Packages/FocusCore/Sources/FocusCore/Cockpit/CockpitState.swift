@@ -144,6 +144,27 @@ public struct RecentPriority: Sendable, Equatable, Hashable, Identifiable {
     }
 }
 
+/// One of the person's standing priorities: the shortlist a planning tool hands over so a focus
+/// block can start on one of them with a single press.
+///
+/// **A shortlist, not a backlog** (F-15). At most three slots, set only by a confirmed
+/// `focus://priorities` handoff, and each points at a stored task — so picking one is exactly
+/// "work on this again": the store's single pointer moves and the context pack comes back with
+/// it. Nothing is queued and nothing is promoted on its own.
+public struct StandingPriority: Sendable, Equatable, Hashable, Identifiable {
+    /// 0 is the main priority; 1 and 2 are the secondaries.
+    public let slot: Int
+    public var row: RecentPriority
+
+    public var id: UUID { row.id }
+    public var isPrimary: Bool { slot == 0 }
+
+    public init(slot: Int, row: RecentPriority) {
+        self.slot = slot
+        self.row = row
+    }
+}
+
 /// What the observer graph is doing right now, as a value the cockpit can draw.
 ///
 /// ## Why this exists, and why every field is a fact rather than a mood
@@ -285,6 +306,8 @@ public struct CockpitState: Sendable, Equatable, Hashable {
     public var priority: PrioritySnapshot?
     /// Previous commitments, newest first (F-15).
     public var recent: [RecentPriority]
+    /// The person's standing priorities, main first; empty until a planning tool has set them.
+    public var standing: [StandingPriority]
     /// An incoming `focus://` handoff awaiting a human decision (F-142).
     ///
     /// Its presence opens the confirmation sheet and **nothing else**. There is no code path
@@ -347,6 +370,7 @@ public struct CockpitState: Sendable, Equatable, Hashable {
         isObservingActivity: Bool,
         priority: PrioritySnapshot? = nil,
         recent: [RecentPriority] = [],
+        standing: [StandingPriority] = [],
         pendingHandoff: HandoffRequest? = nil,
         showsRitualPrompt: Bool = false,
         session: SessionSnapshot? = nil,
@@ -364,6 +388,7 @@ public struct CockpitState: Sendable, Equatable, Hashable {
         self.isObservingActivity = isObservingActivity
         self.priority = priority
         self.recent = recent
+        self.standing = standing
         self.pendingHandoff = pendingHandoff
         self.showsRitualPrompt = showsRitualPrompt
         self.session = session

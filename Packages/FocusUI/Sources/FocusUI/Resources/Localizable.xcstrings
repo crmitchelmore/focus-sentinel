@@ -1057,6 +1057,90 @@
         }
       }
     },
+    "handoff.priorities.action.set" : {
+      "comment" : "Button on the set-priorities handoff sheet that stores the listed priorities.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set Priorities"
+          }
+        }
+      }
+    },
+    "handoff.priorities.action.set.help" : {
+      "comment" : "Tooltip on the set-priorities handoff sheet's Set Priorities.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stores these as your main and secondary priorities. Your current priority does not change, and Undo puts the previous ones back."
+          }
+        }
+      }
+    },
+    "handoff.priorities.current.label" : {
+      "comment" : "Caption above the standing priorities the store holds now, on the set-priorities handoff sheet.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your priorities now"
+          }
+        }
+      }
+    },
+    "handoff.priorities.current.none" : {
+      "comment" : "Shown in place of the standing priorities when none are set.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "None set"
+          }
+        }
+      }
+    },
+    "handoff.priorities.explanation" : {
+      "comment" : "Explanation on the set-priorities handoff sheet.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Another app asked to set your main and secondary priorities. Your current priority does not change: you pick one of these when you are ready to focus. Nothing is set unless you choose Set Priorities."
+          }
+        }
+      }
+    },
+    "handoff.priorities.heading" : {
+      "comment" : "Heading of the sheet shown when another app asks to set the person's main and secondary priorities.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set your priorities?"
+          }
+        }
+      }
+    },
+    "handoff.priorities.incoming.label" : {
+      "comment" : "Caption above the standing priorities a URL asks to set.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Requested priorities"
+          }
+        }
+      }
+    },
     "priority.action.change" : {
       "comment" : "Cockpit button that reopens the capture field so a new sentence can replace the current priority.",
       "extractionState" : "manual",
@@ -1545,6 +1629,78 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Unrelated"
+          }
+        }
+      }
+    },
+    "priority.standing.action.focus" : {
+      "comment" : "Button that makes a standing priority the current one, with its stored context.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus on this"
+          }
+        }
+      }
+    },
+    "priority.standing.action.focus.help" : {
+      "comment" : "Tooltip on a standing priority's Focus on this.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Makes this your current priority, with its apps, sites and keywords."
+          }
+        }
+      }
+    },
+    "priority.standing.current" : {
+      "comment" : "Shown on a standing priority that is the current priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Current"
+          }
+        }
+      }
+    },
+    "priority.standing.heading" : {
+      "comment" : "Caption above the person's main and secondary priorities.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your priorities"
+          }
+        }
+      }
+    },
+    "priority.standing.primary" : {
+      "comment" : "Caption on the person's main standing priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Main"
+          }
+        }
+      }
+    },
+    "priority.standing.secondary" : {
+      "comment" : "Caption on one of the person's secondary standing priorities.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Secondary"
           }
         }
       }

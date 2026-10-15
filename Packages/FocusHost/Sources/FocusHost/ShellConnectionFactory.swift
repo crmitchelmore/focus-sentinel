@@ -75,6 +75,8 @@ enum ShellConnectionFactory {
         )
         root.expect(.recentCount, String(state.recent.count), for: .cockpit)
         root.expect(.recentDigest, ShellValueDigest.describe(state.recent), for: .cockpit)
+        root.expect(.standingCount, String(state.standing.count), for: .cockpit)
+        root.expect(.standingDigest, ShellValueDigest.describe(state.standing), for: .cockpit)
         root.expect(.handoffTask, state.pendingHandoff?.task ?? "", for: .cockpit)
         root.expect(.handoffDetail, ShellValueDigest.describe(state.pendingHandoff), for: .cockpit)
         // **The commitment sections, which the window draws only while there is one.** The window

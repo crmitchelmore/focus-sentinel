@@ -27,6 +27,9 @@ import SwiftUI
 /// priority, lists the apps, sites and keywords that would be added to it, and offers Add
 /// beside Cancel. Cancel stays the default there too — adding is quieter than replacing, but a
 /// script still does not get to change the desk without a person agreeing.
+///
+/// A `focus://priorities` handoff is the third mode: the standing priorities held now beside the
+/// ones requested, and *Set Priorities* beside Cancel. The current priority is not touched by it.
 public struct HandoffConfirmationSheet: View {
     public let request: HandoffRequest
     /// The displays this sheet bounds itself against; `nil` for the live ones. Injectable for
@@ -34,6 +37,8 @@ public struct HandoffConfirmationSheet: View {
     private let screens: ShellScreens
     /// What is in the store right now, or `nil` if nothing is.
     public let current: PrioritySnapshot?
+    /// The standing priorities held now, drawn beside a `priorities` request.
+    public let currentStanding: [StandingPriority]
     public let replace: () -> Void
     public let cancel: () -> Void
 
@@ -47,10 +52,12 @@ public struct HandoffConfirmationSheet: View {
         current: PrioritySnapshot?,
         replace: @escaping () -> Void,
         cancel: @escaping () -> Void,
+        currentStanding: [StandingPriority] = [],
         screens: ShellScreens = nil
     ) {
         self.request = request
         self.current = current
+        self.currentStanding = currentStanding
         self.replace = replace
         self.cancel = cancel
         self.screens = screens
@@ -63,24 +70,22 @@ public struct HandoffConfirmationSheet: View {
 
     private var content: some View {
         VStack(alignment: .leading, spacing: spacing) {
-            ShellText(isContext ? .handoffContextHeading : .handoffHeading, role: .title3)
+            ShellText(headingKey, role: .title3)
                 .fontWeight(.semibold)
                 .lineLimit(nil)
                 .fixedSize(horizontal: false, vertical: true)
 
-            ShellText(isContext ? .handoffContextExplanation : .handoffExplanation, role: .callout)
+            ShellText(explanationKey, role: .callout)
                 .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
                 .lineLimit(nil)
                 .fixedSize(horizontal: false, vertical: true)
 
             ViewThatFits(in: .horizontal) {
                 HStack(alignment: .top, spacing: spacing * 2) {
-                    currentColumn
-                    if isContext { contextColumn } else { incomingColumn }
+                    sides
                 }
                 VStack(alignment: .leading, spacing: spacing) {
-                    currentColumn
-                    if isContext { contextColumn } else { incomingColumn }
+                    sides
                 }
             }
 
@@ -108,6 +113,13 @@ public struct HandoffConfirmationSheet: View {
                     .shellHelp(.handoffContextActionAddHelp)
                     .buttonStyle(.borderedProminent)
                     .focused($focus, equals: .handoffReplace)
+                } else if isPriorities {
+                    Button(action: replace) {
+                        ShellText(.handoffPrioritiesActionSet)
+                    }
+                    .shellHelp(.handoffPrioritiesActionSetHelp)
+                    .buttonStyle(.borderedProminent)
+                    .focused($focus, equals: .handoffReplace)
                 } else {
                     Button(action: replace) {
                         ShellText(.handoffActionReplace)
@@ -129,6 +141,95 @@ public struct HandoffConfirmationSheet: View {
     // MARK: - The two sides
 
     private var isContext: Bool { request.verb == .context }
+    private var isPriorities: Bool { request.verb == .priorities }
+
+    private var headingKey: ShellStringKey {
+        switch request.verb {
+        case .start: .handoffHeading
+        case .context: .handoffContextHeading
+        case .priorities: .handoffPrioritiesHeading
+        }
+    }
+
+    private var explanationKey: ShellStringKey {
+        switch request.verb {
+        case .start: .handoffExplanation
+        case .context: .handoffContextExplanation
+        case .priorities: .handoffPrioritiesExplanation
+        }
+    }
+
+    @ViewBuilder
+    private var sides: some View {
+        switch request.verb {
+        case .start:
+            currentColumn
+            incomingColumn
+        case .context:
+            currentColumn
+            contextColumn
+        case .priorities:
+            standingColumn(
+                titleKey: .handoffPrioritiesCurrentLabel,
+                slots: currentStanding.map { ($0.slot, $0.row.intent, $0.row.doneWhen, 0) },
+                emptyKey: .handoffPrioritiesCurrentNone
+            )
+            standingColumn(
+                titleKey: .handoffPrioritiesIncomingLabel,
+                slots: request.standing.map { ($0.slot, $0.task, $0.doneWhen, $0.context.count) },
+                emptyKey: nil
+            )
+        }
+    }
+
+    /// One side of a priorities request: main first, each with its definition of done and how
+    /// many context items would travel with it.
+    private func standingColumn(
+        titleKey: ShellStringKey,
+        slots: [(slot: Int, intent: String, doneWhen: String?, contextCount: Int)],
+        emptyKey: ShellStringKey?
+    ) -> some View {
+        VStack(alignment: .leading, spacing: spacing / 2) {
+            ShellText(titleKey, role: .caption)
+                .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+            if slots.isEmpty, let emptyKey {
+                ShellText(emptyKey, role: .body)
+                    .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+            }
+            ForEach(Array(slots.enumerated()), id: \.offset) { _, slot in
+                VStack(alignment: .leading, spacing: spacing / 4) {
+                    ShellText(
+                        slot.slot == 0 ? .priorityStandingPrimary : .priorityStandingSecondary,
+                        role: .caption
+                    )
+                    .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+                    Text(verbatim: slot.intent)
+                        .font(DesignTokens.font(.body, scale: textScale))
+                        .lineLimit(nil)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if let doneWhen = slot.doneWhen, !doneWhen.isEmpty {
+                        Text(verbatim: doneWhen)
+                            .font(DesignTokens.font(.caption, scale: textScale))
+                            .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+                            .lineLimit(nil)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    if slot.contextCount > 0 {
+                        Label {
+                            // A count is a number, not prose.
+                            Text(verbatim: slot.contextCount.formatted())
+                                .font(DesignTokens.font(.caption, scale: textScale))
+                        } icon: {
+                            Image(systemName: "paperclip")
+                        }
+                        .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+                        .accessibilityLabel(Text(ShellStrings.resource(.priorityRecentContextItems)))
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
 
     private var currentColumn: some View {
         column(

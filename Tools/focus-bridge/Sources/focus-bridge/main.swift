@@ -10,14 +10,20 @@ let usage = """
       focus-bridge export [--out FILE]                      full 'Export My Data' JSON (stdout by default)
       focus-bridge propose --task TEXT [--done-when TEXT] [--context ITEM]... [--dry-run]
       focus-bridge add-context --item ITEM [--item ITEM]... [--dry-run]
+      focus-bridge set-priorities --slot TEXT [--done-when TEXT] [--context ITEM]...
+                                  [--slot TEXT ...]... [--dry-run]
       focus-bridge mcp                                      Model Context Protocol server on stdio
 
     ITEM is app:<bundle id>, domain:<host> or keyword:<text>, e.g. app:com.microsoft.Outlook,
     domain:dev.azure.com, keyword:sodexo. add-context adds to the current priority.
 
+    set-priorities sets one main and up to two secondary standing priorities: each --slot starts
+    one (main first), and the --done-when and --context after it belong to it.
+
     The store is read through a private SQLite backup and never opened in place. Set FOCUS_STORE
-    to read another store file. `propose` opens focus://start and `add-context` opens
-    focus://context; Focus Sentinel changes nothing until you press Replace or Add.
+    to read another store file. `propose`, `add-context` and `set-priorities` open focus://start,
+    focus://context and focus://priorities; Focus Sentinel changes nothing until you press
+    Replace, Add or Set Priorities.
     """
 
 func fail(_ message: String, code: Int32 = 1) -> Never {
@@ -44,6 +50,31 @@ func options(_ name: String, in args: [String]) -> [String] {
         }
     }
     return values
+}
+
+/// `--slot A --done-when X --context c1 --slot B …`: each `--slot` opens a slot and the options
+/// after it fill that slot.
+func slots(in args: [String]) -> [Handoff.Slot] {
+    var slots: [Handoff.Slot] = []
+    var i = 0
+    while i < args.count {
+        let name = args[i]
+        guard ["--slot", "--done-when", "--context"].contains(name) else { i += 1; continue }
+        guard i + 1 < args.count else { fail("\(name) needs a value", code: 2) }
+        let value = args[i + 1]
+        switch name {
+        case "--slot":
+            slots.append(Handoff.Slot(task: value))
+        case "--done-when":
+            guard !slots.isEmpty else { fail("--done-when must follow a --slot", code: 2) }
+            slots[slots.count - 1].doneWhen = value
+        default:
+            guard !slots.isEmpty else { fail("--context must follow a --slot", code: 2) }
+            slots[slots.count - 1].context.append(value)
+        }
+        i += 2
+    }
+    return slots
 }
 
 func emit(_ value: some Encodable) throws {
@@ -101,6 +132,13 @@ func main() {
                 }
                 try Handoff.open(url)
                 FileHandle.standardError.write(Data("Sent. Press Add in Focus Sentinel to accept it.\n".utf8))
+            }
+        case "set-priorities":
+            let url = try Handoff.prioritiesURL(slots: slots(in: rest))
+            print(url.absoluteString)
+            if !rest.contains("--dry-run") {
+                try Handoff.open(url)
+                FileHandle.standardError.write(Data("Sent. Press Set Priorities in Focus Sentinel to accept them.\n".utf8))
             }
         case "mcp":
             MCPServer(read: { try Snapshot.read(store: store) }).run()

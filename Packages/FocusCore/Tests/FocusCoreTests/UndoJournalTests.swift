@@ -345,7 +345,7 @@ struct UndoJournalTests {
 
     @Test("every action name has a catalog key with three components")
     func actionNameKeysAreWellFormed() {
-        #expect(UndoActionName.allCases.count == 14)
+        #expect(UndoActionName.allCases.count == 15)
         for name in UndoActionName.allCases {
             #expect(name.key.hasPrefix("undo."))
             #expect(name.key.filter { $0 == "." }.count >= 2, "\(name.key) is not <namespace>.<surface>.<element>")

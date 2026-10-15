@@ -93,3 +93,7 @@ Packages/FocusUI/Sources/FocusUI/Scenes/PresentationExclusionSection.swift | ent
 Packages/FocusUI/Sources/FocusUI/Scenes/PresentationExclusionSection.swift | candidate.displayName) | NAME — one running application the add row offers
 
 Packages/FocusUI/Sources/FocusUI/Session/SessionControls.swift | Self.format(elapsedSeconds)) | NUMBER elapsed session duration formatted with locale-aware units; the full sentence remains the accessibility label
+Packages/FocusUI/Sources/FocusUI/Scenes/StandingPrioritiesView.swift | row.intent) | OWN a standing priority, in the planning tool's words the person confirmed
+Packages/FocusUI/Sources/FocusUI/Scenes/StandingPrioritiesView.swift | doneWhen) | OWN its definition of done
+Packages/FocusUI/Sources/FocusUI/Handoff/HandoffConfirmationSheet.swift | slot.intent) | OWN a standing priority, held or requested
+Packages/FocusUI/Sources/FocusUI/Handoff/HandoffConfirmationSheet.swift | slot.contextCount.formatted()) | NUMBER how many context items a requested priority carries

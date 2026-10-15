@@ -5,13 +5,14 @@ import Foundation
 ///
 /// One JSON-RPC 2.0 message per line in, one per line out, nothing else on stdout. No socket is
 /// opened: the client starts this process and owns both ends of the pipe. Three tools only read
-/// a snapshot; two propose a priority or context that the person still has to accept.
+/// a snapshot; three propose a priority, context or standing priorities that the person still
+/// has to accept.
 @MainActor
 public final class MCPServer {
     public typealias Reader = @MainActor () throws -> StoreReading
 
     public static let supportedProtocolVersions = ["2025-06-18", "2025-03-26", "2024-11-05"]
-    public static let serverVersion = "0.2.0"
+    public static let serverVersion = "0.3.0"
 
     private let read: Reader
     private let now: () -> Date
@@ -87,9 +88,10 @@ public final class MCPServer {
         times focus sessions on it. Use focus_status to see what they are focused on now, \
         focus_sessions to read time spent per priority (priorities named '#<n> …' are work-os \
         issues), focus_propose_priority to suggest a new priority with its context (apps, \
-        sites, keywords that belong to the work), and focus_add_context to add context to the \
-        current priority. The app asks the person to confirm both, so never claim anything was \
-        set or added.
+        sites, keywords that belong to the work), focus_add_context to add context to the \
+        current priority, and focus_set_priorities to set their standing main and secondary \
+        priorities (shown in the app as one-press starting points). The app asks the person to \
+        confirm each, so never claim anything was set or added.
         """
 
     static let contextSchema: [String: Any] = [
@@ -100,6 +102,12 @@ public final class MCPServer {
             + "(e.g. app:com.microsoft.Outlook), 'domain:<host>' (e.g. domain:dev.azure.com) or "
             + "'keyword:<text>'. Files are not accepted."
     ]
+
+    static var slotContextSchema: [String: Any] {
+        var schema = contextSchema
+        schema["maxItems"] = HandoffRequest.maximumContextItemsPerSlot
+        return schema
+    }
 
     static var tools: [[String: Any]] {
         [
@@ -153,6 +161,36 @@ public final class MCPServer {
                     "additionalProperties": false
                 ],
                 "annotations": ["readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": false]
+            ],
+            [
+                "name": "focus_set_priorities",
+                "title": "Set standing priorities",
+                "description": "Ask Focus Sentinel to set the person's standing priorities: one main and up to two secondary, each with its own context. The app lists them as one-press starting points for a focus block and does not change the current priority. It shows a confirmation sheet and sets nothing until the person presses Set Priorities. Sending the same set again reuses the stored tasks.",
+                "inputSchema": [
+                    "type": "object",
+                    "properties": [
+                        "priorities": [
+                            "type": "array",
+                            "minItems": 1,
+                            "maxItems": HandoffStandingSlot.keyPrefixes.count,
+                            "description": "Main first, then the secondaries",
+                            "items": [
+                                "type": "object",
+                                "properties": [
+                                    "task": ["type": "string", "description": "The priority, at most 500 characters"],
+                                    "done_when": ["type": "string", "description": "How the person will know it is done"],
+                                    "context": slotContextSchema
+                                ],
+                                "required": ["task"],
+                                "additionalProperties": false
+                            ]
+                        ],
+                        "dry_run": ["type": "boolean", "description": "Return the focus:// URL without opening it"]
+                    ],
+                    "required": ["priorities"],
+                    "additionalProperties": false
+                ],
+                "annotations": ["readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false]
             ],
             [
                 "name": "focus_add_context",
@@ -210,6 +248,28 @@ public final class MCPServer {
                     note: dryRun
                         ? "Not opened (dry run)."
                         : "Focus Sentinel is showing a confirmation sheet. Nothing changes until the person presses Replace."
+                ))
+            case "focus_set_priorities":
+                guard let raw = arguments["priorities"] as? [Any] else { throw BridgeError("priorities is required") }
+                let slots = try raw.map { item -> Handoff.Slot in
+                    guard let object = item as? [String: Any], let task = object["task"] as? String else {
+                        throw BridgeError("each priority needs a task")
+                    }
+                    return Handoff.Slot(
+                        task: task,
+                        doneWhen: object["done_when"] as? String,
+                        context: try Self.strings(object["context"], name: "context")
+                    )
+                }
+                let url = try Handoff.prioritiesURL(slots: slots)
+                let dryRun = arguments["dry_run"] as? Bool ?? false
+                if !dryRun { try openURL(url) }
+                return try text(ProposalReceipt(
+                    url: url.absoluteString,
+                    opened: !dryRun,
+                    note: dryRun
+                        ? "Not opened (dry run)."
+                        : "Focus Sentinel is showing a confirmation sheet. Nothing is set until the person presses Set Priorities."
                 ))
             case "focus_add_context":
                 let url = try Handoff.contextURL(items: Self.strings(arguments["items"], name: "items"))

@@ -474,6 +474,32 @@ final class PriorityHost: PriorityActing {
                     )
                 }
             }
+        case .priorities:
+            // The person's standing shortlist. Each slot names a task by its sentence: an
+            // existing one is reused so its history and desk come with it, otherwise a new,
+            // inactive one is created. The current priority is not touched — picking a slot
+            // later is what moves the pointer. One undo step puts the previous shortlist back;
+            // tasks and context created on the way stay in the history, as a kept desk does.
+            perform { store in
+                var ids: [UUID] = []
+                for slot in request.standing {
+                    let id = try store.findOrCreateTask(intent: slot.task, doneWhen: slot.doneWhen)
+                    let held = Set(
+                        (try store.task(id: id)?.contextItems ?? []).map { "\($0.kindRaw)|\($0.value)" }
+                    )
+                    for draft in slot.context.compactMap(Self.draft(for:))
+                    where !held.contains("\(draft.kind.rawValue)|\(draft.value)") {
+                        _ = try store.addContextItem(
+                            taskID: id,
+                            kindRaw: draft.kind.rawValue,
+                            value: draft.value,
+                            displayName: draft.displayName
+                        )
+                    }
+                    ids.append(id)
+                }
+                try store.setStandingPriorities(taskIDs: ids, undo: self.undo)
+            }
         }
     }
 
@@ -567,6 +593,7 @@ final class PriorityHost: PriorityActing {
         // `storeIsReady`, rather than to blank the window.
         var priority: PrioritySnapshot? = state.priority
         var recent: [RecentPriority] = state.recent
+        var standing: [StandingPriority] = state.standing
         // Seeded with what it already is, so a fetch that throws cannot be read as "the person
         // cleared their priority" — which would invalidate the engine's snapshot for a reason
         // that never happened. `nextCommitment` is seeded for exactly the same reason, and from
@@ -616,6 +643,9 @@ final class PriorityHost: PriorityActing {
             let revision = PriorityStore.mutationCount
             if historyRevision != revision || nextKey != snapshotKey {
                 recent = try store.recentTasks(limit: Self.historyLimit).map(RecentPriority.init)
+                standing = try store.standingPriorities().map {
+                    StandingPriority(slot: $0.slot, row: RecentPriority($0.task))
+                }
                 // Assigned only after the fetch returned. A throw leaves it where it was, so the
                 // next tick tries again rather than caching the absence of an answer.
                 historyRevision = revision
@@ -637,6 +667,7 @@ final class PriorityHost: PriorityActing {
             isObservingActivity: environment.isObservingActivity,
             priority: priority,
             recent: recent,
+            standing: standing,
             pendingHandoff: pendingHandoff,
             showsRitualPrompt: shouldPromptRitual(),
             session: environment.session,

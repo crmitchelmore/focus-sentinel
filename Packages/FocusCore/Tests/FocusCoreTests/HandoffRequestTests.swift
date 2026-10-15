@@ -312,6 +312,57 @@ struct HandoffRequestTests {
         #expect(request.task == "ok")
     }
 
+    // MARK: - Standing priorities (focus-standing)
+
+    @Test("a priorities handoff carries the main slot and up to two secondary ones, each bounded")
+    func prioritiesCarrySlots() throws {
+        let url = "focus://priorities?primary=Boulanger%20qualification&primaryDoneWhen=Go%2Fno-go%20sent"
+            + "&primaryContext=app:com.microsoft.teams2&primaryContext=keyword:Boulanger"
+            + "&secondary1=Fellowship&secondary1Context=domain:github.com"
+            + "&secondary2=Links%20pages"
+        let request = try #require(HandoffRequest.parse(url).request)
+        #expect(request.verb == .priorities)
+        #expect(request.task.isEmpty)
+        #expect(request.context.isEmpty)
+        #expect(request.flags.isEmpty)
+        #expect(request.standing == [
+            HandoffStandingSlot(
+                slot: 0,
+                task: "Boulanger qualification",
+                doneWhen: "Go/no-go sent",
+                context: [
+                    HandoffContextItem(kind: .app, value: "com.microsoft.teams2"),
+                    HandoffContextItem(kind: .keyword, value: "boulanger")
+                ]
+            ),
+            HandoffStandingSlot(
+                slot: 1,
+                task: "Fellowship",
+                doneWhen: nil,
+                context: [HandoffContextItem(kind: .domain, value: "https://github.com")]
+            ),
+            HandoffStandingSlot(slot: 2, task: "Links pages", doneWhen: nil)
+        ])
+    }
+
+    @Test("a priorities handoff with no main priority is refused")
+    func prioritiesNeedAPrimary() {
+        #expect(HandoffRequest.parse("focus://priorities?secondary1=x").rejection == .missingPrimary)
+        #expect(HandoffRequest.parse("focus://priorities?primary=%20%20").rejection == .missingPrimary)
+    }
+
+    @Test("a priorities handoff keeps a gap, caps each slot's context and names what it ignored")
+    func prioritiesAreBounded() throws {
+        let many = (0..<12).map { "primaryContext=keyword:k\($0)" }.joined(separator: "&")
+        let url = "focus://priorities?primary=Main&\(many)&secondary2=Third&secondary1Context=keyword:orphan&task=x"
+        let request = try #require(HandoffRequest.parse(url).request)
+        #expect(request.standing.map(\.slot) == [0, 2])
+        #expect(request.standing[0].context.count == HandoffRequest.maximumContextItemsPerSlot)
+        #expect(request.flags.contains(.unknownQueryItems(["task"])))
+        // Four past the cap, plus the orphan whose slot named no task.
+        #expect(request.flags.contains(.contextItemsIgnored(count: 5)))
+    }
+
     // MARK: - The overload the app actually calls
 
     /// `parse(_ string: String)` is a convenience; `parse(_ url: URL)` is the production entry
@@ -334,7 +385,8 @@ struct HandoffRequestTests {
                     request.verb == .start ? !request.task.isEmpty : request.task.isEmpty,
                     "‘\(url)’ confirmed the wrong task shape"
                 )
-                #expect(request.verb == .start || !request.context.isEmpty)
+                #expect(request.verb != .context || !request.context.isEmpty)
+                #expect(request.verb == .priorities ? !request.standing.isEmpty : request.standing.isEmpty)
                 #expect(request.context.count <= HandoffRequest.maximumContextItems)
                 #expect(request.context.allSatisfy { $0.kind != .file && !$0.value.isEmpty })
                 #expect(request.task.count <= HandoffRequest.maximumFieldLength)
@@ -404,7 +456,8 @@ struct HandoffRequestTests {
                     request.verb == .start ? !request.task.isEmpty : request.task.isEmpty,
                     "‘\(input)’ confirmed the wrong task shape"
                 )
-                #expect(request.verb == .start || !request.context.isEmpty)
+                #expect(request.verb != .context || !request.context.isEmpty)
+                #expect(request.verb == .priorities ? !request.standing.isEmpty : request.standing.isEmpty)
                 #expect(request.context.count <= HandoffRequest.maximumContextItems)
                 #expect(request.context.allSatisfy { $0.kind != .file && !$0.value.isEmpty })
                 #expect(request.task.count <= HandoffRequest.maximumFieldLength)

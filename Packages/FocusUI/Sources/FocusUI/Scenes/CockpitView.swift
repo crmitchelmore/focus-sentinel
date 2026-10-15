@@ -243,6 +243,10 @@ public struct CockpitView: View {
                         timeboxSection(priority)
                         sessionSection(compact: true)
                     }
+                } else if !state.standing.isEmpty {
+                    // Nothing committed yet: the standing priorities are the first offer, so a
+                    // focus block starts on one of them with one press.
+                    standingSection
                 }
             case .details:
                 if let priority = state.priority {
@@ -264,6 +268,9 @@ public struct CockpitView: View {
                     }
                 }
             case .recent:
+                if !state.standing.isEmpty {
+                    standingSection
+                }
                 RecentPrioritiesView(rows: state.recent, activate: wiring.activate)
                     // **What is in the rows, not only how many** (focus-7ow).
                     .shellRendered(.recentCount, state.recent.count)
@@ -299,6 +306,11 @@ public struct CockpitView: View {
                 Color.clear
                     .shellRendered(.recentCount, 0)
                     .shellRendered(.recentDigest, ShellValueDigest.describe(state.recent))
+            }
+            if state.standing.isEmpty {
+                Color.clear
+                    .shellRendered(.standingCount, 0)
+                    .shellRendered(.standingDigest, ShellValueDigest.describe(state.standing))
             }
         }
         // **The traits this window resolved out of its own environment** (focus-h7h).
@@ -340,7 +352,8 @@ public struct CockpitView: View {
                     request: request,
                     current: state.priority,
                     replace: { wiring.acceptHandoff?(request) },
-                    cancel: { wiring.cancelHandoff?() }
+                    cancel: { wiring.cancelHandoff?() },
+                    currentStanding: state.standing
                 )
             }
         }
@@ -810,6 +823,18 @@ public struct CockpitView: View {
     /// AppKit-backed `TextField` does not rasterise under `ImageRenderer` and draws SwiftUI's
     /// yellow "unrenderable view" placeholder, so a read-only render is a picture of the
     /// cockpit rather than a picture of a broken control.
+    /// The standing priorities, drawn on the Recent tab always and on the Now tab while nothing
+    /// is committed. They report from where they are drawn; `hiddenTabReceipts` covers the rest.
+    private var standingSection: some View {
+        StandingPrioritiesView(rows: state.standing, activate: wiring.activate)
+            .shellRendered(.standingCount, state.standing.count)
+            .shellRendered(.standingDigest, ShellValueDigest.describe(state.standing))
+    }
+
+    private var standingIsOnOpenTab: Bool {
+        tab == .recent || (tab == .now && state.priority == nil)
+    }
+
     private var showsCapture: Bool {
         actions != nil && (state.priority == nil || isCapturing)
     }
@@ -1239,6 +1264,11 @@ public struct CockpitView: View {
             Color.clear
                 .shellRendered(.recentCount, state.recent.count)
                 .shellRendered(.recentDigest, ShellValueDigest.describe(state.recent))
+        }
+        if !state.standing.isEmpty && !standingIsOnOpenTab {
+            Color.clear
+                .shellRendered(.standingCount, state.standing.count)
+                .shellRendered(.standingDigest, ShellValueDigest.describe(state.standing))
         }
         if let priority = state.priority {
             if tab != .now {

@@ -38,6 +38,8 @@ public struct SessionSummary: Codable, Sendable, Equatable {
 public struct StatusSummary: Codable, Sendable, Equatable {
     public let generatedAt: Date
     public let priority: PrioritySummary?
+    /// The standing priorities, main first, each with its context pack. Empty until set.
+    public var standing: [StandingSummary]? = nil
     public let session: SessionSummary?
     public let today: Today
 
@@ -45,6 +47,13 @@ public struct StatusSummary: Codable, Sendable, Equatable {
         public let sessions: Int
         public let focusedSeconds: Int
     }
+}
+
+public struct StandingSummary: Codable, Sendable, Equatable {
+    /// `main` or `secondary`.
+    public let role: String
+    public let isCurrent: Bool
+    public let priority: PrioritySummary
 }
 
 public enum Summaries {
@@ -128,22 +137,33 @@ public enum Summaries {
         calendar: Calendar = .current
     ) -> StatusSummary {
         let document = reading.document
+        func withContext(_ p: StoreExport.Priority) -> PrioritySummary {
+            var summary = Self.priority(p)
+            summary.context = document.contextItems
+                .filter { $0.priorityID == p.id }
+                .sorted { $0.addedAt < $1.addedAt }
+                .map { "\($0.kindRaw):\($0.value)" }
+            return summary
+        }
         let priority = reading.activePriorityID
             .flatMap { id in document.priorities.first { $0.id == id } }
-            .map { p -> PrioritySummary in
-                var summary = Self.priority(p)
-                summary.context = document.contextItems
-                    .filter { $0.priorityID == p.id }
-                    .sorted { $0.addedAt < $1.addedAt }
-                    .map { "\($0.kindRaw):\($0.value)" }
-                return summary
+            .map(withContext)
+        let standing = reading.standingPriorityIDs.enumerated().compactMap { index, id -> StandingSummary? in
+            document.priorities.first { $0.id == id }.map {
+                StandingSummary(
+                    role: index == 0 ? "main" : "secondary",
+                    isCurrent: id == reading.activePriorityID,
+                    priority: withContext($0)
+                )
             }
+        }
         let all = sessions(in: document, now: now)
         let open = all.last { $0.endedAt == nil }
         let today = all.filter { calendar.isDate($0.startedAt, inSameDayAs: now) }
         return StatusSummary(
             generatedAt: now,
             priority: priority,
+            standing: standing,
             session: open,
             today: .init(sessions: today.count, focusedSeconds: today.reduce(0) { $0 + $1.focusedSeconds })
         )
