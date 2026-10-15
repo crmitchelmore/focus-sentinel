@@ -95,16 +95,19 @@ public enum PrivacySettingsAction: Sendable, Equatable, Hashable {
     /// Every action the pane can produce, one per value it can produce it with. The self-check
     /// folds this to `verb`; the unit lane folds it to check nothing here is unreachable.
     public static var allDeclared: [PrivacySettingsAction] {
-        [.deleteEverything]
-            + RetentionWindow.ordered.map(PrivacySettingsAction.setRetentionWindow)
-            + [.exportData, .exportSettings, .importSettings]
-            + [
-                .setSensingPaused(true), .setIdleThreshold(seconds: PrivacySettingsView.awayStep),
-                .setMediaSuppression(false), .setLaunchContextOnSessionStart(true)
-            ]
-            + GrantOptIn.allCases.map { PrivacySettingsAction.setGrantOptIn($0, true) }
-            + GrantOptIn.allCases.map(PrivacySettingsAction.openGrantSettings)
-            + [.recheckGrants]
+        // Appended one part at a time: as a single `+` chain this expression timed out the
+        // type checker under xcodebuild.
+        var actions: [PrivacySettingsAction] = [.deleteEverything]
+        actions += RetentionWindow.ordered.map(PrivacySettingsAction.setRetentionWindow)
+        actions += [.exportData, .exportSettings, .importSettings]
+        actions += [
+            .setSensingPaused(true), .setIdleThreshold(seconds: PrivacySettingsView.awayStep),
+            .setMediaSuppression(false), .setLaunchContextOnSessionStart(true)
+        ]
+        actions += GrantOptIn.allCases.map { PrivacySettingsAction.setGrantOptIn($0, true) }
+        actions += GrantOptIn.allCases.map(PrivacySettingsAction.openGrantSettings)
+        actions.append(.recheckGrants)
+        return actions
     }
 
     /// The vocabulary the self-check publishes, in the order the pane draws it.
