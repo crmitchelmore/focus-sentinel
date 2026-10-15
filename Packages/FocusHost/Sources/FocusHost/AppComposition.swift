@@ -831,9 +831,15 @@ public final class AppComposition {
             case .startSession:
                 let previous = self.sessionHost.snapshot?.sessionID
                 self.sessionHost.startSession()
+                // A Shortcut leaves the front where it was, so a session started over a password
+                // manager opens and is stood down at once for it. That is still the session the
+                // person asked for, and reporting it as a failure would invite a second start.
+                let snapshot = self.sessionHost.snapshot
+                let startedOrStoodDown = snapshot?.phase == .focus
+                    || (snapshot?.phase == .paused && snapshot?.pauseCauses == [.sensitiveApp])
                 return self.sessionHost.writeFailure == nil
-                    && self.sessionHost.snapshot?.phase == .focus
-                    && self.sessionHost.snapshot?.sessionID != previous
+                    && startedOrStoodDown
+                    && snapshot?.sessionID != previous
             case .completeSession:
                 self.sessionHost.completeSession()
                 return self.sessionHost.writeFailure == nil

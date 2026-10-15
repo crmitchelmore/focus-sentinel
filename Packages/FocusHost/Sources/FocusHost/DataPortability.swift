@@ -138,6 +138,7 @@ extension AppComposition {
             sensingHost.update(settings: FocusStore.sensingSettings(in: modelContainer.mainContext))
             applyStoredInterventionPreferences()
             reloadSensitivityLists()
+            rebindImportedHotKey()
             refreshCockpit()
             return .imported(name: url.lastPathComponent)
         case .failure(let refusal):
@@ -151,6 +152,26 @@ extension AppComposition {
     /// Where the export save panel starts: beside the active store, or `nil` when it is
     /// memory-only.
     var exportDirectoryURL: URL? { activeStoreURL?.deletingLastPathComponent() }
+
+    /// **The imported shortcut, bound now rather than at the next launch.**
+    ///
+    /// The import writes the stored row; the platform still holds whatever `start()` registered.
+    /// Through `registerHotKey(_:)`, the route the launch and Settings both take, and through
+    /// `storedHotKeySpec()`, so an imported combination this build would refuse falls back to the
+    /// default exactly as it would at launch.
+    ///
+    /// Two cases do nothing. A process that never bound a shortcut — a unit test, a reduced
+    /// self-check mode, a root that has deleted everything — must not start binding one because
+    /// a file was read. And an import that leaves the shortcut where it was, which is what the
+    /// self-check's export-then-reimport round trip does, must not release and re-take a key the
+    /// hot-key report is about to read.
+    @MainActor
+    func rebindImportedHotKey() {
+        guard hotKeyRegistration != nil else { return }
+        let imported = storedHotKeySpec()
+        guard imported != hotKeySpec else { return }
+        registerHotKey(imported)
+    }
 
     /// The save panel for either document. Returns `nil` when the person dismissed it, which is
     /// an answer and not a failure.

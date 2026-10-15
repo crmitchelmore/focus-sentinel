@@ -235,6 +235,28 @@ struct SnoozeStateTests {
         #expect(elsewhere != morning)
     }
 
+    /// Where the clocks change at midnight the day starts at 01:00, and "start of today plus a
+    /// day" kept the 01:00 — an hour into tomorrow. Santiago went forward at midnight on
+    /// 11 September 2022, so that day began at 01:00 and the next one at 00:00.
+    @Test("the rest of the day ends at tomorrow's midnight on a day that began at 01:00")
+    func restOfDayOnAMidnightClockChange() throws {
+        var santiago = Calendar(identifier: .gregorian)
+        santiago.timeZone = try #require(TimeZone(identifier: "America/Santiago"))
+        // 12:00 local on the day of the change (UTC−3 after it).
+        let now = try #require(ISO8601DateFormatter().date(from: "2022-09-11T15:00:00Z"))
+        try #require(
+            santiago.component(.hour, from: santiago.startOfDay(for: now)) == 1,
+            "this zone's data no longer starts that day at 01:00, so this drives nothing"
+        )
+
+        let expiry = try #require(
+            PauseRequest(preset: .restOfDay).expiry(now: now, calendar: santiago)
+        )
+        #expect(santiago.component(.hour, from: expiry) == 0)
+        #expect(santiago.component(.day, from: expiry) == 12)
+        #expect(expiry == santiago.startOfDay(for: expiry))
+    }
+
     // MARK: - Helpers
 
     static var londonCalendar: Calendar {
