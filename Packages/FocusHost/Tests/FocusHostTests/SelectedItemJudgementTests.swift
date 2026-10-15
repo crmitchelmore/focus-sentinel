@@ -10,7 +10,8 @@ import Testing
 ///
 /// The Accessibility read itself is the platform's and is not driven here: a test process that
 /// is trusted for Accessibility would read this Mac's own windows, and one that is not would
-/// prove nothing. What is held is everything on either side of it — the reader's refusals, which
+/// prove nothing. The pure parts of it — the reduction, the search below the title and the
+/// grace for a failed read — are held in FocusCore's `SelectedItemTests`. What is held is everything on either side of it — the reader's refusals, which
 /// need no grant, and what the engine does with an item once it has one.
 @Suite("A selected item narrows the judgement")
 @MainActor
@@ -41,16 +42,6 @@ struct SelectedItemJudgementTests {
                 optIns: GrantOptIns(enabled: [.screenCapture])
             ) == nil
         )
-        #expect(reader.readCount == 0)
-    }
-
-    @Test("an application not on the list is never read, even with the switch on")
-    func anUnlistedApplicationIsNeverRead() throws {
-        let reader = SystemSelectedItemReader()
-        let optedIn = GrantOptIns(enabled: [.accessibilityWindowContext])
-        for bundle in ["com.apple.Safari", "com.apple.mail", "com.apple.MobileSMS"] {
-            #expect(reader.selectedItem(in: try Self.cleared(bundle), optIns: optedIn) == nil)
-        }
         #expect(reader.readCount == 0)
     }
 
@@ -129,5 +120,50 @@ struct SelectedItemJudgementTests {
         #expect(asked.kind == .titleToken)
         #expect(asked.identifier == race.subject)
         #expect(asked.provenance == .selectedItem)
+    }
+
+    /// Issue #27: the label is the person's own name for the item, so it is handed to the
+    /// engine as title prose as well as an item. A context-pack keyword — matched against
+    /// title tokens and nothing else at zero grants — is the witness that it arrives.
+    @Test("the item's label reaches the engine as title words, which a context keyword matches")
+    func theLabelIsTitleProse() async throws {
+        let container = try FocusStore.makeContainer(kind: .inMemory)
+        let context = container.mainContext
+        let host = RelevanceHost(
+            context: context,
+            ruleStore: SwiftDataRuleStore(context: context),
+            monotonicClock: FixedMonotonicClock(),
+            modelRung: nil
+        )
+        let priorities = PriorityStore(
+            context: context,
+            dateProvider: FixedDateProvider(now: NudgeHostFixture.reference)
+        )
+        try priorities.setPriority(intent: "Write the Q3 proposal for Acme")
+        let taskID = try #require(try priorities.activeTask()?.id)
+        _ = try priorities.addContextItem(
+            taskID: taskID, kindRaw: "keyword", value: "proposal", displayName: "proposal"
+        )
+        host.activeCommitment = { ActiveCommitment(id: taskID, intent: "Write the Q3 proposal for Acme") }
+        await host.rebuildSnapshot()
+
+        var published: [NudgeJudgement] = []
+        host.onJudgement = { published.append($0) }
+
+        let drafting = try #require(SelectedItem(bundleIdentifier: Self.copilot, label: "Draft the Acme proposal"))
+        host.observe(
+            JudgeableSubject(bundleIdentifier: Self.copilot, isSuppressed: false, selectedItem: drafting),
+            phase: .focus,
+            isUserIdle: false
+        )
+        #expect(try #require(published.last).verdict == .relevant)
+
+        // The same application with no item has no words to match, so the keyword says nothing.
+        host.observe(
+            JudgeableSubject(bundleIdentifier: Self.copilot, isSuppressed: false),
+            phase: .focus,
+            isUserIdle: false
+        )
+        #expect(try #require(published.last).verdict != .relevant)
     }
 }

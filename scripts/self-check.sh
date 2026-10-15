@@ -4942,9 +4942,9 @@ check(
     rendering.get("privacyActionsDeclared") == [
         "deleteEverything", "setRetentionWindow", "exportData", "exportSettings", "importSettings",
         "setSensingPaused", "setIdleThreshold", "setMediaSuppression",
-        "setLaunchContextOnSessionStart", "setGrantOptIn"
+        "setLaunchContextOnSessionStart", "setGrantOptIn", "openGrantSettings", "recheckGrants"
     ],
-    "the Privacy pane's action vocabulary is exactly its ten verbs",
+    "the Privacy pane's action vocabulary is exactly its twelve verbs",
     rendering.get("privacyActionsDeclared"),
 )
 check(

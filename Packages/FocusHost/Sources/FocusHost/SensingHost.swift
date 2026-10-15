@@ -427,8 +427,9 @@ final class SensingHost {
     /// both is `uncertain`.
     ///
     /// Nothing deeper is read here. There is no origin and no title in this value:
-    /// `ClassificationInput.origin` and `.titleTokens` are exercised by the golden corpus and
-    /// empty in every shipping path. The selected item (issue #24) is attached by the
+    /// `ClassificationInput.origin` is exercised by the golden corpus and empty in every
+    /// shipping path. The selected item (issue #24) — and with it the only `titleTokens` a
+    /// shipping path fills (issue #27) — is attached by the
     /// composition root through `SystemSelectedItemReader`, from `clearedFrontmostActivation`
     /// below, so that the gate's decision is made once and the reader can only ever be handed
     /// an application the gate cleared.

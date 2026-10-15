@@ -6,12 +6,15 @@ import Foundation
 /// In GitHub Copilot, a terminal, an editor, the bundle identifier is the same for the task and
 /// for the detour, so a question about the application asks about the wrong thing. This is the
 /// narrower subject: the chat session, the project folder, the workspace, reduced from the
-/// focused window's title to a short label.
+/// focused window's title — or, where the title names nothing, from the selected sidebar row or
+/// the main region's first heading (issue #26) — to a short label.
 ///
 /// ## What is kept, and what never is
 ///
 /// The raw title is read on device, at judgement time, from the frontmost application only, and
-/// it is handed to `normalise(title:applicationName:bundleIdentifier:)` and dropped. What
+/// it is handed to `normalise(title:applicationName:bundleIdentifier:)` and dropped. Any
+/// application may be read; the person's switch and e03's `SensitivityGate` decide whether one
+/// is, not a list in this file. What
 /// survives is `label`: one segment of the title, its punctuation removed, capped at
 /// `maximumLabelLength` characters on a word boundary. Nothing else from the title reaches the
 /// store, the export or a log. An export goes further and redacts even the label
@@ -123,7 +126,7 @@ public struct SelectedItem: Sendable, Hashable, Codable, CustomStringConvertible
         try container.encode(label, forKey: .label)
     }
 
-    // MARK: - Which applications are read
+    // MARK: - Where the item sits in a title
 
     /// Which part of a window title names the item.
     public enum Segment: String, Sendable, Hashable, CaseIterable {
@@ -133,29 +136,26 @@ public struct SelectedItem: Sendable, Hashable, Codable, CustomStringConvertible
         case last
     }
 
-    /// **The applications whose window title may be read**, and where the item sits in it.
+    /// **The applications whose title names the item last.**
     ///
-    /// Mixed-use tools only: places where one window holds several tasks. Browsers, Mail and
-    /// Messages are deliberately absent — a page title or a subject line is somebody else's
-    /// words, and the origin already narrows a browser (`.domain`). Adding an application here
-    /// is adding a reading, and it is argued for in the same breath.
-    public static let readableApplications: [String: Segment] = [
-        "com.github.githubapp": .first,
-        "com.microsoft.VSCode": .last,
-        "com.todesktop.230313mzl4w4u92": .last,
-        "com.apple.dt.Xcode": .first,
-        "dev.zed.Zed": .first,
-        "com.apple.Terminal": .first,
-        "com.mitchellh.ghostty": .first,
-        "com.googlecode.iterm2": .first,
-        "com.microsoft.m365copilot": .first,
-        "com.openai.chat": .first,
-        "com.anthropic.claudefordesktop": .first,
+    /// Every application is read (the owner's follow-up to issue #24: "make it acceptable for
+    /// all apps rather than limit"); this set only says *where* in a title the item sits. Editors
+    /// built on VS Code put the open file first and the workspace after it, so the workspace is
+    /// the last segment. Every other application puts the item first, which is the default.
+    ///
+    /// What keeps a reading safe is not a list of applications but the path to this type: e03's
+    /// `SensitivityGate` stands a password manager or a private window down before anything is
+    /// read, and what survives `normalise` is a short label that never leaves the Mac.
+    public static let lastSegmentApplications: Set<String> = [
+        "com.microsoft.VSCode",
+        "com.microsoft.VSCodeInsiders",
+        "com.vscodium",
+        "com.todesktop.230313mzl4w4u92",
     ]
 
-    /// Whether this build may read the selected item of an application at all.
-    public static func isReadable(_ bundleIdentifier: String) -> Bool {
-        readableApplications[bundleIdentifier] != nil
+    /// Where the item sits in `bundleIdentifier`'s window title.
+    public static func segment(for bundleIdentifier: String) -> Segment {
+        lastSegmentApplications.contains(bundleIdentifier) ? .last : .first
     }
 
     // MARK: - Reduction
@@ -166,7 +166,7 @@ public struct SelectedItem: Sendable, Hashable, Codable, CustomStringConvertible
     /// Segments that name a shell or a size rather than anything the person chose.
     static let uninformativeSegments: Set<String> = [
         "zsh", "-zsh", "bash", "-bash", "fish", "-fish", "sh", "login", "untitled", "welcome",
-        "new chat", "new tab", "new window",
+        "new chat", "new tab", "new window", "start page", "blank page", "chat", "chats",
     ]
 
     /// **Reduce a window title to an item, then forget the title.**
@@ -180,8 +180,8 @@ public struct SelectedItem: Sendable, Hashable, Codable, CustomStringConvertible
         applicationName: String?,
         bundleIdentifier: String
     ) -> SelectedItem? {
-        guard let segment = readableApplications[bundleIdentifier],
-              let title, !title.isEmpty else { return nil }
+        guard let title, !title.isEmpty else { return nil }
+        let segment = segment(for: bundleIdentifier)
         let appName = applicationName.map(fold)
         var parts = [title]
         for separator in titleSeparators {
@@ -204,6 +204,45 @@ public struct SelectedItem: Sendable, Hashable, Codable, CustomStringConvertible
         }
         if let appName, fold(item.label) == appName { return nil }
         return item
+    }
+
+    /// **Reduce the text of a selected row or a heading to an item** (issue #26).
+    ///
+    /// Some applications keep one window title across every chat or project — the GitHub
+    /// Copilot app's window is always "GitHub Copilot" — and name the open item only inside the
+    /// window: a selected sidebar row, or the first heading of the main region ("Session: …").
+    /// The text is reduced the way a title is: its first line, its first sentence, a one-word
+    /// caption such as "Session:" dropped, the application's own name and the uninformative
+    /// segments refused, then sanitised and capped. The text is forgotten as soon as this
+    /// returns.
+    public static func normalise(
+        elementText: String?,
+        applicationName: String?,
+        bundleIdentifier: String
+    ) -> SelectedItem? {
+        guard var text = elementText?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !text.isEmpty else { return nil }
+        if let line = text.split(whereSeparator: \.isNewline).first { text = String(line) }
+        if let stop = text.range(of: ". ") { text = String(text[text.startIndex..<stop.lowerBound]) }
+        text = strippingCaption(text)
+        let folded = fold(text)
+        if let applicationName, folded == fold(applicationName) { return nil }
+        guard !uninformativeSegments.contains(folded), !isTerminalSize(text),
+              let reduced = lastPathComponent(of: text),
+              let item = SelectedItem(bundleIdentifier: bundleIdentifier, label: reduced)
+        else { return nil }
+        if let applicationName, fold(item.label) == fold(applicationName) { return nil }
+        return item
+    }
+
+    /// "Session: fix the build" → "fix the build". A single word before a colon is the
+    /// application naming the *kind* of thing, not the thing.
+    static func strippingCaption(_ text: String) -> String {
+        guard let colon = text.range(of: ": ") else { return text }
+        let caption = text[text.startIndex..<colon.lowerBound]
+        let rest = text[colon.upperBound...].trimmingCharacters(in: .whitespaces)
+        guard !caption.isEmpty, caption.allSatisfy(\.isLetter), !rest.isEmpty else { return text }
+        return rest
     }
 
     /// The label a raw string sanitises to, or `nil` when nothing nameable is left.

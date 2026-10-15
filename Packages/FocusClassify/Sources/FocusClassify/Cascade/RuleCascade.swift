@@ -4,11 +4,11 @@ import Foundation
 /// One activation, normalised — everything a rung is allowed to look at.
 ///
 /// Built once per classification and handed to every rung, so no rung can normalise the same
-/// string twice or normalise it differently. `origin` and `titleTokens` are **plumbed and
-/// exercised by the golden corpus, and empty in every shipping code path in e04** (F-03 is
-/// baseline-only); e07 turns them on by supplying a capability probe and a reader, and nothing
-/// in this type changes when it does. `selectedItem` is the exception (issue #24): an
-/// already-normalised label read through Accessibility, opt-in, and matched only by equality.
+/// string twice or normalise it differently. `origin` is **plumbed and exercised by the golden
+/// corpus, and empty in every shipping code path** (F-03 is baseline-only). `selectedItem` is
+/// the exception (issue #24): an already-normalised label read through Accessibility, opt-in,
+/// matched by item rules for equality — and its label, as prose, is the only thing a shipping
+/// path puts in `titleTokens` (issue #27), where the similarity signal may corroborate it.
 ///
 /// The two kinds of token are kept apart here as well as at the normaliser (R-57): `identifier`
 /// and `originHost` may only ever be compared for equality, while `title` is prose and is the
@@ -20,13 +20,14 @@ public struct ClassificationEvidence: Sendable, Equatable {
     public let identifier: IdentifierTokenSet
     /// Tokens decomposed from the origin's host. Never reach a similarity function either.
     public let originHost: IdentifierTokenSet
-    /// The window or tab title, as prose. Empty in every shipping path in this epic.
+    /// The window or tab title, as prose. In a shipping path, the selected item's label and
+    /// nothing else (issue #27); empty unless the person switched the Accessibility ask on.
     public let title: ProseTokenSet
     /// How long this subject has held, from the monotonic clock.
     public let dwell: Duration
     /// The item selected inside a mixed-use application, already reduced to a label (issue #24).
-    /// Matched by item rules only, and never handed to a similarity function: it is a name the
-    /// person chose, compared for equality like an identifier.
+    /// Item rules match it for equality. Its label reaches the similarity signal only as `title`
+    /// prose, never as an identifier token (R-57).
     public let selectedItem: SelectedItem?
 
     public init(
@@ -416,9 +417,8 @@ public struct RuleCascade: Sendable {
             if let item = SelectedItem.parse(rule.subject) {
                 return evidence.selectedItem.map(item.matches) ?? false
             }
-            // A legacy word. Empty in every shipping path (F-03 is baseline-only), and
-            // exercised by the corpus so that a reader turns a capability on rather than
-            // writing a rung.
+            // A legacy word. Retired (`PriorityRuleValue.isRetired`), so never in a shipping
+            // snapshot; exercised by the corpus, which still pins how a word would match.
             return evidence.title.values.contains(rule.subject.lowercased())
         }
     }

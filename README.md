@@ -232,17 +232,40 @@ How it is built:
   `Config/grant-use-sites.txt` registers it; `check-grants.sh` proves the selectors appear there
   and nowhere else in source, and `check-forbidden.sh`'s R-33b exempts that one path from the
   ban the rest of the tree is held to;
-- it reads only when the person's Accessibility opt-in is on, macOS reports the process
-  trusted, and the frontmost application is on `SelectedItem.readableApplications` — a short
-  list of mixed-use apps (GitHub Copilot, editors, terminals, chat assistants). Browsers, Mail
-  and Messages are deliberately not on it;
-- it reads the focused window's `AXTitle` of that one process, and nothing else — no tree
-  walk, no other window, no other application. `kCGWindowName` stays banned (SC-1);
-- `SelectedItem.normalise` reduces the title in memory to a label of at most 48 characters —
-  the app name and editor decorations stripped, an uninformative title refused — and the raw
-  title is dropped. The label is the `titleToken` subject `<bundle>::<label>` the question asks
-  about and the rule the answer writes; a `titleToken` row in that form is live again, while a
-  legacy single-word row stays retired;
+- it reads only when the person's Accessibility opt-in is on and macOS reports the process
+  trusted, and only from the frontmost application that e03's `SensitivityGate` already
+  cleared — so a password manager or a private browser window is never read. Any other
+  application may be read (the owner's follow-up widened the first round's short list to every
+  app, because in practice every app is mixed-use);
+- it reads the focused window's `AXTitle` first. When the title names nothing — the Copilot
+  app's is just "GitHub Copilot", a terminal's can be "~" — it looks inside that one window,
+  read-only, for a selected sidebar row (`AXSelectedRows` / `AXSelectedChildren`: a Mail
+  mailbox, a Finder folder, a chat) or else the first heading of the main region (the Copilot
+  app's "Session: …"). The walk is bounded: at most `SelectedItemSearch.maximumElements` (400)
+  elements, depth 14, 150 ms in all, each message capped by a messaging timeout. One app's full
+  tree took ten seconds to walk on the owner's Mac; the budget is why that never stalls a
+  nudge. No other window, no other application; `kCGWindowName` stays banned (SC-1);
+- nothing writes, acts, observes or bulk-reads: an Electron app that exposes no tree until a
+  client writes `AXManualAccessibility` stays unread below its title, by design;
+- `SelectedItem.normalise` reduces the title, row or heading in memory to a label of at most 48
+  characters — the app name, captions and editor decorations stripped, an uninformative text
+  refused — and the raw text is dropped. The label is the `titleToken` subject
+  `<bundle>::<label>` the question asks about and the rule the answer writes; a `titleToken` row
+  in that form is live again, while a legacy single-word row stays retired;
+- the decisions issue #27 asked for: the item is read on **every judgement**, not cached by
+  time, because the dwell key is what notices a switch from one chat to another; a read that
+  fails (a timeout, an exhausted budget) keeps the last item for **12 seconds**
+  (`SelectedItemGrace`), per process, and an empty read or switching the opt-in off clears it;
+  there are **no seed rules** — an item becomes a rule only when the person answers a question
+  about it; and the label also reaches the engine as `titleTokens`, where it can only
+  *corroborate* a relevant verdict (a context-pack keyword in the chat's name), never make one
+  irrelevant (R-57: a label is prose, not evidence of distraction);
+- Settings ▸ Privacy follows the grant once it is switched on: it says whether macOS allows it,
+  offers *Open System Settings* (the exact list), *Check Again* and *Show Focus in Finder*, and
+  explains the one failure macOS never does — a rebuilt or moved copy is a different app and has
+  to be removed and added again. The pane re-reads the grant when the app becomes active and
+  every half-second for two minutes after the person was sent to System Settings
+  (`GrantAccessWatch`), reading without asking;
 - the store export replaces every item subject's label with `selected-item`, so a label never
   leaves the Mac in an export either; the self-check publishes `accessibilityOptedIn` and
   `selectedItemReadCount`, and on a default store they read `false` and `0`.
@@ -1480,10 +1503,11 @@ Nothing the engine concludes can carry raw captured content. Every textual paylo
 explanation can hold is a `NormalisedToken`, which has no public `String` initialiser and
 rejects whitespace, control characters and every ASCII punctuation mark but `.`, `-` and `_` —
 so a window title, a full URL, a document name or an absolute path is *unrepresentable* in an
-explanation rather than forbidden. `ClassificationInput.origin` and `.titleTokens` exist, are
-exercised by the golden corpus, and are **empty in every shipping code path in this version**;
-the one window-derived input a shipping path supplies is `ClassificationInput.selectedItem`, an
-already-normalised label read only with the person's Accessibility opt-in (issue #24).
+explanation rather than forbidden. `ClassificationInput.origin` is exercised by the golden corpus and **empty in every shipping
+code path in this version**. The window-derived inputs a shipping path supplies are
+`ClassificationInput.selectedItem` and, carrying the same label, `.titleTokens` — an
+already-normalised label read only with the person's Accessibility opt-in (issue #24), which can
+corroborate a relevant verdict and nothing else.
 
 ## License
 

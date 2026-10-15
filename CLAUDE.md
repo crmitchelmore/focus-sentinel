@@ -109,6 +109,26 @@ substantive across both.
   row in item form is live; a legacy single-word row stays retired (`PriorityRuleValue.isRetired`).
   The store export writes every item label as `selected-item`. A bare `RelevanceHost` in a test
   has no active task until `host.activeCommitment` is set, so its snapshot carries no task rules.
+- **Every app, not an allowlist (owner's follow-up).** In practice every app is mixed-use, so
+  the reader takes any frontmost app `SensitivityGate` cleared. A live AX diagnostic on the
+  owner's Mac decided the shape: the Copilot app's window title is just "GitHub Copilot" and its
+  web sidebar marks no row selected, but the first `AXHeading` under the main landmark reads
+  "Session: …"; native apps (Mail, Finder, Outlook) report `AXSelectedRows`. So: title first,
+  then a walk of that one window for a selected row or else the first main-region heading **in
+  document order** — a breadth-first walk alone picks the shallowest heading, which is the
+  wrong one, so `SelectedItemSearch` carries child-index paths and compares them. One app's full
+  tree took 10.6 s to walk; the walk is capped at 400 elements, depth 14 and 150 ms.
+- **AX attribute names are `String` constants, bridged `as CFString` at the call.** A
+  `static let x: CFString` fails Swift 6's Sendable check on a global.
+- **This shell is AX-trusted.** A unit test that drives the real reader with the opt-in on reads
+  real windows on the machine running it. Test the reader's logic through `SelectedItemSearch`
+  over fake nodes, and the host through a fake `SelectedItemReading`.
+- **Grant state needs an observable home.** `AppComposition` is a plain class, so a stored
+  `grantOptIns` changed by the Privacy switch redrew nothing. `GrantAccessWatch` (`@Observable`)
+  holds the switches and what macOS says, is re-read when the app becomes active and polled
+  for two minutes after the person is sent to System Settings — the pattern Pasta and Just
+  Speak to It use — and the pane's *Open System Settings* takes an injectable opener so the
+  unit lane never opens a window.
 
 ### 2026-10-15 — the nudge panel lost its bottom inset to the hidden titlebar
 

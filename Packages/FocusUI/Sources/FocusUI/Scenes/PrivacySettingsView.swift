@@ -12,9 +12,11 @@ import SwiftUI
 ///
 /// **There is no call to action in the capability half, and that is the requirement rather than
 /// a style choice.** F-126 asks the surface to show what is active, what is reduced and what the
-/// reduced behaviour actually is, *with no call to action that would be an ask in disguise*. In
-/// this epic the app could not ask even if somebody added a button: every prompting API is
-/// banned from the shipping graph by lint (R-33).
+/// reduced behaviour actually is, *with no call to action that would be an ask in disguise*. The
+/// only route to a grant is a switch that is off (focus-exdi.4), and the prompting APIs are
+/// confined to one file by lint (R-33). The *Open System Settings* and *Check Again* buttons
+/// (issue #24) appear only beside a switch the person turned on, so they help an answer already
+/// given rather than invite one.
 ///
 /// The one limitation that is easy to hide is stated here instead: a person working over Screen
 /// Sharing produces only synthetic input events, which never reach the HID counter, so once that
@@ -57,6 +59,13 @@ public enum PrivacySettingsAction: Sendable, Equatable, Hashable {
     /// the app to ask at all; macOS then asks the person. Switching off withdraws the
     /// permission to ask and returns the capability to `notRequested`.
     case setGrantOptIn(GrantOptIn, Bool)
+    /// **Open the System Settings list that holds a switched-on grant** (issue #24). Not an ask:
+    /// macOS raises no dialog for it, the host refuses it for a grant the person did not switch
+    /// on, and the pane draws the button only beside a switch that is on and a grant that is not
+    /// yet allowed. The host then watches for the answer, which nothing announces.
+    case openGrantSettings(GrantOptIn)
+    /// Read every switched-on grant again, without asking.
+    case recheckGrants
 
     /// **The pane's vocabulary, as verbs.**
     ///
@@ -78,6 +87,8 @@ public enum PrivacySettingsAction: Sendable, Equatable, Hashable {
         case .setMediaSuppression: "setMediaSuppression"
         case .setLaunchContextOnSessionStart: "setLaunchContextOnSessionStart"
         case .setGrantOptIn: "setGrantOptIn"
+        case .openGrantSettings: "openGrantSettings"
+        case .recheckGrants: "recheckGrants"
         }
     }
 
@@ -92,13 +103,15 @@ public enum PrivacySettingsAction: Sendable, Equatable, Hashable {
                 .setMediaSuppression(false), .setLaunchContextOnSessionStart(true)
             ]
             + GrantOptIn.allCases.map { PrivacySettingsAction.setGrantOptIn($0, true) }
+            + GrantOptIn.allCases.map(PrivacySettingsAction.openGrantSettings)
+            + [.recheckGrants]
     }
 
     /// The vocabulary the self-check publishes, in the order the pane draws it.
     public static let vocabulary: [String] = [
         "deleteEverything", "setRetentionWindow", "exportData", "exportSettings", "importSettings",
         "setSensingPaused", "setIdleThreshold", "setMediaSuppression", "setLaunchContextOnSessionStart",
-        "setGrantOptIn"
+        "setGrantOptIn", "openGrantSettings", "recheckGrants"
     ]
 
     /// **The title of the one alert this vocabulary can raise**, resolved here.
@@ -341,6 +354,9 @@ public struct PrivacySettingsView: View {
                         help: Self.helpKey(grant),
                         isOn: grants.isEnabled(grant)
                     ) { onAction(.setGrantOptIn(grant, $0)) }
+                    if grants.isEnabled(grant) {
+                        grantStatus(grant, state: capabilities.state(of: grant.capability))
+                    }
                     if !grant.isConsumedByThisBuild {
                         ShellText(.settingsPrivacyGrantUnused, role: .footnote)
                             .foregroundStyle(DesignTokens.Palette.role(.kiln, for: traits))
@@ -350,7 +366,76 @@ public struct PrivacySettingsView: View {
                 }
             }
         }
-        .shellRendered(.grantOptIns, ShellValueDigest.describe(grants))
+        .shellRendered(
+            .grantOptIns,
+            ShellValueDigest.describe(grants)
+                + GrantOptIn.allCases.filter(grants.isEnabled)
+                    .map { " \($0.rawValue)=\(capabilities.state(of: $0.capability).rawValue)" }
+                    .joined()
+        )
+    }
+
+    /// **Where a switched-on grant stands, and the way to it** (issue #24).
+    ///
+    /// Drawn only once the person has switched the ask on, which is what keeps it from being the
+    /// call to action F-126 forbids: the person already said yes, and macOS's own dialog has
+    /// sent them to System Settings. What follows is the help the owner's Pasta and Just Speak to
+    /// It give at that moment — the exact list to look in, a button that opens it, a re-read,
+    /// and the one failure macOS never explains: a rebuilt or moved copy is a different app.
+    private func grantStatus(_ grant: GrantOptIn, state: CapabilityState) -> some View {
+        VStack(alignment: .leading, spacing: spacing / 4) {
+            HStack(alignment: .firstTextBaseline, spacing: spacing / 2) {
+                Image(systemName: state == .available ? "checkmark.seal.fill" : "exclamationmark.circle")
+                    .foregroundStyle(
+                        state == .available
+                            ? DesignTokens.Palette.accent(for: traits)
+                            : DesignTokens.Palette.role(.kiln, for: traits)
+                    )
+                    .accessibilityHidden(true)
+                ShellText(Self.statusKey(grant, state: state), role: .footnote)
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            if state != .available && state != .restricted {
+                HStack(spacing: spacing / 2) {
+                    Button {
+                        onAction(.openGrantSettings(grant))
+                    } label: {
+                        ShellText(.settingsPrivacyGrantOpenSettings)
+                    }
+                    .shellHelp(.settingsPrivacyGrantOpenSettingsHelp)
+                    Button {
+                        onAction(.recheckGrants)
+                    } label: {
+                        ShellText(.settingsPrivacyGrantCheckAgain)
+                    }
+                    .shellHelp(.settingsPrivacyGrantCheckAgainHelp)
+                    Button {
+                        NSWorkspace.shared.activateFileViewerSelecting([Bundle.main.bundleURL])
+                    } label: {
+                        ShellText(.settingsPrivacyGrantRevealApp)
+                    }
+                    .shellHelp(.settingsPrivacyGrantRevealAppHelp)
+                }
+                .buttonStyle(.bordered)
+                ShellText(.settingsPrivacyGrantStaleNote, role: .footnote)
+                    .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    static func statusKey(_ grant: GrantOptIn, state: CapabilityState) -> ShellStringKey {
+        switch state {
+        case .available: .settingsPrivacyGrantAllowed
+        case .restricted: .settingsPrivacyGrantRestricted
+        case .denied, .unavailable, .notRequested:
+            switch grant {
+            case .accessibilityWindowContext: .settingsPrivacyGrantWaitingAccessibility
+            case .screenCapture: .settingsPrivacyGrantWaitingScreenCapture
+            }
+        }
     }
 
     static func labelKey(_ grant: GrantOptIn) -> ShellStringKey {

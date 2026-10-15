@@ -76,19 +76,24 @@ struct SelectedItemTests {
         )
     }
 
-    @Test("an application not on the list is never reduced, whatever its title says")
-    func unlistedApplications() {
+    @Test("every application is read, and only editors take the item from the end of the title")
+    func everyApplication() throws {
         for bundle in ["com.apple.Safari", "com.apple.mail", "com.apple.MobileSMS", "com.google.Chrome"] {
-            #expect(!SelectedItem.isReadable(bundle))
-            #expect(
+            #expect(SelectedItem.segment(for: bundle) == .first)
+            let item = try #require(
                 SelectedItem.normalise(
                     title: "Quarterly plan — Inbox",
                     applicationName: nil,
                     bundleIdentifier: bundle
-                ) == nil
+                )
             )
+            #expect(item.label == "Quarterly plan")
+            #expect(item.bundleIdentifier == bundle)
         }
-        #expect(SelectedItem.isReadable(Self.copilot))
+        for bundle in SelectedItem.lastSegmentApplications {
+            #expect(SelectedItem.segment(for: bundle) == .last)
+        }
+        #expect(SelectedItem.segment(for: Self.copilot) == .first)
     }
 
     @Test("punctuation is dropped and a long title is capped on a word boundary")
@@ -119,6 +124,137 @@ struct SelectedItemTests {
             let item = try #require(SelectedItem(bundleIdentifier: Self.copilot, label: label))
             #expect(SelectedItem.parse(item.subject) == item)
         }
+    }
+
+    // MARK: - Text inside the window (issue #26)
+
+    @Test("a heading's one-word caption is dropped, and only its first sentence and line are kept")
+    func elementText() throws {
+        let session = try #require(
+            SelectedItem.normalise(
+                elementText: "Session: fix the login race",
+                applicationName: "GitHub Copilot",
+                bundleIdentifier: Self.copilot
+            )
+        )
+        #expect(session.label == "fix the login race")
+
+        let prose = try #require(
+            SelectedItem.normalise(
+                elementText: "Plan the release. Then ship it.\nSecond line",
+                applicationName: nil,
+                bundleIdentifier: Self.copilot
+            )
+        )
+        #expect(prose.label == "Plan the release")
+
+        // A caption that is not one word is part of the name.
+        let scoped = try #require(
+            SelectedItem.normalise(
+                elementText: "fix(mac): the build",
+                applicationName: nil,
+                bundleIdentifier: Self.copilot
+            )
+        )
+        #expect(scoped.label == "fix mac the build")
+    }
+
+    @Test("element text that is the application's name, a placeholder or empty names nothing")
+    func uninformativeElementText() {
+        for text in ["GitHub Copilot", "Chats", "New chat", "Session: GitHub Copilot", "", "  ", nil] {
+            #expect(
+                SelectedItem.normalise(
+                    elementText: text,
+                    applicationName: "GitHub Copilot",
+                    bundleIdentifier: Self.copilot
+                ) == nil,
+                "\(text ?? "nil")"
+            )
+        }
+    }
+
+    // MARK: - The search below the title
+
+    /// A window tree as the search sees it, counting how many elements it read.
+    final class Reads { var count = 0 }
+
+    struct Node: SelectedItemNode {
+        var kind: SelectedItemNodeKind = .other
+        var text: String?
+        var nodes: [Node] = []
+        var selected: [Node] = []
+        var reads: Reads?
+
+        var children: [Node] { reads?.count += 1; return nodes }
+        var selectedRows: [Node] { kind == .collection ? selected : [] }
+    }
+
+    static func search(_ window: Node, stop: @escaping () -> Bool = { false }) -> SelectedItemSearch.Outcome {
+        SelectedItemSearch.search(
+            from: window,
+            applicationName: "GitHub Copilot",
+            bundleIdentifier: Self.copilot,
+            shouldStop: stop
+        )
+    }
+
+    @Test("a native sidebar's selected row names the item, through its cell's text")
+    func selectedRow() throws {
+        let row = Node(nodes: [Node(nodes: [Node(text: "Focus Sentinel")])])
+        let sidebar = Node(kind: .collection, nodes: [row], selected: [row])
+        let window = Node(nodes: [Node(nodes: [sidebar])])
+        let item = try #require(SelectedItem(bundleIdentifier: Self.copilot, label: "Focus Sentinel"))
+        #expect(Self.search(window) == .found(item))
+    }
+
+    @Test("a web sidebar with no selection falls back to the main region's first heading")
+    func mainHeading() throws {
+        let sidebar = Node(kind: .collection, text: "Sessions", nodes: [Node(text: "Other chat")])
+        let stray = Node(kind: .heading, text: "Not in main")
+        let main = Node(kind: .mainRegion, nodes: [
+            Node(nodes: [Node(kind: .heading, text: "Session: fix the build")]),
+            Node(kind: .heading, text: "Second heading"),
+        ])
+        let window = Node(nodes: [stray, sidebar, main])
+        let item = try #require(SelectedItem(bundleIdentifier: Self.copilot, label: "fix the build"))
+        #expect(Self.search(window) == .found(item))
+    }
+
+    @Test("a tree that names nothing says so; one cut short by its budget says it could not tell")
+    func budgets() {
+        #expect(Self.search(Node(nodes: [Node(), Node(kind: .collection)])) == .nothing)
+        #expect(Self.search(Node(nodes: [Node()]), stop: { true }) == .exhausted)
+
+        // A tree far wider than the element budget is read no further than the budget.
+        let reads = Reads()
+        let leaves = Array(repeating: Node(reads: reads), count: SelectedItemSearch.maximumElements * 3)
+        let wide = Node(nodes: leaves, reads: reads)
+        #expect(Self.search(wide) == .exhausted)
+        #expect(reads.count <= SelectedItemSearch.maximumElements)
+    }
+
+    // MARK: - The grace for a failed read (issue #27)
+
+    @Test("a failed read keeps the last item for the same process, briefly; an empty read clears it")
+    func grace() throws {
+        let item = try #require(SelectedItem(bundleIdentifier: Self.copilot, label: "Fix the race"))
+        var grace = SelectedItemGrace()
+        #expect(grace.resolve(.item(item), pid: 7, now: .seconds(100)) == item)
+        #expect(grace.resolve(.failed, pid: 7, now: .seconds(105)) == item)
+        #expect(grace.resolve(.failed, pid: 7, now: .seconds(100) + SelectedItemGrace.holdFor) == item)
+        // Failures never extend the hold: it is measured from the last read that succeeded.
+        #expect(grace.resolve(.failed, pid: 7, now: .seconds(113)) == nil)
+
+        #expect(grace.resolve(.item(item), pid: 7, now: .seconds(200)) == item)
+        #expect(grace.resolve(.failed, pid: 8, now: .seconds(201)) == nil)
+
+        #expect(grace.resolve(.item(item), pid: 7, now: .seconds(300)) == item)
+        #expect(grace.resolve(.nothing, pid: 7, now: .seconds(301)) == nil)
+        #expect(grace.resolve(.failed, pid: 7, now: .seconds(302)) == nil)
+
+        #expect(grace.resolve(.item(item), pid: 7, now: .seconds(400)) == item)
+        grace.clear()
+        #expect(grace.resolve(.failed, pid: 7, now: .seconds(401)) == nil)
     }
 
     // MARK: - The stored form

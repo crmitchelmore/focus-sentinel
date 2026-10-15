@@ -20,16 +20,16 @@ import os
 ///   (six of ninety-two on this Mac, e03's P-83). There is nothing to write a rule *about* one,
 ///   so there is nothing to conclude either.
 ///
-/// A window title, an origin and a document name are all absent by construction:
-/// `ClassificationInput.origin` and `.titleTokens` are exercised by the golden corpus and
-/// **empty in every shipping path** (F-03 is baseline-only), and this type is where that promise
-/// is kept in the app.
+/// A raw window title, an origin and a document name are all absent by construction:
+/// `ClassificationInput.origin` is exercised by the golden corpus and **empty in every shipping
+/// path** (F-03 is baseline-only), and this type is where that promise is kept in the app.
 ///
-/// **The one addition is `selectedItem`** (issue #24): the item selected inside a mixed-use
+/// **The one addition is `selectedItem`** (issue #24): the item selected inside the frontmost
 /// application, read through Accessibility only where the person switched that on, and already
 /// reduced to a short label by `SelectedItem.normalise` — never the title it came from. It is
-/// `nil` on a default install, for a suppressed subject, and for every application not on
-/// `SelectedItem.readableApplications`.
+/// `nil` on a default install, for a suppressed subject, and wherever the window names nothing.
+/// Its label is also the one source of `titleTokens` a shipping path fills (issue #27): the
+/// person's own name for the item, as prose, for the heuristic to corroborate against.
 struct JudgeableSubject: Sendable, Equatable {
     var bundleIdentifier: String?
     var isSuppressed: Bool
@@ -457,6 +457,9 @@ final class RelevanceHost {
         let judgement = engine.judge(
             input: ClassificationInput(
                 bundleIdentifier: subject.bundleIdentifier,
+                // The label is prose — a name the person gave a chat or a folder — so it may be
+                // handed to the similarity signal (R-57), which can only corroborate `relevant`.
+                titleTokens: subject.selectedItem.map { [$0.label] } ?? [],
                 selectedItem: subject.selectedItem
             ),
             snapshot: snapshot,
