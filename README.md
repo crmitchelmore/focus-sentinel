@@ -188,14 +188,16 @@ before). PD-1's absolute form — *this app asks for no permission of any kind* 
 > nothing is asked, nothing prompts, and the capability table reads exactly as it did before.
 > The only route from "not asked" to "asked" is a control the person operated.
 
-Two grants may be switched on, in Settings ▸ Privacy: Accessibility and Screen Recording. Neither
-is read by anything in this build — `titleToken` rules are retired and pixel capture is parked —
-and the pane says so beside each switch, because a switch that takes a permission and spends it
-on nothing is the worst version of this change. What replaced the ban, rather than merely
-lifting it:
+Two grants may be switched on, in Settings ▸ Privacy: Accessibility and Screen Recording. Screen
+Recording is read by nothing in this build — pixel capture is parked — and the pane says so beside
+its switch, because a switch that takes a permission and spends it on nothing is the worst version
+of this change. Accessibility is spent on one thing, described in the next paragraph. What
+replaced the ban, rather than merely lifting it:
 
-- the two families' `banned` columns now name their **use** selectors only, which are still
-  absent from both configurations' Mach-O, because nothing reads what the grants unlock;
+- the Screen Recording family's `banned` column names its **use** selectors, which are still
+  absent from both configurations' Mach-O, because nothing reads what that grant unlocks; the
+  Accessibility family's `banned` column now names only the write, act, observe and bulk-read selectors,
+  and its use selectors are confined like the request selectors (next paragraph);
 - their **request** selectors moved to `Config/grant-request-sites.txt`, which confines them to
   one named file — `SystemGrantRequester.swift` — and `check-grants.sh` proves that confinement
   from the source side while `check-forbidden.sh`'s R-33 proves it from the other, exempting that
@@ -222,7 +224,28 @@ grant unlocks" clause above is being replaced. What the replacement keeps:
 - **confined**: the AX *use* selectors move out of `banned` into one registered reader file,
   proven by the same two-sided confinement the request selectors already have.
 
-Until that work lands, the paragraph above still describes the shipped build.
+How it is built:
+
+- `SelectedItemReader.swift` in `FocusHost` is the one file that calls
+  `AXUIElementCreateApplication`, `AXUIElementCopyAttributeValue` and
+  `AXUIElementSetMessagingTimeout`.
+  `Config/grant-use-sites.txt` registers it; `check-grants.sh` proves the selectors appear there
+  and nowhere else in source, and `check-forbidden.sh`'s R-33b exempts that one path from the
+  ban the rest of the tree is held to;
+- it reads only when the person's Accessibility opt-in is on, macOS reports the process
+  trusted, and the frontmost application is on `SelectedItem.readableApplications` — a short
+  list of mixed-use apps (GitHub Copilot, editors, terminals, chat assistants). Browsers, Mail
+  and Messages are deliberately not on it;
+- it reads the focused window's `AXTitle` of that one process, and nothing else — no tree
+  walk, no other window, no other application. `kCGWindowName` stays banned (SC-1);
+- `SelectedItem.normalise` reduces the title in memory to a label of at most 48 characters —
+  the app name and editor decorations stripped, an uninformative title refused — and the raw
+  title is dropped. The label is the `titleToken` subject `<bundle>::<label>` the question asks
+  about and the rule the answer writes; a `titleToken` row in that form is live again, while a
+  legacy single-word row stays retired;
+- the store export replaces every item subject's label with `selected-item`, so a label never
+  leaves the Mac in an export either; the self-check publishes `accessibilityOptedIn` and
+  `selectedItemReadCount`, and on a default store they read `false` and `0`.
 
 `release-artefact` is the D-09 disk image, and it is described under **Distribution posture**
 below.
@@ -981,7 +1004,7 @@ of `ClassificationInput`'s five fields, and three of them are not in the store:
 | field | why replay cannot have it |
 |---|---|
 | `origin` | `ActivityEvent` has no origin column, and `NormalisedDetail`'s closed vocabulary has no origin token. Storing one would make "this epic records no new observation about a person" false, so it is **not stored**: browser intervals draw as *unattributed*. |
-| `titleTokens` | not stored, and unreachable under PD-1 — the app never reads a window title. |
+| `titleTokens` | not stored. Since issue #24 a window title may be *read* (opt-in, on device), but only its normalised label is kept, and only as a rule's subject — no activity row records which item was in front. |
 | `priorityIntent` / `priorityDoneWhen` | reachable through `priorityID`, but `intent` is mutable and `revision` counts edits without keeping prior text. Replaying Tuesday would silently use **today's** wording. |
 
 So a coloured timeline would be an assertion about the past that the data cannot support. What the
@@ -1458,7 +1481,9 @@ explanation can hold is a `NormalisedToken`, which has no public `String` initia
 rejects whitespace, control characters and every ASCII punctuation mark but `.`, `-` and `_` —
 so a window title, a full URL, a document name or an absolute path is *unrepresentable* in an
 explanation rather than forbidden. `ClassificationInput.origin` and `.titleTokens` exist, are
-exercised by the golden corpus, and are **empty in every shipping code path in this version**.
+exercised by the golden corpus, and are **empty in every shipping code path in this version**;
+the one window-derived input a shipping path supplies is `ClassificationInput.selectedItem`, an
+already-normalised label read only with the person's Accessibility opt-in (issue #24).
 
 ## License
 

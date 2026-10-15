@@ -1357,6 +1357,18 @@
         }
       }
     },
+    "priority.rules.scope.selectedItem" : {
+      "comment" : "Rule scope: the rule is about one item selected inside an application, such as a chat or a project folder (issue #24).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Item in an app"
+          }
+        }
+      }
+    },
     "priority.rules.scope.titleToken" : {
       "comment" : "Rule scope: the rule is about a word drawn from a window or tab title.",
       "extractionState" : "manual",
@@ -3638,13 +3650,13 @@
       }
     },
     "settings.privacy.grant.accessibility.note" : {
-      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the Accessibility switch.",
+      "comment" : "PENDING HUMAN APPROVAL (D-11): revised for issue #24, when the reading landed. Note under the Accessibility switch.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Accessibility would let Focus read window titles and the address of the page you are on. Switching this on asks macOS; macOS asks you."
+            "value" : "With Accessibility, Focus reads the title of the window in front, only in apps such as GitHub Copilot, code editors and terminals, to tell which chat or project you are in. The title is shortened to a name on this Mac and never leaves it. Switching this on asks macOS; macOS asks you."
           }
         }
       }
@@ -7368,13 +7380,13 @@
       }
     },
     "settings.privacy.grant.accessibility.help" : {
-      "comment" : "Tooltip on the Accessibility grant opt-in switch. Describes only the asking; nothing in this build reads the grant.",
+      "comment" : "Tooltip on the Accessibility grant opt-in switch. Revised for issue #24: the grant is now read, on device, by the selected-item reader.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Allows the app to ask macOS for Accessibility access; macOS then asks you."
+            "value" : "Allows the app to ask macOS for Accessibility access, then read the front window's title in a few work apps, on this Mac only."
           }
         }
       }

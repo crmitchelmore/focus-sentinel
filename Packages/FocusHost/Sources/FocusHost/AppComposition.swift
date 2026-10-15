@@ -994,9 +994,16 @@ public final class AppComposition {
                 // The nudge's own key. A correction with no commitment to scope to is not a
                 // narrower rule, it is a global one, and it is refused rather than widened.
                 guard let taskID = priorityID else { return }
+                // An item subject (issue #24) is filed under the scope it is matched by, or the
+                // cascade would read `<bundle>::<label>` as a bundle and match nothing.
+                let scope: PriorityRuleScope = switch pending.subjectKind {
+                case .domain: .domain
+                case .titleToken: .titleToken
+                case .app: .app
+                }
                 priorityHost.addRule(
                     taskID: taskID,
-                    scope: pending.subjectKind == .domain ? .domain : .app,
+                    scope: scope,
                     subject: pending.subject,
                     verdict: pending.verdict
                 )
@@ -1904,6 +1911,11 @@ public final class AppComposition {
     /// `GrantGate`, which refuses unless the person switched that ask on.
     let grantRequester = SystemGrantRequester()
 
+    /// **The one object allowed to read what the Accessibility grant unlocks** (issue #24).
+    /// Asked only from `judge(in:)`, only about the application e03's gate cleared, and it
+    /// answers `nil` unless the person switched the Accessibility ask on and macOS agreed.
+    let selectedItemReader: any SelectedItemReading = SystemSelectedItemReader()
+
     /// **Which grants the person switched on**, held rather than re-read.
     ///
     /// A stored property, not a computed one: `capabilities` is read by the cockpit, the popover
@@ -2681,8 +2693,17 @@ public final class AppComposition {
     /// watching.
     private func judge(in session: SessionSnapshot?) {
         guard sensingHost.isRunning else { return }
+        var subject = sensingHost.judgeableSubject
+        if let cleared = sensingHost.clearedFrontmostActivation,
+           cleared.bundleIdentifier == subject.bundleIdentifier {
+            subject = JudgeableSubject(
+                bundleIdentifier: subject.bundleIdentifier,
+                isSuppressed: subject.isSuppressed,
+                selectedItem: selectedItemReader.selectedItem(in: cleared, optIns: grantOptIns)
+            )
+        }
         relevanceHost.observe(
-            sensingHost.judgeableSubject,
+            subject,
             // No open session is not a break: the person can be working with no session
             // started, and `.focus` is the phase that says "nothing forbids a judgement here".
             // What forbids an *intervention* is a separate question, answered by

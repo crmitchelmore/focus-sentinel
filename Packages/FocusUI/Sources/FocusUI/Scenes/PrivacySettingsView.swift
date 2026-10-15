@@ -322,9 +322,10 @@ public struct PrivacySettingsView: View {
     ///
     /// The programme shipped asking macOS for nothing. This is the only route it has to a grant,
     /// and it is a switch that is off: switching one on is the permission to *ask*, and macOS
-    /// then asks the person. Each row says plainly that nothing in this version reads what the
-    /// grant would unlock, because a switch that takes a permission and spends it on nothing is
-    /// the worst version of this change.
+    /// then asks the person. A row whose grant nothing in this version reads says so plainly,
+    /// because a switch that takes a permission and spends it on nothing is the worst version of
+    /// this change. Since issue #24 that is Screen Recording alone: Accessibility is read, on
+    /// device, by the selected-item reader, and its note says what is read.
     private var grantSwitches: some View {
         VStack(alignment: .leading, spacing: spacing / 2) {
             ShellText(.settingsPrivacyGrantsHeading, role: .headline)

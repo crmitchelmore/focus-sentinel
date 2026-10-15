@@ -278,7 +278,7 @@ final class PriorityHost: PriorityActing {
                     bookmark: item.bookmark
                 )
             }
-            for rule in desk.rules where !rule.scope.isRetired {
+            for rule in desk.rules where !rule.isRetired {
                 _ = try store.addRule(
                     taskID: newID,
                     scopeRaw: rule.scope.rawValue,

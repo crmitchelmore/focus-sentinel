@@ -10,7 +10,9 @@ import Foundation
 ///
 /// `origin` and `titleTokens` are **plumbed and exercised by the golden corpus, and empty in
 /// every shipping code path in e04** (F-03 is baseline-only). e07 turns them on by supplying a
-/// capability probe and a reader; nothing in this type changes when it does.
+/// capability probe and a reader; nothing in this type changes when it does. `selectedItem` is
+/// the one window-derived field a shipping path fills (issue #24), and it is a `SelectedItem` —
+/// a label already reduced by `SelectedItem.normalise`, never a raw title.
 public struct ClassificationInput: Sendable, Equatable, Hashable, Codable {
     /// The user's stated priority, as they wrote it. Empty when no priority is set.
     public var priorityIntent: String
@@ -22,19 +24,25 @@ public struct ClassificationInput: Sendable, Equatable, Hashable, Codable {
     public var origin: String?
     /// Lowercased tokens drawn from the window or tab title.
     public var titleTokens: [String]
+    /// The item selected inside a mixed-use application, already reduced to a label
+    /// (`SelectedItem`, issue #24). `nil` unless the person switched the Accessibility ask on,
+    /// the grant is held, and the frontmost application is one `SelectedItem` may read.
+    public var selectedItem: SelectedItem?
 
     public init(
         priorityIntent: String = "",
         priorityDoneWhen: String? = nil,
         bundleIdentifier: String? = nil,
         origin: String? = nil,
-        titleTokens: [String] = []
+        titleTokens: [String] = [],
+        selectedItem: SelectedItem? = nil
     ) {
         self.priorityIntent = priorityIntent
         self.priorityDoneWhen = priorityDoneWhen
         self.bundleIdentifier = bundleIdentifier
         self.origin = origin
         self.titleTokens = titleTokens
+        self.selectedItem = selectedItem
     }
 
     /// An input carrying no evidence at all. Classifying it must yield `.uncertain`.
@@ -46,5 +54,6 @@ public struct ClassificationInput: Sendable, Equatable, Hashable, Codable {
             && bundleIdentifier == nil
             && origin == nil
             && titleTokens.isEmpty
+            && selectedItem == nil
     }
 }

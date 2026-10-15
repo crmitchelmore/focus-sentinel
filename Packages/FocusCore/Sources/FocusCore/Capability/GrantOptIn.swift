@@ -18,7 +18,8 @@ import Foundation
 /// Two grants, and no more: each one names the reading it would unlock, so a switch is never a
 /// blank cheque. A third case here is a change to the doctrine and has to be argued for.
 public enum GrantOptIn: String, Sendable, CaseIterable, Hashable, Codable, Identifiable {
-    /// Accessibility: window titles and browser context, which is what `e07` always meant by
+    /// Accessibility: the front window's title in a mixed-use application, reduced on device to
+    /// the selected item (issue #24, owner's ruling 2026-10-15). What `e07` always meant by
     /// "with consent" (`Capability.accessibilityWindowContext`).
     case accessibilityWindowContext
     /// Screen Recording: pixel capture, parked by the Feasibility Court as dissent D-04 and
@@ -37,11 +38,18 @@ public enum GrantOptIn: String, Sendable, CaseIterable, Hashable, Codable, Ident
 
     /// Whether anything in this build actually reads what the grant unlocks.
     ///
-    /// `false` for both today: `titleToken` rules are retired and pixel capture is parked. The
-    /// pane says so beside the switch rather than implying a feature that does not exist — a
+    /// Accessibility is read (issue #24): `FocusHost.SystemSelectedItemReader` reads the front
+    /// window's title of an allow-listed mixed-use application, on device, and reduces it to a
+    /// `SelectedItem` before anything keeps it. Screen Recording is still parked. The pane says
+    /// so beside a switch nothing reads, rather than implying a feature that does not exist — a
     /// switch that asks a person for a permission and then uses it for nothing is the worst
     /// version of this change, and this is the flag that keeps the copy honest.
-    public var isConsumedByThisBuild: Bool { false }
+    public var isConsumedByThisBuild: Bool {
+        switch self {
+        case .accessibilityWindowContext: true
+        case .screenCapture: false
+        }
+    }
 
     /// Total: a stored key this build does not know reads as `nil` rather than throwing (R-45).
     public static func decode(_ raw: String) -> GrantOptIn? {

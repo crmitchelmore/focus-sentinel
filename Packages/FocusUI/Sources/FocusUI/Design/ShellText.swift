@@ -335,6 +335,8 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     /// The caption a stored rule of a retired scope carries (e07a): kept, deletable, not read.
     case priorityRulesScopeRetired = "priority.rules.scope.retired"
     case priorityRulesScopeSession = "priority.rules.scope.session"
+    /// A stored row naming one item selected inside an application (issue #24).
+    case priorityRulesScopeSelectedItem = "priority.rules.scope.selectedItem"
     case priorityRulesVerdictRelevant = "priority.rules.verdict.relevant"
     case priorityRulesVerdictUnrelated = "priority.rules.verdict.unrelated"
     case priorityRulesVerdictUncertain = "priority.rules.verdict.uncertain"

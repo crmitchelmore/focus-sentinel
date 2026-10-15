@@ -51,6 +51,10 @@ public enum NudgeCopyKey: String, Sendable, CaseIterable, Codable, Hashable {
     case queryPanelHeading = "query.panel.heading"
     case queryPanelTitle = "query.panel.title"
     case queryPanelScopeApp = "query.panel.scope.app"
+    // The question about one item inside a mixed-use application (issue #24): the chat, the
+    // project, the workspace the Accessibility reader named.
+    case queryPanelTitleItem = "query.panel.title.item"
+    case queryPanelScopeItem = "query.panel.scope.item"
     case queryActionYes = "query.action.yes"
     case queryActionNo = "query.action.no"
     case queryActionNotNow = "query.action.notNow"
@@ -65,10 +69,10 @@ public enum NudgeCopyKey: String, Sendable, CaseIterable, Codable, Hashable {
         case .accusationPanelTitle: [.task]
         case .accusationPanelBody: [.subject, .duration]
         case .accusationActionReturn: [.returnTarget]
-        case .queryPanelTitle: [.subject, .task]
+        case .queryPanelTitle, .queryPanelTitleItem: [.subject, .task]
         case .accusationActionRelevant, .accusationActionNotNow, .accusationActionSnooze,
              .accusationActionPriority, .accusationActionPause, .queryPanelScopeApp,
-             .queryActionYes, .queryActionNo, .queryActionNotNow, .queryPanelHeading: []
+             .queryPanelScopeItem, .queryActionYes, .queryActionNo, .queryActionNotNow, .queryPanelHeading: []
         }
     }
 

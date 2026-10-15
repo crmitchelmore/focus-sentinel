@@ -78,7 +78,11 @@ public final class SubjectNaming {
     /// which is focus-ebv's defect again, with the halves swapped.
     private func name(for identifier: String) -> String? {
         let trimmed = identifier.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty, !NudgeSubject.isOrigin(trimmed) else { return nil }
+        // An item selected inside an application (issue #24) is named by its own label, which
+        // `NudgeSubject` already holds; asking the workspace about `<bundle>::<label>` would be
+        // a lookup with no answer.
+        guard !trimmed.isEmpty, !NudgeSubject.isOrigin(trimmed),
+              !SelectedItem.isItemSubject(trimmed) else { return nil }
         if let learnt = learned[trimmed] { return learnt }
 
         if let usable = NudgeSubject.nameable(

@@ -90,10 +90,14 @@ public struct RuleSnapshotBuilder: Sendable {
         var skipped = sessionRules.count - sessionScoped.count
 
         for row in storedRules {
-            guard let subjectKind = Self.subjectKind(for: row.rule.scope, readingRetired: readsRetiredScopes)
-            else {
-                // A legacy `.session` row, or a retired `.titleToken` one (e07a). It reaches no
-                // rung, is counted, and is never assigned an inferred subject kind (R-72.3).
+            guard let subjectKind = Self.subjectKind(
+                for: row.rule.scope,
+                subject: row.rule.subject,
+                readingRetired: readsRetiredScopes
+            ) else {
+                // A legacy `.session` row, or a retired word-shaped `.titleToken` one (e07a).
+                // It reaches no rung, is counted, and is never assigned an inferred subject
+                // kind (R-72.3).
                 skipped += 1
                 continue
             }
@@ -132,11 +136,20 @@ public struct RuleSnapshotBuilder: Sendable {
     /// `RuleSubjectKind.titleToken` and the cascade arm that matches it stay, because the corpus
     /// measures what the road not taken would have cost (PD-1, e07 S0) and does so through this
     /// very function with `readingRetired: true`.
-    static func subjectKind(for scope: RuleScope, readingRetired: Bool = false) -> RuleSubjectKind? {
+    ///
+    /// **Except an item rule** (issue #24). A `.titleToken` row whose subject parses as a
+    /// `SelectedItem` is the live shape the Accessibility reader produces, and it is promoted
+    /// whatever `readingRetired` says. Only the word-shaped legacy row stays retired.
+    static func subjectKind(
+        for scope: RuleScope,
+        subject: String? = nil,
+        readingRetired: Bool = false
+    ) -> RuleSubjectKind? {
         switch scope {
         case .app: .app
         case .domain: .domain
-        case .titleToken: readingRetired ? .titleToken : nil
+        case .titleToken:
+            readingRetired || subject.map(SelectedItem.isItemSubject) == true ? .titleToken : nil
         case .session: nil
         }
     }

@@ -417,6 +417,18 @@ check "R-33" "no API that can raise a TCC prompt, outside the one confined reque
     'AXIsProcessTrustedWithOptions|kAXTrustedCheckOptionPrompt|CGRequestScreenCaptureAccess|SCShareableContent|AVCaptureDevice\.requestAccess|requestAccess\(for:|CGRequestPostEventAccess|CGRequestListenEventAccess|IOHIDRequestAccess' \
     "$GRANT_REQUEST_FILE"
 
+# R-33b (issue #24, the owner's ruling of 2026-10-15): reading what the Accessibility grant
+# unlocks. The selected item inside a mixed-use application is read through Accessibility, on
+# device, from the frontmost application only — and from ONE file, the one
+# `Config/grant-use-sites.txt` names. `check-grants.sh` proves the same confinement from the
+# registry's side. The write, act and observe selectors are not confined anywhere: they stay
+# banned in `Config/tcc-families.txt`, and this pattern names them too so a source that reached
+# for one fails here before a build does. `kCGWindowName` is SC-1's and stays banned everywhere.
+GRANT_USE_FILE="Packages/FocusHost/Sources/FocusHost/SelectedItemReader.swift"
+check "R-33b" "no Accessibility read of another application, outside the one confined reader" \
+    'AXUIElementCreateApplication|AXUIElementCreateSystemWide|AXUIElementCopyAttributeValue|AXUIElementSetMessagingTimeout|AXUIElementSetAttributeValue|AXUIElementPerformAction|AXObserverCreate' \
+    "$GRANT_USE_FILE"
+
 # R-45: `SessionPhase(rawValue:)` would silently turn a legacy "running" row into a phase this
 # build does not recognise. Every decode goes through SessionPhase.decode(_:), which carries
 # the alias table.
@@ -1536,7 +1548,7 @@ for key, entry in sorted(catalog.get("strings", {}).items()):
             grammar_failures.append(
                 f"{key}: {value!r} is an accusation wearing a question mark"
             )
-    elif key.endswith(".query.panel.title"):
+    elif key.endswith(".query.panel.title") or key.endswith(".query.panel.title.item"):
         grammar_checked += 1
         if not value.rstrip().endswith("?"):
             grammar_failures.append(f"{key}: {value!r} is a question that does not ask")

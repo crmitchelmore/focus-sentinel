@@ -4759,6 +4759,11 @@ enum SelfCheck {
         // — `SUEnableAutomaticChecks = false`, no `SUFeedURL` — is `check-boundaries.sh`'s.
         report["softwareUpdateChecksStored"] = composition.softwareUpdateStatus.checksAutomatically
         report["softwareUpdaterStarted"] = composition.softwareUpdater.isStarted
+        // **The selected-item reader on a default store: never reached** (issue #24). The
+        // Accessibility switch is off, so the reader must not have touched the Accessibility
+        // API even once however many judgements the run made.
+        report["accessibilityOptedIn"] = composition.grantOptIns.isEnabled(.accessibilityWindowContext)
+        report["selectedItemReadCount"] = composition.selectedItemReader.readCount
         report["privacySinkHeld"] = composition.settingsSinks != nil
         report["drivePrivacyRetention"] = drivePrivacyRetentionSink()
         report["driveExclusionList"] = driveExclusionSink()

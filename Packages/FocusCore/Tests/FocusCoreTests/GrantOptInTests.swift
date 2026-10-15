@@ -64,15 +64,17 @@ struct GrantOptInTests {
         #expect(GrantGate.state(of: .screenCapture, optIns: optIns, using: requester) == .notRequested)
     }
 
-    @Test("each grant names a capability, and no grant claims a reading this build makes")
+    @Test("each grant names a capability, and only Accessibility claims a reading this build makes")
     func theVocabularyIsClosedAndHonest() {
         #expect(GrantOptIn.allCases.count == 2)
         #expect(GrantOptIn.accessibilityWindowContext.capability == .accessibilityWindowContext)
         #expect(GrantOptIn.screenCapture.capability == .screenCapture)
         #expect(Set(GrantOptIn.allCases.map(\.capability)).count == GrantOptIn.allCases.count)
-        // Nothing in this build reads what either grant unlocks; the pane says so beside the
-        // switch. A case that flips this has to bring the reading with it.
-        #expect(GrantOptIn.allCases.allSatisfy { !$0.isConsumedByThisBuild })
+        // Accessibility is read by the selected-item reader (issue #24); Screen Recording is
+        // still read by nothing, and the pane says so beside its switch. A case that flips
+        // this has to bring the reading with it.
+        #expect(GrantOptIn.accessibilityWindowContext.isConsumedByThisBuild)
+        #expect(!GrantOptIn.screenCapture.isConsumedByThisBuild)
         #expect(GrantOptIn.decode("accessibilityWindowContext") == .accessibilityWindowContext)
         #expect(GrantOptIn.decode("somethingRetired") == nil)
     }

@@ -286,4 +286,39 @@ struct StoreExportTests {
         #expect(row.measurement == nil)
         #expect(row.measurementValue == nil)
     }
+
+    /// A selected item's label is the name the person's work goes by (issue #24). The rule
+    /// keeps working on this Mac; the export keeps the application and drops the name.
+    @Test("an item rule exports its application and never its label")
+    func anItemRuleExportsWithoutItsLabel() throws {
+        let container = try FocusStore.makeContainer(kind: .inMemory)
+        let context = container.mainContext
+        let item = try #require(
+            SelectedItem(bundleIdentifier: "com.github.githubapp", label: "Secret acquisition plan")
+        )
+        let rule = FocusSchemaV3.RelevanceRule(
+            scopeRaw: PriorityRuleScope.app.rawValue,
+            subject: item.subject,
+            verdictRaw: PriorityRuleVerdict.relevant.rawValue,
+            createdAt: Self.reference
+        )
+        context.insert(rule)
+        let plain = FocusSchemaV3.RelevanceRule(
+            scopeRaw: PriorityRuleScope.app.rawValue,
+            subject: "com.apple.Safari",
+            verdictRaw: PriorityRuleVerdict.relevant.rawValue,
+            createdAt: Self.reference
+        )
+        context.insert(plain)
+        try context.save()
+
+        let bytes = try StoreExport.json(in: context, generatedAt: Self.reference)
+        let text = try #require(String(data: bytes, encoding: .utf8))
+        #expect(!text.contains("Secret acquisition plan"))
+        #expect(!text.contains("Secret"))
+
+        let document = try StoreExport.document(in: context, generatedAt: Self.reference)
+        let subjects = Set(document.rules.map(\.subject))
+        #expect(subjects == ["com.github.githubapp::selected-item", "com.apple.Safari"])
+    }
 }

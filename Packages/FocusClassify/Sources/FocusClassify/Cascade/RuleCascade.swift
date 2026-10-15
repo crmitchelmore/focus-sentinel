@@ -7,7 +7,8 @@ import Foundation
 /// string twice or normalise it differently. `origin` and `titleTokens` are **plumbed and
 /// exercised by the golden corpus, and empty in every shipping code path in e04** (F-03 is
 /// baseline-only); e07 turns them on by supplying a capability probe and a reader, and nothing
-/// in this type changes when it does.
+/// in this type changes when it does. `selectedItem` is the exception (issue #24): an
+/// already-normalised label read through Accessibility, opt-in, and matched only by equality.
 ///
 /// The two kinds of token are kept apart here as well as at the normaliser (R-57): `identifier`
 /// and `originHost` may only ever be compared for equality, while `title` is prose and is the
@@ -23,6 +24,10 @@ public struct ClassificationEvidence: Sendable, Equatable {
     public let title: ProseTokenSet
     /// How long this subject has held, from the monotonic clock.
     public let dwell: Duration
+    /// The item selected inside a mixed-use application, already reduced to a label (issue #24).
+    /// Matched by item rules only, and never handed to a similarity function: it is a name the
+    /// person chose, compared for equality like an identifier.
+    public let selectedItem: SelectedItem?
 
     public init(
         bundleIdentifier: String?,
@@ -30,7 +35,8 @@ public struct ClassificationEvidence: Sendable, Equatable {
         identifier: IdentifierTokenSet,
         originHost: IdentifierTokenSet,
         title: ProseTokenSet,
-        dwell: Duration
+        dwell: Duration,
+        selectedItem: SelectedItem? = nil
     ) {
         self.bundleIdentifier = bundleIdentifier
         self.origin = origin
@@ -38,6 +44,7 @@ public struct ClassificationEvidence: Sendable, Equatable {
         self.originHost = originHost
         self.title = title
         self.dwell = dwell
+        self.selectedItem = selectedItem
     }
 
     /// Normalise an input once, for every rung.
@@ -54,7 +61,8 @@ public struct ClassificationEvidence: Sendable, Equatable {
             title: input.titleTokens.isEmpty
                 ? .empty
                 : normalizer.tokens(fromProse: input.titleTokens.joined(separator: " ")),
-            dwell: dwell
+            dwell: dwell,
+            selectedItem: input.selectedItem
         )
     }
 
@@ -402,8 +410,15 @@ public struct RuleCascade: Sendable {
         case .domain:
             return rule.subject == evidence.origin
         case .titleToken:
-            // Empty in every shipping path in this epic (F-03 is baseline-only), and exercised
-            // by the corpus so that e07 turns a capability on rather than writing a rung.
+            // An item rule (issue #24) names one selected item inside one application, and
+            // matches that item and nothing else: the same application with another chat open
+            // is a different subject.
+            if let item = SelectedItem.parse(rule.subject) {
+                return evidence.selectedItem.map(item.matches) ?? false
+            }
+            // A legacy word. Empty in every shipping path (F-03 is baseline-only), and
+            // exercised by the corpus so that a reader turns a capability on rather than
+            // writing a rung.
             return evidence.title.values.contains(rule.subject.lowercased())
         }
     }
@@ -417,7 +432,10 @@ public struct RuleCascade: Sendable {
     /// empty.
     func subjectToken(for rule: ScopedRuleValue) -> NormalisedToken? {
         switch rule.subjectKind {
-        case .app, .titleToken: NormalisedToken.normalised(rule.subject.lowercased())
+        case .titleToken:
+            SelectedItem.parse(rule.subject)?.slug
+                ?? NormalisedToken.normalised(rule.subject.lowercased())
+        case .app: NormalisedToken.normalised(rule.subject.lowercased())
         case .domain: NormalisedToken.normalised(TokenNormalizer.host(of: rule.subject).lowercased())
         }
     }

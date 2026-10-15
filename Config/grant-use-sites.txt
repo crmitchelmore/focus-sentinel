@@ -1,0 +1,26 @@
+# Where this application is allowed to READ what a grant unlocks (issue #24, the owner's ruling
+# of 2026-10-15). The companion of `Config/grant-request-sites.txt`, which confines the ASK.
+#
+# WHY THIS FILE EXISTS. Until 2026-10-15 every use selector of the two opt-in families was
+# banned from the artefact, because nothing in the build read what either grant unlocks. The
+# owner ruled that the selected item inside a mixed-use application — the Copilot chat, the
+# project folder — is essential, and that it may be read through Accessibility on device. A ban
+# that simply lifted would prove nothing, so it is replaced exactly as the request ban was:
+#
+#   the artefact    the read selectors may appear in the binary; the write, act, observe and
+#                   bulk-read selectors of the same family stay in `tcc-families.txt`'s banned
+#                   column.
+#   the source      every read selector appears in exactly one source file, the one named here.
+#                   `check-grants.sh` proves it from this side; R-33b in `check-forbidden.sh`
+#                   proves it from the other.
+#   the running app the self-check publishes `selectedItemReadCount`, and on a default store,
+#                   where nobody switched the ask on, it is zero.
+#
+# `kCGWindowName` is not here and never will be: SC-1 bans it repository-wide. The title is
+# read through Accessibility, from the frontmost application only, never from the window list.
+#
+# ROW SHAPE — two columns, separated by ` · `:
+#
+#     <file> · <selector>[,<selector>…]
+
+Packages/FocusHost/Sources/FocusHost/SelectedItemReader.swift · AXUIElementCreateApplication,AXUIElementCopyAttributeValue,AXUIElementSetMessagingTimeout

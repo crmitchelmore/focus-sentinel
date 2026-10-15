@@ -152,6 +152,12 @@ mirrored for anything substantive.
   sides, as `SystemGrantRequester.swift` is for the request selectors. README ▸ `grants` carries
   the ruling. Until the work lands, a lint that still bans the use selectors is describing the
   shipped build, not a mistake.
+- **Landed:** `FocusCore/Sensing/SelectedItem.swift` reduces a title to a `<bundle>::<label>`
+  `titleToken` subject (≤48 characters, raw title dropped); `FocusHost/SelectedItemReader.swift`
+  is the one AX use file (`Config/grant-use-sites.txt`, `check-grants.sh`, R-33b). A `titleToken`
+  row in item form is live; a legacy single-word row stays retired (`PriorityRuleValue.isRetired`).
+  The store export writes every item label as `selected-item`. A bare `RelevanceHost` in a test
+  has no active task until `host.activeCommitment` is set, so its snapshot carries no task rules.
 
 ### 2026-10-15 — the nudge panel lost its bottom inset to the hidden titlebar
 

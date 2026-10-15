@@ -67,6 +67,16 @@ public struct NudgeSubject: Sendable, Equatable, Hashable {
     /// it now decides it *by calling this*, so the two cannot drift apart.
     public static func isOrigin(_ identifier: String) -> Bool { identifier.contains("://") }
 
+    /// Whether this subject is an item selected inside an application (issue #24), which the
+    /// question panel words as an item rather than as an app. A property rather than a parse at
+    /// the drawing site, because the panel never reads the identifier (R-96o).
+    public var isSelectedItem: Bool { SelectedItem.isItemSubject(identifier) }
+
+    /// The application an item subject belongs to, for a host that looks names up.
+    public static func applicationIdentifier(of identifier: String) -> String {
+        SelectedItem.parse(identifier)?.bundleIdentifier ?? identifier
+    }
+
     /// The subject a sentence may name, or `nil` when there is nobody to name.
     ///
     /// - Parameters:
@@ -107,7 +117,11 @@ public struct NudgeSubject: Sendable, Equatable, Hashable {
     /// which is the disagreement focus-ebv is about.
     private static func display(for identifier: String, runningName: String?) -> String {
         let candidate: String
-        if isOrigin(identifier) {
+        if let item = SelectedItem.parse(identifier) {
+            // An item is named by its own label (issue #24): the application's name would be
+            // the very thing the question is narrowing away from.
+            candidate = item.label
+        } else if isOrigin(identifier) {
             candidate = ContextItemValue.displayName(forOrigin: identifier)
         } else {
             candidate = runningName ?? identifier

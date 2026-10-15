@@ -91,7 +91,8 @@ public struct CorrectionScope: Sendable, Equatable, Hashable {
     /// `NudgeSubject` rather than re-writing `contains("://")` is what stops a rule and the
     /// sentence about it disagreeing on what an origin is.
     private static func kind(of subject: String) -> RuleSubjectKind {
-        NudgeSubject.isOrigin(subject) ? .domain : .app
+        if NudgeSubject.isOrigin(subject) { return .domain }
+        return SelectedItem.isItemSubject(subject) ? .titleToken : .app
     }
 }
 
