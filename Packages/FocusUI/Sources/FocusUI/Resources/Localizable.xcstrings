@@ -1016,7 +1016,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "New Priority, Same Context…"
+            "value" : "New priority, same context…"
           }
         }
       }
@@ -1844,7 +1844,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Watching the active app. Focus does not read window titles, take screenshots or record what you type."
+            "value" : "Watching the active app. Focus never takes screenshots or records what you type."
           }
         }
       }
@@ -2576,7 +2576,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "When this is on, Focus asks its update feed once a day whether a newer build exists. The request carries the app's name and version and nothing about you. When it is off, Focus never connects to the internet."
+            "value" : "When this is on, Focus checks once a day for a newer version. The request sends only the app's name and version. When it is off, Focus never connects to the internet."
           }
         }
       }
@@ -3644,7 +3644,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Every number Focus decides with. The shipped value is shown beside each one; a dial you have turned is marked."
+            "value" : "The thresholds and limits Focus uses to make decisions. Changed values show their default and a Reset button."
           }
         }
       }
@@ -3692,7 +3692,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Shipped: %@"
+            "value" : "Default: %@"
           }
         }
       }
@@ -3704,7 +3704,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Reset All to Shipped Values"
+            "value" : "Reset all to defaults"
           }
         }
       }
@@ -3728,7 +3728,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "With Accessibility, Focus reads what is selected in the app in front — the window's title, or the chat, mailbox or folder you picked — to tell which task you are on. It reads only when it is about to ask you something, never in password managers or private windows, and keeps a short name on this Mac that never leaves it. Switching this on asks macOS; macOS asks you."
+            "value" : "Lets Focus read the active window's title or the selected chat, mailbox or folder, except in password managers and private windows. Focus keeps only a short name on this Mac. Turning this on opens the macOS permission prompt."
           }
         }
       }
@@ -3752,7 +3752,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Screen Recording would let Focus read the pixels of what is in front of you. Switching this on asks macOS; macOS asks you."
+            "value" : "Would let Focus read pixels from the screen. Turning this on opens the macOS permission prompt."
           }
         }
       }
@@ -3776,7 +3776,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Focus reads only when your events start and end — never their titles, places or people — and keeps none of it. A focus block will not be set to run into a meeting, and Focus stays quiet while one is on. Switching this on asks macOS; macOS asks you."
+            "value" : "Focus reads only when your events start and end. It never reads their titles, places or people, and keeps none of it. Focus will not set a focus block that runs into a meeting, and stays quiet during one. Turning this on opens the macOS permission prompt."
           }
         }
       }
@@ -3788,7 +3788,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nothing in this version reads what this would unlock."
+            "value" : "This version of Focus does not use this permission."
           }
         }
       }
@@ -3800,7 +3800,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Focus asks macOS for nothing unless you switch it on here. Everything above works without any of these, and switching one off stops Focus using it."
+            "value" : "Focus never requests a macOS permission unless you turn it on here. Turning a permission off stops Focus from using it."
           }
         }
       }
@@ -3836,7 +3836,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "No keyboard or mouse for this long, and Focus stops counting time and stays quiet until you are back."
+            "value" : "After this long without keyboard or mouse input, Focus stops timing and holds nudges until you return."
           }
         }
       }
@@ -3848,7 +3848,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "A running microphone keeps Focus quiet"
+            "value" : "Stay quiet while the microphone is in use"
           }
         }
       }
@@ -3860,7 +3860,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "A call is not a distraction. Switch this off and a nudge may arrive mid-call."
+            "value" : "Holds nudges during calls and recordings. Turn this off if you still want nudges while the microphone is active."
           }
         }
       }
@@ -3872,7 +3872,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Open the context pack when a session starts"
+            "value" : "Open context items when a session starts"
           }
         }
       }
@@ -3884,7 +3884,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The apps and files on the priority’s list open with the session."
+            "value" : "Opens the apps and files in the priority's context when you start a session."
           }
         }
       }
@@ -4040,7 +4040,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "How long a nudge stands before the next rung may follow it."
+            "value" : "How long a nudge stays at one step before escalating to the next."
           }
         }
       }
@@ -4280,7 +4280,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "After this many are ignored, the ladder drops back to the menu bar."
+            "value" : "After this many are ignored, nudges step back to the menu bar."
           }
         }
       }
@@ -4436,7 +4436,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "An app becomes an anchor after"
+            "value" : "Time in a related app before detours count"
           }
         }
       }
@@ -4448,7 +4448,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Time in an app before a detour from it is measured against it."
+            "value" : "How long you work in a related app before a brief switch away and back is treated as a detour."
           }
         }
       }
@@ -4460,7 +4460,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Extra grace on an anchored detour"
+            "value" : "Extra grace for a brief detour"
           }
         }
       }
@@ -4472,7 +4472,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Added to the drift threshold when you leave an anchor."
+            "value" : "Added to the drift threshold when you briefly switch away from a related app."
           }
         }
       }
@@ -4592,7 +4592,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "How many apps or sites you must have named before not being on the list means anything."
+            "value" : "Minimum apps or sites in the priority's context before Focus treats an unlisted app or site as unrelated."
           }
         }
       }
@@ -4640,7 +4640,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Closer than this and the on-device comparison may back a related verdict."
+            "value" : "Maximum word-meaning distance for the on-device comparison to support a related verdict."
           }
         }
       }
@@ -4700,7 +4700,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Show Today’s History…"
+            "value" : "Show today's history…"
           }
         }
       }
@@ -4916,7 +4916,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Focus compares the app in front with the context pack to decide whether it is part of the work."
+            "value" : "Focus compares the active app with the priority and its context to decide whether it is part of the work."
           }
         }
       }
@@ -4928,7 +4928,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The context pack is what belongs to the priority: apps, keywords and files. Add them on the Details tab, or drop an app or a file onto the window."
+            "value" : "Context holds what belongs to the priority: apps, keywords and files. Add them on the Details tab, or drop an app or a file onto the window."
           }
         }
       }
@@ -4940,7 +4940,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "A rule settles a case for good. Mark an app as related or unrelated, for this priority or for this session only."
+            "value" : "Rules override automatic decisions. Mark an app as related or unrelated for this priority or for the current session."
           }
         }
       }
@@ -4952,7 +4952,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The desk and the rules"
+            "value" : "Context and rules"
           }
         }
       }
@@ -4964,7 +4964,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "A global shortcut sets a new priority from inside any app. Choose the combination in Settings, General."
+            "value" : "A global shortcut sets a new priority from inside any app. Choose the shortcut in Settings ▸ General."
           }
         }
       }
@@ -5072,7 +5072,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "That sentence is your priority. The hero shows it and everything below acts on it."
+            "value" : "That sentence is your priority. Everything below applies to it."
           }
         }
       }
@@ -5156,7 +5156,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Open the Details tab and add a keyword or an app to the desk."
+            "value" : "Open the Details tab and add a keyword or an app under Context."
           }
         }
       }
@@ -5168,7 +5168,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The desk holds what belongs to this priority. Apps and files can be dropped onto the window too."
+            "value" : "Context holds what belongs to this priority. You can also drop apps and files onto the window."
           }
         }
       }
@@ -5192,7 +5192,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "A rule settles that case for good. A rule for this session only ends with the session."
+            "value" : "Rules apply whenever this priority is active. Session rules end with the session."
           }
         }
       }
@@ -5216,7 +5216,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "A real nudge writes your answer down. Hide all overlays, in the View menu, clears the screen without answering."
+            "value" : "A real nudge records your answer. View ▸ Hide all overlays clears the screen without answering."
           }
         }
       }
@@ -5300,7 +5300,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Finishing ends the demo session and puts back the priority you had before. The demo priority stays in Recent."
+            "value" : "Finishing ends the demo session and restores your previous priority. The demo priority stays in Recent."
           }
         }
       }
@@ -5324,7 +5324,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Continue opens a short tour beside this window. Each step has a button that does the thing in the app, and the last step puts your own priority back."
+            "value" : "Continue opens a short tour beside the main window. Each step can perform the action for you, and the last step restores your priority."
           }
         }
       }
@@ -5360,7 +5360,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "I have seen the cockpit, a nudge and a question"
+            "value" : "I have seen the main window, a nudge and a question"
           }
         }
       }
@@ -5372,7 +5372,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Every panel can be answered, snoozed or closed. Hide all overlays, in the View menu, clears the screen without answering."
+            "value" : "You can answer, snooze or close any panel. View ▸ Hide all overlays clears the screen without answering."
           }
         }
       }
@@ -5492,7 +5492,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Once a day, the window asks what today's priority is. Turn that prompt off in Settings, General."
+            "value" : "Once a day, Focus asks for today's priority. You can turn this off in Settings ▸ General."
           }
         }
       }
@@ -5540,7 +5540,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Privacy settings list every signal Focus reads, how long it keeps activity, and two permissions you can switch on. Focus asks for nothing unless you switch it on."
+            "value" : "Privacy settings show every signal Focus reads, how long activity is kept, and optional macOS permissions. Focus never requests a permission unless you turn it on."
           }
         }
       }
@@ -5552,7 +5552,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Read this again any time from Help, Show walkthrough."
+            "value" : "Open this walkthrough any time from Help ▸ Show walkthrough."
           }
         }
       }
@@ -5636,7 +5636,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Focus does not request Screen Recording or Accessibility permission in this version."
+            "value" : "Focus does not ask for Accessibility or Screen Recording permission unless you turn it on in Privacy settings."
           }
         }
       }
@@ -5648,7 +5648,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Focus does not read window titles, full web addresses, file paths, document names or anything you type."
+            "value" : "Focus does not read full web addresses, file paths, page contents or anything you type. It only reads window titles if you turn on Accessibility in Privacy settings."
           }
         }
       }
@@ -5720,7 +5720,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Focus keeps track of your current priority and nudges you when the active app appears unrelated. It reads the active app and, when available without a permission request, the browser site's host name. It does not read window titles, full web addresses, file paths or anything you type. Your data stays on this Mac."
+            "value" : "Focus keeps track of your current priority and nudges you when the active app appears unrelated. By default it reads only the active app and, when available without a permission prompt, the active website's host name. It does not read full web addresses, file paths, page contents or anything you type. Your data stays on this Mac."
           }
         }
       }
@@ -6378,7 +6378,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Put this priority down without finishing or deleting it."
+            "value" : "Stop working on this priority without completing or deleting it. It stays in Recent."
           }
         }
       }
@@ -6438,7 +6438,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Show the context pack, the rules and the session notes."
+            "value" : "Show the context, rules and session notes for this priority."
           }
         }
       }
@@ -6858,7 +6858,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Record that Focus should have spoken up here."
+            "value" : "Mark this activity as unrelated so Focus nudges next time."
           }
         }
       }
@@ -7158,7 +7158,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lets Focus ask its update feed once a day; off, it checks only when you press Check Now."
+            "value" : "Check for a newer version automatically once a day."
           }
         }
       }
@@ -7170,7 +7170,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Asks the update feed once, now, and tells you what it finds."
+            "value" : "Check for a newer version of Focus Sentinel now."
           }
         }
       }
@@ -7182,7 +7182,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "A check is already running; this button returns when it finishes."
+            "value" : "An update check is already in progress."
           }
         }
       }
@@ -7350,7 +7350,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Puts every tuning back to the value the app shipped with."
+            "value" : "Restore every threshold and limit to its default value."
           }
         }
       }
@@ -7362,7 +7362,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Every tuning is already at its shipped value."
+            "value" : "Every setting is already at its default value."
           }
         }
       }
@@ -7374,7 +7374,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lowers this tuning by one step."
+            "value" : "Lower this value by one step."
           }
         }
       }
@@ -7386,7 +7386,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "This tuning is already at its lowest allowed value."
+            "value" : "Already at the minimum value."
           }
         }
       }
@@ -7398,7 +7398,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Raises this tuning by one step."
+            "value" : "Raise this value by one step."
           }
         }
       }
@@ -7410,7 +7410,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "This tuning is already at its highest allowed value."
+            "value" : "Already at the maximum value."
           }
         }
       }
@@ -7422,7 +7422,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Puts this one tuning back to its shipped value."
+            "value" : "Restore this setting to its default value."
           }
         }
       }
@@ -7542,7 +7542,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Allows the app to ask macOS for Accessibility access, then read what is selected in the app in front, on this Mac only."
+            "value" : "Ask macOS for Accessibility access to read the selected item in the active app."
           }
         }
       }
@@ -7554,7 +7554,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Allows the app to ask macOS for Screen Recording access; macOS then asks you."
+            "value" : "Ask macOS for Screen Recording access."
           }
         }
       }
@@ -7566,7 +7566,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Allows the app to ask macOS for your calendars, to read when you are busy; macOS then asks you."
+            "value" : "Ask macOS for calendar access to read when you are busy."
           }
         }
       }
@@ -7674,7 +7674,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Closes this panel and writes nothing down."
+            "value" : "Close this panel without saving an answer or rule."
           }
         }
       }
@@ -7722,7 +7722,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pauses the session until it is resumed from the cockpit."
+            "value" : "Pauses the session until you resume it from the main window or menu bar."
           }
         }
       }
@@ -7938,7 +7938,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Allowed in System Settings. Focus is using it."
+            "value" : "Allowed in System Settings."
           }
         }
       }
@@ -7950,7 +7950,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Not allowed yet. In System Settings ▸ Privacy & Security ▸ Accessibility, switch Focus Sentinel on. Focus notices as soon as you do."
+            "value" : "Not allowed yet. Turn on Focus Sentinel in System Settings ▸ Privacy & Security ▸ Accessibility."
           }
         }
       }
@@ -7962,7 +7962,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Not allowed yet. In System Settings ▸ Privacy & Security ▸ Screen & System Audio Recording, switch Focus Sentinel on. Focus notices as soon as you do."
+            "value" : "Not allowed yet. Turn on Focus Sentinel in System Settings ▸ Privacy & Security ▸ Screen & System Audio Recording."
           }
         }
       }
@@ -7974,7 +7974,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Not allowed yet. In System Settings ▸ Privacy & Security ▸ Calendars, give Focus Sentinel full access. Focus notices as soon as you do."
+            "value" : "Not allowed yet. Give Focus Sentinel full access in System Settings ▸ Privacy & Security ▸ Calendars."
           }
         }
       }
@@ -7986,7 +7986,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "This Mac's administrator does not allow it, so Focus carries on without it."
+            "value" : "Restricted by this Mac's administrator. Focus continues without this permission."
           }
         }
       }
@@ -8010,7 +8010,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Check Again"
+            "value" : "Check again"
           }
         }
       }
@@ -8034,7 +8034,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Already switched on there and still not allowed? macOS treats a rebuilt or moved copy as a different app. Select Focus Sentinel in that list, remove it with −, then add it again with + — Show Focus in Finder finds the copy that is running."
+            "value" : "If Focus Sentinel is already switched on in System Settings, macOS may be matching an older or moved copy of the app. Remove Focus Sentinel from the list with −, then click + and add the running copy."
           }
         }
       }
@@ -8046,7 +8046,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Opens the list in System Settings where you allow this. Nothing changes until you switch Focus Sentinel on there."
+            "value" : "Open this permission's pane in System Settings."
           }
         }
       }
@@ -8058,7 +8058,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Reads again what macOS allows. It does not ask you anything."
+            "value" : "Check whether macOS has granted this permission, without showing a prompt."
           }
         }
       }
@@ -8070,7 +8070,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Shows the copy of Focus that is running, so you can add that one to the list in System Settings."
+            "value" : "Reveal the running app in Finder so you can add it in System Settings."
           }
         }
       }
