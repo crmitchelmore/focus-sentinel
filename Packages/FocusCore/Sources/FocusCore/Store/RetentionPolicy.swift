@@ -99,9 +99,13 @@ public struct RetentionPolicy: Sendable, Equatable, Hashable, Codable {
     /// Computed by calendar days rather than by subtracting 90 × 86 400 seconds, because a
     /// retention window is a promise about **days** and two of them a year are not 86 400
     /// seconds long. The calendar is the person's own, for `LocalDay`'s reason.
+    ///
+    /// Also `nil` if the calendar cannot do the arithmetic. It used to fall back to `now`, which
+    /// is a cutoff that deletes the whole history; a sweep that cannot say where the window
+    /// starts skips this run, which the next launch repeats.
     public func cutoff(from now: Date, calendar: Calendar) -> Date? {
         guard let days else { return nil }
-        return calendar.date(byAdding: .day, value: -days, to: now) ?? now
+        return calendar.date(byAdding: .day, value: -days, to: now)
     }
 
     /// The same boundary as a local day, for the stores that key on one.
