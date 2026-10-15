@@ -289,6 +289,18 @@
         }
       }
     },
+    "capability.name.calendarEvents" : {
+      "comment" : "Capability name. The person's calendar, read as busy times only (focus-cal).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Calendar busy times"
+          }
+        }
+      }
+    },
     "capability.name.presentation" : {
       "comment" : "Capability name.",
       "extractionState" : "manual",
@@ -1473,6 +1485,42 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ over"
+          }
+        }
+      }
+    },
+    "priority.timebox.inMeeting" : {
+      "comment" : "Line under the timebox presets while the person's calendar has a meeting under way (focus-cal). The argument is a clock time.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In a meeting until %@"
+          }
+        }
+      }
+    },
+    "priority.timebox.nextMeeting" : {
+      "comment" : "Line under the timebox presets naming when the next meeting on the person's calendar starts (focus-cal). The argument is a clock time.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next meeting at %@"
+          }
+        }
+      }
+    },
+    "priority.timebox.untilMeeting" : {
+      "comment" : "Timebox choice that runs until the next meeting starts (focus-cal).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Until the meeting"
           }
         }
       }
@@ -3693,6 +3741,30 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Screen Recording would let Focus read the pixels of what is in front of you. Switching this on asks macOS; macOS asks you."
+          }
+        }
+      }
+    },
+    "settings.privacy.grant.calendar" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Switch that lets the app ask macOS for access to the person's calendars (focus-cal).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let Focus read when you are in meetings"
+          }
+        }
+      }
+    },
+    "settings.privacy.grant.calendar.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the calendar switch (focus-cal).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus reads only when your events start and end — never their titles, places or people — and keeps none of it. A focus block will not be set to run into a meeting, and Focus stays quiet while one is on. Switching this on asks macOS; macOS asks you."
           }
         }
       }
@@ -6443,6 +6515,42 @@
         }
       }
     },
+    "priority.timebox.runsIntoMeeting.help" : {
+      "comment" : "Tooltip on a timebox preset disabled because it would run into the next meeting (focus-cal).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This would still be running when your next meeting starts."
+          }
+        }
+      }
+    },
+    "priority.timebox.duringMeeting.help" : {
+      "comment" : "Tooltip on a timebox preset disabled because a meeting is under way (focus-cal).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You are in a meeting. A focus block can start when it ends."
+          }
+        }
+      }
+    },
+    "priority.timebox.untilMeeting.help" : {
+      "comment" : "Tooltip on the Until the meeting timebox choice (focus-cal).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Give this priority a time limit that ends when your next meeting starts."
+          }
+        }
+      }
+    },
     "priority.ritual.action.set.help" : {
       "comment" : "Tooltip on the morning ritual's Answer now button.",
       "extractionState" : "manual",
@@ -7435,6 +7543,18 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Allows the app to ask macOS for Screen Recording access; macOS then asks you."
+          }
+        }
+      }
+    },
+    "settings.privacy.grant.calendar.help" : {
+      "comment" : "Tooltip on the calendar grant opt-in switch (focus-cal).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Allows the app to ask macOS for your calendars, to read when you are busy; macOS then asks you."
           }
         }
       }

@@ -99,13 +99,22 @@ public enum FocusStore {
     /// the write-ahead log — the file the plaintext is most likely still in — exactly where it
     /// was.
     public static func storeFileURLs(for kind: Kind) -> [URL] {
-        let store: URL
-        switch kind {
-        case .inMemory: return []
-        case .temporary(let url): store = url
-        case .applicationSupport: store = applicationSupportURL
-        }
+        guard let store = storeURL(for: kind) else { return [] }
         return [store, URL(filePath: store.path + "-wal"), URL(filePath: store.path + "-shm")]
+    }
+
+    /// **The database file a store of this kind lives in**, or `nil` for an in-memory one
+    /// (focus-k2in).
+    ///
+    /// The one derivation of "where is the data" from a kind, so the Privacy pane, its Reveal
+    /// button, the export panel and the unavailable-store sheet all name the store the app was
+    /// actually given rather than the person's Application Support file by default.
+    public static func storeURL(for kind: Kind) -> URL? {
+        switch kind {
+        case .inMemory: return nil
+        case .temporary(let url): return url
+        case .applicationSupport: return applicationSupportURL
+        }
     }
 
     /// **Delete everything, and come back with a store that never held it** (e07a,

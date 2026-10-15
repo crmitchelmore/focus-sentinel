@@ -81,7 +81,8 @@ public struct ShellSettingsConnection {
     /// What a click on the Appearance picker performs: update the observer **and** write the
     /// store. One verb, in `FocusHost`, so there is nothing left in the scene to forget.
     public let setPreference: @MainActor (AppearancePreference) -> Void
-    public let storeURL: URL
+    /// `nil` when this session is memory-only (focus-k2in).
+    public let storeURL: URL?
     /// **Which build this is**, already rendered (focus-odz.3).
     ///
     /// A string rather than a `Bundle`, because `Bundle.main` in a test process is the test
@@ -175,7 +176,7 @@ public struct ShellSettingsConnection {
     public init(
         preference: AppearancePreference,
         setPreference: @escaping @MainActor (AppearancePreference) -> Void,
-        storeURL: URL,
+        storeURL: URL?,
         appVersion: String = AppVersion.rendered(bundle: .main),
         launchAtLogin: LaunchAtLogin = .unregistered,
         ritualEnabled: Bool = true,
@@ -427,7 +428,7 @@ public struct ShellSettingsView: View {
     @Environment(\.shellTextScale) private var textScale
 
     @Binding private var preference: AppearancePreference
-    private let storeURL: URL
+    private let storeURL: URL?
     private let summary: SensingSummary
     private let capabilities: CapabilityMatrix
     private let verdict: VerdictSnapshot?
@@ -468,7 +469,7 @@ public struct ShellSettingsView: View {
 
     public init(
         preference: Binding<AppearancePreference>,
-        storeURL: URL,
+        storeURL: URL?,
         appVersion: String = AppVersion.rendered(bundle: .main),
         launchAtLogin: LaunchAtLogin = .unregistered,
         onLaunchAtLogin: @escaping (LaunchAtLoginAction) -> Void = { _ in },

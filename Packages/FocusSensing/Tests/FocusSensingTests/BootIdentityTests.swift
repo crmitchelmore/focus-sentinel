@@ -134,7 +134,7 @@ struct PlatformCapabilityProbeTests {
         )
     }
 
-    @Test("It answers for all twelve capabilities, once each")
+    @Test("It answers for all thirteen capabilities, once each")
     func answersForEveryCapability() {
         let states = Self.fixtureProbe().states()
 

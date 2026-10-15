@@ -265,9 +265,17 @@ final class RelevanceHost {
 
     /// Take a person's dials: the engine everywhere it reads one, and the snapshot builder,
     /// whose normaliser holds the shortest-word dial by value.
+    ///
+    /// The snapshot is invalidated when the dials moved, because it was built by the *old*
+    /// builder: its rule tokens were cut at the old shortest word, and until one of the four
+    /// ordinary invalidations happened to arrive the engine judged new activations against them.
+    /// Not when nothing moved — launch adopts the stored dials into an engine already built with
+    /// them, and that is no reason for a store read.
     func adopt(_ tunings: PolicyTunings) {
+        let moved = tunings != engine.tunings
         engine.adopt(tunings)
         builder = RuleSnapshotBuilder(normalizer: TokenNormalizer(tunings: tunings), scorer: scorer)
+        if moved { invalidateSnapshot() }
     }
 
     /// Stored rows this build declined to promote to a rung — legacy `scopeRaw == "session"`

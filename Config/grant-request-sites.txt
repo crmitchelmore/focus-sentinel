@@ -4,7 +4,9 @@
 # WHY THIS FILE EXISTS. The programme shipped under PD-1: the app asked for nothing, and
 # `check-grants.sh` proved it by banning every request selector from the built artefact. The
 # owner overruled the absolute form of that doctrine — the app may ask for two grants, where the
-# person has switched the ask on. A ban that simply lifted would prove nothing, so it is replaced
+# person has switched the ask on. A third, the calendar, joined them on the owner's request to
+# keep focus blocks out of meetings (focus-cal); it is the first of the three whose grant the
+# build actually reads. A ban that simply lifted would prove nothing, so it is replaced
 # rather than removed:
 #
 #   the artefact    a requestable selector may appear in the binary, but the *use* selectors of
@@ -23,4 +25,4 @@
 # The file is repository-relative. Every selector named here must appear in that file and in no
 # other source file under Packages/ or App/.
 
-Packages/FocusHost/Sources/FocusHost/SystemGrantRequester.swift · AXIsProcessTrustedWithOptions,CGRequestScreenCaptureAccess,CGPreflightScreenCaptureAccess
+Packages/FocusHost/Sources/FocusHost/SystemGrantRequester.swift · AXIsProcessTrustedWithOptions,CGRequestScreenCaptureAccess,CGPreflightScreenCaptureAccess,requestFullAccessToEvents

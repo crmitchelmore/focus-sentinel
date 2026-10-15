@@ -191,6 +191,16 @@ struct SuppressionGateWitnessTests {
                 item to be legible about. The last gate, and the one whose detail lives in \
                 InterventionEligibility rather than in the enum.
                 """
+        ),
+        Row(
+            reason: .calendarMeeting,
+            close: { $0.inCalendarMeeting = true },
+            ambient: .passes,
+            argument: """
+                Gate 8's argument, from the person's calendar rather than their settings: a \
+                meeting is a request not to be spoken to, and the glyph speaks to nobody. The \
+                menu bar is on screen during a meeting exactly as it is during a call (focus-cal).
+                """
         )
     ]
 
@@ -360,11 +370,11 @@ struct SuppressionGateWitnessTests {
 
         let disagreeing = Self.rows.filter { $0.ambient != .silences }
         #expect(
-            disagreeing.count == 5,
+            disagreeing.count == 6,
             """
             \(disagreeing.count) of \(Self.rows.count) gates treat the glyph differently from the \
-            panel — \(disagreeing.map { $0.reason.rawValue }.joined(separator: ", ")). Five is \
-            the committed count: gates 6, 7, 8, 9 and 11. A change here is a change to the ruling \
+            panel — \(disagreeing.map { $0.reason.rawValue }.joined(separator: ", ")). Six is \
+            the committed count: gates 6, 7, 8, 9, 11 and 13. A change here is a change to the ruling \
             and has to be re-recorded, not absorbed.
             """
         )

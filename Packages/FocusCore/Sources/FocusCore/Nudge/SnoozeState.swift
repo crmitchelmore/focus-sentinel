@@ -165,7 +165,11 @@ public struct PauseRequest: Sendable, Equatable, Hashable {
         case .restOfDay:
             // The start of tomorrow in the user's own calendar — never a UTC day, and never a
             // fixed number of hours, because "the rest of today" is shorter in the evening.
-            return calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now))
+            //
+            // The end of today's interval rather than today's start plus a day: where a clock
+            // change happens at midnight (Santiago, Havana, Beirut, Asunción) today starts at
+            // 01:00, and adding a day keeps the 01:00 — an hour into tomorrow.
+            return calendar.dateInterval(of: .day, for: now)?.end
         }
     }
 
