@@ -3746,7 +3746,7 @@
       }
     },
     "settings.privacy.grant.calendar" : {
-      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Switch that lets the app ask macOS for access to the person's calendars (focus-cal).",
+      "comment" : "APPROVED BY USER (D-11, 2026-10-15; review delegated by the user to Gemini 4 Argon). Switch that lets the app ask macOS for access to the person's calendars (focus-cal).",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -3758,7 +3758,7 @@
       }
     },
     "settings.privacy.grant.calendar.note" : {
-      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the calendar switch (focus-cal).",
+      "comment" : "APPROVED BY USER (D-11, 2026-10-15; review delegated by the user to Gemini 4 Argon). Note under the calendar switch (focus-cal).",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {

@@ -47,6 +47,8 @@ Chris approved all 19 pending nudge and notch lines on 8 September 2026 in Codex
 - Thirteen nudge lines, including the restart cue, in `Packages/FocusCore/Sources/FocusCore/Resources/Localizable.xcstrings`.
 - Six notch lines in `Packages/FocusUI/Sources/FocusUI/Resources/Localizable.xcstrings`.
 
+On 15 October 2026 Chris delegated approval of the calendar-feature copy (focus-90sq) to a Gemini 4 Argon review, which approved all eleven lines unchanged: the ten catalogue entries for the calendar switch, its note and tooltip, the timebox meeting lines, button and tooltips, and the capability name, plus `NSCalendarsFullAccessUsageDescription` in `Config/FocusSentinel-Info.plist`. The two entries that carried the pending marker now record `APPROVED BY USER (D-11, 2026-10-15; review delegated by the user to Gemini 4 Argon)`.
+
 ## Next steps, in order
 
 1. **The live drive**. After the final integrated gate, from a driving surface holding Screen Recording and Accessibility:
