@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'Verify the runner or build without UI tests'
+        description: 'Verify the runner, inspect signing availability, or build without UI tests'
         type: choice
-        options: [verify, build]
+        options: [verify, signing, build]
         default: build
       ref:
         description: 'Trusted branch, tag or commit in this repository'
@@ -20,6 +20,7 @@ concurrency:
 jobs:
   local:
     name: Local CI
+    if: inputs.mode != 'signing' || github.actor == github.repository_owner
     runs-on: [bravo-mini-local, macOS, ARM64]
     timeout-minutes: 120
     env:
@@ -40,6 +41,46 @@ jobs:
           ref: ${{ inputs.ref }}
           fetch-depth: 0
           persist-credentials: false
+      - name: Inspect signing availability without exporting credentials
+        if: inputs.mode == 'signing'
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import subprocess
+          import sys
+
+          signing = json.load(open("Config/ReleasePipeline.json"))["signing"]
+
+          def inspect(arguments):
+              return subprocess.run(arguments, capture_output=True, text=True, timeout=90)
+
+          identities = inspect(["security", "find-identity", "-p", "codesigning"])
+          valid = inspect(["security", "find-identity", "-v", "-p", "codesigning"])
+          certificates = inspect([
+              "security", "find-certificate", "-a", "-c", signing["identity"], "-p"
+          ])
+          sparkle = inspect([
+              "security", "find-generic-password", "-a", signing["sparkleKeychainAccount"]
+          ])
+          notary = inspect([
+              "xcrun", "notarytool", "history", "--keychain-profile",
+              signing["notarytoolKeychainProfile"], "--output-format", "json"
+          ])
+          identity_available = signing["identity"] in valid.stdout
+          print(json.dumps({
+              "developerIDCertificateCount": certificates.stdout.count("-----BEGIN CERTIFICATE-----"),
+              "developerIDIdentityPresent": signing["identity"] in identities.stdout,
+              "developerIDIdentityValid": identity_available,
+              "sparkleKeychainAccountPresent": sparkle.returncode == 0,
+              "notaryProfileAuthenticated": notary.returncode == 0,
+          }, indent=2))
+          if identities.returncode or valid.returncode or not identity_available:
+              print("::error::No usable Developer ID Application identity is available to this runner.")
+          if notary.returncode:
+              print("::error::The configured notarization profile could not authenticate.")
+          sys.exit(0 if identity_available and notary.returncode == 0 else 1)
+          PY
       - name: Build and non-UI checks
         if: inputs.mode == 'build'
         shell: bash

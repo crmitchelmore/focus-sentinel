@@ -8,6 +8,13 @@ The services are macOS LaunchAgents. They restart automatically in the bravostat
 
 Open Actions > Local CI > Run workflow. Choose `verify` to check the runner and Xcode without checking out project code. Choose `build` to build and perform the repository's non-UI checks. The default ref is main. These workflows contain no UI tests or hosted-runner fallback and upload no cache or artifact storage.
 
+The owner-only `signing` mode diagnoses the release account without building, signing, exporting
+credentials or running UI tests. It reports whether a Developer ID certificate and usable identity
+exist, whether the configured Sparkle keychain account exists, and whether the configured
+notarization profile can authenticate. Only those results are printed, never certificate contents,
+keychain metadata, private keys or notarization history. A missing identity or unauthenticated
+notarization profile fails the diagnostic explicitly.
+
 Focus's separate Build and verify workflow runs its full gate locally only after explicitly selecting the UI-test confirmation input. Obtain Chris's fresh approval before running it. Do not dispatch an older branch's hosted workflow; bring the current workflow configuration into that branch first.
 
 New runners route through `[bravo-mini-local, macOS, ARM64]`. Pasta retains `[pasta-local, macos-arm64]` so its current jobs and registration are undisturbed. Existing free public-repository hosted jobs remain available. Private Family Watch CI now routes its web and watchOS unit-test jobs locally. This setup does not migrate Linux-only, Android or release-specific lanes from public CI.
