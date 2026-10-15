@@ -1489,6 +1489,10 @@ repository.
    manifest, and only the repository owner may run it. It publishes the draft as `vX.Y.Z`, marks
    it Latest — which is what the Stable feed reads — and records a receipt on the candidate.
 
+Stable appcasts name the final public `vX.Y.Z` download, not the draft candidate. Alpha
+appcasts name their immutable `alpha-build-N` download. The release worker checks both mappings
+with `python3 scripts/test-release-train.py` before building.
+
 Nothing in the flow signs with the gate's ad-hoc identity or claims Gatekeeper acceptance for
 it. What the runner needs before either train can ship is in "What still gates the trains".
 

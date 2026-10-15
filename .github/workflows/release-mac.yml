@@ -71,6 +71,7 @@ jobs:
           scripts/check-boundaries.sh
           scripts/check-forbidden.sh
           scripts/check-strings.sh
+          python3 scripts/test-release-train.py
 
       - name: Build the train's configuration
         if: steps.receipt.outputs.status != 'verified'

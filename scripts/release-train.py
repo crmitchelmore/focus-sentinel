@@ -222,7 +222,10 @@ def cmd_configure(args: argparse.Namespace) -> None:
         "RELEASE_SOURCE": manifest["source"],
         "XCODE_CONFIGURATION": "Alpha" if train == "alpha" else "Release",
         "FEED_URL": row["feedURL"],
-        "DOWNLOAD_TAG": args.tag,
+        "DOWNLOAD_TAG": (
+            f"{PIPELINE['trains']['stable']['releaseTagPrefix']}{manifest['version']}"
+            if train == "stable" else args.tag
+        ),
         "MINIMUM_SYSTEM_VERSION": manifest["minimumSystemVersion"],
     })
 
