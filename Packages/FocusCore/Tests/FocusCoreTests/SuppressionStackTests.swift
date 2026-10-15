@@ -3,7 +3,7 @@ import Testing
 
 @testable import FocusCore
 
-/// The twelve gates, in order — and the assertion that eight of them are e01–e04's code being
+/// The thirteen gates, in order — and the assertion that eight of them are e01–e04's code being
 /// *wired* rather than re-implemented (R-84, R-85, F-118, F-119, F-35, F-36, F-32).
 ///
 /// Under U-1 the app speaks more, so suppression correctness matters **more**, not less.
@@ -68,7 +68,8 @@ struct SuppressionStackTests {
         interruptionInFlight: Bool = false,
         budgetPermits: Bool = true,
         hasAsked: Bool = false,
-        verdictAuthorises: Bool = true
+        verdictAuthorises: Bool = true,
+        inCalendarMeeting: Bool = false
     ) -> SuppressionOutcome {
         SuppressionStack.evaluate(
             kind: kind,
@@ -88,26 +89,29 @@ struct SuppressionStackTests {
             interruptionInFlight: interruptionInFlight,
             budgetPermits: budgetPermits,
             hasAsked: hasAsked,
-            verdictAuthorises: verdictAuthorises
+            verdictAuthorises: verdictAuthorises,
+            inCalendarMeeting: inCalendarMeeting
         )
     }
 
-    // MARK: - Twelve gates, declared in evaluation order
+    // MARK: - Thirteen gates, declared in evaluation order
 
-    @Test("there are twelve gates and their declaration order is their evaluation order")
-    func twelveGatesInOrder() {
-        #expect(NudgeSuppressionReason.allCases.count == 12)
+    @Test("there are thirteen gates and their declaration order is their evaluation order")
+    func thirteenGatesInOrder() {
+        #expect(NudgeSuppressionReason.allCases.count == 13)
         #expect(
             NudgeSuppressionReason.allCases.map(\.rawValue) == [
                 "noActivePriority", "sensingPaused", "sensitiveApplication",
                 "sessionPhaseForbids", "userIdle", "mediaInUse", "presentationActive",
                 "quietHours", "interruptionInFlight", "budgetExhausted", "alreadyAsked",
-                "verdictDoesNotAuthorise"
+                "verdictDoesNotAuthorise", "calendarMeeting"
             ]
         )
-        #expect(NudgeSuppressionReason.allCases.map(\.gateNumber) == Array(1...12))
+        #expect(NudgeSuppressionReason.allCases.map(\.gateNumber) == Array(1...13))
         #expect(NudgeSuppressionReason.alreadyAsked.gateNumber == 11)
         #expect(NudgeSuppressionReason.verdictDoesNotAuthorise.gateNumber == 12)
+        // Appended, so every gate number quoted before it keeps its meaning (focus-cal).
+        #expect(NudgeSuppressionReason.calendarMeeting.gateNumber == 13)
     }
 
     @Test("with every gate open the app may speak")
@@ -136,7 +140,8 @@ struct SuppressionStackTests {
             ("in flight", .interruptionInFlight, { $0.interruptionInFlight = true }),
             ("budget", .budgetExhausted, { $0.budgetPermits = false }),
             ("asked", .alreadyAsked, { $0.hasAsked = true }),
-            ("verdict", .verdictDoesNotAuthorise, { $0.verdictAuthorises = false })
+            ("verdict", .verdictDoesNotAuthorise, { $0.verdictAuthorises = false }),
+            ("meeting", .calendarMeeting, { $0.inCalendarMeeting = true })
         ]
         #expect(closures.count == NudgeSuppressionReason.allCases.count)
 
@@ -150,7 +155,7 @@ struct SuppressionStackTests {
             let expected = closures[cut].1.rawValue
             #expect(
                 outcome.suppressionReason == closures[cut].1,
-                "closing gates \(cut + 1)…12 reported \(observed) rather than \(expected)"
+                "closing gates \(cut + 1)…13 reported \(observed) rather than \(expected)"
             )
         }
 
@@ -179,6 +184,7 @@ struct SuppressionStackTests {
         var budgetPermits = true
         var hasAsked = false
         var verdictAuthorises = true
+        var inCalendarMeeting = false
 
         func evaluate() -> SuppressionOutcome {
             SuppressionStackTests.evaluate(
@@ -187,7 +193,7 @@ struct SuppressionStackTests {
                 idleSeconds: idleSeconds, media: media, presentation: presentation,
                 quietHours: quietHours, interruptionInFlight: interruptionInFlight,
                 budgetPermits: budgetPermits, hasAsked: hasAsked,
-                verdictAuthorises: verdictAuthorises
+                verdictAuthorises: verdictAuthorises, inCalendarMeeting: inCalendarMeeting
             )
         }
     }

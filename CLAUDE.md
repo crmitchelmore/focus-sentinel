@@ -87,6 +87,56 @@ snapshot baselines, running the FocusUITests lane beside another agent's builds,
 type role or a palette hue. `AGENTS.md` and `CLAUDE.md` are independent files; mirror anything
 substantive across both.
 
+### 2026-10-02 — dropped apps, paths pasted as keywords, and site entry hidden (focus-6ji4)
+
+- **What the app can observe is one named fact.** `ShippingObservation.readsBrowserSite`
+  (`FocusCore/Context/ShippingObservation.swift`) is `false` because `RelevanceHost` judges
+  with `ClassificationInput(bundleIdentifier:)` alone. `PriorityRuleScope.isObserved` and
+  `ContextItemKind.isObserved` read it; the rules pane's `authorableScopes`, its inert rows, the
+  site chip's caption and `ContextItemDraft.site(from:)` read those. This is *not* a retirement:
+  the engine still reads stored `.domain` rows, and the day an origin producer ships is one line.
+  Chris chose hiding over a footnote (2026-10-02).
+- **Drop, paste and ⌘O decode in `FocusCore`, on `ContextItemDraft`.** `attachment(url:)` turns
+  an `.app` into an app item by `Bundle(url:)?.bundleIdentifier`; `pasted(_:)` refuses any text
+  shaped like a location (path, `file:`/hierarchical URL, `mailto:`-family, scheme-less
+  host/path) as a keyword. `FocusCore` may not import `UniformTypeIdentifiers`
+  (`check-boundaries.sh`), so the app test is `URLResourceValues.isApplication`.
+- **`swift test --package-path Packages/FocusUI --filter <PureSuite>` runs no snapshot case**
+  ("Executed 0 tests" on the XCTest side). `StringCatalogTests` is lane-gated and *skips* under
+  `swift test`; its duplicate-value pin was checked by reading the catalog instead.
+
+### 2026-09-12 — the calendar, the third opt-in grant and the first one spent (calendar-aware focus blocks)
+
+- **A third grant is a dozen pins, and most of them only fail at gate time.** Adding
+  `Capability.calendarEvents` / `GrantOptIn.calendarEvents` touched: `self-check.sh`'s
+  `EXPECTED_CAPABILITIES`, `CAPABILITY_RULE_CONSTANTS` and the "all thirteen" sentence;
+  `check-grants.sh`'s `CAPABILITIES_CLAIMED` and the `available_rows` allow-list; the calendar row
+  of `Config/tcc-families.txt` (its banned column may not name the confined selector — a selector
+  cannot be both); `Config/grant-request-sites.txt`; R-33's pattern in `check-forbidden.sh`;
+  `ALLOWED_FRAMEWORKS[FocusHost]` in `check-boundaries.sh`; the committed entitlement sets in
+  `entitlement-check.sh`; `BootIdentityTests` and the capability-matrix snapshot fixtures. The
+  Swift `EKEventStore.authorizationStatus(for:)` does emit `authorizationStatusForEntityType` in the
+  Release Mach-O, so it is a sound grant-free control.
+- **The hardened runtime denies EventKit without `com.apple.security.personal-information.calendars`.**
+  The local project builds with `ENABLE_HARDENED_RUNTIME = NO`, so a Debug run would prompt and read
+  happily while every notarised train failed silently. The entitlement lives in
+  `App/FocusSentinel.entitlements`, which `sign-and-notarise.sh` uses.
+- **A new suppression gate is appended, never inserted.** Gate 13 `calendarMeeting` keeps 1–12's
+  numbers, which the self-check's `gatesPassingOverTheGlyph` list and every decision record cite.
+- **Refuse at the host, not only at the control.** `PriorityHost.setTimebox` refuses a colliding
+  timebox with no write and refreshes the cockpit; the control disabling a preset is the courtesy,
+  not the rule. A nil timebox (clearing) is never refused.
+- **R-26 trips on `Packages/FocusHost/.build/checkouts/Sparkle` after a plain `swift build`/`swift
+  test` of FocusHost**: `check()` does not exclude `.build`. Delete that directory before reading
+  R-26 as real.
+- **`-packageCachePath` to a path that does not exist fails as "Missing package product" for every
+  local package**, not as a missing directory. `/Volumes/Memory` is not mounted on every machine
+  that builds this repository; check it before borrowing the flag from the notes above.
+- **Several FocusHost suites draw real windows** (ReduceMotionWireTests, NudgeHostDisplayChangeTests,
+  ReleaseReviewRegressionTests, NudgeFloorTests, KeyboardAnswerTests, UndoResponderChainTests,
+  NudgeDayShapeTests). Under the UI-test confirmation rule they were skipped with `--skip`; the
+  Privacy pane and capability-matrix baselines still need re-recording through the UI lane.
+
 ### 2026-09-12 — tooltips on everything, glyph verbs, one dialog margin, and the Resume that could never clear (focus-mmty, focus-8ski, focus-udn9)
 
 - **A restoration pause is the person's to clear, and the code said otherwise for months.**

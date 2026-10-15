@@ -68,8 +68,21 @@ public final class AppComposition {
     }
 
     public let modelContainer: ModelContainer
-    /// Where `modelContainer` lives, kept so delete-everything can name every file it owns.
+    /// **Where `modelContainer` actually lives**, kept so delete-everything can name every file
+    /// it owns (focus-k2in).
+    ///
+    /// The kind that *opened*, not the kind that was asked for: when the requested store will
+    /// not open the root falls back to memory, and this is then `.inMemory`. Before, it went on
+    /// holding the requested kind, so the Privacy pane named a file nothing was being written to
+    /// and delete-everything removed the very store that had just refused to open — the
+    /// person's data, deleted by a session that never held it.
     let storeKind: FocusStore.Kind
+    /// The kind this root was asked to open. Differs from `storeKind` only after a fallback, and
+    /// is what the unavailable-store sheet names: the file the person should go and look at.
+    let requestedStoreKind: FocusStore.Kind
+    /// The database file the active store lives in, or `nil` when it is memory-only. What the
+    /// Privacy pane draws, what its Reveal button opens and where the export panel starts.
+    var activeStoreURL: URL? { FocusStore.storeURL(for: storeKind) }
     let storeStatus: StoreStatus
 
     /// **The one thing that ever shortens this app's memory** (F-115, focus-tzj.3).
@@ -301,7 +314,7 @@ public final class AppComposition {
         // restarts takes the process with it — so re-reading it would be re-asking a question
         // whose answer is fixed.
         self.bootIdentity = BootIdentity.current()
-        self.storeKind = storeKind
+        self.requestedStoreKind = storeKind
 
         // Every container in this programme is built through `FocusStore.makeContainer`,
         // which always goes through the migration plan. If the on-disk store cannot be
@@ -325,6 +338,7 @@ public final class AppComposition {
         }
         self.modelContainer = container
         self.storeStatus = status
+        self.storeKind = status.isReady ? storeKind : .inMemory
 
         let context = container.mainContext
         self.ruleStore = ruleStoreOverride ?? SwiftDataRuleStore(context: context)
@@ -436,7 +450,10 @@ public final class AppComposition {
                 session: sessions.snapshot,
                 sensing: sensing.summary,
                 capabilities: sensing.capabilities
-            )
+            ),
+            // The store this launch tried to open, which after a fallback is not the one in use:
+            // the sheet that says it did not open must name the file to go and look at.
+            storeLocation: FocusStore.storeURL(for: storeKind)?.path(percentEncoded: false) ?? ""
         )
 
         // The two hosts are one feature seen from two sides: the graph changes the stored
@@ -525,6 +542,15 @@ public final class AppComposition {
         // `startNudgeLoop()`, because the capability table is read by the settings window and the
         // popover, which a person can open before a loop is running — and a table that said
         // "not asked for" about a grant they gave would be the app forgetting an answer.
+        //
+        // The calendar's ask answers later (focus-cal): EventKit reports the person's decision
+        // after the dialog closes, and the answer is what decides whether there is a calendar to
+        // read at all.
+        grantRequester.onGrantAnswered = { [weak self] _ in
+            guard let self else { return }
+            self.applyCalendarReader()
+            self.refreshCockpit()
+        }
         applyStoredGrantOptIns()
     }
 
@@ -814,9 +840,15 @@ public final class AppComposition {
             case .startSession:
                 let previous = self.sessionHost.snapshot?.sessionID
                 self.sessionHost.startSession()
+                // A Shortcut leaves the front where it was, so a session started over a password
+                // manager opens and is stood down at once for it. That is still the session the
+                // person asked for, and reporting it as a failure would invite a second start.
+                let snapshot = self.sessionHost.snapshot
+                let startedOrStoodDown = snapshot?.phase == .focus
+                    || (snapshot?.phase == .paused && snapshot?.pauseCauses == [.sensitiveApp])
                 return self.sessionHost.writeFailure == nil
-                    && self.sessionHost.snapshot?.phase == .focus
-                    && self.sessionHost.snapshot?.sessionID != previous
+                    && startedOrStoodDown
+                    && snapshot?.sessionID != previous
             case .completeSession:
                 self.sessionHost.completeSession()
                 return self.sessionHost.writeFailure == nil
@@ -926,6 +958,9 @@ public final class AppComposition {
             // `bySuppressionReason.quietHours == 0` in every run because no run could ever
             // produce one. The gate was implemented, tested and unreachable.
             quietHours: nudgeHost.quietHours,
+            // Gate 13 (focus-cal): a meeting on the person's own calendar. The same cached read
+            // the cockpit draws, so the two cannot disagree about whether one is under way.
+            agenda: calendarHost.agenda(at: dateProvider.now),
             now: dateProvider.now,
             calendar: calendar,
             monotonic: monotonicClock.elapsed
@@ -1915,6 +1950,28 @@ public final class AppComposition {
     /// Read the switches from the store. At launch, and after one is operated.
     func applyStoredGrantOptIns() {
         grantOptIns = FocusStore.grantOptIns(in: modelContainer.mainContext)
+        applyCalendarReader()
+    }
+
+    /// **The person's calendar, read only as busy time** (focus-cal). See `CalendarHost`.
+    let calendarHost = CalendarHost()
+
+    /// Give the calendar host a reader when, and only when, the person switched the calendar on
+    /// and macOS said yes; take it away otherwise. Neither half opens an event store: the gate
+    /// answers `.notRequested` without asking when the switch is off, and the state read is a
+    /// class method.
+    func applyCalendarReader() {
+        let state = GrantGate.state(of: .calendarEvents, optIns: grantOptIns, using: grantRequester)
+        guard state == .available else {
+            if calendarHost.isReading { calendarHost.use(nil) }
+            return
+        }
+        guard !calendarHost.isReading else { return }
+        calendarHost.use(EventKitCalendarReader { [weak self] in
+            guard let self else { return }
+            self.calendarHost.invalidate()
+            self.refreshCockpit()
+        })
     }
 
     /// What this Mac lets the app do, as the probe read it — with the two opt-in capabilities
@@ -2048,7 +2105,7 @@ public final class AppComposition {
         guard !hasDeletedEverything else {
             return ShellSettingsConnection(
                 preference: .matchSystem, setPreference: { _ in },
-                storeURL: FocusStore.applicationSupportURL,
+                storeURL: activeStoreURL,
                 summary: .inactive, capabilities: CapabilityMatrix(), verdict: nil,
                 intervention: InterventionSettings(), onInterventionAction: { _ in }
             )
@@ -2661,7 +2718,9 @@ public final class AppComposition {
                 // (focus-odz.4, focus-odz.7). See `PriorityHost.Environment` for the measurement
                 // that put them here rather than on the projection afterwards.
                 showsLaunchAtLoginOffer: showsLaunchAtLoginOffer,
-                showsFirstRunExplanation: showsFirstRunExplanation
+                showsFirstRunExplanation: showsFirstRunExplanation,
+                // Busy time only, and `.unread` unless the person switched it on (focus-cal).
+                calendarAgenda: calendarHost.agenda(at: dateProvider.now)
             )
         )
         // **The tour reads every refresh** (focus-u6de): a step is done when the state says so.

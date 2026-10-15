@@ -132,4 +132,10 @@ Ordered by how well they would sell. All verified in source.
 * **Repository and licence.** The repository is private and has no licence (W5, W6). Every "open source" or "read the source" line depends on fixing that.
 * **Mac App Store.** The app ships with App Sandbox **off** (`App/FocusSentinel.entitlements`). The App Store requires it, so the App Store-style copy in `launch-copy.md` is for listings only until that changes.
 * **Product bug found while checking.** A dragged app becomes a file item, which never matches (W8). Fix it in `ContextDropTarget.swift` by mapping application bundles to `ContextItemDraft.app`. The site should avoid "drag an app" until then. The in-app empty state ("Drag an app, a link or a file here…", `UI.xcstrings:784`) has the same problem.
+  **Fixed 2 October 2026 (focus-6ji4):** a dropped or ⌘O-chosen application is now an app item
+  keyed by bundle identifier, so "drag an app" is true again. Site entry is hidden in this
+  version (Chris's call): dropped and pasted links add nothing, the Rules pane offers apps only,
+  and stored site rules and chips say "Not read in this version". W8, W9 and W11's suggested
+  wording should drop sites and links; pasted paths and `file:`/`mailto:` text are no longer kept
+  as keywords.
 * **In-app copy that is stale.** The first-run line "Focus does not request Screen Recording or Accessibility permission in this version." (`UI.xcstrings:4720`) and the browser host-name line (`UI.xcstrings:4744`) overstate in the same ways as W10 and W12. Chris owns that copy (D-11 approvals).

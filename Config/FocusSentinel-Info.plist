@@ -35,6 +35,12 @@
 	     train's, answered by SparkleUpdater's delegate, so an Alpha build cannot be offered a
 	     Stable update. The public key verifies every enclosure; the private half is never in this
 	     repository (see README, "Release trains"). -->
+	<!-- The calendar (focus-cal). macOS shows this sentence in the dialog the app raises only
+	     where the person switched the calendar ask on in Settings › Privacy. The app reads when
+	     events start and end, to keep focus blocks out of meetings, and stores and writes
+	     nothing. Required by macOS 14+ for `requestFullAccessToEvents`. -->
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Focus Sentinel reads when your events start and end so it can keep focus blocks out of meetings and stay quiet while you are in one. It never reads titles or attendees, never stores your calendar and never changes it.</string>
 	<key>SUEnableAutomaticChecks</key>
 	<false/>
 	<key>SUScheduledCheckInterval</key>

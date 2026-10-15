@@ -184,7 +184,11 @@ enum ShellConnectionFactory {
         let intervention = root.interventionSettings
         let generation = root.nextGeneration(for: .settings)
 
-        let storeURL = FocusStore.applicationSupportURL
+        // **The store this session is actually writing to** (focus-k2in), or `nil` when it is
+        // memory-only. This was `FocusStore.applicationSupportURL` whatever the root had opened,
+        // so a fixture launch and an in-memory fallback both told the person their data lived in
+        // a file this session never wrote, and Reveal opened it.
+        let storeURL = root.activeStoreURL
         // **The one bundle whose version means anything** (focus-odz.3). Read here rather than in
         // the pane, because `Bundle.main` in the unit lane is the test runner's and in a preview
         // is Xcode's — a pane that read its own would draw a different answer in every lane that
@@ -215,7 +219,9 @@ enum ShellConnectionFactory {
         root.expect(.privacyCapabilities, matrix.renderedDescription, for: .settings)
         // Where the Privacy pane tells the person their data lives, and what its Reveal in Finder
         // button opens. A mutation printed `/` and nothing anywhere noticed (focus-7ow).
-        root.expect(.privacyStorePath, storeURL.path(percentEncoded: false), for: .settings)
+        root.expect(
+            .privacyStorePath, PrivacySettingsView.renderedStorePath(storeURL), for: .settings
+        )
         // **How long the app keeps what it wrote down** (F-115, focus-l7n). Read from the store
         // every time this value is built, for `ritualEnabled`'s reason — and expected as the
         // stored day count, which is the number the sweep reads rather than the button's word.
