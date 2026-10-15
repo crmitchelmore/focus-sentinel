@@ -4,6 +4,17 @@
 
 Chris instructed on 8 September 2026: stop running UI tests and always confirm with him before running them in future. Obtain fresh explicit confirmation before starting UI tests, including FocusUI snapshots, native FocusHost UI tests, live UI test drives, full gates containing them, or CI triggers/retries that run them. General authorisation to complete work does not waive this requirement. Non-UI work may continue.
 
+## Ship straight to production (owner instruction, 15 October 2026)
+
+Chris: "just ship direct to prod for now, we're still in early development so need to iterate fast without going through multiple stages." Until he says otherwise, finished work goes all the way out in one pass, with no pause for review between stages:
+
+1. Merge to `main` (a direct push or a self-merged squash PR; do not wait on review).
+2. Dispatch **Alpha release** for that `main` SHA (`gh workflow run alpha-release.yml -f source=<sha>`). `Config/ReleasePipeline.json` stays `enabled: false`, so this is the owner-dispatch path.
+3. Dispatch **Prepare Stable** with the resulting `alpha-build-N` and the next version: the next patch above the latest `v*` tag, or `version` from `ReleasePipeline.json` if there is none.
+4. Dispatch **Publish Stable** with that `stable-candidate-N` and the manifest SHA-256 that Prepare Stable prints.
+
+The UI-test rule above still holds. Shipping runs no UI tests, and Chris validates the UI himself.
+
 This project uses **bd** (beads) for issue tracking. Run `bd prime` for full workflow context.
 
 > **Architecture in one line:** Issues live in a local Dolt database
