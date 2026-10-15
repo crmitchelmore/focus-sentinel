@@ -136,6 +136,19 @@ Driver notes from the work itself, newest first. `CLAUDE.md` points here; keep t
 mirrored for anything substantive.
 
 
+### 2026-10-15 — the nudge panel lost its bottom inset to the hidden titlebar
+
+- **A `.titled` + `.fullSizeContentView` window hands SwiftUI a top safe-area inset even when
+  the titlebar is transparent, hidden and empty.** The nudge panel's `NSHostingView` reported
+  `safeAreaInsets.top == 32`. The panel's height is measured off-window by `SurfaceMeasurer`,
+  which never sees that inset, so the live layout squeezed content sized for the whole window
+  into 32 points less. The person saw the answers sitting on the panel's bottom edge. Every
+  published reading (action frames, reachability, hit tests) is relative to the content's own
+  coordinate space, so none of them could see it. The fix is `.ignoresSafeArea()` on the live
+  root view in `NudgePanelController.layOutContent()`.
+  `NudgePanelTests.contentKeepsItsInsetFromTheWindowEdges` reads the content's frame in
+  `.global` space to catch this.
+
 ### 2026-09-12 — tooltips on everything, glyph verbs, one dialog margin, and the Resume that could never clear (focus-mmty, focus-8ski, focus-udn9)
 
 - **A restoration pause is the person's to clear, and the code said otherwise for months.**
