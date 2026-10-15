@@ -132,7 +132,12 @@ extension AppComposition {
         ) {
         case .success:
             // Every host reads its settings when it is built, so the ones the import moved are
-            // re-read here rather than left until the next launch.
+            // re-read here rather than left until the next launch. Left stale, the next settings
+            // write — which writes the whole value the host holds — would also put the old values
+            // back over the imported ones.
+            sensingHost.update(settings: FocusStore.sensingSettings(in: modelContainer.mainContext))
+            applyStoredInterventionPreferences()
+            reloadSensitivityLists()
             refreshCockpit()
             return .imported(name: url.lastPathComponent)
         case .failure(let refusal):

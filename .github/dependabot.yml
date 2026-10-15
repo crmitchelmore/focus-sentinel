@@ -1,0 +1,42 @@
+# Weekly patch and minor updates arrive as one grouped pull request per
+# ecosystem and directory; security fixes are grouped the same way. Major
+# updates open individually for review.
+version: 2
+updates:
+  - package-ecosystem: "swift"
+    directories:
+      - "/Packages/FocusClassify"
+      - "/Packages/FocusCore"
+      - "/Packages/FocusEvaluate"
+      - "/Packages/FocusHost"
+      - "/Packages/FocusModel"
+      - "/Packages/FocusRules"
+      - "/Packages/FocusSensing"
+      - "/Packages/FocusUI"
+      - "/Packages/FocusUpdates"
+      - "/Tools/windowid"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      security:
+        applies-to: security-updates
+        patterns: ["*"]
+      minor-and-patch:
+        applies-to: version-updates
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      security:
+        applies-to: security-updates
+        patterns: ["*"]
+      minor-and-patch:
+        applies-to: version-updates
+        patterns: ["*"]
+        update-types: ["minor", "patch"]

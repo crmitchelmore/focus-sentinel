@@ -2582,7 +2582,17 @@ public final class AppComposition {
             )
             return
         }
+        reloadSensitivityLists()
         refreshCockpit()
+    }
+
+    /// Hand the stored lists to the sensing host, which holds copies of them read at launch.
+    func reloadSensitivityLists() {
+        let (gate, exclusions) = Self.sensitivityLists(
+            in: modelContainer.mainContext,
+            now: dateProvider.now
+        )
+        sensingHost.update(gate: gate, presentationExclusions: exclusions)
     }
 
     /// Re-read everything the store knows nothing about and push it into the cockpit value.

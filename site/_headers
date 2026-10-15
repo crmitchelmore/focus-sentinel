@@ -1,0 +1,35 @@
+# Cloudflare Pages response headers. https://developers.cloudflare.com/pages/configuration/headers/
+# Rules are cumulative: every matching block adds its headers, so Cache-Control is set
+# only on rules that do not overlap.
+
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
+  X-Frame-Options: DENY
+  Cross-Origin-Opener-Policy: same-origin
+  Strict-Transport-Security: max-age=31536000
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests
+
+# Pages: revalidate after five minutes so copy changes appear promptly.
+/
+  Cache-Control: public, max-age=300, must-revalidate
+/index.html
+  Cache-Control: public, max-age=300, must-revalidate
+/press
+  Cache-Control: public, max-age=300, must-revalidate
+/press.html
+  Cache-Control: public, max-age=300, must-revalidate
+/404.html
+  Cache-Control: public, max-age=300, must-revalidate
+
+# Images and icons: file names are not fingerprinted, so cache for 30 days rather than forever.
+/*.png
+  Cache-Control: public, max-age=2592000, stale-while-revalidate=86400
+/*.svg
+  Cache-Control: public, max-age=2592000, stale-while-revalidate=86400
+
+/robots.txt
+  Cache-Control: public, max-age=86400
+/sitemap.xml
+  Cache-Control: public, max-age=86400

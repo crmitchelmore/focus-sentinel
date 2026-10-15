@@ -2649,6 +2649,9 @@ final class NudgeHost {
     func priorityChanged() {
         proofs.run {
             ladder.reduce(.deEscalated(.priorityChanged), now: monotonicClock.elapsed, tunings: tunings)
+            // The anchor was judged relevant to the commitment that was left; "Back to …" must
+            // not offer it as the way back to a different one.
+            returnAnchor = nil
             clearSessionState()
         }
     }
