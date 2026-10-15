@@ -709,6 +709,18 @@
         }
       }
     },
+    "context.site.unobserved" : {
+      "comment" : "Caption on a stored site chip in the context pack (focus-6ji4). This version cannot see which website a browser shows, so the chip does nothing.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not read in this version"
+          }
+        }
+      }
+    },
     "context.file.missing" : {
       "comment" : "Shown on a file chip whose bookmark no longer resolves. The chip is never removed automatically.",
       "extractionState" : "manual",
@@ -800,7 +812,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Drag an app, a link or a file here, or type a keyword."
+            "value" : "Drag an app or a file here, or type a keyword."
           }
         }
       }
@@ -1357,6 +1369,18 @@
         }
       }
     },
+    "priority.rules.scope.unobserved" : {
+      "comment" : "Caption on a stored site rule (focus-6ji4). This version cannot see which website a browser shows, so the rule never applies. The row is kept and can be removed; its verdict cannot be changed.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not read in this version"
+          }
+        }
+      }
+    },
     "priority.rules.scope.session" : {
       "comment" : "Rule scope: the rule lasts until this priority is completed.",
       "extractionState" : "manual",
@@ -1388,7 +1412,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bundle identifier, site or word"
+            "value" : "Bundle identifier"
           }
         }
       }
@@ -3848,7 +3872,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The apps, sites and files on the priority’s list open with the session."
+            "value" : "The apps and files on the priority’s list open with the session."
           }
         }
       }
@@ -4892,7 +4916,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The context pack is what belongs to the priority: apps, sites, keywords and files. Add them on the Details tab, or drop files and links onto the window."
+            "value" : "The context pack is what belongs to the priority: apps, keywords and files. Add them on the Details tab, or drop an app or a file onto the window."
           }
         }
       }
@@ -4904,7 +4928,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "A rule settles a case for good. Mark an app or a site as related or unrelated, for this priority or for this session only."
+            "value" : "A rule settles a case for good. Mark an app as related or unrelated, for this priority or for this session only."
           }
         }
       }
@@ -5132,7 +5156,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The desk holds what belongs to this priority. Files and links can be dropped onto the window too."
+            "value" : "The desk holds what belongs to this priority. Apps and files can be dropped onto the window too."
           }
         }
       }
@@ -5144,7 +5168,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Under Rules, name an app or a site and mark it related or unrelated."
+            "value" : "Under Rules, name an app and mark it related or unrelated."
           }
         }
       }
@@ -6575,6 +6599,18 @@
         }
       }
     },
+    "context.site.unobserved.help" : {
+      "comment" : "Tooltip on a stored site chip (focus-6ji4): why it does nothing, and what the person can do.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This version can’t see which website a browser shows, so a site here does nothing. Remove it, or keep it for later."
+          }
+        }
+      }
+    },
     "context.action.remove.help" : {
       "comment" : "Tooltip on a chip's remove button.",
       "extractionState" : "manual",
@@ -6647,6 +6683,18 @@
         }
       }
     },
+    "priority.rules.scope.unobserved.help" : {
+      "comment" : "Tooltip on the caption of a stored site rule (focus-6ji4): why it never applies, and what the person can do.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This version can’t see which website a browser shows, so a site rule never applies. Remove it, or keep it for later."
+          }
+        }
+      }
+    },
     "priority.rules.subject.prompt.help" : {
       "comment" : "Tooltip on the rule subject field.",
       "extractionState" : "manual",
@@ -6654,7 +6702,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Name the app or site; Return adds it as related."
+            "value" : "Name the app by its bundle identifier; Return adds it as related."
           }
         }
       }
@@ -7470,7 +7518,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Opens the priority's apps, sites and files when a session starts."
+            "value" : "Opens the priority's apps and files when a session starts."
           }
         }
       }

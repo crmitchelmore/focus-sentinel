@@ -109,8 +109,13 @@ public struct ContextChip: View {
             }
 
             if let statusKey {
-                ShellText(statusKey, role: .caption)
+                let caption = ShellText(statusKey, role: .caption)
                     .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+                if statusKey == .contextSiteUnobserved {
+                    caption.shellHelp(.contextSiteUnobservedHelp)
+                } else {
+                    caption
+                }
             }
         }
     }
@@ -151,6 +156,9 @@ public struct ContextChip: View {
         if item.kind == .app, InstalledApplication.info(bundleID: item.value) == nil {
             return .contextAppNotInstalled
         }
+        // A site chip stored before this version stopped offering them (focus-6ji4): kept,
+        // removable, and honest that it does nothing.
+        if item.kind.isKnown, !item.kind.isObserved { return .contextSiteUnobserved }
         return nil
     }
 

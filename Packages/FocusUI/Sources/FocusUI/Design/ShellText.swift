@@ -339,6 +339,8 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case priorityRulesScopeTitleToken = "priority.rules.scope.titleToken"
     /// The caption a stored rule of a retired scope carries (e07a): kept, deletable, not read.
     case priorityRulesScopeRetired = "priority.rules.scope.retired"
+    /// The caption a stored site rule carries while this version reads no site (focus-6ji4).
+    case priorityRulesScopeUnobserved = "priority.rules.scope.unobserved"
     case priorityRulesScopeSession = "priority.rules.scope.session"
     case priorityRulesVerdictRelevant = "priority.rules.verdict.relevant"
     case priorityRulesVerdictUnrelated = "priority.rules.verdict.unrelated"
@@ -406,6 +408,8 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case contextActionLocate = "context.action.locate"
     case contextFileMissing = "context.file.missing"
     case contextAppNotInstalled = "context.app.notInstalled"
+    /// The caption a stored site chip carries while this version reads no site (focus-6ji4).
+    case contextSiteUnobserved = "context.site.unobserved"
     case contextKindApp = "context.kind.app"
     case contextKindDomain = "context.kind.domain"
     case contextKindKeyword = "context.kind.keyword"
@@ -778,6 +782,7 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case contextActionAddKeywordDisabledHelp = "context.action.addKeyword.disabledHelp"
     case contextActionAddKeywordHelp = "context.action.addKeyword.help"
     case contextActionLocateHelp = "context.action.locate.help"
+    case contextSiteUnobservedHelp = "context.site.unobserved.help"
     case contextActionPreviewHelp = "context.action.preview.help"
     case contextActionRemoveHelp = "context.action.remove.help"
     case contextKeywordPromptHelp = "context.keyword.prompt.help"
@@ -798,6 +803,7 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case priorityRulesActionAddRelatedHelp = "priority.rules.action.addRelated.help"
     case priorityRulesActionAddUnrelatedHelp = "priority.rules.action.addUnrelated.help"
     case priorityRulesScopeHelp = "priority.rules.scope.help"
+    case priorityRulesScopeUnobservedHelp = "priority.rules.scope.unobserved.help"
     case priorityRulesSubjectDisabledHelp = "priority.rules.subject.disabledHelp"
     case priorityRulesSubjectPromptHelp = "priority.rules.subject.prompt.help"
     case priorityTimeboxNoneDisabledHelp = "priority.timebox.none.disabledHelp"
