@@ -79,6 +79,10 @@ final class PriorityHost: PriorityActing {
         /// so a change to either is a change to `state` and the window redraws for it.
         var showsLaunchAtLoginOffer: Bool = false
         var showsFirstRunExplanation: Bool = false
+        /// **The person's calendar, as busy blocks** (focus-cal). `.unread` unless the person
+        /// switched the calendar on in Privacy and macOS said yes — and an unread calendar
+        /// refuses no timebox and draws nothing beside the control.
+        var calendarAgenda: CalendarAgenda = .unread
     }
 
     /// Everything a rule snapshot is built from, as one comparable value (R-65).
@@ -174,14 +178,18 @@ final class PriorityHost: PriorityActing {
     private var storeFailureAcknowledged = false
 
     /// Where the store the app tried to open lives, for the sheet that says it did not.
-    static var storeLocation: String { FocusStore.applicationSupportURL.path(percentEncoded: false) }
+    ///
+    /// Handed in by the composition root rather than assumed (focus-k2in): a launch given a
+    /// fixture store that failed to open must name the fixture, not the person's own file.
+    let storeLocation: String
 
     init(
         context: ModelContext,
         dateProvider: any DateProvider,
         calendar: Calendar,
         locale: Locale,
-        environment: Environment
+        environment: Environment,
+        storeLocation: String = FocusStore.applicationSupportURL.path(percentEncoded: false)
     ) {
         self.context = context
         self.store = PriorityStore(context: context, dateProvider: dateProvider)
@@ -189,10 +197,11 @@ final class PriorityHost: PriorityActing {
         self.calendar = calendar
         self.locale = locale
         self.environment = environment
+        self.storeLocation = storeLocation
         self.state = CockpitState(
             status: environment.status,
             storeOpened: environment.storeOpened,
-            storeLocation: Self.storeLocation,
+            storeLocation: storeLocation,
             isObservingActivity: environment.isObservingActivity,
             session: environment.session,
             sensing: environment.sensing,
@@ -301,7 +310,24 @@ final class PriorityHost: PriorityActing {
         }
     }
 
+    /// **A focus block may not be scheduled into a meeting** (focus-cal).
+    ///
+    /// The control already greys out the presets that would collide, but the refusal lives here
+    /// too: the control's outlook was built on the last refresh, and the command palette and the
+    /// walkthrough's *Do it for me* reach this method without the control. Checked against the
+    /// agenda at the instant of the write, which is the instant `setTimebox` stamps as the start.
     func setTimebox(taskID: UUID, seconds: Int?) {
+        let outlook = environment.calendarAgenda.outlook(at: dateProvider.now)
+        if let refusal = outlook.refusal(forTimeboxSeconds: seconds) {
+            // The kind only: when a person's meetings are is theirs, not the log's.
+            let kind = switch refusal {
+            case .duringMeeting: "during a meeting"
+            case .runsIntoMeeting: "runs into a meeting"
+            }
+            logger.info("refused a timebox: \(kind, privacy: .public)")
+            refresh()
+            return
+        }
         perform { store in
             try store.setTimebox(taskID: taskID, seconds: seconds, undo: self.undo)
         }
@@ -499,7 +525,8 @@ final class PriorityHost: PriorityActing {
                     now: now,
                     contextItems: items,
                     rules: rules,
-                    assessment: IntentValidator.assess(task.intent, locale: locale)
+                    assessment: IntentValidator.assess(task.intent, locale: locale),
+                    calendar: environment.calendarAgenda.outlook(at: now)
                 )
             }
             // One fetch, three derivations. Every one of them takes its identifier from
@@ -546,7 +573,7 @@ final class PriorityHost: PriorityActing {
             storeOpened: environment.storeOpened,
             lastWriteFailed: writeFailure != nil,
             storeFailureAcknowledged: storeFailureAcknowledged,
-            storeLocation: Self.storeLocation,
+            storeLocation: storeLocation,
             isObservingActivity: environment.isObservingActivity,
             priority: priority,
             recent: recent,

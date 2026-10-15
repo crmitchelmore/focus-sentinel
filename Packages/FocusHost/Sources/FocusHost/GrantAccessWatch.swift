@@ -31,6 +31,7 @@ public final class GrantAccessWatch {
         let anchor = switch grant {
         case .accessibilityWindowContext: "Privacy_Accessibility"
         case .screenCapture: "Privacy_ScreenCapture"
+        case .calendarEvents: "Privacy_Calendars"
         }
         // A constant string with a fixed scheme always parses; a failure here is a typo.
         // swiftlint:disable:next force_unwrapping

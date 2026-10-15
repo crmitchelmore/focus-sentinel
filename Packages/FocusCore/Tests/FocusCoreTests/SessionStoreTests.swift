@@ -685,6 +685,32 @@ struct SessionStoreTests {
         #expect(snapshot.notes.contains(.clockAnomaly))
     }
 
+    /// The restoration re-stamps the uptime anchor, so it must move `phaseChangedAt` with it.
+    /// Otherwise the next relaunch differences the old phase instant against the new anchor and
+    /// reads the whole gap before the first restoration as a clock anomaly.
+    @Test("A second relaunch after a restoration pause raises no clock anomaly")
+    func secondRelaunchAfterARestorationPauseIsClean() throws {
+        let harness = try SessionStoreHarness()
+        try harness.store.start()
+        harness.clock.advance(by: 20 * 60)
+        harness.uptime.advance(by: 20 * 60)
+        let first = try #require(try harness.store.restore())
+        try #require(first.pauseCauses == [.relaunch])
+
+        let record = try #require(try harness.store.openSession())
+        #expect(record.phaseChangedAt == harness.clock.now)
+        #expect(record.uptimeAnchorSeconds == harness.uptime.uptimeSeconds)
+
+        harness.clock.advance(by: 30)
+        harness.uptime.advance(by: 30)
+        let second = try #require(try harness.store.restore())
+
+        #expect(second.notes.contains(.clockAnomaly) == false)
+        #expect(second.notes.isEmpty)
+        #expect(second.pauseCauses == [.relaunch])
+        #expect(try harness.transitionRows().count == 1)
+    }
+
     @Test("A two-second jump is inside the tolerance and raises nothing")
     func smallJumpIsNotAnAnomaly() throws {
         let harness = try SessionStoreHarness()

@@ -101,6 +101,7 @@ struct StringCatalogTests {
                 ["context.action.remove", "settings.intervention.exclusion.remove"],
                 ["context.kind.app", "priority.rules.scope.app"],
                 ["context.kind.domain", "priority.rules.scope.domain"],
+                ["context.site.unobserved", "priority.rules.scope.unobserved"],
                 ["priority.complete.action.cancel", "shell.menuBar.cancelSnooze"],
                 ["settings.general.launchAtLogin", "shell.cockpit.launchAtLogin.accept"],
                 ["settings.privacy.delete.confirm.action", "settings.privacy.delete.heading"],

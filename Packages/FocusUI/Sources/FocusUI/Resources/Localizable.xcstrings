@@ -289,6 +289,18 @@
         }
       }
     },
+    "capability.name.calendarEvents" : {
+      "comment" : "Capability name. The person's calendar, read as busy times only (focus-cal).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Calendar busy times"
+          }
+        }
+      }
+    },
     "capability.name.presentation" : {
       "comment" : "Capability name.",
       "extractionState" : "manual",
@@ -697,6 +709,18 @@
         }
       }
     },
+    "context.site.unobserved" : {
+      "comment" : "Caption on a stored site chip in the context pack (focus-6ji4). This version cannot see which website a browser shows, so the chip does nothing.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not read in this version"
+          }
+        }
+      }
+    },
     "context.file.missing" : {
       "comment" : "Shown on a file chip whose bookmark no longer resolves. The chip is never removed automatically.",
       "extractionState" : "manual",
@@ -788,7 +812,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Drag an app, a link or a file here, or type a keyword."
+            "value" : "Drag an app or a file here, or type a keyword."
           }
         }
       }
@@ -1345,6 +1369,18 @@
         }
       }
     },
+    "priority.rules.scope.unobserved" : {
+      "comment" : "Caption on a stored site rule (focus-6ji4). This version cannot see which website a browser shows, so the rule never applies. The row is kept and can be removed; its verdict cannot be changed.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not read in this version"
+          }
+        }
+      }
+    },
     "priority.rules.scope.session" : {
       "comment" : "Rule scope: the rule lasts until this priority is completed.",
       "extractionState" : "manual",
@@ -1388,7 +1424,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bundle identifier, site or word"
+            "value" : "Bundle identifier"
           }
         }
       }
@@ -1461,6 +1497,42 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ over"
+          }
+        }
+      }
+    },
+    "priority.timebox.inMeeting" : {
+      "comment" : "Line under the timebox presets while the person's calendar has a meeting under way (focus-cal). The argument is a clock time.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In a meeting until %@"
+          }
+        }
+      }
+    },
+    "priority.timebox.nextMeeting" : {
+      "comment" : "Line under the timebox presets naming when the next meeting on the person's calendar starts (focus-cal). The argument is a clock time.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next meeting at %@"
+          }
+        }
+      }
+    },
+    "priority.timebox.untilMeeting" : {
+      "comment" : "Timebox choice that runs until the next meeting starts (focus-cal).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Until the meeting"
           }
         }
       }
@@ -3685,6 +3757,30 @@
         }
       }
     },
+    "settings.privacy.grant.calendar" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Switch that lets the app ask macOS for access to the person's calendars (focus-cal).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let Focus read when you are in meetings"
+          }
+        }
+      }
+    },
+    "settings.privacy.grant.calendar.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the calendar switch (focus-cal).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus reads only when your events start and end — never their titles, places or people — and keeps none of it. A focus block will not be set to run into a meeting, and Focus stays quiet while one is on. Switching this on asks macOS; macOS asks you."
+          }
+        }
+      }
+    },
     "settings.privacy.grant.unused" : {
       "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Warning beside a switch whose grant nothing in this build reads.",
       "extractionState" : "manual",
@@ -3788,7 +3884,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The apps, sites and files on the priority’s list open with the session."
+            "value" : "The apps and files on the priority’s list open with the session."
           }
         }
       }
@@ -4832,7 +4928,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The context pack is what belongs to the priority: apps, sites, keywords and files. Add them on the Details tab, or drop files and links onto the window."
+            "value" : "The context pack is what belongs to the priority: apps, keywords and files. Add them on the Details tab, or drop an app or a file onto the window."
           }
         }
       }
@@ -4844,7 +4940,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "A rule settles a case for good. Mark an app or a site as related or unrelated, for this priority or for this session only."
+            "value" : "A rule settles a case for good. Mark an app as related or unrelated, for this priority or for this session only."
           }
         }
       }
@@ -5072,7 +5168,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The desk holds what belongs to this priority. Files and links can be dropped onto the window too."
+            "value" : "The desk holds what belongs to this priority. Apps and files can be dropped onto the window too."
           }
         }
       }
@@ -5084,7 +5180,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Under Rules, name an app or a site and mark it related or unrelated."
+            "value" : "Under Rules, name an app and mark it related or unrelated."
           }
         }
       }
@@ -6431,6 +6527,42 @@
         }
       }
     },
+    "priority.timebox.runsIntoMeeting.help" : {
+      "comment" : "Tooltip on a timebox preset disabled because it would run into the next meeting (focus-cal).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This would still be running when your next meeting starts."
+          }
+        }
+      }
+    },
+    "priority.timebox.duringMeeting.help" : {
+      "comment" : "Tooltip on a timebox preset disabled because a meeting is under way (focus-cal).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You are in a meeting. A focus block can start when it ends."
+          }
+        }
+      }
+    },
+    "priority.timebox.untilMeeting.help" : {
+      "comment" : "Tooltip on the Until the meeting timebox choice (focus-cal).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Give this priority a time limit that ends when your next meeting starts."
+          }
+        }
+      }
+    },
     "priority.ritual.action.set.help" : {
       "comment" : "Tooltip on the morning ritual's Answer now button.",
       "extractionState" : "manual",
@@ -6475,6 +6607,18 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Find this file again after it moved or was renamed."
+          }
+        }
+      }
+    },
+    "context.site.unobserved.help" : {
+      "comment" : "Tooltip on a stored site chip (focus-6ji4): why it does nothing, and what the person can do.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This version can’t see which website a browser shows, so a site here does nothing. Remove it, or keep it for later."
           }
         }
       }
@@ -6551,6 +6695,18 @@
         }
       }
     },
+    "priority.rules.scope.unobserved.help" : {
+      "comment" : "Tooltip on the caption of a stored site rule (focus-6ji4): why it never applies, and what the person can do.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This version can’t see which website a browser shows, so a site rule never applies. Remove it, or keep it for later."
+          }
+        }
+      }
+    },
     "priority.rules.subject.prompt.help" : {
       "comment" : "Tooltip on the rule subject field.",
       "extractionState" : "manual",
@@ -6558,7 +6714,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Name the app or site; Return adds it as related."
+            "value" : "Name the app by its bundle identifier; Return adds it as related."
           }
         }
       }
@@ -7374,7 +7530,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Opens the priority's apps, sites and files when a session starts."
+            "value" : "Opens the priority's apps and files when a session starts."
           }
         }
       }
@@ -7399,6 +7555,18 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Allows the app to ask macOS for Screen Recording access; macOS then asks you."
+          }
+        }
+      }
+    },
+    "settings.privacy.grant.calendar.help" : {
+      "comment" : "Tooltip on the calendar grant opt-in switch (focus-cal).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Allows the app to ask macOS for your calendars, to read when you are busy; macOS then asks you."
           }
         }
       }
@@ -7795,6 +7963,18 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Not allowed yet. In System Settings ▸ Privacy & Security ▸ Screen & System Audio Recording, switch Focus Sentinel on. Focus notices as soon as you do."
+          }
+        }
+      }
+    },
+    "settings.privacy.grant.waiting.calendar" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Status under the switched-on Calendar grant while macOS does not yet allow it (issue #24 status row meeting focus-cal's grant).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not allowed yet. In System Settings ▸ Privacy & Security ▸ Calendars, give Focus Sentinel full access. Focus notices as soon as you do."
           }
         }
       }

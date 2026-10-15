@@ -15,16 +15,26 @@ import Foundation
 /// > nothing is asked, nothing prompts, and the capability table reads exactly as it did under
 /// > PD-1. The only route from "not asked" to "asked" is a control the person operated.
 ///
-/// Two grants, and no more: each one names the reading it would unlock, so a switch is never a
-/// blank cheque. A third case here is a change to the doctrine and has to be argued for.
+/// Three grants, and no more: each one names the reading it would unlock, so a switch is never a
+/// blank cheque. A fourth case here is a change to the doctrine and has to be argued for.
+///
+/// **The third was argued for by the owner** (focus-cal): *"enable the app to understand a
+/// Calendar so that you can't schedule focus blocks during meetings."* The same conditional rule
+/// binds it — off by default, asked for once at the moment the switch is operated, and read for
+/// busy intervals alone.
 public enum GrantOptIn: String, Sendable, CaseIterable, Hashable, Codable, Identifiable {
     /// Accessibility: the front window's title, or the selected row or main heading inside it,
-    /// in the frontmost application, reduced on device to the selected item (issue #24, owner's ruling 2026-10-15). What `e07` always meant by
-    /// "with consent" (`Capability.accessibilityWindowContext`).
+    /// in the frontmost application, reduced on device to the selected item (issue #24, owner's
+    /// ruling 2026-10-15). What `e07` always meant by "with consent"
+    /// (`Capability.accessibilityWindowContext`).
     case accessibilityWindowContext
     /// Screen Recording: pixel capture, parked by the Feasibility Court as dissent D-04 and
     /// still parked — the switch exists, and nothing yet reads what it would unlock.
     case screenCapture
+    /// Calendars: full access to events, read for busy intervals alone (focus-cal). macOS has
+    /// no narrower read — write-only access cannot read anything — so the app asks for full
+    /// access and takes from it a start, an end and whether the time is busy.
+    case calendarEvents
 
     public var id: String { rawValue }
 
@@ -33,6 +43,7 @@ public enum GrantOptIn: String, Sendable, CaseIterable, Hashable, Codable, Ident
         switch self {
         case .accessibilityWindowContext: .accessibilityWindowContext
         case .screenCapture: .screenCapture
+        case .calendarEvents: .calendarEvents
         }
     }
 
@@ -41,13 +52,14 @@ public enum GrantOptIn: String, Sendable, CaseIterable, Hashable, Codable, Ident
     /// Accessibility is read (issue #24): `FocusHost.SystemSelectedItemReader` reads the front
     /// window's title — or, when that names nothing, the selected row or main heading inside it —
     /// of the frontmost application, on device, and reduces it to a `SelectedItem` before
-    /// anything keeps it. Screen Recording is still parked. The pane says
-    /// so beside a switch nothing reads, rather than implying a feature that does not exist — a
-    /// switch that asks a person for a permission and then uses it for nothing is the worst
-    /// version of this change, and this is the flag that keeps the copy honest.
+    /// anything keeps it. The calendar is read by the timebox control and the suppression stack
+    /// (focus-cal). Screen Recording is still parked, and the pane says so beside its switch
+    /// rather than implying a feature that does not exist — a switch that asks a person for a
+    /// permission and then uses it for nothing is the worst version of this change, and this is
+    /// the flag that keeps the copy honest.
     public var isConsumedByThisBuild: Bool {
         switch self {
-        case .accessibilityWindowContext: true
+        case .accessibilityWindowContext, .calendarEvents: true
         case .screenCapture: false
         }
     }

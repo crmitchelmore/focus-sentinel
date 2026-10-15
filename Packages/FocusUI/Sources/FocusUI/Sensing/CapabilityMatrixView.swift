@@ -237,6 +237,7 @@ public struct CapabilityMatrixView: View {
         case .screenCapture: .capabilityNameScreenCapture
         case .notifications: .capabilityNameNotifications
         case .onDeviceModel: .capabilityNameOnDeviceModel
+        case .calendarEvents: .capabilityNameCalendarEvents
         }
     }
 

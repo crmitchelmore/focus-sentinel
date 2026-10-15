@@ -64,17 +64,18 @@ struct GrantOptInTests {
         #expect(GrantGate.state(of: .screenCapture, optIns: optIns, using: requester) == .notRequested)
     }
 
-    @Test("each grant names a capability, and only Accessibility claims a reading this build makes")
+    @Test("each grant names a capability, and only the calendar and Accessibility claim a reading this build makes")
     func theVocabularyIsClosedAndHonest() {
-        #expect(GrantOptIn.allCases.count == 2)
+        #expect(GrantOptIn.allCases.count == 3)
         #expect(GrantOptIn.accessibilityWindowContext.capability == .accessibilityWindowContext)
         #expect(GrantOptIn.screenCapture.capability == .screenCapture)
+        #expect(GrantOptIn.calendarEvents.capability == .calendarEvents)
         #expect(Set(GrantOptIn.allCases.map(\.capability)).count == GrantOptIn.allCases.count)
-        // Accessibility is read by the selected-item reader (issue #24); Screen Recording is
-        // still read by nothing, and the pane says so beside its switch. A case that flips
-        // this has to bring the reading with it.
-        #expect(GrantOptIn.accessibilityWindowContext.isConsumedByThisBuild)
-        #expect(!GrantOptIn.screenCapture.isConsumedByThisBuild)
+        // Accessibility is read by the selected-item reader (issue #24) and the calendar by the
+        // timebox control and gate 13 (focus-cal); Screen Recording is still read by nothing, and
+        // the pane says so beside its switch. A case that flips this has to bring the reading
+        // with it.
+        #expect(GrantOptIn.allCases.filter(\.isConsumedByThisBuild) == [.accessibilityWindowContext, .calendarEvents])
         #expect(GrantOptIn.decode("accessibilityWindowContext") == .accessibilityWindowContext)
         #expect(GrantOptIn.decode("somethingRetired") == nil)
     }

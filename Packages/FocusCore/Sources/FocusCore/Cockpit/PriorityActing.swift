@@ -76,6 +76,124 @@ public struct ContextItemDraft: Sendable, Equatable, Hashable {
             bookmark: try? SecurityScopedBookmark.create(for: url)
         )
     }
+
+    // MARK: - What a drop, a paste or the file picker becomes (focus-6ji4)
+
+    /// A file the person dropped or chose — **or the application it is**.
+    ///
+    /// An application bundle arrives as a file URL like any other, and stored as a file item it
+    /// was a chip that looked attached and did nothing: the engine matches an application by
+    /// bundle identifier and never matches a file. So a bundle that names an identifier becomes
+    /// an app item. One that names none stays a file, which at least opens with the session.
+    public static func attachment(url: URL) -> ContextItemDraft {
+        application(at: url) ?? file(url: url)
+    }
+
+    /// The application at `url` as an app draft, or `nil` when `url` is not an application
+    /// bundle with a bundle identifier.
+    ///
+    /// `isApplicationKey` rather than a UTType test because `FocusCore` links Foundation only;
+    /// the extension is the fallback for a volume that answers no resource values.
+    public static func application(at url: URL) -> ContextItemDraft? {
+        guard url.isFileURL else { return nil }
+        let isApplication = (try? url.resourceValues(forKeys: [.isApplicationKey]).isApplication)
+            ?? (url.pathExtension.caseInsensitiveCompare("app") == .orderedSame)
+        guard isApplication, let bundle = Bundle(url: url), let bundleID = bundle.bundleIdentifier
+        else { return nil }
+
+        let name = ["CFBundleDisplayName", "CFBundleName"]
+            .lazy
+            .compactMap { bundle.object(forInfoDictionaryKey: $0) as? String }
+            .first { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+        return app(bundleID: bundleID, displayName: name ?? url.deletingPathExtension().lastPathComponent)
+    }
+
+    /// A site, from a dropped or pasted link — **`nil` while the shipping app reads no site**.
+    ///
+    /// A site chip in this version is neither matched nor opened (`ShippingObservation`), so a
+    /// dropped link adds nothing rather than a chip that pretends to.
+    public static func site(from url: URL) -> ContextItemDraft? {
+        guard ContextItemKind.domain.isObserved else { return nil }
+        return domain(from: url)
+    }
+
+    /// Text the person dropped or pasted.
+    ///
+    /// Prose becomes a keyword. Text **shaped like a location** never does, because a keyword
+    /// is stored verbatim and "never stores file paths" has to hold for a paste as much as for
+    /// a dropped `.url`. A location is one of:
+    ///
+    /// * a path — `/Users/…`, `~/…`;
+    /// * a hierarchical URL — `file:///…`, `https://…`, `x-app://…`;
+    /// * an address URL — `mailto:`, `tel:`, `sms:` and their kin;
+    /// * a link with no scheme but a path — `docs.example.com/d/abc`;
+    /// * or prose that carries a `file:` URL inside it.
+    ///
+    /// A location with an origin becomes a site through `site(from:)`; anything else yields
+    /// `nil`. "note: draft", "re:invent" and "a/b testing" are not locations and stay keywords.
+    public static func pasted(_ text: String) -> ContextItemDraft? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        switch PastedLocation(trimmed) {
+        case .none:
+            return keyword(trimmed)
+        case .url(let url):
+            return site(from: url)
+        case .path:
+            return nil
+        }
+    }
+}
+
+/// Whether pasted text names a place rather than a topic (focus-6ji4). See
+/// `ContextItemDraft.pasted(_:)` for the rules; this is their implementation.
+enum PastedLocation {
+    /// A location with a URL worth offering to the site path.
+    case url(URL)
+    /// A location with nothing to keep: a path, a `file:` or address URL, prose carrying one.
+    case path
+
+    /// `nil` when the text is not a location at all, which is what lets prose through.
+    init?(_ text: String) {
+        let lowered = text.lowercased()
+        if lowered.hasPrefix("/") || lowered == "~" || lowered.hasPrefix("~/") || lowered.contains("file:/") {
+            self = .path
+            return
+        }
+
+        if lowered.range(of: #"^[a-z][a-z0-9+.\-]*:/"#, options: .regularExpression) != nil {
+            self = URL(string: text).map(Self.url) ?? .path
+            return
+        }
+
+        // Everything below is one token. "data: the March numbers" is a sentence, not a URL.
+        guard !text.contains(where: \.isWhitespace) else { return nil }
+
+        if let colon = lowered.firstIndex(of: ":"),
+           Self.addressSchemes.contains(String(lowered[..<colon])) {
+            self = .path
+            return
+        }
+
+        // A link with no scheme: a host, then a path, a query or a fragment. A bare host
+        // ("example.com") is left to be a keyword — it is a name, not a place on a disk.
+        guard let cut = text.firstIndex(where: { "/?#".contains($0) })
+        else { return nil }
+        let host = String(text[..<cut])
+        guard host.range(of: Self.hostPattern, options: .regularExpression) != nil else { return nil }
+        self = URL(string: "https://" + text).map(Self.url) ?? .path
+    }
+
+    /// Schemes whose URLs carry an address rather than a host. Lowercased.
+    static let addressSchemes: Set<String> = [
+        "mailto", "tel", "sms", "facetime", "facetime-audio", "callto", "imessage", "message", "data"
+    ]
+
+    /// A host name with at least one dot and an alphabetic top-level label, or `localhost`,
+    /// with an optional port.
+    static let hostPattern =
+        #"^(localhost|([A-Za-z0-9]([A-Za-z0-9\-]*[A-Za-z0-9])?\.)+[A-Za-z]{2,})(:[0-9]+)?$"#
 }
 
 /// Everything the cockpit can *do*, as a protocol.

@@ -86,7 +86,9 @@ extension CapabilityMatrix {
             .screenCapture: .unavailable,
             .accessibilityWindowContext: .notRequested,
             .notifications: .notRequested,
-            .onDeviceModel: onDeviceModel
+            .onDeviceModel: onDeviceModel,
+            // Opt-in (focus-cal): nothing has been asked until the person switches it on.
+            .calendarEvents: .notRequested
         ]).probe(at: instant)
     }
 

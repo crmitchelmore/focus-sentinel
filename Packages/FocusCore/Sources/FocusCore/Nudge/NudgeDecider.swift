@@ -107,6 +107,9 @@ public struct NudgeSurroundings: Sendable, Equatable {
     /// separate reading and not inferred from `presentation`.
     public let menuBarVisible: Bool
     public let quietHours: QuietHours
+    /// The person's calendar, as busy blocks (focus-cal). `.unread` unless the person switched
+    /// the calendar on; gate 13 reads it at `now`.
+    public let agenda: CalendarAgenda
     /// The wall clock, from an injected `DateProvider`. Quiet hours are the only gate that
     /// reads it.
     public let now: Date
@@ -128,6 +131,7 @@ public struct NudgeSurroundings: Sendable, Equatable {
         presentation: PresentationState = .notPresenting,
         menuBarVisible: Bool = true,
         quietHours: QuietHours = .off,
+        agenda: CalendarAgenda = .unread,
         now: Date,
         calendar: Calendar,
         monotonic: Duration
@@ -143,6 +147,7 @@ public struct NudgeSurroundings: Sendable, Equatable {
         self.presentation = presentation
         self.menuBarVisible = menuBarVisible
         self.quietHours = quietHours
+        self.agenda = agenda
         self.now = now
         self.calendar = calendar
         self.monotonic = monotonic
@@ -153,6 +158,9 @@ public struct NudgeSurroundings: Sendable, Equatable {
     /// out to be IOHIDSystem's clock, which a device report resets with no input event behind it
     /// (focus-7az).
     public var isUserIdle: Bool { idle.isIdle(threshold: idleThresholdSeconds) }
+
+    /// Whether the person's calendar has a meeting under way at `now` (focus-cal, gate 13).
+    public var isInCalendarMeeting: Bool { agenda.meeting(at: now) != nil }
 }
 
 /// **What the app remembers.**
@@ -607,7 +615,8 @@ public struct NudgeDecider: Sendable {
             hasAsked: false,
             // Gate 12, for an accusation, is e04's own producer — which has already run, and
             // whose answer is the mandate this function was handed.
-            verdictAuthorises: true
+            verdictAuthorises: true,
+            inCalendarMeeting: surroundings.isInCalendarMeeting
         )
 
         switch outcome {
@@ -705,7 +714,8 @@ public struct NudgeDecider: Sendable {
             interruptionInFlight: interruptionInFlight,
             budgetPermits: fatigue.isPermitted,
             hasAsked: memory.hasAsked,
-            verdictAuthorises: eligibility.isWarranted
+            verdictAuthorises: eligibility.isWarranted,
+            inCalendarMeeting: surroundings.isInCalendarMeeting
         )
 
         switch outcome {

@@ -116,9 +116,23 @@ final class SensingHost {
     /// programme owns a repeating timer.
     private var tick: Timer?
 
-    /// Whether the sensitivity gate currently holds a session pause, so that leaving the
-    /// sensitive application lifts **that** cause and no other.
-    private var holdsSensitivePause = false
+    /// Whether the gate's last word on the frontmost application was *suppressed* — a fact about
+    /// the screen, kept apart from the session on purpose.
+    ///
+    /// It used to be one flag, `holdsSensitivePause`, that meant both "a sensitive application
+    /// is in front" and "this graph paused the session for it", and the two came apart. A
+    /// password manager brought forward with no session open set the flag and paused nothing;
+    /// a session then started from the menu bar or an App Intent, with the password manager
+    /// still in front, ran unpaused; and the next activation of that application returned early
+    /// because the flag said the pause was already held. Whether the pause is held is now read
+    /// off the session itself (`reconcileSensitivePause()`), so the two can no longer disagree.
+    private(set) var sensitiveAppIsFrontmost = false
+
+    /// The frontmost application as `NSWorkspace` reports it, for the seeds. A seam so a unit
+    /// test can say what is in front without bringing anything forward.
+    var frontmostPayload: @MainActor () -> ObservedNotification? = {
+        WorkspaceActivityObserver.frontmostPayload()
+    }
 
     init(
         events: ActivityEventStore,
@@ -207,7 +221,7 @@ final class SensingHost {
         media.start()
         camera.refresh()
 
-        activity.seedIfUnseeded(from: WorkspaceActivityObserver.frontmostPayload())
+        activity.seedIfUnseeded(from: frontmostPayload())
 
         startTick()
         isRunning = true
@@ -247,11 +261,19 @@ final class SensingHost {
         // application that was frontmost when the switch went off. The front may have moved
         // while nothing was watching — onto a sensitive application, even — so the subject is
         // re-read here rather than believed.
-        if let seed = WorkspaceActivityObserver.frontmostPayload() { activity.reseed(with: seed) }
+        let reread = frontmostPayload()
+        if let reread { activity.reseed(with: reread) }
         refreshCapabilities()
         sample()
 
         record(kind: .sensingResumed, detail: .tokens([.observersAttached]))
+        // The re-read subject goes through the gate like an activation would, because the
+        // reseed delivers none: a password manager brought forward while nothing was watching
+        // would otherwise stand nothing down, and one left behind would keep its pause until the
+        // next activation happened to clear it. Before the global cause is lifted, so a session
+        // that resumes into a password manager goes from paused to paused rather than through
+        // focus. A front that could not be read is not judged: the old subject is not evidence.
+        if reread != nil { noteSensitivity(ofSeed: activity.current) }
         applyToSession(.resumed(cause: .globalPause))
         onSensingChanged?()
     }
@@ -494,7 +516,7 @@ final class SensingHost {
     /// subject while detached would be observing after being told to stop.
     private func seededCurrent() -> FrontmostActivation? {
         guard isRunning else { return activity.current }
-        activity.seedIfUnseeded(from: WorkspaceActivityObserver.frontmostPayload())
+        activity.seedIfUnseeded(from: frontmostPayload())
         return activity.current
     }
 
@@ -549,7 +571,10 @@ final class SensingHost {
 
     /// One accepted activation, taken through the gate and then — only then — through the
     /// cascade the capability matrix permits.
-    private func receive(_ activation: FrontmostActivation) {
+    ///
+    /// Internal rather than private so a unit test can deliver an activation without bringing
+    /// an application forward; nothing in the shipping graph calls it but `activity`.
+    func receive(_ activation: FrontmostActivation) {
         switch gate.evaluate(activation) {
         case .suppressed(let reason):
             suppress(activation, reason: reason)
@@ -573,19 +598,70 @@ final class SensingHost {
             at: activation.at
         )
 
-        guard !holdsSensitivePause else { return }
-        holdsSensitivePause = true
-        applyToSession(.paused(cause: .sensitiveApp))
+        sensitiveAppIsFrontmost = true
+        reconcileSensitivePause()
+    }
+
+    /// **Make the open session's `.sensitiveApp` cause agree with what is in front.**
+    ///
+    /// Called on every gate decision, on resume from the global pause, and by `SessionHost` when
+    /// a session starts — because a session started from the menu bar or an App Intent does not
+    /// bring this app forward, so the password manager the person was using is still in front
+    /// and no activation will arrive to say so.
+    ///
+    /// Whether the pause is held is read off the session rather than remembered here. A
+    /// remembered flag outlives the session it was about, and is set by a pause that found no
+    /// session to apply to; the session's own causes are true by construction. Lifting touches
+    /// **that** cause and no other: a user pause taken while the password manager was forward
+    /// survives.
+    ///
+    /// Nothing happens while the graph is detached. The switch is off, the session already
+    /// carries `.globalPause`, and what was in front when it went off is not evidence about now;
+    /// `resume()` re-reads the front and calls this again.
+    func reconcileSensitivePause() {
+        guard isRunning else { return }
+        let causes: Set<PauseReason>
+        do {
+            guard let open = try sessions.openSession() else { return }
+            causes = open.pauseCauses
+        } catch {
+            logger.error("the session store refused a read: \(error.localizedDescription, privacy: .public)")
+            return
+        }
+        let held = causes.contains(.sensitiveApp)
+        if sensitiveAppIsFrontmost, !held {
+            applyToSession(.paused(cause: .sensitiveApp))
+        } else if !sensitiveAppIsFrontmost, held {
+            applyToSession(.resumed(cause: .sensitiveApp))
+        }
+    }
+
+    /// The gate's answer about a subject that arrived by seed rather than by activation.
+    ///
+    /// A suppressed seed writes the same one row a suppressed activation does, because the
+    /// person is entitled to see that the app noticed and stood down; a cleared one is read no
+    /// deeper here, because the next accepted activation or the tick will do that.
+    private func noteSensitivity(ofSeed seed: FrontmostActivation?) {
+        guard let seed else { return }
+        switch gate.evaluate(seed) {
+        case .suppressed(let reason):
+            record(
+                kind: .sensitiveAppSuppressed,
+                bundleID: seed.bundleIdentifier,
+                detail: .tokens([reason == .unbundled ? .unbundled : .sensitiveApp]),
+                at: seed.at
+            )
+            sensitiveAppIsFrontmost = true
+        case .cleared:
+            sensitiveAppIsFrontmost = false
+        }
+        reconcileSensitivePause()
     }
 
     /// The cascade, cheapest tier first, on an activation that has passed the gate.
     private func lookDeeper(at cleared: ClearedActivation, activation: FrontmostActivation) {
-        // Leaving a sensitive application lifts **that** cause and no other: a user pause taken
-        // while the password manager was forward survives.
-        if holdsSensitivePause {
-            holdsSensitivePause = false
-            applyToSession(.resumed(cause: .sensitiveApp))
-        }
+        sensitiveAppIsFrontmost = false
+        reconcileSensitivePause()
 
         // Remembered for the interruption sheet, and only for cleared activations that are not
         // this app's own. See `lastForeignBundleIdentifier`.

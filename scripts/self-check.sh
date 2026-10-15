@@ -2800,10 +2800,11 @@ EXPECTED_CAPABILITIES = [
     "frontmostApplication", "windowMetadata", "idle", "systemLifecycle",
     "displayGeometry", "presentation", "microphoneActivity", "cameraActivity",
     "accessibilityWindowContext", "screenCapture", "notifications", "onDeviceModel",
+    "calendarEvents",
 ]
 check(
     [c.get("capability") for c in capabilities] == EXPECTED_CAPABILITIES,
-    "all twelve capabilities are reported, in order",
+    "all thirteen capabilities are reported, in order",
     [c.get("capability") for c in capabilities],
 )
 # --- the twelve states, read as a RUN rather than as the enum's codomain ----------------------
@@ -2985,6 +2986,9 @@ CAPABILITY_RULE_CONSTANTS = {
     # nobody put would be inventing a refusal.
     "accessibilityWindowContext": "notRequested",
     "notifications": "notRequested",
+    # The calendar is read only where the person switched it on (focus-cal), and the self-check
+    # runs on a default store, so the gate answers without asking EventKit anything.
+    "calendarEvents": "notRequested",
 }
 # The three the machine decides, each with the reading it is decided from. A reading that was not
 # taken makes its row unpredictable rather than wrong, so the row is routed rather than asserted.
@@ -3023,7 +3027,7 @@ CAPABILITY_RULE_MEASURED = {
         "available" if isinstance(input_devices, int) and input_devices > 0 else "unavailable",
     ),
 }
-# **The self-referential completeness check.** The rule and the matrix must name the same twelve,
+# **The self-referential completeness check.** The rule and the matrix must name the same thirteen,
 # in both directions: a capability added to `Capability` with no rule here is a row this script
 # never checked, and a rule here for a capability the app no longer reports is a rule about
 # nothing.
@@ -4341,7 +4345,7 @@ check(
 # copying its neighbour is a diff in these lines rather than a silence in the menu bar.
 check(
     nudge.get("gatesPassingOverTheGlyph")
-    == ["alreadyAsked", "interruptionInFlight", "mediaInUse", "quietHours"],
+    == ["alreadyAsked", "calendarMeeting", "interruptionInFlight", "mediaInUse", "quietHours"],
     "the gates about the app SPEAKING pass over the rung that says nothing",
     nudge.get("gatesPassingOverTheGlyph"),
 )

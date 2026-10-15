@@ -12,12 +12,15 @@ import Testing
 /// without anybody editing it. Red before this round on the first assertion.
 @Suite("The rules pane's authoring vocabulary")
 struct TaskRulesViewTests {
-    @Test("a retired scope cannot be authored, and every live subject scope can")
+    /// focus-6ji4 withdrew `.domain` on the same argument while the shipping app reads no site:
+    /// a site rule was stored and could never match. It returns with `ShippingObservation`.
+    @Test("a retired or unobserved scope cannot be authored, and every live observed scope can")
     func authorableScopesAreTheLiveSubjectScopes() {
         #expect(!TaskRulesView.authorableScopes.contains(.titleToken))
-        #expect(TaskRulesView.authorableScopes == [.app, .domain])
+        #expect(TaskRulesView.authorableScopes.contains(.domain) == ShippingObservation.readsBrowserSite)
+        #expect(TaskRulesView.authorableScopes.contains(.app))
         for scope in PriorityRuleScope.allCases {
-            let expected = scope != .session && !scope.isRetired
+            let expected = scope != .session && !scope.isRetired && scope.isObserved
             #expect(
                 TaskRulesView.authorableScopes.contains(scope) == expected,
                 "\(scope) is \(expected ? "missing from" : "present in") the authoring vocabulary"
@@ -31,5 +34,17 @@ struct TaskRulesViewTests {
     func aRetiredScopeIsStillNameable() {
         #expect(TaskRulesView.scopeKey(.titleToken) == .priorityRulesScopeTitleToken)
         #expect(!PriorityRuleScope.titleToken.symbolName.isEmpty)
+    }
+
+    @Test("a stored rule the app cannot read is drawn inert, and one it can read is not")
+    func inertRowsAreTheUnreadableOnes() throws {
+        func rule(_ scope: PriorityRuleScope, _ subject: String) -> PriorityRuleValue {
+            PriorityRuleValue(scope: scope, subject: subject, verdict: .relevant, createdAt: .distantPast)
+        }
+        let item = try #require(SelectedItem(bundleIdentifier: "com.github.copilot", label: "Release notes"))
+        #expect(TaskRulesView.isInert(rule(.titleToken, "invoice")))
+        #expect(!TaskRulesView.isInert(rule(.titleToken, item.subject)))
+        #expect(TaskRulesView.isInert(rule(.domain, "example.com")) == !ShippingObservation.readsBrowserSite)
+        #expect(!TaskRulesView.isInert(rule(.app, "com.apple.dt.Xcode")))
     }
 }

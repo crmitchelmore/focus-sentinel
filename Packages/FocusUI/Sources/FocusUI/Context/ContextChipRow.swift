@@ -163,7 +163,8 @@ public struct ContextChipRow: View {
             remove?(relocating)
             self.relocating = nil
         }
-        add?(urls.map(ContextItemDraft.file(url:)))
+        // An application chosen here becomes an app item, as a dropped one does (focus-6ji4).
+        add?(urls.map(ContextItemDraft.attachment(url:)))
     }
 
     private func beginRelocating(_ item: ContextItemValue) {

@@ -409,12 +409,13 @@ check "R-22" "startAccessingSecurityScopedResource only in SecurityScopedBookmar
 # A lint that made the app unable to *report* it had never asked would be a lint working against
 # the thing it exists to prove.
 # AMENDED 2026-09-09 (focus-exdi.4, the owner's ruling). Two of these may now appear, in the one
-# file `Config/grant-request-sites.txt` names — and only there. The exemption is this file path
+# file `Config/grant-request-sites.txt` names — and only there. The calendar's ask joined them
+# (focus-cal) on the same terms, so it is in the pattern below and exempt in the same one file. The exemption is this file path
 # and nothing wider, so a second site anywhere in the repository still fails here; `check-grants.sh`
 # folds over the registry as well, and proves the same confinement from the other direction.
 GRANT_REQUEST_FILE="Packages/FocusHost/Sources/FocusHost/SystemGrantRequester.swift"
 check "R-33" "no API that can raise a TCC prompt, outside the one confined requester" \
-    'AXIsProcessTrustedWithOptions|kAXTrustedCheckOptionPrompt|CGRequestScreenCaptureAccess|SCShareableContent|AVCaptureDevice\.requestAccess|requestAccess\(for:|CGRequestPostEventAccess|CGRequestListenEventAccess|IOHIDRequestAccess' \
+    'AXIsProcessTrustedWithOptions|kAXTrustedCheckOptionPrompt|CGRequestScreenCaptureAccess|SCShareableContent|AVCaptureDevice\.requestAccess|requestAccess\(for:|CGRequestPostEventAccess|CGRequestListenEventAccess|IOHIDRequestAccess|requestFullAccessToEvents|requestWriteOnlyAccessToEvents|requestAccess\(to:' \
     "$GRANT_REQUEST_FILE"
 
 # R-33b (issue #24, the owner's ruling of 2026-10-15): reading what the Accessibility grant

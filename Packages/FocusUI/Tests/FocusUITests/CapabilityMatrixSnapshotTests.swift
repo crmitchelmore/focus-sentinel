@@ -42,7 +42,8 @@ enum CapabilityFixture {
         .screenCapture: .unavailable,
         .accessibilityWindowContext: .notRequested,
         .notifications: .notRequested,
-        .onDeviceModel: .notRequested
+        .onDeviceModel: .notRequested,
+        .calendarEvents: .notRequested
     ])
 
     /// A matrix carrying **all five** states at once.
@@ -64,7 +65,8 @@ enum CapabilityFixture {
         .screenCapture: .unavailable,
         .accessibilityWindowContext: .denied,
         .notifications: .denied,
-        .onDeviceModel: .notRequested
+        .onDeviceModel: .notRequested,
+        .calendarEvents: .available
     ])
 
     /// Nothing observed yet — the honest first launch, before a single probe has run.
@@ -151,7 +153,7 @@ struct CapabilityMatrixSnapshotTests {
     func everyCapabilityAndFallbackIsNamed() {
         let names = Capability.allCases
             .map { ShellStrings.string(CapabilityMatrixView.labelKey(for: $0)) }
-        #expect(names.count == 12)
+        #expect(names.count == 13)
         #expect(Set(names).count == names.count, "two capabilities read the same: \(names)")
 
         let fallbacks: [CapabilityFallback] = [

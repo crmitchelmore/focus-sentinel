@@ -144,6 +144,7 @@ CAPABILITIES_CLAIMED = {
     "notifications",
     "cameraActivity",
     "microphoneActivity",
+    "calendarEvents",
 }
 
 # The symbol-universe floor, per binary examined. Measured at 9af6d0c: the Release executable
@@ -206,10 +207,11 @@ check(
 # the person switched the ask on and macOS agreed. That is still not the app taking a grant it
 # never asked for — it is the only route this application has to a grant at all — and each row
 # owes the same sentence saying so.
+# AMENDED again (focus-cal): the calendar is the third opt-in family, on the same terms.
 available_rows = sorted(name for name, row in rows.items() if "available" in row["states"])
 check(
-    available_rows == ["accessibility", "microphone", "screenRecording"],
-    "only the microphone property read and the two opt-in families may read 'available'",
+    available_rows == ["accessibility", "calendar", "microphone", "screenRecording"],
+    "only the microphone property read and the three opt-in families may read 'available'",
     available_rows,
 )
 for name in available_rows:
