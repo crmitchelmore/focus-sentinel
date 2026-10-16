@@ -77,17 +77,6 @@ public struct CockpitView: View {
     /// worth recording, so it gets a sheet rather than happening under the pointer.
     @State private var isCompleting: Bool = false
 
-    /// Whether the priority's own sentence is being corrected in place.
-    ///
-    /// A different act from capture, and a different verb: this keeps the task, its context
-    /// pack and its rules and bumps the revision, where committing the capture field starts a
-    /// new commitment and pushes this one into history.
-    @State private var isEditingIntent: Bool = false
-
-    /// The sentence while it is being corrected. Seeded from the stored intent when the editor
-    /// opens, discarded on Escape.
-    @State private var intentDraft: String = ""
-
     /// Bumped when the File menu's ⌘O arrives, which is how a menu item reaches a sheet that
     /// belongs to a subview.
     @State private var fileImportToken: Int = 0
@@ -236,7 +225,7 @@ public struct CockpitView: View {
             case .now:
                 if let priority = state.priority {
                     doneWhenSection(priority)
-                    primaryActions(priority)
+                    primaryActions
                     well {
                         timeboxSection(priority)
                         sessionSection(compact: true)
@@ -294,7 +283,6 @@ public struct CockpitView: View {
         .frame(minWidth: 420, minHeight: 260, alignment: .topLeading)
         .background(DesignTokens.Palette.role(.inlay, for: traits))
         .buttonStyle(CompanionButtonStyle())
-        .animation(DesignTokens.animation(for: traits), value: isEditingIntent)
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { contentWidth = $0 }
         .background {
             // Empty history deliberately draws no section, so its EmptyView cannot
@@ -340,8 +328,6 @@ public struct CockpitView: View {
             doneWhenDraft = state.priority?.doneWhen ?? ""
             capturePriorityID = nil
             isKeepingContext = false
-            // A different commitment is not the one that was being re-worded.
-            isEditingIntent = false
         }
         .onChange(of: state.priority?.doneWhen) { doneWhenDraft = state.priority?.doneWhen ?? "" }
         // The one and only surface an incoming `focus://` URL can reach. There is no path from
@@ -612,45 +598,19 @@ public struct CockpitView: View {
         }
     }
 
-    /// The priority itself — read as a hero, or corrected in place at the same size.
-    ///
-    /// The editor replaces the hero rather than sitting beside it: the sentence must not move
-    /// or change size when someone starts fixing a typo in it, because the thing they are
-    /// editing is the largest object on the screen and it should stay exactly where it is.
+    /// The title is directly editable; a new task gets its own draft and pending autosave.
     @ViewBuilder
     private var hero: some View {
-        if isEditingIntent, let priority = state.priority, wiring.editIntent != nil {
+        if let priority = state.priority, wiring.editIntent != nil {
             PriorityIntentEditor(
-                draft: $intentDraft,
-                commit: { commitIntent(priority) },
-                cancel: { isEditingIntent = false },
+                intent: priority.intent,
+                save: wiring.autosaveIntent,
                 focus: $focus
             )
+            .id(priority.id)
         } else {
             PriorityHeroView(intent: state.priority?.intent)
         }
-    }
-
-    /// Open the in-place editor on the sentence that is there now.
-    private func beginEditingIntent(_ priority: PrioritySnapshot) {
-        intentDraft = priority.intent
-        isEditingIntent = true
-        focus = .cockpitEditIntent
-    }
-
-    /// Commit the corrected sentence.
-    ///
-    /// An emptied field is not a command to erase the commitment — it is a slip — so it closes
-    /// the editor and changes nothing. An unchanged sentence writes nothing either, because an
-    /// undo step that undoes nothing is a step the user has to take twice.
-    private func commitIntent(_ priority: PrioritySnapshot) {
-        isEditingIntent = false
-        guard
-            let corrected = CockpitWiring.correction(intentDraft, replacing: priority.intent)
-        else {
-            return
-        }
-        wiring.editIntent?(corrected)
     }
 
     // MARK: - Definition of done (F-08)
@@ -867,7 +827,7 @@ public struct CockpitView: View {
         )
     }
 
-    private func primaryActions(_ priority: PrioritySnapshot) -> some View {
+    private var primaryActions: some View {
         // The row wraps rather than shrinking its labels. A fourth verb does not fit beside
         // the other three at the default window width — measured, in the committed baseline —
         // and a button reading "Complete Pri…" is a control the user has to guess at, which is
@@ -883,7 +843,6 @@ public struct CockpitView: View {
                 completeButton
                 changeButton
                 sameContextButton
-                fixWordingButton(priority)
                 clearButton
             }
             VStack(alignment: .leading, spacing: rowSpacing) {
@@ -892,10 +851,7 @@ public struct CockpitView: View {
                     changeButton
                     sameContextButton
                 }
-                HStack(spacing: rowSpacing) {
-                    fixWordingButton(priority)
-                    clearButton
-                }
+                clearButton
             }
             VStack(alignment: .leading, spacing: rowSpacing) {
                 HStack(spacing: rowSpacing) {
@@ -903,16 +859,12 @@ public struct CockpitView: View {
                     changeButton
                 }
                 sameContextButton
-                HStack(spacing: rowSpacing) {
-                    fixWordingButton(priority)
-                    clearButton
-                }
+                clearButton
             }
             VStack(alignment: .leading, spacing: rowSpacing) {
                 completeButton
                 changeButton
                 sameContextButton
-                fixWordingButton(priority)
                 clearButton
             }
         }
@@ -995,24 +947,6 @@ public struct CockpitView: View {
             capturePriorityID = state.priority?.id
         } completion: {
             focus = .cockpitCaptureField
-        }
-    }
-
-    /// Correct the wording of the commitment that is already there.
-    ///
-    /// Not the same act as replacing it, and the store has two verbs for that reason: this one
-    /// keeps the task and its whole context pack and bumps the revision, where Change Priority
-    /// starts a new commitment and pushes this one into history.
-    @ViewBuilder
-    private func fixWordingButton(_ priority: PrioritySnapshot) -> some View {
-        if !isEditingIntent {
-            Button {
-                beginEditingIntent(priority)
-            } label: {
-                ShellText(.priorityActionEditIntent)
-            }
-            .disabled(wiring.editIntent == nil)
-            .shellHelp(.priorityActionEditIntentHelp)
         }
     }
 

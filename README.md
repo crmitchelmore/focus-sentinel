@@ -547,7 +547,10 @@ The cockpit shows **What are you working on?** and **Set priority** when no prio
 selected. Selecting a saved priority closes that form, leaving its completion, wording,
 clearing and session controls. **Change priority** and **New priority, same context…** open
 the form deliberately for the current priority; selecting another priority closes it again.
-**Fix wording…** edits the existing priority rather than replacing it.
+Edit the priority title directly: changes autosave after a short pause in typing, and pending
+edits save when you leave the field or switch priorities. This changes the wording of the same
+task, preserving its context, rules and timebox. Empty wording never replaces a saved title;
+leaving an empty field restores the last saved wording.
 
 ## The walkthrough (focus-u6de)
 

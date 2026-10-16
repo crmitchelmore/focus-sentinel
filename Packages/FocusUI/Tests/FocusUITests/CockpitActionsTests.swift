@@ -425,6 +425,100 @@ struct CockpitActionsTests {
         #expect(host.calls(of: .setPriority).isEmpty)
     }
 
+    @Test("autosaving title edits changes only the current task's wording")
+    func autosaveChangesOnlyTheWording() {
+        let host = RecordingPriorityActing()
+        let wiring = CockpitWiring(actions: host, priority: Self.priority())
+
+        wiring.autosaveIntent("  Finish and submit the Q3 proposal today  ")
+
+        #expect(host.calls == [
+            .init(.editIntent, taskID: Self.taskID, detail: "Finish and submit the Q3 proposal today")
+        ])
+    }
+
+    @Test("autosave ignores blank wording and cannot write without a host or task")
+    func autosaveRefusesEmptyEdits() {
+        let host = RecordingPriorityActing()
+        let wiring = CockpitWiring(actions: host, priority: Self.priority())
+
+        for draft in ["", " \n\t "] {
+            wiring.autosaveIntent(draft)
+        }
+        CockpitWiring(actions: host, priority: nil).autosaveIntent("A new title")
+        CockpitWiring(actions: nil, priority: Self.priority()).autosaveIntent("A new title")
+
+        #expect(host.calls.isEmpty)
+    }
+
+    @Test("returning to the original wording still saves when an older snapshot is captured")
+    func autosaveDoesNotDiscardRevertedTyping() {
+        let host = RecordingPriorityActing()
+        let wiring = CockpitWiring(actions: host, priority: Self.priority())
+
+        wiring.autosaveIntent("Finish the proposal today")
+        wiring.autosaveIntent(Self.priority().intent)
+
+        #expect(host.calls.map(\.detail) == ["Finish the proposal today", Self.priority().intent])
+    }
+
+    @Test("flushing a departing editor keeps its task identity after the active priority changes")
+    func departingEditorSavesItsOwnTask() {
+        let host = RecordingPriorityActing()
+        let departing = CockpitWiring(actions: host, priority: Self.priority())
+
+        departing.activate?(Self.otherTaskID)
+        departing.autosaveIntent("Finish the original proposal today")
+
+        #expect(host.calls == [
+            .init(.activate, taskID: Self.otherTaskID),
+            .init(.editIntent, taskID: Self.taskID, detail: "Finish the original proposal today")
+        ])
+    }
+
+    @Test("cancelled debounce tasks save nothing and the latest draft autosaves once")
+    func autosaveDebouncesTyping() async {
+        let host = RecordingPriorityActing()
+        let wiring = CockpitWiring(actions: host, priority: Self.priority())
+        let superseded = Task {
+            await PriorityIntentEditor.autosave("An unfinished edit", save: wiring.autosaveIntent)
+        }
+        superseded.cancel()
+        await superseded.value
+        #expect(host.calls.isEmpty)
+
+        await PriorityIntentEditor.autosave("Finish the proposal today", save: wiring.autosaveIntent)
+
+        #expect(host.calls == [
+            .init(.editIntent, taskID: Self.taskID, detail: "Finish the proposal today")
+        ])
+    }
+
+    @Test("save acknowledgements never replace more recent typing, while clean drafts follow undo")
+    func storedWordingReconcilesWithoutLosingTyping() {
+        #expect(
+            PriorityIntentEditor.reconciledDraft(
+                "A newer draft", previous: "Original title", current: "An earlier autosave"
+            ) == "A newer draft"
+        )
+        #expect(
+            PriorityIntentEditor.reconciledDraft(
+                "Saved title ", previous: "Original title", current: "Saved title"
+            ) == "Saved title "
+        )
+        #expect(
+            PriorityIntentEditor.reconciledDraft(
+                "Saved title", previous: "Saved title", current: "Original title"
+            ) == "Original title"
+        )
+        #expect(
+            PriorityIntentEditor.reconciledDraft(
+                "Original title", previous: "Original title", current: "Earlier autosave",
+                submitted: "Earlier autosave"
+            ) == "Original title"
+        )
+    }
+
     // MARK: - The handoff sheet (F-142)
 
     @Test("the handoff sheet's Cancel calls nothing that could change the store")

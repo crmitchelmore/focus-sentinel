@@ -488,6 +488,7 @@ public final class PriorityStore {
         guard !trimmed.isEmpty else { throw PriorityStoreError.emptyIntent }
 
         let task = try requireTask(taskID)
+        if restoringRevision == nil, task.intent == trimmed { return }
         let previousIntent = task.intent
         let previousRevision = task.revision
 

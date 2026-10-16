@@ -158,6 +158,60 @@ struct PriorityStoreTests {
         #expect(try harness.store.task(id: id)?.doneWhen == nil)
     }
 
+    @Test("repeated autosaves of unchanged wording add neither revisions nor undo entries")
+    @MainActor
+    func unchangedIntentIsNotWritten() throws {
+        let harness = try PriorityStoreHarness()
+        let id = try harness.store.setPriority(intent: "Draft the proposal")
+        let undo = UndoManager()
+        undo.groupsByEvent = false
+        let mutations = PriorityStore.mutationCount
+
+        try harness.store.editIntent(taskID: id, to: "Draft the proposal", undo: undo)
+        try harness.store.editIntent(taskID: id, to: "  Draft the proposal  ", undo: undo)
+
+        #expect(try harness.store.task(id: id)?.revision == 1)
+        #expect(PriorityStore.mutationCount == mutations)
+        #expect(!undo.canUndo)
+    }
+
+    @Test("autosaved wording preserves the task, its context, rules and timebox and remains undoable")
+    @MainActor
+    func wordingEditsKeepTheTaskIntact() throws {
+        let harness = try PriorityStoreHarness()
+        let id = try harness.store.setPriority(
+            intent: "Draft the proposal", doneWhen: "The proposal is submitted"
+        )
+        let itemID = try harness.store.addContextItem(
+            taskID: id, kindRaw: "app", value: "com.apple.dt.Xcode", displayName: "Xcode"
+        )
+        let ruleID = try harness.store.addRule(
+            taskID: id, scopeRaw: "app", subject: "com.apple.dt.Xcode", verdictRaw: "relevant"
+        )
+        try harness.store.setTimebox(taskID: id, seconds: 1_500)
+        let originalRevision = try #require(try harness.store.task(id: id)).revision
+        let undo = UndoManager()
+        undo.groupsByEvent = false
+
+        try harness.store.editIntent(taskID: id, to: "Submit the proposal", undo: undo)
+
+        let task = try #require(try harness.store.activeTask())
+        #expect(task.id == id)
+        #expect(task.intent == "Submit the proposal")
+        #expect(task.revision == originalRevision + 1)
+        #expect(task.doneWhen == "The proposal is submitted")
+        #expect(task.contextItems.map(\.id) == [itemID])
+        #expect(task.rules.map(\.id) == [ruleID])
+        #expect(task.timeboxSeconds == 1_500)
+        #expect(task.startedAt == harness.clock.now)
+        #expect(try harness.tasks().count == 1)
+
+        undo.undo()
+        #expect(task.intent == "Draft the proposal")
+        #expect(task.revision == originalRevision)
+        #expect(try harness.store.activeTask()?.id == id)
+    }
+
     @Test("setting a timebox stamps startedAt from the injected clock; clearing removes both")
     @MainActor
     func timeboxUsesTheInjectedClock() throws {

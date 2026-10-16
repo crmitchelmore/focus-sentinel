@@ -71,6 +71,12 @@ struct CockpitWiring {
         return { intent in actions.editIntent(taskID: priority.id, to: intent) }
     }
 
+    func autosaveIntent(_ draft: String) {
+        // This closure may outlive its snapshot; the store, not that snapshot, skips no-op saves.
+        guard let corrected = Self.correction(draft, replacing: nil) else { return }
+        editIntent?(corrected)
+    }
+
     /// What an in-place correction of the sentence is worth writing, if anything.
     ///
     /// Two things are deliberately *not* verbs. An emptied field is a slip, not an instruction
@@ -81,7 +87,7 @@ struct CockpitWiring {
     ///
     /// `nonisolated` and `static`: it is a rule about two strings, and keeping it here rather
     /// than inside the view is what lets it be held to.
-    nonisolated static func correction(_ draft: String, replacing intent: String) -> String? {
+    nonisolated static func correction(_ draft: String, replacing intent: String?) -> String? {
         let trimmed = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, trimmed != intent else { return nil }
         return trimmed

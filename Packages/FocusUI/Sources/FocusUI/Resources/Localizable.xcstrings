@@ -1189,18 +1189,6 @@
         }
       }
     },
-    "priority.action.editIntent" : {
-      "comment" : "Cockpit button that puts the current priority's own sentence into an editable field, in place, without starting a new commitment.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fix wording…"
-          }
-        }
-      }
-    },
     "priority.complete.action.cancel" : {
       "comment" : "Button that closes the completion sheet without finishing anything.",
       "extractionState" : "manual",
@@ -6647,18 +6635,6 @@
         }
       }
     },
-    "priority.action.editIntent.help" : {
-      "comment" : "Tooltip on the Fix wording button.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Reword this priority; its context and rules stay as they are."
-          }
-        }
-      }
-    },
     "priority.action.clear.help" : {
       "comment" : "Tooltip on the Clear button.",
       "extractionState" : "manual",
@@ -6774,7 +6750,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Return saves the new wording; Escape keeps the old one."
+            "value" : "Edit the priority directly. Changes save automatically."
           }
         }
       }

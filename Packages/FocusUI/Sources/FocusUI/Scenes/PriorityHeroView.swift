@@ -64,33 +64,91 @@ public struct PriorityHeroView: View {
 /// the moment you start typing in it is a different sentence to the eye, and the person is
 /// correcting the largest thing on the screen, not filling in a form field.
 struct PriorityIntentEditor: View {
-    @Binding var draft: String
-    /// Return, or leaving the field. Commits whatever is there.
-    let commit: () -> Void
-    /// Escape. Leaves the stored sentence exactly as it was.
-    let cancel: () -> Void
+    let intent: String
+    let save: (String) -> Void
     /// The surrounding surface's focus state, so the editor keeps its place in the Tab order.
     let focus: FocusState<FocusField?>.Binding
+
+    @State private var draft: String
+    @State private var submittedIntent: String?
+
+    static let autosaveDelay: Duration = .milliseconds(400)
+
+    init(
+        intent: String,
+        save: @escaping (String) -> Void,
+        focus: FocusState<FocusField?>.Binding
+    ) {
+        self.intent = intent
+        self.save = save
+        self.focus = focus
+        self._draft = State(initialValue: intent)
+    }
 
     var body: some View {
         TextField(
             text: $draft,
-            prompt: Text(ShellStrings.resource(.priorityIntentEditPrompt))
+            prompt: Text(ShellStrings.resource(.priorityIntentEditPrompt)),
+            axis: .vertical
         ) {
             ShellText(.priorityIntentEditLabel)
         }
         .labelsHidden()
         .heroType()
         .textFieldStyle(.plain)
-        // One line, and Return commits it. A vertical-axis field would take Return for a
-        // newline, and a priority is one sentence — the place to write more than that is the
-        // definition of done, which is right underneath.
+        .foregroundStyle(DesignTokens.Palette.primaryText)
+        .lineLimit(nil)
+        .fixedSize(horizontal: false, vertical: true)
         .focused(focus, equals: .cockpitEditIntent)
-        .onSubmit(commit)
-        .onExitCommand(perform: cancel)
+        .onSubmit(finishEditing)
+        .onExitCommand {
+            finishEditing()
+            focus.wrappedValue = nil
+        }
+        .task(id: draft) {
+            await Self.autosave(draft, save: saveDraft)
+        }
+        .onChange(of: focus.wrappedValue) { oldValue, newValue in
+            if oldValue == .cockpitEditIntent, newValue != .cockpitEditIntent {
+                finishEditing()
+            }
+        }
+        .onChange(of: intent) { previous, current in
+            draft = Self.reconciledDraft(
+                draft, previous: previous, current: current, submitted: submittedIntent
+            )
+            submittedIntent = nil
+        }
+        .onDisappear { saveDraft(draft) }
         .accessibilityLabel(Text(ShellStrings.resource(.priorityIntentEditLabel)))
-        // Tooltip from the catalog (focus-8ski).
+        .accessibilityAddTraits(.isHeader)
         .shellHelp(.priorityIntentEditLabelHelp)
+    }
+
+    private func finishEditing() {
+        saveDraft(draft)
+        let trimmed = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        draft = trimmed.isEmpty ? intent : trimmed
+    }
+
+    private func saveDraft(_ text: String) {
+        guard let corrected = CockpitWiring.correction(text, replacing: nil) else { return }
+        submittedIntent = corrected
+        save(corrected)
+    }
+
+    static func autosave(_ draft: String, save: (String) -> Void) async {
+        try? await Task.sleep(for: autosaveDelay)
+        guard !Task.isCancelled else { return }
+        save(draft)
+    }
+
+    /// A save acknowledgement or external refresh must not overwrite more recent typing.
+    static func reconciledDraft(
+        _ draft: String, previous: String, current: String, submitted: String? = nil
+    ) -> String {
+        guard current != submitted else { return draft }
+        return draft == previous ? current : draft
     }
 }
 
