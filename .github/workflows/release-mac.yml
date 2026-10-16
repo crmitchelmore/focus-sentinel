@@ -173,7 +173,10 @@ jobs:
 
       - name: Sign the appcast
         if: steps.receipt.outputs.status != 'verified'
+        timeout-minutes: 2
         shell: zsh {0}
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
         run: |
           DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/${DOWNLOAD_TAG}/$(basename "$DMG")"
           scripts/generate-appcast.sh "$RELEASE_VERSION" "$BUILD_NUMBER" "$DMG" "$FEED_URL" "$DOWNLOAD_URL" \

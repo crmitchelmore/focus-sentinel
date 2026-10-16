@@ -7,7 +7,7 @@
 # Sparkle compares — `sparkle:shortVersionString` is for display — and the build number is the
 # train's allocation number (`alpha-build-N`), so it climbs with every build the train cuts.
 #
-# THE SIGNATURE. `sign_update` reads the EdDSA private key from the login keychain under the
+# THE SIGNATURE. `security` reads the EdDSA private key from the login keychain under the
 # Sparkle account named in Config/ReleasePipeline.json (`Focus Sentinel`), which is where
 # `generate_keys --account "Focus Sentinel"` put it on the Mac that cuts releases. Set
 # SPARKLE_PRIVATE_KEY to the exported key to sign from a machine without that keychain item; it
@@ -51,17 +51,29 @@ KEY_FILE=""
 cleanup() { [[ -n "$KEY_FILE" ]] && rm -f -- "$KEY_FILE"; }
 trap cleanup EXIT INT TERM
 
+umask 077
+KEY_FILE=$(mktemp) || exit 1
 if [[ -n "${SPARKLE_PRIVATE_KEY:-}" ]]; then
-    KEY_FILE=$(mktemp) || exit 1
-    print -rn -- "$SPARKLE_PRIVATE_KEY" > "$KEY_FILE"
-    SIGNATURE_LINE=$("$SIGN_UPDATE" --ed-key-file "$KEY_FILE" -p "$DMG" 2>/dev/null)
+    print -rn -- "$SPARKLE_PRIVATE_KEY" > "$KEY_FILE" || exit 1
 else
-    SIGNATURE_LINE=$("$SIGN_UPDATE" --account "$ACCOUNT" -p "$DMG" 2>/dev/null)
+    # Use the installed system tool rather than asking a newly resolved executable for access.
+    security find-generic-password -s "https://sparkle-project.org" -a "$ACCOUNT" -w > "$KEY_FILE" || {
+        print -u2 "FAIL cannot read the existing '$ACCOUNT' Sparkle key; authorise access on the runner or provide SPARKLE_PRIVATE_KEY"
+        exit 1
+    }
+fi
+if ! SIGNATURE_LINE=$("$SIGN_UPDATE" --ed-key-file "$KEY_FILE" -p "$DMG" 2>/dev/null); then
+    print -u2 "FAIL sign_update could not sign $DMG; no appcast emitted"
+    exit 1
 fi
 # `-p` prints the raw signature only; without it the tool prints the whole attribute string.
 SIGNATURE="${SIGNATURE_LINE//[[:space:]]/}"
 if [[ -z "$SIGNATURE" ]]; then
     print -u2 "FAIL sign_update produced no signature for $DMG (is the '$ACCOUNT' key in this login keychain?)"
+    exit 1
+fi
+if ! print -rn -- "$SIGNATURE" | python3 -c 'import base64,sys; s=sys.stdin.read(); sys.exit(0 if len(base64.b64decode(s,validate=True))==64 else 1)' 2>/dev/null; then
+    print -u2 "FAIL sign_update returned an invalid EdDSA signature; no appcast emitted"
     exit 1
 fi
 

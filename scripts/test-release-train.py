@@ -2,7 +2,9 @@
 """Socket-free checks of release-train publication configuration."""
 
 import argparse
+import base64
 import importlib.util
+import os
 import pathlib
 import shlex
 import subprocess
@@ -82,6 +84,60 @@ class ReleaseConfigurationTests(unittest.TestCase):
             )
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("signed", result.stdout)
+
+    def test_appcast_signing_uses_a_temporary_key_and_rejects_failed_signatures(self):
+        script = pathlib.Path(__file__).with_name("generate-appcast.sh").resolve()
+        signature = base64.b64encode(bytes(64)).decode()
+        for source, output, status in [
+            ("keychain", signature, 0),
+            ("export", signature, 0),
+            ("keychain", "fixture-private-key", 1),
+            ("keychain", "invalid-signature", 0),
+        ]:
+            with self.subTest(source=source, status=status, output=output), \
+                    tempfile.TemporaryDirectory(prefix="focus-appcast-test-") as directory:
+                root = pathlib.Path(directory)
+                signer = root / "SourcePackages/artifacts/sparkle/Sparkle/bin/sign_update"
+                signer.parent.mkdir(parents=True)
+                signer.write_text(
+                    '#!/bin/sh\n'
+                    'test "$1" = "--ed-key-file" && test -s "$2" || exit 2\n'
+                    'printf "%s" "$2" > "$SIGN_TEST_KEY_PATH"\n'
+                    'printf "%s" "$SIGN_TEST_OUTPUT"\n'
+                    'exit "$SIGN_TEST_STATUS"\n'
+                )
+                signer.chmod(0o700)
+                security = root / "security"
+                security.write_text('#!/bin/sh\nprintf "%s" "fixture-private-key"\n')
+                security.chmod(0o700)
+                dmg = root / "fixture.dmg"
+                dmg.write_bytes(b"fixture archive")
+                key_path = root / "key-path"
+                env = os.environ.copy()
+                env.update({
+                    "PATH": f"{directory}:/usr/bin:/bin",
+                    "FOCUS_DERIVED_DATA": directory,
+                    "SIGN_TEST_KEY_PATH": str(key_path),
+                    "SIGN_TEST_OUTPUT": output,
+                    "SIGN_TEST_STATUS": str(status),
+                })
+                if source == "export":
+                    env["SPARKLE_PRIVATE_KEY"] = "fixture-private-key"
+                else:
+                    env.pop("SPARKLE_PRIVATE_KEY", None)
+                result = subprocess.run(
+                    ["/bin/zsh", str(script), "0.1.0", "9", str(dmg),
+                     "https://example.test/feed", "https://example.test/archive"],
+                    env=env, capture_output=True, text=True, check=False,
+                )
+                if output == signature:
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertIn(f'sparkle:edSignature="{signature}"', result.stdout)
+                else:
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertNotIn("<rss", result.stdout)
+                self.assertNotIn("fixture-private-key", result.stdout + result.stderr)
+                self.assertFalse(pathlib.Path(key_path.read_text()).exists())
 
 
 if __name__ == "__main__":
