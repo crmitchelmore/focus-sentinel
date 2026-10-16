@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'Verify the runner, inspect signing availability, build without UI tests, or run the package unit suites'
+        description: 'Verify the runner, inspect signing availability, build without UI tests, run the package unit suites, or run the FocusUI snapshot lane'
         type: choice
-        options: [verify, signing, build, unit]
+        options: [verify, signing, build, unit, snapshots]
         default: build
       ref:
         description: 'Trusted branch, tag or commit in this repository'
@@ -102,3 +102,28 @@ jobs:
             swift test --package-path "Packages/$package" --cache-path "$cache"
             echo "::endgroup::"
           done
+      - name: FocusUI snapshot lane
+        if: inputs.mode == 'snapshots'
+        shell: bash
+        # The UI lane, on this runner only (the owner's ruling: never on his own Mac). A failing
+        # comparison leaves its candidate in the result bundle; the next step exports them so a
+        # changed baseline can be recorded from the artifact rather than from a local run.
+        run: |
+          set -o pipefail
+          xcodebuild -workspace Focus.xcworkspace -scheme FocusUnitTests -destination "platform=macOS,arch=arm64" -derivedDataPath "$RUNNER_TEMP/focus-derived-data" -resultBundlePath "$RUNNER_TEMP/ui.xcresult" -only-testing:FocusUITests test
+      - name: Export snapshot candidates
+        if: always() && inputs.mode == 'snapshots'
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/ui-attachments"
+          if [ -d "$RUNNER_TEMP/ui.xcresult" ]; then
+            xcrun xcresulttool export attachments --path "$RUNNER_TEMP/ui.xcresult" --output-path "$RUNNER_TEMP/ui-attachments" || true
+          fi
+          ls "$RUNNER_TEMP/ui-attachments" | wc -l
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always() && inputs.mode == 'snapshots'
+        with:
+          name: snapshot-candidates
+          path: ${{ runner.temp }}/ui-attachments
+          if-no-files-found: warn
+          retention-days: 7

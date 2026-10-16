@@ -256,6 +256,9 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case settingsPrivacyGrantCalendar = "settings.privacy.grant.calendar"
     case settingsPrivacyGrantCalendarNote = "settings.privacy.grant.calendar.note"
     case settingsPrivacyGrantUnused = "settings.privacy.grant.unused"
+    /// The opt-in remote judge, Microsoft Decision-1: the switch and what it sends.
+    case settingsPrivacyRemoteJudge = "settings.privacy.remoteJudge"
+    case settingsPrivacyRemoteJudgeNote = "settings.privacy.remoteJudge.note"
     /// Where a switched-on grant stands, and the way to it (issue #24). Drawn only beside a
     /// switch the person turned on, so none of it is an ask in disguise.
     case settingsPrivacyGrantAllowed = "settings.privacy.grant.allowed"
@@ -901,6 +904,7 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case settingsPrivacyGrantRevealAppHelp = "settings.privacy.grant.revealApp.help"
     case settingsPrivacyGrantScreenCaptureHelp = "settings.privacy.grant.screenCapture.help"
     case settingsPrivacyGrantCalendarHelp = "settings.privacy.grant.calendar.help"
+    case settingsPrivacyRemoteJudgeHelp = "settings.privacy.remoteJudge.help"
     case settingsPrivacyExportDataHelp = "settings.privacy.portability.exportData.help"
     case settingsPrivacyExportSettingsHelp = "settings.privacy.portability.exportSettings.help"
     case settingsPrivacyImportSettingsHelp = "settings.privacy.portability.importSettings.help"

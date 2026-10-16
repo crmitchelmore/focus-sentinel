@@ -147,6 +147,31 @@ Driver notes from the work itself, newest first. `CLAUDE.md` points here; keep t
 mirrored for anything substantive.
 
 
+### 2026-10-16 — the remote judge gets a switch, and stops caching a judge it could not reach
+
+- **Composed is not on.** The judge is composed for the person's own store whenever the
+  configuration parses (an absent endpoint now takes the measured default), and gated at call
+  time by `RemoteJudgeSwitch`, mirrored for SwiftUI in `GrantAccessWatch.remoteJudgeOn`, set by
+  `PrivacySettingsAction.setRemoteJudge` and stored as `FocusRemoteJudgeEnabled` in defaults —
+  not the store, so no schema version. Switched off or cooling down, `judge` declines before it
+  asks the context source, so nothing is read.
+- **`.notAvailable` is the transient decline and is never cached.** `FocusModelRung.record()`
+  drops it and does not count it as a generation; `.refused` stays cached for the key. An
+  unreachable judge (no token, network error, 401/403/408/429/5xx) answers `.notAvailable` and
+  starts a one-minute `RemoteJudgeBackoff`, a clock read rather than a timer.
+- **A Privacy action costs four pins:** the enum's `verb`/`allDeclared`/`vocabulary`,
+  `DataPortability`'s early-return list, `RetentionControlTests` (list and count) and
+  `self-check.sh`'s `privacyActionsDeclared`. The `.grantOptIns` receipt carries
+  ` remoteJudge=on` on both sides — the pane and `ShellConnectionFactory`'s `expect`.
+- **The catalog cannot be round-tripped through `json.dumps` any more**: some entries are
+  written inline (`{ "en" : { … } }`), so a dump rewrites the file. Insert or replace text.
+- **Two FocusHost tests only failed on a runner.** `startSession` calls
+  `reconcileSensitivePause()`, which reads the real frontmost app; on bravo that is unbundled
+  or sensitive, so the session started paused. Pin `sensingHost.frontmostPayload`. An in-memory
+  root's `activeStoreURL` is nil; compare against it, not `FocusStore.applicationSupportURL`.
+- **Never run UI tests on Chris's Mac.** FocusHost's whole `swift test` presents windows; run a
+  pure suite with `--filter`, and run the rest on the bravo runner through Local CI.
+
 ### 2026-10-15 — the owner's ruling: read the selected item through Accessibility, on device (issue #24)
 
 - **Accuracy needs more than a bundle identifier, so the Accessibility grant is now spent.** In

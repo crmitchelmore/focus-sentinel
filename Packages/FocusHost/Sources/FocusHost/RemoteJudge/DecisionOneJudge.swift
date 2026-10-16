@@ -5,7 +5,7 @@ import Foundation
 import os
 
 /// **The one file in this application's own code that opens a network connection**, and only
-/// when someone switched it on (`RemoteJudgeConfiguration`).
+/// when the person switched it on in Settings ▸ Privacy (`RemoteJudgeSwitch`).
 ///
 /// Microsoft's Decision-1 (System One) answers the model rung's question — *is this window part
 /// of the work the person wrote down?* — from the priority sentence and what the frontmost window
@@ -23,7 +23,10 @@ import os
 ///   so a password manager or a private window is never sent.
 /// * **It is off the classification path.** `FocusModelRung` calls it from a detached task and
 ///   caches the answer, per priority revision and per selected page or item, for the session.
-///   A failure of any kind is `.refused`, which is silence.
+///   A refusal (a malformed answer, a window that could not be read) is `.refused` and cached.
+///   A judge that could not be reached (offline, timed out, rate-limited, not signed in) is
+///   `.notAvailable`, which is not cached, and quiets the judge for `RemoteJudgeBackoff.cooldown`.
+///   Either is silence.
 ///
 /// `check-boundaries.sh` names this file as the single exception to its repo-wide networking
 /// scan, so a second file that opens a connection fails the gate.
@@ -35,17 +38,23 @@ struct DecisionOneJudge: ModelJudging {
     let configuration: RemoteJudgeConfiguration
     let source: RemoteJudgeContextSource
     let tokens: AzureCLITokenProvider
+    let isEnabled: RemoteJudgeSwitch
+    let backoff: RemoteJudgeBackoff
     private let session: URLSession
     private let logger = Logger(subsystem: FocusStore.bundleIdentifier, category: "RemoteJudge")
 
     init(
         configuration: RemoteJudgeConfiguration,
         source: RemoteJudgeContextSource,
-        tokens: AzureCLITokenProvider = AzureCLITokenProvider()
+        isEnabled: RemoteJudgeSwitch,
+        tokens: AzureCLITokenProvider = AzureCLITokenProvider(),
+        backoff: RemoteJudgeBackoff = RemoteJudgeBackoff()
     ) {
         self.configuration = configuration
         self.source = source
+        self.isEnabled = isEnabled
         self.tokens = tokens
+        self.backoff = backoff
         // Ephemeral: no cookie jar, no URL cache, nothing written to disk.
         let sessionConfiguration = URLSessionConfiguration.ephemeral
         sessionConfiguration.timeoutIntervalForRequest = Self.requestTimeout
@@ -58,19 +67,24 @@ struct DecisionOneJudge: ModelJudging {
     func availability() -> ModelTierAvailability { .available }
 
     func judge(_ request: ModelRequest) async -> ModelAnswer {
-        guard let input = await source.input(for: request) else { return .decline(.refused) }
-        guard let body = try? DecisionOneProtocol.body(
-            deployment: configuration.deployment,
-            task: input.task,
-            window: input.window
-        ) else { return .decline(.refused) }
+        // Off, or quiet after a failure to reach it: nothing is read and nothing is sent.
+        guard isEnabled.isOn, !backoff.isCoolingDown else { return .decline(.notAvailable) }
+        // The window has moved on, or the gate stood down: a later judgement may find it again.
+        guard let pending = await source.pending(for: request) else { return .decline(.notAvailable) }
+        guard let window = await Task.detached(priority: .utility, operation: { pending.read() }).value,
+              let body = try? DecisionOneProtocol.body(
+                  deployment: configuration.deployment,
+                  task: pending.task,
+                  window: window
+              )
+        else { return .decline(.refused) }
 
         // One retry, and only after a 401 with a refreshed token: an expired token is the one
         // failure a second attempt can repair.
         for attempt in 0..<2 {
             guard let token = await tokens.token(refresh: attempt > 0) else {
                 logger.error("no access token: is the Azure CLI installed and signed in?")
-                return .decline(.refused)
+                return unreachable()
             }
             var http = URLRequest(url: configuration.endpoint.appending(path: DecisionOneProtocol.path))
             http.httpMethod = "POST"
@@ -83,16 +97,31 @@ struct DecisionOneJudge: ModelJudging {
                   let status = (response as? HTTPURLResponse)?.statusCode
             else {
                 logger.error("request failed before a response")
-                return .decline(.refused)
+                return unreachable()
             }
             if status == 401, attempt == 0 { continue }
+            if Self.isUnreachable(status: status) {
+                logger.error("judge unavailable: HTTP \(status, privacy: .public)")
+                return unreachable()
+            }
+            backoff.noteReached()
             guard status == 200, let probabilities = DecisionOneProtocol.probabilities(from: data) else {
                 logger.error("unexpected response: HTTP \(status, privacy: .public)")
                 return .decline(.refused)
             }
             return DecisionOneProtocol.answer(from: probabilities, threshold: configuration.threshold)
         }
-        return .decline(.refused)
+        return unreachable()
+    }
+
+    /// Statuses that say nothing about the window: signed out, throttled, or the service down.
+    static func isUnreachable(status: Int) -> Bool {
+        status == 401 || status == 403 || status == 408 || status == 429 || (500...599).contains(status)
+    }
+
+    private func unreachable() -> ModelAnswer {
+        backoff.noteUnreachable()
+        return .decline(.notAvailable)
     }
 }
 

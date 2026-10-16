@@ -15,9 +15,12 @@ import Testing
 struct DecisionOneProtocolTests {
     // MARK: Configuration
 
-    @Test("no endpoint, or one that is not HTTPS, is off")
+    @Test("no endpoint takes the measured one; an endpoint that is not HTTPS is off")
     func offWithoutAnHTTPSEndpoint() {
-        #expect(RemoteJudgeConfiguration.parse(endpoint: nil, deployment: nil, threshold: nil) == nil)
+        #expect(
+            RemoteJudgeConfiguration.parse(endpoint: nil, deployment: nil, threshold: nil)?.endpoint
+                == RemoteJudgeConfiguration.defaultEndpoint
+        )
         #expect(RemoteJudgeConfiguration.parse(endpoint: "", deployment: nil, threshold: nil) == nil)
         #expect(RemoteJudgeConfiguration.parse(endpoint: "http://example.com", deployment: nil, threshold: nil) == nil)
         #expect(RemoteJudgeConfiguration.parse(endpoint: 42, deployment: nil, threshold: nil) == nil)
@@ -44,14 +47,57 @@ struct DecisionOneProtocolTests {
         #expect(RemoteJudgeConfiguration.parse(endpoint: endpoint, deployment: "mine", threshold: 0.8)?.deployment == "mine")
     }
 
-    @Test("an unconfigured defaults domain is off")
-    func emptyDefaultsAreOff() throws {
+    @Test("an unconfigured defaults domain is configured but switched off")
+    func emptyDefaultsAreSwitchedOff() throws {
         let suite = "DecisionOneProtocolTests.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
+        #expect(RemoteJudgeConfiguration.read(from: defaults)?.endpoint == RemoteJudgeConfiguration.defaultEndpoint)
+        #expect(RemoteJudgeSwitch.read(from: defaults).isOn == false)
+        defaults.set(true, forKey: RemoteJudgeConfiguration.enabledKey)
+        #expect(RemoteJudgeSwitch.read(from: defaults).isOn)
+        defaults.set("http://example.com", forKey: RemoteJudgeConfiguration.endpointKey)
         #expect(RemoteJudgeConfiguration.read(from: defaults) == nil)
-        defaults.set("https://example.com", forKey: RemoteJudgeConfiguration.endpointKey)
-        #expect(RemoteJudgeConfiguration.read(from: defaults) != nil)
+    }
+
+    // MARK: Reaching it
+
+    @Test("only a status that says the judge could not be reached starts the quiet minute")
+    func unreachableStatuses() {
+        for status in [401, 403, 408, 429, 500, 503, 599] {
+            #expect(DecisionOneJudge.isUnreachable(status: status), "\(status)")
+        }
+        for status in [200, 400, 404, 413, 422] {
+            #expect(!DecisionOneJudge.isUnreachable(status: status), "\(status)")
+        }
+    }
+
+    @Test("after an unreachable judge every judgement inside a minute declines; reaching it ends that")
+    func backoffIsAMinute() {
+        let start = ContinuousClock.now
+        let clock = Clock(start)
+        let backoff = RemoteJudgeBackoff(now: { clock.now })
+        #expect(!backoff.isCoolingDown)
+        backoff.noteUnreachable()
+        #expect(backoff.isCoolingDown)
+        clock.now = start + .seconds(59)
+        #expect(backoff.isCoolingDown)
+        clock.now = start + .seconds(60)
+        #expect(!backoff.isCoolingDown)
+        backoff.noteUnreachable()
+        #expect(backoff.isCoolingDown)
+        backoff.noteReached()
+        #expect(!backoff.isCoolingDown)
+    }
+
+    private final class Clock: @unchecked Sendable {
+        private let lock = NSLock()
+        private var instant: ContinuousClock.Instant
+        init(_ instant: ContinuousClock.Instant) { self.instant = instant }
+        var now: ContinuousClock.Instant {
+            get { lock.withLock { instant } }
+            set { lock.withLock { instant = newValue } }
+        }
     }
 
     // MARK: What is sent
@@ -147,30 +193,54 @@ struct DecisionOneProtocolTests {
 
     // MARK: No window, no request
 
-    @Test("with no window offered the judge declines before asking for a token or a connection")
+    @Test("with no window offered the judge declines, uncached, before asking for a token or a connection")
     @MainActor
     func declinesWithoutAWindow() async throws {
         let source = RemoteJudgeContextSource()
         let configuration = try #require(
             RemoteJudgeConfiguration.parse(endpoint: "https://example.invalid", deployment: nil, threshold: nil)
         )
-        let judge = DecisionOneJudge(configuration: configuration, source: source)
-        let request = ModelRequest(
-            cacheKey: "k",
-            priorityTokens: [],
-            subject: try #require(NormalisedToken.normalised("com.example")),
-            priorityRevision: 1
-        )
-        #expect(await judge.judge(request) == .decline(.refused))
+        let judge = DecisionOneJudge(configuration: configuration, source: source, isEnabled: RemoteJudgeSwitch(isOn: true))
+        let request = Self.request
+        #expect(await judge.judge(request) == .decline(.notAvailable))
 
         var asked = 0
         source.provide = { _ in
             asked += 1
             return nil
         }
-        #expect(await judge.judge(request) == .decline(.refused))
+        #expect(await judge.judge(request) == .decline(.notAvailable))
         #expect(asked == 1)
     }
+
+    @Test("switched off, or quiet after a failure, the judge reads no window at all")
+    @MainActor
+    func offReadsNothing() async throws {
+        let source = RemoteJudgeContextSource()
+        var asked = 0
+        source.provide = { _ in
+            asked += 1
+            return nil
+        }
+        let configuration = try #require(
+            RemoteJudgeConfiguration.parse(endpoint: "https://example.invalid", deployment: nil, threshold: nil)
+        )
+        let isEnabled = RemoteJudgeSwitch(isOn: false)
+        let backoff = RemoteJudgeBackoff()
+        let judge = DecisionOneJudge(configuration: configuration, source: source, isEnabled: isEnabled, backoff: backoff)
+        #expect(await judge.judge(Self.request) == .decline(.notAvailable))
+        isEnabled.isOn = true
+        backoff.noteUnreachable()
+        #expect(await judge.judge(Self.request) == .decline(.notAvailable))
+        #expect(asked == 0)
+    }
+
+    static let request = ModelRequest(
+        cacheKey: "k",
+        priorityTokens: [],
+        subject: NormalisedToken.normalised("com.example")!,
+        priorityRevision: 1
+    )
 
     @Test("an offered window is read and paired with the task")
     @MainActor

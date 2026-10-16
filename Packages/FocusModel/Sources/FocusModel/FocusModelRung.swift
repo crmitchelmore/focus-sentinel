@@ -30,7 +30,8 @@ public struct SystemModelJudge: ModelJudging {
 /// ## The cache is the rate limiter, so there is no rate constant to get wrong
 ///
 /// The model is asked **at most once per `(priorityRevision, subject)` per session**, because
-/// declines are cached too — a model that keeps declining is asked once, not for ever. In-flight
+/// declines are cached too (all but `.notAvailable`, which says the judge was not reached) — a
+/// model that keeps declining is asked once, not for ever. In-flight
 /// requests are tracked so that the dwell ticks re-judging a frontmost subject cannot fan out
 /// into a queue of identical asks.
 ///
@@ -172,6 +173,15 @@ public final class FocusModelRung: ModelRung, @unchecked Sendable {
     private func record(_ answer: ModelAnswer, for request: ModelRequest) {
         lock.lock()
         defer { lock.unlock() }
+        // **Not available is not an answer.** A judge that could not be reached — a remote one
+        // offline, timed out or rate-limited — said nothing about this window, and caching that
+        // would keep it unjudged for the rest of the session. It is dropped, and the next
+        // judgement asks again; the judge owns any back-off, because this package may not own a
+        // clock (R-117e).
+        guard answer != .decline(.notAvailable) else {
+            inFlight.remove(request.cacheKey)
+            return
+        }
         answers[request.cacheKey] = answer
         keysBySubject[request.subject.value, default: []].insert(request.cacheKey)
         inFlight.remove(request.cacheKey)

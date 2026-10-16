@@ -65,7 +65,9 @@ public enum ModelDeclineReason: String, Sendable, CaseIterable, Codable, Hashabl
     case modelSaidUnrelated
     /// The model's own `unsure` label.
     case modelSaidUncertain
-    /// The tier is not composed, or the resource gate closed.
+    /// The tier is not composed, the resource gate closed, or the judge could not be reached
+    /// (a remote judge offline, timed out or rate-limited). **Never cached**: it says nothing
+    /// about the window, so `FocusModelRung` asks again at the next judgement.
     case notAvailable
     /// The session refused, threw, or produced something the schema could not hold.
     ///

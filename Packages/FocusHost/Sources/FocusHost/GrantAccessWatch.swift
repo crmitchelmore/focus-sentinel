@@ -47,6 +47,10 @@ public final class GrantAccessWatch {
     public private(set) var optIns: GrantOptIns = .none
     /// What macOS said, for each switched-on grant, the last time it was read.
     public private(set) var states: [GrantOptIn: CapabilityState] = [:]
+    /// **Whether the person switched *Ask Decision-1* on.** Not a macOS grant, but it is held
+    /// here for the same reason the switches are: the Privacy pane draws it beside them, and
+    /// this is the object whose change redraws that pane. `RemoteJudgeSwitch` is the judge's copy.
+    public internal(set) var remoteJudgeOn = false
 
     @ObservationIgnored private let requester: any GrantRequesting
     @ObservationIgnored private var watch: Task<Void, Never>?

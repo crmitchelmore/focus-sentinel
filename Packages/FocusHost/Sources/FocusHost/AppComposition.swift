@@ -404,20 +404,30 @@ public final class AppComposition {
         let probe = PlatformCapabilityProbe(
             onDeviceModel: modelRung.availability.capabilityState
         )
-        // **The opt-in remote judge** (`DecisionOneJudge`). Off unless someone wrote its endpoint
-        // into this application's defaults, and never in a lane: the unit tests use an in-memory
-        // store and every self-check passes `--focus-self-check`, so neither can open a socket.
-        // The probe above still describes the on-device model, which is what the Privacy pane
-        // reports; the remote judge is a developer switch with no surface yet.
+        // **The opt-in remote judge** (`DecisionOneJudge`). Composed in the shipping app and
+        // never in a lane: the unit tests use an in-memory store and every self-check passes
+        // `--focus-self-check`, so neither can open a socket. Composed is not on — it declines,
+        // reading nothing and sending nothing, until the person turns on Settings ▸ Privacy ▸
+        // *Ask Decision-1*, which `remoteJudgeSwitch` carries to it without a relaunch. The
+        // probe above still describes the on-device model.
         let remoteJudgeSource = RemoteJudgeContextSource()
         let remoteJudgeConfiguration: RemoteJudgeConfiguration? =
             storeKind == .applicationSupport
                 && !CommandLine.arguments.contains(where: { $0.hasPrefix("--focus-self-check") })
             ? RemoteJudgeConfiguration.read()
             : nil
-        let composedRung = remoteJudgeConfiguration.map {
-            FocusModelRung(judge: DecisionOneJudge(configuration: $0, source: remoteJudgeSource))
-        } ?? modelRung
+        // A lane neither reads nor writes the person's switch: it starts off and stays in memory.
+        let remoteJudgeSwitch = remoteJudgeConfiguration == nil
+            ? RemoteJudgeSwitch(isOn: false)
+            : RemoteJudgeSwitch.read()
+        let remoteJudgeRung = remoteJudgeConfiguration.map {
+            FocusModelRung(judge: DecisionOneJudge(
+                configuration: $0,
+                source: remoteJudgeSource,
+                isEnabled: remoteJudgeSwitch
+            ))
+        }
+        let composedRung = remoteJudgeRung ?? modelRung
         let sessions = SessionHost(
             context: context,
             events: events,
@@ -457,6 +467,8 @@ public final class AppComposition {
         self.relevanceHost = relevance
         self.classifier = relevance.engine
         self.remoteJudgeSource = remoteJudgeSource
+        self.remoteJudgeSwitch = remoteJudgeSwitch
+        self.remoteJudgeRung = remoteJudgeRung
 
         self.priorityHost = PriorityHost(
             context: context,
@@ -1443,7 +1455,23 @@ public final class AppComposition {
             openGrantSettings(grant)
         case .recheckGrants:
             grantAccess.refresh()
+        case .setRemoteJudge(let isEnabled):
+            setRemoteJudge(isEnabled)
         }
+    }
+
+    /// **The person's switch for the remote judge.** Stored in defaults rather than the store,
+    /// because it is a preference about this Mac's network use, not a row about the person, and
+    /// a stored preference would cost a schema version. Off forgets every answer the judge gave,
+    /// so nothing it said outlives the person's no.
+    private func setRemoteJudge(_ isEnabled: Bool) {
+        if remoteJudgeRung != nil {
+            UserDefaults.standard.set(isEnabled, forKey: RemoteJudgeConfiguration.enabledKey)
+        }
+        remoteJudgeSwitch.isOn = isEnabled
+        grantAccess.remoteJudgeOn = isEnabled
+        if !isEnabled { remoteJudgeRung?.reset() }
+        refreshCockpit()
     }
 
     /// **Switch one grant's ask on or off** (focus-exdi.4).
@@ -1997,6 +2025,7 @@ public final class AppComposition {
     /// follows a grant given in System Settings without the person having to come back and look.
     public private(set) lazy var grantAccess: GrantAccessWatch = {
         let watch = GrantAccessWatch(requester: grantRequester)
+        watch.remoteJudgeOn = remoteJudgeSwitch.isOn
         watch.onChange = { [weak self] in self?.grantAccessChanged() }
         return watch
     }()
@@ -2011,8 +2040,17 @@ public final class AppComposition {
     let selectedItemReader: any SelectedItemReading = SystemSelectedItemReader()
 
     /// Where the opt-in remote judge asks for a window, answered by the closure the wiring
-    /// installs. Built on every launch; asked only when a remote judge was configured.
+    /// installs. Built on every launch; asked only when a remote judge is composed and on.
     let remoteJudgeSource: RemoteJudgeContextSource
+
+    /// The person's *Ask Decision-1* switch, shared with the judge and drawn by the Privacy
+    /// pane. Read from defaults only where a judge is composed; a lane's starts off and is
+    /// never written back.
+    let remoteJudgeSwitch: RemoteJudgeSwitch
+
+    /// The rung the remote judge answers through, or nil in a lane. Held so that turning the
+    /// switch off can forget every answer it gave.
+    let remoteJudgeRung: FocusModelRung?
 
     /// **Which grants the person switched on**, held rather than re-read.
     ///

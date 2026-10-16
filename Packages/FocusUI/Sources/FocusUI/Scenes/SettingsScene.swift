@@ -125,6 +125,8 @@ public struct ShellSettingsConnection {
     public let sensing: SensingSettingsValue
     /// Which macOS grants the person switched on (focus-exdi.4).
     public let grants: GrantOptIns
+    /// Whether the person switched the opt-in remote judge on.
+    public let remoteJudge: Bool
     /// What the Privacy pane's one destructive control reaches (e07a, focus-6pr.3). A sink like
     /// the two above, and unlike them **never driven by a lane**: it deletes the person's store.
     ///
@@ -187,6 +189,7 @@ public struct ShellSettingsConnection {
         retention: RetentionWindow = .committedDefault,
         sensing: SensingSettingsValue = .defaults,
         grants: GrantOptIns = .none,
+        remoteJudge: Bool = false,
         onPrivacyAction: @escaping @MainActor (PrivacySettingsAction) -> Void = { _ in },
         selectedTab: SettingsTab = .general,
         selectTab: @escaping @MainActor (SettingsTab) -> Void = { _ in },
@@ -212,6 +215,7 @@ public struct ShellSettingsConnection {
         self.retention = retention
         self.sensing = sensing
         self.grants = grants
+        self.remoteJudge = remoteJudge
         self.onPrivacyAction = onPrivacyAction
         self.selectedTab = selectedTab
         self.selectTab = selectTab
@@ -264,6 +268,7 @@ extension ShellSettingsConnection: ShellDrawnConnection {
             "sensing.mediaSuppressionEnabled": .drawn([.sensingSettings]),
             "grants": .drawn([.grantOptIns]),
             "grants.enabled": .drawn([.grantOptIns]),
+            "remoteJudge": .drawn([.grantOptIns]),
             "onPrivacyAction": .undrawn(.sink),
             "summary": .drawn([.privacySummary, .sensingDetail]),
             "capabilities": .drawn([.privacyCapabilities]),
@@ -447,6 +452,7 @@ public struct ShellSettingsView: View {
     private let retention: RetentionWindow
     private let sensing: SensingSettingsValue
     private let grants: GrantOptIns
+    private let remoteJudge: Bool
     private let onPrivacyAction: (PrivacySettingsAction) -> Void
     /// Which pane is on screen. A `Binding` over the composition root's own value, never a
     /// `@State`: the root drives it so each pane can be made to draw and report (focus-7ow).
@@ -476,6 +482,7 @@ public struct ShellSettingsView: View {
         retention: RetentionWindow = .committedDefault,
         sensing: SensingSettingsValue = .defaults,
         grants: GrantOptIns = .none,
+        remoteJudge: Bool = false,
         onPrivacyAction: @escaping (PrivacySettingsAction) -> Void = { _ in },
         selectedTab: Binding<SettingsTab> = .constant(.general),
         softwareUpdates: SoftwareUpdateStatus = .off,
@@ -496,6 +503,7 @@ public struct ShellSettingsView: View {
         self.retention = retention
         self.sensing = sensing
         self.grants = grants
+        self.remoteJudge = remoteJudge
         self.onPrivacyAction = onPrivacyAction
         self.softwareUpdates = softwareUpdates
         self.onSoftwareUpdateAction = onSoftwareUpdateAction
@@ -530,6 +538,7 @@ public struct ShellSettingsView: View {
         self.retention = connection.retention
         self.sensing = connection.sensing
         self.grants = connection.grants
+        self.remoteJudge = connection.remoteJudge
         self.onPrivacyAction = connection.onPrivacyAction
         self.softwareUpdates = connection.softwareUpdates
         self.onSoftwareUpdateAction = connection.onSoftwareUpdateAction
@@ -587,6 +596,7 @@ public struct ShellSettingsView: View {
                 retention: retention,
                 sensing: sensing,
                 grants: grants,
+                remoteJudge: remoteJudge,
                 onAction: onPrivacyAction
             )
             .tabItem { tabLabel(.privacy) }

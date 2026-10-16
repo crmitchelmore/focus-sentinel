@@ -1606,14 +1606,16 @@ corroborate a relevant verdict and nothing else.
 
 ### The opt-in remote judge (Decision-1)
 
-**Off by default, with no switch in the app.** One file in this repository's own code opens a
-connection: `Packages/FocusHost/Sources/FocusHost/RemoteJudge/DecisionOneJudge.swift`, which
-asks Microsoft's Decision-1 (System One) model the model rung's question — *is this window part
-of the priority I wrote down?* `check-boundaries.sh` exempts that one path from its networking
-scan, fails if the file is gone, and still fails on any second file. It is composed only when
-someone writes an endpoint into the app's defaults, never under the in-memory store the unit
-lane uses and never under `--focus-self-check`, so the gate's socket sampling still reads zero
-and `composesTheRung` is still `false` for the on-device model.
+**Off by default, behind a switch in Settings ▸ Privacy.** One file in this repository's own
+code opens a connection: `Packages/FocusHost/Sources/FocusHost/RemoteJudge/DecisionOneJudge.swift`,
+which asks Microsoft's Decision-1 (System One) model the model rung's question — *is this window
+part of the priority I wrote down?* `check-boundaries.sh` exempts that one path from its
+networking scan, fails if the file is gone, and still fails on any second file. The judge is
+composed for the person's own store only, never under the in-memory store the unit lane uses and
+never under `--focus-self-check`, so the gate's socket sampling still reads zero and
+`composesTheRung` is still `false` for the on-device model. Composed is not on: until the person
+switches *Ask Decision-1* on (`FocusRemoteJudgeEnabled`), every judgement declines before a
+window is read.
 
 Why it exists: on the 45-cell corpus the on-device model went quiet about fifteen holds and was
 never released. Given the window's content, Decision-1 rescued all fifteen and was seduced by
@@ -1626,22 +1628,17 @@ by e03's `SensitivityGate` (so never a password manager or a private window), an
 Accessibility opt-in on — the window's title, file path, web address reduced to host and path,
 focused element and up to 6,000 characters of text, read in `SelectedItemReader.swift` through
 the same three selectors. It can only rescue: there is no `unrelated` answer, and any failure is
-a decline that leaves the deterministic verdict standing.
+a decline that leaves the deterministic verdict standing. A judge it could not reach (no token,
+offline, 401/403/408/429/5xx) is not cached: it is asked again after a quiet minute
+(`RemoteJudgeBackoff`), so a sign-in or a network that comes back is picked up without a relaunch.
 
 To turn it on (the credential is an Entra token from a signed-in Azure CLI; nothing is stored):
-
-```sh
-az login
-defaults write com.chrismitchelmore.FocusSentinel FocusRemoteJudgeEndpoint https://<resource>.services.ai.azure.com
-defaults write com.chrismitchelmore.FocusSentinel FocusRemoteJudgeThreshold 0.6   # optional, 0.5–0.95
-defaults write com.chrismitchelmore.FocusSentinel FocusRemoteJudgeDeployment decision-1  # optional
-```
-
-then switch on the Accessibility ask in Settings ▸ Privacy and relaunch. Alpha builds read the
-`com.chrismitchelmore.FocusSentinel.alpha` domain instead. `defaults delete
-com.chrismitchelmore.FocusSentinel FocusRemoteJudgeEndpoint` turns it off. While it is on, the
-Privacy pane's *"Focus never connects to the internet…"* sentence is not true; changing that
-sentence is a UI change and has not been made yet.
+`az login`, then switch on the Accessibility ask and *Ask Decision-1* in Settings ▸ Privacy. The
+endpoint defaults to the measured deployment; another can be given in the app's defaults
+(`FocusRemoteJudgeEndpoint`, HTTPS only; `FocusRemoteJudgeDeployment`;
+`FocusRemoteJudgeThreshold`, 0.5–0.95), read at launch. Alpha builds read the
+`com.chrismitchelmore.FocusSentinel.alpha` domain. The Privacy pane's network sentence names
+this switch alongside update checks.
 
 ## License
 

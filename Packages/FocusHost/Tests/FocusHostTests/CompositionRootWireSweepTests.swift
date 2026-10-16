@@ -173,6 +173,10 @@ struct CompositionRootWireSweepTests {
         let (root, _) = try Self.joinedRoot(clock: clock)
         defer { Self.tearDown(root) }
 
+        // The graph's own front, not whatever the machine running the suite has in front: on a
+        // CI runner that is an unbundled process, the gate stands down for it, and the session
+        // opens already paused for a sensitive app — which proves nothing about this wire.
+        root.sensingHost.frontmostPayload = { ReviewFollowUpTests.payload(ReviewFollowUpTests.browser) }
         root.sensingHost.resume()
         root.sessionActions.startSession(kind: .openEnded, plannedSeconds: nil, deadlineAt: nil)
         let started = try #require(root.sessionHost.snapshot, "no session was opened")

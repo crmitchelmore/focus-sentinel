@@ -66,6 +66,10 @@ public enum PrivacySettingsAction: Sendable, Equatable, Hashable {
     case openGrantSettings(GrantOptIn)
     /// Read every switched-on grant again, without asking.
     case recheckGrants
+    /// **Ask Decision-1** (the opt-in remote judge). On, the model rung sends the cleared
+    /// frontmost window's content to Microsoft's Decision-1 to ask whether it is part of the
+    /// work; off — the default — nothing is sent, and every answer it gave is forgotten.
+    case setRemoteJudge(Bool)
 
     /// **The pane's vocabulary, as verbs.**
     ///
@@ -89,6 +93,7 @@ public enum PrivacySettingsAction: Sendable, Equatable, Hashable {
         case .setGrantOptIn: "setGrantOptIn"
         case .openGrantSettings: "openGrantSettings"
         case .recheckGrants: "recheckGrants"
+        case .setRemoteJudge: "setRemoteJudge"
         }
     }
 
@@ -107,6 +112,7 @@ public enum PrivacySettingsAction: Sendable, Equatable, Hashable {
         actions += GrantOptIn.allCases.map { PrivacySettingsAction.setGrantOptIn($0, true) }
         actions += GrantOptIn.allCases.map(PrivacySettingsAction.openGrantSettings)
         actions.append(.recheckGrants)
+        actions.append(.setRemoteJudge(true))
         return actions
     }
 
@@ -114,7 +120,7 @@ public enum PrivacySettingsAction: Sendable, Equatable, Hashable {
     public static let vocabulary: [String] = [
         "deleteEverything", "setRetentionWindow", "exportData", "exportSettings", "importSettings",
         "setSensingPaused", "setIdleThreshold", "setMediaSuppression", "setLaunchContextOnSessionStart",
-        "setGrantOptIn", "openGrantSettings", "recheckGrants"
+        "setGrantOptIn", "openGrantSettings", "recheckGrants", "setRemoteJudge"
     ]
 
     /// **The title of the one alert this vocabulary can raise**, resolved here.
@@ -151,6 +157,8 @@ public struct PrivacySettingsView: View {
     private let retention: RetentionWindow
     private let sensing: SensingSettingsValue
     private let grants: GrantOptIns
+    /// Whether the person switched *Ask Decision-1* on; drawn beside the grants it depends on.
+    private let remoteJudge: Bool
 
     /// Snapshot section, or nil for the complete shipping pane. Unbounded expanded-text
     /// renders can exceed CoreGraphics' roughly 16,000-row image limit. Ownership,
@@ -195,6 +203,7 @@ public struct PrivacySettingsView: View {
         retention: RetentionWindow = .committedDefault,
         sensing: SensingSettingsValue = .defaults,
         grants: GrantOptIns = .none,
+        remoteJudge: Bool = false,
         half: Half? = nil,
         screens: ShellScreens = nil,
         onAction: @escaping (PrivacySettingsAction) -> Void = { _ in }
@@ -206,6 +215,7 @@ public struct PrivacySettingsView: View {
         self.retention = retention
         self.sensing = sensing
         self.grants = grants
+        self.remoteJudge = remoteJudge
         self.half = half
         self.screens = screens
         self.onAction = onAction
@@ -373,6 +383,14 @@ public struct PrivacySettingsView: View {
                     }
                 }
             }
+            // Not a macOS grant, but the one switch that sends anything off this Mac, and it
+            // reads what the Accessibility switch above unlocks — so it sits under it.
+            switchRow(
+                .settingsPrivacyRemoteJudge,
+                note: .settingsPrivacyRemoteJudgeNote,
+                help: .settingsPrivacyRemoteJudgeHelp,
+                isOn: remoteJudge
+            ) { onAction(.setRemoteJudge($0)) }
         }
         .shellRendered(
             .grantOptIns,
@@ -380,6 +398,7 @@ public struct PrivacySettingsView: View {
                 + GrantOptIn.allCases.filter(grants.isEnabled)
                     .map { " \($0.rawValue)=\(capabilities.state(of: $0.capability).rawValue)" }
                     .joined()
+                + (remoteJudge ? " remoteJudge=on" : "")
         )
     }
 

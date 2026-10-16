@@ -3495,13 +3495,13 @@
       }
     },
     "settings.privacy.noNetwork" : {
-      "comment" : "Privacy pane disclosure: the app reaches the network for one thing only, and only when the person switched it on in General settings (F-122, focus-h8jf). Linted of the product by the boundaries stage.",
+      "comment" : "Privacy pane disclosure: the app reaches the network only for update checks, switched on in General settings (F-122, focus-h8jf), and the opt-in remote judge, switched on in this pane. Linted of the product by the boundaries stage.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Focus never connects to the internet unless you turn on update checks in General settings."
+            "value" : "Focus never connects to the internet unless you turn on update checks in General settings, or Ask Decision-1 below."
           }
         }
       }
@@ -7820,6 +7820,42 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Allows the app to ask macOS for Accessibility access, then read what is selected in the app in front, on this Mac only."
+          }
+        }
+      }
+    },
+    "settings.privacy.remoteJudge" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): switch for the opt-in remote judge, Microsoft Decision-1. Off by default.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ask Decision-1 whether a window is part of your work"
+          }
+        }
+      }
+    },
+    "settings.privacy.remoteJudge.note" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): note under the remote-judge switch. Says what is sent, where, and what it needs.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "When the rules cannot tell, Focus sends your priority and what the app in front shows — its title, address, file and visible text — to Microsoft's Decision-1 on Azure, which answers whether it is part of the work. It can only keep Focus quiet, never make it speak. Nothing is sent from password managers or private windows, nothing sent is kept, and it needs Accessibility above and a signed-in Azure CLI."
+          }
+        }
+      }
+    },
+    "settings.privacy.remoteJudge.help" : {
+      "comment" : "Tooltip on the remote-judge switch.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sends the window in front to Microsoft's Decision-1 when the rules cannot tell whether it is part of your work."
           }
         }
       }

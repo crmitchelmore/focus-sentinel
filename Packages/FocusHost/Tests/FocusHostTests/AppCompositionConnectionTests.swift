@@ -137,7 +137,9 @@ struct AppCompositionConnectionTests {
         let connection = root.settingsConnection()
 
         #expect(connection.preference == .dark)
-        #expect(connection.storeURL == FocusStore.applicationSupportURL)
+        // The file this root is writing to — none, for the in-memory store every lane uses
+        // (focus-k2in) — never the shipping path it is not writing to.
+        #expect(connection.storeURL == root.activeStoreURL)
         #expect(connection.summary == root.sensingSummary)
         #expect(connection.capabilities == root.capabilities)
         #expect(connection.verdict == root.verdict)

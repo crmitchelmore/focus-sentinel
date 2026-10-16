@@ -222,7 +222,7 @@ extension AppComposition {
             outcome = readSettingsImport(from: url)
         case .deleteEverything, .setRetentionWindow, .setSensingPaused, .setIdleThreshold,
              .setMediaSuppression, .setLaunchContextOnSessionStart, .setGrantOptIn,
-             .openGrantSettings, .recheckGrants:
+             .openGrantSettings, .recheckGrants, .setRemoteJudge:
             return
         }
         lastPortabilityOutcome = outcome

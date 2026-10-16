@@ -121,6 +121,17 @@ struct FocusModelRungTests {
         #expect(decliner.generationCount == 1)
     }
 
+    @Test("a judge that could not be reached is asked again, not cached")
+    func notAvailableIsNotCached() async {
+        let unreachable = FocusModelRung(
+            judge: StubJudge(state: .available, answer: .decline(.notAvailable))
+        )
+        #expect(await unreachable.prime(Self.request()) == .decline(.notAvailable))
+        #expect(unreachable.cachedAnswer(for: Self.request()) == nil)
+        #expect(await unreachable.prime(Self.request()) == .decline(.notAvailable))
+        #expect(unreachable.generationCount == 0)
+    }
+
     @Test("an unavailable tier declines and generates nothing")
     func unavailableTierAsksNobody() async {
         for state in ModelTierAvailability.allCases where state != .available {

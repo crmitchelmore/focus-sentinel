@@ -1,20 +1,25 @@
 import FocusClassify
 import Foundation
 
-/// **The remote judge's switch, and it is off** unless someone sets an endpoint.
+/// **Where the remote judge is, and how sure it must be.** Whether it runs at all is
+/// `RemoteJudgeSwitch`, which the person sets in Settings ▸ Privacy and which is off by default.
 ///
-/// Read once at launch from the app's own defaults domain, because there is no Settings control
-/// for it yet: the Privacy pane still promises a default install never connects, and on a
-/// default install that stays true. Turning it on is a deliberate act at a terminal:
+/// The endpoint defaults to the Azure AI Foundry resource the spike provisioned; a developer can
+/// point it elsewhere from a terminal:
 ///
 ///     defaults write com.chrismitchelmore.FocusSentinel FocusRemoteJudgeEndpoint https://<resource>.services.ai.azure.com
 ///
-/// A self-check or test composition never reads it (see `AppComposition`), so no gate run can
-/// open a socket because of a value on the machine running the gate.
+/// A self-check or test composition never builds a judge (see `AppComposition`), so no gate run
+/// can open a socket because of a value on the machine running the gate.
 struct RemoteJudgeConfiguration: Sendable, Equatable {
     static let endpointKey = "FocusRemoteJudgeEndpoint"
     static let deploymentKey = "FocusRemoteJudgeDeployment"
     static let thresholdKey = "FocusRemoteJudgeThreshold"
+    /// The person's switch, written by the Privacy pane. Absent is off.
+    static let enabledKey = "FocusRemoteJudgeEnabled"
+
+    // swiftlint:disable:next force_unwrapping
+    static let defaultEndpoint = URL(string: "https://focus-sentinel-decision-spike.services.ai.azure.com")!
 
     static let defaultDeployment = "decision-1"
     /// Relevance at or above which the window is part of the work. The ContextSpike measured
@@ -28,12 +33,18 @@ struct RemoteJudgeConfiguration: Sendable, Equatable {
     let deployment: String
     let threshold: Double
 
-    /// The configuration these values describe, or nil — off — when there is no endpoint, the
-    /// endpoint is not HTTPS, or a value is malformed. Off is the answer to every doubt.
+    /// The configuration these values describe, or nil — no judge — when a value is given and
+    /// malformed: an endpoint that is not HTTPS, an empty deployment, an unmeasured threshold.
+    /// An absent value takes its default. Off is the answer to every doubt.
     static func parse(endpoint: Any?, deployment: Any?, threshold: Any?) -> RemoteJudgeConfiguration? {
-        guard let raw = (endpoint as? String)?.trimmingCharacters(in: .whitespacesAndNewlines),
-              let url = URL(string: raw), url.scheme?.lowercased() == "https", url.host?.isEmpty == false
-        else { return nil }
+        var url = defaultEndpoint
+        if let endpoint {
+            guard let raw = (endpoint as? String)?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  let given = URL(string: raw), given.scheme?.lowercased() == "https",
+                  given.host?.isEmpty == false
+            else { return nil }
+            url = given
+        }
         var name = defaultDeployment
         if let deployment {
             guard let given = (deployment as? String)?.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -58,6 +69,58 @@ struct RemoteJudgeConfiguration: Sendable, Equatable {
             deployment: defaults.object(forKey: deploymentKey),
             threshold: defaults.object(forKey: thresholdKey)
         )
+    }
+}
+
+/// **The person's switch for the remote judge**, read by the judge before anything else.
+///
+/// Held by reference so the Privacy pane can turn the judge off under a rung that is already
+/// composed: the rung reads availability once, at launch, so the judge is always composed in
+/// the shipping app and declines `.notAvailable` — uncached, no window read, no socket — while
+/// this is off.
+final class RemoteJudgeSwitch: @unchecked Sendable {
+    private let lock = NSLock()
+    private var on: Bool
+
+    init(isOn: Bool) { on = isOn }
+
+    var isOn: Bool {
+        get { lock.withLock { on } }
+        set { lock.withLock { on = newValue } }
+    }
+
+    static func read(from defaults: UserDefaults = .standard) -> RemoteJudgeSwitch {
+        RemoteJudgeSwitch(isOn: defaults.bool(forKey: RemoteJudgeConfiguration.enabledKey))
+    }
+}
+
+/// **A quiet minute after the judge could not be reached.**
+///
+/// An unreachable judge answers `.notAvailable`, which the rung does not cache, so the next
+/// judgement asks again. Without this a machine offline would read the frontmost window and try
+/// the network on every dwell tick; with it, every judgement inside the minute declines at once.
+/// A clock read, not a timer: nothing is scheduled.
+final class RemoteJudgeBackoff: @unchecked Sendable {
+    static let cooldown: Duration = .seconds(60)
+
+    private let lock = NSLock()
+    private let now: @Sendable () -> ContinuousClock.Instant
+    private var retryNotBefore: ContinuousClock.Instant?
+
+    init(now: @escaping @Sendable () -> ContinuousClock.Instant = { ContinuousClock.now }) {
+        self.now = now
+    }
+
+    var isCoolingDown: Bool {
+        lock.withLock { retryNotBefore.map { now() < $0 } ?? false }
+    }
+
+    func noteUnreachable() {
+        lock.withLock { retryNotBefore = now() + Self.cooldown }
+    }
+
+    func noteReached() {
+        lock.withLock { retryNotBefore = nil }
     }
 }
 

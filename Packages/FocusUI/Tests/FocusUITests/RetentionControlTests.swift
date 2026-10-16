@@ -70,12 +70,13 @@ struct RetentionControlTests {
             "deleteEverything", "setRetentionWindow",
             "exportData", "exportSettings", "importSettings",
             "setSensingPaused", "setIdleThreshold", "setMediaSuppression",
-            "setLaunchContextOnSessionStart", "setGrantOptIn", "openGrantSettings", "recheckGrants"
+            "setLaunchContextOnSessionStart", "setGrantOptIn", "openGrantSettings", "recheckGrants",
+            "setRemoteJudge"
         ])
         // One action per offered window, plus the destructive one and the three portability
         // verbs — so a window that could be stored but never asked for is a count that does not
         // add up.
-        #expect(PrivacySettingsAction.allDeclared.count == RetentionWindow.ordered.count + 9 + 2 * GrantOptIn.allCases.count)
+        #expect(PrivacySettingsAction.allDeclared.count == RetentionWindow.ordered.count + 10 + 2 * GrantOptIn.allCases.count)
         #expect(Set(PrivacySettingsAction.allDeclared).count
             == PrivacySettingsAction.allDeclared.count)
     }
