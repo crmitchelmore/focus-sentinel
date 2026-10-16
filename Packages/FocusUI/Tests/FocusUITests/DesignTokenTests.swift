@@ -10,6 +10,18 @@ import Testing
 /// differently, with no reference to the live system anywhere.
 @Suite("Design tokens")
 struct DesignTokenTests {
+    // MARK: - Liquid Glass
+
+    @Test("glass is drawn only where a summoned surface may be translucent")
+    func glassFallsBackToOpaque() {
+        #expect(DesignTokens.drawsGlass(for: .light))
+        #expect(DesignTokens.drawsGlass(for: .dark))
+        #expect(!DesignTokens.drawsGlass(for: .reduceTransparency))
+        #expect(!DesignTokens.drawsGlass(for: .increasedContrast))
+        #expect(DesignTokens.liquidAnimation(for: .light) != nil)
+        #expect(DesignTokens.liquidAnimation(for: .reduceMotion) == nil)
+    }
+
     // MARK: - Reduce Transparency
 
     @Test("materials collapse to an opaque fill under Reduce Transparency")

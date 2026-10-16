@@ -122,7 +122,7 @@ public struct CompletionSheet: View {
             .font(DesignTokens.font(.body, scale: textScale))
             .textFieldStyle(.plain)
             .padding(10)
-            .background(DesignTokens.Palette.role(.inlay, for: traits), in: RoundedRectangle(cornerRadius: 10))
+            .softField(traits)
             .focused($focus, equals: identity)
             .accessibilityLabel(Text(ShellStrings.resource(label)))
         }

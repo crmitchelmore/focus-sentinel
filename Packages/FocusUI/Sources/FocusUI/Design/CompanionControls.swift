@@ -1,6 +1,10 @@
 import SwiftUI
 
 /// Shared native controls for the companion identity. State still belongs to each feature.
+///
+/// Drawn as interactive Liquid Glass wherever summoned glass is drawn (`DesignTokens.drawsGlass`):
+/// a prominent or selected control is glass tinted Spruce, the rest are clear glass. Under Reduce
+/// Transparency or Increase Contrast they keep the opaque fills and hairlines they had before.
 struct CompanionButtonStyle: ButtonStyle {
     var prominent = false
     var selected = false
@@ -11,27 +15,61 @@ struct CompanionButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         let filled = prominent || selected
-        let shape = RoundedRectangle(cornerRadius: 10, style: .continuous)
-        configuration.label
-            .font(DesignTokens.font(.callout, scale: textScale))
-            .padding(.horizontal, 12)
-            .padding(.vertical, 9)
-            .foregroundStyle(configuration.role == .destructive
-                ? Color(nsColor: .systemRed)
-                : DesignTokens.Palette.role(filled ? .bench : .slate, for: traits))
-            .background(shape.fill(DesignTokens.Palette.role(filled ? .spruce : .inlay, for: traits)))
-            .overlay(shape.strokeBorder(
-                DesignTokens.Palette.role(isHovered && isEnabled ? .spruce : .mist, for: traits)
-                    .opacity(DesignTokens.emphasis(for: traits).promotesSecondaryText ? 1 : (isHovered && isEnabled ? 0.7 : 0.25)),
-                lineWidth: DesignTokens.emphasis(for: traits).promotesSecondaryText ? 2 : 1
-            ))
-            .opacity(isEnabled ? (configuration.isPressed ? 0.8 : 1) : 0.45)
-            .contentShape(shape)
-            .scaleEffect(configuration.isPressed && isEnabled && !traits.reduceMotion ? 0.985 : 1)
-            .animation(DesignTokens.animation(for: traits), value: configuration.isPressed)
-            .animation(DesignTokens.animation(for: traits), value: isHovered)
-            .animation(DesignTokens.animation(for: traits), value: selected)
-            .onHover { isHovered = $0 }
+        let shape = RoundedRectangle(cornerRadius: DesignTokens.controlRadius, style: .continuous)
+        let emphasis = DesignTokens.emphasis(for: traits)
+        let glass = DesignTokens.drawsGlass(for: traits)
+        surface(
+            configuration.label
+                .font(DesignTokens.font(.callout, scale: textScale))
+                .padding(.horizontal, 14)
+                .padding(.vertical, 9)
+                .foregroundStyle(configuration.role == .destructive
+                    ? Color(nsColor: .systemRed)
+                    : DesignTokens.Palette.role(filled ? .bench : .slate, for: traits)),
+            filled: filled,
+            glass: glass,
+            shape: shape
+        )
+        .overlay(shape.strokeBorder(
+            DesignTokens.Palette.role(isHovered && isEnabled ? .spruce : .mist, for: traits)
+                .opacity(strokeOpacity(glass: glass, emphasis: emphasis)),
+            lineWidth: emphasis.promotesSecondaryText ? 2 : 1
+        ))
+        .opacity(isEnabled ? (configuration.isPressed ? 0.85 : 1) : 0.45)
+        .contentShape(shape)
+        .scaleEffect(configuration.isPressed && isEnabled && !traits.reduceMotion ? 0.97 : 1)
+        .animation(DesignTokens.liquidAnimation(for: traits), value: configuration.isPressed)
+        .animation(DesignTokens.animation(for: traits), value: isHovered)
+        .animation(DesignTokens.liquidAnimation(for: traits), value: selected)
+        .onHover { isHovered = $0 }
+    }
+
+    @ViewBuilder
+    private func surface(
+        _ label: some View,
+        filled: Bool,
+        glass: Bool,
+        shape: RoundedRectangle
+    ) -> some View {
+        if glass {
+            label.glassEffect(
+                filled
+                    ? Glass.regular.tint(DesignTokens.Palette.role(.spruce, for: traits)).interactive(isEnabled)
+                    : Glass.regular.interactive(isEnabled),
+                in: shape
+            )
+        } else {
+            label.background(shape.fill(DesignTokens.Palette.role(filled ? .spruce : .inlay, for: traits)))
+        }
+    }
+
+    /// Glass draws its own rim, so at rest a glass control carries no hairline; hover still
+    /// lights the edge Spruce, so the pointer's target is never only a change of shimmer.
+    private func strokeOpacity(glass: Bool, emphasis: Emphasis) -> Double {
+        if emphasis.promotesSecondaryText { return 1 }
+        let lit = isHovered && isEnabled
+        if glass { return lit ? 0.55 : 0 }
+        return lit ? 0.7 : 0.25
     }
 }
 
@@ -46,8 +84,7 @@ struct CompanionSectionHeading: View {
         HStack(spacing: 10) {
             Image(systemName: symbol)
                 .font(DesignTokens.font(.callout, scale: textScale))
-                .frame(width: 30, height: 30)
-                .background(DesignTokens.Palette.role(.inlay, for: traits), in: RoundedRectangle(cornerRadius: 9))
+                .glyphWell(traits)
                 .accessibilityHidden(true)
             ShellText(key, role: .sectionHeading)
                 .fixedSize(horizontal: false, vertical: true)
@@ -56,22 +93,40 @@ struct CompanionSectionHeading: View {
     }
 }
 
+/// A card. Glass tinted with a little Bench over the window's ambient ground, so it reads as a
+/// soft pane; the opaque Bench card with a hairline when glass is not drawn.
 private struct CompanionSurface: ViewModifier {
     var accent: Bool
     @Environment(\.appearanceTraits) private var traits
     @Environment(\.shellTextScale) private var textScale
 
+    @ViewBuilder
     func body(content: Content) -> some View {
-        let shape = RoundedRectangle(cornerRadius: 18, style: .continuous)
-        content
+        let shape = RoundedRectangle(cornerRadius: DesignTokens.cardRadius, style: .continuous)
+        let padded = content
             .padding(DesignTokens.spacing(18, scale: textScale))
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(DesignTokens.Palette.role(.bench, for: traits), in: shape)
-            .overlay(shape.strokeBorder(
-                DesignTokens.Palette.role(accent ? .spruce : .mist, for: traits)
-                    .opacity(DesignTokens.emphasis(for: traits).promotesSecondaryText ? 1 : (accent ? 0.5 : 0.22)),
-                lineWidth: accent ? 2 : 1
-            ))
+        if DesignTokens.drawsGlass(for: traits) {
+            padded
+                .glassEffect(
+                    .regular.tint(
+                        DesignTokens.Palette.role(.bench, for: traits).opacity(DesignTokens.glassGroundTint)
+                    ),
+                    in: shape
+                )
+                .overlay(shape.strokeBorder(
+                    DesignTokens.Palette.role(.spruce, for: traits).opacity(accent ? 0.45 : 0),
+                    lineWidth: 1.5
+                ))
+        } else {
+            padded
+                .background(DesignTokens.Palette.role(.bench, for: traits), in: shape)
+                .overlay(shape.strokeBorder(
+                    DesignTokens.Palette.role(accent ? .spruce : .mist, for: traits)
+                        .opacity(DesignTokens.emphasis(for: traits).promotesSecondaryText ? 1 : (accent ? 0.5 : 0.22)),
+                    lineWidth: accent ? 2 : 1
+                ))
+        }
     }
 }
 

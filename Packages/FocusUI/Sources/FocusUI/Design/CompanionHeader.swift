@@ -38,7 +38,7 @@ struct CompanionHeader<Title: View>: View {
                     }
                 }
             }
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .clipShape(RoundedRectangle(cornerRadius: DesignTokens.controlRadius + 4, style: .continuous))
     }
 }
 

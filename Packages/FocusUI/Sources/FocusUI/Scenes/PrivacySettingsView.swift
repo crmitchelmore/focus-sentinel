@@ -568,7 +568,7 @@ public struct PrivacySettingsView: View {
         }
         // The one dialog margin every pane and sheet draws (focus-udn9).
         .dialogInset()
-        .background(DesignTokens.Palette.role(.inlay, for: traits))
+        .glassBackdrop(traits)
         .buttonStyle(CompanionButtonStyle())
         .frame(maxWidth: .infinity, alignment: .leading)
         // **What this pane drew, reported by this pane** (focus-7ow).

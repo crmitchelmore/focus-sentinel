@@ -147,6 +147,20 @@ Driver notes from the work itself, newest first. `CLAUDE.md` points here; keep t
 mirrored for anything substantive.
 
 
+### 2026-10-16 — Liquid Glass on the summoned surfaces
+
+- **Glass is a token decision, not a call-site one.** `DesignTokens.drawsGlass(for:)`
+  (`Design/LiquidGlass.swift`) is true only where `material(for:provenance: .summoned)` is
+  `.material` and Increase Contrast is off; every helper (`glassBackdrop`, `glassSlab`,
+  `softField`, `glyphWell`, `CompanionButtonStyle`, `CompanionSurface`, `shellSurface`'s
+  `.material` case) reads it and falls back to the old opaque Inlay/Bench fills.
+- **Uninvited surfaces stay opaque.** The nudge panels never draw glass; `material(for:provenance:)`
+  is unchanged and its tests still pin it.
+- **One `GlassEffectContainer` only, in the cockpit tab bar**, so the selected-tab lozenge morphs
+  between tabs. A root container would merge glass buttons into the glass cards under them.
+- **Every snapshot baseline moved.** Re-record through the UI lane only with Chris's confirmation;
+  check first whether `ImageRenderer` rasterises `glassEffect` at all.
+
 ### 2026-10-16 — time from other sources, through the bridge (issue #31)
 
 - **EventKit is not every calendar.** An Exchange account behind Conditional Access never reaches
