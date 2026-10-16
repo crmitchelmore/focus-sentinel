@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'Verify the runner, inspect signing availability, or build without UI tests'
+        description: 'Verify the runner, inspect signing availability, build without UI tests, or run the package unit suites'
         type: choice
-        options: [verify, signing, build]
+        options: [verify, signing, build, unit]
         default: build
       ref:
         description: 'Trusted branch, tag or commit in this repository'
@@ -86,3 +86,19 @@ jobs:
         shell: bash
         run: |
           xcodebuild -workspace Focus.xcworkspace -scheme FocusSentinel -configuration Debug -destination "platform=macOS,arch=arm64" -derivedDataPath "$RUNNER_TEMP/focus-derived-data" -jobs 2 build
+      - name: Source lints and package unit suites
+        if: inputs.mode == 'unit'
+        shell: bash
+        # On this runner, never on the owner's own Mac: FocusHost's suite presents real popovers and
+        # nudge panels. FocusUI snapshot suites skip under `swift test`; the xcodebuild UI lane is
+        # not run here.
+        run: |
+          set -o pipefail
+          cache="$RUNNER_TEMP/swiftpm-cache-focus"
+          zsh scripts/check-boundaries.sh
+          zsh scripts/check-forbidden.sh
+          for package in FocusClassify FocusHost; do
+            echo "::group::swift test $package"
+            swift test --package-path "Packages/$package" --cache-path "$cache"
+            echo "::endgroup::"
+          done
