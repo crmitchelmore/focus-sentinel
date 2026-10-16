@@ -833,8 +833,18 @@ fi
 
 print
 print "== networking APIs across all package sources"
+# **One exemption, by path, and it cannot outlive its file** (Decision-1). The opt-in remote
+# judge is the one file allowed to open a connection; it is off unless someone writes its
+# endpoint into the app's defaults, and it is never composed in a test or a self-check. The
+# exemption fails if the file is gone, so it cannot quietly cover a file of the same name later,
+# and a second networking file anywhere still fails below.
+REMOTE_JUDGE_NETWORK_FILE="Packages/FocusHost/Sources/FocusHost/RemoteJudge/DecisionOneJudge.swift"
+if [[ ! -f "$REMOTE_JUDGE_NETWORK_FILE" ]]; then
+    fail "the networking exemption names $REMOTE_JUDGE_NETWORK_FILE, which no longer exists; remove the exemption"
+fi
 all_hits=$(grep -rnE "$NETWORK_SYMBOL_PATTERN" Packages/*/Sources 2>/dev/null \
-    | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|///|\*)')
+    | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|///|\*)' \
+    | grep -vF "$REMOTE_JUDGE_NETWORK_FILE:")
 if [[ -n "$all_hits" ]]; then
     fail "a package source names a networking API:"
     print -u2 "$all_hits"

@@ -253,6 +253,35 @@ mirrored for anything substantive.
   NudgeDayShapeTests). Under the UI-test confirmation rule they were skipped with `--skip`; the
   Privacy pane and capability-matrix baselines still need re-recording through the UI lane.
 
+### 2026-09-13 — the opt-in remote judge (Decision-1)
+
+- **The on-device model failed for lack of evidence, not lack of size.** Token-only input
+  (bundle id plus priority tokens) failed the 45-cell corpus on every model tried, Decision-1
+  and fifteen Foundry deployments included. Given the window's title, web address, file and
+  Accessibility text (`Tools/ContextSpike`, "full"), `gpt-5.6-luna` and Microsoft's
+  Decision-1 both rescued 15/15 holds with 0 seductions. Luna holds that from threshold 0.5 to
+  0.98; Decision-1 only at 0.5–0.8 (0.6 at "meta"), but it answers in ~0.2 s against ~0.9 s and
+  costs ~$46 per 1,000 users a month against ~$179. Decision-1 shipped, at 0.6.
+- **Where each piece had to go, and why.** The window read lives in `SelectedItemReader.swift`
+  because `Config/grant-use-sites.txt` allows exactly one Accessibility reader file and three
+  selectors; it returns a closure so the bounded walk (4,000 elements, 1.5 s) runs off the main
+  actor after the main-actor checks. The network call lives in
+  `RemoteJudge/DecisionOneJudge.swift`, the one path `check-boundaries.sh` exempts and which
+  fails the gate if it disappears. `R-97` reads any `fetch()` call as an uncounted SwiftData
+  fetch, so a helper named `fetch` fails `check-forbidden.sh` — it is `askTheCLI()`.
+- **It is never composed in a lane.** `AppComposition` builds it only for the
+  `.applicationSupport` store and without `--focus-self-check`, so unit tests and self-checks
+  keep the on-device rung, `rungIsComposed == composesTheRung == false` and zero sockets.
+  `RelevanceHost(releasesModelRung:)` is the switch; its default is still
+  `ModelTierRelease.composesTheRung`.
+- **The rung caches by priority revision and selected item.** `RuleCascade.modelAnswer` now
+  appends `selectedItem.subject` to the evidence key, so two pages of one browser are judged
+  apart. A transient failure is cached as `.refused` for that key for the session.
+- **Package `.build` directories trip the source lints.** `check-forbidden.sh` greps the tree,
+  so a `swift build` of FocusHost leaves `Packages/FocusHost/.build/checkouts/Sparkle` for R-26
+  to find, and a spike's `Tools/*/.build` binaries carry `kCGWindowName` for SC-1. Delete them
+  before reading those failures as real.
+
 ### 2026-09-12 — tooltips on everything, glyph verbs, one dialog margin, and the Resume that could never clear (focus-mmty, focus-8ski, focus-udn9)
 
 - **A restoration pause is the person's to clear, and the code said otherwise for months.**

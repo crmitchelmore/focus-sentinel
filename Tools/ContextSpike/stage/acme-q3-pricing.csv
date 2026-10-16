@@ -1,0 +1,13 @@
+Acme Q3 proposal - pricing,,,,
+Line item,Depot,Vans,Unit cost (GBP),Total (GBP)
+Telemetry unit (4G),Leeds,50,620,31000
+Telemetry unit (4G),Sheffield,40,620,24800
+Telemetry unit (4G),Birmingham,65,620,40300
+Telemetry unit (4G),Coventry,45,620,27900
+Telemetry unit (4G),Nottingham,40,620,24800
+Installation,All depots,240,180,43200
+Driver app licences (3 yrs),All depots,240,410,98400
+Project management,,,,96000
+Contingency (8%),,,,31600
+Subtotal,,,,418000
+Volume discount if Phase 3 confirmed by 1 Aug,,,,-25080

@@ -308,7 +308,10 @@ public struct RuleCascade: Sendable {
             cacheKey: snapshot.stamp.verdictCacheKey(
                 priorityID: priorityID,
                 priorityRevision: snapshot.priorityRevision,
+                // The selected page or item, when one was read, so two pages of one browser
+                // are judged apart: the remote judge reads the window, not just the app.
                 evidenceKey: "\(Self.osVersionKey)|\(subject)"
+                    + (evidence.selectedItem.map { "|\($0.subject)" } ?? "")
             ),
             priorityTokens: snapshot.priorityTokens.tokens,
             subject: subjectToken,

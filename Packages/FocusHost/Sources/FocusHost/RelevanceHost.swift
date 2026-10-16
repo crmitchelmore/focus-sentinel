@@ -225,6 +225,9 @@ final class RelevanceHost {
         normalizer: TokenNormalizer = TokenNormalizer(),
         scorer: SimilarityScorer = SimilarityScorer(),
         modelRung: FocusModelRung? = FocusModelRung(),
+        // `true` only for a rung whose judge has its own measurement: the opt-in remote judge,
+        // which rescued all fifteen holds the on-device model lost (`DecisionOneJudge`).
+        releasesModelRung: Bool = ModelTierRelease.composesTheRung,
         tunings: PolicyTunings = .shipped
     ) {
         var normalizer = normalizer
@@ -237,8 +240,7 @@ final class RelevanceHost {
         // cells the grid committed as holds, three prompt forms running, and a seduction is the
         // app going silent about something the person's own evidence said to hold. See
         // `ModelTierRelease` for the table and for what would flip it.
-        let composed = availability.isExecutable && ModelTierRelease.composesTheRung
-            ? modelRung : nil
+        let composed = availability.isExecutable && releasesModelRung ? modelRung : nil
         self.modelAvailability = availability
         let engine = DeterministicRelevanceEngine(
             normalizer: normalizer,
@@ -410,6 +412,13 @@ final class RelevanceHost {
                 .map { StoredRuleRow(rule: $0, isTaskScoped: true) }
         }
         return rows
+    }
+
+    /// The active priority's sentence while it is still at `revision`, for the remote judge: an
+    /// answer about a sentence the person has since rewritten is an answer to nobody.
+    func prioritySentence(atRevision revision: Int) -> String? {
+        guard let task = activeTask(), task.revision == revision else { return nil }
+        return task.intent
     }
 
     private func activeTask() -> FocusSchemaV3.PriorityTask? {

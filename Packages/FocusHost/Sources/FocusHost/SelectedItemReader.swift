@@ -17,6 +17,23 @@ protocol SelectedItemReading: AnyObject {
 
     /// How many reads reached the Accessibility API.
     var readCount: Int { get }
+
+    /// A read of `activation`'s focused window for the opt-in remote judge, or `nil` when the
+    /// person has not switched the Accessibility ask on or macOS has not granted it. The read
+    /// itself is returned rather than run, so the caller can run it off the main actor; it reads
+    /// the window as it is when called.
+    func windowContentRead(
+        in activation: ClearedActivation,
+        optIns: GrantOptIns
+    ) -> (@Sendable () -> RemoteWindowContext?)?
+}
+
+extension SelectedItemReading {
+    /// Doubles read nothing for the remote judge unless they say otherwise.
+    func windowContentRead(
+        in activation: ClearedActivation,
+        optIns: GrantOptIns
+    ) -> (@Sendable () -> RemoteWindowContext?)? { nil }
 }
 
 /// How long one Accessibility message may block the main actor. A hung application must not hang
@@ -39,6 +56,8 @@ private enum Attribute {
     static let document = "AXDocument"
     static let url = "AXURL"
     static let hidden = "AXHidden"
+    static let focusedUIElement = "AXFocusedUIElement"
+    static let window = "AXWindow"
 }
 
 /// **The one place in this application that reads what the Accessibility grant unlocks**
@@ -67,8 +86,12 @@ private enum Attribute {
 ///   and fragment discarded. Browser paths remain on device and are redacted from exports.
 /// * **Bounded.** One message may block for `messagingTimeout`; a walk below the title reads at
 ///   most `SelectedItemSearch.maximumElements` elements and stops at `searchBudget`.
-/// * **On device.** This file imports no networking API, and nothing it returns is sent
-///   anywhere; `check-boundaries.sh` holds FocusHost to that already.
+/// * **On device, with one opt-in exception.** This file imports no networking API, and a
+///   `SelectedItem` is never sent anywhere. `windowContentRead` is the exception: when someone
+///   configured the remote judge (`RemoteJudgeConfiguration`, off by default), it reads the
+///   focused window's title, file, web address and text — bounded by `WindowContentWalk` — for
+///   `DecisionOneJudge` to send once, unstored. It is reached only through
+///   `RemoteJudgeContextSource`, which hands it a cleared activation that is still frontmost.
 @MainActor
 final class SystemSelectedItemReader: SelectedItemReading {
     /// How long a walk below the title may take, all messages included. Measured on the owner's
@@ -101,6 +124,24 @@ final class SystemSelectedItemReader: SelectedItemReading {
             return nil
         }
         return grace.resolve(reading, pid: activation.pid, now: clock.elapsed)
+    }
+
+    /// How many window-content reads were handed out for the remote judge. Zero on a default
+    /// install, where nothing configures one.
+    private(set) var windowContentReadCount = 0
+
+    func windowContentRead(
+        in activation: ClearedActivation,
+        optIns: GrantOptIns
+    ) -> (@Sendable () -> RemoteWindowContext?)? {
+        guard optIns.isEnabled(.accessibilityWindowContext), AXIsProcessTrusted() else { return nil }
+        windowContentReadCount += 1
+        let pid = activation.pid
+        let bundleIdentifier = activation.bundleIdentifier
+        let applicationName = NSRunningApplication(processIdentifier: pid)?.localizedName
+        return {
+            WindowContentWalk.read(pid: pid, bundleIdentifier: bundleIdentifier, applicationName: applicationName)
+        }
     }
 
     private func read(_ activation: ClearedActivation) -> SelectedItemGrace.Reading {
@@ -216,6 +257,130 @@ private struct WindowElement: SelectedItemNode {
         return found.map { child in
             AXUIElementSetMessagingTimeout(child, messagingTimeout)
             return WindowElement(element: child, log: log)
+        }
+    }
+}
+
+/// **The remote judge's read of one window** — the ContextSpike's `full` capture, bounded.
+///
+/// Depth-first in reading order, content first: text inside a web area, a text area, a cell or
+/// a document layout goes first; toolbar, tab-strip and status-bar text after it; control labels
+/// (buttons, menus, sliders) are dropped, and exact repeats are dropped. Run off the main actor,
+/// and stopped by whichever comes first of `maximumElements`, `budget` and enough text.
+enum WindowContentWalk {
+    /// The spike read up to 8,000 elements with no clock. A judgement is worth less than that on
+    /// a person's machine, so the walk stops sooner and says so with "(truncated)".
+    static let maximumElements = 4_000
+    static let budget: Duration = .milliseconds(1_500)
+
+    private static let valueRoles: Set<String> = [
+        "AXStaticText", "AXTextArea", "AXTextField", "AXCell", "AXHeading", "AXLink",
+        "AXComboBox", "AXSearchField",
+    ]
+    private static let controlRoles: Set<String> = [
+        "AXButton", "AXMenuButton", "AXPopUpButton", "AXCheckBox", "AXRadioButton", "AXMenuItem",
+        "AXMenuBarItem", "AXSlider", "AXIncrementor", "AXDisclosureTriangle", "AXScrollBar",
+        "AXValueIndicator", "AXSplitter", "AXImage", "AXRadioGroup",
+    ]
+    private static let contentRoles: Set<String> = [
+        "AXWebArea", "AXTextArea", "AXLayoutArea", "AXTable", "AXCell", "AXDocument",
+    ]
+    private static let chromeRoles: Set<String> = ["AXToolbar", "AXMenuBar", "AXTabGroup"]
+
+    private enum Zone { case content, neutral, chrome }
+
+    static func read(pid: pid_t, bundleIdentifier: String, applicationName: String?) -> RemoteWindowContext? {
+        let application = AXUIElementCreateApplication(pid)
+        AXUIElementSetMessagingTimeout(application, messagingTimeout)
+        let log = MessageLog()
+        guard let windowValue = log.copy(application, Attribute.focusedWindow),
+              CFGetTypeID(windowValue) == AXUIElementGetTypeID()
+        else { return nil }
+        // swiftlint:disable:next force_cast
+        let window = windowValue as! AXUIElement
+
+        let document = string(log.copy(window, Attribute.document))
+        var webAddress = RemoteWindowContext.reducedWebAddress(document)
+        let deadline = ContinuousClock.now + budget
+        let enough = RemoteWindowContext.maximumTextLength * 2
+
+        var stack: [(AXUIElement, Zone)] = [(window, .neutral)]
+        var seen = Set<String>()
+        var content: [String] = [], neutral: [String] = [], chrome: [String] = []
+        var collected = 0
+        var visited = 0
+        while let (element, inherited) = stack.popLast(),
+              visited < maximumElements, collected < enough, ContinuousClock.now < deadline {
+            visited += 1
+            let role = string(log.copy(element, Attribute.role)) ?? ""
+            if role == "AXWebArea", webAddress == nil {
+                webAddress = RemoteWindowContext.reducedWebAddress(string(log.copy(element, Attribute.url)))
+            }
+            var zone = inherited
+            if zone != .chrome, contentRoles.contains(role) { zone = .content }
+            if zone != .content, isChrome(role, element, log) { zone = .chrome }
+            if !controlRoles.contains(role) {
+                var candidates = [Attribute.title, Attribute.description]
+                if valueRoles.contains(role) { candidates.insert(Attribute.value, at: 0) }
+                for attribute in candidates {
+                    guard let text = string(log.copy(element, attribute))?
+                        .trimmingCharacters(in: .whitespacesAndNewlines),
+                        text.count > 1, seen.insert(text).inserted
+                    else { continue }
+                    collected += text.count
+                    switch zone {
+                    case .content: content.append(text)
+                    case .neutral: neutral.append(text)
+                    case .chrome: chrome.append(text)
+                    }
+                }
+            }
+            let children = (log.copy(element, Attribute.children) as? [AXUIElement]) ?? []
+            for child in children.reversed() {
+                AXUIElementSetMessagingTimeout(child, messagingTimeout)
+                stack.append((child, zone))
+            }
+        }
+
+        return RemoteWindowContext(
+            applicationName: applicationName,
+            bundleIdentifier: bundleIdentifier,
+            title: string(log.copy(window, Attribute.title)),
+            webAddress: webAddress,
+            openFile: RemoteWindowContext.filePath(fromDocument: document),
+            focused: focusedSummary(application: application, window: window, log: log),
+            text: (content + neutral + chrome).joined(separator: "\n")
+        )
+    }
+
+    private static func isChrome(_ role: String, _ element: AXUIElement, _ log: MessageLog) -> Bool {
+        if chromeRoles.contains(role) { return true }
+        guard role == "AXGroup" else { return false }
+        let label = (string(log.copy(element, Attribute.description)) ?? "")
+            + (string(log.copy(element, Attribute.title)) ?? "")
+        return label.localizedCaseInsensitiveContains("status bar")
+    }
+
+    /// The focused element, only when it sits in the focused window.
+    private static func focusedSummary(application: AXUIElement, window: AXUIElement, log: MessageLog) -> String? {
+        guard let focusedValue = log.copy(application, Attribute.focusedUIElement),
+              CFGetTypeID(focusedValue) == AXUIElementGetTypeID()
+        else { return nil }
+        // swiftlint:disable:next force_cast
+        let focused = focusedValue as! AXUIElement
+        guard let owner = log.copy(focused, Attribute.window), CFEqual(owner, window) else { return nil }
+        let role = string(log.copy(focused, Attribute.role)) ?? "?"
+        let label = string(log.copy(focused, Attribute.title))
+            ?? string(log.copy(focused, Attribute.description)) ?? ""
+        let value = string(log.copy(focused, Attribute.value)).map { String($0.prefix(300)) } ?? ""
+        return [role, label, value].filter { !$0.isEmpty }.joined(separator: " · ")
+    }
+
+    private static func string(_ value: CFTypeRef?) -> String? {
+        switch value {
+        case let string as String: string
+        case let url as URL: url.absoluteString
+        default: nil
         }
     }
 }

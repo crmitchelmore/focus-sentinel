@@ -404,6 +404,20 @@ public final class AppComposition {
         let probe = PlatformCapabilityProbe(
             onDeviceModel: modelRung.availability.capabilityState
         )
+        // **The opt-in remote judge** (`DecisionOneJudge`). Off unless someone wrote its endpoint
+        // into this application's defaults, and never in a lane: the unit tests use an in-memory
+        // store and every self-check passes `--focus-self-check`, so neither can open a socket.
+        // The probe above still describes the on-device model, which is what the Privacy pane
+        // reports; the remote judge is a developer switch with no surface yet.
+        let remoteJudgeSource = RemoteJudgeContextSource()
+        let remoteJudgeConfiguration: RemoteJudgeConfiguration? =
+            storeKind == .applicationSupport
+                && !CommandLine.arguments.contains(where: { $0.hasPrefix("--focus-self-check") })
+            ? RemoteJudgeConfiguration.read()
+            : nil
+        let composedRung = remoteJudgeConfiguration.map {
+            FocusModelRung(judge: DecisionOneJudge(configuration: $0, source: remoteJudgeSource))
+        } ?? modelRung
         let sessions = SessionHost(
             context: context,
             events: events,
@@ -437,10 +451,12 @@ public final class AppComposition {
             context: context,
             ruleStore: self.ruleStore,
             monotonicClock: monotonicClock,
-            modelRung: modelRung
+            modelRung: composedRung,
+            releasesModelRung: remoteJudgeConfiguration != nil || ModelTierRelease.composesTheRung
         )
         self.relevanceHost = relevance
         self.classifier = relevance.engine
+        self.remoteJudgeSource = remoteJudgeSource
 
         self.priorityHost = PriorityHost(
             context: context,
@@ -687,6 +703,23 @@ public final class AppComposition {
         // (focus-zrs), rather than opening `PriorityStore` and deciding for itself which task is
         // active — which was a fourth independent read of the fact gate 1 is decided by.
         relevanceHost.activeCommitment = { [weak priorityHost] in priorityHost?.activeCommitment }
+
+        // **What the remote judge may send, decided here and nowhere else.** Only the window of
+        // the application the request names, only while it is still frontmost and e03's gate
+        // cleared it (no password manager, no private window), and only under the priority
+        // revision the request was made for. Installed whether or not a judge was configured;
+        // with none, nothing ever asks.
+        remoteJudgeSource.provide = { [weak self] request in
+            guard let self,
+                  let cleared = self.sensingHost.clearedFrontmostActivation,
+                  !self.sensingHost.judgeableSubject.isSuppressed,
+                  NormalisedToken.normalised(cleared.bundleIdentifier.lowercased())?.value
+                    == request.subject.value,
+                  let task = self.relevanceHost.prioritySentence(atRevision: request.priorityRevision),
+                  let read = self.selectedItemReader.windowContentRead(in: cleared, optIns: self.grantOptIns)
+            else { return nil }
+            return RemoteJudgeContextSource.Pending(task: task, read: read)
+        }
 
         // **One projection at the end**, so the two facts read at the top of this function reach
         // the value the cockpit draws (focus-odz.4, focus-odz.7). They travel through
@@ -1976,6 +2009,10 @@ public final class AppComposition {
     /// Asked only from `judge(in:)`, only about the application e03's gate cleared, and it
     /// answers `nil` unless the person switched the Accessibility ask on and macOS agreed.
     let selectedItemReader: any SelectedItemReading = SystemSelectedItemReader()
+
+    /// Where the opt-in remote judge asks for a window, answered by the closure the wiring
+    /// installs. Built on every launch; asked only when a remote judge was configured.
+    let remoteJudgeSource: RemoteJudgeContextSource
 
     /// **Which grants the person switched on**, held rather than re-read.
     ///
