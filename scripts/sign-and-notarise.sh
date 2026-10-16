@@ -45,11 +45,11 @@ fi
 
 sign() {
     # $1 path; the rest are extra codesign options.
-    local path="$1"; shift
-    codesign --force --timestamp --options runtime --sign "$IDENTITY" "$@" -- "$path" || {
-        print -u2 "FAIL codesign refused $path"; exit 1
+    local target="$1"; shift
+    codesign --force --timestamp --options runtime --sign "$IDENTITY" "$@" -- "$target" || {
+        print -u2 "FAIL codesign refused $target"; exit 1
     }
-    print "signed   ${path#$APP/}"
+    print "signed   ${target#$APP/}"
 }
 
 FRAMEWORK="$APP/Contents/Frameworks/Sparkle.framework"

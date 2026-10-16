@@ -4,6 +4,9 @@
 import argparse
 import importlib.util
 import pathlib
+import shlex
+import subprocess
+import tempfile
 import unittest
 from unittest import mock
 
@@ -60,6 +63,25 @@ class ReleaseConfigurationTests(unittest.TestCase):
                 self.assertIn(declaration, job)
                 self.assertNotIn(declaration, steps)
                 self.assertIn(f"env.{flag} == 'true'", steps)
+
+    def test_codesigning_helper_preserves_executable_search_path(self):
+        script = pathlib.Path(__file__).with_name("sign-and-notarise.sh").read_text()
+        body = script.split("sign() {\n", 1)[1].split("\n}\n", 1)[0]
+        with tempfile.TemporaryDirectory(prefix="focus-sign-test-") as directory:
+            tool = pathlib.Path(directory) / "codesign"
+            tool.write_text('#!/bin/sh\nexit 0\n')
+            tool.chmod(0o700)
+            result = subprocess.run(
+                [
+                    "/bin/zsh", "-fc",
+                    f"sign() {{\n{body}\n}}\n"
+                    f"PATH={shlex.quote(directory)}:/usr/bin:/bin\n"
+                    "APP=/tmp/Example.app\nIDENTITY=test\nsign /tmp/Example.app",
+                ],
+                capture_output=True, text=True, check=False,
+            )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("signed", result.stdout)
 
 
 if __name__ == "__main__":
