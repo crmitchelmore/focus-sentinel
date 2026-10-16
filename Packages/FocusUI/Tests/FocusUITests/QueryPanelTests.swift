@@ -207,7 +207,10 @@ struct QueryPanelTests {
     @Test("every button reports its own answer and nothing else")
     func clicksReportThemselves() {
         var seen: [QueryAnswer] = []
-        let view = QueryPanelView(presentation: QueryFixture.noNegativeBasis()) { seen.append($0) }
+        let view = QueryPanelView(
+            presentation: QueryFixture.noNegativeBasis(),
+            onAnswer: { seen.append($0) }
+        )
 
         for answer in QueryPresentation.actionOrder { view.onAnswer(answer) }
 
