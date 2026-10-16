@@ -1404,6 +1404,13 @@ so a debugger can still attach, and `scripts/entitlement-check.sh` asserts both 
 
 ### The artefact (D-09)
 
+**Ad-hoc development download:** [0.1.0 development build](https://github.com/crmitchelmore/focus-sentinel/releases/tag/adhoc-0.1.0-20261016).
+This owner-approved download is not notarised, has no Developer ID, and may be refused by
+macOS. Its release carries a SHA-256 checksum. It is separate from the signed production
+trains and does not advance either update feed; manual checks can still report an unavailable
+feed until the first production release is delivered. Requires an Apple silicon Mac running
+macOS 26.0 or later.
+
 `scripts/package-release.sh <app> <out>` makes `FocusSentinel-<version>-<commit>.dmg` from the
 Release product the gate already built. It **never builds, never signs, and never touches the
 keychain**: it `ditto`s the product (which preserves the supplied signature), writes a `README.txt`

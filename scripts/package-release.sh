@@ -144,8 +144,9 @@ if [[ "$SIGNING_MODE" == --developer-id ]]; then
     notarisation_section="NOTARISATION
 
 Apple notarised this build and the ticket is stapled to it. Update checks are off until you
-turn them on in Settings, General; when on, the app asks its update feed once a day and installs
-only builds signed with the key whose public half it carries."
+turn them on in Settings, General or explicitly check from Settings or the File menu.
+Automatic checks ask the update feed once a day. Updates must be signed with the key whose
+public half the app carries."
 else
     notarisation_section="WHY IT IS NOT NOTARISED
 
@@ -180,8 +181,9 @@ WHAT THIS IS
 A local Mac application. It watches which application is in front of you and asks, at most a
 few times a day, whether what you are doing is the thing you said you were doing. It talks to
 no server: there is no account and no sync, and it connects to the internet only to check for
-an update, only if you turn that on in Settings, General. The build gate proves both on the
-shipped binary rather than in a promise.
+an update or download one. Automatic checks are off until you enable them in Settings,
+General. You can also explicitly check from Settings or the File menu without enabling
+automatic checks.
 
 Requires macOS 26.0 or later.
 
@@ -215,9 +217,10 @@ $notarisation_section
 
 WHAT IT ASKS OF THE SYSTEM
 
-Nothing, on first run. It requests no permission of any kind and it never calls
-requestAuthorization — the gate asserts that on the shipped binary. It works with no grants at
-all; features that would need one are drawn as unavailable and say why.
+Nothing, on first run. Accessibility, Screen Recording and calendar access are separate
+opt-ins in Settings, Privacy; the app asks macOS only after you enable the corresponding
+switch. It also works without those grants. Selected-item reading stays on device, and
+calendar access reads event times, not titles or attendees, and never changes events.
 README
 
 print
