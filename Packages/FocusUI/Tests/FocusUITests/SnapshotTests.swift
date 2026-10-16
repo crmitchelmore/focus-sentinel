@@ -60,7 +60,10 @@ enum SnapshotComponent: String, CaseIterable, Sendable {
     /// together they passed eighteen thousand rows under the pseudo-locale at the largest text
     /// size, which is a height `ImageRenderer` answers with an empty buffer rather than a picture.
     case privacySettingsCapability
-    /// The fourth part of the Privacy pane: what the app made of what it saw.
+    /// The grant switches, apart from the capability table: the remote judge's switch carried
+    /// the two together past the row limit under the pseudo-locale.
+    case privacySettingsGrants
+    /// The fifth part of the Privacy pane: what the app made of what it saw.
     case privacySettingsReasoning
     case statusRelevant
     case statusUncertain
@@ -82,7 +85,7 @@ enum SnapshotComponent: String, CaseIterable, Sendable {
         case .statusRelevant, .statusUncertain, .statusUnrelated, .statusPaused, .statusBreak:
             nil
         case .privacySettings, .privacySettingsInsight, .privacySettingsCapability,
-            .privacySettingsReasoning:
+            .privacySettingsGrants, .privacySettingsReasoning:
             // **The width the pane commits to**, plus the harness's own 16-point padding on each
             // side, so the pane is proposed exactly `settingsWidth` and the picture has no dead
             // band beside it (focus-nu6). A surface that commits a width must be photographed at
@@ -213,6 +216,10 @@ enum SnapshotComponent: String, CaseIterable, Sendable {
         case .privacySettingsCapability:
             return AnyView(
                 PrivacySettingsView(storeURL: Self.storeURL, half: .capability, screens: [])
+            )
+        case .privacySettingsGrants:
+            return AnyView(
+                PrivacySettingsView(storeURL: Self.storeURL, half: .grants, screens: [])
             )
         case .privacySettingsReasoning:
             return AnyView(

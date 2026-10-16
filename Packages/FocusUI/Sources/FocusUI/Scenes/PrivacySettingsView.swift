@@ -165,7 +165,8 @@ public struct PrivacySettingsView: View {
     /// observation and reasoning are therefore photographed separately at the same width.
     private let half: Half?
 
-    /// Snapshot sections in reading order: ownership, observation, capability, then reasoning.
+    /// Snapshot sections in reading order: ownership, observation, capability, grants, then
+    /// reasoning.
     /// The shipping pane passes nil and draws every section.
     ///
     /// **Four parts rather than three since focus-oqsx.** Past roughly sixteen thousand rows
@@ -176,8 +177,11 @@ public struct PrivacySettingsView: View {
     public enum Half: String, Sendable, CaseIterable, Hashable {
         case ownership
         case insight
-        /// The capability table and the two grant switches, photographed on their own.
+        /// The capability table, photographed on its own.
         case capability
+        /// The grant switches and the remote judge's, apart from the table since the judge's
+        /// switch carried the two together past the row limit under the pseudo-locale.
+        case grants
         /// A separate photograph keeps expanded large text below CoreGraphics' image limit.
         case reasoning
     }
@@ -786,6 +790,9 @@ public struct PrivacySettingsView: View {
                 Divider()
 
                 CapabilityMatrixView(capabilities: capabilities)
+            }
+
+            if draws(.grants) {
                 Divider()
                 grantSwitches
             }
