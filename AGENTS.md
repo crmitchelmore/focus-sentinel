@@ -348,7 +348,7 @@ mirrored for anything substantive.
   panel that `WalkthroughPlacement` puts beside the control the step is about and
   `WalkthroughHighlightWindow` outlines; the controls report their frames through
   `.walkthroughAnchor(_:)` into `WalkthroughAnchorRegistry`, most specific first (the capture
-  field, else *Change priority*; the context pack, else the Details tab). `FocusHost.WalkthroughTour`
+  field, else *Change priority*; the context pack, else *Configure context…* — the Details tab until focus-g9iw). `FocusHost.WalkthroughTour`
   takes a baseline reading on entering a step and reads completion off `PriorityHost.state`,
   `SessionHost.snapshot`, the popover's `onPopoverDidShow` and `noteSettingsRendering` — never
   off the button. The reading arrives through `PriorityHost.onStateChanged`, added because

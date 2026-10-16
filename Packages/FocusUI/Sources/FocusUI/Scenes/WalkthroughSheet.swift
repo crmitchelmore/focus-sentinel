@@ -61,8 +61,7 @@ public enum WalkthroughPage: String, Sendable, CaseIterable, Hashable, Identifia
             [
                 WalkthroughParagraph(key: .walkthroughPriorityOne, symbol: "scope"),
                 WalkthroughParagraph(key: .walkthroughPriorityDoneWhen, symbol: "checkmark.seal"),
-                WalkthroughParagraph(key: .walkthroughPriorityRefine, symbol: "text.badge.checkmark"),
-                WalkthroughParagraph(key: .walkthroughPriorityRitual, symbol: "sun.max")
+                WalkthroughParagraph(key: .walkthroughPriorityRefine, symbol: "text.badge.checkmark")
             ]
         case .time:
             [

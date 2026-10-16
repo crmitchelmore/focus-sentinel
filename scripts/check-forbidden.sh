@@ -49,7 +49,7 @@
 #   R-26  No bare `Date()` outside `FocusCore/Time/DateProvider.swift`, and no
 #         `Calendar.current` / `TimeZone.current` outside `FocusCore/Time/`. Timestamps come
 #         from an injected `DateProvider` and day keys from an injected calendar; that is
-#         what makes the ritual, the timebox and the history ordering deterministic instead
+#         what makes the timebox and the history ordering deterministic instead
 #         of a function of the runner's clock and timezone.
 #
 # ## The Carbon.HIToolbox exemption, and why it is one file rather than one package

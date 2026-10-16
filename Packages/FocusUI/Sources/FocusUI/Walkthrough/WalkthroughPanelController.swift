@@ -21,7 +21,7 @@ public final class WalkthroughTourModel {
 /// ## Why a panel and not the sheet
 ///
 /// The sheet covers the cockpit, and the point of the tour is that the person acts on the
-/// cockpit: types the priority, presses Start, opens Details. So the tour is a floating utility
+/// cockpit: types the priority, presses Start, configures its context. So the tour is a floating utility
 /// panel that moves beside whichever control the step is about, with the app fully visible and
 /// fully usable, and `WalkthroughHighlightWindow` outlines that control.
 ///

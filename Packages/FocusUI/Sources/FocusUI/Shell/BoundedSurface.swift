@@ -135,6 +135,9 @@ public enum ShellSurfaceBounds {
     public static let sheetChromeAllowance: Double = 160
 
     public static let completionSheetWidth: Double = 420
+    /// The context sheet (focus-g9iw): wide enough for a row of chips and a rule's verdict
+    /// buttons beside its subject, which is what the Details tab gave them.
+    public static let contextSheetWidth: Double = 520
     public static let interruptionSheetWidth: Double = 420
     public static let handoffSheetWidth: Double = 480
     public static let sheetMinimumHeight: Double = 160

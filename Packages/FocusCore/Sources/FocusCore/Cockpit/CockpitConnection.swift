@@ -144,7 +144,7 @@ public struct CockpitConnection {
 /// checked against the type rather than against a memory of it.
 ///
 /// `state` descends: the cockpit draws its members one at a time — the footer's store line, the
-/// ritual banner, the recents list — so a receipt for "the state" as one blob would be satisfied
+/// session, the recents list — so a receipt for "the state" as one blob would be satisfied
 /// by a window that drew nine of eleven fields correctly and lied about two.
 extension CockpitConnection: ShellDrawnConnection {
     public nonisolated static var connectionName: String { "CockpitConnection" }
@@ -185,7 +185,6 @@ extension CockpitConnection: ShellDrawnConnection {
             "state.recent": .drawn([.recentCount, .recentDigest]),
             "state.standing": .drawn([.standingCount, .standingDigest]),
             "state.pendingHandoff": .drawn([.handoffTask, .handoffDetail]),
-            "state.showsRitualPrompt": .drawn([.ritualBanner]),
             "state.session": .drawn([.sessionPhase, .sessionDetail]),
             "state.sensing": .drawn([.sensingSummary, .sensingDetail]),
             // e04's verdict inspector is a Settings surface. The cockpit draws a `status` badge,

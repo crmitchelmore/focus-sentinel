@@ -73,9 +73,9 @@ person presses Replace. `focus_add_context` adds to the priority that is current
 presses Add; with no current priority the app ignores the URL, so the tool refuses first.
 
 Standing priorities are a shortlist of starting points, not a backlog. Setting them does not
-change the current priority. The app lists them under **Your priorities** (on the Now tab when
-nothing is committed, and always on the Recent tab), and **Focus on this** makes one current with
-its context. Sending the same set again reuses the stored tasks, and a task whose intent matches
+change the current priority. The app lists them under **Your priorities** on Now while no session
+is open, and behind **Change priority** while one is; **Focus on this** makes one current with its
+context. Sending the same set again reuses the stored tasks, and a task whose intent matches
 gets the new done-when.
 
 Register it with Copilot CLI for one repository (`.github/mcp.json`) or for all of them:

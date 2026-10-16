@@ -193,10 +193,75 @@ struct CockpitWiring {
         actions.map { host in { host.cancelHandoff() } }
     }
 
-    // MARK: - The daily ritual (F-19)
+    // MARK: - Planning and working (focus-g9iw)
 
-    /// Answering *or* dismissing writes the day key, so the banner asks once (R-28).
-    var dismissRitual: (() -> Void)? {
-        actions.map { host in { host.dismissRitual() } }
+    /// **What Now is for at this moment.**
+    ///
+    /// Read off the session alone, because that is the one fact that changes what the person is
+    /// doing: with no session open they are choosing and preparing a priority; with one running
+    /// or paused they are doing it. A terminal session is history, not work — the same line
+    /// `SessionPhase.isTerminal` draws for every other reader.
+    enum NowMode: String, Sendable, Equatable {
+        case planning
+        case working
+    }
+
+    nonisolated static func nowMode(session: SessionSnapshot?) -> NowMode {
+        guard let session, !session.phase.isTerminal else { return .planning }
+        return .working
+    }
+
+    /// **Whether the standing priorities belong on Now** (focus-g9iw).
+    ///
+    /// While planning they are the menu the person is choosing from, so they sit beside the
+    /// capture field. While working they would compete with the task in hand, so they come back
+    /// only when the person deliberately opens *Change priority* — the one route to choosing
+    /// something else mid-session. Never on History: they are not the past.
+    nonisolated static func showsStanding(
+        mode: NowMode,
+        captureShown: Bool,
+        hasStanding: Bool
+    ) -> Bool {
+        hasStanding && (mode == .planning || captureShown)
+    }
+
+    /// **Whose session this is, as far as the cockpit can tell** (focus-g9iw).
+    ///
+    /// The timer sits under the priority's title, so a session that began on a different task —
+    /// one the person switched away from mid-session, or one started before anything was
+    /// committed — would read as belonging to the priority above it. This names the mismatch
+    /// rather than resolving it: reassigning or ending a session is the person's verb, never a
+    /// side effect of drawing one.
+    enum SessionOwnership: String, Sendable, Equatable {
+        /// The session is about the priority on screen, or there is no session to describe.
+        case matches
+        /// The session began on a task that is not the priority on screen.
+        case otherPriority
+        /// The session began with nothing committed, and there is a priority now.
+        case noPriority
+    }
+
+    nonisolated static func sessionOwnership(
+        priority: PrioritySnapshot?,
+        session: SessionSnapshot?
+    ) -> SessionOwnership {
+        guard let session else { return .matches }
+        switch (session.taskID, priority?.id) {
+        case let (taskID?, priorityID) where taskID != priorityID:
+            return .otherPriority
+        case (nil, _?):
+            return .noPriority
+        default:
+            return .matches
+        }
+    }
+
+    /// The caption for an ownership that is not a match, or `nil` when there is nothing to say.
+    nonisolated static func ownershipKey(_ ownership: SessionOwnership) -> ShellStringKey? {
+        switch ownership {
+        case .matches: nil
+        case .otherPriority: .sessionBelongsToOtherPriority
+        case .noPriority: .sessionBelongsToNoPriority
+        }
     }
 }

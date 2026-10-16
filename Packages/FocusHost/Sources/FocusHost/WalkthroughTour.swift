@@ -11,7 +11,7 @@ import os
 /// The walkthrough's first page is a sheet that says what the app watches. Its Continue button
 /// opens this: a floating panel (`WalkthroughPanelController`) that walks eleven steps, and on
 /// each one moves beside the control the step is about, outlines it, and asks the person to do
-/// the thing there — type the priority, press Start, open Details. The app's own state says when
+/// the thing there — type the priority, press Start, configure its context. The app's own state says when
 /// it has been done; a *Do it for me* button does it through the same hosts for anybody who
 /// would rather watch. This object is the only thing that performs those actions, and it
 /// performs them through the hosts the cockpit's own controls call, so a demo is the product

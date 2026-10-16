@@ -306,6 +306,16 @@ public struct CockpitState: Sendable, Equatable, Hashable {
     public var priority: PrioritySnapshot?
     /// Previous commitments, newest first (F-15).
     public var recent: [RecentPriority]
+
+    /// **The earlier priorities: `recent` without the one that is current** (focus-g9iw).
+    ///
+    /// `recent` is the store's history and keeps the active task in it, marked `isActive`. The
+    /// cockpit's History destination is the past only — the current priority already has the
+    /// whole of Now — so this is the list it draws and the list its receipts describe, derived
+    /// here so the window and the composition root's expectation cannot filter it two ways.
+    public var earlierPriorities: [RecentPriority] {
+        recent.filter { !$0.isActive }
+    }
     /// The person's standing priorities, main first; empty until a planning tool has set them.
     public var standing: [StandingPriority]
     /// An incoming `focus://` handoff awaiting a human decision (F-142).
@@ -313,14 +323,23 @@ public struct CockpitState: Sendable, Equatable, Hashable {
     /// Its presence opens the confirmation sheet and **nothing else**. There is no code path
     /// from a URL to a store mutation that does not pass through a person pressing Replace.
     public var pendingHandoff: HandoffRequest?
-    /// Whether the daily ritual banner should be shown (F-19). A banner, never a modal.
-    public var showsRitualPrompt: Bool
 
     /// The session the person is in, or `nil` when there is none.
     ///
     /// `nil` is a real answer rather than a missing one: sensing runs whether or not a session
     /// does, and the cockpit offers to start one instead of drawing an empty timer.
     public var session: SessionSnapshot?
+
+    /// **Whether the cockpit draws the session section** (focus-g9iw).
+    ///
+    /// A session belongs to the task it started on, and putting today's priority down does not
+    /// end it, so the section follows an open session as well as the priority: hiding a running
+    /// timer because nothing is committed would hide the one fact the person most needs. A
+    /// finished session with nothing committed is nothing to act on, so it is not drawn. Derived
+    /// here so the window and the composition root's expectation cannot decide it two ways.
+    public var drawsSession: Bool {
+        priority != nil || (session.map { !$0.phase.isTerminal } ?? false)
+    }
 
     /// What the observer graph is doing. Drawn plainly, including when the answer is "nothing".
     public var sensing: SensingSummary
@@ -372,7 +391,6 @@ public struct CockpitState: Sendable, Equatable, Hashable {
         recent: [RecentPriority] = [],
         standing: [StandingPriority] = [],
         pendingHandoff: HandoffRequest? = nil,
-        showsRitualPrompt: Bool = false,
         session: SessionSnapshot? = nil,
         sensing: SensingSummary = .inactive,
         verdict: VerdictSnapshot? = nil,
@@ -390,7 +408,6 @@ public struct CockpitState: Sendable, Equatable, Hashable {
         self.recent = recent
         self.standing = standing
         self.pendingHandoff = pendingHandoff
-        self.showsRitualPrompt = showsRitualPrompt
         self.session = session
         self.sensing = sensing
         self.verdict = verdict

@@ -3,7 +3,7 @@ import Testing
 
 @testable import FocusCore
 
-@Suite("Local day and the daily ritual")
+@Suite("Local day")
 struct LocalDayTests {
     private func calendar(_ timeZoneIdentifier: String) throws -> Calendar {
         var calendar = Calendar(identifier: .gregorian)
@@ -94,86 +94,5 @@ struct LocalDayTests {
         #expect(LocalDay(year: 2026, month: 1, day: 1) < LocalDay(year: 2026, month: 1, day: 2))
         #expect(LocalDay(year: 2026, month: 1, day: 31) < LocalDay(year: 2026, month: 2, day: 1))
         #expect(LocalDay(year: 2025, month: 12, day: 31) < LocalDay(year: 2026, month: 1, day: 1))
-    }
-
-    // MARK: - The ritual
-
-    @Test("the ritual fires once per local day and not again after being dealt with")
-    func ritualFiresOncePerDay() throws {
-        let utc = try calendar("UTC")
-        let today = LocalDay.today(calendar: utc, now: newYearUTC)
-        let tomorrow = LocalDay.today(calendar: utc, now: newYearUTC.addingTimeInterval(86_400))
-
-        // Never run before.
-        #expect(DailyRitualGate.shouldPrompt(lastRitualLocalDay: nil, today: today, isEnabled: true))
-
-        // Dealt with — answered *or* dismissed writes the same key.
-        let written = DailyRitualGate.dayKeyAfterPrompting(today)
-        #expect(written == "2026-01-01")
-        #expect(
-            DailyRitualGate.shouldPrompt(lastRitualLocalDay: written, today: today, isEnabled: true)
-                == false,
-            "the ritual came back on the same day"
-        )
-
-        // A new local day, and it asks again.
-        #expect(
-            DailyRitualGate.shouldPrompt(
-                lastRitualLocalDay: written,
-                today: tomorrow,
-                isEnabled: true
-            )
-        )
-    }
-
-    @Test("the ritual switch wins over everything, and a corrupt key counts as never")
-    func ritualSwitchAndCorruptKeys() throws {
-        let utc = try calendar("UTC")
-        let today = LocalDay.today(calendar: utc, now: newYearUTC)
-
-        #expect(
-            DailyRitualGate.shouldPrompt(lastRitualLocalDay: nil, today: today, isEnabled: false)
-                == false
-        )
-        #expect(
-            DailyRitualGate.shouldPrompt(
-                lastRitualLocalDay: "2026-01-01",
-                today: today,
-                isEnabled: false
-            ) == false
-        )
-        // Written by a future version, or corrupted. Asking once more is the safe reading;
-        // never asking again would silently retire the feature.
-        #expect(
-            DailyRitualGate.shouldPrompt(
-                lastRitualLocalDay: "the-first-of-january",
-                today: today,
-                isEnabled: true
-            )
-        )
-    }
-
-    /// The same instant, the same stored key, two timezones — and the answer differs. That is
-    /// the whole reason `Calendar` is a parameter.
-    @Test("whether the ritual fires depends on the injected calendar, and only on that")
-    func ritualDependsOnTheInjectedCalendar() throws {
-        let midday = newYearUTC.addingTimeInterval(12 * 60 * 60)
-        let stored = "2026-01-01"
-
-        let inUTC = LocalDay.today(calendar: try calendar("UTC"), now: midday)
-        let inAuckland = LocalDay.today(calendar: try calendar("Pacific/Auckland"), now: midday)
-
-        #expect(
-            DailyRitualGate.shouldPrompt(lastRitualLocalDay: stored, today: inUTC, isEnabled: true)
-                == false
-        )
-        #expect(
-            DailyRitualGate.shouldPrompt(
-                lastRitualLocalDay: stored,
-                today: inAuckland,
-                isEnabled: true
-            ),
-            "in Auckland it is already the next day, so the ritual is due"
-        )
     }
 }

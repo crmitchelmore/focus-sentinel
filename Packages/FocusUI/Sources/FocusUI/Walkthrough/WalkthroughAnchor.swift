@@ -6,9 +6,9 @@ import SwiftUI
 /// A closed vocabulary of the places in the cockpit a coach mark lands on. The cockpit's
 /// sections report their frames under these names as they are laid out, the tour reads them
 /// back as screen rectangles, and `WalkthroughTests` holds that every step names anchors that
-/// exist. A control that is not on screen — the Details tab's sections while Now is open, the
-/// capture field while a priority is set — reports nothing, which is how a step knows to point
-/// at the control that opens it instead.
+/// exist. A control that is not on screen — the context sheet's sections while the sheet is
+/// down, the capture field while a priority is set — reports nothing, which is how a step knows
+/// to point at the control that opens it instead.
 public enum WalkthroughAnchor: String, Sendable, CaseIterable, Hashable {
     /// The capture field, open when there is no priority or after *Change priority*.
     case captureField
@@ -20,14 +20,20 @@ public enum WalkthroughAnchor: String, Sendable, CaseIterable, Hashable {
     case timeboxControl
     /// The session controls: Start, Pause, Finish and the rest.
     case sessionControls
-    /// The Details tab's button in the tab bar.
-    case detailsTab
-    /// The context pack on the Details tab.
+    /// The *Configure context…* button on Now, which opens the context sheet (focus-g9iw).
+    case configureContext
+    /// The context pack, in the context sheet.
     case contextPack
-    /// The rules section on the Details tab.
+    /// The rules section, in the context sheet.
     case rules
     /// The *Open Settings* button in the footer.
     case openSettingsButton
+
+    /// Whether the control is drawn in the context sheet rather than in the cockpit's own
+    /// content — which is a different window, attached to the cockpit, with its own geometry.
+    public var isInContextSheet: Bool {
+        self == .contextPack || self == .rules
+    }
 }
 
 /// **Where every anchored control is, in its window** (focus-u6de).
@@ -72,17 +78,20 @@ public final class WalkthroughAnchorRegistry {
     ///
     /// SwiftUI's global space is the window's content view with the origin at the top left; AppKit's
     /// is the same view with the origin at the bottom left, and `convertToScreen` takes the latter.
+    ///
+    /// A control in the context sheet reported its frame in the *sheet's* content space, so it is
+    /// converted against the sheet attached to the cockpit when there is one (focus-g9iw).
     public func screenRect(of anchor: WalkthroughAnchor, in window: NSWindow?) -> CGRect? {
-        guard let rect = windowRects[anchor], let window, let content = window.contentView else {
-            return nil
-        }
+        guard let rect = windowRects[anchor], let window else { return nil }
+        let host = anchor.isInContextSheet ? (window.attachedSheet ?? window) : window
+        guard let content = host.contentView else { return nil }
         let flipped = NSRect(
             x: rect.minX,
             y: content.bounds.height - rect.maxY,
             width: rect.width,
             height: rect.height
         )
-        return window.convertToScreen(flipped)
+        return host.convertToScreen(flipped)
     }
 }
 

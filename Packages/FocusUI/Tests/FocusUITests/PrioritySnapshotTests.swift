@@ -256,24 +256,28 @@ enum PriorityComponent: String, CaseIterable, Sendable {
     /// always has a `doneWhen`, so no baseline covers the empty case"*. Without it the fix is
     /// unwitnessed and the next fixture change reintroduces the heading-over-nothing silently.
     case cockpitWithPriorityNoDoneWhen
-    /// **The other two tabs** (focus-1rj7). `cockpitWithPriority` photographs Now; these
-    /// photograph the session in full with the desk and the rules, and the recent priorities.
-    case cockpitDetails
-    case cockpitRecent
+    /// **History, and the context sheet** (focus-1rj7, focus-g9iw). `cockpitWithPriority`
+    /// photographs Now; these photograph the earlier priorities with the way to the day's
+    /// record, and the sheet *Configure context…* opens over the desk and the rules.
+    case cockpitHistory
+    case contextSheet
     case contextPack
     case taskRules
     case timeboxRunning
     case timeboxOvertime
     case recentPriorities
-    case ritualBanner
     case handoffConfirm
 
     /// Everything wraps inside a fixed width, so growing text grows the *height* — which is
     /// what the dynamic-type and pseudo-localisation assertions read.
     var width: CGFloat? {
-        // The handoff sheet commits a width now, so it is photographed at the width it commits
-        // to, plus the harness's own 16-point padding on each side (focus-nu6).
-        self == .handoffConfirm ? ShellSurfaceBounds.handoffSheetWidth + 32 : 520
+        // The handoff and context sheets commit a width, so each is photographed at the width it
+        // commits to, plus the harness's own 16-point padding on each side (focus-nu6).
+        switch self {
+        case .handoffConfirm: ShellSurfaceBounds.handoffSheetWidth + 32
+        case .contextSheet: ShellSurfaceBounds.contextSheetWidth + 32
+        default: 520
+        }
     }
 
     /// Whether a pseudo-localised pass means anything for this component.
@@ -297,9 +301,10 @@ enum PriorityComponent: String, CaseIterable, Sendable {
         drawsLocalisedProse && !Self.cockpitComposites.contains(self)
     }
 
-    /// The whole-cockpit renders: one per tab (focus-1rj7), and the no-done-when variant.
+    /// The whole-cockpit renders: one per destination (focus-1rj7, focus-g9iw), and the
+    /// no-done-when variant.
     static let cockpitComposites: Set<PriorityComponent> = [
-        .cockpitWithPriority, .cockpitWithPriorityNoDoneWhen, .cockpitDetails, .cockpitRecent
+        .cockpitWithPriority, .cockpitWithPriorityNoDoneWhen, .cockpitHistory
     ]
 
     /// Whether Increase Contrast has anything to change in this component.
@@ -339,20 +344,23 @@ enum PriorityComponent: String, CaseIterable, Sendable {
                     sessionElapsedSeconds: SessionFixture.elapsedSeconds
                 )
             )
-        case .cockpitDetails:
+        case .cockpitHistory:
             AnyView(
                 CockpitView(
                     state: PriorityFixture.cockpit(),
                     sessionElapsedSeconds: SessionFixture.elapsedSeconds,
-                    tab: .details
+                    tab: .history
                 )
             )
-        case .cockpitRecent:
+        case .contextSheet:
             AnyView(
-                CockpitView(
-                    state: PriorityFixture.cockpit(),
-                    sessionElapsedSeconds: SessionFixture.elapsedSeconds,
-                    tab: .recent
+                // `screens: []` for the handoff sheet's reason, below.
+                ContextSheet(
+                    intent: PriorityFixture.intent,
+                    contextItems: PriorityFixture.contextItems,
+                    rules: PriorityFixture.rulesWithARetiredRow,
+                    done: {},
+                    screens: []
                 )
             )
         case .contextPack:
@@ -389,12 +397,6 @@ enum PriorityComponent: String, CaseIterable, Sendable {
             )
         case .recentPriorities:
             AnyView(RecentPrioritiesView(rows: PriorityFixture.recent))
-        case .ritualBanner:
-            AnyView(
-                FocusHost { focus in
-                    RitualBanner(answer: {}, dismiss: {}, focus: focus)
-                }
-            )
         case .handoffConfirm:
             AnyView(
                 // `screens: []` — no display, so the sheet's container draws its column whole

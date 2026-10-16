@@ -288,7 +288,6 @@ struct ShellConnectionTotalityTests {
         for member in [
             "state.storeOpened",
             "state.lastWriteFailed",
-            "state.showsRitualPrompt",
             "state.priority.intent",
             "state.priority.timebox",
             "state.priority.assessment",
@@ -348,7 +347,6 @@ struct ShellConnectionTotalityTests {
             flags: [],
             context: [HandoffContextItem(kind: .domain, value: "https://status.example.com")]
         ),
-        showsRitualPrompt: true,
         session: SessionSnapshot(
             sessionID: UUID(uuidString: "70741117-0000-4000-8000-000000000003")!,
             taskID: UUID(uuidString: "70741117-0000-4000-8000-000000000001")!,

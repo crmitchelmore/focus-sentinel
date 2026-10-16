@@ -25,10 +25,10 @@ import os
 ///
 /// ## What is *not* undoable, on purpose
 ///
-/// Two writes here go straight to the context rather than through `PriorityStore`: stamping
-/// the ritual's local-day key, and re-creating a stale file bookmark. Neither is something a
-/// person did, so neither belongs in the Edit menu — an "Undo" that put back a bookmark
-/// pointing at a file's old path would be undoing housekeeping the user never asked for.
+/// One write here goes straight to the context rather than through `PriorityStore`:
+/// re-creating a stale file bookmark. It is not something a person did, so it does not belong
+/// in the Edit menu — an "Undo" that put back a bookmark pointing at a file's old path would be
+/// undoing housekeeping the user never asked for.
 @Observable
 @MainActor
 final class PriorityHost: PriorityActing {
@@ -538,29 +538,6 @@ final class PriorityHost: PriorityActing {
         refresh()
     }
 
-    /// Record that today's ritual has been answered **or** dismissed. The same write for both,
-    /// which is what makes "it asks once" true rather than aspirational (F-19).
-    func dismissRitual() {
-        let today = LocalDay.today(calendar: calendar, dateProvider: dateProvider)
-        do {
-            let now = dateProvider.now
-            // Reuse the one sanctioned creator of the settings row rather than writing a
-            // second one here. Passing the preference the store already holds makes this a
-            // no-op on that column and an upsert on the row.
-            let row = try FocusStore.setAppearancePreference(
-                FocusStore.appearancePreference(in: context),
-                in: context,
-                now: now
-            )
-            row.lastRitualLocalDay = DailyRitualGate.dayKeyAfterPrompting(today)
-            try context.save()
-            writeFailure = nil
-        } catch {
-            record(error)
-        }
-        refresh()
-    }
-
     // MARK: - Mutating, once
 
     /// Every verb funnels through here: run it, remember what went wrong if anything did, and
@@ -585,7 +562,7 @@ final class PriorityHost: PriorityActing {
     /// Rebuild `CockpitState` from the store.
     ///
     /// One pass: the active task (if any) with its resolved context pack, its rules and the
-    /// validator's opinion of its sentence; the history; and the ritual's answer for today.
+    /// validator's opinion of its sentence; the history; and the standing priorities.
     func refresh() {
         let now = dateProvider.now
         // Seeded with what is already on screen: if the fetch throws, the honest thing is to
@@ -669,7 +646,6 @@ final class PriorityHost: PriorityActing {
             recent: recent,
             standing: standing,
             pendingHandoff: pendingHandoff,
-            showsRitualPrompt: shouldPromptRitual(),
             session: environment.session,
             sensing: environment.sensing,
             verdict: environment.verdict,
@@ -788,18 +764,5 @@ final class PriorityHost: PriorityActing {
         task.rules
             .sorted { $0.createdAt < $1.createdAt }
             .compactMap(PriorityRuleValue.init)
-    }
-
-    private func shouldPromptRitual() -> Bool {
-        guard let row = FocusStore.settingsRow(in: context) else {
-            // No settings row at all means the app has never stored anything, which is the
-            // first launch — and the ritual is enabled by default.
-            return true
-        }
-        return DailyRitualGate.shouldPrompt(
-            lastRitualLocalDay: row.lastRitualLocalDay,
-            today: LocalDay.today(calendar: calendar, dateProvider: dateProvider),
-            isEnabled: row.ritualEnabled
-        )
     }
 }

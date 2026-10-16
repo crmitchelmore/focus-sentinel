@@ -125,6 +125,16 @@ struct WalkthroughTests {
         for step in onArrival { #expect(step.fallbackTitleKey == .walkthroughShowItAgain) }
     }
 
+    /// **The desk and the rules live in the context sheet** (focus-g9iw), so their steps name the
+    /// control inside the sheet first and *Configure context…* second: while the sheet is open the
+    /// panel stands beside what to type into, and while it is closed, beside the way in.
+    @Test("the context steps point into the sheet first, then at the button that opens it")
+    func contextStepsReachTheSheet() {
+        #expect(WalkthroughAction.addDemoDesk.anchors == [.contextPack, .configureContext])
+        #expect(WalkthroughAction.addDemoRule.anchors == [.rules, .configureContext])
+        #expect(Set(WalkthroughAnchor.allCases.filter(\.isInContextSheet)) == [.contextPack, .rules])
+    }
+
     /// The registry: a report is a rectangle, a clear is its absence, and each tells the tour.
     @Test("the anchor registry reports, clears and converts through the window")
     @MainActor

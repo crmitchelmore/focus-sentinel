@@ -39,8 +39,6 @@ struct StoredSettingRestorationTests {
         case corroborationTickSeconds
         case launchContextOnSessionStart
         case mediaSuppressionEnabled
-        case lastRitualLocalDay
-        case ritualEnabled
         case hotKeyKeyCode
         case hotKeyModifierFlags
         case voiceRaw
@@ -54,6 +52,15 @@ struct StoredSettingRestorationTests {
 
     /// Columns that are not anybody's choice: the identity and the two schema timestamps.
     static let bookkeeping: Set<String> = ["id", "schemaTouchedAt", "touchedAt"]
+
+    /// **Columns the store keeps and the app no longer reads** (focus-g9iw).
+    ///
+    /// The daily ritual banner asked the question the cockpit's capture field already asks, so
+    /// it was retired with its General switch. Its two columns stay — dropping them costs a
+    /// migration for nothing — but there is no live value for a relaunch to restore, so they
+    /// are named here rather than given a read-back that could only read the store to itself.
+    /// A settings document still carries `ritualEnabled`; `SettingsDocumentTests` holds that.
+    static let retired: Set<String> = ["lastRitualLocalDay", "ritualEnabled"]
 
     /// A writable directory holding a store this test owns.
     static func temporaryStoreURL() -> URL {
@@ -94,7 +101,12 @@ struct StoredSettingRestorationTests {
         let columns = entities
             .flatMap { $0.properties.map(\.name) }
             .filter { !Self.bookkeeping.contains($0) }
-        #expect(Set(columns) == Set(StoredSetting.allCases.map(\.rawValue)))
+        // The retired columns must still be in the schema: an entry here for a column that has
+        // gone is a stale excuse, not an exemption.
+        #expect(Self.retired.isSubset(of: Set(columns)))
+        #expect(
+            Set(columns).subtracting(Self.retired) == Set(StoredSetting.allCases.map(\.rawValue))
+        )
     }
 
     /// **Write it in one root, read it back in the next.** Every case, one pair of roots each.
@@ -136,7 +148,7 @@ struct StoredSettingRestorationTests {
     /// used to be set on the row here by hand, with a comment saying why: nothing in the app
     /// could write them, so a read-back proof had to supply the write itself — which is precisely
     /// the shape a read-back proof cannot see through. Deleting that hand-seeding is what makes
-    /// this suite red without the General pane's two controls.
+    /// this suite red without the General pane's capture control.
     static func write(_ setting: StoredSetting, into root: AppComposition) {
         let context = root.modelContainer.mainContext
         let now = root.dateProvider.now
@@ -154,18 +166,6 @@ struct StoredSettingRestorationTests {
                 in: context,
                 now: now
             )
-
-        case .lastRitualLocalDay:
-            // The app's own writer. It records that today's ritual has been answered or
-            // dismissed, which is the only thing that ever sets this column.
-            root.priorityHost.dismissRitual()
-
-        case .ritualEnabled:
-            // **The app's own writer** (focus-d3g). This case used to set the column on the row
-            // by hand, and said so: nothing in the application could write it, so the only value
-            // it could ever hold was the schema's default. The General pane's switch is that
-            // writer now, reached through the same sink the pane holds.
-            root.perform(CaptureSettingsAction.setRitualEnabled(false))
 
         case .hotKeyKeyCode, .hotKeyModifierFlags:
             // The other half of the same defect, and the user-reachable one: P-55 measured that
@@ -211,15 +211,6 @@ struct StoredSettingRestorationTests {
         case .mediaSuppressionEnabled:
             return sensing.mediaSuppressionEnabled
                 == Self.probeSensingSettings.mediaSuppressionEnabled
-
-        case .lastRitualLocalDay:
-            // The projection the cockpit draws. Today's ritual was answered in the launch above,
-            // so the banner must not be offered again — which is the whole of "it asks once".
-            return root.cockpitState.showsRitualPrompt == false
-        case .ritualEnabled:
-            // Nothing was dismissed in the launch above, so a root that ignored the column would
-            // offer the banner. The switch is off, so it must not.
-            return root.cockpitState.showsRitualPrompt == false
 
         case .hotKeyKeyCode:
             return root.hotKeySpec.keyCode == Self.probeHotKey.keyCode

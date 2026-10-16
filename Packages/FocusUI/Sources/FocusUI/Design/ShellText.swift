@@ -178,7 +178,6 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case walkthroughPriorityOne = "shell.walkthrough.priority.one"
     case walkthroughPriorityDoneWhen = "shell.walkthrough.priority.doneWhen"
     case walkthroughPriorityRefine = "shell.walkthrough.priority.refine"
-    case walkthroughPriorityRitual = "shell.walkthrough.priority.ritual"
     case walkthroughTimeTitle = "shell.walkthrough.time.title"
     case walkthroughTimeTimebox = "shell.walkthrough.time.timebox"
     case walkthroughTimeSession = "shell.walkthrough.time.session"
@@ -213,12 +212,21 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case cockpitStoreSheetConsequence = "shell.cockpit.store.sheet.consequence"
     case cockpitStoreSheetAcknowledge = "shell.cockpit.store.sheet.acknowledge"
     case cockpitOpenSettings = "shell.cockpit.openSettings"
-    /// The cockpit's three tabs (focus-1rj7).
+    /// The cockpit's two destinations (focus-1rj7, focus-g9iw).
     case cockpitTabNow = "shell.cockpit.tab.now"
-    case cockpitTabDetails = "shell.cockpit.tab.details"
-    case cockpitTabRecent = "shell.cockpit.tab.recent"
-    /// The Recent tab's route to the day's history window (focus-1rj7).
+    case cockpitTabHistory = "shell.cockpit.tab.history"
+    /// History's route to the day's history window (focus-1rj7).
     case cockpitOpenHistory = "shell.cockpit.openHistory"
+    /// Now's route to the priority's context sheet, and the line under it (focus-g9iw).
+    case cockpitConfigureContext = "shell.cockpit.configureContext"
+    /// `%1$@` and `%2$@`: how many context items and how many rules, each already formatted for
+    /// the person's locale.
+    case cockpitContextSummary = "shell.cockpit.contextSummary"
+    case cockpitContextSummaryEmpty = "shell.cockpit.contextSummary.empty"
+    /// The context sheet (focus-g9iw). `%@` in the title is the priority's own sentence.
+    case contextSheetTitle = "context.sheet.title"
+    case contextSheetExplanation = "context.sheet.explanation"
+    case contextSheetDone = "context.sheet.done"
     /// A new priority that keeps the current one's desk (focus-1rj7).
     case priorityActionSameContext = "priority.action.sameContext"
     /// The policy tunings table (focus-exdi): one label and one note per dial, plus its chrome.
@@ -375,9 +383,6 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case priorityStandingSecondary = "priority.standing.secondary"
     case priorityStandingCurrent = "priority.standing.current"
     case priorityStandingActionFocus = "priority.standing.action.focus"
-    case priorityRitualMessage = "priority.ritual.message"
-    case priorityRitualActionSet = "priority.ritual.action.set"
-    case priorityRitualActionDismiss = "priority.ritual.action.dismiss"
     case priorityCompleteHeading = "priority.complete.heading"
     case priorityCompleteShippedLabel = "priority.complete.shipped.label"
     case priorityCompleteShippedPrompt = "priority.complete.shipped.prompt"
@@ -477,9 +482,8 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     // two of them need a sentence: an approval only the person can give, and a copy of the app
     // the system cannot find.
     case settingsLaunchAtLogin = "settings.general.launchAtLogin"
-    // e09a (focus-d3g): the two facts the launch read at every start and nothing could write.
-    case settingsRitualEnabled = "settings.general.ritualEnabled"
-    case settingsRitualEnabledNote = "settings.general.ritualEnabledNote"
+    // e09a (focus-d3g): a fact the launch read at every start and nothing could write. Its
+    // sibling, the daily-ritual switch, was retired with the ritual itself (focus-g9iw).
     case settingsQuickCaptureShortcut = "settings.general.quickCaptureShortcut"
     case settingsQuickCaptureShortcutNote = "settings.general.quickCaptureShortcutNote"
     // Software updates (focus-h8jf): the General pane's opt-in, its button, and what on costs.
@@ -585,6 +589,10 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case sessionNoteRebooted = "session.note.rebooted"
     case sessionNoteStale = "session.note.stale"
     case sessionNoteClockAnomaly = "session.note.clockAnomaly"
+    /// A session belongs to the priority it began on (focus-g9iw). When the priority on screen
+    /// is another one, or none, the session says so rather than lending its timer to it.
+    case sessionBelongsToOtherPriority = "session.note.otherPriority"
+    case sessionBelongsToNoPriority = "session.note.noPriority"
     case sessionInterruptHeading = "session.interrupt.heading"
     case sessionInterruptExplanation = "session.interrupt.explanation"
     case sessionInterruptReasonLabel = "session.interrupt.reasonLabel"
@@ -838,8 +846,6 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case priorityDoneWhenLabelHelp = "priority.doneWhen.label.help"
     case priorityIntentEditLabelHelp = "priority.intent.edit.label.help"
     case priorityRecentActionAgainHelp = "priority.recent.action.again.help"
-    case priorityRitualActionDismissHelp = "priority.ritual.action.dismiss.help"
-    case priorityRitualActionSetHelp = "priority.ritual.action.set.help"
     case priorityRulesActionAddRelatedHelp = "priority.rules.action.addRelated.help"
     case priorityRulesActionAddUnrelatedHelp = "priority.rules.action.addUnrelated.help"
     case priorityRulesScopeHelp = "priority.rules.scope.help"
@@ -873,7 +879,6 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case settingsLaunchAtLoginHelp = "settings.general.launchAtLogin.help"
     case settingsLaunchAtLoginOpenSettingsHelp = "settings.general.launchAtLoginOpenSettings.help"
     case settingsQuickCaptureShortcutHelp = "settings.general.quickCaptureShortcut.help"
-    case settingsRitualEnabledHelp = "settings.general.ritualEnabled.help"
     case settingsUpdatesAutomaticHelp = "settings.general.updates.automatic.help"
     case settingsUpdatesCheckNowDisabledHelp = "settings.general.updates.checkNow.disabledHelp"
     case settingsUpdatesCheckNowHelp = "settings.general.updates.checkNow.help"
@@ -916,12 +921,13 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case settingsTuningsResetOneHelp = "settings.tunings.resetOne.help"
     case cockpitLaunchAtLoginAcceptHelp = "shell.cockpit.launchAtLogin.accept.help"
     case cockpitLaunchAtLoginDismissHelp = "shell.cockpit.launchAtLogin.dismiss.help"
+    case cockpitConfigureContextHelp = "shell.cockpit.configureContext.help"
     case cockpitOpenHistoryHelp = "shell.cockpit.openHistory.help"
     case cockpitOpenSettingsHelp = "shell.cockpit.openSettings.help"
     case cockpitStoreSheetAcknowledgeHelp = "shell.cockpit.store.sheet.acknowledge.help"
-    case cockpitTabDetailsHelp = "shell.cockpit.tab.details.help"
+    case cockpitTabHistoryHelp = "shell.cockpit.tab.history.help"
     case cockpitTabNowHelp = "shell.cockpit.tab.now.help"
-    case cockpitTabRecentHelp = "shell.cockpit.tab.recent.help"
+    case contextSheetDoneHelp = "context.sheet.done.help"
     case commandShowWalkthroughHelp = "shell.command.showWalkthrough.help"
     case historyCorrectActionHelp = "shell.history.correctAction.help"
     case menuBarCancelSnoozeHelp = "shell.menuBar.cancelSnooze.help"

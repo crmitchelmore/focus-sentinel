@@ -43,10 +43,11 @@ public struct SessionControls: View {
     /// control is disabled while it is `nil`, so a button can never look live and do nothing.
     public let actions: (any SessionActing)?
 
-    /// **The Now tab's reading of the session** (focus-1rj7): the phase, the elapsed time, the
-    /// causes that explain a disabled Resume, and the verbs that change the phase. The notes
-    /// and the two endings belong to the Details tab, where the whole session is drawn.
-    public let compact: Bool
+    /// **A sentence about whose session this is, when it is not the priority above it**
+    /// (focus-g9iw). A session belongs to the task it began on, so one that outlived a change of
+    /// priority says so under its heading rather than lending its timer to the wrong title.
+    /// `CockpitWiring.ownershipKey(_:)` decides it; `nil` draws nothing.
+    public let ownershipNote: ShellStringKey?
 
     @Environment(\.appearanceTraits) private var traits
     @Environment(\.shellTextScale) private var textScale
@@ -64,14 +65,14 @@ public struct SessionControls: View {
         elapsedSeconds: Double? = nil,
         lastActiveBundleID: String? = nil,
         actions: (any SessionActing)? = nil,
-        compact: Bool = false,
+        ownershipNote: ShellStringKey? = nil,
         focus: FocusState<FocusField?>.Binding
     ) {
         self.session = session
         self.elapsedSeconds = elapsedSeconds
         self.lastActiveBundleID = lastActiveBundleID
         self.actions = actions
-        self.compact = compact
+        self.ownershipNote = ownershipNote
         self._focus = focus
     }
 
@@ -79,6 +80,13 @@ public struct SessionControls: View {
         VStack(alignment: .leading, spacing: spacing) {
             CompanionSectionHeading(key: .sessionHeading, symbol: "waveform.path")
                 .foregroundStyle(DesignTokens.Palette.role(.spruce, for: traits))
+
+            if let ownershipNote {
+                ShellText(ownershipNote, role: .footnote)
+                    .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
 
             if let session {
                 running(session)
@@ -147,7 +155,7 @@ public struct SessionControls: View {
             .animation(DesignTokens.animation(for: traits), value: session.phase)
 
             causes(session)
-            if !compact { notes(session) }
+            notes(session)
             verbs(session)
         }
     }
@@ -235,14 +243,14 @@ public struct SessionControls: View {
             verbButtons(session)
             // The shelf between the reversible verbs and the terminal ones. It is the whole of
             // the grouping in the wide case: consequence reads as distance.
-            if session.phase.offersAnEnding, !compact {
+            if session.phase.offersAnEnding {
                 Spacer(minLength: spacing)
                 endings
             }
         }
         let column = VStack(alignment: .leading, spacing: spacing) {
             verbButtons(session)
-            if session.phase.offersAnEnding, !compact { endings }
+            if session.phase.offersAnEnding { endings }
         }
 
         // The same discipline the priority actions use: the row wraps to a column rather than

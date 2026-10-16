@@ -92,7 +92,6 @@ struct ReleaseReviewRegressionTests {
         #expect(root.cockpitConnection().actions == nil)
         #expect(root.writeDataExport(to: URL(fileURLWithPath: "/unreachable/export.json")) == .none)
         root.perform(LaunchAtLoginOfferAction.dismiss)
-        root.setRitualEnabled(false)
         #expect(root.setQuickCaptureShortcut(.quickCaptureDefault) == nil)
         #expect(root.hotKeyRegistrar.registeredSpec == nil)
     }

@@ -33,10 +33,6 @@ public struct GeneralSettingsView: View {
     /// a person who removes the app from Login Items in System Settings has changed the truth.
     private let launchAtLogin: LaunchAtLogin
     private let onLaunchAtLogin: (LaunchAtLoginAction) -> Void
-    /// **Whether the daily ritual banner is offered at all** (focus-d3g). Handed in, never a
-    /// stored `Bool` this pane keeps: the value is a column, and a pane that remembered its own
-    /// answer would go on saying "on" after the store was deleted.
-    private let ritualEnabled: Bool
     /// **The combination quick capture is bound to** (focus-d3g).
     private let quickCaptureShortcut: HotKeySpec
     private let onCaptureAction: (CaptureSettingsAction) -> Void
@@ -58,7 +54,6 @@ public struct GeneralSettingsView: View {
         appVersion: String = AppVersion.rendered(bundle: .main),
         launchAtLogin: LaunchAtLogin = .unregistered,
         onLaunchAtLogin: @escaping (LaunchAtLoginAction) -> Void = { _ in },
-        ritualEnabled: Bool = true,
         quickCaptureShortcut: HotKeySpec = .quickCaptureDefault,
         onCaptureAction: @escaping (CaptureSettingsAction) -> Void = { _ in },
         commandCenter: FocusCommandCenter = .shared,
@@ -69,7 +64,6 @@ public struct GeneralSettingsView: View {
         self.appVersion = appVersion
         self.launchAtLogin = launchAtLogin
         self.onLaunchAtLogin = onLaunchAtLogin
-        self.ritualEnabled = ritualEnabled
         self.quickCaptureShortcut = quickCaptureShortcut
         self.onCaptureAction = onCaptureAction
         self.commandCenter = commandCenter
@@ -99,8 +93,6 @@ public struct GeneralSettingsView: View {
 
             VStack(alignment: .leading, spacing: spacing) {
                 launchAtLoginRow
-                Divider()
-                ritualRow
             }
             .companionSurface()
 
@@ -142,10 +134,9 @@ public struct GeneralSettingsView: View {
         // The **status**, not the switch position: two of the four states draw the same position,
         // and only one of them is true yet (focus-odz.4).
         .shellRendered(.launchAtLoginStatus, launchAtLogin.status.rawValue)
-        // The two columns that had a launch reader and no writer, reported by the pane that now
-        // writes them: a receipt taken anywhere else would be blind to a control handed a
+        // The column that had a launch reader and no writer, reported by the pane that now
+        // writes it: a receipt taken anywhere else would be blind to a control handed a
         // constant (focus-7ow, focus-d3g).
-        .shellRendered(.ritualEnabled, ritualEnabled ? "on" : "off")
         .shellRendered(.quickCaptureShortcut, quickCaptureShortcut.glyphs)
         // **The whole update status, as the pane drew it** (focus-h8jf). The digest rather than
         // the switch position: the train and the manual-check availability are drawn too, and a
@@ -216,12 +207,6 @@ public struct GeneralSettingsView: View {
         }
     }
 
-    /// **The daily ritual banner's switch** (focus-d3g).
-    ///
-    /// The column's own comment says *"whether the daily ritual banner is offered at all"*, and
-    /// until now nothing in the application could set it — so the banner could not be turned off
-    /// by anybody who did not want it. A different fact from `lastRitualLocalDay`, which records
-    /// that today's ritual has been answered: one is a preference, the other is a diary entry.
     private var appearanceButtons: some View {
         ForEach(Self.options, id: \.self) { option in
             let button = Button { preference = option } label: {
@@ -275,22 +260,6 @@ public struct GeneralSettingsView: View {
                 .accessibilityHidden(true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    @ViewBuilder
-    private var ritualRow: some View {
-        Button { onCaptureAction(.setRitualEnabled(!ritualEnabled)) } label: {
-            settingToggleLabel(.settingsRitualEnabled, isOn: ritualEnabled, symbol: "sun.max")
-        }
-        .buttonStyle(CompanionButtonStyle(selected: ritualEnabled))
-        .accessibilityAddTraits(ritualEnabled ? .isSelected : [])
-        .focused($focus, equals: .generalRitualEnabled)
-        .shellHelp(.settingsRitualEnabledHelp)
-
-        ShellText(.settingsRitualEnabledNote, role: .footnote)
-            .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
-            .lineLimit(nil)
-            .fixedSize(horizontal: false, vertical: true)
     }
 
     /// **The quick-capture shortcut** (focus-d3g, P-55/P-56).

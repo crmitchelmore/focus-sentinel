@@ -45,11 +45,13 @@ struct KeyboardReachabilityTests {
         // The other half of "reachable": a key equivalent that arrives somewhere nothing is
         // listening is a shortcut in the reference and a dead end in the app. Every priority
         // command is answered by the cockpit, whose focus contract names the field each one
-        // lands in.
+        // lands in. Adding files lands in the context sheet the cockpit opens (focus-g9iw).
         let cockpit = FocusTraversal.contract(for: .cockpit)
         #expect(cockpit.order.contains(.cockpitCaptureField))
         #expect(cockpit.order.contains(.cockpitComplete))
-        #expect(cockpit.order.contains(.cockpitContextAddFiles))
+        #expect(cockpit.order.contains(.cockpitConfigureContext))
+        let contextSheet = FocusTraversal.contract(for: .contextSheet)
+        #expect(contextSheet.order.contains(.cockpitContextAddFiles))
     }
 
     // MARK: - e05: every nudge action is reachable without a mouse (F-145)
@@ -275,6 +277,32 @@ struct KeyboardReachabilityTests {
         #expect(FocusTraversal.contract(for: .quickCapture).cancel == .dismissWindow)
         // A sheet always has a way out that changes nothing.
         #expect(FocusTraversal.contract(for: .completionSheet).cancel == .dismissWindow)
+        #expect(FocusTraversal.contract(for: .contextSheet).cancel == .dismissWindow)
+    }
+
+    @Test("context is configured in its own sheet, reached from one control on Now")
+    func contextSheetIsItsOwnSurface() {
+        let cockpit = FocusTraversal.contract(for: .cockpit)
+        let sheet = FocusTraversal.contract(for: .contextSheet)
+
+        // The desk, then the rules, then Done — and none of them in the cockpit's column.
+        #expect(
+            sheet.order == [.cockpitContextKeyword, .cockpitContextAddFiles, .cockpitRuleSubject, .contextSheetDone]
+        )
+        for field in sheet.order {
+            #expect(!cockpit.order.contains(field), "\(field.rawValue) is still in the cockpit")
+            #expect(FocusTraversal.surface(of: field) == .contextSheet)
+        }
+        // Return adds what is being typed; it never closes the sheet out from under a field.
+        #expect(sheet.defaultField == nil)
+
+        // The one control that opens it sits under the session it serves, before History's.
+        #expect(
+            FocusTraversal.next(after: .cockpitSessionPrimary, in: .cockpit) == .cockpitConfigureContext
+        )
+        #expect(
+            FocusTraversal.next(after: .cockpitConfigureContext, in: .cockpit) == .cockpitOpenHistory
+        )
     }
 
     @Test("Return activates the primary action wherever a surface has one")
@@ -330,14 +358,14 @@ struct KeyboardReachabilityTests {
 
     @Test("the cockpit and both Settings tabs each have a focusable element")
     func everyShellSurfaceIsReachable() {
-        // The ritual banner sits above everything else while it is shown, so it comes first
-        // in the order. The hero is the top of the column under it, so correcting the
+        // The destination bar sits under the window's name, above both destinations, so it
+        // comes first (focus-g9iw). The hero is the top of Now under it, so correcting the
         // priority's wording comes next, then its definition of done and completion action.
         // Keeping the context and Change Priority open capture below those existing-commitment
         // controls.
-        #expect(FocusTraversal.firstField(in: .cockpit) == .cockpitRitualDismiss)
+        #expect(FocusTraversal.firstField(in: .cockpit) == .cockpitTabs)
         #expect(
-            FocusTraversal.next(after: .cockpitRitualDismiss, in: .cockpit) == .cockpitEditIntent
+            FocusTraversal.next(after: .cockpitTabs, in: .cockpit) == .cockpitEditIntent
         )
         #expect(
             FocusTraversal.next(after: .cockpitEditIntent, in: .cockpit) == .cockpitDoneWhen
@@ -350,6 +378,7 @@ struct KeyboardReachabilityTests {
         )
         #expect(FocusTraversal.firstField(in: .quickCapture) == .quickCaptureField)
         #expect(FocusTraversal.firstField(in: .completionSheet) == .completionShipped)
+        #expect(FocusTraversal.firstField(in: .contextSheet) == .cockpitContextKeyword)
         #expect(FocusTraversal.firstField(in: .settingsGeneral) == .generalAppearancePicker)
         #expect(FocusTraversal.firstField(in: .settingsPrivacy) == .privacyRevealStore)
     }

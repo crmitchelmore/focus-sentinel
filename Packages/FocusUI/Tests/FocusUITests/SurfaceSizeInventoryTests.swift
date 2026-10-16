@@ -105,6 +105,22 @@ struct SurfaceSizeInventoryTests {
                 )
             ),
             Surface(
+                // The context sheet (focus-g9iw): the priority's sentence in the title, with the
+                // desk and the rules under it.
+                name: "contextSheet",
+                width: ShellSurfaceBounds.contextSheetWidth,
+                ceiling: Self.sheetCeiling,
+                view: AnyView(
+                    ContextSheet(
+                        intent: Self.longIntent,
+                        contextItems: PriorityFixture.contextItems,
+                        rules: PriorityFixture.rulesWithARetiredRow,
+                        done: {},
+                        screens: [Self.laptop]
+                    )
+                )
+            ),
+            Surface(
                 name: "privacySettings",
                 width: ShellSurfaceBounds.settingsWidth,
                 ceiling: Self.settingsCeiling,
@@ -121,13 +137,14 @@ struct SurfaceSizeInventoryTests {
         ]
     }
 
-    /// The five names above, plus the quick-capture panel, which is an `NSPanel` and is measured
+    /// The six names above, plus the quick-capture panel, which is an `NSPanel` and is measured
     /// through its controller rather than as a view. Spelled out so that a surface added to one
     /// list and not the other is a failure rather than a silence.
     static let inventory = [
         "completionSheet",
         "interruptionSheet",
         "handoffSheet",
+        "contextSheet",
         "privacySettings",
         "interventionSettings",
         "quickCapturePanel"

@@ -446,7 +446,7 @@ public enum DesignTokens {
             /// **The drift.** Accusation rule, drift glyph tint, timer digits. A lamp, never a
             /// voice — see `tintMayCarryText(_:at:traits:)`.
             case kiln
-            /// The quiet inset ground: the ritual strip, and chips that must not read as buttons.
+            /// The quiet inset ground: section-heading glyph wells, and chips that must not read as buttons.
             case inlay
 
             /// The Color Set's name in `Resources/Palette.xcassets`.

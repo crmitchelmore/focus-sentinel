@@ -163,8 +163,8 @@ AskedQuestion | answeredAt | MEASURE | When they answered, or nil while it stand
 AppSettingsRecord | id | KEY | The row's identifier
 AppSettingsRecord | appearancePreferenceRaw | TOKEN | AppearancePreference — closed vocabulary
 AppSettingsRecord | schemaTouchedAt | MEASURE | When the schema last wrote this row
-AppSettingsRecord | lastRitualLocalDay | MEASURE | The local day the daily ritual was last offered
-AppSettingsRecord | ritualEnabled | MEASURE | Whether the daily ritual banner is offered at all
+AppSettingsRecord | lastRitualLocalDay | MEASURE | The local day the retired daily ritual was last offered (legacy; no longer written)
+AppSettingsRecord | ritualEnabled | MEASURE | Whether the retired daily ritual banner was switched on (legacy; no longer offered)
 AppSettingsRecord | hotKeyKeyCode | MEASURE | The quick-capture shortcut's virtual key code
 AppSettingsRecord | hotKeyModifierFlags | MEASURE | The quick-capture shortcut's modifiers
 AppSettingsRecord | sensingPaused | MEASURE | Whether the person has stopped the app looking

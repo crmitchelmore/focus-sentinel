@@ -567,6 +567,25 @@ edits save when you leave the field or switch priorities. This changes the wordi
 task, preserving its context, rules and timebox. Empty wording never replaces a saved title;
 leaving an empty field restores the last saved wording.
 
+The cockpit has two destinations (focus-g9iw). **Now** is the only place the current priority
+and its session live. With no session open it is for planning: the priority, its definition of
+done, its timebox and **Your priorities**, the standing shortlist to choose from. While a session
+is running or paused it is for working: the same column without the shortlist, so the task, the
+timer and every session verb (including Stop) have the eye; **Change priority** brings the list
+back on purpose. A session belongs to the priority it started on. If the priority is cleared or
+another is chosen mid-session, the session stays on Now with a note saying it began on another
+priority (or on none), rather than presenting its timer as the new priority's. **History** holds earlier priorities, each one press from becoming
+current again, and **Open History** for the day's full record.
+
+What counts as work on a priority — its context items and its per-priority rules — sits behind
+**Configure context…** on Now, beside a one-line count of each. It opens a sheet titled with
+the priority that says what those settings are for; edits land as they are made, so the sheet
+has one **Done** button and Escape is the same. ⌘O opens the sheet's file picker, and files and
+apps are dropped onto the sheet. There is no daily *"What is the one thing today?"* prompt and
+no setting for it: the capture field asks that question already. Old stores keep the retired
+setting's columns for compatibility with existing data and settings imports; the app no longer
+offers the prompt or records a day for it.
+
 ## The walkthrough (focus-u6de)
 
 The first-run sheet is page one and says what the app watches; nothing else was ever on it.
@@ -574,10 +593,11 @@ Its *Continue* opens a tour of eleven steps on the real cockpit rather than a de
 one: a floating panel (`WalkthroughPanelController`) sits beside the control each step is
 about, a borderless window (`WalkthroughHighlightWindow`) outlines the control with a nub
 toward the panel, and the instruction asks the person to do the thing there — type the
-priority and press Return, choose a timebox, press Start, open Details, click the Focus mark
+priority and press Return, choose a timebox, press Start, press Configure context…, click the Focus mark
 in the menu bar, press Open Settings. The cockpit's sections report where they were laid out
 through `.walkthroughAnchor(_:)`, most specific first, so the priority step points at the
-capture field while it is open and at *Change priority* while it is not.
+capture field while it is open and at *Change priority* while it is not, and the desk and rule
+steps point into the context sheet while it is open and at *Configure context…* while it is not.
 
 A step is done when the app's state says so, not when a button was pressed:
 `FocusHost.WalkthroughTour` takes a reading on entering the step and compares it with the
@@ -585,7 +605,7 @@ priority host's state, the session host's snapshot, the popover's showing and th
 window's drawing on every later change. *Do it for me* performs the same host call the control
 would, for somebody who would rather watch; the two nudge steps draw an accusation and a
 question on a panel of the tour's own, whose buttons close it and write nothing. The demo
-priority is a real task and stays in Recent; finishing — the last step's button, the panel's
+priority is a real task and stays in History; finishing — the last step's button, the panel's
 close box or Escape — completes the session the tour started, if it started one, and
 re-activates the priority that was active before, or clears.
 

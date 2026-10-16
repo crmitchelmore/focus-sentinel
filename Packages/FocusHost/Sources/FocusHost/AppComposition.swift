@@ -114,11 +114,11 @@ public final class AppComposition {
     /// Elapsed time. Deliberately a different protocol returning a different type.
     let monotonicClock: any MonotonicClock
 
-    /// The calendar the daily ritual is keyed through (F-19).
+    /// The calendar every local day downstream is keyed through.
     ///
     /// `autoupdatingCurrent` rather than `current`: the live app must follow the user if they
     /// fly to Auckland mid-morning. It is a *parameter* everywhere downstream — probe P-69
-    /// measured that "once per local day" is a function of the calendar, so every test injects
+    /// measured that "one local day" is a function of the calendar, so every test injects
     /// a fixed one, and `check-forbidden.sh` keeps `Calendar.current` out of every file that
     /// is not this composition root's business.
     let calendar: Calendar
@@ -1531,18 +1531,15 @@ public final class AppComposition {
     public var relaunch: () -> Void = {}
     public var prepareForStoreDeletion: () -> Void = {}
 
-    /// **The General pane's two capture controls** (focus-d3g, focus-tee.6).
+    /// **The General pane's capture control** (focus-d3g, focus-tee.6).
     ///
     /// One `perform` in the shape every other settings sink has, so the closure the pane holds is
     /// the closure the self-check drives — and a `{ _ in }` in its place reaches nothing that
-    /// moves this object's graph.
+    /// moves this object's graph. The daily ritual's switch was retired with the banner
+    /// (focus-g9iw); its column is carried by a settings document and read by nothing.
     public func perform(_ action: CaptureSettingsAction) {
         guard !hasDeletedEverything else { return }
         switch action {
-        case .setRitualEnabled(let isEnabled):
-            // The state they asked **for**, not a toggle: a pane built a moment ago cannot invert
-            // it, which is the rule `setSensingPaused` and the launch-at-login switch both state.
-            setRitualEnabled(isEnabled)
         case .setQuickCaptureShortcut(let spec):
             setQuickCaptureShortcut(spec)
         }
@@ -1784,36 +1781,7 @@ public final class AppComposition {
         return stored.isRegistrable ? stored : .quickCaptureDefault
     }
 
-    // MARK: - The two facts the launch read and nothing could write (focus-d3g, focus-tee.6)
-
-    /// Whether the daily ritual banner may be offered at all, as the store holds it.
-    public var ritualEnabled: Bool {
-        FocusStore.ritualEnabled(in: modelContainer.mainContext)
-    }
-
-    /// Turn the daily ritual banner on or off.
-    ///
-    /// The cockpit's projection is refreshed afterwards, because `shouldPromptRitual()` is read
-    /// when `PriorityHost` builds its state and nothing else would ask it again: a switch that
-    /// took effect on the next launch is a switch that looks broken.
-    public func setRitualEnabled(_ isEnabled: Bool) {
-        guard !hasDeletedEverything else { return }
-        do {
-            try FocusStore.setRitualEnabled(
-                isEnabled,
-                in: modelContainer.mainContext,
-                now: dateProvider.now
-            )
-            refreshCockpit()
-        } catch {
-            logger.error(
-                """
-                the store refused the ritual switch: \
-                \(error.localizedDescription, privacy: .public)
-                """
-            )
-        }
-    }
+    // MARK: - The fact the launch read and nothing could write (focus-d3g, focus-tee.6)
 
     /// **Store a quick-capture shortcut and bind it in the same breath.**
     ///

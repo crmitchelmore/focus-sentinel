@@ -24,12 +24,19 @@ import SwiftData
 /// had not read.
 extension FocusStore {
     /// Whether the daily ritual banner may be offered at all.
+    ///
+    /// **A legacy preference with no runtime reader** (focus-g9iw). The banner asked the same
+    /// question the cockpit's capture field already asks, so it was retired and its General
+    /// switch with it. The column stays — removing it costs a migration for nothing — and a
+    /// settings document still carries it, so a file written by an older build round-trips
+    /// rather than losing a value somebody chose. Nothing in the app consults it.
     @MainActor
     public static func ritualEnabled(in context: ModelContext) -> Bool {
         settingsRow(in: context)?.ritualEnabled ?? true
     }
 
-    /// Turn the daily ritual banner on or off.
+    /// Turn the daily ritual banner on or off — a legacy preference, written only by a settings
+    /// import now (focus-g9iw).
     ///
     /// This is a different fact from `lastRitualLocalDay`, which records that *today's* ritual
     /// has been answered. One is a preference and the other is a diary entry, and folding them

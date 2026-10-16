@@ -1382,49 +1382,13 @@
       }
     },
     "priority.recent.heading" : {
-      "comment" : "Caption above the history of previous commitments.",
+      "comment" : "Caption above the earlier priorities on the cockpit’s History destination.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Recent priorities"
-          }
-        }
-      }
-    },
-    "priority.ritual.action.dismiss" : {
-      "comment" : "Ritual banner button that dismisses it. Dismissing also writes the day key, so it asks once.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Not today"
-          }
-        }
-      }
-    },
-    "priority.ritual.action.set" : {
-      "comment" : "Ritual banner button that moves focus to the capture field.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Answer now"
-          }
-        }
-      }
-    },
-    "priority.ritual.message" : {
-      "comment" : "The daily ritual banner's question, shown once per local day.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "What is the one thing today?"
+            "value" : "Earlier priorities"
           }
         }
       }
@@ -2582,6 +2546,30 @@
         }
       }
     },
+    "session.note.otherPriority" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the session when it belongs to a priority other than the one on screen, or when no priority is set (focus-g9iw).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This session began on another priority."
+          }
+        }
+      }
+    },
+    "session.note.noPriority" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Note under the session when it began with nothing committed and a priority has been set since (focus-g9iw).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This session began with no priority set."
+          }
+        }
+      }
+    },
     "session.note.rebooted" : {
       "comment" : "What restoration had to say about the session.",
       "extractionState" : "manual",
@@ -2734,30 +2722,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Choose a different shortcut if another app uses this one. Focus only offers shortcuts it can register."
-          }
-        }
-      }
-    },
-    "settings.general.ritualEnabled" : {
-      "comment" : "Switch that turns the daily ritual banner on or off.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ask what today's priority is"
-          }
-        }
-      }
-    },
-    "settings.general.ritualEnabledNote" : {
-      "comment" : "Footnote under the daily-ritual switch.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ask once a day when you first open Focus."
           }
         }
       }
@@ -4995,13 +4959,85 @@
       }
     },
     "shell.cockpit.openHistory" : {
-      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Button on the cockpit’s Recent tab that opens the History window (focus-1rj7).",
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Button on the cockpit’s History destination that opens the History window (focus-1rj7).",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Show Today’s History…"
+          }
+        }
+      }
+    },
+    "shell.cockpit.configureContext" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Button on the cockpit’s Now destination that opens the sheet holding the priority’s context pack and rules (focus-g9iw).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Configure context…"
+          }
+        }
+      }
+    },
+    "shell.cockpit.contextSummary" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. The line under Configure context…: how many context items and how many rules the priority has. Each number is already formatted for the locale (focus-g9iw).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Context items: %1$@ · Rules: %2$@"
+          }
+        }
+      }
+    },
+    "shell.cockpit.contextSummary.empty" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. The line under Configure context… when the priority has no context items and no rules (focus-g9iw).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No apps, files, keywords or rules yet."
+          }
+        }
+      }
+    },
+    "context.sheet.title" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Heading of the context sheet. The argument is the priority’s own sentence, verbatim (focus-g9iw).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Context for “%@”"
+          }
+        }
+      }
+    },
+    "context.sheet.explanation" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. The sentence under the context sheet’s heading: what the context pack and the rules are for (focus-g9iw).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "These tell Focus what counts as work on this priority. Changes are saved as you make them."
+          }
+        }
+      }
+    },
+    "context.sheet.done" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Button that closes the context sheet. Every change has already been saved (focus-g9iw).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Done"
           }
         }
       }
@@ -5018,20 +5054,8 @@
         }
       }
     },
-    "shell.cockpit.tab.details" : {
-      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. The cockpit’s second tab: the session in full, context and rules (focus-1rj7).",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Details"
-          }
-        }
-      }
-    },
     "shell.cockpit.tab.now" : {
-      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. The cockpit’s first tab: what needs doing and how long (focus-1rj7).",
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. The cockpit’s first destination: the priority, planned and then worked on (focus-1rj7, focus-g9iw).",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -5042,14 +5066,14 @@
         }
       }
     },
-    "shell.cockpit.tab.recent" : {
-      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. The cockpit’s third tab: recent priorities (focus-1rj7).",
+    "shell.cockpit.tab.history" : {
+      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. The cockpit’s second destination: earlier priorities and the way to today’s record (focus-g9iw).",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Recent"
+            "value" : "History"
           }
         }
       }
@@ -5223,13 +5247,13 @@
       }
     },
     "shell.walkthrough.desk.pack" : {
-      "comment" : "Walkthrough page 4: the context pack (F-09), added on the Details tab or by drag and drop onto the cockpit.",
+      "comment" : "Walkthrough page 4: the context pack (F-09), added from Configure context… on Now, by typing, choosing or drag and drop onto the context sheet (focus-g9iw).",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The context pack is what belongs to the priority: apps, keywords and files. Add them on the Details tab, or drop an app or a file onto the window."
+            "value" : "The context pack is what belongs to the priority: apps, keywords and files. Add them with Configure context… under the priority, or drop an app or a file onto that sheet."
           }
         }
       }
@@ -5457,7 +5481,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Open the Details tab and add a keyword or an app to the desk."
+            "value" : "Press Configure context… and add a keyword or an app to the desk."
           }
         }
       }
@@ -5601,7 +5625,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Finishing ends the demo session and puts back the priority you had before. The demo priority stays in Recent."
+            "value" : "Finishing ends the demo session and puts back the priority you had before. The demo priority stays in History."
           }
         }
       }
@@ -5763,13 +5787,13 @@
       }
     },
     "shell.walkthrough.priority.one" : {
-      "comment" : "Walkthrough page 2: capture. A new priority replaces the current one and the old one stays in Recent (F-02, F-15).",
+      "comment" : "Walkthrough page 2: capture. A new priority replaces the current one and the old one stays in History (F-02, F-15).",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Type what you are working on as one sentence. Focus keeps one priority. Setting a new one replaces it and moves the old one to Recent."
+            "value" : "Type what you are working on as one sentence. Focus keeps one priority. Setting a new one replaces it and moves the old one to History."
           }
         }
       }
@@ -5782,18 +5806,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "If the sentence has no verb or no outcome, Focus suggests a rewrite. You can keep your own wording."
-          }
-        }
-      }
-    },
-    "shell.walkthrough.priority.ritual" : {
-      "comment" : "Walkthrough page 2: the daily ritual banner (F-19), which asks once per local day and can be switched off in General settings.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Once a day, the window asks what today's priority is. Turn that prompt off in Settings, General."
           }
         }
       }
@@ -5871,13 +5883,13 @@
       }
     },
     "shell.walkthrough.time.recent" : {
-      "comment" : "Walkthrough page 3: the Recent tab (F-15). Re-activating a task brings its context pack and rules back.",
+      "comment" : "Walkthrough page 3: the cockpit’s History destination (F-15). Re-activating a task brings its context pack and rules back.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Recent lists earlier priorities. Choose one to make it current again, with its files and rules."
+            "value" : "History lists earlier priorities. Choose one to make it current again, with its files and rules."
           }
         }
       }
@@ -6708,6 +6720,18 @@
         }
       }
     },
+    "shell.cockpit.tab.history.help" : {
+      "comment" : "Tooltip on the History tab.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show earlier priorities and the way to today's history."
+          }
+        }
+      }
+    },
     "shell.cockpit.tab.now.help" : {
       "comment" : "Tooltip on the Now tab.",
       "extractionState" : "manual",
@@ -6715,31 +6739,19 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Show the priority, the session and the timebox."
+            "value" : "Plan the priority and work on it: its timebox, session and context."
           }
         }
       }
     },
-    "shell.cockpit.tab.details.help" : {
-      "comment" : "Tooltip on the Details tab.",
+    "context.sheet.done.help" : {
+      "comment" : "Tooltip on the context sheet’s Done button.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Show the context pack, the rules and the session notes."
-          }
-        }
-      }
-    },
-    "shell.cockpit.tab.recent.help" : {
-      "comment" : "Tooltip on the Recent tab.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Show earlier priorities and the way to today's history."
+            "value" : "Close this sheet. Your changes are already saved."
           }
         }
       }
@@ -6752,6 +6764,18 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Open today's record of what Focus did and why."
+          }
+        }
+      }
+    },
+    "shell.cockpit.configureContext.help" : {
+      "comment" : "Tooltip on the Configure context… button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose the apps, files, keywords and rules that count as work on this priority."
           }
         }
       }
@@ -6848,30 +6872,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Give this priority a time limit that ends when your next meeting starts."
-          }
-        }
-      }
-    },
-    "priority.ritual.action.set.help" : {
-      "comment" : "Tooltip on the morning ritual's Answer now button.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Go to the capture field and write today's priority."
-          }
-        }
-      }
-    },
-    "priority.ritual.action.dismiss.help" : {
-      "comment" : "Tooltip on the morning ritual's dismiss button.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Close this reminder for today."
           }
         }
       }
@@ -7484,18 +7484,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Makes this key combination open quick capture from any app."
-          }
-        }
-      }
-    },
-    "settings.general.ritualEnabled.help" : {
-      "comment" : "Tooltip on the morning ritual switch.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Shows or hides the once-a-day question when you first open Focus."
           }
         }
       }

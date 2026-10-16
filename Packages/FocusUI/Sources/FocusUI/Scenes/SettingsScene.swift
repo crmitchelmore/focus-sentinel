@@ -33,17 +33,16 @@ public enum SettingsTab: String, Sendable, CaseIterable, Hashable, Identifiable 
     }
 }
 
-/// **What the General pane's two capture controls perform** (focus-d3g, focus-tee.6).
+/// **What the General pane's capture control performs** (focus-d3g, focus-tee.6).
 ///
-/// Two facts the launch read at every start and nothing in the application could write: whether
-/// the daily ritual banner is offered at all, and which combination quick capture is bound to.
+/// A fact the launch read at every start and nothing in the application could write: which
+/// combination quick capture is bound to. (The daily ritual's switch was retired with its banner
+/// in focus-g9iw, because the cockpit's capture field already asks the same question.)
 /// A sink in the shape `LaunchAtLoginAction` already established, for the same reason — a click
 /// is the only thing that produces one, and no lane in this programme holds the Accessibility
 /// grant it would take to press a control headlessly, so the composition root drives the closure
 /// itself and watches its own graph move.
 public enum CaptureSettingsAction: Sendable, Equatable, Hashable {
-    /// Turn the daily ritual banner on or off.
-    case setRitualEnabled(Bool)
     /// Bind quick capture to a different combination, and store it in the same breath.
     case setQuickCaptureShortcut(HotKeySpec)
 }
@@ -96,12 +95,10 @@ public struct ShellSettingsConnection {
     /// from a stored `Bool`: somebody who removes the app from Login Items in System Settings has
     /// changed the truth, and a switch answering from its own memory would go on saying "on".
     public let launchAtLogin: LaunchAtLogin
-    /// **Whether the daily ritual banner is offered at all** (focus-d3g). Read from the store
-    /// every time this value is built, exactly as `launchAtLogin` is read from the service: a
-    /// switch answering from its own memory is a switch that lies after a delete-everything.
-    public let ritualEnabled: Bool
-    /// **The combination quick capture is bound to** (focus-d3g). The stored one, or the default
-    /// where nothing has been stored — `AppComposition.storedHotKeySpec()`'s own answer, so the
+    /// **The combination quick capture is bound to** (focus-d3g). Read from the store every time
+    /// this value is built, exactly as `launchAtLogin` is read from the service: a control
+    /// answering from its own memory is a control that lies after a delete-everything. The stored
+    /// one, or the default where nothing has been stored — `AppComposition.storedHotKeySpec()`'s own answer, so the
     /// control draws what the platform was actually told.
     public let quickCaptureShortcut: HotKeySpec
     public let summary: SensingSummary
@@ -115,12 +112,12 @@ public struct ShellSettingsConnection {
     /// `onInterventionAction`'s reason and driven the same way: no lane in this programme holds
     /// the Accessibility grant it would take to click a switch.
     public let onLaunchAtLogin: @MainActor (LaunchAtLoginAction) -> Void
-    /// What the General pane's ritual switch and shortcut picker reach (focus-d3g). A sink for
+    /// What the General pane's shortcut picker reaches (focus-d3g). A sink for
     /// `onLaunchAtLogin`'s reason and driven the same way.
     public let onCaptureAction: @MainActor (CaptureSettingsAction) -> Void
     /// **How long the app keeps what it wrote down, as the store holds it** (F-115, focus-l7n).
     ///
-    /// Read from the store every time this value is built, for `ritualEnabled`'s reason: a
+    /// Read from the store every time this value is built, for `quickCaptureShortcut`'s reason: a
     /// control answering from its own memory would go on saying *90 days* after a
     /// delete-everything, and this is a promise rather than a decoration.
     public let retention: RetentionWindow
@@ -168,7 +165,7 @@ public struct ShellSettingsConnection {
     /// sink that was replaced with a no-op reaches nothing, and the graph does not move.
     public let didDraw: @MainActor (ShellSettingsRendering) -> Void
     /// **What the General pane draws about software updates** (focus-h8jf). Read from the store
-    /// and the updater every time this value is built, for `ritualEnabled`'s reason.
+    /// and the updater every time this value is built, for `quickCaptureShortcut`'s reason.
     public let softwareUpdates: SoftwareUpdateStatus
     /// What the General pane's two update controls reach.
     public let onSoftwareUpdateAction: @MainActor (SoftwareUpdateSettingsAction) -> Void
@@ -179,7 +176,6 @@ public struct ShellSettingsConnection {
         storeURL: URL?,
         appVersion: String = AppVersion.rendered(bundle: .main),
         launchAtLogin: LaunchAtLogin = .unregistered,
-        ritualEnabled: Bool = true,
         quickCaptureShortcut: HotKeySpec = .quickCaptureDefault,
         summary: SensingSummary,
         capabilities: CapabilityMatrix,
@@ -205,7 +201,6 @@ public struct ShellSettingsConnection {
         self.storeURL = storeURL
         self.appVersion = appVersion
         self.launchAtLogin = launchAtLogin
-        self.ritualEnabled = ritualEnabled
         self.quickCaptureShortcut = quickCaptureShortcut
         self.summary = summary
         self.capabilities = capabilities
@@ -245,7 +240,6 @@ extension ShellSettingsConnection: ShellDrawnConnection {
             "launchAtLogin": .drawn([.launchAtLoginStatus]),
             "launchAtLogin.status": .drawn([.launchAtLoginStatus]),
             "onLaunchAtLogin": .undrawn(.sink),
-            "ritualEnabled": .drawn([.ritualEnabled]),
             "quickCaptureShortcut": .drawn([.quickCaptureShortcut]),
             // The two integers descend to the same receipt, because the receipt carries the
             // **glyphs** — which is what the person reads, and the only rendering in which a
@@ -439,11 +433,9 @@ public struct ShellSettingsView: View {
     private let launchAtLogin: LaunchAtLogin
     /// What the launch-at-login controls reach.
     private let onLaunchAtLogin: (LaunchAtLoginAction) -> Void
-    /// Whether the daily ritual banner is offered at all, as the store holds it (focus-d3g).
-    private let ritualEnabled: Bool
     /// The combination quick capture is bound to (focus-d3g).
     private let quickCaptureShortcut: HotKeySpec
-    /// What the General pane's two capture controls reach.
+    /// What the General pane's capture control reaches.
     private let onCaptureAction: (CaptureSettingsAction) -> Void
     /// What the General pane draws about software updates, and what its controls reach
     /// (focus-h8jf).
@@ -474,7 +466,6 @@ public struct ShellSettingsView: View {
         appVersion: String = AppVersion.rendered(bundle: .main),
         launchAtLogin: LaunchAtLogin = .unregistered,
         onLaunchAtLogin: @escaping (LaunchAtLoginAction) -> Void = { _ in },
-        ritualEnabled: Bool = true,
         quickCaptureShortcut: HotKeySpec = .quickCaptureDefault,
         onCaptureAction: @escaping (CaptureSettingsAction) -> Void = { _ in },
         summary: SensingSummary = .inactive,
@@ -495,7 +486,6 @@ public struct ShellSettingsView: View {
         self.appVersion = appVersion
         self.launchAtLogin = launchAtLogin
         self.onLaunchAtLogin = onLaunchAtLogin
-        self.ritualEnabled = ritualEnabled
         self.quickCaptureShortcut = quickCaptureShortcut
         self.onCaptureAction = onCaptureAction
         self.summary = summary
@@ -530,7 +520,6 @@ public struct ShellSettingsView: View {
         self.appVersion = connection.appVersion
         self.launchAtLogin = connection.launchAtLogin
         self.onLaunchAtLogin = connection.onLaunchAtLogin
-        self.ritualEnabled = connection.ritualEnabled
         self.quickCaptureShortcut = connection.quickCaptureShortcut
         self.onCaptureAction = connection.onCaptureAction
         self.summary = connection.summary
@@ -572,7 +561,6 @@ public struct ShellSettingsView: View {
                 appVersion: appVersion,
                 launchAtLogin: launchAtLogin,
                 onLaunchAtLogin: onLaunchAtLogin,
-                ritualEnabled: ritualEnabled,
                 quickCaptureShortcut: quickCaptureShortcut,
                 onCaptureAction: onCaptureAction,
                 softwareUpdates: softwareUpdates,

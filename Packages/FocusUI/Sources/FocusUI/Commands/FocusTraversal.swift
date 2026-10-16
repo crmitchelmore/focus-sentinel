@@ -10,6 +10,8 @@ public enum FocusSurface: String, Sendable, CaseIterable, Hashable, Identifiable
     case quickCapture
     /// The sheet that finishes a priority.
     case completionSheet
+    /// The sheet that configures a priority's context and rules (focus-g9iw).
+    case contextSheet
     /// The sheet an incoming focus:// handoff lands on.
     case handoffConfirm
     /// The sheet that stops a session and asks why (F-101).
@@ -30,8 +32,6 @@ public enum FocusSurface: String, Sendable, CaseIterable, Hashable, Identifiable
 /// declared here appears in exactly one surface's order — so a field that is added and never
 /// placed is a failure, not an invisible dead end.
 public enum FocusField: String, Sendable, CaseIterable, Hashable, Identifiable {
-    /// The daily ritual banner's dismissal, above everything else while it is shown.
-    case cockpitRitualDismiss
     /// The directly editable priority title. Distinct from the capture field:
     /// that one starts a new commitment, this one corrects the wording of the current.
     case cockpitEditIntent
@@ -39,18 +39,18 @@ public enum FocusField: String, Sendable, CaseIterable, Hashable, Identifiable {
     case cockpitCaptureField
     /// The cockpit's Set Priority button.
     case cockpitSetPriority
-    /// The cockpit's tab bar (focus-1rj7): one identity for the three tabs, carried by the
-    /// selected one, the way the timebox's four presets share `cockpitTimebox`.
+    /// The cockpit's destination bar (focus-1rj7, focus-g9iw): one identity for Now and History,
+    /// carried by the selected one, the way the timebox's four presets share `cockpitTimebox`.
     case cockpitTabs
     /// The definition-of-done field, directly under the priority hero.
     case cockpitDoneWhen
     /// The timebox control. One identity for the control, not one per preset button.
     case cockpitTimebox
-    /// The field that adds a keyword to the context pack.
+    /// The field that adds a keyword to the context pack, in the context sheet.
     case cockpitContextKeyword
-    /// The button that opens the file importer for the context pack.
+    /// The button that opens the file importer for the context pack, in the context sheet.
     case cockpitContextAddFiles
-    /// The field that names what a new per-task rule is about.
+    /// The field that names what a new per-task rule is about, in the context sheet.
     case cockpitRuleSubject
     /// The session's primary verb — Start, Pause or Resume, whichever the phase makes primary.
     ///
@@ -62,7 +62,9 @@ public enum FocusField: String, Sendable, CaseIterable, Hashable, Identifiable {
     case cockpitComplete
     /// A new priority that keeps this one's desk (focus-1rj7).
     case cockpitSameContext
-    /// The Recent tab's route to the day's full history (focus-1rj7).
+    /// *Configure context…* on Now, which opens the context sheet (focus-g9iw).
+    case cockpitConfigureContext
+    /// History's route to the day's full record (focus-1rj7).
     case cockpitOpenHistory
     /// F-119's switch, in the cockpit. The same stored value the menu item drives.
     case cockpitSensingPause
@@ -73,9 +75,6 @@ public enum FocusField: String, Sendable, CaseIterable, Hashable, Identifiable {
     /// The launch-at-login switch in General settings (D-12, focus-odz.4). A switch a person
     /// cannot reach from the keyboard is a switch somebody cannot turn on.
     case generalLaunchAtLogin
-    /// The daily-ritual switch in General settings (focus-d3g). A switch a person cannot reach
-    /// from the keyboard is a switch somebody cannot turn off.
-    case generalRitualEnabled
     /// The quick-capture shortcut picker in General settings (focus-d3g).
     case generalQuickCaptureShortcut
     /// The button in General settings that opens the walkthrough again (focus-u6de).
@@ -101,6 +100,8 @@ public enum FocusField: String, Sendable, CaseIterable, Hashable, Identifiable {
     case completionShipped
     case completionRestartPoint
     case completionConfirm
+    /// The context sheet's Done (focus-g9iw).
+    case contextSheetDone
     /// The handoff sheet's two buttons — and there are only ever two.
     case handoffReplace
     case handoffCancel
@@ -153,31 +154,30 @@ public enum FocusTraversal {
             // Top to bottom, in the order the column reads: the definition of done sits
             // under the hero, the primary action under that, and the route to Settings last.
             order: [
-                .cockpitRitualDismiss,
+                // The destination bar sits directly under the window's name (focus-g9iw), so it is
+                // reached first, before the first field of either destination.
+                .cockpitTabs,
                 // The title is directly editable, before the definition of done.
                 .cockpitEditIntent,
                 .cockpitDoneWhen,
                 // The priority's own verbs sit directly under its definition of done (focus-6uya):
                 // they act on the commitment, so they are reached before the machinery that
-                // serves it rather than after the rules pane.
+                // serves it.
                 .cockpitComplete,
                 // A new priority on the same desk sits with the verb it varies (focus-1rj7).
                 .cockpitSameContext,
                 // Change Priority opens capture below the current commitment's verbs.
                 .cockpitCaptureField,
                 .cockpitSetPriority,
-                // The tab bar comes after the commitment and before anything a tab holds
-                // (focus-1rj7), so it is reached before the first field of any tab.
-                .cockpitTabs,
                 .cockpitTimebox,
                 // The session sits directly under the timebox: both are about how the time is
                 // being spent, and a person who has just chosen a box is one Tab from starting
                 // the session that runs inside it.
                 .cockpitSessionPrimary,
-                .cockpitContextKeyword,
-                .cockpitContextAddFiles,
-                .cockpitRuleSubject,
-                // The Recent tab's one control after its rows (focus-1rj7).
+                // What counts as this work, behind one button under the session (focus-g9iw);
+                // the fields it opens are the context sheet's own surface.
+                .cockpitConfigureContext,
+                // History's one control after its rows (focus-1rj7).
                 .cockpitOpenHistory,
                 // The footer, in the order it reads: what is being watched, then the way out to
                 // Settings.
@@ -210,6 +210,19 @@ public enum FocusTraversal {
             cancel: .dismissWindow
         ),
         SurfaceFocus(
+            surface: .contextSheet,
+            // Top to bottom: the desk, then the rules, then Done.
+            order: [
+                .cockpitContextKeyword, .cockpitContextAddFiles,
+                .cockpitRuleSubject, .contextSheetDone
+            ],
+            // **No default action.** Return adds the keyword or the rule in the field that has
+            // focus; a default button would collect every Return a field did not claim. Every
+            // edit has already landed, so Escape is Done.
+            defaultField: nil,
+            cancel: .dismissWindow
+        ),
+        SurfaceFocus(
             surface: .handoffConfirm,
             // Cancel first and Cancel by default: Return must never be the key that gives
             // away the priority the user was already working on.
@@ -233,7 +246,7 @@ public enum FocusTraversal {
             surface: .settingsGeneral,
             order: [
                 .generalAppearancePicker, .generalLaunchAtLogin,
-                .generalRitualEnabled, .generalQuickCaptureShortcut,
+                .generalQuickCaptureShortcut,
                 .generalShowWalkthrough, .generalSoftwareUpdates, .generalCheckForUpdates
             ],
             defaultField: nil,
@@ -272,7 +285,7 @@ public enum FocusTraversal {
     /// crash.
     public static func contract(for surface: FocusSurface) -> SurfaceFocus {
         switch surface {
-        case .cockpit, .quickCapture, .completionSheet, .handoffConfirm,
+        case .cockpit, .quickCapture, .completionSheet, .contextSheet, .handoffConfirm,
              .interruptionSheet, .settingsGeneral, .settingsPrivacy, .walkthroughTour:
             surfaces.first { $0.surface == surface }
                 ?? SurfaceFocus(surface: surface, order: [], defaultField: nil, cancel: .none)

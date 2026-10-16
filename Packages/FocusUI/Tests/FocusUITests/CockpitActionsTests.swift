@@ -37,7 +37,6 @@ final class RecordingPriorityActing: PriorityActing {
         case removeRule
         case acceptHandoff
         case cancelHandoff
-        case dismissRitual
         case acknowledgeStoreFailure
     }
 
@@ -137,10 +136,6 @@ final class RecordingPriorityActing: PriorityActing {
         calls.append(Call(.cancelHandoff))
     }
 
-    func dismissRitual() {
-        calls.append(Call(.dismissRitual))
-    }
-
     func acknowledgeStoreFailure() {
         calls.append(Call(.acknowledgeStoreFailure))
     }
@@ -212,7 +207,6 @@ struct CockpitActionsTests {
         wiring.removeRule?(ruleID)
         wiring.acceptHandoff?(handoff)
         wiring.cancelHandoff?()
-        wiring.dismissRitual?()
         // The one button on the sheet the cockpit raises when the store did not open
         // (focus-tzj.4). It is the thing that lifts the capture refusal, so a wiring member that
         // stopped reaching the host would leave a person unable to type anything at all.
@@ -347,7 +341,6 @@ struct CockpitActionsTests {
         #expect(wiring.removeRule == nil)
         #expect(wiring.acceptHandoff == nil)
         #expect(wiring.cancelHandoff == nil)
-        #expect(wiring.dismissRitual == nil)
     }
 
     @Test("with no priority, no verb can name a task")
@@ -371,7 +364,6 @@ struct CockpitActionsTests {
         #expect(wiring.activate != nil)
         #expect(wiring.clear != nil)
         #expect(wiring.cancelHandoff != nil)
-        #expect(wiring.dismissRitual != nil)
     }
 
     // MARK: - Correcting the sentence in place (F-02)
@@ -558,6 +550,136 @@ struct CockpitActionsTests {
 
         #expect(host.verbs == [.acceptHandoff])
         #expect(host.calls(of: .acceptHandoff).first?.detail == Self.handoff.task)
+    }
+
+    // MARK: - Now: planning and working (focus-g9iw)
+
+    private static func session(
+        taskID: UUID?,
+        phase: SessionPhase = .focus
+    ) -> SessionSnapshot {
+        SessionSnapshot(
+            sessionID: UUID(uuidString: "E0200000-0000-4000-A000-0000000000B1")!,
+            taskID: taskID,
+            phase: phase,
+            startedAt: Date(timeIntervalSince1970: 1_800_000_000)
+        )
+    }
+
+    @Test("Now is planning with no session or a finished one, and working while one is open")
+    func nowModeFollowsTheSession() {
+        #expect(CockpitWiring.nowMode(session: nil) == .planning)
+        for phase in SessionPhase.allCases {
+            let expected: CockpitWiring.NowMode = phase.isTerminal ? .planning : .working
+            #expect(
+                CockpitWiring.nowMode(session: Self.session(taskID: Self.taskID, phase: phase)) == expected,
+                "\(phase) should read as \(expected)"
+            )
+        }
+    }
+
+    @Test("standing priorities are offered while planning, and mid-session only through Change priority")
+    func standingFollowsTheMode() {
+        // Planning: the shortlist is what the person chooses from.
+        #expect(CockpitWiring.showsStanding(mode: .planning, captureShown: false, hasStanding: true))
+        #expect(CockpitWiring.showsStanding(mode: .planning, captureShown: true, hasStanding: true))
+        // Working: hidden, unless the person deliberately opened Change priority.
+        #expect(!CockpitWiring.showsStanding(mode: .working, captureShown: false, hasStanding: true))
+        #expect(CockpitWiring.showsStanding(mode: .working, captureShown: true, hasStanding: true))
+        // Nothing to offer is never drawn.
+        for mode in [CockpitWiring.NowMode.planning, .working] {
+            for captureShown in [false, true] {
+                #expect(!CockpitWiring.showsStanding(mode: mode, captureShown: captureShown, hasStanding: false))
+            }
+        }
+    }
+
+    @Test("a session is described against the priority it began on, never lent to another")
+    func sessionOwnershipNamesAMismatch() {
+        let current = Self.priority()
+        #expect(CockpitWiring.sessionOwnership(priority: current, session: nil) == .matches)
+        #expect(CockpitWiring.sessionOwnership(priority: nil, session: nil) == .matches)
+        #expect(
+            CockpitWiring.sessionOwnership(priority: current, session: Self.session(taskID: Self.taskID)) == .matches
+        )
+        // Begun on a different priority, or on one that has since been put down.
+        #expect(
+            CockpitWiring.sessionOwnership(priority: current, session: Self.session(taskID: Self.otherTaskID))
+                == .otherPriority
+        )
+        #expect(
+            CockpitWiring.sessionOwnership(priority: nil, session: Self.session(taskID: Self.taskID))
+                == .otherPriority
+        )
+        // Begun with nothing committed, with a priority set since.
+        #expect(CockpitWiring.sessionOwnership(priority: current, session: Self.session(taskID: nil)) == .noPriority)
+        #expect(CockpitWiring.sessionOwnership(priority: nil, session: Self.session(taskID: nil)) == .matches)
+
+        #expect(CockpitWiring.ownershipKey(.matches) == nil)
+        #expect(CockpitWiring.ownershipKey(.otherPriority) == .sessionBelongsToOtherPriority)
+        #expect(CockpitWiring.ownershipKey(.noPriority) == .sessionBelongsToNoPriority)
+    }
+
+    @Test("the session section follows the priority and any session still open, but not a finished one")
+    func sessionSectionFollowsAnOpenSession() {
+        func state(priority: PrioritySnapshot?, session: SessionSnapshot?) -> CockpitState {
+            CockpitState(
+                status: .uncertain,
+                storeOpened: true,
+                isObservingActivity: true,
+                priority: priority,
+                session: session
+            )
+        }
+        #expect(!state(priority: nil, session: nil).drawsSession)
+        #expect(state(priority: Self.priority(), session: nil).drawsSession)
+        // Clearing the priority does not end the session, so it is not hidden either.
+        #expect(state(priority: nil, session: Self.session(taskID: Self.taskID)).drawsSession)
+        #expect(state(priority: nil, session: Self.session(taskID: Self.taskID, phase: .paused)).drawsSession)
+        // A finished session with nothing committed has nothing left to act on.
+        #expect(!state(priority: nil, session: Self.session(taskID: Self.taskID, phase: .complete)).drawsSession)
+        #expect(state(priority: Self.priority(), session: Self.session(taskID: Self.taskID, phase: .complete)).drawsSession)
+    }
+
+    @Test("the cockpit has two destinations, Now and History, in that order")
+    func twoDestinations() {
+        #expect(CockpitTab.allCases == [.now, .history])
+        #expect(CockpitTab.now.titleKey == .cockpitTabNow)
+        #expect(CockpitTab.history.titleKey == .cockpitTabHistory)
+    }
+
+    // MARK: - The context sheet (focus-g9iw)
+
+    @Test("the context sheet edits through the same verbs as the cockpit, and Done edits nothing")
+    func contextSheetReachesTheHost() {
+        let host = RecordingPriorityActing()
+        let wiring = CockpitWiring(actions: host, priority: Self.priority())
+        var closed = false
+        let sheet = ContextSheet(
+            intent: Self.priority().intent,
+            contextItems: [],
+            rules: [],
+            addContext: wiring.addContext,
+            removeContext: wiring.removeContext,
+            addRule: wiring.addRule,
+            changeRule: wiring.changeRule,
+            removeRule: wiring.removeRule,
+            done: { closed = true }
+        )
+
+        sheet.done()
+        #expect(closed)
+        #expect(host.calls.isEmpty)
+
+        sheet.addContext?([ContextItemDraft.keyword("proposal")!])
+        sheet.addRule?(.app, "com.apple.Safari", .relevant)
+        sheet.changeRule?(Self.ruleID, .unrelated)
+        sheet.removeRule?(Self.ruleID)
+        sheet.removeContext?(Self.contextID)
+        #expect(host.verbs == [.addContext, .addRule, .changeRule, .removeRule, .removeContext])
+        // The additions go to the priority the sheet is about.
+        #expect(host.calls(of: .addContext).map(\.taskID) == [Self.taskID])
+        #expect(host.calls(of: .addRule).map(\.taskID) == [Self.taskID])
     }
 
     // MARK: - The completion sheet (F-22)

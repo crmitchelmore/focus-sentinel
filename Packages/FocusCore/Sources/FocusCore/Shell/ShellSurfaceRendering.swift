@@ -27,12 +27,8 @@ public enum ShellRenderedField: String, Sendable, CaseIterable, Codable, Hashabl
     /// A boolean flip here tells the person their work is not being saved when it is, or the
     /// reverse. It was drawn from `state.storeIsReady` and reported nowhere (focus-7ow).
     case storeStatus
-    /// Whether the start-of-day ritual banner is on the screen: `"shown"` or `"hidden"`.
-    ///
-    /// The banner appears when `showsRitualPrompt` **and** a mutation host is attached, so this
-    /// is the conjunction the window actually drew rather than either half of it.
-    case ritualBanner
-    /// How many rows the recent-priorities list drew.
+    /// How many rows the earlier-priorities list on History drew — `CockpitState.earlierPriorities`,
+    /// the history without the current priority (focus-g9iw).
     case recentCount
     /// **What is in those rows** (focus-7ow). `recentCount` alone was satisfied by a list of the
     /// right length holding somebody else's history.
@@ -75,9 +71,9 @@ public enum ShellRenderedField: String, Sendable, CaseIterable, Codable, Hashabl
     /// **Whether the footer is making the one-time launch-at-login offer**: `"shown"` or
     /// `"hidden"` (D-12, focus-odz.4).
     ///
-    /// The conjunction the window actually drew, in `ritualBanner`'s shape and for its reason: an
-    /// offer that appears when it should not is a row asking somebody for a commitment they have
-    /// already declined, and one that never appears is a feature nobody can find.
+    /// The conjunction the window actually drew rather than either half of it: an offer that
+    /// appears when it should not is a row asking somebody for a commitment they have already
+    /// declined, and one that never appears is a feature nobody can find.
     case launchAtLoginOffer
     /// **Whether the first-run explanation is on screen**: `"shown"` or `"hidden"`
     /// (focus-odz.7).
@@ -153,10 +149,6 @@ public enum ShellRenderedField: String, Sendable, CaseIterable, Codable, Hashabl
     /// and only one of them is true yet. A receipt carrying the position alone could not tell a
     /// pane that drew the footnote from one that did not.
     case launchAtLoginStatus
-    /// **Whether the daily ritual banner is offered at all**, as the General pane's switch drew
-    /// it (focus-d3g). Reported by the pane, for `appVersion`'s reason: a control handed a
-    /// constant is invisible to a receipt taken anywhere else.
-    case ritualEnabled
     /// **The combination quick capture is bound to**, as the General pane's picker drew it
     /// (focus-d3g). The glyphs rather than the two integers, because the glyphs are what the
     /// person reads and a receipt should carry what was on the screen.

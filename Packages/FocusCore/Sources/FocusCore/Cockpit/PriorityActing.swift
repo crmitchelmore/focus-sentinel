@@ -269,9 +269,6 @@ public protocol PriorityActing: AnyObject {
     /// Dismiss the pending handoff without changing anything.
     func cancelHandoff()
 
-    /// Record that today's ritual has been answered or dismissed, so it asks once (F-19).
-    func dismissRitual()
-
     /// **The person has been told the store did not open** (focus-tzj.4).
     ///
     /// Called from the one button on the sheet the cockpit shows when `storeOpened` is `false`,

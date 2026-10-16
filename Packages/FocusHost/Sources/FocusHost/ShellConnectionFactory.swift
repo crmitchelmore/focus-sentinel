@@ -61,20 +61,9 @@ enum ShellConnectionFactory {
                 .cockpitStoreReady
             }
         root.expect(.storeStatus, expectedStoreKey.rawValue, for: .cockpit)
-        // The banner is on screen when the state asks for it **and** a host can dismiss it.
-        // The window draws that conjunction and reports what it drew; this expects the half that
-        // can actually vary, because `cockpitActions` is non-optional — the root has no way to
-        // hand over a cockpit with no mutation host, and `state.showsRitualPrompt && actions !=
-        // nil` was a comparison the compiler could see was always true (focus-zrs). A connection
-        // built with `actions: nil` still reports "hidden" against this "shown", which is the
-        // asymmetry the check is for.
-        root.expect(
-            .ritualBanner,
-            state.showsRitualPrompt ? "shown" : "hidden",
-            for: .cockpit
-        )
-        root.expect(.recentCount, String(state.recent.count), for: .cockpit)
-        root.expect(.recentDigest, ShellValueDigest.describe(state.recent), for: .cockpit)
+        // History draws the earlier priorities only; the current one is Now's (focus-g9iw).
+        root.expect(.recentCount, String(state.earlierPriorities.count), for: .cockpit)
+        root.expect(.recentDigest, ShellValueDigest.describe(state.earlierPriorities), for: .cockpit)
         root.expect(.standingCount, String(state.standing.count), for: .cockpit)
         root.expect(.standingDigest, ShellValueDigest.describe(state.standing), for: .cockpit)
         root.expect(.handoffTask, state.pendingHandoff?.task ?? "", for: .cockpit)
@@ -90,30 +79,36 @@ enum ShellConnectionFactory {
                 : ShellRenderedValues.noCommitment,
             for: .cockpit
         )
+        // **The session section follows the session as well as the priority** (focus-g9iw). A
+        // session belongs to the task it started on, and clearing today's priority does not end
+        // it — so a window that hid a running timer because nothing is committed would be hiding
+        // the one fact the person most needs. The section is drawn while a priority is set or a
+        // session is still open; `CockpitState.drawsSession` is the one rule both sides read.
+        let hasSessionSurface = state.drawsSession
         root.expect(
             .sessionPhase,
-            hasCommitment
+            hasSessionSurface
                 ? (state.session?.phase.rawValue ?? "none")
                 : ShellRenderedValues.noCommitment,
             for: .cockpit
         )
         root.expect(
             .sessionDetail,
-            hasCommitment
+            hasSessionSurface
                 ? ShellValueDigest.describe(state.session)
                 : ShellRenderedValues.noCommitment,
             for: .cockpit
         )
         root.expect(
             .sessionElapsedSeconds,
-            hasCommitment
+            hasSessionSurface
                 ? (elapsed.map { String(Int($0)) } ?? "none")
                 : ShellRenderedValues.noCommitment,
             for: .cockpit
         )
         root.expect(
             .lastActiveApp,
-            hasCommitment
+            hasSessionSurface
                 ? (root.lastActiveBundleID ?? "none")
                 : ShellRenderedValues.noCommitment,
             for: .cockpit
@@ -204,14 +199,12 @@ enum ShellConnectionFactory {
         // changed the truth, and a switch answering from its own memory would go on saying "on".
         let launchAtLogin = LaunchAtLogin(status: root.loginItem.status)
         root.expect(.launchAtLoginStatus, launchAtLogin.status.rawValue, for: .settings)
-        // **The two facts that had a launch reader and no writer** (focus-d3g). Read from the
-        // store every time this value is built, for `launchAtLogin`'s reason: a control answering
-        // from its own memory would go on saying "on" after a delete-everything. The shortcut is
+        // **The fact that had a launch reader and no writer** (focus-d3g). Read from the store
+        // every time this value is built, for `launchAtLogin`'s reason: a control answering from
+        // its own memory would go on saying "on" after a delete-everything. The shortcut is
         // `storedHotKeySpec()`'s own answer rather than the raw columns, so the picker draws the
         // combination the platform was actually told rather than one an unregistrable row claims.
-        let ritualEnabled = root.ritualEnabled
         let shortcut = root.storedHotKeySpec()
-        root.expect(.ritualEnabled, ritualEnabled ? "on" : "off", for: .settings)
         root.expect(.quickCaptureShortcut, shortcut.glyphs, for: .settings)
         // **The update status, read once and expected whole** (focus-h8jf). Once, because the
         // updater's manual-check availability can move between two reads, and the receipt has to
@@ -225,7 +218,7 @@ enum ShellConnectionFactory {
             .privacyStorePath, PrivacySettingsView.renderedStorePath(storeURL), for: .settings
         )
         // **How long the app keeps what it wrote down** (F-115, focus-l7n). Read from the store
-        // every time this value is built, for `ritualEnabled`'s reason — and expected as the
+        // every time this value is built, for `shortcut`'s reason — and expected as the
         // stored day count, which is the number the sweep reads rather than the button's word.
         let retention = FocusStore.privacyPreferences(in: root.modelContainer.mainContext).retention
         root.expect(.retentionWindow, String(retention.storedDays), for: .settings)
@@ -294,7 +287,6 @@ enum ShellConnectionFactory {
             storeURL: storeURL,
             appVersion: version,
             launchAtLogin: launchAtLogin,
-            ritualEnabled: ritualEnabled,
             quickCaptureShortcut: shortcut,
             summary: summary,
             capabilities: matrix,

@@ -89,7 +89,7 @@ public enum WalkthroughAction: String, Sendable, CaseIterable, Hashable, Identif
 
     /// The controls this step points at, most specific first. The tour uses the first one that
     /// is on screen: the capture field when it is open, else the button that opens it; the
-    /// context pack when Details is open, else the Details tab. Empty for the steps whose subject
+    /// context pack when the context sheet is up, else *Configure context…*. Empty for the steps whose subject
     /// is not a cockpit control — the demo nudge, the menu bar, the finish.
     public var anchors: [WalkthroughAnchor] {
         switch self {
@@ -97,8 +97,8 @@ public enum WalkthroughAction: String, Sendable, CaseIterable, Hashable, Identif
         case .setDemoDoneWhen: [.doneWhenField]
         case .setDemoTimebox: [.timeboxControl]
         case .startDemoSession: [.sessionControls]
-        case .addDemoDesk: [.contextPack, .detailsTab]
-        case .addDemoRule: [.rules, .detailsTab]
+        case .addDemoDesk: [.contextPack, .configureContext]
+        case .addDemoRule: [.rules, .configureContext]
         case .showDemoNudge, .showDemoQuestion, .openMenuBar, .finishDemo: []
         case .openPrivacySettings: [.openSettingsButton]
         }

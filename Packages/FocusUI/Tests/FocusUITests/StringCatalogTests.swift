@@ -92,7 +92,8 @@ struct StringCatalogTests {
         let duplicated = byValue.filter { $0.value.count > 1 }.map { $0.value.sorted() }.sorted { $0[0] < $1[0] }
 
         // Shared wording is intentional: the same app/site scopes, priority prompt,
-        // nudge title, login action and deletion action recur on different surfaces.
+        // nudge title, login action and deletion action recur on different surfaces, and the
+        // cockpit's History destination shares its name with the History window it opens.
         // Keep the full list pinned so an unrelated copy-paste still fails.
         #expect(
             duplicated == [
@@ -106,6 +107,7 @@ struct StringCatalogTests {
                 ["settings.general.launchAtLogin", "shell.cockpit.launchAtLogin.accept"],
                 ["settings.privacy.delete.confirm.action", "settings.privacy.delete.heading"],
                 ["shell.cockpit.heading", "shell.window.cockpit.title"],
+                ["shell.cockpit.tab.history", "shell.window.history.title"],
                 ["shell.help.heading", "shell.window.help.title"]
             ],
             "unexpected duplicate catalog values: \(duplicated)"

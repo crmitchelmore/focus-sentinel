@@ -12,8 +12,8 @@ import SwiftData
 /// ## What it carries, and what it refuses to
 ///
 /// Preferences and rules of thumb: the appearance, the nudge voice and its two companions, the
-/// retention window, the daily ritual, the quick-capture combination, the four sensing dials, and
-/// the applications the person added to the exclusion lists themselves.
+/// retention window, the retired daily ritual's switch, the quick-capture combination, the four
+/// sensing dials, and the applications the person added to the exclusion lists themselves.
 ///
 /// It carries **none** of:
 ///
@@ -56,6 +56,8 @@ public struct SettingsDocument: Codable, Sendable, Equatable {
     public let quietHoursStartMinuteOfDay: Int?
     public let quietHoursEndMinuteOfDay: Int?
     public let retentionDays: Int
+    /// The retired daily ritual's switch (focus-g9iw). Carried so a document round-trips between
+    /// builds; nothing in the app reads it any more.
     public let ritualEnabled: Bool
     public let hotKeyKeyCode: Int
     public let hotKeyModifierFlags: Int

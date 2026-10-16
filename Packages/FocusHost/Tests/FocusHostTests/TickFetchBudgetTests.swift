@@ -30,9 +30,10 @@ struct TickFetchBudgetTests {
     /// * **no commitment** — nothing at all in the nudge half. Gate 1 closes before either read
     ///   is consulted, and `everyMemoryDecidesTheSameThingWithNoCommitment` proves the skip is
     ///   sound over the whole space.
-    /// * **a commitment, popover closed** — the settings row the ritual gate reads and the active
-    ///   pointer, plus gate 11's receipt. The history and the day's budget are cached against the
-    ///   two write counters, so they cost nothing until something is written.
+    /// * **a commitment, popover closed** — the active pointer, plus gate 11's receipt. The
+    ///   history and the day's budget are cached against the two write counters, so they cost
+    ///   nothing until something is written. (The retired daily ritual's settings-row read went
+    ///   with it in focus-g9iw; the ceiling did not move.)
     /// * **a commitment, popover open** — the same, because building the popover's content
     ///   touches no store.
     @Test("a tick that changes nothing fetches almost nothing, in every state")

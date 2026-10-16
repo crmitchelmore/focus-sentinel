@@ -2,13 +2,14 @@ import Foundation
 
 /// A calendar day, in the user's own timezone.
 ///
-/// F-19 promises the ritual asks **once per local day**. That is only a well-defined sentence
-/// once you say whose calendar decides — probe P-69: `2026-01-01T00:00:00Z` is the 1st of
-/// January in UTC and also the 1st in `Pacific/Auckland` (where it is already 13:00), while an
-/// instant twelve hours later is the 1st in UTC and the 2nd in Auckland. The calendar is
-/// therefore a **parameter** everywhere in this type. A test that read `Calendar.current`
-/// would pass in London and fail in Auckland, and `scripts/check-forbidden.sh` bans
-/// `Calendar.current` and `TimeZone.current` outside this directory for exactly that reason.
+/// The day log and the retention cut-off both talk about **one local day**. That is only a
+/// well-defined sentence once you say whose calendar decides — probe P-69:
+/// `2026-01-01T00:00:00Z` is the 1st of January in UTC and also the 1st in `Pacific/Auckland`
+/// (where it is already 13:00), while an instant twelve hours later is the 1st in UTC and the
+/// 2nd in Auckland. The calendar is therefore a **parameter** everywhere in this type. A test
+/// that read `Calendar.current` would pass in London and fail in Auckland, and
+/// `scripts/check-forbidden.sh` bans `Calendar.current` and `TimeZone.current` outside this
+/// directory for exactly that reason.
 ///
 /// The key is `yyyy-MM-dd`, built by hand rather than by a `DateFormatter`, because a
 /// formatter's output depends on a locale and a calendar identifier and this string is a
@@ -26,7 +27,7 @@ public struct LocalDay: Sendable, Equatable, Hashable, Comparable, Codable,
     }
 
     /// Parse a stored key. Returns `nil` for anything that is not `yyyy-MM-dd`, so a corrupt
-    /// or future-format value reads as "no ritual has run" rather than as a crash.
+    /// or future-format value reads as "no day recorded" rather than as a crash.
     public init?(key: String) {
         let parts = key.split(separator: "-", omittingEmptySubsequences: false)
         guard parts.count == 3,
@@ -74,40 +75,5 @@ public struct LocalDay: Sendable, Equatable, Hashable, Comparable, Codable,
     /// Today, from a `DateProvider`. The form the app uses.
     public static func today(calendar: Calendar, dateProvider: some DateProvider) -> LocalDay {
         containing(dateProvider.now, calendar: calendar)
-    }
-}
-
-/// Whether the daily priority ritual should be offered right now (F-19).
-///
-/// A banner, not a modal: a modal on launch is a toll booth. And it asks **once** — answering
-/// *or* dismissing writes the day key, so a ritual that has been dealt with does not come back
-/// at lunchtime.
-///
-/// **No notification authorisation is requested for this feature, ever** (Court). The whole
-/// mechanism is a stored string and a comparison.
-public enum DailyRitualGate {
-    /// Should the banner appear?
-    ///
-    /// - Parameters:
-    ///   - lastRitualLocalDay: `AppSettingsRecord.lastRitualLocalDay`, or `nil` if it has
-    ///     never run. An unparseable value counts as never.
-    ///   - today: the local day, from an injected calendar.
-    ///   - isEnabled: the user's own switch. Off means off; the day key is not consulted.
-    public static func shouldPrompt(
-        lastRitualLocalDay: String?,
-        today: LocalDay,
-        isEnabled: Bool
-    ) -> Bool {
-        guard isEnabled else { return false }
-        guard let stored = lastRitualLocalDay, let lastDay = LocalDay(key: stored) else {
-            return true
-        }
-        return lastDay != today
-    }
-
-    /// What to write once the ritual has been answered **or** dismissed. The same value for
-    /// both, which is what makes "it asks once" true rather than aspirational.
-    public static func dayKeyAfterPrompting(_ today: LocalDay) -> String {
-        today.key
     }
 }
