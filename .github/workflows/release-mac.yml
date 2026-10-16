@@ -9,8 +9,8 @@ run-name: Build ${{ inputs.manifest }}
 # writes a receipt with the digests. It never decides what to build: allocation and approval are
 # the two dispatch workflows' jobs.
 #
-# It runs on the owner's Mac (the self-hosted runner) because that is where the identity and the
-# Sparkle key live; no signing material is in a GitHub secret.
+# It runs on the owner's Mac (the self-hosted runner), where the Sparkle key lives. Developer ID
+# and notarisation material may come from that Mac's keychain or the repository's secrets.
 
 on:
   workflow_call:
@@ -35,6 +35,9 @@ jobs:
     env:
       DEVELOPER_DIR: /Applications/Xcode.app/Contents/Developer
       GH_TOKEN: ${{ github.token }}
+      # Step conditions are evaluated before that step's own environment is available.
+      HAS_P12: ${{ secrets.APPLE_DEVELOPER_ID_APPLICATION != '' }}
+      HAS_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY != '' }}
       # Bulk build output lives on the external SSD on this Mac (see the machine notes); the
       # package cache is private to this repository so another process's SwiftPM lock cannot
       # stall a release.
@@ -115,13 +118,16 @@ jobs:
         if: steps.receipt.outputs.status != 'verified' && env.HAS_P12 == 'true'
         shell: zsh {0}
         env:
-          HAS_P12: ${{ secrets.APPLE_DEVELOPER_ID_APPLICATION != '' }}
           APPLE_DEVELOPER_ID_APPLICATION: ${{ secrets.APPLE_DEVELOPER_ID_APPLICATION }}
           APPLE_DEVELOPER_ID_APPLICATION_PASSWORD: ${{ secrets.APPLE_DEVELOPER_ID_APPLICATION_PASSWORD }}
         run: |
+          set -e
+          umask 077
           KEYCHAIN_PATH="$RUNNER_TEMP/focus-signing.keychain-db"
           KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
+          echo "::add-mask::$KEYCHAIN_PASSWORD"
           security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          echo "FOCUS_SIGNING_KEYCHAIN=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
           security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           CERT="$RUNNER_TEMP/developer-id.p12"
@@ -132,17 +138,16 @@ jobs:
           # The temporary keychain joins the search list in front of the login keychain, so
           # `codesign --sign "Developer ID Application"` finds the imported identity first.
           security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | tr -d '"')
-          echo "FOCUS_SIGNING_KEYCHAIN=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
 
       - name: Install the notarisation API key from secrets, if provided
         if: steps.receipt.outputs.status != 'verified' && env.HAS_KEY == 'true'
         shell: zsh {0}
         env:
-          HAS_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY != '' }}
           APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
           APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
         run: |
+          set -e
           umask 077
           KEY_PATH="$RUNNER_TEMP/notary.p8"
           print -rn -- "$APP_STORE_CONNECT_API_KEY" | base64 --decode > "$KEY_PATH"
@@ -197,7 +202,7 @@ jobs:
           if [[ -n "${FOCUS_SIGNING_KEYCHAIN:-}" ]]; then
             security delete-keychain "$FOCUS_SIGNING_KEYCHAIN" || true
           fi
-          rm -f -- "$RUNNER_TEMP/notary.p8"
+          rm -f -- "$RUNNER_TEMP/developer-id.p12" "$RUNNER_TEMP/notary.p8"
 
       - name: Free the build directory
         if: always()

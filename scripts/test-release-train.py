@@ -45,6 +45,22 @@ class ReleaseConfigurationTests(unittest.TestCase):
             values["FEED_URL"], release_train.TRAINS["stable"]["feedURL"]
         )
 
+    def test_signing_secret_flags_are_available_before_step_conditions(self):
+        workflow = (
+            pathlib.Path(__file__).resolve().parent.parent
+            / ".github/workflows/release-mac.yml"
+        ).read_text()
+        job, steps = workflow.split("    steps:", 1)
+        for flag, secret in [
+            ("HAS_P12", "APPLE_DEVELOPER_ID_APPLICATION"),
+            ("HAS_KEY", "APP_STORE_CONNECT_API_KEY"),
+        ]:
+            with self.subTest(flag=flag):
+                declaration = f"{flag}: ${{{{ secrets.{secret} != '' }}}}"
+                self.assertIn(declaration, job)
+                self.assertNotIn(declaration, steps)
+                self.assertIn(f"env.{flag} == 'true'", steps)
+
 
 if __name__ == "__main__":
     unittest.main()

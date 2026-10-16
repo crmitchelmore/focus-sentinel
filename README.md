@@ -1557,6 +1557,10 @@ workflow uses (`APPLE_DEVELOPER_ID_APPLICATION` as a base64 `.p12`,
 `APPLE_DEVELOPER_ID_APPLICATION_PASSWORD`, `APP_STORE_CONNECT_API_KEY` as a base64 `.p8`,
 `APP_STORE_CONNECT_KEY_ID`, `APP_STORE_CONNECT_ISSUER_ID`), imported into a temporary keychain
 for the job and deleted afterwards.
+The encrypted identity must include its matching private key; an Apple Development certificate
+or a certificate-only export cannot replace it. The notarisation API key must include both its
+Key ID and Issuer ID. Secret-availability flags are job-scoped so the import steps can evaluate
+them before their step environments exist.
 
 **Release hosting is public.** The feed and every enclosure must be readable over HTTPS
 without GitHub credentials. The repository and its signed release assets are publicly hosted at
