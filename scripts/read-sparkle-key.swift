@@ -34,7 +34,7 @@ guard status == errSecSuccess else {
 }
 guard let encoded = item as? Data,
       let decoded = Data(base64Encoded: encoded),
-      [64, 96].contains(decoded.count) else {
+      [32, 64, 96].contains(decoded.count) else {
     FileHandle.standardError.write(Data("FAIL the existing Sparkle key has an invalid format\n".utf8))
     exit(1)
 }
