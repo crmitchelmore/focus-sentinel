@@ -287,6 +287,44 @@ struct CockpitActionsTests {
         #expect(host.calls(of: .addContext).map(\.detail) == ["proposal", "https://docs.google.com"])
     }
 
+    // MARK: - Capture visibility
+
+    @Test("an active priority has no capture form unless explicitly being changed")
+    func activePriorityHidesCapture() {
+        let host = RecordingPriorityActing()
+        let wiring = CockpitWiring(actions: host, priority: Self.priority())
+
+        #expect(!wiring.showsCapture(requestedFor: nil))
+        #expect(wiring.showsCapture(requestedFor: Self.taskID))
+    }
+
+    @Test("selecting a different priority hides the previous priority's capture form")
+    func selectingPriorityClosesCapture() {
+        let host = RecordingPriorityActing()
+        let wiring = CockpitWiring(actions: host, priority: Self.priority())
+
+        #expect(!wiring.showsCapture(requestedFor: Self.otherTaskID))
+    }
+
+    @Test("an empty cockpit offers capture, including after completing or clearing a priority")
+    func emptyCockpitShowsCapture() {
+        let host = RecordingPriorityActing()
+        let wiring = CockpitWiring(actions: host, priority: nil)
+
+        #expect(wiring.showsCapture(requestedFor: nil))
+        #expect(wiring.showsCapture(requestedFor: Self.taskID))
+    }
+
+    @Test("a read-only cockpit never offers capture")
+    func readOnlyCockpitHidesCapture() {
+        for priority in [nil, Self.priority()] {
+            let wiring = CockpitWiring(actions: nil, priority: priority)
+
+            #expect(!wiring.showsCapture(requestedFor: nil))
+            #expect(!wiring.showsCapture(requestedFor: Self.taskID))
+        }
+    }
+
     // MARK: - Nothing is live without a host
 
     @Test("the read-only cockpit exposes no verb at all")

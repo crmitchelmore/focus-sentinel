@@ -64,10 +64,8 @@ public struct CockpitView: View {
     @State private var doneWhenDraft: String = ""
     @State private var contentWidth: CGFloat = 0
 
-    /// Whether the capture field is open while a priority already exists — the "change my
-    /// mind" path. With no priority the field is always open, because it is the only thing
-    /// the window is for.
-    @State private var isCapturing: Bool = false
+    /// The priority explicitly being replaced. Selecting another priority closes capture.
+    @State private var capturePriorityID: UUID?
     /// Whether the capture field, when it commits, keeps the current priority's desk
     /// (focus-1rj7). Set by the "New Priority, Same Context…" verb and cleared with the field.
     @State private var isKeepingContext: Bool = false
@@ -340,6 +338,8 @@ public struct CockpitView: View {
         // reason it needs re-seeding and no fourth place for the two to drift apart in.
         .onChange(of: state.priority?.id, initial: true) {
             doneWhenDraft = state.priority?.doneWhen ?? ""
+            capturePriorityID = nil
+            isKeepingContext = false
             // A different commitment is not the one that was being re-worded.
             isEditingIntent = false
         }
@@ -836,20 +836,12 @@ public struct CockpitView: View {
     }
 
     private var showsCapture: Bool {
-        actions != nil && (state.priority == nil || isCapturing)
+        wiring.showsCapture(requestedFor: capturePriorityID)
     }
 
     /// Focus the inserted field once its reveal transition has finished.
     private func beginCapture() {
-        guard !showsCapture else {
-            focus = .cockpitCaptureField
-            return
-        }
-        withAnimation(DesignTokens.animation(for: traits), completionCriteria: .removed) {
-            isCapturing = true
-        } completion: {
-            focus = .cockpitCaptureField
-        }
+        beginCapturing(keepingContext: false)
     }
 
     /// One sentence in, one priority out.
@@ -865,7 +857,7 @@ public struct CockpitView: View {
                 } else {
                     wiring.setPriority?(intent, doneWhen)
                 }
-                isCapturing = false
+                capturePriorityID = nil
                 isKeepingContext = false
             },
             isEnabled: actions != nil,
@@ -1000,7 +992,7 @@ public struct CockpitView: View {
             return
         }
         withAnimation(DesignTokens.animation(for: traits), completionCriteria: .removed) {
-            isCapturing = true
+            capturePriorityID = state.priority?.id
         } completion: {
             focus = .cockpitCaptureField
         }

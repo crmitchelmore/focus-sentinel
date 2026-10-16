@@ -541,6 +541,14 @@ sentences among the strings it draws and both resolve to real text, and — read
 process on a default store — that the stored choice is off and the updater was never started
 (`softwareUpdateChecksStored`, `softwareUpdaterStarted`).
 
+## Setting and changing a priority
+
+The cockpit shows **What are you working on?** and **Set priority** when no priority is
+selected. Selecting a saved priority closes that form, leaving its completion, wording,
+clearing and session controls. **Change priority** and **New priority, same context…** open
+the form deliberately for the current priority; selecting another priority closes it again.
+**Fix wording…** edits the existing priority rather than replacing it.
+
 ## The walkthrough (focus-u6de)
 
 The first-run sheet is page one and says what the app watches; nothing else was ever on it.

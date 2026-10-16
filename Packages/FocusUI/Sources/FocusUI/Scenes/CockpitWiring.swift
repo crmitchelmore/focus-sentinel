@@ -36,6 +36,10 @@ struct CockpitWiring {
 
     // MARK: - Capture
 
+    func showsCapture(requestedFor taskID: UUID?) -> Bool {
+        actions != nil && (priority == nil || (taskID != nil && taskID == priority?.id))
+    }
+
     /// **The person has read the sheet that says nothing will be saved** (focus-tzj.4).
     ///
     /// `nil` for the read-only cockpit, like every other verb here — a surface with no host has
