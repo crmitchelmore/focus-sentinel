@@ -62,7 +62,7 @@ struct MenuBarActionTotalityTests {
         case .setSensingPaused: .pausesSensing
         case .openSettings: .opensSettings
         case .quit: .quits
-        case .cancelSnooze, .answerQuery, .correct: .reachesTheNudgeLoop
+        case .cancelSnooze, .answerQuery, .selectQueryScope, .correct: .reachesTheNudgeLoop
         }
     }
 

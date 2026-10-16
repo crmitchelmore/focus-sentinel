@@ -97,9 +97,7 @@ public struct TaskRulesView: View {
                     .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
                     .lineLimit(1)
             } else if !rule.scope.isObserved {
-                // **A site rule is not retired, but this version cannot see a site**
-                // (focus-6ji4). Kept, deletable, and drawn inert for the same reason, in
-                // different words: it is waiting on an origin producer, not given up.
+                // Kept and deletable if a future build cannot observe this scope.
                 ShellText(.priorityRulesScopeUnobserved, role: .caption)
                     .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
                     .lineLimit(1)

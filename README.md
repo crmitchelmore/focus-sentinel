@@ -261,14 +261,29 @@ How it is built:
   cleared — so a password manager or a private browser window is never read. Any other
   application may be read (the owner's follow-up widened the first round's short list to every
   app, because in practice every app is mixed-use);
-- it reads the focused window's `AXTitle` first. When the title names nothing — the Copilot
-  app's is just "GitHub Copilot", a terminal's can be "~" — it looks inside that one window,
+- it looks inside the focused window before falling back to a window title,
   read-only, for a selected sidebar row (`AXSelectedRows` / `AXSelectedChildren`: a Mail
   mailbox, a Finder folder, a chat) or else the first heading of the main region (the Copilot
   app's "Session: …"). The walk is bounded: at most `SelectedItemSearch.maximumElements` (400)
   elements, depth 14, 150 ms in all, each message capped by a messaging timeout. One app's full
   tree took ten seconds to walk on the owner's Mac; the budget is why that never stalls a
   nudge. No other window, no other application; `kCGWindowName` stays banned (SC-1);
+- **Browser content, not Safari as a catch-all** (owner's ruling, 2026-10-16): it reads the
+  focused window's document URL, or the active web area's URL, never links within a page.
+  `BrowserPage` keeps only the normalised HTTP(S) host and case-sensitive path: credentials,
+  query and fragment are discarded before the value leaves the reader. This explicitly
+  extends the earlier origin-only storage rule for learned browser rules, not activity rows.
+  The question names that page. Before either **Yes** or **No**, its scope menu offers the
+  exact page (the default), each enclosing path and its pages, or the whole domain. Subdomains,
+  schemes and explicit ports remain distinct. “Exact page” ignores query and fragment.
+  At the same rule authority, an exact page overrides its paths, the longest matching path
+  overrides its domain, and the domain overrides an app-wide rule; contradictory equally
+  specific rules stay uncertain. These are ordinary, removable task rules in the Rules pane;
+- **No silent widening**: an unreadable browser URL never becomes a question about the whole
+  browser. The shipping host also withholds app-wide questions when another application's
+  session, document or selected view cannot be identified. The existing Privacy opt-in remains
+  required; switching it off does not grant permission to guess. Failed browser reads do not
+  reuse a previous tab's identity. Paths are redacted back to their origin in store exports;
 - nothing writes, acts, observes or bulk-reads: an Electron app that exposes no tree until a
   client writes `AXManualAccessibility` stays unread below its title, by design;
 - `SelectedItem.normalise` reduces the title, row or heading in memory to a label of at most 48
@@ -278,7 +293,7 @@ How it is built:
   in that form is live again, while a legacy single-word row stays retired;
 - the decisions issue #27 asked for: the item is read on **every judgement**, not cached by
   time, because the dwell key is what notices a switch from one chat to another; a read that
-  fails (a timeout, an exhausted budget) keeps the last item for **12 seconds**
+  fails (a timeout, an exhausted budget) keeps the last non-browser item for **12 seconds**
   (`SelectedItemGrace`), per process, and an empty read or switching the opt-in off clears it;
   there are **no seed rules** — an item becomes a rule only when the person answers a question
   about it; and the label also reaches the engine as `titleTokens`, where it can only

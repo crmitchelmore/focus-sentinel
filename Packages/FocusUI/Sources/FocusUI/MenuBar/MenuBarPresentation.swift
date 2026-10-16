@@ -330,6 +330,7 @@ public enum MenuBarAction: Sendable, Equatable, Hashable {
     case cancelSnooze(subject: NudgeSubject)
     /// Answer the question the popover is carrying, when reduced interruption routed one here.
     case answerQuery(QueryAnswer)
+    case selectQueryScope(CorrectionScope)
     /// **Answer the accusation the popover is carrying** (focus-uru), when reduced interruption,
     /// the `silentVisual` deck or a running microphone routed the top rung here instead of to a
     /// panel. The `Duration` is the chosen snooze span and is `nil` for every other action — the

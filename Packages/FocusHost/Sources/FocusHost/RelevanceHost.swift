@@ -20,9 +20,8 @@ import os
 ///   (six of ninety-two on this Mac, e03's P-83). There is nothing to write a rule *about* one,
 ///   so there is nothing to conclude either.
 ///
-/// A raw window title, an origin and a document name are all absent by construction:
-/// `ClassificationInput.origin` is exercised by the golden corpus and **empty in every shipping
-/// path** (F-03 is baseline-only), and this type is where that promise is kept in the app.
+/// Raw window titles are absent. Opt-in browser items carry a normalised HTTP path, with
+/// credentials, query and fragment discarded; their origin also reaches `ClassificationInput`.
 ///
 /// **The one addition is `selectedItem`** (issue #24): the item selected inside the frontmost
 /// application, read through Accessibility only where the person switched that on, and already
@@ -465,9 +464,10 @@ final class RelevanceHost {
         let judgement = engine.judge(
             input: ClassificationInput(
                 bundleIdentifier: subject.bundleIdentifier,
+                origin: subject.selectedItem?.browserPage?.origin,
                 // The label is prose — a name the person gave a chat or a folder — so it may be
                 // handed to the similarity signal (R-57), which can only corroborate `relevant`.
-                titleTokens: subject.selectedItem.map { [$0.label] } ?? [],
+                titleTokens: subject.selectedItem.flatMap { $0.browserPage == nil ? [$0.label] : nil } ?? [],
                 selectedItem: subject.selectedItem
             ),
             snapshot: snapshot,
@@ -491,7 +491,8 @@ final class RelevanceHost {
                 dwelled: dwell,
                 snapshot: published,
                 stamp: engine.stamp,
-                selectedItem: subject.selectedItem
+                selectedItem: subject.selectedItem,
+                allowsApplicationQuestion: false
             )
         )
     }

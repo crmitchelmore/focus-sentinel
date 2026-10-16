@@ -1126,6 +1126,7 @@ public final class AppComposition {
         case .setSensingPaused(let paused): sessionHost.setSensingPaused(paused)
         case .cancelSnooze(let subject): nudgeHost.cancelSnooze(subject: subject.identifier)
         case .answerQuery(let answer): nudgeHost.answer(answer)
+        case .selectQueryScope(let scope): nudgeHost.selectQueryScope(scope)
         // **The same entry point the panel's buttons use** (focus-uru). The popover performs
         // nothing and decides nothing: a correction pressed on the badge is the identical call
         // `AccusationPanelView` makes on the panel, so one click has one meaning and

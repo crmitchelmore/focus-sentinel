@@ -255,7 +255,7 @@ public final class DeterministicRelevanceEngine: RelevanceClassifier, @unchecked
         let observation = DriftObservation(
             now: now,
             verdict: resolution.verdict,
-            subject: evidence.subject,
+            subject: evidence.selectedItem?.subject ?? evidence.subject,
             isUserIdle: isUserIdle,
             phase: phase,
             effectiveThreshold: window.effectiveThreshold(at: now)

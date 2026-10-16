@@ -79,7 +79,8 @@ public struct QuerySubject: Sendable, Equatable, Hashable {
     public static func derive(
         judgedSubject: String?,
         explanation: Explanation,
-        selectedItem: SelectedItem? = nil
+        selectedItem: SelectedItem? = nil,
+        allowsApplicationScope: Bool = true
     ) -> QuerySubject? {
         let applicationSubject: QuerySubject
         if let named = explanationSubject(explanation) {
@@ -97,10 +98,18 @@ public struct QuerySubject: Sendable, Equatable, Hashable {
         } else {
             return nil
         }
+        // Seed explanations fold identifier case; the original activation must still match.
         guard let item = selectedItem,
               applicationSubject.kind == .app,
               applicationSubject.identifier == item.bundleIdentifier
-        else { return applicationSubject }
+                || (judgedSubject == item.bundleIdentifier
+                    && applicationSubject.identifier.lowercased() == item.bundleIdentifier.lowercased())
+        else {
+            return applicationSubject.kind == .app && !allowsApplicationScope ? nil : applicationSubject
+        }
+        if let page = item.browserPage {
+            return QuerySubject(kind: .domain, identifier: page.identifier, provenance: .selectedItem)
+        }
         return QuerySubject(kind: .titleToken, identifier: item.subject, provenance: .selectedItem)
     }
 

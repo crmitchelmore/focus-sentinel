@@ -1549,6 +1549,31 @@
         }
       }
     },
+    "nudge.query.scope.web" : {
+      "comment" : "The person chooses the scope before marking browser content relevant or unrelated.",
+      "extractionState" : "manual",
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Applies to the page, path or domain you choose below, for this priority." } } }
+    },
+    "nudge.query.scope.page" : {
+      "comment" : "Exact page scope, with the normalised host and path.",
+      "extractionState" : "manual",
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "This page: %@" } } }
+    },
+    "nudge.query.scope.path" : {
+      "comment" : "Path-prefix scope, with its host, path and wildcard marker.",
+      "extractionState" : "manual",
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "This path and pages within it: %@" } } }
+    },
+    "nudge.query.scope.domain" : {
+      "comment" : "Whole-domain scope. It does not include other subdomains.",
+      "extractionState" : "manual",
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "This domain: %@" } } }
+    },
+    "nudge.query.scope.help" : {
+      "comment" : "Tooltip for the scope menu used by both browser question answers.",
+      "extractionState" : "manual",
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Choose what Yes or No applies to. This page is the default; a path includes its pages, and a domain includes its paths." } } }
+    },
     "priority.rules.scope.selectedItem" : {
       "comment" : "Rule scope: the rule is about one item selected inside an application, such as a chat or a project folder (issue #24).",
       "extractionState" : "manual",
@@ -2072,7 +2097,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Watching the active app. Focus does not read window titles, take screenshots or record what you type."
+            "value" : "Watching the active app. With your Accessibility opt-in, Focus also reads the selected view or browser page on this Mac. It does not take screenshots or record what you type."
           }
         }
       }
@@ -5924,7 +5949,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Focus does not read window titles, full web addresses, file paths, document names or anything you type."
+            "value" : "With your Accessibility opt-in, Focus identifies the selected session, document or browser page on this Mac. Raw titles, URL credentials, queries and fragments are not stored. It does not take screenshots or record what you type."
           }
         }
       }
@@ -5936,7 +5961,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Focus reads which app is active. If a browser shares its site without a permission request, Focus reads the host name only."
+            "value" : "Focus reads which app is active. If you enable Accessibility in Privacy, it can also identify the selected view or browser page and ask about that content instead of the whole app."
           }
         }
       }
@@ -5996,7 +6021,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Focus keeps track of your current priority and nudges you when the active app appears unrelated. It reads the active app and, when available without a permission request, the browser site's host name. It does not read window titles, full web addresses, file paths or anything you type. Your data stays on this Mac."
+            "value" : "Focus keeps track of your current priority and nudges you when the current content appears unrelated. It reads the active app. With your Accessibility opt-in, it also identifies the selected view or browser page on this Mac. Browser answers can apply to one page, a path or a domain. Raw titles, URL credentials, queries and fragments are not stored. Focus does not take screenshots or record what you type. Your data stays on this Mac."
           }
         }
       }

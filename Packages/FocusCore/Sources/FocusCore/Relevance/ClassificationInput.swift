@@ -8,12 +8,9 @@ import Foundation
 /// query string or a screenshot, and that is deliberate — it is the type-level half of the
 /// privacy guarantee.
 ///
-/// `origin` is **plumbed and exercised by the golden corpus, and empty in every shipping code
-/// path** (F-03 is baseline-only). `selectedItem` is the one window-derived field a shipping
-/// path fills (issue #24), and it is a `SelectedItem` — a label already reduced by
-/// `SelectedItem.normalise`, never a raw title. `titleTokens` is filled from that label and from
-/// nothing else (issue #27), so it too is empty unless the person switched the Accessibility ask
-/// on.
+/// With the Accessibility opt-in, `selectedItem` carries either a reduced label or the active
+/// browser page's normalised path; the latter also supplies `origin`. `titleTokens` is filled
+/// only from non-browser labels, never URL components or raw titles.
 public struct ClassificationInput: Sendable, Equatable, Hashable, Codable {
     /// The user's stated priority, as they wrote it. Empty when no priority is set.
     public var priorityIntent: String

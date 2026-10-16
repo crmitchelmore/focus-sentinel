@@ -4,11 +4,11 @@ import Foundation
 /// One activation, normalised — everything a rung is allowed to look at.
 ///
 /// Built once per classification and handed to every rung, so no rung can normalise the same
-/// string twice or normalise it differently. `origin` is **plumbed and exercised by the golden
-/// corpus, and empty in every shipping code path** (F-03 is baseline-only). `selectedItem` is
-/// the exception (issue #24): an already-normalised label read through Accessibility, opt-in,
+/// string twice or normalise it differently. `origin` comes from an opt-in browser-page read.
+/// `selectedItem` is an already-normalised item read through Accessibility, opt-in,
 /// matched by item rules for equality — and its label, as prose, is the only thing a shipping
 /// path puts in `titleTokens` (issue #27), where the similarity signal may corroborate it.
+/// Browser URL components are never presented as title prose.
 ///
 /// The two kinds of token are kept apart here as well as at the normaliser (R-57): `identifier`
 /// and `originHost` may only ever be compared for equality, while `title` is prose and is the
@@ -365,7 +365,9 @@ public struct RuleCascade: Sendable {
         // a domain rule and an app rule that disagree are not a conflict — they are an
         // exception and the general case, which is what the person meant by writing both.
         guard let narrowest = matched.map(\.subjectKind).min() else { return nil }
-        let cell = matched.filter { $0.subjectKind == narrowest }
+        let sameKind = matched.filter { $0.subjectKind == narrowest }
+        let specificity = sameKind.map { BrowserPage.specificity(of: $0.subject) }.max() ?? 0
+        let cell = sameKind.filter { BrowserPage.specificity(of: $0.subject) == specificity }
 
         let verdicts = Set(cell.map(\.verdict))
         guard verdicts.count == 1, let decided = verdicts.first else {
@@ -409,7 +411,8 @@ public struct RuleCascade: Sendable {
         case .app:
             return rule.subject == evidence.bundleIdentifier
         case .domain:
-            return rule.subject == evidence.origin
+            return evidence.selectedItem?.browserPage?.matches(rule.subject)
+                ?? (rule.subject == evidence.origin)
         case .titleToken:
             // An item rule (issue #24) names one selected item inside one application, and
             // matches that item and nothing else: the same application with another chat open

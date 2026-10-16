@@ -11,6 +11,8 @@ public enum SelectedItemNodeKind: Sendable, Equatable {
     case heading
     /// The main region of a document — where a web application draws the open item.
     case mainRegion
+    /// The active browser document. Its URL is read, never links within its body.
+    case webArea
     /// Anything else. Walked through, never read.
     case other
 }
@@ -24,6 +26,11 @@ public protocol SelectedItemNode {
     var selectedRows: [Self] { get }
     /// The element's own text: its title, its value or its description, whichever it has.
     var text: String? { get }
+    var documentURL: String? { get }
+}
+
+extension SelectedItemNode {
+    public var documentURL: String? { nil }
 }
 
 /// **Find the selected item inside a window whose title names nothing** (issue #26).
@@ -99,7 +106,7 @@ public enum SelectedItemSearch {
                 }
             case .mainRegion:
                 childrenInMain = true
-            case .other:
+            case .other, .webArea:
                 break
             }
             if path.count < maximumDepth {
@@ -109,6 +116,29 @@ public enum SelectedItemSearch {
             }
         }
         return heading.map { .found($0.item) } ?? .nothing
+    }
+
+    public static func browserPage<Node: SelectedItemNode>(
+        from window: Node,
+        shouldStop: () -> Bool
+    ) -> BrowserPage? {
+        var queue: [(node: Node, depth: Int)] = [(window, 0)]
+        var next = 0
+        while next < queue.count, next < maximumElements, !shouldStop() {
+            let (node, depth) = queue[next]
+            next += 1
+            if node.kind == .webArea {
+                if let url = node.documentURL, let page = BrowserPage(url) { return page }
+                // No browsing of page text or links to guess which page is open.
+                continue
+            }
+            if depth < maximumDepth {
+                queue.append(contentsOf: node.children.prefix(maximumElements - queue.count).map {
+                    ($0, depth + 1)
+                })
+            }
+        }
+        return nil
     }
 
     /// The first nameable text in a selected row: the row's own, else its cells' and their text.

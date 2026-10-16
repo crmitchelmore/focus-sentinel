@@ -6,8 +6,9 @@ import Foundation
 /// In GitHub Copilot, a terminal, an editor, the bundle identifier is the same for the task and
 /// for the detour, so a question about the application asks about the wrong thing. This is the
 /// narrower subject: the chat session, the project folder, the workspace, reduced from the
-/// focused window's title — or, where the title names nothing, from the selected sidebar row or
-/// the main region's first heading (issue #26) — to a short label.
+/// selected sidebar row or the main region's first heading (issue #26), then the focused
+/// window's title, reduced to a short label. A browser instead supplies its active page URL,
+/// normalised by `BrowserPage` without credentials, query or fragment.
 ///
 /// ## What is kept, and what never is
 ///
@@ -30,6 +31,8 @@ public struct SelectedItem: Sendable, Hashable, Codable, CustomStringConvertible
     public let bundleIdentifier: String
     /// The short, normalised name drawn in the question: letters, digits, spaces and `-_.`.
     public let label: String
+    /// Present only when the reader identified the active web document, not just its title.
+    public let browserPage: BrowserPage?
 
     /// The separator between the bundle identifier and the label in a stored subject. A bundle
     /// identifier never contains it, and `label` cannot.
@@ -38,9 +41,10 @@ public struct SelectedItem: Sendable, Hashable, Codable, CustomStringConvertible
     /// The longest label kept. A label is a name, not a sentence.
     public static let maximumLabelLength = 48
 
-    private init(validBundle bundleIdentifier: String, validLabel label: String) {
+    private init(validBundle bundleIdentifier: String, validLabel label: String, browserPage: BrowserPage? = nil) {
         self.bundleIdentifier = bundleIdentifier
         self.label = label
+        self.browserPage = browserPage
     }
 
     /// Build one from parts, or `nil` when either part does not survive normalisation.
@@ -50,10 +54,19 @@ public struct SelectedItem: Sendable, Hashable, Codable, CustomStringConvertible
         self.init(validBundle: bundle, validLabel: label)
     }
 
+    public init?(bundleIdentifier: String, browserPage: BrowserPage) {
+        guard Self.isBundleShaped(bundleIdentifier),
+              let label = Self.sanitise(BrowserPage.displayName(for: browserPage.identifier) ?? browserPage.origin)
+        else { return nil }
+        self.init(validBundle: bundleIdentifier, validLabel: label, browserPage: browserPage)
+    }
+
     // MARK: - The stored form
 
-    /// The rule subject an item is filed under: `<bundle>::<label>`, scope `.titleToken`.
-    public var subject: String { bundleIdentifier + Self.subjectSeparator + label }
+    /// `<bundle>::<label>` in `.titleToken`, or a browser page's host and path in `.domain`.
+    public var subject: String {
+        browserPage?.identifier ?? (bundleIdentifier + Self.subjectSeparator + label)
+    }
 
     /// The case-folded form the cascade matches on, so a title that only changed case is the
     /// same item.
@@ -82,7 +95,9 @@ public struct SelectedItem: Sendable, Hashable, Codable, CustomStringConvertible
 
     /// The same item: one application, one slug.
     public func matches(_ other: SelectedItem) -> Bool {
-        bundleIdentifier == other.bundleIdentifier && slug != nil && slug == other.slug
+        guard bundleIdentifier == other.bundleIdentifier else { return false }
+        if browserPage != nil || other.browserPage != nil { return browserPage == other.browserPage }
+        return slug != nil && slug == other.slug
     }
 
     public var description: String { subject }
@@ -91,9 +106,11 @@ public struct SelectedItem: Sendable, Hashable, Codable, CustomStringConvertible
     /// name the person's work goes by does not.
     public static let exportedLabel = "selected-item"
 
-    /// **What an export writes for a stored subject.** An item subject keeps its application
-    /// and loses its label; anything else passes through unchanged.
+    /// An item loses its label; a browser page or path loses its path. Other keys pass through.
     public static func exportedSubject(_ subject: String) -> String {
+        if BrowserPage.scope(of: subject) != nil {
+            return OriginNormalizer.normalize(subject) ?? subject
+        }
         guard let item = parse(subject) else { return subject }
         return item.bundleIdentifier + subjectSeparator + exportedLabel
     }
@@ -103,13 +120,26 @@ public struct SelectedItem: Sendable, Hashable, Codable, CustomStringConvertible
     private enum CodingKeys: String, CodingKey {
         case bundleIdentifier
         case label
+        case browserURL
     }
 
-    /// Decoding re-runs the normalisation, so a stored value can never carry more than a label.
+    /// Decoding re-runs the normalisation for both labels and browser pages.
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let bundle = try container.decode(String.self, forKey: .bundleIdentifier)
         let label = try container.decode(String.self, forKey: .label)
+        if let url = try container.decodeIfPresent(String.self, forKey: .browserURL) {
+            guard let page = BrowserPage(url), page.identifier == url,
+                  let item = SelectedItem(bundleIdentifier: bundle, browserPage: page),
+                  item.label == label
+            else {
+                throw DecodingError.dataCorruptedError(
+                    forKey: .browserURL, in: container, debugDescription: "not a normalised browser page"
+                )
+            }
+            self = item
+            return
+        }
         guard let item = SelectedItem(bundleIdentifier: bundle, label: label), item.label == label else {
             throw DecodingError.dataCorruptedError(
                 forKey: .label,
@@ -124,6 +154,7 @@ public struct SelectedItem: Sendable, Hashable, Codable, CustomStringConvertible
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(bundleIdentifier, forKey: .bundleIdentifier)
         try container.encode(label, forKey: .label)
+        try container.encodeIfPresent(browserPage?.identifier, forKey: .browserURL)
     }
 
     // MARK: - Where the item sits in a title

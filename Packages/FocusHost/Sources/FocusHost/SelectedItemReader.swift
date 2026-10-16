@@ -11,8 +11,8 @@ import Foundation
 @MainActor
 protocol SelectedItemReading: AnyObject {
     /// The item selected in `activation`'s application, or `nil` when the person has not
-    /// switched the Accessibility ask on, macOS has not granted it, or neither the window title
-    /// nor the window's selected row or main heading names anything worth keeping.
+    /// switched the Accessibility ask on, macOS has not granted it, or the focused document,
+    /// selected row, main heading and window title identify no usable content.
     func selectedItem(in activation: ClearedActivation, optIns: GrantOptIns) -> SelectedItem?
 
     /// How many reads reached the Accessibility API.
@@ -20,7 +20,7 @@ protocol SelectedItemReading: AnyObject {
 }
 
 /// How long one Accessibility message may block the main actor. A hung application must not hang
-/// this one: past this, the read gives up and the question falls back to the app.
+/// this one: past this, the read gives up without inventing an app-wide question.
 private let messagingTimeout: Float = 0.25
 
 /// The attribute names, spelled rather than imported: `ApplicationServices` declares them as global
@@ -36,6 +36,9 @@ private enum Attribute {
     static let children = "AXChildren"
     static let selectedRows = "AXSelectedRows"
     static let selectedChildren = "AXSelectedChildren"
+    static let document = "AXDocument"
+    static let url = "AXURL"
+    static let hidden = "AXHidden"
 }
 
 /// **The one place in this application that reads what the Accessibility grant unlocks**
@@ -60,7 +63,8 @@ private enum Attribute {
 ///   *writes* `AXManualAccessibility` therefore stays unread below its title, by design.
 /// * **Reduced before it is kept.** The raw title, row text and heading text live in this
 ///   function's locals and nowhere else: never logged, never stored, never exported. What leaves
-///   is a `SelectedItem`, whose label is one short segment, sanitised and capped.
+///   is a `SelectedItem`: a short, sanitised name or an HTTP(S) page with credentials, query
+///   and fragment discarded. Browser paths remain on device and are redacted from exports.
 /// * **Bounded.** One message may block for `messagingTimeout`; a walk below the title reads at
 ///   most `SelectedItemSearch.maximumElements` elements and stops at `searchBudget`.
 /// * **On device.** This file imports no networking API, and nothing it returns is sent
@@ -89,7 +93,14 @@ final class SystemSelectedItemReader: SelectedItemReading {
             return nil
         }
         readCount += 1
-        return grace.resolve(read(activation), pid: activation.pid, now: clock.elapsed)
+        let reading = read(activation)
+        if BrowserPage.browserApplications.contains(activation.bundleIdentifier) {
+            // A failed tab read must not teach a rule about the previously open page.
+            grace.clear()
+            if case let .item(item) = reading { return item }
+            return nil
+        }
+        return grace.resolve(reading, pid: activation.pid, now: clock.elapsed)
     }
 
     private func read(_ activation: ClearedActivation) -> SelectedItemGrace.Reading {
@@ -106,16 +117,22 @@ final class SystemSelectedItemReader: SelectedItemReading {
         let window = windowValue as! AXUIElement
         let applicationName = NSRunningApplication(processIdentifier: activation.pid)?.localizedName
 
-        if let rawTitle = log.copy(window, Attribute.title) as? String,
-           let item = SelectedItem.normalise(
-               title: rawTitle,
-               applicationName: applicationName,
-               bundleIdentifier: activation.bundleIdentifier
-           ) {
+        if let url = log.copy(window, Attribute.document) as? String,
+           let page = BrowserPage(url),
+           let item = SelectedItem(bundleIdentifier: activation.bundleIdentifier, browserPage: page) {
+            return .item(item)
+        }
+        if BrowserPage.browserApplications.contains(activation.bundleIdentifier) {
+            let deadline = clock.elapsed + Self.searchBudget
+            guard let page = SelectedItemSearch.browserPage(
+                from: WindowElement(element: window, log: log),
+                shouldStop: { [clock] in clock.elapsed >= deadline }
+            ), let item = SelectedItem(bundleIdentifier: activation.bundleIdentifier, browserPage: page)
+            else { return .nothing }
             return .item(item)
         }
 
-        // The title names nothing — "GitHub Copilot", "~" — so look inside the window (#26).
+        // The view's selection or main heading is more specific than a shared window title.
         let deadline = clock.elapsed + Self.searchBudget
         let outcome = SelectedItemSearch.search(
             from: WindowElement(element: window, log: log),
@@ -125,8 +142,15 @@ final class SystemSelectedItemReader: SelectedItemReading {
         )
         switch outcome {
         case let .found(item): return .item(item)
-        case .exhausted: return .failed
-        case .nothing: return log.timedOut ? .failed : .nothing
+        case .exhausted, .nothing:
+            if let item = SelectedItem.normalise(
+                title: log.copy(window, Attribute.title) as? String,
+                applicationName: applicationName,
+                bundleIdentifier: activation.bundleIdentifier
+            ) {
+                return .item(item)
+            }
+            return log.timedOut ? .failed : .nothing
         }
     }
 }
@@ -153,6 +177,7 @@ private struct WindowElement: SelectedItemNode {
         switch log.copy(element, Attribute.role) as? String {
         case "AXOutline", "AXTable", "AXList": return .collection
         case "AXHeading": return .heading
+        case "AXWebArea": return .webArea
         case "AXGroup":
             return log.copy(element, Attribute.subrole) as? String == "AXLandmarkMain" ? .mainRegion : .other
         default: return .other
@@ -160,6 +185,16 @@ private struct WindowElement: SelectedItemNode {
     }
 
     var children: [WindowElement] { elements(Attribute.children) }
+
+    var documentURL: String? {
+        if log.copy(element, Attribute.hidden) as? Bool == true { return nil }
+        for attribute in [Attribute.url, Attribute.document] {
+            let value = log.copy(element, attribute)
+            if let url = value as? URL { return url.absoluteString }
+            if let string = value as? String { return string }
+        }
+        return nil
+    }
 
     var selectedRows: [WindowElement] {
         let rows = elements(Attribute.selectedRows)

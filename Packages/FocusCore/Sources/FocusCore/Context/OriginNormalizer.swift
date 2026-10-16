@@ -1,12 +1,12 @@
 import Foundation
 
-/// Reduces a web URL to the only part of it this programme is allowed to keep.
+/// Reduces a web URL to its origin, without retaining any document identity.
 ///
 /// **Standing condition 3: only normalised origins, never full URLs.** A path is a document
 /// title, a query is a search term, a fragment is a position in a page, and a user-info
-/// component is a credential. None of them may reach the store, and e02 is the first epic that
-/// stores a URL at all — which is why this ships here rather than in e07, with a property test
-/// over generated URLs asserting that none of those five components survives.
+/// component is a credential. None survives this normaliser, whose property tests enforce that
+/// boundary. The owner's browser-content ruling extends storage to learned page and path
+/// subjects through `BrowserPage`; context attachments and exports still use this origin form.
 ///
 /// The result is `scheme://host` plus an explicit port when the URL carried one. Measured
 /// (P-68):

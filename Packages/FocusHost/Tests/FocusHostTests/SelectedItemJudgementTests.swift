@@ -165,5 +165,49 @@ struct SelectedItemJudgementTests {
             isUserIdle: false
         )
         #expect(try #require(published.last).verdict != .relevant)
+        #expect(NudgeDecider.querySubject(for: try #require(published.last)) == nil)
+    }
+
+    @Test("a browser URL reaches both domain matching and the page-specific question")
+    func browserPageReachesTheEngine() async throws {
+        let container = try FocusStore.makeContainer(kind: .inMemory)
+        let context = container.mainContext
+        let host = RelevanceHost(
+            context: context,
+            ruleStore: SwiftDataRuleStore(context: context),
+            monotonicClock: FixedMonotonicClock(),
+            modelRung: nil
+        )
+        let priorities = PriorityStore(context: context)
+        try priorities.setPriority(intent: "Write the proposal")
+        let taskID = try #require(try priorities.activeTask()?.id)
+        try priorities.addRule(
+            taskID: taskID, scopeRaw: "domain", subject: "https://example.com/work/*", verdictRaw: "relevant"
+        )
+        host.activeCommitment = { ActiveCommitment(id: taskID, intent: "Write the proposal") }
+        await host.rebuildSnapshot()
+        var latest: NudgeJudgement?
+        host.onJudgement = { latest = $0 }
+
+        for (url, expected) in [
+            ("https://example.com/work/proposal", Verdict.relevant),
+            ("https://example.com/holiday", Verdict.uncertain),
+        ] {
+            let page = try #require(BrowserPage(url))
+            let item = try #require(SelectedItem(bundleIdentifier: "com.apple.Safari", browserPage: page))
+            host.observe(
+                JudgeableSubject(bundleIdentifier: item.bundleIdentifier, isSuppressed: false, selectedItem: item),
+                phase: .focus, isUserIdle: false
+            )
+            let judgement = try #require(latest)
+            #expect(judgement.verdict == expected)
+            #expect(NudgeDecider.querySubject(for: judgement)?.identifier == url)
+            #expect(!judgement.allowsApplicationQuestion)
+        }
+        host.observe(
+            JudgeableSubject(bundleIdentifier: "com.apple.Safari", isSuppressed: false),
+            phase: .focus, isUserIdle: false
+        )
+        #expect(NudgeDecider.querySubject(for: try #require(latest)) == nil)
     }
 }

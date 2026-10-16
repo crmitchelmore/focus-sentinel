@@ -184,9 +184,11 @@ struct SelectedItemTests {
         var nodes: [Node] = []
         var selected: [Node] = []
         var reads: Reads?
+        var url: String?
 
         var children: [Node] { reads?.count += 1; return nodes }
         var selectedRows: [Node] { kind == .collection ? selected : [] }
+        var documentURL: String? { url }
     }
 
     static func search(_ window: Node, stop: @escaping () -> Bool = { false }) -> SelectedItemSearch.Outcome {

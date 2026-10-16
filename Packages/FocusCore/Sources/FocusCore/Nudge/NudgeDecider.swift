@@ -32,6 +32,9 @@ public struct NudgeJudgement: Sendable, Equatable {
     /// The item selected inside `subject`'s application, already reduced to a label (issue #24).
     /// `nil` unless the person switched the Accessibility reading on.
     public let selectedItem: SelectedItem?
+    /// Shipping observations require identified content; synthetic baseline judgements may
+    /// still exercise the original application-only contract.
+    public let allowsApplicationQuestion: Bool
 
     public init(
         outcome: ClassificationOutcome,
@@ -40,7 +43,8 @@ public struct NudgeJudgement: Sendable, Equatable {
         dwelled: Duration,
         snapshot: VerdictSnapshot,
         stamp: EngineStamp,
-        selectedItem: SelectedItem? = nil
+        selectedItem: SelectedItem? = nil,
+        allowsApplicationQuestion: Bool = true
     ) {
         self.outcome = outcome
         self.uncertainty = uncertainty
@@ -49,6 +53,7 @@ public struct NudgeJudgement: Sendable, Equatable {
         self.snapshot = snapshot
         self.stamp = stamp
         self.selectedItem = selectedItem
+        self.allowsApplicationQuestion = allowsApplicationQuestion
     }
 
     public var verdict: Verdict { outcome.verdict }
@@ -494,7 +499,8 @@ public struct NudgeDecider: Sendable {
         QuerySubject.derive(
             judgedSubject: judgement.subject,
             explanation: judgement.explanation,
-            selectedItem: judgement.selectedItem
+            selectedItem: judgement.selectedItem,
+            allowsApplicationScope: judgement.allowsApplicationQuestion
         )
     }
 
@@ -690,6 +696,7 @@ public struct NudgeDecider: Sendable {
             interruptionInFlight: interruptionInFlight,
             judgedSubject: judgement.subject,
             selectedItem: judgement.selectedItem,
+            allowsApplicationScope: judgement.allowsApplicationQuestion,
             explanation: judgement.explanation,
             stamp: judgement.stamp
         )

@@ -45,7 +45,11 @@ struct NudgePresentationBuilder {
     let hasOpenSession: @MainActor () -> Bool
 
     /// The question one surface is drawing, under the commitment it was asked beneath.
-    func query(_ warrant: QueryWarrant, under commitment: ActiveCommitment) -> QueryPresentation {
+    func query(
+        _ warrant: QueryWarrant,
+        under commitment: ActiveCommitment,
+        selectedScope: CorrectionScope? = nil
+    ) -> QueryPresentation {
         QueryPresentation(
             voice: voice,
             // **The commitment this question was asked under, carried on it** (focus-lmo,
@@ -55,7 +59,9 @@ struct NudgePresentationBuilder {
             task: commitment.intent,
             subject: naming.subject(of: warrant.subject),
             reason: warrant.reason,
-            dwelled: warrant.dwelled
+            dwelled: warrant.dwelled,
+            answerScopes: CorrectionScope.from(warrant).answerScopes,
+            selectedScope: selectedScope
         )
     }
 

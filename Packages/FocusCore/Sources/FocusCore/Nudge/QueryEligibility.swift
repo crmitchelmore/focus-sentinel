@@ -228,6 +228,7 @@ public enum QueryEligibility: Sendable, Equatable, Hashable {
         interruptionInFlight: Bool,
         judgedSubject: String?,
         selectedItem: SelectedItem? = nil,
+        allowsApplicationScope: Bool = true,
         explanation: Explanation,
         stamp: EngineStamp
     ) -> QueryEligibility {
@@ -263,7 +264,8 @@ public enum QueryEligibility: Sendable, Equatable, Hashable {
         guard let subject = QuerySubject.derive(
             judgedSubject: judgedSubject,
             explanation: explanation,
-            selectedItem: selectedItem
+            selectedItem: selectedItem,
+            allowsApplicationScope: allowsApplicationScope
         ) else { return .withheld(.noSingleSubject) }
         guard dwellSatisfied else { return .withheld(.withinDwellGrace) }
 

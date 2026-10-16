@@ -7,7 +7,7 @@ import Foundation
 /// mandate that named the last of them would be the app misdescribing somebody's afternoon
 /// (R-60).
 public enum DriftSubject: Sendable, Equatable, Hashable, Codable {
-    /// One bundle identifier or normalised origin.
+    /// One application, selected item, or normalised browser page.
     case single(String)
     /// Drift accumulated across more than one unrelated subject.
     case mixed
@@ -43,7 +43,7 @@ public enum DriftState: Sendable, Equatable, Hashable, Codable {
     /// `since` and `accumulated` are both readings of the monotonic clock, never wall time.
     case grace(subject: DriftSubject, since: Duration, accumulated: Duration)
     /// `isMixed` is carried separately from `subject` because a mandate reports it, and a
-    /// surface must be able to say "several unrelated apps" without inspecting an enum case.
+    /// surface must be able to say "several unrelated items" without inspecting an enum case.
     case sustained(subject: DriftSubject, accumulated: Duration, isMixed: Bool)
     case cooldown(subject: DriftSubject, until: Duration)
 

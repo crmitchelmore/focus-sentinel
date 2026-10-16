@@ -176,6 +176,33 @@ struct EngineTests {
 
     // MARK: - The mandate, end to end
 
+    @Test("drift names the selected view or page, never its whole application",
+          arguments: [false, true])
+    func driftNamesSelectedContent(browser: Bool) throws {
+        let bundle = browser ? "com.apple.Safari" : "com.github.githubapp"
+        let item: SelectedItem
+        if browser {
+            let page = try #require(BrowserPage("https://example.com/holiday"))
+            item = try #require(SelectedItem(
+                bundleIdentifier: bundle, browserPage: page
+            ))
+        } else {
+            item = try #require(SelectedItem(bundleIdentifier: bundle, label: "Holiday planning"))
+        }
+        let snapshot = RuleCascadeTests().snapshot(rules: [
+            RuleCascadeTests.rule(.task, .app, bundle, .unrelated)
+        ])
+        let engine = DeterministicRelevanceEngine()
+        let judgement = engine.judge(
+            input: ClassificationInput(
+                bundleIdentifier: bundle, origin: item.browserPage?.origin, selectedItem: item
+            ),
+            snapshot: snapshot, now: .zero, dwell: .seconds(120)
+        )
+        #expect(judgement.verdict == .unrelated)
+        #expect(engine.driftState.subject?.identifier == item.subject)
+    }
+
     /// The one route from a judgement to an authorisation, exercised through the whole engine:
     /// a well-specified priority, a named identity, a productive tool that is not it, and
     /// sustained drift past the threshold.

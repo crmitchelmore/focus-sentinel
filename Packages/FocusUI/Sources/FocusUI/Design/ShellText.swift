@@ -354,6 +354,11 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case priorityRulesScopeSession = "priority.rules.scope.session"
     /// A stored row naming one item selected inside an application (issue #24).
     case priorityRulesScopeSelectedItem = "priority.rules.scope.selectedItem"
+    case nudgeQueryScopeWeb = "nudge.query.scope.web"
+    case nudgeQueryScopePage = "nudge.query.scope.page"
+    case nudgeQueryScopePath = "nudge.query.scope.path"
+    case nudgeQueryScopeDomain = "nudge.query.scope.domain"
+    case nudgeQueryScopeHelp = "nudge.query.scope.help"
     case priorityRulesVerdictRelevant = "priority.rules.verdict.relevant"
     case priorityRulesVerdictUnrelated = "priority.rules.verdict.unrelated"
     case priorityRulesVerdictUncertain = "priority.rules.verdict.uncertain"

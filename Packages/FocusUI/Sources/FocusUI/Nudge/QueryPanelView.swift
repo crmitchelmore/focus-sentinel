@@ -12,7 +12,7 @@ public struct QueryPresentation: Sendable, Equatable {
     public let voice: NudgeVoice
     /// The priority's own sentence. `{task}`.
     public let task: String
-    /// The application the question is about. `{subject}`.
+    /// The selected view or browser page the question is about. `{subject}`.
     ///
     /// **Never optional.** `QuerySubject` has no mixed case and `QueryEligibility.decide(…)`
     /// withholds with `.noSingleSubject` rather than producing one, so by the time anybody can
@@ -30,19 +30,25 @@ public struct QueryPresentation: Sendable, Equatable {
     /// How long they have been with it, monotonic. Carried for the record; the panel draws no
     /// duration, because a question about a moment does not need to price it.
     public let dwelled: Duration
+    public let answerScopes: [CorrectionScope]
+    public let selectedScope: CorrectionScope?
 
     public init(
         voice: NudgeVoice = .standard,
         task: String,
         subject: NudgeSubject,
         reason: QueryableUncertainty,
-        dwelled: Duration
+        dwelled: Duration,
+        answerScopes: [CorrectionScope] = [],
+        selectedScope: CorrectionScope? = nil
     ) {
         self.voice = voice
         self.task = task
         self.subject = subject
         self.reason = reason
         self.dwelled = dwelled
+        self.answerScopes = answerScopes
+        self.selectedScope = selectedScope
     }
 
     /// **Three answers, and no fourth** (U-1, §3.B.8).
@@ -88,7 +94,9 @@ public struct QueryPresentation: Sendable, Equatable {
                 titleKey,
                 arguments: [subject.displayName, task]
             ),
-            NudgeCopy.string(voice: voice, scopeKey)
+            answerScopes.count > 1
+                ? String(localized: ShellStrings.resource(.nudgeQueryScopeWeb))
+                : NudgeCopy.string(voice: voice, scopeKey)
         ].joined(separator: " ")
     }
 }
@@ -135,6 +143,8 @@ public struct QueryPanelView: DecisionSurfaceContent {
     /// decides nothing and writes nothing, and `QueryLedger.answer(…)` remains the single place
     /// an answer becomes the atomic two-record transaction R-78 requires.
     let onAnswer: (QueryAnswer) -> Void
+    private let onSelectScope: (CorrectionScope) -> Void
+    @State private var selection: (subject: NudgeSubject, task: String, scope: CorrectionScope)?
     /// **Who put this on the screen** (focus-0nm, U-1).
     ///
     /// `.uninvited` by default, and the default is the point: this view exists to be raised by
@@ -155,11 +165,13 @@ public struct QueryPanelView: DecisionSurfaceContent {
     public init(
         presentation: QueryPresentation,
         provenance: SurfaceProvenance = .uninvited,
+        onSelectScope: @escaping (CorrectionScope) -> Void = { _ in },
         onAnswer: @escaping (QueryAnswer) -> Void = { _ in }
     ) {
         self.presentation = presentation
         self.provenance = provenance
         self.onAnswer = onAnswer
+        self.onSelectScope = onSelectScope
     }
 
     private enum LayoutPart { case whole, context, decision }
@@ -261,10 +273,19 @@ public struct QueryPanelView: DecisionSurfaceContent {
 
         // The scope, **before** the answer. A person who clicks "Yes" has been told what
         // the click writes.
-        NudgeText(presentation.scopeKey, voice: presentation.voice, role: supportingRole)
+        scopeExplanation
             .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
             .lineLimit(nil)
             .fixedSize(horizontal: false, vertical: true)
+    }
+
+    @ViewBuilder
+    private var scopeExplanation: some View {
+        if presentation.answerScopes.count > 1 {
+            ShellText(.nudgeQueryScopeWeb, role: supportingRole)
+        } else {
+            NudgeText(presentation.scopeKey, voice: presentation.voice, role: supportingRole)
+        }
     }
 
     private var supportingRole: DesignTokens.FontRole {
@@ -273,23 +294,62 @@ public struct QueryPanelView: DecisionSurfaceContent {
 
     private var answers: some View {
         let gap = DesignTokens.spacing(spacing / 2, scale: textScale)
-        return ViewThatFits(in: .horizontal) {
-            HStack(spacing: gap) {
-                ForEach(QueryPresentation.actionOrder, id: \.self) { answer in
-                    answerButton(answer, wraps: false)
+        return VStack(alignment: .leading, spacing: gap) {
+            if presentation.answerScopes.count > 1, let first = presentation.answerScopes.first {
+                Menu {
+                    ForEach(presentation.answerScopes, id: \.self) { scope in
+                        Button {
+                            selection = (presentation.subject, presentation.task, scope)
+                            onSelectScope(scope)
+                        } label: {
+                            scopeLabel(scope)
+                            if scope == currentScope(defaultingTo: first) {
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                } label: {
+                    scopeLabel(currentScope(defaultingTo: first))
                 }
+                .shellHelp(.nudgeQueryScopeHelp)
             }
-            // The fallback. It wraps, because at the largest accessibility text size "Not now"
-            // measured 371 points inside a 348-point column and reported a frame past the edge of
-            // the panel — an answer a person cannot click is an answer they do not have, which is
-            // the U-1 defect this whole invariant exists to catch.
-            VStack(alignment: .leading, spacing: gap) {
-                ForEach(QueryPresentation.actionOrder, id: \.self) { answer in
-                    answerButton(answer, wraps: true)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: gap) {
+                    ForEach(QueryPresentation.actionOrder, id: \.self) { answer in
+                        answerButton(answer, wraps: false)
+                    }
+                }
+                VStack(alignment: .leading, spacing: gap) {
+                    ForEach(QueryPresentation.actionOrder, id: \.self) { answer in
+                        answerButton(answer, wraps: true)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
                 }
             }
         }
+    }
+
+    private func currentScope(defaultingTo first: CorrectionScope) -> CorrectionScope {
+        if let selection, selection.subject == presentation.subject, selection.task == presentation.task,
+           presentation.answerScopes.contains(selection.scope) {
+            return selection.scope
+        }
+        return presentation.selectedScope ?? first
+    }
+
+    private func scopeLabel(_ scope: CorrectionScope) -> some View {
+        let key: ShellStringKey = switch scope.browserScope {
+        case .page, nil: .nudgeQueryScopePage
+        case .path: .nudgeQueryScopePath
+        case .domain: .nudgeQueryScopeDomain
+        }
+        return ShellText(
+            key,
+            role: .callout,
+            argument: scope.displayName
+        )
+        .lineLimit(nil)
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     /// Prominent, never default — the same ruling the accusation panel records. "Yes, add it"

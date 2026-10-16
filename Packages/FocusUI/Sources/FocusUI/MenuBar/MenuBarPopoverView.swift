@@ -408,7 +408,9 @@ public struct MenuBarPopoverView: DecisionSurfaceContent {
             // The **same view** the panel draws, so a question routed to the popover is the same
             // question with the same three answers and the same stated scope. A second rendering
             // of the question would be a second place its tone could drift.
-            QueryPanelView(presentation: query, provenance: .summoned) { answer in
+            QueryPanelView(presentation: query, provenance: .summoned, onSelectScope: { scope in
+                onAction(.selectQueryScope(scope))
+            }) { answer in
                 onAction(.answerQuery(answer))
             }
         }

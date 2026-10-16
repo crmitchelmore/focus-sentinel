@@ -294,6 +294,7 @@ final class NudgeHost {
     /// a `nil` key.
     private struct OpenQuestion {
         let warrant: QueryWarrant
+        var selectedScope: CorrectionScope?
         /// **The commitment it was asked under** (focus-lmo, U-1) — captured, never fetched,
         /// because the panel is sticky (`hidesOnDeactivate` is `false`, R-89) and a person can
         /// commit to something new while a question waits. It is the key the receipt, the learned
@@ -1216,7 +1217,8 @@ final class NudgeHost {
             // `record(…)` and every ledger write below reads that same value, unchanged.
             subject: naming.subject(of: warrant.subject),
             reason: warrant.reason,
-            dwelled: warrant.dwelled
+            dwelled: warrant.dwelled,
+            answerScopes: CorrectionScope.from(warrant).answerScopes
         )
 
         guard let surface = route.surface else {
@@ -1247,7 +1249,9 @@ final class NudgeHost {
         switch surface {
         case .panel:
             panel.update(
-                QueryPanelView(presentation: presentation) { [weak self] answer in
+                QueryPanelView(presentation: presentation, onSelectScope: { [weak self] scope in
+                    self?.selectQueryScope(scope)
+                }) { [weak self] answer in
                     self?.answer(answer)
                 },
                 traits: appearanceTraits()
@@ -1919,6 +1923,16 @@ final class NudgeHost {
     /// **R-78's atomic transaction**, performed by the ledger: the rule and the immutable
     /// receipt commit together or neither does, so the app is never in the state where it has
     /// learned the answer but forgotten the asking.
+    func selectQueryScope(_ scope: CorrectionScope) {
+        guard let question = openQuestion,
+              CorrectionScope.from(question.warrant).answerScopes.contains(scope)
+        else {
+            logger.error("refused a query scope outside the content the question identified")
+            return
+        }
+        openQuestion?.selectedScope = scope
+    }
+
     func answer(_ answer: QueryAnswer) {
         proofs.run {
             // **Answering a question ends the question, and nothing else** (focus-ti4, focus-nrl).
@@ -1957,7 +1971,8 @@ final class NudgeHost {
             // panel away. A question that exists knows what commitment it is about, because it
             // cannot be constructed without one.
             guard let question = openQuestion else { return }
-            let scope = CorrectionScope.from(question.warrant)
+            let questionScope = CorrectionScope.from(question.warrant)
+            let scope = question.selectedScope ?? questionScope
             let now = monotonicClock.elapsed
 
             do {
@@ -1971,6 +1986,7 @@ final class NudgeHost {
                     priorityID: question.priorityID,
                     task: task,
                     scope: scope,
+                    questionScope: questionScope,
                     reason: question.warrant.reason,
                     askedAt: question.askedAt
                 )
@@ -2824,7 +2840,9 @@ final class NudgeHost {
         // as though it had been routed there — and would have been read as a badge question by
         // anything that asked.
         guard let question = openQuestion, question.surface == .popoverBadge else { return nil }
-        return presentations.query(question.warrant, under: question.commitment)
+        return presentations.query(
+            question.warrant, under: question.commitment, selectedScope: question.selectedScope
+        )
     }
 
     /// **The accusation waiting in the menu-bar popover** (focus-uru), when reduced interruption,

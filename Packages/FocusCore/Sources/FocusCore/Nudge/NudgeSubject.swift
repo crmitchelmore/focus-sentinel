@@ -122,7 +122,8 @@ public struct NudgeSubject: Sendable, Equatable, Hashable {
             // the very thing the question is narrowing away from.
             candidate = item.label
         } else if isOrigin(identifier) {
-            candidate = ContextItemValue.displayName(forOrigin: identifier)
+            candidate = BrowserPage.displayName(for: identifier)
+                ?? ContextItemValue.displayName(forOrigin: identifier)
         } else {
             candidate = runningName ?? identifier
         }

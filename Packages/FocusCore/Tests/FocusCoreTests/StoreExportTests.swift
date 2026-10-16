@@ -321,4 +321,34 @@ struct StoreExportTests {
         let subjects = Set(document.rules.map(\.subject))
         #expect(subjects == ["com.github.githubapp::selected-item", "com.apple.Safari"])
     }
+
+    @Test("browser paths leave neither learned rules, question receipts nor intervention exports")
+    func browserPathsAreRedactedEverywhere() throws {
+        let container = try FocusStore.makeContainer(kind: .inMemory)
+        let context = container.mainContext
+        let subject = "https://example.com/Secret-Acquisition/plan"
+        context.insert(FocusSchemaV3.RelevanceRule(
+            scopeRaw: "domain", subject: subject, verdictRaw: "relevant", createdAt: Self.reference
+        ))
+        context.insert(FocusSchemaV4.AskedQuestion(
+            priorityID: UUID(), subjectKindRaw: "domain", subject: subject,
+            reasonRaw: QueryableUncertainty.noNegativeBasis.rawValue,
+            askedAt: Self.reference, outcomeRaw: AskedQuestionOutcome.answeredRelevant.rawValue,
+            answeredAt: Self.reference
+        ))
+        context.insert(FocusSchemaV7.InterventionRecord(
+            at: Self.reference, localDayKey: "2026-01-01", kindRaw: InterruptionKind.query.rawValue,
+            subject: subject, subjectKindRaw: "domain", priorityID: UUID(),
+            surfaceRaw: NudgeSurface.panel.rawValue,
+            dispositionRaw: InterventionDisposition.delivered.rawValue
+        ))
+        try context.save()
+        let document = try StoreExport.document(in: context, generatedAt: Self.reference)
+        #expect(document.rules.first?.subject == "https://example.com")
+        let text = try #require(String(
+            data: StoreExport.json(in: context, generatedAt: Self.reference), encoding: .utf8
+        ))
+        #expect(!text.contains("Secret-Acquisition"))
+        #expect(!text.contains("/plan"))
+    }
 }

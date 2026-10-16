@@ -47,6 +47,23 @@ public struct CorrectionScope: Sendable, Equatable, Hashable {
         CorrectionScope(kind: warrant.subject.kind, subject: warrant.subject.identifier)
     }
 
+    /// The page the engine saw, its enclosing paths, and its origin. No arbitrary URL or app
+    /// can be substituted by a control or a late answer.
+    public var answerScopes: [CorrectionScope] {
+        guard kind == .domain, BrowserPage.scope(of: subject) == .page,
+              let page = BrowserPage(subject)
+        else { return [self] }
+        return page.answerSubjects.map { CorrectionScope(kind: .domain, subject: $0) }
+    }
+
+    public var browserScope: BrowserPage.Scope? {
+        kind == .domain ? BrowserPage.scope(of: subject) : nil
+    }
+
+    public var displayName: String {
+        NudgeSubject.named(subject)?.displayName ?? subject
+    }
+
     /// The scope a correction on a **row History drew** writes (focus-tee.5).
     ///
     /// The third producer, and it keeps R-86 rather than weakening it. The other two take an

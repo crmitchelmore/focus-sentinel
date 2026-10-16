@@ -73,6 +73,39 @@ struct RuleCascadeTests {
 
     // MARK: - The ladder itself
 
+    @Test("page rules beat enclosing paths, deeper paths beat domains, and domains beat apps")
+    func browserScopePrecedence() throws {
+        func judge(_ url: String, rules: [ScopedRuleValue]) throws -> CascadeResolution {
+            let page = try #require(BrowserPage(url))
+            let item = try #require(SelectedItem(bundleIdentifier: "com.apple.Safari", browserPage: page))
+            return cascade.evaluate(
+                evidence: ClassificationEvidence.make(
+                    input: ClassificationInput(
+                        bundleIdentifier: item.bundleIdentifier, origin: page.origin, selectedItem: item
+                    ),
+                    dwell: .seconds(60), normalizer: normalizer
+                ),
+                snapshot: snapshot(rules: rules)
+            )
+        }
+        let rules = [
+            Self.rule(.task, .app, "com.apple.Safari", .unrelated),
+            Self.rule(.task, .domain, "https://example.com", .relevant),
+            Self.rule(.task, .domain, "https://example.com/teams/*", .unrelated),
+            Self.rule(.task, .domain, "https://example.com/teams/alpha/*", .relevant),
+            Self.rule(.task, .domain, "https://example.com/teams/alpha/holiday", .unrelated),
+        ]
+        #expect(try judge("https://example.com/teams/alpha/holiday", rules: rules).verdict == .unrelated)
+        #expect(try judge("https://example.com/teams/alpha/work", rules: rules).verdict == .relevant)
+        #expect(try judge("https://example.com/teams/beta/work", rules: rules).verdict == .unrelated)
+        #expect(try judge("https://example.com/elsewhere", rules: rules).verdict == .relevant)
+        #expect(try judge("https://other.example.com/teams/alpha/work", rules: rules).verdict == .unrelated)
+        let conflict = rules + [
+            Self.rule(.task, .domain, "https://example.com/teams/alpha/holiday", .relevant)
+        ]
+        #expect(try judge("https://example.com/teams/alpha/holiday", rules: conflict).uncertaintyReason == .conflictingRules)
+    }
+
     /// R-54's three lengths, as the cascade sees them. The model rung is not skipped by a
     /// special case: it is **not in the sequence being walked**.
     @Test("the cascade walks the executable rungs only, and always reaches a decision")

@@ -2,20 +2,11 @@ import Foundation
 
 /// What the shipping app can actually observe, named once (focus-6ji4).
 ///
-/// The vocabulary is wider than the observation. `PriorityRuleScope.domain` and
-/// `ContextItemKind.domain` are live in the engine — `RuleCascade` compares them against
-/// `evidence.origin` — but nothing in the shipping graph supplies an origin:
-/// `RelevanceHost` judges with `ClassificationInput(bundleIdentifier:)` alone. A site rule or a
-/// site chip therefore can never match, and offering to make one is a control wired to nothing.
-///
-/// This is not a retirement. A word-shaped `PriorityRuleScope.titleToken` row is retired because
-/// the product gave the idea up (an item-form one is live, issue #24); a site is still in scope
-/// (PD-1 keeps the normalised origin) and is waiting on an origin producer. So the authoring
-/// surfaces read *this* fact rather than `isRetired`, the engine keeps reading stored rows as it
-/// always has, and the day an origin producer ships is one line here.
+/// The opt-in Accessibility reader now supplies the active browser page and its origin.
+/// Site rules and chips can therefore match when that reading is enabled and available.
 public enum ShippingObservation {
     /// Whether anything in the shipping app reads which site a browser is showing.
-    public static let readsBrowserSite = false
+    public static let readsBrowserSite = true
 }
 
 extension PriorityRuleScope {
@@ -37,7 +28,7 @@ extension ContextItemKind {
     ///
     /// A file is `true` although the engine cannot see which file is open: a file item is
     /// opened when a session starts, which is a thing it does. A site is neither matched nor
-    /// opened in this version.
+    /// opened automatically; it is matched against the observed browser origin.
     public var isObserved: Bool {
         switch self {
         case .app, .keyword, .file: true

@@ -19,6 +19,7 @@ public enum QueryLedgerError: Error, Equatable, Sendable {
     /// one commitment and the receipt under another would leave the app able to learn an answer
     /// and forget the asking — the exact state R-78's transaction exists to make impossible.
     case priorityMismatch
+    case scopeOutsideQuestion
     /// The way the question ended and the outcome the receipt would carry disagree about
     /// whether the asking is over (focus-qds). Gate 11 reads the *stored outcome*, so a receipt
     /// whose row says "settled" written from an ending the policy refused to settle would burn
@@ -377,6 +378,7 @@ public final class QueryLedger {
         priorityID: UUID,
         task: FocusSchemaV3.PriorityTask?,
         scope: CorrectionScope,
+        questionScope: CorrectionScope? = nil,
         reason: QueryableUncertainty,
         askedAt: Date? = nil,
         at instant: Date? = nil,
@@ -386,8 +388,10 @@ public final class QueryLedger {
         // left an unsettled receipt behind and legitimately came back; answering it now is the
         // whole point, and it writes the settling row beside the record of the earlier asking
         // (focus-qds).
+        let receiptScope = questionScope ?? scope
+        guard receiptScope.answerScopes.contains(scope) else { throw QueryLedgerError.scopeOutsideQuestion }
         try refuseIfSettled(
-            priorityID: priorityID, subjectKind: scope.kind, subject: scope.subject
+            priorityID: priorityID, subjectKind: receiptScope.kind, subject: receiptScope.subject
         )
 
         let now = instant ?? dateProvider.now
@@ -426,8 +430,8 @@ public final class QueryLedger {
 
             let receipt = FocusSchemaV4.AskedQuestion(
                 priorityID: priorityID,
-                subjectKindRaw: scope.kind.rawValue,
-                subject: scope.subject,
+                subjectKindRaw: receiptScope.kind.rawValue,
+                subject: receiptScope.subject,
                 reasonRaw: reason.rawValue,
                 askedAt: askedAt ?? now,
                 outcomeRaw: answer.outcome.rawValue,
