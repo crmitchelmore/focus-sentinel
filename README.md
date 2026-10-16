@@ -1574,11 +1574,16 @@ The encrypted identity must include its matching private key; an Apple Developme
 or a certificate-only export cannot replace it. The notarisation API key must include both its
 Key ID and Issuer ID. Secret-availability flags are job-scoped so the import steps can evaluate
 them before their step environments exist.
-Sparkle's existing update key is read through the runner's system `security` tool into a
-temporary owner-only file, not by a newly resolved signing executable. The file is removed on
+Sparkle's existing update key is read without allowing keychain interaction into a temporary
+owner-only file, using Sparkle's exact service, account and protocol query. The file is removed on
 exit. An exported existing key can instead be supplied as `SPARKLE_PRIVATE_KEY`; do not generate
 a replacement key for a release, since the app must trust the public half of the same key.
 The appcast step times out rather than leaving a release waiting indefinitely for keychain UI.
+Local CI's owner-only `sparkle` mode checks this access without reading the key into logs,
+showing a prompt, or running the application or UI tests.
+Before writing a verified receipt, the worker downloads the uploaded appcast and disk image and
+checks their digests against its nonempty local files. Signing and upload errors stop the step;
+a local file or a receipt alone is not evidence that the release was delivered.
 
 **Release hosting is public.** The feed and every enclosure must be readable over HTTPS
 without GitHub credentials. The repository and its signed release assets are publicly hosted at

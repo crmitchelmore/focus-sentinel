@@ -79,6 +79,7 @@ public struct CockpitView: View {
     /// Which destination is open (focus-1rj7, focus-g9iw). The initial value is the view's
     /// argument, so the snapshot lane can photograph each; the app always opens on Now.
     @State private var tab: CockpitTab
+    @Namespace private var tabLozengeSpace
 
     /// Whether the completion sheet is up. Completing is a deliberate act with two things
     /// worth recording, so it gets a sheet rather than happening under the pointer.
@@ -230,7 +231,7 @@ public struct CockpitView: View {
         .background(absentCommitmentReceipts)
         .padding(sectionSpacing)
         .frame(minWidth: 420, minHeight: 260, alignment: .topLeading)
-        .background(DesignTokens.Palette.role(.inlay, for: traits))
+        .glassBackdrop(traits)
         .buttonStyle(CompanionButtonStyle())
         .background {
             // No earlier priorities deliberately draws no section, so its EmptyView cannot
@@ -1211,17 +1212,51 @@ public struct CockpitView: View {
     /// and a macOS `TabView` builds only the selected pane, which is exactly the shape that
     /// loses receipts (see `ShellRenderedField.settingsTab`). Plain buttons and a switch keep
     /// the whole column one SwiftUI tree the lane can photograph and the audit can read.
+    /// **A glass segmented pill** (the Liquid Glass pass). The open destination wears a Spruce-
+    /// tinted glass lozenge that flows between the two tabs; with glass off it is an opaque
+    /// Bench lozenge with a Spruce edge, and under Reduce Motion it moves without animating.
     private var tabBar: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: sectionSpacing) {
+        let track = Capsule(style: .continuous)
+        return GlassEffectContainer(spacing: rowSpacing) {
+            HStack(spacing: rowSpacing / 2) {
                 ForEach(CockpitTab.allCases) { candidate in
                     tabButton(candidate)
                 }
-                Spacer(minLength: 0)
             }
-            Divider()
+            .padding(rowSpacing / 3)
+            .background(
+                DesignTokens.Palette.role(.bench, for: traits)
+                    .opacity(DesignTokens.drawsGlass(for: traits) ? 0.35 : 1),
+                in: track
+            )
+            .overlay(track.strokeBorder(
+                DesignTokens.Palette.role(.mist, for: traits)
+                    .opacity(DesignTokens.emphasis(for: traits).promotesSecondaryText ? 1 : 0.18),
+                lineWidth: DesignTokens.emphasis(for: traits).promotesSecondaryText ? 2 : 1
+            ))
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .contain)
+    }
+
+    @ViewBuilder
+    private func tabLozenge(isOpen: Bool) -> some View {
+        let lozenge = Capsule(style: .continuous)
+        if isOpen {
+            if DesignTokens.drawsGlass(for: traits) {
+                Color.clear
+                    .glassEffect(
+                        .regular.tint(DesignTokens.Palette.role(.spruce, for: traits).opacity(0.22)).interactive(),
+                        in: lozenge
+                    )
+                    .glassEffectID("cockpit.tab.lozenge", in: tabLozengeSpace)
+            } else {
+                lozenge
+                    .fill(DesignTokens.Palette.role(.inlay, for: traits))
+                    .overlay(lozenge.strokeBorder(DesignTokens.Palette.role(.spruce, for: traits), lineWidth: 1.5))
+                    .matchedGeometryEffect(id: "cockpit.tab.lozenge", in: tabLozengeSpace)
+            }
+        }
     }
 
     @ViewBuilder
@@ -1231,24 +1266,20 @@ public struct CockpitView: View {
             if tab == .now, candidate != .now, let priority = state.priority {
                 commitDoneWhen(priority)
             }
-            tab = candidate
-        } label: {
-            VStack(alignment: .leading, spacing: rowSpacing / 2) {
-                ShellText(candidate.titleKey, role: .headline)
-                    .foregroundStyle(
-                        isOpen
-                            ? DesignTokens.Palette.role(.spruce, for: traits)
-                            : DesignTokens.supportingTextColor(for: traits)
-                    )
-                Rectangle()
-                    .fill(
-                        isOpen
-                            ? DesignTokens.Palette.role(.spruce, for: traits)
-                            : Color.clear
-                    )
-                    .frame(height: DesignTokens.decisionRuleWidth)
+            withAnimation(DesignTokens.liquidAnimation(for: traits)) {
+                tab = candidate
             }
-            .contentShape(Rectangle())
+        } label: {
+            ShellText(candidate.titleKey, role: .headline)
+                .foregroundStyle(
+                    isOpen
+                        ? DesignTokens.Palette.role(.spruce, for: traits)
+                        : DesignTokens.supportingTextColor(for: traits)
+                )
+                .padding(.horizontal, sectionSpacing * 0.8)
+                .padding(.vertical, rowSpacing / 2)
+                .background { tabLozenge(isOpen: isOpen) }
+                .contentShape(Capsule(style: .continuous))
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isOpen ? [.isSelected] : [])

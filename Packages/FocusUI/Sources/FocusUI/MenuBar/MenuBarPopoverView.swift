@@ -197,7 +197,7 @@ public struct MenuBarPopoverView: DecisionSurfaceContent {
         case .status:
             statusRow
                 .padding(12)
-                .background(DesignTokens.Palette.role(.inlay, for: traits), in: RoundedRectangle(cornerRadius: 14))
+                .glassSlab(traits)
         case .belief:
             belief
         case .accusation:

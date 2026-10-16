@@ -15,6 +15,11 @@ notarization profile can authenticate. Only those results are printed, never cer
 keychain metadata, private keys or notarization history. A missing identity or unauthenticated
 notarization profile fails the diagnostic explicitly.
 
+The owner-only `sparkle` mode checks data access to the existing update-signing key using
+Sparkle's exact query, with keychain interaction disabled and key output discarded. A locked
+keychain or an access denial returns its OSStatus instead of waiting for a dialog. It never
+changes access permissions, generates a key or launches the app.
+
 Focus's separate Build and verify workflow runs its full gate locally only after explicitly selecting the UI-test confirmation input. Obtain Chris's fresh approval before running it. Do not dispatch an older branch's hosted workflow; bring the current workflow configuration into that branch first.
 
 New runners route through `[bravo-mini-local, macOS, ARM64]`. Pasta retains `[pasta-local, macos-arm64]` so its current jobs and registration are undisturbed. Existing free public-repository hosted jobs remain available. Private Family Watch CI now routes its web and watchOS unit-test jobs locally. This setup does not migrate Linux-only, Android or release-specific lanes from public CI.

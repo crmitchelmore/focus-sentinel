@@ -610,7 +610,7 @@ public struct ShellSettingsView: View {
         // panes bound themselves now — each is a `BoundedSurface` at the same width and the same
         // display-derived ceiling — and what is left here is the window agreeing to those
         // numbers rather than contradicting them.
-        .background(DesignTokens.Palette.role(.inlay, for: traits))
+        .glassBackdrop(traits)
         .buttonStyle(CompanionButtonStyle())
         .frame(width: ShellSurfaceBounds.settingsWidth)
         .frame(maxHeight: ShellSurfaceBounds.settingsCeiling().map { CGFloat($0) })

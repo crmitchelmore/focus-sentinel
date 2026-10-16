@@ -78,8 +78,7 @@ public struct ContextSheet: View {
             HStack(spacing: 10) {
                 Image(systemName: "slider.horizontal.3")
                     .font(DesignTokens.font(.callout, scale: textScale))
-                    .frame(width: 30, height: 30)
-                    .background(DesignTokens.Palette.role(.inlay, for: traits), in: RoundedRectangle(cornerRadius: 9))
+                    .glyphWell(traits)
                     .accessibilityHidden(true)
                 ShellText(.contextSheetTitle, role: .sectionHeading, argument: intent)
                     .lineLimit(nil)

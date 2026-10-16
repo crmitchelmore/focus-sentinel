@@ -8,7 +8,7 @@ import SwiftUI
 /// collapse to opaque fills under Reduce Transparency" is a promise, and a promise that can
 /// only be checked by looking at a screenshot is not one the gate can keep.
 public enum SurfaceFill: String, Sendable, Equatable, Hashable, CaseIterable {
-    /// The system's regular material — translucent, vibrant, the default.
+    /// Translucent — drawn as macOS 26 Liquid Glass (`shellSurface`), the default.
     case material
     /// A flat opaque fill. What Reduce Transparency asks for.
     case opaque
@@ -779,7 +779,7 @@ extension View {
     /// Fill a surface behind this view according to the resolved token.
     ///
     /// The two branches are deliberately different *views*, not one view with an opacity
-    /// tweak: `.regularMaterial` blurs what is behind it, and the point of the opaque branch
+    /// tweak: glass bends what is behind it, and the point of the opaque branch
     /// is that nothing shows through at all.
     ///
     /// **The opaque branch is Bench** (focus-w41, direction §1.2). It used to be
@@ -796,7 +796,9 @@ extension View {
     ) -> some View {
         switch fill {
         case .material:
-            background(.regularMaterial, in: shape)
+            // Liquid Glass (macOS 26): the summoned surface's material, softer than the
+            // regular material it replaced. Still collapses to Bench under `.opaque`.
+            glassEffect(.regular, in: shape)
         case .opaque:
             background(DesignTokens.Palette.role(.bench, for: traits), in: shape)
         }
