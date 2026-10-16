@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'Verify the runner, inspect signing availability, build without UI tests, run the package unit suites, or run the FocusUI snapshot lane'
+        description: 'Verify the runner, inspect signing or Sparkle key access, build without UI tests, run package unit suites, or run FocusUI snapshots'
         type: choice
-        options: [verify, signing, build, unit, snapshots]
+        options: [verify, signing, sparkle, build, unit, snapshots]
         default: build
       ref:
         description: 'Trusted branch, tag or commit in this repository'
@@ -20,7 +20,7 @@ concurrency:
 jobs:
   local:
     name: Local CI
-    if: inputs.mode != 'signing' || github.actor == github.repository_owner
+    if: (inputs.mode != 'signing' && inputs.mode != 'sparkle') || github.actor == github.repository_owner
     runs-on: [bravo-mini-local, macOS, ARM64]
     timeout-minutes: 120
     env:
@@ -81,6 +81,13 @@ jobs:
               print("::error::The configured notarization profile could not authenticate.")
           sys.exit(0 if identity_available and notary.returncode == 0 else 1)
           PY
+      - name: Inspect existing Sparkle key access without prompting or logging the key
+        if: inputs.mode == 'sparkle'
+        timeout-minutes: 2
+        shell: bash
+        run: |
+          account=$(python3 -c 'import json; print(json.load(open("Config/ReleasePipeline.json"))["signing"]["sparkleKeychainAccount"])')
+          swift scripts/read-sparkle-key.swift "$account" > /dev/null
       - name: Build and non-UI checks
         if: inputs.mode == 'build'
         shell: bash

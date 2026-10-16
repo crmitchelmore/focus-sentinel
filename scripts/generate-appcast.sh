@@ -7,7 +7,7 @@
 # Sparkle compares — `sparkle:shortVersionString` is for display — and the build number is the
 # train's allocation number (`alpha-build-N`), so it climbs with every build the train cuts.
 #
-# THE SIGNATURE. `security` reads the EdDSA private key from the login keychain under the
+# THE SIGNATURE. A non-interactive reader gets the EdDSA private key from the login keychain under the
 # Sparkle account named in Config/ReleasePipeline.json (`Focus Sentinel`), which is where
 # `generate_keys --account "Focus Sentinel"` put it on the Mac that cuts releases. Set
 # SPARKLE_PRIVATE_KEY to the exported key to sign from a machine without that keychain item; it
@@ -56,8 +56,7 @@ KEY_FILE=$(mktemp) || exit 1
 if [[ -n "${SPARKLE_PRIVATE_KEY:-}" ]]; then
     print -rn -- "$SPARKLE_PRIVATE_KEY" > "$KEY_FILE" || exit 1
 else
-    # Use the installed system tool rather than asking a newly resolved executable for access.
-    security find-generic-password -s "https://sparkle-project.org" -a "$ACCOUNT" -w > "$KEY_FILE" || {
+    swift scripts/read-sparkle-key.swift "$ACCOUNT" > "$KEY_FILE" || {
         print -u2 "FAIL cannot read the existing '$ACCOUNT' Sparkle key; authorise access on the runner or provide SPARKLE_PRIVATE_KEY"
         exit 1
     }

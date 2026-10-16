@@ -107,9 +107,13 @@ class ReleaseConfigurationTests(unittest.TestCase):
                     'exit "$SIGN_TEST_STATUS"\n'
                 )
                 signer.chmod(0o700)
-                security = root / "security"
-                security.write_text('#!/bin/sh\nprintf "%s" "fixture-private-key"\n')
-                security.chmod(0o700)
+                reader = root / "swift"
+                reader.write_text(
+                    '#!/bin/sh\n'
+                    'test "$1" = "scripts/read-sparkle-key.swift" || exit 2\n'
+                    'printf "%s" "fixture-private-key"\n'
+                )
+                reader.chmod(0o700)
                 dmg = root / "fixture.dmg"
                 dmg.write_bytes(b"fixture archive")
                 key_path = root / "key-path"
