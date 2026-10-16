@@ -248,6 +248,16 @@ def cmd_receipt(args: argparse.Namespace) -> None:
         if not path.is_file():
             raise SystemExit(f"FAIL {asset} is not a file; a receipt names what was really uploaded")
         assets[path.name] = {"sha256": sha256(path), "bytes": path.stat().st_size}
+    if args.status == "verified":
+        if "appcast.xml" not in assets or not any(name.endswith(".dmg") for name in assets):
+            raise SystemExit("FAIL a verified receipt requires an appcast and disk image")
+        with tempfile.TemporaryDirectory() as scratch:
+            for name, recorded in assets.items():
+                if recorded["bytes"] == 0:
+                    raise SystemExit(f"FAIL {name} is empty; no verified receipt written")
+                remote = download_asset(args.tag, name, pathlib.Path(scratch))
+                if remote is None or sha256(remote) != recorded["sha256"]:
+                    raise SystemExit(f"FAIL {name} was not uploaded intact; no verified receipt written")
     receipt = {"surface": SURFACE, "status": args.status, "recordedAt": now(), "assets": assets}
     with tempfile.TemporaryDirectory() as scratch:
         path = pathlib.Path(scratch) / receipt_name()

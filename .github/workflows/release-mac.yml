@@ -48,7 +48,7 @@ jobs:
         with:
           ref: ${{ inputs.manifest }}
           fetch-depth: 0
-          persist-credentials: false
+          persist-credentials: true
 
       - name: Read the frozen manifest
         shell: zsh {0}
@@ -70,6 +70,7 @@ jobs:
         if: steps.receipt.outputs.status != 'verified'
         shell: zsh {0}
         run: |
+          set -e -o pipefail
           scripts/verify-project.sh
           scripts/check-boundaries.sh
           scripts/check-forbidden.sh
@@ -97,6 +98,7 @@ jobs:
         if: steps.receipt.outputs.status != 'verified'
         shell: zsh {0}
         run: |
+          set -e -o pipefail
           APP="$FOCUS_DERIVED_DATA/Build/Products/$XCODE_CONFIGURATION/FocusSentinel.app"
           echo "APP=$APP" >> "$GITHUB_ENV"
           PLIST="$APP/Contents/Info.plist"
@@ -166,6 +168,7 @@ jobs:
         if: steps.receipt.outputs.status != 'verified'
         shell: zsh {0}
         run: |
+          set -e -o pipefail
           scripts/package-release.sh "$APP" "$RUNNER_TEMP/out" --developer-id
           DMG=$(ls "$RUNNER_TEMP"/out/FocusSentinel-*.dmg)
           test -f "$DMG"
@@ -178,6 +181,7 @@ jobs:
         env:
           SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
         run: |
+          set -e -o pipefail
           DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/${DOWNLOAD_TAG}/$(basename "$DMG")"
           scripts/generate-appcast.sh "$RELEASE_VERSION" "$BUILD_NUMBER" "$DMG" "$FEED_URL" "$DOWNLOAD_URL" \
             > "$RUNNER_TEMP/out/appcast.xml"
@@ -189,6 +193,7 @@ jobs:
         if: steps.receipt.outputs.status != 'verified'
         shell: zsh {0}
         run: |
+          set -e -o pipefail
           gh release upload "${{ inputs.manifest }}" "$DMG" "$RUNNER_TEMP/out/appcast.xml" --clobber -R "${{ github.repository }}"
           python3 scripts/release-train.py receipt --tag "${{ inputs.manifest }}" --status verified \
             --asset "$DMG" --asset "$RUNNER_TEMP/out/appcast.xml"

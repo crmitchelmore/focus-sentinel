@@ -66,6 +66,54 @@ class ReleaseConfigurationTests(unittest.TestCase):
                 self.assertNotIn(declaration, steps)
                 self.assertIn(f"env.{flag} == 'true'", steps)
 
+    def test_release_steps_stop_before_claiming_success_after_an_error(self):
+        workflow = (
+            pathlib.Path(__file__).resolve().parent.parent
+            / ".github/workflows/release-mac.yml"
+        ).read_text()
+        for name in [
+            "Source lints", "The product is the train it claims", "Package the disk image",
+            "Sign the appcast", "Upload and write the receipt",
+        ]:
+            with self.subTest(step=name):
+                step = workflow.split(f"- name: {name}\n", 1)[1].split("\n      - ", 1)[0]
+                self.assertIn("run: |\n          set -e -o pipefail\n", step)
+        self.assertIn("persist-credentials: true", workflow)
+
+    def test_verified_receipts_require_nonempty_uploaded_assets(self):
+        for failure in ["missing", "empty", "changed", "incomplete", None]:
+            with self.subTest(failure=failure), \
+                    tempfile.TemporaryDirectory(prefix="focus-receipt-test-") as directory:
+                root = pathlib.Path(directory)
+                image = root / "FocusSentinel.dmg"
+                appcast = root / "appcast.xml"
+                image.write_bytes(b"image")
+                appcast.write_bytes(b"" if failure == "empty" else b"appcast")
+                remote_dir = root / "remote"
+                remote_dir.mkdir()
+
+                def downloaded(tag, name, into):
+                    if failure == "missing":
+                        return None
+                    remote = remote_dir / name
+                    content = (root / name).read_bytes()
+                    remote.write_bytes(content + (b"changed" if failure == "changed" else b""))
+                    return remote
+
+                args = argparse.Namespace(
+                    tag="alpha-build-13", status="verified",
+                    asset=[str(image)] if failure == "incomplete" else [str(image), str(appcast)],
+                )
+                with mock.patch.object(release_train, "download_asset", side_effect=downloaded), \
+                        mock.patch.object(release_train, "upload") as upload:
+                    if failure:
+                        with self.assertRaises(SystemExit):
+                            release_train.cmd_receipt(args)
+                        upload.assert_not_called()
+                    else:
+                        release_train.cmd_receipt(args)
+                        upload.assert_called_once()
+
     def test_codesigning_helper_preserves_executable_search_path(self):
         script = pathlib.Path(__file__).with_name("sign-and-notarise.sh").read_text()
         body = script.split("sign() {\n", 1)[1].split("\n}\n", 1)[0]
