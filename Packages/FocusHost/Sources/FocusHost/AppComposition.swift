@@ -587,6 +587,7 @@ public final class AppComposition {
             self.applyCalendarReader()
             self.refreshCockpit()
         }
+        calendarHost.calendar = calendar
         applyStoredGrantOptIns()
 
         // **Time from outside sources** (focus-ext): the files `focus-bridge` writes beside the

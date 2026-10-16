@@ -17,12 +17,17 @@ import Foundation
 /// and replaced on the next read.
 @MainActor
 final class CalendarHost {
-    /// How far either side of now is read. Twelve hours covers the longest timebox several
-    /// times over and a meeting that started this morning, without reading a person's week.
+    /// How far either side of now is read, at least; the window also always covers the whole
+    /// local day. Twelve hours covers the longest timebox several times over and a meeting that
+    /// started this morning, without reading a person's week.
     static let horizon: TimeInterval = 12 * 60 * 60
     /// How long a read is trusted before the next one. A minute is well inside the minute's
     /// grace `CalendarOutlook` allows, and EventKit's change notification re-reads sooner.
     static let freshness: TimeInterval = 60
+
+    /// The calendar whose local day the window always covers, so the day strip sees this
+    /// evening's meetings at eight in the morning.
+    var calendar: Calendar = .autoupdatingCurrent
 
     private var reader: (any CalendarReading)?
     private var external: (any ExternalTimeReading)?
@@ -54,9 +59,11 @@ final class CalendarHost {
     /// `freshness` or `now` has moved backwards past it (a clock change); the outside sources'
     /// reader is asked every time, and re-reads its files only when one changed.
     func agenda(at now: Date) -> CalendarAgenda {
+        let midnight = calendar.startOfDay(for: now)
+        let nextMidnight = calendar.date(byAdding: .day, value: 1, to: midnight) ?? midnight
         let window = DateInterval(
-            start: now.addingTimeInterval(-Self.horizon),
-            end: now.addingTimeInterval(Self.horizon)
+            start: min(now.addingTimeInterval(-Self.horizon), midnight),
+            end: max(now.addingTimeInterval(Self.horizon), nextMidnight)
         )
         let outside = external?.busyBlocks(in: window)
         guard reader != nil || outside != nil else { return .unread }

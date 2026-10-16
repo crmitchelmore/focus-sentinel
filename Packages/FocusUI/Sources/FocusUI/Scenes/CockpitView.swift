@@ -779,6 +779,7 @@ public struct CockpitView: View {
             timeboxSeconds: priority.timeboxSeconds,
             state: priority.timebox,
             calendar: priority.calendar,
+            day: priority.calendarDay,
             choose: wiring.setTimebox,
             focus: $focus
         )

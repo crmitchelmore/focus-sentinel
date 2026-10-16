@@ -590,7 +590,8 @@ final class PriorityHost: PriorityActing {
                     contextItems: items,
                     rules: rules,
                     assessment: IntentValidator.assess(task.intent, locale: locale),
-                    calendar: environment.calendarAgenda.outlook(at: now)
+                    calendar: environment.calendarAgenda.outlook(at: now),
+                    calendarDay: environment.calendarAgenda.day(at: now, calendar: calendar)
                 )
             }
             // One fetch, three derivations. Every one of them takes its identifier from

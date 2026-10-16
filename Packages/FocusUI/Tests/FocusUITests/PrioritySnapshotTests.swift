@@ -34,6 +34,26 @@ enum PriorityFixture {
 
     static let id = UUID(uuidString: "E0200000-0000-4000-A000-000000000001")!
 
+    /// The day strip's fixture (focus-ext): a fixed zone, so the clock labels are the same
+    /// pictures on every machine.
+    static let dayZone = TimeZone(identifier: "UTC")!
+
+    /// 2026-01-01 at `hour:minute`, UTC.
+    static func dayAt(_ hour: Int, _ minute: Int = 0) -> Date {
+        now.addingTimeInterval(TimeInterval(hour * 3_600 + minute * 60))
+    }
+
+    /// 08:00–18:00, a stand-up that is over, a long afternoon block, and now at 11:30.
+    static let day = CalendarDay.read(
+        span: DateInterval(start: dayAt(8), end: dayAt(18)),
+        busy: [
+            CalendarBusyBlock(start: dayAt(9), end: dayAt(9, 30)),
+            CalendarBusyBlock(start: dayAt(13), end: dayAt(15, 30)),
+            CalendarBusyBlock(start: dayAt(16, 30), end: dayAt(17))
+        ],
+        now: dayAt(11, 30)
+    )
+
     /// A real sentence, well-formed by the validator's rules: a leading imperative verb and a
     /// concrete outcome.
     static let intent = "Finish and submit the Q3 partnership proposal"
@@ -265,6 +285,8 @@ enum PriorityComponent: String, CaseIterable, Sendable {
     case taskRules
     case timeboxRunning
     case timeboxOvertime
+    /// **Today's busy time under the presets** (focus-ext): two meetings, one over, and now.
+    case timeboxWithDay
     case recentPriorities
     case handoffConfirm
 
@@ -394,6 +416,19 @@ enum PriorityComponent: String, CaseIterable, Sendable {
                         focus: focus
                     )
                 }
+            )
+        case .timeboxWithDay:
+            AnyView(
+                FocusHost { focus in
+                    TimeboxControl(
+                        timeboxSeconds: 25 * 60,
+                        state: .running(remaining: .seconds(19 * 60)),
+                        day: PriorityFixture.day,
+                        focus: focus
+                    )
+                }
+                .environment(\.timeZone, PriorityFixture.dayZone)
+                .environment(\.locale, Locale(identifier: "en_GB"))
             )
         case .recentPriorities:
             AnyView(RecentPrioritiesView(rows: PriorityFixture.recent))

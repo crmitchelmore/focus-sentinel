@@ -77,4 +77,28 @@ struct ExternalTimeBlockReaderTests {
         let agenda = host.agenda(at: Self.now)
         #expect(agenda.busy == [CalendarBusyBlock(start: Self.now, end: Self.now.addingTimeInterval(1_800))])
     }
+
+    @Test("the window covers the whole local day, so the day strip sees an evening block in the morning")
+    func coversTheLocalDay() throws {
+        let directory = try Self.temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        var utc = Calendar(identifier: .gregorian)
+        utc.timeZone = TimeZone(identifier: "UTC")!
+        let morning = Self.now.addingTimeInterval(30 * 60)   // 00:30 UTC
+        let host = CalendarHost()
+        host.calendar = utc
+        host.useExternal(ExternalTimeBlockReader(directory: directory))
+        let evening = 22 * 3_600.0
+        try Self.write([Self.block(.busy, evening, evening + 1_800)], source: "outlook", to: directory)
+        let calendarEvening = CalendarBusyBlock(
+            start: Self.now.addingTimeInterval(evening - 3_600), end: Self.now.addingTimeInterval(evening - 1_800)
+        )
+        host.use(ScriptedCalendar(busy: [calendarEvening]))
+
+        let day = host.agenda(at: morning).day(at: morning, calendar: utc)
+        #expect(day.busy == [
+            calendarEvening,
+            CalendarBusyBlock(start: Self.now.addingTimeInterval(evening), end: Self.now.addingTimeInterval(evening + 1_800))
+        ])
+    }
 }

@@ -24,6 +24,8 @@ public struct PrioritySnapshot: Sendable, Equatable, Hashable, Identifiable {
     /// same instant as `timebox`. `.unread` unless the person switched the calendar on — and the
     /// timebox control draws exactly what it always drew for `.unread`.
     public var calendar: CalendarOutlook
+    /// Today's busy time, for the day strip under the timebox (focus-ext). `.unread` draws nothing.
+    public var calendarDay: CalendarDay
     public var contextItems: [ContextItemValue]
     public var rules: [PriorityRuleValue]
     /// What the deterministic validator makes of the stored sentence, so the cockpit can
@@ -40,6 +42,7 @@ public struct PrioritySnapshot: Sendable, Equatable, Hashable, Identifiable {
         startedAt: Date? = nil,
         timebox: TimeboxState = .none,
         calendar: CalendarOutlook = .unread,
+        calendarDay: CalendarDay = .unread,
         contextItems: [ContextItemValue] = [],
         rules: [PriorityRuleValue] = [],
         assessment: IntentAssessment = .notAssessable
@@ -53,6 +56,7 @@ public struct PrioritySnapshot: Sendable, Equatable, Hashable, Identifiable {
         self.startedAt = startedAt
         self.timebox = timebox
         self.calendar = calendar
+        self.calendarDay = calendarDay
         self.contextItems = contextItems
         self.rules = rules
         self.assessment = assessment
@@ -70,7 +74,8 @@ public struct PrioritySnapshot: Sendable, Equatable, Hashable, Identifiable {
         contextItems: [ContextItemValue],
         rules: [PriorityRuleValue],
         assessment: IntentAssessment,
-        calendar: CalendarOutlook = .unread
+        calendar: CalendarOutlook = .unread,
+        calendarDay: CalendarDay = .unread
     ) {
         self.init(
             id: task.id,
@@ -82,6 +87,7 @@ public struct PrioritySnapshot: Sendable, Equatable, Hashable, Identifiable {
             startedAt: task.startedAt,
             timebox: TimeboxState.state(for: task, now: now),
             calendar: calendar,
+            calendarDay: calendarDay,
             contextItems: contextItems,
             rules: rules,
             assessment: assessment

@@ -71,6 +71,32 @@ public struct CalendarAgenda: Sendable, Equatable, Hashable {
         return .clear
     }
 
+    /// Today's busy time, for the cockpit's day strip (focus-ext).
+    ///
+    /// The span is the working day — 08:00 to 18:00 — widened to whole hours to take in every
+    /// busy block of the local day and `now`, and never past midnight either side.
+    public func day(at now: Date, calendar: Calendar) -> CalendarDay {
+        guard isRead else { return .unread }
+        let midnight = calendar.startOfDay(for: now)
+        guard let nextMidnight = calendar.date(byAdding: .day, value: 1, to: midnight) else { return .unread }
+        let today = busy.compactMap { block -> CalendarBusyBlock? in
+            let clipped = CalendarBusyBlock(start: max(block.start, midnight), end: min(block.end, nextMidnight))
+            return clipped.isEmpty ? nil : clipped
+        }
+        let hour: (Int) -> Date = { calendar.date(byAdding: .hour, value: $0, to: midnight) ?? midnight }
+        var start = min(hour(CalendarDay.workdayStartHour), now)
+        var end = max(hour(CalendarDay.workdayEndHour), now)
+        if let first = today.first { start = min(start, first.start) }
+        if let last = today.last { end = max(end, last.end) }
+        start = calendar.dateInterval(of: .hour, for: start)?.start ?? start
+        if let endHour = calendar.dateInterval(of: .hour, for: end), endHour.start < end {
+            end = endHour.end
+        }
+        start = max(start, midnight)
+        end = min(end, nextMidnight)
+        return .read(span: DateInterval(start: start, end: max(start, end)), busy: today, now: now)
+    }
+
     private static func seconds(from start: Date, to end: Date) -> Int {
         max(0, Int(end.timeIntervalSince(start).rounded(.down)))
     }
@@ -148,6 +174,65 @@ public enum CalendarOutlook: Sendable, Equatable, Hashable {
     public var isInMeeting: Bool {
         if case .inMeeting = self { return true }
         return false
+    }
+}
+
+/// **Today's busy time, as the cockpit's day strip draws it** (focus-ext).
+///
+/// An enum for the same reason as `CalendarOutlook`: it travels on `PrioritySnapshot` and the
+/// shell's totality walk stops at an enum, so the whole day is one datum the receipt digests.
+public enum CalendarDay: Sendable, Equatable, Hashable {
+    /// No calendar and no outside source was read. The strip draws nothing.
+    case unread
+    /// The span the strip covers, the busy blocks inside it (clipped to the local day, disjoint
+    /// and sorted), and the instant it was built at.
+    case read(span: DateInterval, busy: [CalendarBusyBlock], now: Date)
+
+    /// The working day the strip covers unless a busy block or now lies outside it.
+    public static let workdayStartHour = 8
+    public static let workdayEndHour = 18
+
+    /// One busy block as fractions of the span, from 0 to 1, and whether it is over.
+    public struct Segment: Sendable, Equatable, Hashable {
+        public let start: Double
+        public let end: Double
+        public let isPast: Bool
+    }
+
+    /// The span, or `nil` when unread.
+    public var span: DateInterval? {
+        guard case .read(let span, _, _) = self else { return nil }
+        return span
+    }
+
+    /// The busy blocks, empty when unread.
+    public var busy: [CalendarBusyBlock] {
+        guard case .read(_, let busy, _) = self else { return [] }
+        return busy
+    }
+
+    /// Whether there is anything to draw: read, with at least one busy block today.
+    public var hasBusyTime: Bool { !busy.isEmpty }
+
+    /// Every busy block as fractions of the span.
+    public var segments: [Segment] {
+        guard case .read(let span, let busy, let now) = self, span.duration > 0 else { return [] }
+        return busy.compactMap { block in
+            let start = Self.fraction(of: block.start, in: span)
+            let end = Self.fraction(of: block.end, in: span)
+            guard end > start else { return nil }
+            return Segment(start: start, end: end, isPast: block.end <= now)
+        }
+    }
+
+    /// Where now falls in the span, from 0 to 1, or `nil` when unread.
+    public var nowFraction: Double? {
+        guard case .read(let span, _, let now) = self, span.duration > 0 else { return nil }
+        return Self.fraction(of: now, in: span)
+    }
+
+    private static func fraction(of instant: Date, in span: DateInterval) -> Double {
+        min(1, max(0, instant.timeIntervalSince(span.start) / span.duration))
     }
 }
 

@@ -97,3 +97,7 @@ Packages/FocusUI/Sources/FocusUI/Scenes/StandingPrioritiesView.swift | row.inten
 Packages/FocusUI/Sources/FocusUI/Scenes/StandingPrioritiesView.swift | doneWhen) | OWN its definition of done
 Packages/FocusUI/Sources/FocusUI/Handoff/HandoffConfirmationSheet.swift | slot.intent) | OWN a standing priority, held or requested
 Packages/FocusUI/Sources/FocusUI/Handoff/HandoffConfirmationSheet.swift | slot.contextCount.formatted()) | NUMBER how many context items a requested priority carries
+
+# --- focus-ext: the day strip's two ends ------------------------------------------------------
+Packages/FocusUI/Sources/FocusUI/Scenes/CalendarDayStrip.swift | span.start.formatted(clock)) | NUMBER the clock time the day strip starts at, through a locale-aware Date.FormatStyle
+Packages/FocusUI/Sources/FocusUI/Scenes/CalendarDayStrip.swift | span.end.formatted(clock)) | NUMBER the clock time the day strip ends at, through a locale-aware Date.FormatStyle

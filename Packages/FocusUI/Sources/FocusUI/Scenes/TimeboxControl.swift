@@ -25,6 +25,8 @@ public struct TimeboxControl: View {
     public let state: TimeboxState
     /// What the person's calendar says about the time from now on. `.unread` draws nothing.
     public let calendar: CalendarOutlook
+    /// Today's busy time, drawn as a strip under the calendar's line (focus-ext). `.unread` draws nothing.
+    public let day: CalendarDay
     /// Choose a timebox, or `nil` for none. `nil` here means "no mutation host attached".
     public let choose: ((Int?) -> Void)?
 
@@ -37,12 +39,14 @@ public struct TimeboxControl: View {
         timeboxSeconds: Int?,
         state: TimeboxState,
         calendar: CalendarOutlook = .unread,
+        day: CalendarDay = .unread,
         choose: ((Int?) -> Void)? = nil,
         focus: FocusState<FocusField?>.Binding
     ) {
         self.timeboxSeconds = timeboxSeconds
         self.state = state
         self.calendar = calendar
+        self.day = day
         self.choose = choose
         self._focus = focus
     }
@@ -106,6 +110,8 @@ public struct TimeboxControl: View {
                 }
                 .foregroundStyle(DesignTokens.supportingTextColor(for: traits))
             }
+
+            CalendarDayStrip(day: day)
         }
     }
 

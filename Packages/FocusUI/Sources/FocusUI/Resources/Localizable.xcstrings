@@ -1742,6 +1742,18 @@
         }
       }
     },
+    "priority.timebox.day" : {
+      "comment" : "Accessibility label of the day strip under the timebox presets (focus-ext). The argument lists today's busy stretches as clock-time ranges.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Busy today: %@"
+          }
+        }
+      }
+    },
     "priority.timebox.untilMeeting" : {
       "comment" : "Timebox choice that runs until the next meeting starts (focus-cal).",
       "extractionState" : "manual",
@@ -6860,6 +6872,18 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "You are in a meeting. A focus block can start when it ends."
+          }
+        }
+      }
+    },
+    "priority.timebox.day.help" : {
+      "comment" : "Tooltip on the day strip under the timebox presets (focus-ext).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Today's busy time, from your calendar and other sources. The mark is now."
           }
         }
       }

@@ -220,6 +220,8 @@ extension CockpitConnection: ShellDrawnConnection {
             "state.priority.timebox": .drawn([.priorityDetail]),
             // The timebox control draws the calendar's outlook beside the presets (focus-cal).
             "state.priority.calendar": .drawn([.priorityDetail]),
+            // The day strip under the presets draws today's busy time (focus-ext).
+            "state.priority.calendarDay": .drawn([.priorityDetail]),
             "state.priority.contextItems": .drawn([.priorityDetail]),
             "state.priority.rules": .drawn([.priorityDetail]),
             "state.priority.assessment": .drawn([.priorityDetail]),
