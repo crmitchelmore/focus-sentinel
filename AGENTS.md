@@ -171,6 +171,24 @@ mirrored for anything substantive.
 - **`check-grants`, `check-focus-steal` and `check-published-keys` need build artefacts** (a
   self-check JSON, an app, `FOCUS_KEYS_READ`); run alone they fail on usage, not on source.
 
+### 2026-10-16 — today's busy time as a strip in the cockpit (focus-ext)
+
+- **`CalendarAgenda.day(at:calendar:)` is the model; `CalendarDayStrip` only draws it.** Busy
+  blocks (calendar and every outside source, already merged) are clipped to the local day; the
+  span is 08:00–18:00 widened to whole hours for an early or late block and for now. It is an
+  enum (`CalendarDay`) so the shell's totality walk stops at one binding line,
+  `state.priority.calendarDay`, as `CalendarOutlook` does. The strip draws nothing for `.unread`
+  or a day with no busy time, and lives in `TimeboxControl`, so it shows only with a priority.
+- **The read window had to grow.** `CalendarHost.agenda` read now ± 12 h, which in the morning
+  missed the evening; it now reads the union with the local day, using `calendarHost.calendar`
+  (set from the composition's calendar).
+- **A clock time drawn in a snapshot must come from the environment.** `date.formatted(...)`
+  uses the process's zone and locale, so a baseline recorded on bravo would differ elsewhere.
+  The strip formats with `@Environment(\.locale)`/`(\.timeZone)`; the fixture injects UTC and
+  en_GB. Each new `Text(verbatim:)` also needs a row in `Config/verbatim-sites.txt`.
+- **The lint scripts are zsh** (`${0:A:h}`); `bash scripts/check-*.sh` fails on line one with
+  "A: unbound variable". Run them with `zsh`.
+
 ### 2026-10-16 — the remote judge gets a switch, and stops caching a judge it could not reach
 
 - **Composed is not on.** The judge is composed for the person's own store whenever the
