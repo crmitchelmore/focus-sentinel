@@ -22,6 +22,15 @@ struct DesignTokenTests {
         #expect(DesignTokens.liquidAnimation(for: .reduceMotion) == nil)
     }
 
+    @Test("content panes are soft and quiet: mostly Bench, a faint accent wash, a lift only in Light")
+    func contentPanesStayQuiet() {
+        #expect(DesignTokens.softPaneOpacity > 0.5 && DesignTokens.softPaneOpacity < 1)
+        #expect(DesignTokens.accentWashOpacity < 0.12)
+        #expect(DesignTokens.quietRuleOpacity < 0.25)
+        #expect(DesignTokens.paneLiftOpacity(for: .light) > 0)
+        #expect(DesignTokens.paneLiftOpacity(for: .dark) == 0)
+    }
+
     // MARK: - Reduce Transparency
 
     @Test("materials collapse to an opaque fill under Reduce Transparency")

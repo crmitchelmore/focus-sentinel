@@ -151,9 +151,15 @@ mirrored for anything substantive.
 
 - **Glass is a token decision, not a call-site one.** `DesignTokens.drawsGlass(for:)`
   (`Design/LiquidGlass.swift`) is true only where `material(for:provenance: .summoned)` is
-  `.material` and Increase Contrast is off; every helper (`glassBackdrop`, `glassSlab`,
-  `softField`, `glyphWell`, `CompanionButtonStyle`, `CompanionSurface`, `shellSurface`'s
-  `.material` case) reads it and falls back to the old opaque Inlay/Bench fills.
+  `.material` and Increase Contrast is off; every helper (`glassBackdrop`, `softSlab`,
+  `softField`, `CompanionSeparator`, `CompanionButtonStyle`, `CompanionSurface`, `shellSurface`'s
+  `.material` case) reads it and falls back to the old opaque Inlay/Bench fills and hairlines.
+- **Glass on controls and navigation only, never on content** (Apple's Tahoe guidance, and the
+  cleanliness pass the same day). Cards are borderless soft Bench panes with a Light-only lift
+  and a faint Spruce wash for the accented one; fields and the popover status row are soft
+  neutral fills. Glass cards under glass buttons was glass on glass, and read muddy.
+- **Whitespace separates cards; `CompanionSeparator` separates inside one.** No `Divider()`
+  between two cards; inside a card a faint Mist rule, the system divider where glass is off.
 - **Uninvited surfaces stay opaque.** The nudge panels never draw glass; `material(for:provenance:)`
   is unchanged and its tests still pin it.
 - **One `GlassEffectContainer` only, in the cockpit tab bar**, so the selected-tab lozenge morphs

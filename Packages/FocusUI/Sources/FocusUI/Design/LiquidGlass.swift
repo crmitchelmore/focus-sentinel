@@ -7,7 +7,12 @@ import SwiftUI
 // Inlay ground, and buttons that were small filled rectangles. The owner asked for the summoned
 // surfaces to be "more liquid glassy so we have some softness". macOS 26's own Liquid Glass is
 // the material that word names, so the cockpit, the Settings panes and the popover now draw
-// their cards, buttons, chips and tab bar as glass over a soft ambient ground.
+// their buttons, chips and tab bar as glass over a soft ambient ground.
+//
+// The cleanliness pass (same day) took glass back off the *content* layer, per Apple's Tahoe
+// guidance — glass is for controls and navigation, never glass on glass — and the 2026
+// productivity-app consensus (Things, Linear, Raycast): cards are borderless soft panes with a
+// gentle lift, separation comes from whitespace and type, and colour is the one Spruce accent.
 //
 // Glass is a summoned-surface material and nothing more. The uninvited nudge panels stay opaque
 // for the reason `DesignTokens.material(for:provenance:)` gives, and every glass surface falls
@@ -31,9 +36,24 @@ extension DesignTokens {
     /// graceful when an accessibility size wraps the label onto two.
     public static let controlRadius: CGFloat = 16
 
-    /// How much of the Bench ground a glass card carries, so ink on it keeps its contrast over
-    /// whatever colour the ambient ground lends the glass.
-    public static let glassGroundTint: Double = 0.4
+    /// How much Bench a soft content pane carries over the ambient ground: enough that ink keeps
+    /// its contrast, little enough that the ground's bloom still shows through.
+    public static let softPaneOpacity: Double = 0.72
+
+    /// The Spruce wash that marks the accented card, in place of a border.
+    public static let accentWashOpacity: Double = 0.07
+
+    /// The neutral ink wash an inset field carries.
+    public static let insetWashOpacity: Double = 0.06
+
+    /// A rule inside a soft card: present, but quieter than the whitespace around it.
+    public static let quietRuleOpacity: Double = 0.16
+
+    /// The soft lift under a content pane in Light; Dark separates panes by fill alone, since a
+    /// light shadow on a dark ground reads as a glow.
+    public static func paneLiftOpacity(for traits: AppearanceTraits) -> Double {
+        traits.colorScheme == .dark ? 0 : 0.07
+    }
 
     /// How strongly the ambient ground blooms toward Spruce behind the glass.
     public static let ambientBloomOpacity: Double = 0.26
@@ -100,34 +120,36 @@ struct GlassBackdrop: View {
     }
 }
 
-/// A round glyph well: a soft Spruce wash rather than a boxed tile. Not glass — it sits on glass
-/// cards, and glass stacked on glass turns muddy.
-struct GlyphWell: ViewModifier {
-    let traits: AppearanceTraits
-
-    func body(content: Content) -> some View {
-        content
-            .frame(width: 30, height: 30)
-            .background(
-                DesignTokens.drawsGlass(for: traits)
-                    ? DesignTokens.Palette.role(.spruce, for: traits).opacity(0.14)
-                    : DesignTokens.Palette.role(.inlay, for: traits),
-                in: Circle()
-            )
-    }
-}
-
-/// An inset text field's ground: soft glass when glass is drawn, the old Inlay fill otherwise.
+/// An inset field's ground. A faint neutral inset rather than glass: a field sits inside
+/// content, and Apple's Tahoe guidance keeps glass to the control and navigation layer.
 struct SoftField: ViewModifier {
     let traits: AppearanceTraits
 
-    @ViewBuilder
     func body(content: Content) -> some View {
         let shape = RoundedRectangle(cornerRadius: DesignTokens.controlRadius, style: .continuous)
+        content.background(
+            DesignTokens.drawsGlass(for: traits)
+                ? DesignTokens.Palette.role(.slate, for: traits).opacity(DesignTokens.insetWashOpacity)
+                : DesignTokens.Palette.role(.inlay, for: traits),
+            in: shape
+        )
+    }
+}
+
+/// **The quiet separator** inside a card. Over the soft ground it is a faint Mist rule, because
+/// whitespace and the headline under it already do the separating; wherever glass is not drawn
+/// it is the system divider, since a person who asked for contrast asked for firm edges.
+struct CompanionSeparator: View {
+    @Environment(\.appearanceTraits) private var traits
+
+    var body: some View {
         if DesignTokens.drawsGlass(for: traits) {
-            content.glassEffect(.regular, in: shape)
+            Rectangle()
+                .fill(DesignTokens.Palette.role(.mist, for: traits).opacity(DesignTokens.quietRuleOpacity))
+                .frame(height: 1)
+                .accessibilityHidden(true)
         } else {
-            content.background(DesignTokens.Palette.role(.inlay, for: traits), in: shape)
+            Divider()
         }
     }
 }
@@ -138,24 +160,19 @@ extension View {
         background(GlassBackdrop(traits: traits))
     }
 
-    /// A section or sheet heading's round glyph well.
-    func glyphWell(_ traits: AppearanceTraits) -> some View {
-        modifier(GlyphWell(traits: traits))
-    }
-
     /// An inset field's soft ground.
     func softField(_ traits: AppearanceTraits) -> some View {
         modifier(SoftField(traits: traits))
     }
 
-    /// A summoned row drawn as a glass slab, or the old Inlay fill when glass is not drawn.
-    @ViewBuilder
-    func glassSlab(_ traits: AppearanceTraits, radius: CGFloat = DesignTokens.controlRadius) -> some View {
-        let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
-        if DesignTokens.drawsGlass(for: traits) {
-            glassEffect(.regular, in: shape)
-        } else {
-            background(DesignTokens.Palette.role(.inlay, for: traits), in: shape)
-        }
+    /// A summoned row on a soft Bench slab — the content layer's ground, not glass, so it can sit
+    /// inside a popover or window that is already glass. The old Inlay fill when glass is off.
+    func softSlab(_ traits: AppearanceTraits, radius: CGFloat = DesignTokens.controlRadius) -> some View {
+        background(
+            DesignTokens.drawsGlass(for: traits)
+                ? DesignTokens.Palette.role(.bench, for: traits).opacity(DesignTokens.softPaneOpacity)
+                : DesignTokens.Palette.role(.inlay, for: traits),
+            in: RoundedRectangle(cornerRadius: radius, style: .continuous)
+        )
     }
 }

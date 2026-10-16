@@ -39,7 +39,7 @@ public struct RecentPrioritiesView: View {
                     ForEach(rows) { row in
                         entry(row)
                             .padding(.vertical, spacing)
-                        if row.id != rows.last?.id { Divider() }
+                        if row.id != rows.last?.id { CompanionSeparator() }
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)

@@ -78,7 +78,6 @@ public struct ContextSheet: View {
             HStack(spacing: 10) {
                 Image(systemName: "slider.horizontal.3")
                     .font(DesignTokens.font(.callout, scale: textScale))
-                    .glyphWell(traits)
                     .accessibilityHidden(true)
                 ShellText(.contextSheetTitle, role: .sectionHeading, argument: intent)
                     .lineLimit(nil)
@@ -101,7 +100,7 @@ public struct ContextSheet: View {
             )
             .walkthroughAnchor(.contextPack)
 
-            Divider()
+            CompanionSeparator()
 
             TaskRulesView(
                 rules: rules,

@@ -197,7 +197,7 @@ public struct MenuBarPopoverView: DecisionSurfaceContent {
         case .status:
             statusRow
                 .padding(12)
-                .glassSlab(traits)
+                .softSlab(traits)
         case .belief:
             belief
         case .accusation:

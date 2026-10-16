@@ -1229,9 +1229,12 @@ public struct CockpitView: View {
                     .opacity(DesignTokens.drawsGlass(for: traits) ? 0.35 : 1),
                 in: track
             )
+            // Borderless over glass — the track's fill is the edge; a hairline only where glass is
+            // off, and a firm one under Increase Contrast.
             .overlay(track.strokeBorder(
                 DesignTokens.Palette.role(.mist, for: traits)
-                    .opacity(DesignTokens.emphasis(for: traits).promotesSecondaryText ? 1 : 0.18),
+                    .opacity(DesignTokens.emphasis(for: traits).promotesSecondaryText
+                        ? 1 : (DesignTokens.drawsGlass(for: traits) ? 0 : 0.22)),
                 lineWidth: DesignTokens.emphasis(for: traits).promotesSecondaryText ? 2 : 1
             ))
         }

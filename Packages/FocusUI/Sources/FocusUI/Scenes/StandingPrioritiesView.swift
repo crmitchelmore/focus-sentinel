@@ -33,7 +33,7 @@ public struct StandingPrioritiesView: View {
                     ForEach(rows) { row in
                         entry(row)
                             .padding(.vertical, spacing / 2)
-                        if row.id != rows.last?.id { Divider() }
+                        if row.id != rows.last?.id { CompanionSeparator() }
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)

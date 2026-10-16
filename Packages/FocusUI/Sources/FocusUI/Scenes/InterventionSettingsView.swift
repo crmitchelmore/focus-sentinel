@@ -201,7 +201,6 @@ public struct InterventionSettingsView: View {
             voiceSection
                 .companionSurface()
                 .shellRendered(.interventionVoice, settings.voice.rawValue)
-            Divider()
             reducedInterruptionSection
                 .companionSurface()
                 .shellRendered(
@@ -211,15 +210,12 @@ public struct InterventionSettingsView: View {
                     .reducedInterruptionForced,
                     settings.reducedInterruptionIsForced ? "forced" : "chosen"
                 )
-            Divider()
             quietHoursSection
                 .companionSurface()
                 .shellRendered(.quietHours, ShellValueDigest.describe(settings.quietHours))
-            Divider()
             notchSection
                 .companionSurface()
                 .shellRendered(.notchCompanion, Self.notchReceipt(settings.notchRefusal))
-            Divider()
             // **The section that was deleted, with the half that was missing** (focus-62o,
             // focus-u3w). It drew a heading and an instruction to add an application the
             // application offered no way to add, so it went at a081d64 rather than being
@@ -237,12 +233,12 @@ public struct InterventionSettingsView: View {
                     addable: settings.addableApplications
                 )
             )
-            Divider()
+            CompanionSeparator()
             routingMatrix
-            Divider()
+            CompanionSeparator()
             capsSection
                 .shellRendered(.interruptionUsage, ShellValueDigest.describe(settings.usage))
-            Divider()
+            CompanionSeparator()
             thresholdsSection
         }
         // The one dialog margin every pane and sheet draws (focus-udn9).

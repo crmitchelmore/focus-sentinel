@@ -84,7 +84,6 @@ struct CompanionSectionHeading: View {
         HStack(spacing: 10) {
             Image(systemName: symbol)
                 .font(DesignTokens.font(.callout, scale: textScale))
-                .glyphWell(traits)
                 .accessibilityHidden(true)
             ShellText(key, role: .sectionHeading)
                 .fixedSize(horizontal: false, vertical: true)
@@ -93,8 +92,10 @@ struct CompanionSectionHeading: View {
     }
 }
 
-/// A card. Glass tinted with a little Bench over the window's ambient ground, so it reads as a
-/// soft pane; the opaque Bench card with a hairline when glass is not drawn.
+/// A card: a borderless soft pane with a gentle lift over the window's ambient ground, and the
+/// accented card carries a faint Spruce wash rather than an outline. Not glass — the buttons and
+/// chips inside are, and glass on glass turns muddy. The opaque Bench card with a hairline when
+/// glass is not drawn.
 private struct CompanionSurface: ViewModifier {
     var accent: Bool
     @Environment(\.appearanceTraits) private var traits
@@ -107,17 +108,20 @@ private struct CompanionSurface: ViewModifier {
             .padding(DesignTokens.spacing(18, scale: textScale))
             .frame(maxWidth: .infinity, alignment: .leading)
         if DesignTokens.drawsGlass(for: traits) {
-            padded
-                .glassEffect(
-                    .regular.tint(
-                        DesignTokens.Palette.role(.bench, for: traits).opacity(DesignTokens.glassGroundTint)
-                    ),
-                    in: shape
-                )
-                .overlay(shape.strokeBorder(
-                    DesignTokens.Palette.role(.spruce, for: traits).opacity(accent ? 0.45 : 0),
-                    lineWidth: 1.5
-                ))
+            padded.background {
+                shape
+                    .fill(DesignTokens.Palette.role(.bench, for: traits).opacity(DesignTokens.softPaneOpacity))
+                    .overlay(shape.fill(
+                        DesignTokens.Palette.role(.spruce, for: traits)
+                            .opacity(accent ? DesignTokens.accentWashOpacity : 0)
+                    ))
+                    .shadow(
+                        color: DesignTokens.Palette.role(.slate, for: traits)
+                            .opacity(DesignTokens.paneLiftOpacity(for: traits)),
+                        radius: 14,
+                        y: 4
+                    )
+            }
         } else {
             padded
                 .background(DesignTokens.Palette.role(.bench, for: traits), in: shape)

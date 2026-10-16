@@ -562,7 +562,6 @@ public struct PrivacySettingsView: View {
         VStack(alignment: .leading, spacing: spacing) {
             CompanionHeader { ShellText(.settingsPrivacyTitle, role: .title2) }
             if half == nil || half == .ownership { ownershipContent.companionSurface() }
-            if half == nil { Divider() }
             if half != .ownership { insightContent.companionSurface() }
             Spacer(minLength: 0)
         }
@@ -686,7 +685,7 @@ public struct PrivacySettingsView: View {
                 .shellHelp(.settingsPrivacyRevealHelp)
             }
 
-            Divider()
+            CompanionSeparator()
 
             // **How long any of this is kept** (F-115, focus-l7n). It sits directly above the
             // delete-everything control because the two are the same promise at two speeds: one
@@ -713,7 +712,7 @@ public struct PrivacySettingsView: View {
                 .accessibilityLabel(ShellStrings.resource(.settingsPrivacyRetentionHeading))
             }
 
-            Divider()
+            CompanionSeparator()
 
             // **Take it and leave** (F-110, F-134, focus-ix9). Two documents and three verbs,
             // drawn together because the question a person is answering here is one question:
@@ -732,7 +731,7 @@ public struct PrivacySettingsView: View {
                 PortabilityRow(spacing: spacing, onAction: onAction)
             }
 
-            Divider()
+            CompanionSeparator()
 
             // **The one thing here a person can undo the app with** (e07a, focus-6pr.3). The
             // statement above says everything lives in one local file; this is the button that
@@ -787,25 +786,25 @@ public struct PrivacySettingsView: View {
             }
 
             if draws(.capability) {
-                Divider()
+                CompanionSeparator()
 
                 CapabilityMatrixView(capabilities: capabilities)
             }
 
             if draws(.grants) {
-                Divider()
+                CompanionSeparator()
                 grantSwitches
             }
 
             if draws(.reasoning) {
-                Divider()
+                CompanionSeparator()
 
                 // How the app decides, drawn from the one ordered list of rungs in the repository
                 // (R-54). It sits between *what the app can see* and *what it made of it*, which is
                 // the order a person reads them in. It offers nothing to press either.
                 CascadePrecedenceView()
 
-                Divider()
+                CompanionSeparator()
 
                 // What the app concluded about the person, and why (R-71). It sits at the foot of
                 // this pane rather than behind a developer flag because it is a *trust* surface:
