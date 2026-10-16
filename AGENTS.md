@@ -147,6 +147,30 @@ Driver notes from the work itself, newest first. `CLAUDE.md` points here; keep t
 mirrored for anything substantive.
 
 
+### 2026-10-16 — time from other sources, through the bridge (issue #31)
+
+- **EventKit is not every calendar.** An Exchange account behind Conditional Access never reaches
+  macOS's calendar, and Graph and Outlook's own files are closed to us too, so the app now takes
+  blocked time from any provider. `focus-bridge`'s `focus_set_time_blocks` /
+  `focus_add_time_block` / `focus_list_time_blocks` / `focus_clear_time_blocks` (and
+  `focus-bridge time-blocks …`) write `TimeBlocks/<source>.json` beside the store.
+- **A file drop, not a `focus://` URL**, because blocks must persist and arrive unattended; no
+  confirmation, because blocked time only makes the app do less. The contract is
+  `FocusCore/Time/ExternalTimeBlocks.swift`; the app decodes through a narrow struct that reads
+  kind, start and end only, so titles and details never enter the store or the export.
+- **`CalendarHost` merges, it does not cache, the external source.** `agenda(at:)` asks
+  `ExternalTimeBlockReader` every call; the reader re-reads only when the directory's
+  (name, size, modification date) signature moves. EventKit blocks keep their 60 s cache.
+  `busy`/`away`/`tentative` hold the question; `focus`/`free` do not.
+- **Composed only for the person's own store, never in a lane or a self-check**, the same rule as
+  the remote judge. *Delete Everything* removes the directory.
+- **`MCPServer` is `@MainActor`**, so a static helper on it cannot be called from `main.swift`'s
+  nonisolated command functions; shared parsing lives on `TimeBlockStore`.
+- **`#expect(a.map(\.x) == [.p, .q].sorted { … })` timed out the type checker.** Bind the mapped
+  array to a typed `let` first.
+- **`check-grants`, `check-focus-steal` and `check-published-keys` need build artefacts** (a
+  self-check JSON, an app, `FOCUS_KEYS_READ`); run alone they fail on usage, not on source.
+
 ### 2026-10-16 — the remote judge gets a switch, and stops caching a judge it could not reach
 
 - **Composed is not on.** The judge is composed for the person's own store whenever the

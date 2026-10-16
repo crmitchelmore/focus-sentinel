@@ -8,6 +8,11 @@ import Foundation
 /// switch is off, or macOS said no — the agenda is `.unread`, which refuses no timebox, closes
 /// no gate and draws nothing: a default install behaves exactly as it did before this existed.
 ///
+/// Outside sources (focus-ext) add their busy time through `useExternal(_:)`: the files
+/// `focus-bridge` writes on a provider's behalf. Their blocks merge with the calendar's, so an
+/// Outlook meeting pushed by a provider holds the question exactly as an EventKit one does. The
+/// agenda is `.unread` only when there is no calendar reader and no source has written a file.
+///
 /// Nothing here is stored. The agenda is a window of busy intervals around now, held in memory
 /// and replaced on the next read.
 @MainActor
@@ -20,7 +25,8 @@ final class CalendarHost {
     static let freshness: TimeInterval = 60
 
     private var reader: (any CalendarReading)?
-    private var cached: CalendarAgenda = .unread
+    private var external: (any ExternalTimeReading)?
+    private var cached: [CalendarBusyBlock] = []
     private var readAt: Date?
 
     /// Point the host at a reader, or at none. Drops the cache either way, so a calendar the
@@ -30,26 +36,39 @@ final class CalendarHost {
         invalidate()
     }
 
+    /// Point the host at the outside sources' directory reader, or at none.
+    func useExternal(_ external: (any ExternalTimeReading)?) {
+        self.external = external
+    }
+
     var isReading: Bool { reader != nil }
+    var readsExternalTime: Bool { external != nil }
 
     /// Forget the last read; the next `agenda(at:)` reads again.
     func invalidate() {
-        cached = .unread
+        cached = []
         readAt = nil
     }
 
-    /// The agenda around `now`, read again when the last read is older than `freshness` or
-    /// `now` has moved backwards past it (a clock change).
+    /// The agenda around `now`. The calendar is read again when the last read is older than
+    /// `freshness` or `now` has moved backwards past it (a clock change); the outside sources'
+    /// reader is asked every time, and re-reads its files only when one changed.
     func agenda(at now: Date) -> CalendarAgenda {
-        guard let reader else { return .unread }
-        if let readAt, now >= readAt, now.timeIntervalSince(readAt) < Self.freshness {
-            return cached
-        }
         let window = DateInterval(
             start: now.addingTimeInterval(-Self.horizon),
             end: now.addingTimeInterval(Self.horizon)
         )
-        cached = CalendarAgenda(busy: reader.busyBlocks(in: window))
+        let outside = external?.busyBlocks(in: window)
+        guard reader != nil || outside != nil else { return .unread }
+        return CalendarAgenda(busy: calendarBlocks(at: now, window: window) + (outside ?? []))
+    }
+
+    private func calendarBlocks(at now: Date, window: DateInterval) -> [CalendarBusyBlock] {
+        guard let reader else { return [] }
+        if let readAt, now >= readAt, now.timeIntervalSince(readAt) < Self.freshness {
+            return cached
+        }
+        cached = reader.busyBlocks(in: window)
         readAt = now
         return cached
     }

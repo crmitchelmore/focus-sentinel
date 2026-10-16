@@ -231,6 +231,19 @@ committed entitlement set carries it, and `NSCalendarsFullAccessUsageDescription
 sentence what is read. On a default install nothing changes: the capability reads
 `notRequested`, the request counter is zero.
 
+**Time from other sources** (owner's request, 2026-10-16). macOS's calendar is not every
+calendar — an Exchange account behind Conditional Access never reaches EventKit (issue #31) — so
+any provider can tell the app about blocked time through `focus-bridge`'s MCP tools or its
+`time-blocks` command. Each source owns one file, `TimeBlocks/<source>.json` beside the store
+(`0700` directory, `0600` file, written atomically). A block is a kind (`busy`, `away`,
+`tentative`, `focus` or `free`), a start, and an end or a duration; a title and a detail are
+optional. `ExternalTimeBlockReader` reads only the kind, start and end of each block, re-reads a
+file only when it changes, and hands busy, away and tentative blocks to `CalendarHost`, which
+merges them with the calendar's. The rules above then apply unchanged: no timebox into blocked
+time, gate 13 holds questions, and the cockpit names the next block. Titles and details stay in
+the provider's file, are never stored or exported, and *Delete Everything* removes the
+directory. Lanes and self-checks never read it. With no files, nothing changes.
+
 **The Accessibility grant is now spent, on device, from 2026-10-15** (owner's ruling, issue #24).
 A bundle identifier cannot tell one task from another inside a mixed-use application — GitHub
 Copilot, a terminal, an editor, a browser — so a nudge that can only say "you are in Copilot" is

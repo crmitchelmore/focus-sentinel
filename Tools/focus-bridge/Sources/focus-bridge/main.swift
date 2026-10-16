@@ -1,4 +1,5 @@
 import FocusBridgeKit
+import FocusCore
 import Foundation
 
 let usage = """
@@ -12,6 +13,11 @@ let usage = """
       focus-bridge add-context --item ITEM [--item ITEM]... [--dry-run]
       focus-bridge set-priorities --slot TEXT [--done-when TEXT] [--context ITEM]...
                                   [--slot TEXT ...]... [--dry-run]
+      focus-bridge time-blocks add --source NAME --kind KIND [--start TIME]
+                                   (--end TIME | --minutes N) [--title TEXT] [--detail TEXT] [--id ID]
+      focus-bridge time-blocks set --source NAME [--file FILE]   replace NAME's blocks (JSON on stdin by default)
+      focus-bridge time-blocks list [--source NAME]
+      focus-bridge time-blocks clear (--source NAME | --all)
       focus-bridge mcp                                      Model Context Protocol server on stdio
 
     ITEM is app:<bundle id>, domain:<host> or keyword:<text>, e.g. app:com.microsoft.Outlook,
@@ -19,6 +25,14 @@ let usage = """
 
     set-priorities sets one main and up to two secondary standing priorities: each --slot starts
     one (main first), and the --done-when and --context after it belong to it.
+
+    time-blocks lets another source mark time the app cannot see. KIND is busy, away or
+    tentative (the app stays quiet and refuses a focus block that would run into it) or focus or
+    free (recorded, no effect). TIME is ISO 8601, e.g. 2026-10-16T14:00:00+01:00; without an
+    offset it is local; --start defaults to now. `set` reads a JSON array of
+    {kind, start, end | duration_minutes, title?, detail?, id?}. Blocks are written to
+    TimeBlocks/<NAME>.json beside the store (or FOCUS_TIME_BLOCKS) and take effect without
+    confirmation; titles and details stay there and never enter the app's data.
 
     The store is read through a private SQLite backup and never opened in place. Set FOCUS_STORE
     to read another store file. `propose`, `add-context` and `set-priorities` open focus://start,
@@ -140,6 +154,8 @@ func main() {
                 try Handoff.open(url)
                 FileHandle.standardError.write(Data("Sent. Press Set Priorities in Focus Sentinel to accept them.\n".utf8))
             }
+        case "time-blocks":
+            try timeBlocks(Array(rest), now: now)
         case "mcp":
             MCPServer(read: { try Snapshot.read(store: store) }).run()
         case "-h", "--help", "help":
@@ -149,6 +165,54 @@ func main() {
         }
     } catch {
         fail("\(error)")
+    }
+}
+
+func timeBlocks(_ args: [String], now: Date) throws {
+    let blocks = TimeBlockStore(directory: TimeBlockStore.defaultDirectory())
+    guard let verb = args.first else { fail("time-blocks needs add, set, list or clear", code: 2) }
+    let rest = Array(args.dropFirst())
+    switch verb {
+    case "add":
+        guard let source = option("--source", in: rest) else { fail("time-blocks add needs --source", code: 2) }
+        var arguments: [String: Any] = [:]
+        for (flag, key) in [("--kind", "kind"), ("--start", "start"), ("--end", "end"), ("--minutes", "duration_minutes"),
+                            ("--title", "title"), ("--detail", "detail"), ("--id", "id")] {
+            if let value = option(flag, in: rest) { arguments[key] = value }
+        }
+        let block = try TimeBlockStore.block(from: arguments, now: now)
+        let file = try blocks.add(source: try TimeBlockStore.source(source), block: block, now: now)
+        FileHandle.standardError.write(Data("\(file.blocks.count) block(s) for \(source) in \(blocks.directory.path)\n".utf8))
+    case "set":
+        guard let source = option("--source", in: rest) else { fail("time-blocks set needs --source", code: 2) }
+        let data: Data
+        if let path = option("--file", in: rest), path != "-" {
+            data = try Data(contentsOf: URL(fileURLWithPath: (path as NSString).expandingTildeInPath))
+        } else {
+            data = FileHandle.standardInput.readDataToEndOfFile()
+        }
+        let json = try JSONSerialization.jsonObject(with: data)
+        guard let raw = (json as? [Any]) ?? ((json as? [String: Any])?["blocks"] as? [Any]) else {
+            fail("time-blocks set reads a JSON array of blocks, or an object with a blocks array", code: 2)
+        }
+        let parsed = try raw.map { item -> TimeBlock in
+            guard let object = item as? [String: Any] else { throw BridgeError("each block must be an object") }
+            return try TimeBlockStore.block(from: object, now: now)
+        }
+        let file = try blocks.set(source: try TimeBlockStore.source(source), blocks: parsed, now: now)
+        FileHandle.standardError.write(Data("\(file.blocks.count) block(s) for \(source) in \(blocks.directory.path)\n".utf8))
+    case "list":
+        try emit(blocks.list(source: try option("--source", in: rest).map(TimeBlockStore.source), now: now))
+    case "clear":
+        if let source = option("--source", in: rest) {
+            try emit(blocks.clear(source: try TimeBlockStore.source(source)))
+        } else if rest.contains("--all") {
+            try emit(blocks.clear())
+        } else {
+            fail("time-blocks clear needs --source NAME or --all", code: 2)
+        }
+    default:
+        fail("time-blocks needs add, set, list or clear, not '\(verb)'", code: 2)
     }
 }
 

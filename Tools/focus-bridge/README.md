@@ -1,8 +1,8 @@
 # focus-bridge
 
 A command-line tool and stdio MCP server that let scripts and agents read Focus Sentinel's data,
-propose a priority and propose context (apps, sites and keywords) for it. The app's UI is not
-driven.
+propose a priority and propose context (apps, sites and keywords) for it, and tell it about time
+that is already spoken for. The app's UI is not driven.
 
 It is a tool, not part of the app: nothing in `FocusSentinel.xcodeproj` links it, so it is outside
 the app's dependency graph, `check-boundaries.sh` and `check-forbidden.sh` (the same reason as
@@ -26,6 +26,9 @@ the app's dependency graph, `check-boundaries.sh` and `check-forbidden.sh` (the 
   shortlist).
 - **No files from scripts.** Context items are `app:<bundle id>`, `domain:<host>` or
   `keyword:<text>`. A file path from a script is not a file the person chose, so `file:` is refused.
+- **Blocked time needs no confirmation, because it only makes the app do less.** Time blocks are
+  written to `TimeBlocks/<source>.json` beside the store (`0700` directory, `0600` file, atomic
+  write), never into the store. The app reads only each block's kind, start and end.
 - **Summaries leave out the activity log.** `status` and `sessions` give the priority, the session
   and the minutes. Only `export` writes the full `focus-sentinel.data` document, which includes
   activity events, and it writes them to a file the caller names.
@@ -48,6 +51,11 @@ focus-bridge add-context --item app:com.microsoft.VSCode --item keyword:rcg [--d
 focus-bridge set-priorities \
   --slot "#9 Qualify Boulanger" --done-when "Go/no-go agreed" --context keyword:boulanger \
   --slot "#62 Fellowship dogfooding" --slot "#77 Links pages loop" [--dry-run]
+focus-bridge time-blocks add --source outlook --kind busy --start 2026-10-16T14:00 --minutes 30 \
+  [--end …] [--id …] [--title "Standup"] [--detail …]
+focus-bridge time-blocks set --source outlook [--file blocks.json]   # replaces the source; JSON on stdin otherwise
+focus-bridge time-blocks list [--source outlook]
+focus-bridge time-blocks clear --source outlook | --all
 focus-bridge mcp                         # MCP server on stdio
 ```
 
@@ -55,7 +63,23 @@ Each `--slot` starts a standing priority (the first is the main one, at most thr
 `--done-when` and `--context` options after it belong to it, up to 8 context items each.
 
 `FOCUS_STORE=/path/to/FocusSentinel.store` reads a different store, such as a fixture or the
-Alpha train's store.
+Alpha train's store. Time blocks go beside that store, or to `FOCUS_TIME_BLOCKS=/path/to/dir`.
+
+### Time blocks
+
+A provider — a calendar it can read, a rota, a script — owns one source (`a–z`, `0–9`, `.`, `_`,
+`-`, up to 64 characters). `set` replaces everything that source said; `add` adds one block, or
+replaces the one with the same `id`. Blocks that have ended are dropped on every write; a source
+holds at most 500 blocks, each at most 31 days long.
+
+| Kind | The app |
+|---|---|
+| `busy`, `away`, `tentative` | treats it as a meeting: no timebox starts in or runs into it, questions wait (gate 13), the cockpit names the next one |
+| `focus`, `free` | records it but holds nothing |
+
+A block needs `kind` and either `end` or `duration_minutes`; `start` defaults to now. Times are
+ISO 8601 (`2026-10-16T14:00:00Z`, `2026-10-16T14:00:00+01:00`) or local (`2026-10-16T14:00`).
+`title` and `detail` are for the provider's own records; the app does not read them.
 
 ## MCP tools
 
@@ -67,6 +91,10 @@ Alpha train's store.
 | `focus_propose_priority` | opens `focus://start` (confirmation required); optional `context` items | the URL, and whether it was opened |
 | `focus_set_priorities` | opens `focus://priorities` (confirmation required); one main and up to two secondary, each with `done_when` and `context` | the URL, and whether it was opened |
 | `focus_add_context` | opens `focus://context` (confirmation required); adds to the current priority, skipping items it already has | the URL, and whether it was opened |
+| `focus_set_time_blocks` | writes the source's file, replacing it | the source, the count kept, the path |
+| `focus_add_time_block` | adds one block to the source's file (same `id` replaces) | the source, the count, the path |
+| `focus_list_time_blocks` | reads the files, optionally one `source` | each source's blocks |
+| `focus_clear_time_blocks` | deletes one source's file, or every file when `source` is omitted | the sources removed |
 
 Context reaches the app in two ways. Items sent with a new priority are attached to it when the
 person presses Replace. `focus_add_context` adds to the priority that is current when the person

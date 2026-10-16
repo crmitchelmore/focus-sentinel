@@ -6,26 +6,30 @@ import Foundation
 /// One JSON-RPC 2.0 message per line in, one per line out, nothing else on stdout. No socket is
 /// opened: the client starts this process and owns both ends of the pipe. Three tools only read
 /// a snapshot; three propose a priority, context or standing priorities that the person still
-/// has to accept.
+/// has to accept; four let an outside source mark time — a meeting, time away — that the app
+/// then keeps quiet through (focus-ext).
 @MainActor
 public final class MCPServer {
     public typealias Reader = @MainActor () throws -> StoreReading
 
     public static let supportedProtocolVersions = ["2025-06-18", "2025-03-26", "2024-11-05"]
-    public static let serverVersion = "0.3.0"
+    public static let serverVersion = "0.4.0"
 
     private let read: Reader
     private let now: () -> Date
     private let openURL: (URL) throws -> Void
+    private let timeBlocks: TimeBlockStore
 
     public init(
         read: @escaping Reader,
         now: @escaping () -> Date = Date.init,
-        openURL: @escaping (URL) throws -> Void = Handoff.open
+        openURL: @escaping (URL) throws -> Void = Handoff.open,
+        timeBlocks: TimeBlockStore = TimeBlockStore(directory: TimeBlockStore.defaultDirectory())
     ) {
         self.read = read
         self.now = now
         self.openURL = openURL
+        self.timeBlocks = timeBlocks
     }
 
     /// Serve until stdin closes.
@@ -91,7 +95,15 @@ public final class MCPServer {
         sites, keywords that belong to the work), focus_add_context to add context to the \
         current priority, and focus_set_priorities to set their standing main and secondary \
         priorities (shown in the app as one-press starting points). The app asks the person to \
-        confirm each, so never claim anything was set or added.
+        confirm each, so never claim anything was set or added. \
+        Time blocks are different: focus_set_time_blocks, focus_add_time_block, \
+        focus_list_time_blocks and focus_clear_time_blocks let a source (an Outlook or other \
+        calendar, a rota, a script) mark time the app cannot see. They take effect without \
+        confirmation. Kinds busy, away and tentative make the app stay quiet and refuse a focus \
+        block that would run into them; focus and free are recorded and change nothing. A block \
+        can be just a kind, a start and a duration; a title and detail are optional and stay \
+        with the source, never in the app's data. Use one stable source name per provider, and \
+        prefer focus_set_time_blocks to replace that source's whole set when syncing.
         """
 
     static let contextSchema: [String: Any] = [
@@ -101,6 +113,26 @@ public final class MCPServer {
         "description": "Apps, sites and keywords that belong to this work, as 'app:<bundle id>' "
             + "(e.g. app:com.microsoft.Outlook), 'domain:<host>' (e.g. domain:dev.azure.com) or "
             + "'keyword:<text>'. Files are not accepted."
+    ]
+
+    static let timeBlockProperties: [String: Any] = [
+        "kind": [
+            "type": "string",
+            "enum": TimeBlockKind.allCases.map(\.rawValue),
+            "description": "busy, away and tentative silence the app and block focus sessions across them; focus and free change nothing"
+        ],
+        "start": ["type": "string", "description": "ISO 8601 start, e.g. 2026-10-16T14:00:00+01:00 (a time without an offset is local). Defaults to now."],
+        "end": ["type": "string", "description": "ISO 8601 end. Give this or duration_minutes."],
+        "duration_minutes": ["type": "number", "description": "Length in minutes. Give this or end."],
+        "title": ["type": "string", "description": "Optional, at most \(ExternalTimeBlocks.maximumTitleLength) characters. Kept with the source; the app never stores it."],
+        "detail": ["type": "string", "description": "Optional, at most \(ExternalTimeBlocks.maximumDetailLength) characters. Kept with the source; the app never stores it."],
+        "id": ["type": "string", "description": "Optional stable id from the source; adding a block with an existing id replaces it."]
+    ]
+
+    static let sourceSchema: [String: Any] = [
+        "type": "string",
+        "pattern": "^[a-z0-9_-][a-z0-9._-]{0,63}$",
+        "description": "Stable name for the provider, e.g. 'outlook' or 'rota'. Each source owns its own set of blocks."
     ]
 
     static var slotContextSchema: [String: Any] {
@@ -206,6 +238,64 @@ public final class MCPServer {
                     "additionalProperties": false
                 ],
                 "annotations": ["readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false]
+            ],
+            [
+                "name": "focus_set_time_blocks",
+                "title": "Replace a source's time blocks",
+                "description": "Replace every time block from one source with this set (an empty list clears it). Use it to sync a calendar: send the source's busy time for the coming hours or days. Takes effect within seconds, without confirmation. Blocks that have already ended are dropped.",
+                "inputSchema": [
+                    "type": "object",
+                    "properties": [
+                        "source": sourceSchema,
+                        "blocks": [
+                            "type": "array",
+                            "maxItems": ExternalTimeBlocks.maximumBlocksPerSource,
+                            "items": [
+                                "type": "object",
+                                "properties": timeBlockProperties,
+                                "required": ["kind"],
+                                "additionalProperties": false
+                            ]
+                        ]
+                    ],
+                    "required": ["source", "blocks"],
+                    "additionalProperties": false
+                ],
+                "annotations": ["readOnlyHint": false, "destructiveHint": true, "idempotentHint": true, "openWorldHint": false]
+            ],
+            [
+                "name": "focus_add_time_block",
+                "title": "Add a time block",
+                "description": "Add one time block for a source, e.g. {source:'manual', kind:'away', duration_minutes:45}. Replaces a block with the same id. Takes effect within seconds, without confirmation.",
+                "inputSchema": [
+                    "type": "object",
+                    "properties": timeBlockProperties.merging(["source": sourceSchema]) { a, _ in a },
+                    "required": ["source", "kind"],
+                    "additionalProperties": false
+                ],
+                "annotations": ["readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": false]
+            ],
+            [
+                "name": "focus_list_time_blocks",
+                "title": "List time blocks",
+                "description": "The time blocks sources have sent that have not yet ended, per source, with their titles and details.",
+                "inputSchema": [
+                    "type": "object",
+                    "properties": ["source": sourceSchema],
+                    "additionalProperties": false
+                ],
+                "annotations": ["readOnlyHint": true, "openWorldHint": false]
+            ],
+            [
+                "name": "focus_clear_time_blocks",
+                "title": "Clear time blocks",
+                "description": "Remove every time block from one source, or from every source when source is omitted.",
+                "inputSchema": [
+                    "type": "object",
+                    "properties": ["source": sourceSchema],
+                    "additionalProperties": false
+                ],
+                "annotations": ["readOnlyHint": false, "destructiveHint": true, "idempotentHint": true, "openWorldHint": false]
             ]
         ]
     }
@@ -287,6 +377,26 @@ public final class MCPServer {
                         ? "Not opened (dry run)."
                         : "Focus Sentinel is showing a confirmation sheet. Nothing is added until the person presses Add."
                 ))
+            case "focus_set_time_blocks":
+                let source = try TimeBlockStore.source(arguments["source"])
+                guard let raw = arguments["blocks"] as? [Any] else { throw BridgeError("blocks must be an array") }
+                let at = now()
+                let blocks = try raw.map { item -> TimeBlock in
+                    guard let object = item as? [String: Any] else { throw BridgeError("each block must be an object") }
+                    return try TimeBlockStore.block(from: object, now: at)
+                }
+                return try text(TimeBlockReceipt(timeBlocks.set(source: source, blocks: blocks, now: at)))
+            case "focus_add_time_block":
+                let source = try TimeBlockStore.source(arguments["source"])
+                let at = now()
+                let block = try TimeBlockStore.block(from: arguments, now: at)
+                return try text(TimeBlockReceipt(timeBlocks.add(source: source, block: block, now: at)))
+            case "focus_list_time_blocks":
+                let source = try arguments["source"].map(TimeBlockStore.source)
+                return try text(timeBlocks.list(source: source, now: now()))
+            case "focus_clear_time_blocks":
+                let source = try arguments["source"].map(TimeBlockStore.source)
+                return try text(ClearReceipt(cleared: timeBlocks.clear(source: source)))
             default:
                 throw BridgeError("unknown tool: \(name)")
             }
@@ -299,6 +409,21 @@ public final class MCPServer {
 
     struct ExportReceipt: Encodable { let path: String; let bytes: Int; let priorities: Int; let sessions: Int }
     struct ProposalReceipt: Encodable { let url: String; let opened: Bool; let note: String }
+    struct ClearReceipt: Encodable { let cleared: [String] }
+    struct TimeBlockReceipt: Encodable {
+        let source: String
+        let blocks: Int
+        let holdingTheQuestion: Int
+        let note: String
+
+        init(_ file: TimeBlockFile) {
+            source = file.source
+            blocks = file.blocks.count
+            holdingTheQuestion = file.blocks.filter(\.kind.holdsTheQuestion).count
+            note = "Focus Sentinel reads these within seconds. Busy, away and tentative time keeps it quiet and blocks focus sessions across it."
+        }
+    }
+
 
     private func text(_ value: some Encodable) throws -> [String: Any] {
         let data = try Summaries.encoder().encode(value)

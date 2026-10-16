@@ -186,11 +186,15 @@ struct HandoffTests {
 
 @MainActor
 struct MCPServerTests {
-    private func server(opened: @escaping (URL) -> Void = { _ in }) -> MCPServer {
+    private func server(
+        timeBlocks: URL = FileManager.default.temporaryDirectory.appending(path: "focus-bridge-unused-\(UUID().uuidString)"),
+        opened: @escaping (URL) -> Void = { _ in }
+    ) -> MCPServer {
         MCPServer(
             read: { throw BridgeError("no store in this test") },
             now: { Date(timeIntervalSince1970: 0) },
-            openURL: opened
+            openURL: opened,
+            timeBlocks: TimeBlockStore(directory: timeBlocks)
         )
     }
 
@@ -212,11 +216,12 @@ struct MCPServerTests {
         #expect(server().handle(#"{"jsonrpc":"2.0","method":"notifications/initialized"}"#) == nil)
     }
 
-    @Test func listsSixTools() throws {
+    @Test func listsTenTools() throws {
         let reply = try object(server().handle(#"{"jsonrpc":"2.0","id":"a","method":"tools/list"}"#))
         let tools = try #require((reply["result"] as? [String: Any])?["tools"] as? [[String: Any]])
         #expect(tools.compactMap { $0["name"] as? String }
-            == ["focus_status", "focus_sessions", "focus_export", "focus_propose_priority", "focus_set_priorities", "focus_add_context"])
+            == ["focus_status", "focus_sessions", "focus_export", "focus_propose_priority", "focus_set_priorities", "focus_add_context",
+                "focus_set_time_blocks", "focus_add_time_block", "focus_list_time_blocks", "focus_clear_time_blocks"])
         #expect(reply["id"] as? String == "a")
     }
 
@@ -266,5 +271,110 @@ struct MCPServerTests {
     @Test func unknownMethodsAreJSONRPCErrors() throws {
         let reply = try object(server().handle(#"{"jsonrpc":"2.0","id":4,"method":"resources/list"}"#))
         #expect((reply["error"] as? [String: Any])?["code"] as? Int == -32601)
+    }
+}
+
+@MainActor
+struct TimeBlockTests {
+    private static let now = Date(timeIntervalSince1970: 1_800_000_000)
+
+    private func directory() -> URL {
+        FileManager.default.temporaryDirectory.appending(path: "focus-time-blocks-\(UUID().uuidString)", directoryHint: .isDirectory)
+    }
+
+    private func server(_ directory: URL) -> MCPServer {
+        MCPServer(read: { throw BridgeError("no store") }, now: { Self.now }, openURL: { _ in }, timeBlocks: TimeBlockStore(directory: directory))
+    }
+
+    private func call(_ server: MCPServer, _ name: String, _ arguments: [String: Any]) throws -> (isError: Bool, text: String) {
+        let request: [String: Any] = ["jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": ["name": name, "arguments": arguments]]
+        let line = String(decoding: try JSONSerialization.data(withJSONObject: request), as: UTF8.self)
+        let data = try #require(server.handle(line)?.data(using: .utf8))
+        let reply = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let result = try #require(reply["result"] as? [String: Any])
+        let text = try #require((result["content"] as? [[String: Any]])?.first?["text"] as? String)
+        return (result["isError"] as? Bool ?? true, text)
+    }
+
+    @Test func aBlockOfJustKindAndDurationReachesTheAppsReader() throws {
+        let dir = directory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let reply = try call(server(dir), "focus_add_time_block", ["source": "manual", "kind": "away", "duration_minutes": 45])
+        #expect(!reply.isError, "\(reply.text)")
+
+        let url = ExternalTimeBlocks.fileURL(for: "manual", in: dir)
+        let data = try Data(contentsOf: url)
+        let window = DateInterval(start: Self.now, duration: 3_600)
+        #expect(ExternalTimeBlocks.busyBlocks(from: data, in: window)
+            == [CalendarBusyBlock(start: Self.now, end: Self.now.addingTimeInterval(45 * 60))])
+        let permissions = try FileManager.default.attributesOfItem(atPath: url.path)[.posixPermissions] as? Int
+        #expect(permissions == 0o600)
+    }
+
+    @Test func settingReplacesTheSourcesSetAndDropsWhatHasEnded() throws {
+        let dir = directory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let server = server(dir)
+        let iso = { (offset: TimeInterval) in ISO8601DateFormatter().string(from: Self.now.addingTimeInterval(offset)) }
+        _ = try call(server, "focus_set_time_blocks", ["source": "outlook", "blocks": [
+            ["kind": "busy", "start": iso(600), "end": iso(1_800), "title": "1:1", "id": "a"]
+        ]])
+        let reply = try call(server, "focus_set_time_blocks", ["source": "outlook", "blocks": [
+            ["kind": "busy", "start": iso(-3_600), "end": iso(-1_800)],
+            ["kind": "tentative", "start": iso(3_600), "duration_minutes": 30, "detail": "Room 4"],
+            ["kind": "focus", "start": iso(7_200), "duration_minutes": 60]
+        ]])
+        #expect(!reply.isError, "\(reply.text)")
+        let files = try TimeBlockStore(directory: dir).list(now: Self.now)
+        #expect(files.map(\.source) == ["outlook"])
+        #expect(files.first?.blocks.map(\.kind) == [.tentative, .focus])
+        #expect(files.first?.blocks.first?.detail == "Room 4")
+    }
+
+    @Test func addingWithAnExistingIDReplacesIt() throws {
+        let dir = directory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let server = server(dir)
+        _ = try call(server, "focus_add_time_block", ["source": "rota", "kind": "busy", "duration_minutes": 30, "id": "x"])
+        _ = try call(server, "focus_add_time_block", ["source": "rota", "kind": "away", "duration_minutes": 10, "id": "x"])
+        _ = try call(server, "focus_add_time_block", ["source": "rota", "kind": "busy", "duration_minutes": 5])
+        let blocks = try TimeBlockStore(directory: dir).list(source: "rota", now: Self.now).first?.blocks ?? []
+        let kinds: [TimeBlockKind] = blocks.map(\.kind)
+        #expect(kinds == [.busy, .away])
+    }
+
+    @Test(arguments: [
+        ["source": "../etc", "kind": "busy", "duration_minutes": 5],
+        ["source": "ok", "kind": "meeting", "duration_minutes": 5],
+        ["source": "ok", "kind": "busy"],
+        ["source": "ok", "kind": "busy", "duration_minutes": 5, "end": "2030-01-01T00:00:00Z"],
+        ["source": "ok", "kind": "busy", "duration_minutes": -5],
+        ["source": "ok", "kind": "busy", "start": "next tuesday", "duration_minutes": 5],
+        ["source": "ok", "kind": "busy", "duration_minutes": 60 * 24 * 40]
+    ] as [[String: any Sendable]])
+    func badBlocksAreToolErrorsAndWriteNothing(_ arguments: [String: any Sendable]) throws {
+        let dir = directory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let reply = try call(server(dir), "focus_add_time_block", arguments)
+        #expect(reply.isError)
+        #expect(!FileManager.default.fileExists(atPath: dir.path))
+    }
+
+    @Test func clearingOneSourceLeavesTheOthers() throws {
+        let dir = directory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let server = server(dir)
+        _ = try call(server, "focus_add_time_block", ["source": "a", "kind": "busy", "duration_minutes": 5])
+        _ = try call(server, "focus_add_time_block", ["source": "b", "kind": "busy", "duration_minutes": 5])
+        let cleared = try call(server, "focus_clear_time_blocks", ["source": "a"])
+        #expect(cleared.text.contains("\"a\""))
+        #expect(try TimeBlockStore(directory: dir).list(now: Self.now).map(\.source) == ["b"])
+        _ = try call(server, "focus_clear_time_blocks", [:])
+        #expect(try TimeBlockStore(directory: dir).list(now: Self.now).isEmpty)
+    }
+
+    @Test func theDefaultDirectorySitsBesideTheStore() {
+        #expect(TimeBlockStore.defaultDirectory(environment: ["FOCUS_STORE": "/tmp/s/FocusSentinel.store"]).path == "/tmp/s/TimeBlocks")
+        #expect(TimeBlockStore.defaultDirectory(environment: ["FOCUS_TIME_BLOCKS": "/tmp/tb"]).path == "/tmp/tb")
     }
 }

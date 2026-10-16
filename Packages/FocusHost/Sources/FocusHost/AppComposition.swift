@@ -588,6 +588,15 @@ public final class AppComposition {
             self.refreshCockpit()
         }
         applyStoredGrantOptIns()
+
+        // **Time from outside sources** (focus-ext): the files `focus-bridge` writes beside the
+        // person's own store. Read only for that store and never in a self-check, so a lane
+        // never sees the person's real time blocks; tests hand the host a directory of their own.
+        if self.storeKind == .applicationSupport
+            && !CommandLine.arguments.contains(where: { $0.hasPrefix("--focus-self-check") }) {
+            externalTimeDirectory = ExternalTimeBlocks.directory(besideStore: FocusStore.applicationSupportURL)
+            calendarHost.useExternal(externalTimeDirectory.map(ExternalTimeBlockReader.init(directory:)))
+        }
     }
 
     /// Seed the sensitive-application list and read both lists back.
@@ -1578,6 +1587,10 @@ public final class AppComposition {
         prepareForStoreDeletion()
         do {
             _ = try FocusStore.deleteEverything(modelContainer, kind: storeKind)
+            // Providers' files carry their titles; deleting everything takes them too.
+            if let externalTimeDirectory, FileManager.default.fileExists(atPath: externalTimeDirectory.path) {
+                try FileManager.default.removeItem(at: externalTimeDirectory)
+            }
         } catch {
             logger.error(
                 "delete everything could not rebuild the store: \(error.localizedDescription, privacy: .public)"
@@ -2083,6 +2096,9 @@ public final class AppComposition {
 
     /// **The person's calendar, read only as busy time** (focus-cal). See `CalendarHost`.
     let calendarHost = CalendarHost()
+
+    /// Where outside sources' time blocks are read from (focus-ext), or `nil` in a lane.
+    private(set) var externalTimeDirectory: URL?
 
     /// Give the calendar host a reader when, and only when, the person switched the calendar on
     /// and macOS said yes; take it away otherwise. Neither half opens an event store: the gate
