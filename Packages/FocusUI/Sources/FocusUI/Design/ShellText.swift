@@ -794,6 +794,7 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     // close affordance's label, the countdown's spoken form and the one line that tells somebody
     // the top rung wants an answer.
     case nudgeDismiss = "shell.nudge.dismiss"
+    case nudgeContinuePriority = "shell.nudge.continuePriority"
     case nudgeSnoozeCountdown = "shell.nudge.snoozeCountdown"
     case nudgeSnoozeCustom = "shell.nudge.snoozeCustom"
     case nudgeSnoozeCustomMinutes = "shell.nudge.snoozeCustomMinutes"
@@ -1010,6 +1011,7 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     case nudgeActionPauseHelp = "shell.nudge.action.pause.help"
     case nudgeActionReturnToTaskHelp = "shell.nudge.action.returnToTask.help"
     case nudgeActionThisIsRelevantHelp = "shell.nudge.action.thisIsRelevant.help"
+    case nudgeContinuePriorityHelp = "shell.nudge.action.continuePriority.help"
     case nudgeAnswerNoHelp = "shell.nudge.answer.no.help"
     case nudgeAnswerNotNowHelp = "shell.nudge.answer.notNow.help"
     case nudgeAnswerYesAddItHelp = "shell.nudge.answer.yesAddIt.help"

@@ -6578,6 +6578,18 @@
         }
       }
     },
+    "shell.nudge.continuePriority" : {
+      "comment" : "Visible accusation-panel action that closes the reminder while keeping the current priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continue with this priority"
+          }
+        }
+      }
+    },
     "shell.nudge.snoozeCustom" : {
       "comment" : "Custom quiet duration control, requested by the owner on 9 September 2026.",
       "localizations" : {
@@ -8048,6 +8060,18 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Opens quick capture to set a different priority."
+          }
+        }
+      }
+    },
+    "shell.nudge.action.continuePriority.help" : {
+      "comment" : "Tooltip on the accusation-panel action that closes the reminder without changing the current priority.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Closes this reminder and keeps your current priority."
           }
         }
       }

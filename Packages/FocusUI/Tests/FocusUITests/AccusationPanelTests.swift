@@ -85,27 +85,41 @@ enum AccusationFixture {
 struct AccusationPanelTests {
     // MARK: - The economy is complete, and it is complete by construction
 
-    /// Every action except the dismissal has a place in the panel, exactly once.
+    /// Every action has a place in the panel, exactly once.
     ///
-    /// `dismiss` is the exception on purpose: it is Escape and the close affordance, and a
-    /// button labelled "ignore me" in a row of six would be a panel arguing with itself. The
-    /// assertion is a **partition** rather than a subset, so an action added to
-    /// `CorrectionAction` in a later epic fails this test rather than quietly never being shown.
-    @Test("the display order is every correction action except the dismissal, each once")
+    /// The dismissal is now a named action alongside Escape and the close affordance, so a
+    /// person can choose to continue without guessing what closing the panel does. The
+    /// assertion is a **partition** rather than a subset, so a new action cannot go unshown.
+    @Test("the display order is every correction action, each once")
     func displayOrderIsAPartition() {
         let ordered = AccusationPresentation.actionOrder
 
         #expect(Set(ordered).count == ordered.count)
-        #expect(Set(ordered) == Set(CorrectionAction.allCases).subtracting([.dismiss]))
-        #expect(!ordered.contains(.dismiss))
+        #expect(Set(ordered) == Set(CorrectionAction.allCases))
+        #expect(ordered.contains(.dismiss))
     }
 
-    @Test("every offered action carries a deck line, and only the dismissal does not")
+    @Test("every correction action has visible copy")
     func everyOfferedActionHasCopy() {
         for action in AccusationPresentation.actionOrder {
-            #expect(action.copyKey != nil)
+            if action == .dismiss {
+                #expect(action.copyKey == nil)
+            } else {
+                #expect(action.copyKey != nil)
+            }
         }
-        #expect(CorrectionAction.dismiss.copyKey == nil)
+    }
+
+    @Test(
+        "the continue action names what it keeps",
+        .enabled(if: LocalizationLane.catalogsAreCompiled)
+    )
+    func continueActionCopy() {
+        #expect(ShellStrings.string(.nudgeContinuePriority) == "Continue with this priority")
+        #expect(
+            ShellStrings.string(.nudgeContinuePriorityHelp)
+                == "Closes this reminder and keeps your current priority."
+        )
     }
 
     @Test("with a subject and a return anchor the whole economy is on offer")
@@ -118,6 +132,7 @@ struct AccusationPanelTests {
         #expect(offered.contains(.changePriority))
         #expect(offered.contains(.pause))
         #expect(offered.contains(.returnToTask))
+        #expect(offered.contains(.dismiss))
     }
 
     // MARK: - What is withdrawn, and why
@@ -127,6 +142,7 @@ struct AccusationPanelTests {
     func returnWithdrawnWithNoAnchor() {
         let offered = AccusationFixture.noReturnTarget.offeredActions
         #expect(!offered.contains(.returnToTask))
+        #expect(offered.contains(.dismiss))
         // …and everything else is still there. Withdrawing one action must not withdraw the
         // economy: a panel with nothing on it is the anti-pattern, not the fix.
         #expect(offered.contains(.thisIsRelevant))
@@ -170,7 +186,7 @@ struct AccusationPanelTests {
         )
         let offered = presentation.offeredActions
 
-        #expect(offered == [.returnToTask, .changePriority])
+        #expect(offered == [.returnToTask, .dismiss, .changePriority])
         #expect(!offered.isEmpty, "an accusation nobody can answer is the anti-pattern")
     }
 
@@ -196,6 +212,7 @@ struct AccusationPanelTests {
     func primaryActionIsTheWayBack() {
         #expect(AccusationFixture.rungTwo().primaryAction == .returnToTask)
         #expect(AccusationFixture.mixed.primaryAction == .returnToTask)
+        #expect(AccusationFixture.noReturnTarget.primaryAction == .dismiss)
     }
 
     // MARK: - Owner-selected snooze shortcuts

@@ -33,7 +33,7 @@ import Testing
 /// The expected offer is read off `NudgeHost.openRungPresentation` — the value the surfaces are
 /// actually drawn from — rather than recomputed here, because a test that derived its own list
 /// would agree with itself instead of with the app.
-@Suite("Every correction writes what it promises, with and without a session", .serialized)
+@Suite("Every accusation action does what it promises, with and without a session", .serialized)
 @MainActor
 struct CorrectionTotalityTests {
     static let subject = NudgeHostFixture.decoy
@@ -96,10 +96,10 @@ struct CorrectionTotalityTests {
             // "back to work" button with nowhere to go is a button that lies (R-88).
             Promise(isOffered: false, outcome: .returned, write: .nothing)
         case .dismiss:
-            // Escape and the close affordance. Deliberately absent from `actionOrder` — a row of
-            // buttons with "ignore me" in it would be a panel arguing with itself — and it
-            // writes nothing, which is allowed (D-07).
-            Promise(isOffered: false, outcome: .dismissed, write: .nothing)
+            // The named "Continue with this priority" action is also available when Escape or
+            // the close affordance is not an obvious choice. It closes the reminder and writes
+            // no priority, rule or session changes (D-07).
+            Promise(isOffered: true, outcome: .dismissed, write: .nothing)
         }
     }
 
@@ -231,6 +231,12 @@ struct CorrectionTotalityTests {
         // The two that did are the two this table now names by their real destination, and a
         // command sent from here with the window shut would be a command stored for ever.
         #expect(sink.commands.isEmpty, "\(action) sent a command down a channel a window owns")
+        if action == .dismiss {
+            #expect(
+                root.priorityHost.state.priority?.id == priorityID,
+                "continuing with this priority changed or cleared it"
+            )
+        }
 
         // **And what it recorded**, which is the half that was false: the refused actions used to
         // complete their row as `.corrected` while writing nothing at all.

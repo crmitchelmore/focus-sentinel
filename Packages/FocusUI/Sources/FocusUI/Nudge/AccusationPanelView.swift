@@ -87,11 +87,11 @@ public struct AccusationPresentation: Sendable, Equatable {
     /// Getting back to work first, because that is what the person came here to do; the two
     /// corrections next, because telling the app it is wrong must be as easy as obeying it;
     /// then the two ways of buying quiet, and finally the one that changes the commitment
-    /// itself. `dismiss` is deliberately absent from this list: Escape and the close affordance
-    /// are the dismissal, and a row of buttons with "ignore me" in it would be a panel arguing
-    /// with itself.
+    /// itself. Dismissal is also offered as an explicit "Continue with this priority" action:
+    /// Escape and the close affordance are still available, but neither makes the outcome clear
+    /// to someone deciding whether to keep working.
     public static let actionOrder: [CorrectionAction] = [
-        .returnToTask, .thisIsRelevant, .notThisTime, .snooze, .pause, .changePriority
+        .returnToTask, .dismiss, .thisIsRelevant, .notThisTime, .snooze, .pause, .changePriority
     ]
 
     /// The actions this panel actually shows, in `actionOrder`.
@@ -110,7 +110,7 @@ public struct AccusationPresentation: Sendable, Equatable {
         }
     }
 
-    /// The one action drawn as the default.
+    /// The one action drawn prominently.
     ///
     /// Returning to work when there is somewhere to return to; otherwise the correction, because
     /// "this is relevant" is the click that makes the app better and it should never be the
@@ -141,8 +141,7 @@ public struct AccusationPresentation: Sendable, Equatable {
 
 /// The copy key each action is titled from.
 extension CorrectionAction {
-    /// The deck line that names this action, or `nil` for the one that is a gesture rather than
-    /// a button.
+    /// The deck line that names this action, or `nil` when its label is shell copy.
     public var copyKey: NudgeCopyKey? {
         switch self {
         case .thisIsRelevant: .accusationActionRelevant
@@ -548,7 +547,7 @@ public struct AccusationPanelView: DecisionSurfaceContent {
         case .changePriority: .nudgeActionChangePriorityHelp
         case .pause: .nudgeActionPauseHelp
         case .returnToTask: .nudgeActionReturnToTaskHelp
-        case .dismiss: .nudgeDismissHelp
+        case .dismiss: .nudgeContinuePriorityHelp
         }
     }
 
@@ -714,7 +713,7 @@ public struct AccusationPanelView: DecisionSurfaceContent {
                 role: .callout
             )
         } else {
-            ShellText(.nudgeDismiss, role: .callout)
+            ShellText(.nudgeContinuePriority, role: .callout)
         }
     }
 }
