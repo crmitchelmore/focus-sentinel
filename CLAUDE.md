@@ -98,7 +98,27 @@ snapshot baselines, running the FocusUITests lane beside another agent's builds,
 type role or a palette hue. `AGENTS.md` and `CLAUDE.md` are independent files; mirror anything
 substantive across both.
 
-### 2026-10-16 — Liquid Glass on the summoned surfaces
+### 2026-10-16 — Liquid Glass, rethought for legibility (supersedes the entry below it)
+
+- **The strategy is `Design/LiquidGlass.md`; read it before touching a surface.** Three layers:
+  the ground is solid, content is opaque, and only function (navigation and floating chrome) is
+  glass. The first pass put glass on buttons and cards over a bloom ground, and teal text on
+  teal-tinted glass was illegible. Apple's guidance is glass on the navigation layer only.
+- **Ground and pane invert by scheme.** Bench is the lighter role in Light and the darker one in
+  Dark, so `DesignTokens.groundRole(for:)` (Light Inlay, Dark Bench) and `paneRole(for:)`
+  (Light Bench, Dark Inlay) choose them. Panes always rise off the ground. `DesignTokenTests`
+  pins this and pins Slate on pane and ground, and Bench on Spruce, at ≥ 4.5:1.
+- **Glass appears once per window: the cockpit tab track** (`GlassEffectContainer`, `.regular`,
+  untinted). The selected thumb is an opaque pane capsule with a Slate label, not Spruce on glass.
+- **Buttons are solid.** `CompanionButtonStyle` uses a Spruce fill with a Bench label, or a
+  secondary Slate wash. This is also safe on the uninvited nudges.
+- **In content, `contentInset(in:traits:)` replaces `shellSurface`** (chips, badges, path box,
+  refinement strip). `shellSurface(.material)` now draws glass only for the summoned nudge panels.
+  `glassBackdrop` is gone; screens use `contentGround(_:)`.
+- **Every snapshot baseline moved again.** Re-record through the UI lane only with Chris's
+  confirmation.
+
+### 2026-10-16 — Liquid Glass on the summoned surfaces (superseded: glass buttons and glass cards were withdrawn)
 
 - **Glass is a token decision, not a call-site one.** `DesignTokens.drawsGlass(for:)`
   (`Design/LiquidGlass.swift`) is true only where `material(for:provenance: .summoned)` is

@@ -243,7 +243,7 @@ public struct InterventionSettingsView: View {
         }
         // The one dialog margin every pane and sheet draws (focus-udn9).
         .dialogInset()
-        .glassBackdrop(traits)
+        .contentGround(traits)
         .buttonStyle(CompanionButtonStyle())
         .frame(maxWidth: .infinity, alignment: .leading)
     }

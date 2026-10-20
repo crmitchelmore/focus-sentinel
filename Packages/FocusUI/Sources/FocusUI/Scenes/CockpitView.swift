@@ -231,7 +231,7 @@ public struct CockpitView: View {
         .background(absentCommitmentReceipts)
         .padding(sectionSpacing)
         .frame(minWidth: 420, minHeight: 260, alignment: .topLeading)
-        .glassBackdrop(traits)
+        .contentGround(traits)
         .buttonStyle(CompanionButtonStyle())
         .background {
             // No earlier priorities deliberately draws no section, so its EmptyView cannot
@@ -586,7 +586,9 @@ public struct CockpitView: View {
     /// Now's; repeating them here is what made the old tabs hard to tell apart.
     @ViewBuilder
     private var historyDestination: some View {
-        RecentPrioritiesView(
+        // The list sits on a card like Now's sections; an empty history draws nothing, so it
+        // gets no empty card either.
+        let recent = RecentPrioritiesView(
             rows: state.earlierPriorities,
             activate: wiring.activate.map { activate in
                 { id in
@@ -598,6 +600,11 @@ public struct CockpitView: View {
             // **What is in the rows, not only how many** (focus-7ow).
             .shellRendered(.recentCount, state.earlierPriorities.count)
             .shellRendered(.recentDigest, ShellValueDigest.describe(state.earlierPriorities))
+        if state.earlierPriorities.isEmpty {
+            recent
+        } else {
+            well { recent }
+        }
         openHistoryButton
     }
 
@@ -1204,7 +1211,12 @@ public struct CockpitView: View {
 
     // MARK: - The destinations (focus-1rj7, focus-g9iw)
 
-    /// Two plain buttons under a hairline, the open one in Spruce with a rule beneath it.
+    /// **A segmented switcher on a glass track** — the cockpit's one custom glass element,
+    /// because it is the window's navigation (`Design/LiquidGlass.md`). The track is
+    /// regular, untinted glass; the open destination is an opaque pane-coloured thumb with a soft
+    /// lift and primary ink, which slides between the tabs. No word ever sits on tinted glass.
+    /// With glass off the track is the opaque ground with a hairline, and under Reduce Motion the
+    /// thumb moves without animating.
     ///
     /// Drawn by hand rather than as a `Picker` or a `TabView`, for two measured reasons: a
     /// segmented `Picker` is AppKit-backed and rasterises under `ImageRenderer` as the yellow
@@ -1212,30 +1224,27 @@ public struct CockpitView: View {
     /// and a macOS `TabView` builds only the selected pane, which is exactly the shape that
     /// loses receipts (see `ShellRenderedField.settingsTab`). Plain buttons and a switch keep
     /// the whole column one SwiftUI tree the lane can photograph and the audit can read.
-    /// **A glass segmented pill** (the Liquid Glass pass). The open destination wears a Spruce-
-    /// tinted glass lozenge that flows between the two tabs; with glass off it is an opaque
-    /// Bench lozenge with a Spruce edge, and under Reduce Motion it moves without animating.
     private var tabBar: some View {
         let track = Capsule(style: .continuous)
+        let glass = DesignTokens.drawsGlass(for: traits)
+        let firm = DesignTokens.emphasis(for: traits).promotesSecondaryText
         return GlassEffectContainer(spacing: rowSpacing) {
-            HStack(spacing: rowSpacing / 2) {
+            HStack(spacing: rowSpacing / 4) {
                 ForEach(CockpitTab.allCases) { candidate in
                     tabButton(candidate)
                 }
             }
-            .padding(rowSpacing / 3)
-            .background(
-                DesignTokens.Palette.role(.bench, for: traits)
-                    .opacity(DesignTokens.drawsGlass(for: traits) ? 0.35 : 1),
-                in: track
-            )
-            // Borderless over glass — the track's fill is the edge; a hairline only where glass is
-            // off, and a firm one under Increase Contrast.
+            .padding(rowSpacing / 4)
+            .background {
+                if glass {
+                    Color.clear.glassEffect(.regular, in: track)
+                } else {
+                    track.fill(DesignTokens.Palette.role(DesignTokens.groundRole(for: traits), for: traits))
+                }
+            }
             .overlay(track.strokeBorder(
-                DesignTokens.Palette.role(.mist, for: traits)
-                    .opacity(DesignTokens.emphasis(for: traits).promotesSecondaryText
-                        ? 1 : (DesignTokens.drawsGlass(for: traits) ? 0 : 0.22)),
-                lineWidth: DesignTokens.emphasis(for: traits).promotesSecondaryText ? 2 : 1
+                DesignTokens.Palette.role(.mist, for: traits).opacity(firm ? 1 : (glass ? 0 : 0.3)),
+                lineWidth: firm ? 2 : 1
             ))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -1246,19 +1255,20 @@ public struct CockpitView: View {
     private func tabLozenge(isOpen: Bool) -> some View {
         let lozenge = Capsule(style: .continuous)
         if isOpen {
-            if DesignTokens.drawsGlass(for: traits) {
-                Color.clear
-                    .glassEffect(
-                        .regular.tint(DesignTokens.Palette.role(.spruce, for: traits).opacity(0.22)).interactive(),
-                        in: lozenge
-                    )
-                    .glassEffectID("cockpit.tab.lozenge", in: tabLozengeSpace)
-            } else {
-                lozenge
-                    .fill(DesignTokens.Palette.role(.inlay, for: traits))
-                    .overlay(lozenge.strokeBorder(DesignTokens.Palette.role(.spruce, for: traits), lineWidth: 1.5))
-                    .matchedGeometryEffect(id: "cockpit.tab.lozenge", in: tabLozengeSpace)
-            }
+            lozenge
+                .fill(DesignTokens.Palette.role(DesignTokens.paneRole(for: traits), for: traits))
+                .overlay(lozenge.strokeBorder(
+                    DesignTokens.Palette.role(DesignTokens.emphasis(for: traits).promotesSecondaryText
+                        ? .slate : .mist, for: traits)
+                        .opacity(DesignTokens.emphasis(for: traits).promotesSecondaryText ? 1 : 0.18),
+                    lineWidth: DesignTokens.emphasis(for: traits).promotesSecondaryText ? 2 : 1
+                ))
+                .shadow(
+                    color: DesignTokens.Palette.role(.slate, for: traits).opacity(0.14),
+                    radius: 4,
+                    y: 1
+                )
+                .matchedGeometryEffect(id: "cockpit.tab.lozenge", in: tabLozengeSpace)
         }
     }
 
@@ -1276,7 +1286,7 @@ public struct CockpitView: View {
             ShellText(candidate.titleKey, role: .headline)
                 .foregroundStyle(
                     isOpen
-                        ? DesignTokens.Palette.role(.spruce, for: traits)
+                        ? DesignTokens.Palette.role(.slate, for: traits)
                         : DesignTokens.supportingTextColor(for: traits)
                 )
                 .padding(.horizontal, sectionSpacing * 0.8)
@@ -1353,13 +1363,8 @@ public struct CockpitView: View {
         }
     }
 
-    /// **A well: one zone of the column on the quiet inset ground** (focus-6uya).
-    ///
-    /// Inlay, never a material and never a shadow: the cockpit is summoned, and a raised card
-    /// inside it would compete with the hero for the eye. The border appears only under Increase Contrast, where a fill two
-    /// steps from the window ground is not a boundary a person can rely on.
-
-    /// Working groups share the same furniture as settings and the popover.
+    /// **A well: one zone of the column on its own card** (focus-6uya), the same opaque pane
+    /// Settings uses (`companionSurface`), so working groups share one piece of furniture.
     private func well<Content: View>(
         spacing: CGFloat? = nil,
         washed: Bool = true,

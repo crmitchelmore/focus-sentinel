@@ -567,7 +567,7 @@ public struct PrivacySettingsView: View {
         }
         // The one dialog margin every pane and sheet draws (focus-udn9).
         .dialogInset()
-        .glassBackdrop(traits)
+        .contentGround(traits)
         .buttonStyle(CompanionButtonStyle())
         .frame(maxWidth: .infinity, alignment: .leading)
         // **What this pane drew, reported by this pane** (focus-7ow).
@@ -658,8 +658,7 @@ public struct PrivacySettingsView: View {
             // The path is quoted material, so it is drawn on its own surface — which is also
             // where Reduce Transparency and Increase Contrast become visible in this pane:
             // the fill goes opaque, and the border thickens.
-            .shellSurface(
-                DesignTokens.material(for: traits, provenance: .summoned),
+            .contentInset(
                 in: RoundedRectangle(cornerRadius: spacing / 2, style: .continuous),
                 traits: traits
             )

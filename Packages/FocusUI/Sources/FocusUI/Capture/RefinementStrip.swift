@@ -66,8 +66,7 @@ public struct RefinementStrip: View {
                 }
                 .padding(spacing)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .shellSurface(
-                    DesignTokens.material(for: traits, provenance: .summoned),
+                .contentInset(
                     in: RoundedRectangle(cornerRadius: spacing / 2, style: .continuous),
                     traits: traits
                 )

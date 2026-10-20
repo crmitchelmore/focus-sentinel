@@ -157,7 +157,8 @@ private struct CockpitHost: View {
             cockpit
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .background(DesignTokens.Palette.windowBackground(for: traits))
+        // The cockpit's own ground, so the column and the space below it are one solid field.
+        .background(DesignTokens.Palette.role(DesignTokens.groundRole(for: traits), for: traits))
     }
 
     private var cockpit: some View {

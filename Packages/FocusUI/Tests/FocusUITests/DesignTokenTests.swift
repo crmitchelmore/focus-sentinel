@@ -22,13 +22,44 @@ struct DesignTokenTests {
         #expect(DesignTokens.liquidAnimation(for: .reduceMotion) == nil)
     }
 
-    @Test("content panes are soft and quiet: mostly Bench, a faint accent wash, a lift only in Light")
+    @Test("content panes are opaque and quiet: a faint accent wash, a lift in Light, a rim in Dark")
     func contentPanesStayQuiet() {
-        #expect(DesignTokens.softPaneOpacity > 0.5 && DesignTokens.softPaneOpacity < 1)
         #expect(DesignTokens.accentWashOpacity < 0.12)
+        #expect(DesignTokens.insetWashOpacity < DesignTokens.controlWashOpacity)
+        #expect(DesignTokens.controlWashOpacity < DesignTokens.controlHoverWashOpacity)
         #expect(DesignTokens.quietRuleOpacity < 0.25)
         #expect(DesignTokens.paneLiftOpacity(for: .light) > 0)
         #expect(DesignTokens.paneLiftOpacity(for: .dark) == 0)
+        #expect(DesignTokens.paneRimOpacity(for: .light) == 0)
+        #expect(DesignTokens.paneRimOpacity(for: .dark) > 0)
+    }
+
+    /// **A card rises off the ground in both schemes** (the legibility ruling). Bench is the
+    /// lighter role in Light and the darker in Dark, so a Bench card on an Inlay ground recessed
+    /// in Dark; the roles swap with the scheme.
+    @Test("a content pane is lighter than the ground in both schemes", arguments: [
+        AppearanceTraits.light, .dark,
+    ])
+    func panesRiseOffTheGround(traits: AppearanceTraits) {
+        let ground = DesignTokens.groundRole(for: traits).value(for: traits)
+        let pane = DesignTokens.paneRole(for: traits).value(for: traits)
+        #expect(DesignTokens.groundRole(for: traits) != DesignTokens.paneRole(for: traits))
+        #expect(pane.relativeLuminance > ground.relativeLuminance)
+    }
+
+    /// **Words on a control are legible** — the selected tab's ink on its thumb, a primary
+    /// button's Bench ink on Spruce, and a secondary button's Slate ink on a pane — at WCAG AA.
+    @Test("control labels keep 4.5:1 on their fills", arguments: [
+        AppearanceTraits.light, .dark,
+    ])
+    func controlLabelsAreLegible(traits: AppearanceTraits) {
+        typealias Role = DesignTokens.Palette.Role
+        let pane = DesignTokens.paneRole(for: traits).value(for: traits)
+        let ground = DesignTokens.groundRole(for: traits).value(for: traits)
+        let spruce = Role.spruce.value(for: traits)
+        #expect(Role.slate.value(for: traits).contrastRatio(against: pane) >= 4.5)
+        #expect(Role.slate.value(for: traits).contrastRatio(against: ground) >= 4.5)
+        #expect(Role.bench.value(for: traits).contrastRatio(against: spruce) >= 4.5)
     }
 
     // MARK: - Reduce Transparency

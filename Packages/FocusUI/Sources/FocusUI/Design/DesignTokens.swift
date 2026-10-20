@@ -796,8 +796,9 @@ extension View {
     ) -> some View {
         switch fill {
         case .material:
-            // Liquid Glass (macOS 26): the summoned surface's material, softer than the
-            // regular material it replaced. Still collapses to Bench under `.opaque`.
+            // Liquid Glass (macOS 26), regular and untinted: a whole floating panel the person
+            // summoned. Never content inside a window — chips, badges and fields use
+            // `contentInset` (Design/LiquidGlass.md). Collapses to Bench under `.opaque`.
             glassEffect(.regular, in: shape)
         case .opaque:
             background(DesignTokens.Palette.role(.bench, for: traits), in: shape)
