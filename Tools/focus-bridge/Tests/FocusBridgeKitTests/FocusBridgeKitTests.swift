@@ -203,8 +203,8 @@ struct MCPServerTests {
         return try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
     }
 
-    @Test func initializeNegotiatesAVersionAndNamesTheServer() throws {
-        let reply = try object(server().handle(
+    @Test func initializeNegotiatesAVersionAndNamesTheServer() async throws {
+        let reply = try await object(server().handle(
             #"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"t","version":"0"}}}"#
         ))
         let result = try #require(reply["result"] as? [String: Any])
@@ -212,64 +212,66 @@ struct MCPServerTests {
         #expect((result["serverInfo"] as? [String: Any])?["name"] as? String == "focus-sentinel")
     }
 
-    @Test func notificationsGetNoReply() {
-        #expect(server().handle(#"{"jsonrpc":"2.0","method":"notifications/initialized"}"#) == nil)
+    @Test func notificationsGetNoReply() async {
+        #expect(await server().handle(#"{"jsonrpc":"2.0","method":"notifications/initialized"}"#) == nil)
     }
 
-    @Test func listsTenTools() throws {
-        let reply = try object(server().handle(#"{"jsonrpc":"2.0","id":"a","method":"tools/list"}"#))
+    @Test func listsSeventeenTools() async throws {
+        let reply = try await object(server().handle(#"{"jsonrpc":"2.0","id":"a","method":"tools/list"}"#))
         let tools = try #require((reply["result"] as? [String: Any])?["tools"] as? [[String: Any]])
         #expect(tools.compactMap { $0["name"] as? String }
             == ["focus_status", "focus_sessions", "focus_export", "focus_propose_priority", "focus_set_priorities", "focus_add_context",
-                "focus_set_time_blocks", "focus_add_time_block", "focus_list_time_blocks", "focus_clear_time_blocks"])
+                "focus_set_time_blocks", "focus_add_time_block", "focus_list_time_blocks", "focus_clear_time_blocks",
+                "focus_list_tasks", "focus_create_task", "focus_complete_task", "focus_sync_tasks",
+                "focus_list_task_sources", "focus_add_task_source", "focus_remove_task_source"])
         #expect(reply["id"] as? String == "a")
     }
 
-    @Test func aStoreFailureIsAToolErrorNotAProtocolError() throws {
-        let reply = try object(server().handle(
+    @Test func aStoreFailureIsAToolErrorNotAProtocolError() async throws {
+        let reply = try await object(server().handle(
             #"{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"focus_status","arguments":{}}}"#
         ))
         let result = try #require(reply["result"] as? [String: Any])
         #expect(result["isError"] as? Bool == true)
     }
 
-    @Test func aDryRunProposalOpensNothing() throws {
+    @Test func aDryRunProposalOpensNothing() async throws {
         var opened: [URL] = []
-        let reply = try object(server { opened.append($0) }.handle(
+        let reply = try await object(server { opened.append($0) }.handle(
             ##"{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"focus_propose_priority","arguments":{"task":"#8 Review","dry_run":true}}}"##
         ))
         #expect((reply["result"] as? [String: Any])?["isError"] as? Bool == false)
         #expect(opened.isEmpty)
     }
 
-    @Test func settingPrioritiesOpensOneURLUnlessDry() throws {
+    @Test func settingPrioritiesOpensOneURLUnlessDry() async throws {
         var opened: [URL] = []
         let call = { (dry: Bool) in
             ##"{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"focus_set_priorities","arguments":{"priorities":[{"task":"#9 Boulanger","done_when":"Go/no-go","context":["keyword:boulanger"]},{"task":"#62 Fellowship"}],"dry_run":\##(dry)}}}"##
         }
-        let dry = try object(server { opened.append($0) }.handle(call(true)))
+        let dry = try await object(server { opened.append($0) }.handle(call(true)))
         #expect((dry["result"] as? [String: Any])?["isError"] as? Bool == false)
         #expect(opened.isEmpty)
-        let live = try object(server { opened.append($0) }.handle(call(false)))
+        let live = try await object(server { opened.append($0) }.handle(call(false)))
         #expect((live["result"] as? [String: Any])?["isError"] as? Bool == false)
         #expect(opened.map(\.host) == ["priorities"])
     }
 
-    @Test func addingContextWithoutAStoreOpensNothing() throws {
+    @Test func addingContextWithoutAStoreOpensNothing() async throws {
         var opened: [URL] = []
-        let dry = try object(server { opened.append($0) }.handle(
+        let dry = try await object(server { opened.append($0) }.handle(
             #"{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"focus_add_context","arguments":{"items":["keyword:sodexo"],"dry_run":true}}}"#
         ))
         #expect((dry["result"] as? [String: Any])?["isError"] as? Bool == false)
-        let live = try object(server { opened.append($0) }.handle(
+        let live = try await object(server { opened.append($0) }.handle(
             #"{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"focus_add_context","arguments":{"items":["keyword:sodexo"]}}}"#
         ))
         #expect((live["result"] as? [String: Any])?["isError"] as? Bool == true)
         #expect(opened.isEmpty)
     }
 
-    @Test func unknownMethodsAreJSONRPCErrors() throws {
-        let reply = try object(server().handle(#"{"jsonrpc":"2.0","id":4,"method":"resources/list"}"#))
+    @Test func unknownMethodsAreJSONRPCErrors() async throws {
+        let reply = try await object(server().handle(#"{"jsonrpc":"2.0","id":4,"method":"resources/list"}"#))
         #expect((reply["error"] as? [String: Any])?["code"] as? Int == -32601)
     }
 }
@@ -286,20 +288,20 @@ struct TimeBlockTests {
         MCPServer(read: { throw BridgeError("no store") }, now: { Self.now }, openURL: { _ in }, timeBlocks: TimeBlockStore(directory: directory))
     }
 
-    private func call(_ server: MCPServer, _ name: String, _ arguments: [String: Any]) throws -> (isError: Bool, text: String) {
+    private func call(_ server: MCPServer, _ name: String, _ arguments: [String: Any]) async throws -> (isError: Bool, text: String) {
         let request: [String: Any] = ["jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": ["name": name, "arguments": arguments]]
         let line = String(decoding: try JSONSerialization.data(withJSONObject: request), as: UTF8.self)
-        let data = try #require(server.handle(line)?.data(using: .utf8))
+        let data = try #require(await server.handle(line)?.data(using: .utf8))
         let reply = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
         let result = try #require(reply["result"] as? [String: Any])
         let text = try #require((result["content"] as? [[String: Any]])?.first?["text"] as? String)
         return (result["isError"] as? Bool ?? true, text)
     }
 
-    @Test func aBlockOfJustKindAndDurationReachesTheAppsReader() throws {
+    @Test func aBlockOfJustKindAndDurationReachesTheAppsReader() async throws {
         let dir = directory()
         defer { try? FileManager.default.removeItem(at: dir) }
-        let reply = try call(server(dir), "focus_add_time_block", ["source": "manual", "kind": "away", "duration_minutes": 45])
+        let reply = try await call(server(dir), "focus_add_time_block", ["source": "manual", "kind": "away", "duration_minutes": 45])
         #expect(!reply.isError, "\(reply.text)")
 
         let url = ExternalTimeBlocks.fileURL(for: "manual", in: dir)
@@ -311,15 +313,15 @@ struct TimeBlockTests {
         #expect(permissions == 0o600)
     }
 
-    @Test func settingReplacesTheSourcesSetAndDropsWhatHasEnded() throws {
+    @Test func settingReplacesTheSourcesSetAndDropsWhatHasEnded() async throws {
         let dir = directory()
         defer { try? FileManager.default.removeItem(at: dir) }
         let server = server(dir)
         let iso = { (offset: TimeInterval) in ISO8601DateFormatter().string(from: Self.now.addingTimeInterval(offset)) }
-        _ = try call(server, "focus_set_time_blocks", ["source": "outlook", "blocks": [
+        _ = try await call(server, "focus_set_time_blocks", ["source": "outlook", "blocks": [
             ["kind": "busy", "start": iso(600), "end": iso(1_800), "title": "1:1", "id": "a"]
         ]])
-        let reply = try call(server, "focus_set_time_blocks", ["source": "outlook", "blocks": [
+        let reply = try await call(server, "focus_set_time_blocks", ["source": "outlook", "blocks": [
             ["kind": "busy", "start": iso(-3_600), "end": iso(-1_800)],
             ["kind": "tentative", "start": iso(3_600), "duration_minutes": 30, "detail": "Room 4"],
             ["kind": "focus", "start": iso(7_200), "duration_minutes": 60]
@@ -331,13 +333,13 @@ struct TimeBlockTests {
         #expect(files.first?.blocks.first?.detail == "Room 4")
     }
 
-    @Test func addingWithAnExistingIDReplacesIt() throws {
+    @Test func addingWithAnExistingIDReplacesIt() async throws {
         let dir = directory()
         defer { try? FileManager.default.removeItem(at: dir) }
         let server = server(dir)
-        _ = try call(server, "focus_add_time_block", ["source": "rota", "kind": "busy", "duration_minutes": 30, "id": "x"])
-        _ = try call(server, "focus_add_time_block", ["source": "rota", "kind": "away", "duration_minutes": 10, "id": "x"])
-        _ = try call(server, "focus_add_time_block", ["source": "rota", "kind": "busy", "duration_minutes": 5])
+        _ = try await call(server, "focus_add_time_block", ["source": "rota", "kind": "busy", "duration_minutes": 30, "id": "x"])
+        _ = try await call(server, "focus_add_time_block", ["source": "rota", "kind": "away", "duration_minutes": 10, "id": "x"])
+        _ = try await call(server, "focus_add_time_block", ["source": "rota", "kind": "busy", "duration_minutes": 5])
         let blocks = try TimeBlockStore(directory: dir).list(source: "rota", now: Self.now).first?.blocks ?? []
         let kinds: [TimeBlockKind] = blocks.map(\.kind)
         #expect(kinds == [.busy, .away])
@@ -352,24 +354,24 @@ struct TimeBlockTests {
         ["source": "ok", "kind": "busy", "start": "next tuesday", "duration_minutes": 5],
         ["source": "ok", "kind": "busy", "duration_minutes": 60 * 24 * 40]
     ] as [[String: any Sendable]])
-    func badBlocksAreToolErrorsAndWriteNothing(_ arguments: [String: any Sendable]) throws {
+    func badBlocksAreToolErrorsAndWriteNothing(_ arguments: [String: any Sendable]) async throws {
         let dir = directory()
         defer { try? FileManager.default.removeItem(at: dir) }
-        let reply = try call(server(dir), "focus_add_time_block", arguments)
+        let reply = try await call(server(dir), "focus_add_time_block", arguments)
         #expect(reply.isError)
         #expect(!FileManager.default.fileExists(atPath: dir.path))
     }
 
-    @Test func clearingOneSourceLeavesTheOthers() throws {
+    @Test func clearingOneSourceLeavesTheOthers() async throws {
         let dir = directory()
         defer { try? FileManager.default.removeItem(at: dir) }
         let server = server(dir)
-        _ = try call(server, "focus_add_time_block", ["source": "a", "kind": "busy", "duration_minutes": 5])
-        _ = try call(server, "focus_add_time_block", ["source": "b", "kind": "busy", "duration_minutes": 5])
-        let cleared = try call(server, "focus_clear_time_blocks", ["source": "a"])
+        _ = try await call(server, "focus_add_time_block", ["source": "a", "kind": "busy", "duration_minutes": 5])
+        _ = try await call(server, "focus_add_time_block", ["source": "b", "kind": "busy", "duration_minutes": 5])
+        let cleared = try await call(server, "focus_clear_time_blocks", ["source": "a"])
         #expect(cleared.text.contains("\"a\""))
         #expect(try TimeBlockStore(directory: dir).list(now: Self.now).map(\.source) == ["b"])
-        _ = try call(server, "focus_clear_time_blocks", [:])
+        _ = try await call(server, "focus_clear_time_blocks", [:])
         #expect(try TimeBlockStore(directory: dir).list(now: Self.now).isEmpty)
     }
 

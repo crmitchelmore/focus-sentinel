@@ -89,6 +89,8 @@ struct VoiceOverSemanticsTests {
             )
         case .privacy:
             Audited(name: tab.rawValue, file: "Scenes/PrivacySettingsView.swift", announced: nil)
+        case .tasks:
+            Audited(name: tab.rawValue, file: "Tasks/TaskSettingsView.swift", announced: nil)
         }
     }
 

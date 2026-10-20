@@ -12,6 +12,7 @@ public enum SettingsTab: String, Sendable, CaseIterable, Hashable, Identifiable 
     case general
     case intervention
     case privacy
+    case tasks
 
     public var id: String { rawValue }
 
@@ -20,6 +21,7 @@ public enum SettingsTab: String, Sendable, CaseIterable, Hashable, Identifiable 
         case .general: .settingsGeneralTitle
         case .intervention: .interventionTitle
         case .privacy: .settingsPrivacyTitle
+        case .tasks: .settingsTasksTitle
         }
     }
 
@@ -29,6 +31,7 @@ public enum SettingsTab: String, Sendable, CaseIterable, Hashable, Identifiable 
         case .general: "gearshape"
         case .intervention: "bell.badge"
         case .privacy: "hand.raised"
+        case .tasks: "checklist"
         }
     }
 }
@@ -426,6 +429,8 @@ public struct ShellSettingsView: View {
     /// injection is a separate wire from the connection and is separately guttable.
     @Environment(\.appearanceTraits) private var traits
     @Environment(\.shellTextScale) private var textScale
+    /// The task mirror's board, injected by the app; absent in every snapshot fixture.
+    @Environment(TaskBoardModel.self) private var taskBoard: TaskBoardModel?
 
     @Binding private var preference: AppearancePreference
     private let storeURL: URL?
@@ -601,6 +606,10 @@ public struct ShellSettingsView: View {
             )
             .tabItem { tabLabel(.privacy) }
             .tag(SettingsTab.privacy)
+
+            TaskSettingsView(model: taskBoard)
+                .tabItem { tabLabel(.tasks) }
+                .tag(SettingsTab.tasks)
         }
         // **A committed width and a ceiling, not a pair of minimums** (focus-nu6).
         //

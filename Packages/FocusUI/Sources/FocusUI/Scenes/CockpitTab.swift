@@ -13,6 +13,8 @@ import Foundation
 ///   While a session runs or is paused it is **working**: the task, the timer and the session's
 ///   whole set of verbs, once. The context and its rules are one *Configure context…* away.
 /// * *History* — the earlier priorities, to pick one up again, and the route to the day's log.
+/// * *Tasks* — the to-do list mirrored from other systems (task mirror); any task can be pinned
+///   to the priority, where it shows on Now as a subtask.
 ///
 /// The priority's hero is Now's first section rather than a header over both, because History
 /// is the one place a person goes to look away from it; switching back is one press, and every
@@ -20,6 +22,7 @@ import Foundation
 public enum CockpitTab: String, Sendable, CaseIterable, Hashable, Identifiable {
     case now
     case history
+    case tasks
 
     public var id: String { rawValue }
 
@@ -28,6 +31,7 @@ public enum CockpitTab: String, Sendable, CaseIterable, Hashable, Identifiable {
         switch self {
         case .now: .cockpitTabNow
         case .history: .cockpitTabHistory
+        case .tasks: .cockpitTabTasks
         }
     }
 }

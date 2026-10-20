@@ -65,6 +65,8 @@ public struct CockpitView: View {
     @Environment(\.openSettings) private var openSettings
     @Environment(\.openWindow) private var openWindow
     @Environment(\.shellTextScale) private var textScale
+    /// The task mirror's board, injected by the app; absent in every snapshot fixture.
+    @Environment(TaskBoardModel.self) private var taskBoard: TaskBoardModel?
     @FocusState private var focus: FocusField?
 
     /// The definition of done, while it is being edited. Committed on Return and on losing
@@ -209,6 +211,8 @@ public struct CockpitView: View {
                 nowDestination
             case .history:
                 historyDestination
+            case .tasks:
+                TasksPane(model: taskBoard, priority: state.priority?.id)
             }
 
             // **The instrument strip** (focus-6uya), on both destinations: the store line, what
@@ -572,6 +576,7 @@ public struct CockpitView: View {
 
         if let priority = state.priority {
             configureContextRow(priority)
+            PinnedTasksSection(model: taskBoard, priority: priority.id)
         }
 
         // Planning with a priority set: the standing priorities stay in reach, under the
@@ -1310,6 +1315,7 @@ public struct CockpitView: View {
         switch tab {
         case .now: .cockpitTabNowHelp
         case .history: .cockpitTabHistoryHelp
+        case .tasks: .cockpitTabTasksHelp
         }
     }
 
@@ -1341,7 +1347,7 @@ public struct CockpitView: View {
                 .shellRendered(.standingCount, state.standing.count)
                 .shellRendered(.standingDigest, ShellValueDigest.describe(state.standing))
         }
-        if tab == .history {
+        if tab != .now {
             Color.clear
                 .shellRendered(.priorityIntent, state.priority?.intent ?? "")
                 .shellRendered(.status, state.status.rawValue)

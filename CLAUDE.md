@@ -120,6 +120,35 @@ substantive across both.
   `shell.about.credits` to contain "does not read" and "stays on this Mac"; keep both when
   rewording it. `noNetwork`/`updateChecks` are pinned only as declared and resolving.
 
+### 2026-10-20 — the task mirror: tasks from other systems, through the bridge
+
+- **The app reads files; the bridge talks to the source.** `FocusCore/Tasks/TaskMirror.swift`
+  is the contract: `TaskMirror/` beside the store holds `config.json`, `sources/<name>.json`
+  (written only by `focus-bridge`), `local.json`, `pins.json` and `outbox/<uuid>.json`.
+  `TaskMirrorFiles` is the one reader and writer both sides use. The app opens no socket, so
+  `check-boundaries.sh` needs no exemption.
+- **A provider is one protocol in the bridge** (`FocusBridgeKit/Tasks/TaskProvider.swift`):
+  `github-issues` (label filter) and `github-project` (Projects v2) today. The token comes from
+  `gh auth token --user <account>`, so a source names a gh account, not a secret. Changing a
+  project needs the `project` scope; draft items have no labels, so a tag filter hides them.
+- **A remote change is an outbox file first.** `TaskMirrorHost` enqueues complete, reopen or
+  create, the board shows it as pending at once, and `focus-bridge tasks sync` (run as a
+  subprocess with `FOCUS_TASK_MIRROR`) drains it. The sync exits 0 when it ran even if a
+  source failed; the failure is that source's `lastError`, which the Tasks tab draws. A
+  missing binary is `syncProblem`. The `local` source never runs the bridge.
+- **Composed only for the person's own store**, like the remote judge and the time blocks:
+  `AppComposition.taskMirror` is nil in a lane and a self-check, and `taskBoardModel` is
+  injected into the cockpit and Settings environments. *Delete Everything* removes the directory.
+- **The judge's seam is `taskMirror?.openTitles(priority:)`**: open titles, the priority's
+  pinned subtasks first, capped at 30.
+- **A third cockpit tab costs pins** in CockpitActionsTests, SettingsTests,
+  InterventionSettingsTests, VoiceOverSemanticsTests (an audited file per Settings tab) and
+  StringCatalogTests (`settings.tasks.title` = `shell.cockpit.tab.tasks`, both "Tasks"). Each
+  `Text(verbatim:)` gets a row in `Config/verbatim-sites.txt`. Every cockpit and Settings
+  baseline moves; re-record only with Chris's confirmation.
+- **`swift test --filter SettingsTests\.` also matches `InterventionSettingsSnapshotTests`.**
+  Anchor the filter (`^FocusUITests.SettingsTests`).
+
 ### 2026-10-16 — Liquid Glass, rethought for legibility (supersedes the entry below it)
 
 - **The strategy is `Design/LiquidGlass.md`; read it before touching a surface.** Three layers:

@@ -101,3 +101,9 @@ Packages/FocusUI/Sources/FocusUI/Handoff/HandoffConfirmationSheet.swift | slot.c
 # --- focus-ext: the day strip's two ends ------------------------------------------------------
 Packages/FocusUI/Sources/FocusUI/Scenes/CalendarDayStrip.swift | span.start.formatted(clock)) | NUMBER the clock time the day strip starts at, through a locale-aware Date.FormatStyle
 Packages/FocusUI/Sources/FocusUI/Scenes/CalendarDayStrip.swift | span.end.formatted(clock)) | NUMBER the clock time the day strip ends at, through a locale-aware Date.FormatStyle
+
+Packages/FocusUI/Sources/FocusUI/Tasks/TasksView.swift | item.task.title) | OWN a task's title, as written in the system it is mirrored from or typed here
+Packages/FocusUI/Sources/FocusUI/Tasks/TasksView.swift | tag) | NAME a label a task carries in its source, as the filter chip and the row show it
+Packages/FocusUI/Sources/FocusUI/Tasks/TasksView.swift | label) | NAME where a task lives: its source reference (e.g. owner/repo#12) or the source's name
+Packages/FocusUI/Sources/FocusUI/Tasks/TaskSettingsView.swift | source.name) | NAME a task source, as the person named it
+Packages/FocusUI/Sources/FocusUI/Tasks/TaskSettingsView.swift | Self.describe(source)) | NAME what a task source mirrors: its repository or project, and its label filter

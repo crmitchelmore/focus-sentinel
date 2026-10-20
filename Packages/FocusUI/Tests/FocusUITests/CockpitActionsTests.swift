@@ -641,11 +641,12 @@ struct CockpitActionsTests {
         #expect(state(priority: Self.priority(), session: Self.session(taskID: Self.taskID, phase: .complete)).drawsSession)
     }
 
-    @Test("the cockpit has two destinations, Now and History, in that order")
-    func twoDestinations() {
-        #expect(CockpitTab.allCases == [.now, .history])
+    @Test("the cockpit has three destinations, Now, History and Tasks, in that order")
+    func threeDestinations() {
+        #expect(CockpitTab.allCases == [.now, .history, .tasks])
         #expect(CockpitTab.now.titleKey == .cockpitTabNow)
         #expect(CockpitTab.history.titleKey == .cockpitTabHistory)
+        #expect(CockpitTab.tasks.titleKey == .cockpitTabTasks)
     }
 
     // MARK: - The context sheet (focus-g9iw)

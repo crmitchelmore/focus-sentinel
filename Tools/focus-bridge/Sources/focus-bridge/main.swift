@@ -18,6 +18,19 @@ let usage = """
       focus-bridge time-blocks set --source NAME [--file FILE]   replace NAME's blocks (JSON on stdin by default)
       focus-bridge time-blocks list [--source NAME]
       focus-bridge time-blocks clear (--source NAME | --all)
+      focus-bridge tasks sync [--source NAME] [--wait] [--quiet]
+                                                            send queued changes, then fetch every task source
+      focus-bridge tasks list [--tag TAG]... [--source NAME] [--include-done] [--pinned]
+      focus-bridge tasks create --title TEXT [--source NAME] [--tag TAG]... [--pin]
+      focus-bridge tasks complete KEY | reopen KEY
+      focus-bridge tasks pin KEY [--priority UUID] | unpin KEY
+      focus-bridge tasks sources
+      focus-bridge tasks add-source --name NAME --provider github-issues --repository OWNER/NAME
+                                    [--account LOGIN] [--tag TAG]... [--default]
+      focus-bridge tasks add-source --name NAME --provider github-project --owner LOGIN --number N
+                                    [--account LOGIN] [--done-status TEXT] [--reopen-status TEXT]
+                                    [--status-field TEXT] [--tag TAG]... [--default]
+      focus-bridge tasks remove-source --name NAME
       focus-bridge mcp                                      Model Context Protocol server on stdio
 
     ITEM is app:<bundle id>, domain:<host> or keyword:<text>, e.g. app:com.microsoft.Outlook,
@@ -33,6 +46,18 @@ let usage = """
     {kind, start, end | duration_minutes, title?, detail?, id?}. Blocks are written to
     TimeBlocks/<NAME>.json beside the store (or FOCUS_TIME_BLOCKS) and take effect without
     confirmation; titles and details stay there and never enter the app's data.
+
+    tasks mirrors the person's to-do list from task sources into TaskMirror/ beside the store (or
+    FOCUS_TASK_MIRROR). A KEY is <source>/<id>, e.g. work-os/42 or local/<uuid>. Tasks go to the
+    local list unless --source names a source or one was added with --default. complete, reopen
+    and create on a GitHub source change it at once (the issue is closed or reopened; a project
+    item's Status moves) and are queued for the next sync if it cannot be reached. --tag on a
+    source keeps only tasks carrying any of those labels. --pin and --pinned mean the current
+    priority. Tokens come from `gh auth token` (--user ACCOUNT when the source names one), or
+    FOCUS_GITHUB_TOKEN for a source without an account. `sync` exits 0 when it ran, even if a
+    source failed (read `ok` and each source's `error` in the JSON it prints), and at once with
+    alreadyRunning when another sync holds the lock unless --wait. complete, reopen and create
+    exit 1 when the source refused the change.
 
     The store is read through a private SQLite backup and never opened in place. Set FOCUS_STORE
     to read another store file. `propose`, `add-context` and `set-priorities` open focus://start,
@@ -96,7 +121,7 @@ func emit(_ value: some Encodable) throws {
 }
 
 @MainActor
-func main() {
+func main() async {
     let args = Array(CommandLine.arguments.dropFirst())
     guard let command = args.first else { print(usage); return }
     let rest = Array(args.dropFirst())
@@ -156,8 +181,10 @@ func main() {
             }
         case "time-blocks":
             try timeBlocks(Array(rest), now: now)
+        case "tasks":
+            try await tasks(Array(rest), store: store)
         case "mcp":
-            MCPServer(read: { try Snapshot.read(store: store) }).run()
+            await MCPServer(read: { try Snapshot.read(store: store) }).run()
         case "-h", "--help", "help":
             print(usage)
         default:
@@ -216,4 +243,92 @@ func timeBlocks(_ args: [String], now: Date) throws {
     }
 }
 
-MainActor.assumeIsolated { main() }
+/// The first argument that is not an option or an option's value.
+func positional(in args: [String], valued: Set<String>) -> String? {
+    var i = 0
+    while i < args.count {
+        if valued.contains(args[i]) { i += 2; continue }
+        if args[i].hasPrefix("--") { i += 1; continue }
+        return args[i]
+    }
+    return nil
+}
+
+@MainActor
+func tasks(_ args: [String], store: URL) async throws {
+    let bridge = TaskBridge(directory: TaskBridge.defaultDirectory())
+    guard let verb = args.first else {
+        fail("tasks needs sync, list, create, complete, reopen, pin, unpin, sources, add-source or remove-source", code: 2)
+    }
+    let rest = Array(args.dropFirst())
+    func currentPriority() throws -> UUID? {
+        try Snapshot.read(store: store).activePriorityID.flatMap(UUID.init(uuidString:))
+    }
+    switch verb {
+    case "sync":
+        let summary = try await bridge.sync.run(source: option("--source", in: rest), lockWait: rest.contains("--wait") ? bridge.lockWait : 0)
+        if !rest.contains("--quiet") { try emit(summary) }
+    case "list":
+        let pinned = rest.contains("--pinned")
+        try emit(bridge.list(
+            tags: options("--tag", in: rest),
+            source: option("--source", in: rest),
+            includeDone: rest.contains("--include-done"),
+            pinnedOnly: pinned,
+            currentPriority: try? currentPriority()
+        ))
+    case "create":
+        guard let title = option("--title", in: rest) else { fail("tasks create needs --title", code: 2) }
+        var pinTo: UUID?
+        if rest.contains("--pin") {
+            guard let current = try currentPriority() else { fail("there is no current priority to pin the task to") }
+            pinTo = current
+        }
+        let change = try await bridge.create(title: title, source: option("--source", in: rest), tags: options("--tag", in: rest), pinTo: pinTo)
+        try emit(change)
+        if change.refused { exit(1) }
+    case "complete", "reopen":
+        guard let key = positional(in: rest, valued: []) else { fail("tasks \(verb) needs a task key, e.g. work-os/42", code: 2) }
+        let change = try await bridge.setState(key: key, done: verb == "complete")
+        try emit(change)
+        if change.refused { exit(1) }
+    case "pin":
+        guard let key = positional(in: rest, valued: ["--priority"]) else { fail("tasks pin needs a task key", code: 2) }
+        let priority: UUID
+        if let text = option("--priority", in: rest) {
+            guard let id = UUID(uuidString: text) else { fail("--priority must be a priority's UUID", code: 2) }
+            priority = id
+        } else {
+            guard let current = try currentPriority() else { fail("there is no current priority; pass --priority UUID") }
+            priority = current
+        }
+        try emit(bridge.pin(key: key, to: priority))
+    case "unpin":
+        guard let key = positional(in: rest, valued: []) else { fail("tasks unpin needs a task key", code: 2) }
+        try emit(bridge.pin(key: key, to: nil))
+    case "sources":
+        try emit(bridge.sources())
+    case "add-source":
+        guard let name = option("--name", in: rest) else { fail("tasks add-source needs --name", code: 2) }
+        guard let provider = option("--provider", in: rest) else {
+            fail("tasks add-source needs --provider (\(TaskProviderKind.allCases.map(\.rawValue).joined(separator: " or ")))", code: 2)
+        }
+        var settings: [String: String] = [:]
+        for (flag, key) in [("--repository", "repository"), ("--account", "account"), ("--owner", "owner"), ("--number", "number"),
+                            ("--done-status", "doneStatus"), ("--reopen-status", "reopenStatus"), ("--status-field", "statusField")] {
+            if let value = option(flag, in: rest) { settings[key] = value }
+        }
+        let source = TaskSourceConfig(name: name, provider: provider, settings: settings, tags: options("--tag", in: rest),
+                                      enabled: !rest.contains("--disabled"))
+        try emit(bridge.addSource(source, makeDefault: rest.contains("--default")))
+    case "remove-source":
+        guard let name = option("--name", in: rest) ?? positional(in: rest, valued: []) else {
+            fail("tasks remove-source needs --name", code: 2)
+        }
+        try emit(bridge.removeSource(named: name))
+    default:
+        fail("tasks needs sync, list, create, complete, reopen, pin, unpin, sources, add-source or remove-source, not '\(verb)'", code: 2)
+    }
+}
+
+await main()

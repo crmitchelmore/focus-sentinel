@@ -565,7 +565,7 @@ struct InterventionSettingsTests {
 
     @Test("the Settings window has three full tabs and the new one is named")
     func settingsTabs() {
-        #expect(SettingsTab.allCases == [.general, .intervention, .privacy])
+        #expect(SettingsTab.allCases == [.general, .intervention, .privacy, .tasks])
         #expect(SettingsTab.intervention.titleKey == .interventionTitle)
         #expect(Set(SettingsTab.allCases.map(\.systemImage)).count == SettingsTab.allCases.count)
     }

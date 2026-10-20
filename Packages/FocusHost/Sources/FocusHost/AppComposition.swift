@@ -597,6 +597,11 @@ public final class AppComposition {
             && !CommandLine.arguments.contains(where: { $0.hasPrefix("--focus-self-check") }) {
             externalTimeDirectory = ExternalTimeBlocks.directory(besideStore: FocusStore.applicationSupportURL)
             calendarHost.useExternal(externalTimeDirectory.map(ExternalTimeBlockReader.init(directory:)))
+            // **The task mirror** (task mirror): the same rule — the person's own store only, so
+            // a lane never runs the bridge or reads their tasks.
+            taskMirror = TaskMirrorHost(
+                directory: TaskMirror.directory(besideStore: FocusStore.applicationSupportURL)
+            )
         }
     }
 
@@ -665,6 +670,8 @@ public final class AppComposition {
         // projection below, so the cockpit's first paint already draws the history the app is
         // keeping rather than one that is about to be shortened.
         sweepRetentionIfDue()
+
+        taskMirror?.start()
 
         // One last projection, so the cockpit's first paint already shows the reconciled
         // session, the live observer count and the capability matrix as the probe just read it —
@@ -1339,6 +1346,7 @@ public final class AppComposition {
         // app stopped watching is the picture of a claim the app is no longer making.
         notchCompanion.remove()
         grantAccess.stopWatching()
+        taskMirror?.stop()
     }
 
     // MARK: - The first-run explanation (focus-odz.7)
@@ -1592,6 +1600,8 @@ public final class AppComposition {
             if let externalTimeDirectory, FileManager.default.fileExists(atPath: externalTimeDirectory.path) {
                 try FileManager.default.removeItem(at: externalTimeDirectory)
             }
+            // The mirrored tasks and the local list go too; nothing is deleted at the sources.
+            try taskMirror?.files.removeAll()
         } catch {
             logger.error(
                 "delete everything could not rebuild the store: \(error.localizedDescription, privacy: .public)"
@@ -2100,6 +2110,12 @@ public final class AppComposition {
 
     /// Where outside sources' time blocks are read from (focus-ext), or `nil` in a lane.
     private(set) var externalTimeDirectory: URL?
+
+    /// The task mirror (task mirror), or `nil` in a lane and a self-check.
+    public private(set) var taskMirror: TaskMirrorHost?
+
+    /// The board the Tasks destination and Settings ▸ Tasks draw; `nil` hides them.
+    public var taskBoardModel: TaskBoardModel? { taskMirror?.model }
 
     /// Give the calendar host a reader when, and only when, the person switched the calendar on
     /// and macOS said yes; take it away otherwise. Neither half opens an event store: the gate

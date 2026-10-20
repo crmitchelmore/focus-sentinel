@@ -18,9 +18,9 @@ struct SettingsTests {
     /// the one this suite has always held — **no empty pane**.
     @Test("there are exactly three tabs, and all three are named")
     func everyTabExists() {
-        #expect(SettingsTab.allCases.map(\.id) == ["general", "intervention", "privacy"])
-        #expect(Set(SettingsTab.allCases.map(\.titleKey)).count == 3)
-        #expect(Set(SettingsTab.allCases.map(\.systemImage)).count == 3)
+        #expect(SettingsTab.allCases.map(\.id) == ["general", "intervention", "privacy", "tasks"])
+        #expect(Set(SettingsTab.allCases.map(\.titleKey)).count == 4)
+        #expect(Set(SettingsTab.allCases.map(\.systemImage)).count == 4)
         for tab in SettingsTab.allCases {
             #expect(!tab.systemImage.isEmpty)
         }

@@ -8411,6 +8411,786 @@
           }
         }
       }
+    },
+    "shell.cockpit.tab.tasks" : {
+      "comment" : "Task mirror: The cockpit's third destination: tasks mirrored from other to-do systems, plus ones made here.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tasks"
+          }
+        }
+      }
+    },
+    "shell.tasks.heading" : {
+      "comment" : "Task mirror: Heading of the Tasks destination's list.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "To do"
+          }
+        }
+      }
+    },
+    "shell.tasks.subtasks.heading" : {
+      "comment" : "Task mirror: Heading of the tasks pinned to the current priority, on Now.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Subtasks"
+          }
+        }
+      }
+    },
+    "shell.tasks.empty" : {
+      "comment" : "Task mirror: Shown when the Tasks list (after filters) has no tasks.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing to do here. Add a task above, or connect a source in Settings."
+          }
+        }
+      }
+    },
+    "shell.tasks.add.prompt" : {
+      "comment" : "Task mirror: Placeholder of the Tasks destination's one-line add field.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add a task"
+          }
+        }
+      }
+    },
+    "shell.tasks.subtask.add.prompt" : {
+      "comment" : "Task mirror: Placeholder of the add field under the current priority's subtasks.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add a subtask"
+          }
+        }
+      }
+    },
+    "shell.tasks.add.action" : {
+      "comment" : "Task mirror: Accessibility label of the + button beside a task add field.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add task"
+          }
+        }
+      }
+    },
+    "shell.tasks.pending" : {
+      "comment" : "Task mirror: Caption on a task whose change has not reached its source yet.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waiting to sync"
+          }
+        }
+      }
+    },
+    "shell.tasks.action.complete" : {
+      "comment" : "Task mirror: Accessibility label of an open task's checkbox.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mark done"
+          }
+        }
+      }
+    },
+    "shell.tasks.action.reopen" : {
+      "comment" : "Task mirror: Accessibility label of a done task's checkbox.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mark not done"
+          }
+        }
+      }
+    },
+    "shell.tasks.action.pin" : {
+      "comment" : "Task mirror: Accessibility label of the pin on a task row.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pin to this priority"
+          }
+        }
+      }
+    },
+    "shell.tasks.action.unpin" : {
+      "comment" : "Task mirror: Accessibility label of the pin on a pinned task row.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unpin from this priority"
+          }
+        }
+      }
+    },
+    "shell.tasks.filter.all" : {
+      "comment" : "Task mirror: The label chip that clears the Tasks filter.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "All"
+          }
+        }
+      }
+    },
+    "shell.tasks.filter.done" : {
+      "comment" : "Task mirror: Button that shows or hides finished tasks.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show done"
+          }
+        }
+      }
+    },
+    "shell.tasks.sync.action" : {
+      "comment" : "Task mirror: Button that asks every task source for its tasks now.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sync now"
+          }
+        }
+      }
+    },
+    "shell.tasks.sync.running" : {
+      "comment" : "Task mirror: Shown while a task sync runs.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Syncing…"
+          }
+        }
+      }
+    },
+    "shell.tasks.sync.last" : {
+      "comment" : "Task mirror: When tasks were last synced. %@ is a relative time, e.g. '2 minutes ago'.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Synced %@"
+          }
+        }
+      }
+    },
+    "shell.tasks.sync.never" : {
+      "comment" : "Task mirror: Shown before the first task sync.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not synced yet"
+          }
+        }
+      }
+    },
+    "shell.tasks.sync.problem" : {
+      "comment" : "Task mirror: Why the task sync could not run. %@ is the reason, in English from focus-bridge.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tasks could not sync: %@"
+          }
+        }
+      }
+    },
+    "shell.tasks.source.error" : {
+      "comment" : "Task mirror: A task source's last failure. %1$@ is the source's name; %2$@ is the reason.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ could not sync: %2$@"
+          }
+        }
+      }
+    },
+    "shell.tasks.configure" : {
+      "comment" : "Task mirror: Button on the Tasks destination that opens Settings to configure task sources.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sources"
+          }
+        }
+      }
+    },
+    "shell.cockpit.tab.tasks.help" : {
+      "comment" : "Task mirror: Tooltip of the cockpit's Tasks tab.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tasks. Your to-do list, mirrored from the systems you connect."
+          }
+        }
+      }
+    },
+    "shell.tasks.action.complete.help" : {
+      "comment" : "Task mirror: Tooltip of an open task's checkbox.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mark done. Closes it where it came from too."
+          }
+        }
+      }
+    },
+    "shell.tasks.action.reopen.help" : {
+      "comment" : "Task mirror: Tooltip of a done task's checkbox.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mark not done. Reopens it where it came from too."
+          }
+        }
+      }
+    },
+    "shell.tasks.action.pin.help" : {
+      "comment" : "Task mirror: Tooltip of the pin on a task row.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Make this a subtask of the current priority. It shows on Now."
+          }
+        }
+      }
+    },
+    "shell.tasks.action.unpin.help" : {
+      "comment" : "Task mirror: Tooltip of the pin on a pinned task row.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Return this task to the list. It stops showing on Now."
+          }
+        }
+      }
+    },
+    "shell.tasks.action.open.help" : {
+      "comment" : "Task mirror: Tooltip of a task's link to its source.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open this task where it lives."
+          }
+        }
+      }
+    },
+    "shell.tasks.add.action.help" : {
+      "comment" : "Task mirror: Tooltip of the + button beside a task add field.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add the task. It goes to the source you chose in Settings, or stays on this Mac."
+          }
+        }
+      }
+    },
+    "shell.tasks.filter.all.help" : {
+      "comment" : "Task mirror: Tooltip of the chip that clears the label filter.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show tasks with any label."
+          }
+        }
+      }
+    },
+    "shell.tasks.filter.tag.help" : {
+      "comment" : "Task mirror: Tooltip of a label filter chip.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show only tasks with this label. Pick more than one to see any of them."
+          }
+        }
+      }
+    },
+    "shell.tasks.filter.done.help" : {
+      "comment" : "Task mirror: Tooltip of the Show done button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show or hide finished tasks."
+          }
+        }
+      }
+    },
+    "shell.tasks.sync.action.help" : {
+      "comment" : "Task mirror: Tooltip of Sync now.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fetch the latest tasks from every source now. It also happens on its own every few minutes."
+          }
+        }
+      }
+    },
+    "shell.tasks.configure.help" : {
+      "comment" : "Task mirror: Tooltip of the Sources button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Settings to connect or remove a task source."
+          }
+        }
+      }
+    },
+    "settings.tasks.title" : {
+      "comment" : "Task mirror: Title of the Settings Tasks tab and pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tasks"
+          }
+        }
+      }
+    },
+    "settings.tasks.sources.heading" : {
+      "comment" : "Task mirror: Heading of the list of task sources.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connected sources"
+          }
+        }
+      }
+    },
+    "settings.tasks.sources.empty" : {
+      "comment" : "Task mirror: Shown when no task source is configured.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No sources yet. Tasks you add stay on this Mac."
+          }
+        }
+      }
+    },
+    "settings.tasks.source.isDefault" : {
+      "comment" : "Task mirror: Caption on the source new tasks are created in.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New tasks go here"
+          }
+        }
+      }
+    },
+    "settings.tasks.source.makeDefault" : {
+      "comment" : "Task mirror: Accessibility label of the button that makes a source the place new tasks go.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Send new tasks here"
+          }
+        }
+      }
+    },
+    "settings.tasks.source.remove" : {
+      "comment" : "Task mirror: Accessibility label of the button that removes a task source.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Disconnect source"
+          }
+        }
+      }
+    },
+    "settings.tasks.source.failed" : {
+      "comment" : "Task mirror: A source's last failure. %@ is the reason.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last sync failed: %@"
+          }
+        }
+      }
+    },
+    "settings.tasks.source.synced" : {
+      "comment" : "Task mirror: A source's status. %1$@ is the task count; %2$@ is a relative time.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ tasks, synced %2$@"
+          }
+        }
+      }
+    },
+    "settings.tasks.source.notSynced" : {
+      "comment" : "Task mirror: A source that has not synced yet.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waiting for its first sync"
+          }
+        }
+      }
+    },
+    "settings.tasks.add.heading" : {
+      "comment" : "Task mirror: Heading of the form that adds a task source.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connect a source"
+          }
+        }
+      }
+    },
+    "settings.tasks.provider.issues" : {
+      "comment" : "Task mirror: Provider choice: a repository's issues.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GitHub issues"
+          }
+        }
+      }
+    },
+    "settings.tasks.provider.project" : {
+      "comment" : "Task mirror: Provider choice: a GitHub Projects board.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GitHub project"
+          }
+        }
+      }
+    },
+    "settings.tasks.field.name" : {
+      "comment" : "Task mirror: Label of the source name field.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Name"
+          }
+        }
+      }
+    },
+    "settings.tasks.field.name.prompt" : {
+      "comment" : "Task mirror: Placeholder of the source name field: lower case, digits, dots, dashes.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "work-os"
+          }
+        }
+      }
+    },
+    "settings.tasks.field.repository" : {
+      "comment" : "Task mirror: Label of the repository field.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repository"
+          }
+        }
+      }
+    },
+    "settings.tasks.field.repository.prompt" : {
+      "comment" : "Task mirror: Placeholder of the repository field.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "owner/repository"
+          }
+        }
+      }
+    },
+    "settings.tasks.field.owner" : {
+      "comment" : "Task mirror: Label of the project owner field (a user or organisation).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Project owner"
+          }
+        }
+      }
+    },
+    "settings.tasks.field.owner.prompt" : {
+      "comment" : "Task mirror: Placeholder of the project owner field.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "user or organisation"
+          }
+        }
+      }
+    },
+    "settings.tasks.field.number" : {
+      "comment" : "Task mirror: Label of the project number field.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Project number"
+          }
+        }
+      }
+    },
+    "settings.tasks.field.number.prompt" : {
+      "comment" : "Task mirror: Placeholder of the project number field.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "from the project's address"
+          }
+        }
+      }
+    },
+    "settings.tasks.field.labels" : {
+      "comment" : "Task mirror: Label of the label filter field.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Only these labels"
+          }
+        }
+      }
+    },
+    "settings.tasks.field.labels.prompt" : {
+      "comment" : "Task mirror: Placeholder of the label filter field.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "comma separated; blank for all"
+          }
+        }
+      }
+    },
+    "settings.tasks.field.account" : {
+      "comment" : "Task mirror: Label of the gh account field.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GitHub account"
+          }
+        }
+      }
+    },
+    "settings.tasks.field.account.prompt" : {
+      "comment" : "Task mirror: Placeholder of the gh account field.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "blank for gh's active account"
+          }
+        }
+      }
+    },
+    "settings.tasks.add.invalid" : {
+      "comment" : "Task mirror: Shown when the add-source form is incomplete.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check the fields. A name is lower case letters, digits, dots and dashes; a repository is owner/name; a project needs its owner and number."
+          }
+        }
+      }
+    },
+    "settings.tasks.add.action" : {
+      "comment" : "Task mirror: Button that adds the task source.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connect"
+          }
+        }
+      }
+    },
+    "settings.tasks.add.action.help" : {
+      "comment" : "Task mirror: Tooltip of Connect.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connect this source and fetch its tasks."
+          }
+        }
+      }
+    },
+    "settings.tasks.provider.issues.help" : {
+      "comment" : "Task mirror: Tooltip of the GitHub issues choice.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mirror a repository's open issues. Done closes the issue."
+          }
+        }
+      }
+    },
+    "settings.tasks.provider.project.help" : {
+      "comment" : "Task mirror: Tooltip of the GitHub project choice.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mirror a project's items. Done moves the item to its Done status."
+          }
+        }
+      }
+    },
+    "settings.tasks.source.makeDefault.help" : {
+      "comment" : "Task mirror: Tooltip of the make-default button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Send tasks you add in Focus Sentinel to this source."
+          }
+        }
+      }
+    },
+    "settings.tasks.source.remove.help" : {
+      "comment" : "Task mirror: Tooltip of the remove-source button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stop mirroring this source. Nothing is deleted from it."
+          }
+        }
+      }
+    },
+    "settings.tasks.footnote" : {
+      "comment" : "Task mirror: Footnote of the Settings Tasks pane.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus Sentinel never connects to the network itself. focus-bridge reads and updates your tasks using the gh command line tool's sign-in."
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

@@ -248,6 +248,23 @@ posture (2026-10-20) they are among what the remote judge may be sent once the p
 *Ask Decision-1* on; with it off they never leave the Mac. *Delete Everything* removes the
 directory. Lanes and self-checks never read it. With no files, nothing changes.
 
+**Tasks mirrored from other systems** (owner's request, task mirror). The cockpit's *Tasks*
+destination lists tasks from any to-do system, and the *Now* tab shows the ones pinned to the
+current priority as its subtasks. The app still opens no socket for them. `focus-bridge` talks
+to each source behind one provider protocol (`github-issues`, filtered by label;
+`github-project`, a Projects v2 board) using the `gh` sign-in for the account the source names.
+It writes `TaskMirror/sources/<source>.json` beside the store, and the app only reads those
+files. Ticking a task off, reopening it, or adding one to a remote source goes to
+`TaskMirror/outbox/` (one file per action), shows as pending at once, and is drained by `focus-bridge tasks sync`,
+which `TaskMirrorHost` runs at launch, every `pollSeconds` (90 by default), and straight after
+each change. Completing a task closes the issue or moves the Projects item to *Done*. The
+`local` source is `TaskMirror/local.json`, a list that needs no bridge. Pins live in
+`TaskMirror/pins.json`. Agents read and change the same files through the bridge's
+MCP tools (`focus_list_tasks`, `focus_create_task`, `focus_complete_task`,
+`focus_sync_tasks`, and `focus_add_task_source`, `focus_list_task_sources`, `focus_remove_task_source`). Open task titles are among what the remote judge may be sent once
+the person switches *Ask Decision-1* on. *Delete Everything* removes the directory and deletes
+nothing at a source. Lanes and self-checks never compose the host.
+
 **The Accessibility grant is now spent, from 2026-10-15** (owner's ruling, issue #24).
 A bundle identifier cannot tell one task from another inside a mixed-use application — GitHub
 Copilot, a terminal, an editor, a browser — so a nudge that can only say "you are in Copilot" is

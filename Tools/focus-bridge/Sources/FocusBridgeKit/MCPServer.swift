@@ -4,44 +4,52 @@ import Foundation
 /// **A Model Context Protocol server over stdio.**
 ///
 /// One JSON-RPC 2.0 message per line in, one per line out, nothing else on stdout. No socket is
-/// opened: the client starts this process and owns both ends of the pipe. Three tools only read
-/// a snapshot; three propose a priority, context or standing priorities that the person still
-/// has to accept; four let an outside source mark time — a meeting, time away — that the app
-/// then keeps quiet through (focus-ext).
+/// listened on: the client starts this process and owns both ends of the pipe. Three tools only
+/// read a snapshot; three propose a priority, context or standing priorities that the person
+/// still has to accept; four let an outside source mark time — a meeting, time away — that the
+/// app then keeps quiet through (focus-ext); seven read and change the mirrored task list (task
+/// mirror), which is the one place the bridge calls out, to GitHub over HTTPS, and only for the
+/// task sources the person configured.
+///
+/// Handling is `async` because a task change waits for its source to answer; the server still
+/// answers one message at a time, in order.
 @MainActor
 public final class MCPServer {
     public typealias Reader = @MainActor () throws -> StoreReading
 
     public static let supportedProtocolVersions = ["2025-06-18", "2025-03-26", "2024-11-05"]
-    public static let serverVersion = "0.4.0"
+    public static let serverVersion = "0.5.0"
 
     private let read: Reader
     private let now: () -> Date
     private let openURL: (URL) throws -> Void
     private let timeBlocks: TimeBlockStore
+    private let tasks: TaskBridge
 
     public init(
         read: @escaping Reader,
         now: @escaping () -> Date = Date.init,
         openURL: @escaping (URL) throws -> Void = Handoff.open,
-        timeBlocks: TimeBlockStore = TimeBlockStore(directory: TimeBlockStore.defaultDirectory())
+        timeBlocks: TimeBlockStore = TimeBlockStore(directory: TimeBlockStore.defaultDirectory()),
+        tasks: TaskBridge = TaskBridge(directory: TaskBridge.defaultDirectory())
     ) {
         self.read = read
         self.now = now
         self.openURL = openURL
         self.timeBlocks = timeBlocks
+        self.tasks = tasks
     }
 
     /// Serve until stdin closes.
-    public func run() {
+    public func run() async {
         while let line = readLine(strippingNewline: true) {
-            guard let reply = handle(line) else { continue }
+            guard let reply = await handle(line) else { continue }
             FileHandle.standardOutput.write(Data((reply + "\n").utf8))
         }
     }
 
     /// Answer one line. `nil` for a notification, which gets no reply.
-    public func handle(_ line: String) -> String? {
+    public func handle(_ line: String) async -> String? {
         guard !line.trimmingCharacters(in: .whitespaces).isEmpty else { return nil }
         guard let data = line.data(using: .utf8),
               let message = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
@@ -78,7 +86,7 @@ public final class MCPServer {
             guard Self.tools.contains(where: { $0["name"] as? String == name }) else {
                 return error(id, code: -32602, "unknown tool: \(name)")
             }
-            result = call(name, arguments)
+            result = await call(name, arguments)
         default:
             return error(id, code: -32601, "method not found: \(method)")
         }
@@ -103,7 +111,18 @@ public final class MCPServer {
         block that would run into them; focus and free are recorded and change nothing. A block \
         can be just a kind, a start and a duration; a title and detail are optional and stay \
         with the source, never in the app's data. Use one stable source name per provider, and \
-        prefer focus_set_time_blocks to replace that source's whole set when syncing.
+        prefer focus_set_time_blocks to replace that source's whole set when syncing. \
+        Tasks are a third thing: the app mirrors the person's to-do list from task sources \
+        (GitHub issues in a repository, a GitHub Projects board) plus a local list. \
+        focus_list_tasks reads it (filter by tags, source, pinned_only for the current \
+        priority's subtasks); focus_create_task adds a task (to the local list unless a source \
+        is named or set as the default; pin_to_current_priority makes it a subtask of what they \
+        are focused on); focus_complete_task marks a task done, or open again with reopen, and \
+        for a GitHub task closes or reopens the issue (or moves the project item's Status) \
+        straight away. Task keys are '<source>/<id>', e.g. 'work-os/42' or 'local/<uuid>'. \
+        These change the person's real task list without confirmation, so only complete or \
+        create a task they asked you to. focus_sync_tasks refreshes from the sources; \
+        focus_list_task_sources, focus_add_task_source and focus_remove_task_source manage them.
         """
 
     static let contextSchema: [String: Any] = [
@@ -296,11 +315,132 @@ public final class MCPServer {
                     "additionalProperties": false
                 ],
                 "annotations": ["readOnlyHint": false, "destructiveHint": true, "idempotentHint": true, "openWorldHint": false]
+            ],
+            [
+                "name": "focus_list_tasks",
+                "title": "List tasks",
+                "description": "The person's mirrored to-do list: tasks from each configured task source (GitHub issues, "
+                    + "GitHub Projects) and the local list, with each source's last sync and error. Open tasks only "
+                    + "unless include_done. A task is pinned when it is a subtask of a priority; pinned_only keeps "
+                    + "the current priority's subtasks. 'pending' names an action still waiting for its source.",
+                "inputSchema": [
+                    "type": "object",
+                    "properties": [
+                        "tags": ["type": "array", "items": ["type": "string"], "description": "Keep tasks carrying any of these labels (case-insensitive)."],
+                        "source": taskSourceSchema,
+                        "include_done": ["type": "boolean", "description": "Include tasks done recently. Default false."],
+                        "pinned_only": ["type": "boolean", "description": "Only tasks pinned to the current priority (to any priority when none is current). Default false."]
+                    ],
+                    "additionalProperties": false
+                ],
+                "annotations": ["readOnlyHint": true, "openWorldHint": false]
+            ],
+            [
+                "name": "focus_create_task",
+                "title": "Create a task",
+                "description": "Add a task to the person's list. It goes to the local list unless source names a task "
+                    + "source (or the person set a default source), in which case it is created there at once, e.g. "
+                    + "as a GitHub issue. Takes effect without confirmation.",
+                "inputSchema": [
+                    "type": "object",
+                    "properties": [
+                        "title": ["type": "string", "description": "At most \(TaskMirror.maximumTitleLength) characters."],
+                        "source": taskSourceSchema,
+                        "tags": ["type": "array", "items": ["type": "string"], "description": "Labels; for a GitHub issue they must already exist in the repository."],
+                        "pin_to_current_priority": ["type": "boolean", "description": "Make it a subtask of the current priority. Default false."]
+                    ],
+                    "required": ["title"],
+                    "additionalProperties": false
+                ],
+                "annotations": ["readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": true]
+            ],
+            [
+                "name": "focus_complete_task",
+                "title": "Complete a task",
+                "description": "Mark a task done (or open again with reopen). A GitHub issue is closed as completed (or "
+                    + "reopened); a GitHub Projects item has its Status set to the board's done option (or back). "
+                    + "If the source cannot be reached the change is queued and retried. Takes effect without confirmation.",
+                "inputSchema": [
+                    "type": "object",
+                    "properties": [
+                        "key": ["type": "string", "description": "The task's key from focus_list_tasks, '<source>/<id>'."],
+                        "reopen": ["type": "boolean", "description": "Open the task again instead. Default false."]
+                    ],
+                    "required": ["key"],
+                    "additionalProperties": false
+                ],
+                "annotations": ["readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": true]
+            ],
+            [
+                "name": "focus_sync_tasks",
+                "title": "Sync tasks",
+                "description": "Send queued task changes to their sources, then fetch every enabled task source (or one), "
+                    + "and report each source's task count and any error.",
+                "inputSchema": [
+                    "type": "object",
+                    "properties": ["source": taskSourceSchema],
+                    "additionalProperties": false
+                ],
+                "annotations": ["readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": true]
+            ],
+            [
+                "name": "focus_list_task_sources",
+                "title": "List task sources",
+                "description": "The configured task sources: provider, settings, label filter, whether new tasks go there "
+                    + "by default, and how each last synced.",
+                "inputSchema": ["type": "object", "properties": [String: Any](), "additionalProperties": false],
+                "annotations": ["readOnlyHint": true, "openWorldHint": false]
+            ],
+            [
+                "name": "focus_add_task_source",
+                "title": "Add a task source",
+                "description": "Add or replace a task source. Providers: 'github-issues' (settings: repository "
+                    + "'owner/name', optional account = the gh login to use) and 'github-project' (settings: owner, "
+                    + "number, optional account, doneStatus (default 'Done'), reopenStatus, statusField (default "
+                    + "'Status')). Tokens come from the GitHub CLI (gh auth token). tags keeps only tasks carrying "
+                    + "any of those labels. Run focus_sync_tasks afterwards.",
+                "inputSchema": [
+                    "type": "object",
+                    "properties": [
+                        "name": taskSourceSchema,
+                        "provider": ["type": "string", "enum": TaskProviderKind.allCases.map(\.rawValue)],
+                        "settings": [
+                            "type": "object",
+                            "additionalProperties": ["type": ["string", "number"]],
+                            "description": "Provider settings, e.g. {\"repository\": \"octo/tasks\", \"account\": \"octo\"}."
+                        ],
+                        "tags": ["type": "array", "items": ["type": "string"], "description": "Label filter, any-of, case-insensitive. Empty keeps every task."],
+                        "enabled": ["type": "boolean", "description": "Default true."],
+                        "make_default": ["type": "boolean", "description": "Create new tasks here when no source is named. Default false."]
+                    ],
+                    "required": ["name", "provider", "settings"],
+                    "additionalProperties": false
+                ],
+                "annotations": ["readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false]
+            ],
+            [
+                "name": "focus_remove_task_source",
+                "title": "Remove a task source",
+                "description": "Stop mirroring a task source: removes it, its mirrored tasks, its queued changes and its "
+                    + "pins. Nothing is changed in the source itself.",
+                "inputSchema": [
+                    "type": "object",
+                    "properties": ["name": taskSourceSchema],
+                    "required": ["name"],
+                    "additionalProperties": false
+                ],
+                "annotations": ["readOnlyHint": false, "destructiveHint": true, "idempotentHint": true, "openWorldHint": false]
             ]
         ]
     }
 
-    private func call(_ name: String, _ arguments: [String: Any]) -> [String: Any] {
+    static let taskSourceSchema: [String: Any] = [
+        "type": "string",
+        "pattern": "^[a-z0-9_-][a-z0-9._-]{0,63}$",
+        "description": "A task source's name, e.g. 'work-os', or 'local' for the person's own list."
+    ]
+
+    private func call(_ name: String, _ arguments: [String: Any]) async -> [String: Any] {
         do {
             switch name {
             case "focus_status":
@@ -397,6 +537,44 @@ public final class MCPServer {
             case "focus_clear_time_blocks":
                 let source = try arguments["source"].map(TimeBlockStore.source)
                 return try text(ClearReceipt(cleared: timeBlocks.clear(source: source)))
+            case "focus_list_tasks":
+                let tags = try Self.strings(arguments["tags"], name: "tags")
+                let pinnedOnly = arguments["pinned_only"] as? Bool ?? false
+                return try text(tasks.list(
+                    tags: tags,
+                    source: arguments["source"] as? String,
+                    includeDone: arguments["include_done"] as? Bool ?? false,
+                    pinnedOnly: pinnedOnly,
+                    currentPriority: currentPriority()
+                ))
+            case "focus_create_task":
+                guard let title = arguments["title"] as? String else { throw BridgeError("title is required") }
+                let tags = try Self.strings(arguments["tags"], name: "tags")
+                let source = arguments["source"] as? String
+                var pinTo: UUID?
+                if arguments["pin_to_current_priority"] as? Bool ?? false {
+                    guard let current = currentPriority() else {
+                        throw BridgeError("there is no current priority to pin the task to")
+                    }
+                    pinTo = current
+                }
+                return try text(await tasks.create(title: title, source: source, tags: tags, pinTo: pinTo))
+            case "focus_complete_task":
+                guard let key = arguments["key"] as? String else { throw BridgeError("key is required") }
+                let reopen = arguments["reopen"] as? Bool ?? false
+                return try text(await tasks.setState(key: key, done: !reopen))
+            case "focus_sync_tasks":
+                let source = arguments["source"] as? String
+                return try text(await tasks.sync.run(source: source, lockWait: tasks.lockWait))
+            case "focus_list_task_sources":
+                return try text(tasks.sources())
+            case "focus_add_task_source":
+                let source = try TaskBridge.sourceConfig(from: arguments)
+                let added = try tasks.addSource(source, makeDefault: arguments["make_default"] as? Bool ?? false)
+                return try text(added)
+            case "focus_remove_task_source":
+                guard let name = arguments["name"] as? String else { throw BridgeError("name is required") }
+                return try text(tasks.removeSource(named: name))
             default:
                 throw BridgeError("unknown tool: \(name)")
             }
@@ -406,6 +584,11 @@ public final class MCPServer {
     }
 
     // MARK: - Helpers
+
+    /// The current priority, if the store can be read and holds one.
+    private func currentPriority() -> UUID? {
+        (try? read().activePriorityID).flatMap { $0 }.flatMap(UUID.init(uuidString:))
+    }
 
     struct ExportReceipt: Encodable { let path: String; let bytes: Int; let priorities: Int; let sessions: Int }
     struct ProposalReceipt: Encodable { let url: String; let opened: Bool; let note: String }
@@ -441,7 +624,7 @@ public final class MCPServer {
         return String(decoding: data, as: UTF8.self)
     }
 
-    static func strings(_ value: Any?, name: String) throws -> [String] {
+    nonisolated static func strings(_ value: Any?, name: String) throws -> [String] {
         guard let value else { return [] }
         guard let array = value as? [Any], array.allSatisfy({ $0 is String }) else {
             throw BridgeError("\(name) must be an array of strings")

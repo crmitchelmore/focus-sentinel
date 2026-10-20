@@ -93,7 +93,8 @@ struct StringCatalogTests {
 
         // Shared wording is intentional: the same app/site scopes, priority prompt,
         // nudge title, login action and deletion action recur on different surfaces, and the
-        // cockpit's History destination shares its name with the History window it opens.
+        // cockpit's History destination shares its name with the History window it opens, and the Tasks destination shares its name with the Settings pane
+        // that configures it.
         // Keep the full list pinned so an unrelated copy-paste still fails.
         #expect(
             duplicated == [
@@ -106,6 +107,7 @@ struct StringCatalogTests {
                 ["priority.complete.action.cancel", "shell.menuBar.cancelSnooze"],
                 ["settings.general.launchAtLogin", "shell.cockpit.launchAtLogin.accept"],
                 ["settings.privacy.delete.confirm.action", "settings.privacy.delete.heading"],
+                ["settings.tasks.title", "shell.cockpit.tab.tasks"],
                 ["shell.cockpit.heading", "shell.window.cockpit.title"],
                 ["shell.cockpit.tab.history", "shell.window.history.title"],
                 ["shell.help.heading", "shell.window.help.title"]

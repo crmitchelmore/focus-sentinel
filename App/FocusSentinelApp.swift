@@ -199,6 +199,8 @@ private struct CockpitHost: View {
             .onOpenURL { url in
                 composition.receive(url)
             }
+            // The task mirror's board; nil in a lane, where the Tasks destination draws no controls.
+            .environment(composition.taskBoardModel)
     }
 }
 
@@ -234,6 +236,7 @@ private struct SettingsHost: View {
             .onAppear {
                 composition.settingsWindowAppeared()
             }
+            .environment(composition.taskBoardModel)
     }
 }
 
