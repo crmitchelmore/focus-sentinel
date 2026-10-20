@@ -9,7 +9,7 @@ import os
 ///
 /// Microsoft's Decision-1 (System One) answers the model rung's question — *is this window part
 /// of the work the person wrote down?* — from the priority sentence and what the frontmost window
-/// holds. The ContextSpike (`Tools/ContextSpike/README.md`) measured it against the same
+/// holds, with what else the app knows about the work (`RemoteWorkContext`). The ContextSpike (`Tools/ContextSpike/README.md`) measured it against the same
 /// forty-five cells the on-device model failed: with the window's content it rescued all fifteen
 /// holds and was seduced by none, at about 0.2 s a judgement.
 ///
@@ -75,7 +75,8 @@ struct DecisionOneJudge: ModelJudging {
               let body = try? DecisionOneProtocol.body(
                   deployment: configuration.deployment,
                   task: pending.task,
-                  window: window
+                  window: window,
+                  work: pending.work
               )
         else { return .decline(.refused) }
 

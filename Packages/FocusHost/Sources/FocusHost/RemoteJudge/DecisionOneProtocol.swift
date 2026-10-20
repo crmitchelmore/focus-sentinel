@@ -1,9 +1,10 @@
 import FocusClassify
+import FocusCore
 import Foundation
 
-/// What one remote judgement is shown: the person's own priority sentence and what the
-/// frontmost window holds, read once through Accessibility from an activation e03's
-/// `SensitivityGate` already cleared.
+/// The window half of what one remote judgement is shown (the work half is
+/// `RemoteWorkContext`): what the frontmost window holds, read once through Accessibility from
+/// an activation e03's `SensitivityGate` already cleared.
 ///
 /// Raw, and transient: built on the main actor immediately before a request, handed to
 /// `DecisionOneJudge`, and dropped when the request returns. Never logged, stored or exported.
@@ -65,6 +66,104 @@ struct RemoteWindowContext: Sendable, Equatable {
     }
 }
 
+/// What else the app knows about the task, sent beside the window once the person opted in to
+/// the remote judge (owner's ruling, 20 October 2026: local first, opt in for more).
+///
+/// Only this task's own facts. Privacy would allow the person's other priorities and other tasks
+/// too, but measured at threshold 0.6 they made the judge worse: a window for other work the
+/// person also has read as this task (`Tools/ContextSpike/README.md`, 20 October 2026).
+///
+/// Transient, like `RemoteWindowContext`: built for one request and dropped when it returns.
+/// Every list and line is capped, so a long shortlist or a busy mirror cannot swamp the window.
+struct RemoteWorkContext: Sendable, Equatable {
+    /// The active priority's definition of done.
+    var doneWhen: String?
+    /// The active priority's context pack, in chip order, each as `Kind: name (value)`.
+    var contextItems: [String] = []
+    /// The task mirror's open tasks pinned to this priority, its own steps.
+    var steps: [String] = []
+    /// Today's busy time, calendar and outside sources merged, as `HH:mm–HH:mm`.
+    var busyToday: [String] = []
+    /// The local time the busy blocks are read against, as `HH:mm`.
+    var clock: String?
+
+    static let maximumItems = 12
+    static let maximumLineLength = 200
+
+    init(
+        doneWhen: String? = nil,
+        contextItems: [String] = [],
+        steps: [String] = [],
+        busyToday: [String] = [],
+        clock: String? = nil
+    ) {
+        self.doneWhen = doneWhen
+        self.contextItems = contextItems
+        self.steps = steps
+        self.busyToday = busyToday
+        self.clock = clock
+    }
+
+    var isEmpty: Bool { formatted.isEmpty }
+
+    /// One labelled block per fact the app holds, and nothing for a fact it does not.
+    var formatted: String {
+        var lines: [String] = []
+        if let done = Self.line(doneWhen) { lines.append("Done when: \(done)") }
+        func section(_ heading: String, _ items: [String]) {
+            let kept = items.compactMap(Self.line).prefix(Self.maximumItems)
+            guard !kept.isEmpty else { return }
+            lines.append(heading + "\n" + kept.map { "- \($0)" }.joined(separator: "\n"))
+        }
+        section("Attached to this task:", contextItems)
+        section("Steps of this task:", steps)
+        let busy = busyToday.compactMap(Self.line).prefix(Self.maximumItems)
+        if !busy.isEmpty {
+            let now = clock.map { " (it is now \($0))" } ?? ""
+            lines.append("Busy today\(now): " + busy.joined(separator: ", "))
+        }
+        return lines.joined(separator: "\n")
+    }
+
+    private static func line(_ raw: String?) -> String? {
+        guard let raw else { return nil }
+        let flattened = raw.split(whereSeparator: \.isNewline).joined(separator: " ")
+            .trimmingCharacters(in: .whitespaces)
+        guard !flattened.isEmpty else { return nil }
+        return flattened.count > maximumLineLength
+            ? String(flattened.prefix(maximumLineLength)) + "…"
+            : flattened
+    }
+
+    /// A context item as the judge reads it.
+    static func describe(_ item: ContextItemValue) -> String {
+        let kind: String
+        switch item.kind {
+        case .app: kind = "App"
+        case .domain: kind = "Site"
+        case .keyword: kind = "Keyword"
+        case .file: kind = "File"
+        default: kind = "Item"
+        }
+        let name = item.displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if name.isEmpty || name == item.value { return "\(kind): \(item.value)" }
+        return "\(kind): \(name) (\(item.value))"
+    }
+
+    /// Today's busy blocks as clock ranges in `calendar`'s zone, and the clock now.
+    static func busy(_ day: CalendarDay, calendar: Calendar) -> (blocks: [String], clock: String?) {
+        guard case .read(_, let blocks, let now) = day, !blocks.isEmpty else { return ([], nil) }
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = calendar.timeZone
+        formatter.dateFormat = "HH:mm"
+        return (
+            blocks.map { "\(formatter.string(from: $0.start))–\(formatter.string(from: $0.end))" },
+            formatter.string(from: now)
+        )
+    }
+}
+
 /// Everything about a Decision-1 exchange except the exchange: the body sent, the reading of
 /// the body returned, and the mapping onto the rung's rescue-only answer. Pure, so
 /// `DecisionOneProtocolTests` pins it without a network.
@@ -91,14 +190,35 @@ enum DecisionOneProtocol {
         "cannot_tell": "The task is too vague to judge.",
     ]
 
-    static func body(deployment: String, task: String, window: RemoteWindowContext) throws -> Data {
+    /// Added to the preamble only when the state carries `work`, so a request with nothing more
+    /// to say is byte for byte the one the ContextSpike measured. The ContextSpike's preamble C,
+    /// word for word: 15/15 rescued, 0 seduced, 0 unstable over five passes at 0.5–0.7. "Use it
+    /// to understand the task" let a same-client window through, and a sentence naming shared
+    /// names lost a rescue; neither is safe to reword without measuring again.
+    static let workPreamble = """
+         Judge only the task named in the state's task. The state's work says more about it — \
+        what done looks like, what the person attached to it, its own steps — and about the rest \
+        of their day. A window that belongs to the other work listed there is other work, even \
+        though it is the person's.
+        """
+
+    static func body(
+        deployment: String,
+        task: String,
+        window: RemoteWindowContext,
+        work: RemoteWorkContext = RemoteWorkContext()
+    ) throws -> Data {
+        var state = ["task": task, "window": window.formatted]
+        let workText = work.formatted
+        if !workText.isEmpty { state["work"] = workText }
         let body: [String: Any] = [
             "model": deployment,
-            "state": ["task": task, "window": window.formatted],
+            "state": state,
             "questions": [
                 "fit": [
                     "type": "choice",
-                    "instructions": preamble + " Which describes this window?",
+                    "instructions": preamble + (workText.isEmpty ? "" : workPreamble)
+                        + " Which describes this window?",
                     "criteria": criteria,
                 ] as [String: Any],
             ],

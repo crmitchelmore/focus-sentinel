@@ -421,6 +421,17 @@ final class RelevanceHost {
         return task.intent
     }
 
+    /// The rest of the active priority, for the remote judge: its definition of done and its
+    /// context pack, while it is still at `revision`. Not the other priorities: measured, they
+    /// made the judge read their windows as this task.
+    func priorityWork(atRevision revision: Int) -> RemoteWorkContext? {
+        guard let task = activeTask(), task.revision == revision else { return nil }
+        return RemoteWorkContext(
+            doneWhen: task.doneWhen,
+            contextItems: Self.contextValues(of: task).map(RemoteWorkContext.describe)
+        )
+    }
+
     private func activeTask() -> FocusSchemaV3.PriorityTask? {
         // The commitment's identifier from the one place that states it, and the row by that
         // identifier (focus-zrs). Never `activeTask()`, which would be this host deciding for

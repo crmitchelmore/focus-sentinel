@@ -589,4 +589,10 @@ public struct TaskBoard: Sendable, Equatable {
         let rest = open.filter { !pinnedKeys.contains($0.key) }
         return Array((pinned + rest).prefix(limit).map(\.task.title))
     }
+
+    /// The open tasks pinned to `priority`, and no others.
+    public func subtaskTitles(priority: UUID?, limit: Int = 12) -> [String] {
+        guard let priority else { return [] }
+        return Array(items.filter { !$0.isDone && $0.pinnedTo == priority }.prefix(limit).map(\.task.title))
+    }
 }

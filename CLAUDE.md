@@ -112,10 +112,15 @@ substantive across both.
 - **What did not change:** raw titles are still never written to the store or an export file;
   `SensitivityGate` still keeps password managers and private windows from the judge; the
   default build's zero-socket readings and the one-file networking exemption still hold.
-- **Copy runs ahead of the code on purpose.** The Privacy pane says the judge "may" be sent
-  everything that helps; today `DecisionOneProtocol.body` sends only the priority sentence and
-  `RemoteWindowContext`. Widening it (context pack, other priorities, `CalendarAgenda.day`,
-  task titles) is a code change awaiting the owner's go-ahead and a re-measure on the corpus.
+- **Permitted is not sent: the judge gets this task's facts only.** Beside the window,
+  `RemoteWorkContext` sends the definition of done, the context pack, the mirror's open tasks
+  pinned to the priority (`subtaskTitles`, not `openTitles`) and today's busy time. Sending the
+  other priorities or the rest of the task list failed the 0.6 bar in every wording tried: the
+  person's other work reads as this task (Xcode on this repo for triage, once the Resume bug was
+  listed). `workPreamble` is the ContextSpike's preamble C word for word; two other wordings over
+  the same block failed. Re-run `CTX_WORK=1 CTX_WORK_SHAPE=steps CTX_PASSES=5` before changing
+  either. A main.swift global used before its line has run is uninitialised: the spike
+  segfaulted until the table moved into an enum.
 - **The About credits are pinned by phrase.** `self-check.sh` requires
   `shell.about.credits` to contain "does not read" and "stays on this Mac"; keep both when
   rewording it. `noNetwork`/`updateChecks` are pinned only as declared and resolving.
@@ -139,8 +144,9 @@ substantive across both.
 - **Composed only for the person's own store**, like the remote judge and the time blocks:
   `AppComposition.taskMirror` is nil in a lane and a self-check, and `taskBoardModel` is
   injected into the cockpit and Settings environments. *Delete Everything* removes the directory.
-- **The judge's seam is `taskMirror?.openTitles(priority:)`**: open titles, the priority's
-  pinned subtasks first, capped at 30.
+- **The judge sends `taskMirror?.subtaskTitles(priority:)`**: the open tasks pinned to the
+  priority, capped at 12. `openTitles(priority:)` (pinned first, then the rest, capped at 30)
+  measured worse for the judge, because other tasks read as this one.
 - **A third cockpit tab costs pins** in CockpitActionsTests, SettingsTests,
   InterventionSettingsTests, VoiceOverSemanticsTests (an audited file per Settings tab) and
   StringCatalogTests (`settings.tasks.title` = `shell.cockpit.tab.tasks`, both "Tasks"). Each

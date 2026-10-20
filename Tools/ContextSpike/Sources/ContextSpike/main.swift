@@ -64,6 +64,63 @@ struct Report: Codable {
     let errors: Int
 }
 
+/// The work block each task is judged with under `CTX_WORK=1`: the corpus's other tasks stand in
+/// for the person's other priorities (the next four) and their task list (the rest), with a fixed
+/// busy day — the shape `RemoteWorkContext.formatted` sends. A task's translation is the same
+/// work, so it is never listed as another.
+func workBlocks(_ corpus: Corpus) -> [String: String] {
+    func family(_ id: String) -> String { id.hasSuffix("-de") ? String(id.dropLast(3)) : id }
+    var blocks: [String: String] = [:]
+    for (index, task) in corpus.tasks.enumerated() {
+        let rotated = corpus.tasks[(index + 1)...] + corpus.tasks[..<index]
+        let others = rotated.filter { family($0.id) != family(task.id) }.map(\.intent)
+        let priorities = others.prefix(4), list = others.dropFirst(4).prefix(12)
+        let busy = "Busy today (it is now 11:42): 09:00–10:00, 14:00–15:30"
+        switch environment["CTX_WORK_SHAPE"] ?? "split" {
+        case "own":
+            blocks[task.intent] = busy
+        case "steps":
+            let own = OwnWork.byTask[task.id] ?? (done: "", steps: [])
+            blocks[task.intent] = [
+                "Done when: \(own.done)",
+                "Steps of this task:\n" + own.steps.map { "- \($0)" }.joined(separator: "\n"),
+                busy,
+            ].joined(separator: "\n")
+        case "other":
+            blocks[task.intent] = [
+                "Other work the person has, which is not this task:\n"
+                    + (priorities + list).map { "- \($0)" }.joined(separator: "\n"),
+                busy,
+            ].joined(separator: "\n")
+        default:
+            blocks[task.intent] = [
+                "The person's other priorities:\n" + priorities.map { "- \($0)" }.joined(separator: "\n"),
+                "Tasks on the person's list:\n" + list.map { "- \($0)" }.joined(separator: "\n"),
+                busy,
+            ].joined(separator: "\n")
+        }
+    }
+    return blocks
+}
+
+/// `CTX_WORK_SHAPE=steps`: a definition of done and two steps per task, written as a person
+/// would, standing in for the priority's own fields and the task mirror's subtasks.
+enum OwnWork {
+    static let byTask: [String: (done: String, steps: [String])] = [
+    "t-acme": ("The proposal is sent to Dana", ["Update the pricing table", "Fold in the call notes"]),
+    "t-acme-de": ("Das Angebot ist an Dana geschickt", ["Preistabelle aktualisieren", "Gesprächsnotizen einarbeiten"]),
+    "t-resume": ("Resume is enabled after a restart, and a test pins it", ["Reproduce after a reboot", "Write a regression test"]),
+    "t-fm": ("A prototype classifies five sample windows", ["Read the Foundation Models docs", "Write a small Swift harness"]),
+    "t-speech": ("The speech is ready to rehearse", ["Collect stories about Tom", "Draft the toast"]),
+    "t-checkout": ("The crash no longer reproduces on iOS", ["Symbolicate the crash log", "Find the nil in checkout"]),
+    "t-offsite": ("A venue is booked for March", ["Shortlist three venues", "Check the team's dates"]),
+    "t-fantasy": ("Transfers confirmed before the Saturday deadline", ["Check injury news", "Compare player form"]),
+    "t-novel": ("Chapter 3 has a full first draft", ["Outline the scenes", "Write the opening"]),
+    "t-triage": ("Every open issue has a label and an owner", ["Read the new issues", "Label duplicates"]),
+    "t-sourdough": ("One loaf baked", ["Feed the starter", "Follow a beginner recipe"]),
+    ]
+}
+
 func judge() async {
     let captures = loadCaptures()
     let backendName = environment["CTX_BACKEND"] ?? "local"
@@ -96,9 +153,11 @@ func judge() async {
             fail("set DECISION_ENDPOINT")
         }
         model = environment["CTX_DEPLOYMENT"] ?? "decision-1"
+        let withWork = environment["CTX_WORK"] == "1"
         judge = SystemOneJudge(endpoint: endpoint, deployment: model, token: entraToken(),
-                               pacer: Pacer(perMinute: Double(environment["CTX_RPM"] ?? "") ?? 55))
-        variant = "window"
+                               pacer: Pacer(perMinute: Double(environment["CTX_RPM"] ?? "") ?? 55),
+                               work: withWork ? workBlocks(corpus) : [:])
+        variant = withWork ? "work" : "window"
     default:
         fail("CTX_BACKEND must be local, chat or systemone")
     }

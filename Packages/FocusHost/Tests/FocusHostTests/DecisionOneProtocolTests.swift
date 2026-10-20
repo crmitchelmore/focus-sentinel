@@ -171,6 +171,80 @@ struct DecisionOneProtocolTests {
         #expect((fit["criteria"] as? [String: String])?.keys.sorted() == ["cannot_tell", "direct", "supporting", "unrelated"])
     }
 
+    @Test("with nothing more known the body is the measured one: no work key, the measured preamble")
+    func bodyWithoutWork() throws {
+        let window = RemoteWindowContext(
+            applicationName: nil, bundleIdentifier: "com.example", title: "T",
+            webAddress: nil, openFile: nil, focused: nil, text: "x"
+        )
+        let data = try DecisionOneProtocol.body(
+            deployment: "d", task: "Write the report", window: window, work: RemoteWorkContext(doneWhen: "  \n ")
+        )
+        let root = try #require(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let state = try #require(root["state"] as? [String: String])
+        #expect(state.keys.sorted() == ["task", "window"])
+        let fit = try #require((root["questions"] as? [String: Any])?["fit"] as? [String: Any])
+        #expect(fit["instructions"] as? String == DecisionOneProtocol.preamble + " Which describes this window?")
+    }
+
+    @Test("what else the app knows travels as one work block, and the preamble says how to use it")
+    func bodyWithWork() throws {
+        let window = RemoteWindowContext(
+            applicationName: nil, bundleIdentifier: "com.example", title: "T",
+            webAddress: nil, openFile: nil, focused: nil, text: "x"
+        )
+        let work = RemoteWorkContext(
+            doneWhen: "Sent to Dana",
+            contextItems: ["Keyword: acme"],
+            steps: ["Update the pricing table"],
+            busyToday: ["09:00–10:00", "14:00–15:30"],
+            clock: "11:42"
+        )
+        #expect(work.formatted == """
+            Done when: Sent to Dana
+            Attached to this task:
+            - Keyword: acme
+            Steps of this task:
+            - Update the pricing table
+            Busy today (it is now 11:42): 09:00–10:00, 14:00–15:30
+            """)
+        let data = try DecisionOneProtocol.body(deployment: "d", task: "Write the report", window: window, work: work)
+        let root = try #require(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let state = try #require(root["state"] as? [String: String])
+        #expect(state["work"] == work.formatted)
+        let fit = try #require((root["questions"] as? [String: Any])?["fit"] as? [String: Any])
+        #expect(fit["instructions"] as? String
+            == DecisionOneProtocol.preamble + DecisionOneProtocol.workPreamble + " Which describes this window?")
+    }
+
+    @Test("work lists are capped, lines flattened and trimmed, and blank entries dropped")
+    func workIsBounded() {
+        let many = (1...30).map { "Task \($0)" }
+        let work = RemoteWorkContext(steps: ["", "  "] + many + [String(repeating: "a", count: 500)])
+        let lines = work.formatted.split(separator: "\n")
+        #expect(lines.count == 1 + RemoteWorkContext.maximumItems)
+        #expect(lines.last == "- Task 12")
+        let long = RemoteWorkContext(doneWhen: "one\ntwo " + String(repeating: "b", count: 500))
+        #expect(long.formatted.hasPrefix("Done when: one two "))
+        #expect(long.formatted.count == "Done when: ".count + RemoteWorkContext.maximumLineLength + 1)
+    }
+
+    @Test("today's busy time reads as clock ranges in the calendar's zone, and unread is nothing")
+    func busyToday() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(identifier: "UTC"))
+        let midnight = Date(timeIntervalSince1970: 1_760_000_000 - 1_760_000_000.truncatingRemainder(dividingBy: 86_400))
+        let day = CalendarDay.read(
+            span: DateInterval(start: midnight, duration: 86_400),
+            busy: [CalendarBusyBlock(start: midnight.addingTimeInterval(9 * 3600), end: midnight.addingTimeInterval(10.5 * 3600))],
+            now: midnight.addingTimeInterval(11 * 3600 + 42 * 60)
+        )
+        let busy = RemoteWorkContext.busy(day, calendar: calendar)
+        #expect(busy.blocks == ["09:00–10:30"])
+        #expect(busy.clock == "11:42")
+        #expect(RemoteWorkContext.busy(.unread, calendar: calendar).blocks.isEmpty)
+    }
+
     // MARK: How the answer is read
 
     @Test("the documented response shape gives its probabilities; anything else gives nil")
@@ -250,13 +324,14 @@ struct DecisionOneProtocolTests {
             applicationName: nil, bundleIdentifier: "com.example", title: nil,
             webAddress: nil, openFile: nil, focused: nil, text: "x"
         )
-        source.provide = { _ in .init(task: "Write the report", read: { window }) }
+        let work = RemoteWorkContext(doneWhen: "Sent", steps: ["Update the pricing table"])
+        source.provide = { _ in .init(task: "Write the report", work: work, read: { window }) }
         let request = ModelRequest(
             cacheKey: "k",
             priorityTokens: [],
             subject: try #require(NormalisedToken.normalised("com.example")),
             priorityRevision: 1
         )
-        #expect(await source.input(for: request) == RemoteJudgeInput(task: "Write the report", window: window))
+        #expect(await source.input(for: request) == RemoteJudgeInput(task: "Write the report", window: window, work: work))
     }
 }

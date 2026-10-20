@@ -125,10 +125,11 @@ final class RemoteJudgeBackoff: @unchecked Sendable {
 }
 
 /// What a remote judgement needs that a `ModelRequest` deliberately does not carry: the
-/// priority sentence as written, and the window as read.
+/// priority sentence as written, the window as read, and the rest of the work as the app holds it.
 struct RemoteJudgeInput: Sendable, Equatable {
     var task: String
     var window: RemoteWindowContext
+    var work: RemoteWorkContext = RemoteWorkContext()
 }
 
 /// **Where the remote judge gets its input, and the only way it can.**
@@ -142,7 +143,14 @@ final class RemoteJudgeContextSource {
     /// The checks pass on the main actor; the window is read after, off it, by `read`.
     struct Pending: Sendable {
         var task: String
+        var work: RemoteWorkContext = RemoteWorkContext()
         var read: @Sendable () -> RemoteWindowContext?
+
+        init(task: String, work: RemoteWorkContext = RemoteWorkContext(), read: @escaping @Sendable () -> RemoteWindowContext?) {
+            self.task = task
+            self.work = work
+            self.read = read
+        }
     }
 
     var provide: ((ModelRequest) -> Pending?)?
@@ -155,6 +163,6 @@ final class RemoteJudgeContextSource {
     nonisolated func input(for request: ModelRequest) async -> RemoteJudgeInput? {
         guard let pending = await pending(for: request) else { return nil }
         let window = await Task.detached(priority: .utility) { pending.read() }.value
-        return window.map { RemoteJudgeInput(task: pending.task, window: $0) }
+        return window.map { RemoteJudgeInput(task: pending.task, window: $0, work: pending.work) }
     }
 }

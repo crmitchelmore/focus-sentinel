@@ -101,6 +101,43 @@ What it says:
 - The decoy most cloud models fall for is `t-resume/w-crashlog`, a TextEdit crash log open for a
   CV-rewriting task. gpt-4.1-mini and Llama accept it at every level.
 
+## Results (20 October 2026): what else to send beside the window
+
+Under the owner's opt-in posture (2026-10-20) the judge may be sent everything the app knows. The
+question was what helps. `CTX_WORK=1` adds a `work` state field and a preamble sentence
+(`CTX_WORK_PREAMBLE` overrides it); `CTX_WORK_SHAPE` chooses what goes in it. The busy line is
+fixed (`Busy today (it is now 11:42): 09:00–10:00, 14:00–15:30`). Other priorities and other
+tasks are the corpus's other intents, and the corpus has no definitions of done or steps, so
+`steps` writes one of each per task. Decision-1, `full`, threshold 0.6:
+
+| Shape | Preamble | Passes | Rescued | Seduced | Unstable | Bar |
+|---|---|---|---|---|---|---|
+| none (baseline, re-run) | — | 3 | 15/15 | 0 | 0 | ✓ |
+| `split`: other priorities + other tasks + busy | "use it to understand the task" | 3 | 14/15 | 0 | 1 (`t-offsite/w-offsite`) | ✗ |
+| `split` | A: "use it only to understand the task" | 3 | 15/15 | 1 (`t-triage/w-fmdocs`) | 0 | ✗ |
+| `split` | B: "judge only the task named…" | 5 | 15/15 | 1 (`t-triage/w-xcode`, 0.61) | 1 | ✗ |
+| `other`: all other work under one heading + busy | C | 5 | 14/15 | 0 | 1 (`t-offsite/w-offsite`) | ✗ |
+| `own`: busy only | C | 5 | 15/15 | 0 | 0 | ✓ |
+| `steps`: done when + own steps + busy | "use it to understand the task" | 5 | 15/15 | 1 (`t-acme/w-offsite`, 0.9) | 1 | ✗ |
+| `steps` | D: C plus "even when it shares a name, a person or a client" | 5 | 14/15 | 0 | 1 (`t-offsite/w-offsite`, 0.22) | ✗ |
+| **`steps`** | **C** | 5 | **15/15** | **0** | **0** | **✓** |
+
+Preamble C, which shipped: *"Judge only the task named in the state's task. The state's work says
+more about it — what done looks like, what the person attached to it, its own steps — and about
+the rest of their day. A window that belongs to the other work listed there is other work, even
+though it is the person's."* With `steps` and C, the lowest rescue was 0.89 and the highest hold
+`t-triage/w-xcode` at 0.36.
+
+- **The person's other work makes the judge worse.** Listing their other priorities or other
+  tasks put Decision-1 on both sides of the corpus's decoys: Xcode on this repo read as the
+  triage task once "the Resume bug" was on the list, and the Acme offsite plan stopped being
+  rescued for the offsite task once "the Acme proposal" was. No wording fixed it at five passes.
+  The app sends this task's facts only; privacy would allow the rest, accuracy does not.
+- **Wording matters as much as content.** The same `steps` block failed with two other preambles.
+  Change `DecisionOneProtocol.workPreamble` only with a re-run of this table.
+- **One pass in five decides.** B passed at three passes and failed at five; decide on
+  `CTX_PASSES=5`.
+
 ## Caveats
 
 - The documents and pages were staged by the spike, and the labels are the author's own judgement.
@@ -112,3 +149,6 @@ What it says:
 - At `meta` and `full`, file paths, URLs and document text leave the Mac. That is a privacy change
   for the product, not a tuning choice; the owner made it opt-in on 2026-10-20 (README ▸ Privacy
   posture).
+- The 20 October definitions of done and steps were written by the spike's author, one short line
+  each. A person's real ones may be longer, vaguer or name other work; the context pack was not
+  measured at all.

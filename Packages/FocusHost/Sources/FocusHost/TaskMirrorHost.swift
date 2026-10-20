@@ -130,6 +130,11 @@ public final class TaskMirrorHost: TaskMirrorActing {
         model.board.openTitles(priority: priority, limit: limit)
     }
 
+    /// The open tasks pinned to the priority, and nothing else: what the remote judge sends.
+    public func subtaskTitles(priority: UUID?, limit: Int = 12) -> [String] {
+        model.board.subtaskTitles(priority: priority, limit: limit)
+    }
+
     /// Re-composes the board when anything under the directory changed.
     func reload(force: Bool) {
         let current = files.signature()

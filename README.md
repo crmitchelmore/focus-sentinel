@@ -1638,10 +1638,11 @@ we can do it remote for extra benefit."* Three rules follow from it:
 3. **Opting in to the remote judge opens everything the app knows to it.** Not a curated subset:
    the priorities and their definitions of done, the context pack, the frontmost window's title,
    selected item, address, file and visible text, today's calendar and external time blocks, and
-   the task titles the task mirror stores. What the judge is sent today is narrower (see below);
-   widening it is permitted by this posture, not yet built. The only exclusions are the ones that
-   protect the person from the app rather than from the judge: nothing from a password manager or
-   a private window (`SensitivityGate`), and nothing sent is stored by the app.
+   the task titles the task mirror stores. What the app actually sends is chosen for accuracy, not
+   privacy (see below): this task's facts help the judge, the person's other work was measured to
+   mislead it. The only exclusions privacy makes are the ones that protect the person from the app
+   rather than from the judge: nothing from a password manager or a private window
+   (`SensitivityGate`), and nothing sent is stored by the app.
 
 What has not changed: raw titles are never written to the store or an export file, and the
 lints, entitlement checks and self-check readings below still hold the default build to them.
@@ -1707,11 +1708,15 @@ only: the priority sentence, and — only while the application asked about is s
 cleared by e03's `SensitivityGate` (so never a password manager or a private window), and only
 with the Accessibility opt-in on — the window's title, file path, web address reduced to host and
 path, focused element and up to 6,000 characters of text, read in `SelectedItemReader.swift`
-through the same three selectors. Under the 2026-10-20 posture the judge may also be given the
-definition of done, the context pack, the other priorities, today's calendar and external time
-blocks, and the task mirror's titles; that widening needs a change to
-`DecisionOneProtocol.body` and `RemoteJudgeContextSource`, re-measured on the corpus, and waits on
-the owner's go-ahead. It can only rescue: there is no `unrelated` answer, and any failure is
+through the same three selectors. With it, as a `work` state field (`RemoteWorkContext`), the
+priority's definition of done, its context pack, the task mirror's open tasks pinned to it
+(`TaskMirrorHost.subtaskTitles`, up to twelve) and today's busy time, calendar and external
+blocks merged, as clock ranges — each line capped at 200 characters, each list at twelve. Not the
+other priorities or the rest of the task list: measured on the corpus at 0.6, the person's other
+work led Decision-1 to read its windows as this task, and no preamble fixed that in five passes;
+this task's own facts with the measured preamble kept 15/15 rescued and none seduced
+(`Tools/ContextSpike/README.md`, 20 October 2026). A request with no work to add is byte for byte
+the one measured on 16 October. It can only rescue: there is no `unrelated` answer, and any failure is
 a decline that leaves the deterministic verdict standing. A judge it could not reach (no token,
 offline, 401/403/408/429/5xx) is not cached: it is asked again after a quiet minute
 (`RemoteJudgeBackoff`), so a sign-in or a network that comes back is picked up without a relaunch.

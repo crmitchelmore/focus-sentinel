@@ -223,6 +223,16 @@ struct SystemOneJudge: Judge {
     let deployment: String
     let token: String
     let pacer: Pacer
+    /// `CTX_WORK=1`: the app's `RemoteWorkContext` block per task intent, as the shipped judge
+    /// sends it once the person opted in (owner's ruling, 20 October 2026).
+    var work: [String: String] = [:]
+
+    static let workPreamble = """
+         The state may also say more about the person's work: what done looks like, what they \
+        attached to the task, their other priorities, tasks on their list and today's busy time. \
+        Use it to understand the task. A window that serves only another priority or another \
+        task on the list is other work.
+        """
 
     func preamble(level: Level) -> String {
         """
@@ -239,10 +249,14 @@ struct SystemOneJudge: Judge {
     }
 
     func answer(intent: String, context: String, level: Level) async -> Answer? {
-        let preamble = preamble(level: level)
+        let workText = work[intent] ?? ""
+        let workPreamble = environment["CTX_WORK_PREAMBLE"].map { " " + $0 } ?? Self.workPreamble
+        let preamble = preamble(level: level) + (workText.isEmpty ? "" : workPreamble)
+        var state = ["task": intent, "window": context]
+        if !workText.isEmpty { state["work"] = workText }
         let body: [String: Any] = [
             "model": deployment,
-            "state": ["task": intent, "window": context],
+            "state": state,
             "questions": [
                 "fit": [
                     "type": "choice",

@@ -733,11 +733,15 @@ public final class AppComposition {
         // active — which was a fourth independent read of the fact gate 1 is decided by.
         relevanceHost.activeCommitment = { [weak priorityHost] in priorityHost?.activeCommitment }
 
-        // **What the remote judge may send, decided here and nowhere else.** Only the window of
-        // the application the request names, only while it is still frontmost and e03's gate
-        // cleared it (no password manager, no private window), and only under the priority
-        // revision the request was made for. Installed whether or not a judge was configured;
-        // with none, nothing ever asks.
+        // **What the remote judge may send, decided here and nowhere else.** Once the person opted
+        // in, everything the app knows about the work: the window of the application the request
+        // names, only while it is still frontmost and e03's gate cleared it (no password manager,
+        // no private window), and only under the priority revision the request was made for; and
+        // with it the priority's definition of done, its context pack, the mirrored tasks pinned to
+        // it and today's busy time. Not the person's other priorities or other tasks: privacy
+        // allows them, but measured at 0.6 they made the judge read other work as this task
+        // (Tools/ContextSpike/README.md). Installed whether or not a judge was configured; with
+        // none, nothing ever asks.
         remoteJudgeSource.provide = { [weak self] request in
             guard let self,
                   let cleared = self.sensingHost.clearedFrontmostActivation,
@@ -747,7 +751,16 @@ public final class AppComposition {
                   let task = self.relevanceHost.prioritySentence(atRevision: request.priorityRevision),
                   let read = self.selectedItemReader.windowContentRead(in: cleared, optIns: self.grantOptIns)
             else { return nil }
-            return RemoteJudgeContextSource.Pending(task: task, read: read)
+            var work = self.relevanceHost.priorityWork(atRevision: request.priorityRevision) ?? RemoteWorkContext()
+            work.steps = self.taskMirror?.subtaskTitles(priority: self.priorityHost.activeCommitment?.id) ?? []
+            let now = self.dateProvider.now
+            let busy = RemoteWorkContext.busy(
+                self.calendarHost.agenda(at: now).day(at: now, calendar: self.calendarHost.calendar),
+                calendar: self.calendarHost.calendar
+            )
+            work.busyToday = busy.blocks
+            work.clock = busy.clock
+            return RemoteJudgeContextSource.Pending(task: task, work: work, read: read)
         }
 
         // **One projection at the end**, so the two facts read at the top of this function reach

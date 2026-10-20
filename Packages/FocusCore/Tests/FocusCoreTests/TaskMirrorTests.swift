@@ -141,6 +141,8 @@ struct TaskMirrorTests {
         #expect(board.pinned(to: Self.priority).map(\.key) == [pinned])
         #expect(board.openTitles(priority: Self.priority) == ["Subtask", "Inbox"])
         #expect(board.openTitles(priority: nil, limit: 1) == ["Inbox"])
+        #expect(board.subtaskTitles(priority: Self.priority) == ["Subtask"])
+        #expect(board.subtaskTitles(priority: nil).isEmpty)
     }
 
     @Test("the chip list merges labels that differ only in case")
