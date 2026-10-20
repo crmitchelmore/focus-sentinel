@@ -16,7 +16,8 @@ for every screen. The code that enforces it is `Design/LiquidGlass.swift`.
 - Dimillian's `swiftui-liquid-glass` skill and conorluddy's *LiquidGlassReference*: glass is
   for the floating navigation layer and never for content. Tint carries meaning, not
   decoration. Keep text at 4.5:1 contrast or better. Group glass shapes in one
-  `GlassEffectContainer`.
+  `GlassEffectContainer`. Apply `glassEffect` to the view whose content sits on the glass; a
+  glass `.background` inside a container is drawn over that content.
 
 ## The strategy: three layers, with glass only at the top
 

@@ -155,6 +155,13 @@ substantive across both.
 - **`swift test --filter SettingsTests\.` also matches `InterventionSettingsSnapshotTests`.**
   Anchor the filter (`^FocusUITests.SettingsTests`).
 
+### 2026-10-20 — glass drawn over the cockpit tab labels
+
+- **A `.background { Color.clear.glassEffect(...) }` inside a `GlassEffectContainer` is drawn
+  over its siblings**, not under them: the tab words read as frosted and the opaque thumb's edge
+  was lensed. Put `.glassEffect(.regular, in:)` on the view whose content sits on the glass
+  (the tab row); SwiftUI draws that content in front. One glass shape needs no container.
+
 ### 2026-10-16 — Liquid Glass, rethought for legibility (supersedes the entry below it)
 
 - **The strategy is `Design/LiquidGlass.md`; read it before touching a surface.** Three layers:
@@ -165,7 +172,7 @@ substantive across both.
   Dark, so `DesignTokens.groundRole(for:)` (Light Inlay, Dark Bench) and `paneRole(for:)`
   (Light Bench, Dark Inlay) choose them. Panes always rise off the ground. `DesignTokenTests`
   pins this and pins Slate on pane and ground, and Bench on Spruce, at ≥ 4.5:1.
-- **Glass appears once per window: the cockpit tab track** (`GlassEffectContainer`, `.regular`,
+- **Glass appears once per window: the cockpit tab track** (`.glassEffect(.regular)` on the tab row itself,
   untinted). The selected thumb is an opaque pane capsule with a Slate label, not Spruce on glass.
 - **Buttons are solid.** `CompanionButtonStyle` uses a Spruce fill with a Bench label, or a
   secondary Slate wash. This is also safe on the uninvited nudges.

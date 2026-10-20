@@ -1233,25 +1233,29 @@ public struct CockpitView: View {
         let track = Capsule(style: .continuous)
         let glass = DesignTokens.drawsGlass(for: traits)
         let firm = DesignTokens.emphasis(for: traits).promotesSecondaryText
-        return GlassEffectContainer(spacing: rowSpacing) {
-            HStack(spacing: rowSpacing / 4) {
-                ForEach(CockpitTab.allCases) { candidate in
-                    tabButton(candidate)
-                }
+        let row = HStack(spacing: rowSpacing / 4) {
+            ForEach(CockpitTab.allCases) { candidate in
+                tabButton(candidate)
             }
-            .padding(rowSpacing / 4)
-            .background {
-                if glass {
-                    Color.clear.glassEffect(.regular, in: track)
-                } else {
-                    track.fill(DesignTokens.Palette.role(DesignTokens.groundRole(for: traits), for: traits))
-                }
-            }
-            .overlay(track.strokeBorder(
-                DesignTokens.Palette.role(.mist, for: traits).opacity(firm ? 1 : (glass ? 0 : 0.3)),
-                lineWidth: firm ? 2 : 1
-            ))
         }
+        .padding(rowSpacing / 4)
+        // `glassEffect` on the row itself, never on a `.background` inside a
+        // `GlassEffectContainer`: there the container drew the glass over the labels and the
+        // thumb, so the words read as frosted and the thumb's edge was lensed. Applied here,
+        // SwiftUI draws the row in front of its glass.
+        return Group {
+            if glass {
+                row.glassEffect(.regular, in: track)
+            } else {
+                row.background(track.fill(
+                    DesignTokens.Palette.role(DesignTokens.groundRole(for: traits), for: traits)
+                ))
+            }
+        }
+        .overlay(track.strokeBorder(
+            DesignTokens.Palette.role(.mist, for: traits).opacity(firm ? 1 : (glass ? 0 : 0.3)),
+            lineWidth: firm ? 2 : 1
+        ))
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .contain)
     }
