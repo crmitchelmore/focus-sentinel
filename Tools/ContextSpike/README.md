@@ -110,4 +110,5 @@ What it says:
 - Office content is missing (see above). A production design would have to use AppleScript or the
   screen for Word and Excel, each a separate grant.
 - At `meta` and `full`, file paths, URLs and document text leave the Mac. That is a privacy change
-  for the product, not a tuning choice.
+  for the product, not a tuning choice; the owner made it opt-in on 2026-10-20 (README ▸ Privacy
+  posture).

@@ -21,7 +21,7 @@ Examples of the resulting wording:
 - Display history: "Displayed", without claiming the person saw the panel.
 - Custom duration: "Minutes, 1 to 1,440".
 
-Privacy wording describes this branch's current implementation. It must be checked again when the separate opt-in permission work is integrated. Destructive confirmations retain their scope, restart requirements and inability to undo. Revised catalogue comments distinguish this owner-requested edit from approval of the earlier wording.
+Privacy wording follows the owner's posture of 20 October 2026: local first, nothing leaves the Mac unless the person switches it on, and opting in to Ask Decision-1 gives the remote judge everything the app knows. Each opt-in note says what it lets Focus see or send; none promises less than the switch allows. Destructive confirmations retain their scope, restart requirements and inability to undo. Revised catalogue comments distinguish this owner-requested edit from approval of the earlier wording.
 
 The copy assertions and accessibility-driving scripts use the revised labels. Source checks preserve localisation coverage and format arguments. Native layout and accessibility validation remain subject to the owner's standing requirement to confirm each UI test batch.
 

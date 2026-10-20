@@ -1,7 +1,9 @@
 # Focus Sentinel
 
-A local-only macOS focus guardian. Everything here is built, tested and verified from the
-command line: **no step in this repository requires Xcode.app to be opened.**
+A local-first macOS focus guardian. Nothing leaves the Mac unless the person switches it on;
+switching on the remote judge trades that for more power (see **Privacy posture**). Everything
+here is built, tested and verified from the command line: **no step in this repository requires
+Xcode.app to be opened.**
 
 Requirements: macOS 26+, Xcode 26.2 with the Swift 6.2 toolchain. Nothing else is installed
 and nothing else may be introduced — in particular `xcodegen` is neither installed nor invoked,
@@ -241,10 +243,12 @@ optional. `ExternalTimeBlockReader` reads only the kind, start and end of each b
 file only when it changes, and hands busy, away and tentative blocks to `CalendarHost`, which
 merges them with the calendar's. The rules above then apply unchanged: no timebox into blocked
 time, gate 13 holds questions, and the cockpit names the next block. Titles and details stay in
-the provider's file, are never stored or exported, and *Delete Everything* removes the
+the provider's file and are never written to the store or an export file. Under the opt-in
+posture (2026-10-20) they are among what the remote judge may be sent once the person switches
+*Ask Decision-1* on; with it off they never leave the Mac. *Delete Everything* removes the
 directory. Lanes and self-checks never read it. With no files, nothing changes.
 
-**The Accessibility grant is now spent, on device, from 2026-10-15** (owner's ruling, issue #24).
+**The Accessibility grant is now spent, from 2026-10-15** (owner's ruling, issue #24).
 A bundle identifier cannot tell one task from another inside a mixed-use application — GitHub
 Copilot, a terminal, an editor, a browser — so a nudge that can only say "you are in Copilot" is
 not accurate enough to be worth asking. Reading the *selected item* (the focused window's title,
@@ -253,11 +257,13 @@ grant unlocks" clause above is being replaced. What the replacement keeps:
 
 - **still opt-in**: nothing is read unless the person switched Accessibility on in Settings ▸
   Privacy and macOS granted it; on a default install the capability table is unchanged;
-- **on device only**: whatever is read stays on this Mac — no network, no export of raw titles,
-  no telemetry; the socket readings above stay exactly as strict;
-- **minimal and ephemeral**: only the focused window's title (and, where an app needs it, the
-  selected row of its sidebar) of the frontmost application, read at nudge time, reduced to a
-  short normalised subject before anything is stored; raw titles are never persisted;
+- **local first**: whatever is read stays on this Mac — no telemetry, no export of raw titles —
+  unless the person also switches on *Ask Decision-1*, the opt-in remote judge, which may see
+  everything the app knows (see **Privacy posture**, as amended on 2026-10-20). With that switch
+  off, the socket readings above stay exactly as strict;
+- **minimal and ephemeral on disk**: only the focused window's title (and, where an app needs
+  it, the selected row of its sidebar) of the frontmost application, read at nudge time, reduced
+  to a short normalised subject before anything is stored; raw titles are never persisted;
 - **confined**: the AX *use* selectors move out of `banned` into one registered reader file,
   proven by the same two-sided confinement the request selectors already have.
 
@@ -319,7 +325,7 @@ How it is built:
   every half-second for two minutes after the person was sent to System Settings
   (`GrantAccessWatch`), reading without asking;
 - the store export replaces every item subject's label with `selected-item`, so a label never
-  leaves the Mac in an export either; the self-check publishes `accessibilityOptedIn` and
+  reaches an export file; the self-check publishes `accessibilityOptedIn` and
   `selectedItemReadCount`, and on a default store they read `false` and `0`.
 
 `release-artefact` is the D-09 disk image, and it is described under **Distribution posture**
@@ -544,10 +550,11 @@ person's own list is exactly as it was found.
 
 Two sentences in Settings ▸ Privacy, directly under the statement about where the data lives and
 with no heading of their own — a section headed *"what we do not do"* invites the list to grow,
-and a list of denials reads as defensive rather than plain. *"Focus never connects to the
-internet unless you turn on update checks in General settings."* (F-122) and *"Update checks are
-off until you turn them on. When Focus checks, it sends its name and version and nothing about
-you."* (F-137, focus-h8jf).
+and a list of denials reads as defensive rather than plain. *"Focus connects to the internet
+only for what you switch on: update checks in General settings, and Ask Decision-1 below."*
+(F-122, revised for the opt-in posture on 2026-10-20) and *"Update checks are off until you turn
+them on. When Focus checks, it sends its name and version and nothing about you."* (F-137,
+focus-h8jf).
 
 Until focus-h8jf the second sentence read *"It never checks for updates."* D-09 parked Sparkle
 because this programme had no server, no remote and no deployment lane, so a feed would have
@@ -555,8 +562,9 @@ pointed at nothing. The release trains below give it a feed per train, and the s
 with the product rather than ahead of it.
 
 **Neither is a promise.** The first is linted of the shipped product by the gate's `boundaries`
-stage — no networking symbol in any package source (Sparkle's own socket is Sparkle's, inside
-`Sparkle.framework`, and `FocusUpdates` names no networking API of its own), and
+stage — no networking symbol in any package source but the one remote-judge file (Sparkle's own
+socket is Sparkle's, inside `Sparkle.framework`, and `FocusUpdates` names no networking API of
+its own), and
 `nm -u FocusClassify.o` naming none, with the object's seven NaturalLanguage symbols as the
 control that stops an empty table passing. The second is linted in the same place, in the
 opposite direction from before: `nm -u` over the Release app's own binary **names** the Sparkle
@@ -645,7 +653,11 @@ app is unsandboxed, that panel is an ordinary window rather than a Powerbox requ
 does not take that on trust: it drives the same verbs the panel's OK button reaches and takes the
 on-screen authorisation-surface scan on both sides of the write.
 
-**What never leaves is four columns**, and every one of them is a fact about *this Mac* rather
+Both are files on this Mac, written only when the person asks; neither is sent anywhere, and
+neither is how the remote judge sees anything (that has a switch of its own; see **Privacy
+posture**).
+
+**What an export never carries is four columns**, and every one of them is a fact about *this Mac* rather
 than about the person: the security-scoped bookmark, the boot identity and uptime anchor, and the
 display id. The list is short because the store cannot hold the things an export usually has to
 strip — a window title, a URL beyond a normalised origin, a document name, an observed file path
@@ -1595,6 +1607,30 @@ and do not treat an unavailable feed as “you’re up to date”.
 
 ## Privacy posture
 
+**Local first, opt in for more** (owner's ruling, 2026-10-20). Chris: *"We won't share things if
+you don't want to. But if you opt in, then you get much more power by doing so… Local 1st, but
+we can do it remote for extra benefit."* Three rules follow from it:
+
+1. **By default nothing leaves the Mac.** No account, no sync, no telemetry, no analytics. Every
+   grant (Accessibility, Screen Recording, calendars) and every network use (update checks, the
+   remote judge) is off until the person switches it on in Settings, and the gate's socket
+   sampling on a default store still reads zero.
+2. **Each opt-in buys power, and the copy says so.** A grant lets the app see more on this Mac;
+   update checks send the app's name and version; *Ask Decision-1* sends context to a model on
+   Azure so the app can tell work from distraction far better than it can alone.
+3. **Opting in to the remote judge opens everything the app knows to it.** Not a curated subset:
+   the priorities and their definitions of done, the context pack, the frontmost window's title,
+   selected item, address, file and visible text, today's calendar and external time blocks, and
+   the task titles the task mirror stores. What the judge is sent today is narrower (see below);
+   widening it is permitted by this posture, not yet built. The only exclusions are the ones that
+   protect the person from the app rather than from the judge: nothing from a password manager or
+   a private window (`SensitivityGate`), and nothing sent is stored by the app.
+
+What has not changed: raw titles are never written to the store or an export file, and the
+lints, entitlement checks and self-check readings below still hold the default build to them.
+Opting in is the person's act, never the app's, and switching it off stops the sending at the
+next judgement.
+
 No accounts, no telemetry, no analytics, and one third-party package: every `Package.swift` in
 this repository declares local siblings only, except `Packages/FocusUpdates`, which declares
 Sparkle and nothing else, and the gate's `boundaries` stage asserts both halves — a remote
@@ -1649,12 +1685,16 @@ never released. Given the window's content, Decision-1 rescued all fifteen and w
 none at threshold 0.6, at about 0.2 s and an estimated $46 per 1,000 users a month — the same
 quality as `gpt-5.6-luna` at a quarter of the cost (`Tools/ContextSpike/README.md`).
 
-What it sends, once per priority revision and per selected page or item, held in memory only:
-the priority sentence, and — only while the application asked about is still frontmost, cleared
-by e03's `SensitivityGate` (so never a password manager or a private window), and only with the
-Accessibility opt-in on — the window's title, file path, web address reduced to host and path,
-focused element and up to 6,000 characters of text, read in `SelectedItemReader.swift` through
-the same three selectors. It can only rescue: there is no `unrelated` answer, and any failure is
+What it sends today, once per priority revision and per selected page or item, held in memory
+only: the priority sentence, and — only while the application asked about is still frontmost,
+cleared by e03's `SensitivityGate` (so never a password manager or a private window), and only
+with the Accessibility opt-in on — the window's title, file path, web address reduced to host and
+path, focused element and up to 6,000 characters of text, read in `SelectedItemReader.swift`
+through the same three selectors. Under the 2026-10-20 posture the judge may also be given the
+definition of done, the context pack, the other priorities, today's calendar and external time
+blocks, and the task mirror's titles; that widening needs a change to
+`DecisionOneProtocol.body` and `RemoteJudgeContextSource`, re-measured on the corpus, and waits on
+the owner's go-ahead. It can only rescue: there is no `unrelated` answer, and any failure is
 a decline that leaves the deterministic verdict standing. A judge it could not reach (no token,
 offline, 401/403/408/429/5xx) is not cached: it is asked again after a quiet minute
 (`RemoteJudgeBackoff`), so a sign-in or a network that comes back is picked up without a relaunch.

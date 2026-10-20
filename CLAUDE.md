@@ -98,6 +98,28 @@ snapshot baselines, running the FocusUITests lane beside another agent's builds,
 type role or a palette hue. `AGENTS.md` and `CLAUDE.md` are independent files; mirror anything
 substantive across both.
 
+### 2026-10-20 — the privacy posture is local first, opt in for more (supersedes "on device only")
+
+- **The owner's ruling.** Chris: *"We won't share things if you don't want to. But if you opt in,
+  then you get much more power by doing so… Local 1st, but we can do it remote for extra
+  benefit."* By default nothing leaves the Mac; every grant and every network use is a switch
+  the person turns on. Opting in to *Ask Decision-1* gives the remote judge **everything** the
+  app knows: priorities, definitions of done, context packs, window title, selected item,
+  address, file and visible text, calendar and external time blocks, and the task mirror's
+  titles. README ▸ Privacy posture carries it. This replaces "on device only (no network, no
+  export of raw titles)" in the 2026-10-15 entry and the time-blocks entry's "never enter the
+  export" as far as the judge is concerned.
+- **What did not change:** raw titles are still never written to the store or an export file;
+  `SensitivityGate` still keeps password managers and private windows from the judge; the
+  default build's zero-socket readings and the one-file networking exemption still hold.
+- **Copy runs ahead of the code on purpose.** The Privacy pane says the judge "may" be sent
+  everything that helps; today `DecisionOneProtocol.body` sends only the priority sentence and
+  `RemoteWindowContext`. Widening it (context pack, other priorities, `CalendarAgenda.day`,
+  task titles) is a code change awaiting the owner's go-ahead and a re-measure on the corpus.
+- **The About credits are pinned by phrase.** `self-check.sh` requires
+  `shell.about.credits` to contain "does not read" and "stays on this Mac"; keep both when
+  rewording it. `noNetwork`/`updateChecks` are pinned only as declared and resolving.
+
 ### 2026-10-16 — Liquid Glass, rethought for legibility (supersedes the entry below it)
 
 - **The strategy is `Design/LiquidGlass.md`; read it before touching a surface.** Three layers:
@@ -148,7 +170,8 @@ substantive across both.
 - **A file drop, not a `focus://` URL**, because blocks must persist and arrive unattended; no
   confirmation, because blocked time only makes the app do less. The contract is
   `FocusCore/Time/ExternalTimeBlocks.swift`; the app decodes through a narrow struct that reads
-  kind, start and end only, so titles and details never enter the store or the export.
+  kind, start and end only, so titles and details never enter the store or the export
+  (the opt-in remote judge may be sent them under the 2026-10-20 posture).
 - **`CalendarHost` merges, it does not cache, the external source.** `agenda(at:)` asks
   `ExternalTimeBlockReader` every call; the reader re-reads only when the directory's
   (name, size, modification date) signature moves. EventKit blocks keep their 60 s cache.
@@ -214,8 +237,8 @@ substantive across both.
   the focused window's title, the chat session, the project folder — is essential and is to be
   built now. This replaces "nothing reads what the grant unlocks" from the 2026-09-09 ruling; it
   does not replace "the app asks for nothing unless the person switched that ask on".
-- **The privacy shape is fixed:** opt-in through the existing Settings ▸ Privacy switch; on
-  device only (no network, no export of raw titles); read at nudge time from the frontmost
+- **The privacy shape was:** opt-in through the existing Settings ▸ Privacy switch; on
+  device only (no network, no export of raw titles; superseded for the remote judge on 2026-10-20); read at nudge time from the frontmost
   application only; reduced to a short normalised subject before storage, never persisting the
   raw title; the AX use selectors confined to one registered reader file and proven from both
   sides, as `SystemGrantRequester.swift` is for the request selectors. README ▸ `grants` carries

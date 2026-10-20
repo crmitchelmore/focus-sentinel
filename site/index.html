@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="canonical" href="https://focus-sentinel.win/">
 <title>Focus Sentinel — one priority, kept in view</title>
-<meta name="description" content="Focus Sentinel is a local-only macOS companion that keeps one priority in view, watches which app is in front, and asks instead of accusing. It blocks nothing and never connects to the internet.">
+<meta name="description" content="Focus Sentinel is a local-first macOS companion that keeps one priority in view, watches which app is in front, and asks instead of accusing. It blocks nothing, and nothing leaves your Mac unless you opt in.">
 <meta name="theme-color" content="#FAF7F0" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#191D1F" media="(prefers-color-scheme: dark)">
 <meta name="color-scheme" content="light dark">
@@ -16,14 +16,14 @@
 <meta property="og:url" content="https://focus-sentinel.win/">
 <meta property="og:locale" content="en_GB">
 <meta property="og:title" content="Focus Sentinel — one priority, kept in view">
-<meta property="og:description" content="A local-only Mac companion that notices when you drift from your priority and asks before it assumes. It blocks nothing and never connects to the internet.">
+<meta property="og:description" content="A local-first Mac companion that notices when you drift from your priority and asks before it assumes. It blocks nothing, and nothing leaves your Mac unless you opt in.">
 <meta property="og:image" content="https://focus-sentinel.win/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="Focus Sentinel: One priority, kept in view. A local-only Mac companion that asks before it assumes.">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Focus Sentinel — one priority, kept in view">
-<meta name="twitter:description" content="A local-only Mac companion that notices when you drift from your priority and asks before it assumes. It blocks nothing and never connects to the internet.">
+<meta name="twitter:description" content="A local-first Mac companion that notices when you drift from your priority and asks before it assumes. It blocks nothing, and nothing leaves your Mac unless you opt in.">
 <meta name="twitter:image" content="https://focus-sentinel.win/og.png">
 <meta name="twitter:image:alt" content="Focus Sentinel: One priority, kept in view. A local-only Mac companion that asks before it assumes.">
 <script type="application/ld+json">
@@ -31,7 +31,7 @@
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
   "name": "Focus Sentinel",
-  "description": "A local-only macOS companion that keeps one priority in view, notices when the app in front drifts from it, and asks before it assumes. It blocks nothing and never connects to the internet.",
+  "description": "A local-first macOS companion that keeps one priority in view, notices when the app in front drifts from it, and asks before it assumes. It blocks nothing, and nothing leaves your Mac unless you opt in.",
   "url": "https://focus-sentinel.win/",
   "image": "https://focus-sentinel.win/og.png",
   "operatingSystem": "macOS 26",
@@ -356,9 +356,9 @@
 <main id="main" tabindex="-1">
   <div class="wrap hero">
     <div>
-      <p class="eyebrow">A local-only focus companion for the Mac</p>
+      <p class="eyebrow">A local-first focus companion for the Mac</p>
       <h1>One priority, kept in view.</h1>
-      <p class="lede">Write down the one thing that matters today. Focus Sentinel watches which app is in front, notices when you drift from it, and asks before it assumes. It keeps no score, and nothing it learns leaves your Mac.</p>
+      <p class="lede">Write down the one thing that matters today. Focus Sentinel watches which app is in front, notices when you drift from it, and asks before it assumes. It keeps no score, and nothing it learns leaves your Mac unless you switch that on.</p>
       <div class="ctas">
         <a class="btn primary" href="https://github.com/crmitchelmore/focus-sentinel/releases"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5a4.5 4.5 0 0 0-4.5 4.5v2.6L2.2 11a.6.6 0 0 0 .5.9h10.6a.6.6 0 0 0 .5-.9l-1.3-2.4V6A4.5 4.5 0 0 0 8 1.5zM6.2 13a1.9 1.9 0 0 0 3.6 0z"/></svg>Watch releases on GitHub</a>
         <a class="btn quiet" href="https://github.com/crmitchelmore/focus-sentinel/issues/12">See what is left to ship</a>
@@ -406,7 +406,7 @@
   <div class="wrap">
     <ul class="trust" aria-label="At a glance">
       <li><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3 3L13 4.5"/></svg><span><b>No account</b>, no sync</span></li>
-      <li><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3 3L13 4.5"/></svg><span><b>Never goes online</b>, not even for updates</span></li>
+      <li><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3 3L13 4.5"/></svg><span><b>Local first</b>, online only if you opt in</span></li>
       <li><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3 3L13 4.5"/></svg><span><b>Blocks nothing</b>, closes nothing</span></li>
       <li><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3 3L13 4.5"/></svg><span><b>MIT licence</b>, source published at release</span></li>
     </ul>
@@ -562,7 +562,7 @@
             </tr>
             <tr role="row">
               <th scope="row" role="rowheader">Where the record lives</th>
-              <td role="cell" class="us" data-label="Focus Sentinel">One folder on this Mac. No account, and it never goes online.</td>
+              <td role="cell" class="us" data-label="Focus Sentinel">One folder on this Mac. No account, and it goes online only if you opt in.</td>
               <td role="cell" data-label="App blockers">Varies; some sync lists between devices.</td>
               <td role="cell" data-label="Time trackers">Often a cloud account.</td>
               <td role="cell" data-label="Plain timers">Usually nowhere; there is no record.</td>
@@ -579,24 +579,24 @@
     <div class="wrap split">
       <p class="eyebrow reveal">Privacy</p>
       <div>
-        <h2 class="reveal">Your data stays on this Mac.</h2>
-        <p class="intro measure reveal" style="--i:1">No account, no sync, no usage reports. This is the app's own wording from its Privacy settings, and the build gate checks the shipped binary against it.</p>
+        <h2 class="reveal">Local first. More power if you opt in.</h2>
+        <p class="intro measure reveal" style="--i:1">No account, no sync, no usage reports, and nothing leaves your Mac unless you switch it on. Every extra it can do is off until you choose it, and each one you choose lets Focus see more and judge your work better. This follows the app's own Privacy settings, and the build gate checks the shipped binary against the default.</p>
         <ul class="promises">
           <li class="reveal" style="--i:2">
-            <h3>What it reads</h3>
-            <p>Which app is active: its name, never its windows. This version does not read which website a browser is showing.</p>
+            <h3>What it reads by default</h3>
+            <p>Which app is active, by name. With nothing switched on, it reads no window titles, web addresses, file paths or document text, and it stores no raw titles even when you do.</p>
           </li>
           <li class="reveal" style="--i:3">
-            <h3>What it never reads</h3>
-            <p>Window titles, full web addresses, file paths, document names, or anything you type.</p>
+            <h3>Permissions are yours to give</h3>
+            <p>Accessibility, Screen Recording and your calendar are each listed in Privacy settings, off, with a note of what they let Focus read. Switch Accessibility on and Focus can tell which window, chat or project you are in, on this Mac.</p>
           </li>
           <li class="reveal" style="--i:4">
-            <h3>No network</h3>
-            <p>Focus never connects to the internet and has no updater. Its Privacy settings say so in as many words.</p>
+            <h3>Online only if you opt in</h3>
+            <p>Focus goes online for two things, both off until you turn them on: update checks, which send the app's name and version, and Ask Decision-1.</p>
           </li>
           <li class="reveal" style="--i:2">
-            <h3>Permissions are yours to give</h3>
-            <p>Focus asks for Screen Recording or Accessibility only if you switch that on in Privacy settings, and nothing in this version uses them. Each is listed there, off, with a note of what it would let Focus read.</p>
+            <h3>Opt in for the full picture</h3>
+            <p>Switch on Ask Decision-1 and, when its own rules cannot tell, Focus may send Microsoft's Decision-1 model on Azure everything it knows that helps: your priorities and their context, the window in front, your busy times and your tasks. It can only keep Focus quiet, never make it speak, and nothing is sent from password managers or private windows.</p>
           </li>
           <li class="reveal" style="--i:3">
             <h3>Away means quiet</h3>
@@ -624,7 +624,7 @@
           <li class="reveal" style="--i:1"><span><b>Writers and researchers</b> who keep one question open all day and drift into a browser without noticing.</span></li>
           <li class="reveal" style="--i:2"><span><b>Engineers and designers</b> whose task spans an editor, a terminal, a few sites and a handful of files, and who would rather tell the app that list than have it guess.</span></li>
           <li class="reveal" style="--i:3"><span><b>Anyone on calls</b> who needs silence while a microphone is live, while presenting, and after hours.</span></li>
-          <li class="reveal" style="--i:4"><span><b>People who read the privacy page first.</b> Every signal is listed, every permission is off until you switch it on, and the record can be inspected, exported or deleted.</span></li>
+          <li class="reveal" style="--i:4"><span><b>People who read the privacy page first.</b> Every signal is listed, every permission and every connection is off until you switch it on, and the record can be inspected, exported or deleted.</span></li>
         </ul>
       </div>
     </div>
@@ -638,11 +638,11 @@
         <div class="faq reveal" style="--i:1">
           <details>
             <summary>Does it read my screen?<span class="plus" aria-hidden="true"><svg viewBox="0 0 18 18"><path d="M9 3v12M3 9h12"/></svg></span></summary>
-            <p>No. Focus asks macOS for Screen Recording or Accessibility only if you switch that on in Privacy settings, and nothing in this version reads what either would unlock. It reads which app is active. It does not read which website a browser is showing.</p>
+            <p>Not unless you ask it to. By default it reads which app is active, by name. Focus asks macOS for Accessibility, Screen Recording or your calendar only if you switch that on in Privacy settings. With Accessibility on, it reads the title and selected item of the window in front so it can tell your work from a distraction in the same app.</p>
           </details>
           <details>
             <summary>Does it need the internet, or phone home?<span class="plus" aria-hidden="true"><svg viewBox="0 0 18 18"><path d="M9 3v12M3 9h12"/></svg></span></summary>
-            <p>No, and no. Focus never connects to the internet and has no updater, so everything works offline. The build gate checks the shipped app for networking code on every run. When a new version is out, you download it from the release page yourself.</p>
+            <p>No, and only if you say so. Everything works offline, and by default Focus never connects to the internet. Two things can go online, both off until you switch them on: update checks, and Ask Decision-1, which sends context to a model on Azure for sharper judgement. The build gate checks the shipped app on every run, so no other code can reach the network.</p>
           </details>
           <details>
             <summary>Does it block apps or sites?<span class="plus" aria-hidden="true"><svg viewBox="0 0 18 18"><path d="M9 3v12M3 9h12"/></svg></span></summary>

@@ -1,5 +1,10 @@
 # Claims audit: site/index.html against the source
 
+> **Superseded in part (2026-10-20).** The owner changed the privacy posture to *local first, opt in
+> for more*: update checks and the Decision-1 remote judge are opt-in network uses, and opting in to
+> the judge gives it everything the app knows. Rows W1, W2, V1, V6, V37, V38 and O18 below describe
+> the earlier local-only posture; the site now says the new one (README ▸ Privacy posture).
+
 Checked on 1 October 2026 against `main` at `9319f3b`. Every line in `site/index.html` that makes a
 product claim was checked against the source code, the string catalogues and the GitHub API.
 

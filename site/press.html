@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="canonical" href="https://focus-sentinel.win/press">
 <title>Press and media · Focus Sentinel</title>
-<meta name="description" content="Fact sheet, boilerplate and images for writing about Focus Sentinel, a local-only macOS companion that keeps one priority in view.">
+<meta name="description" content="Fact sheet, boilerplate and images for writing about Focus Sentinel, a local-first macOS companion that keeps one priority in view.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Focus Sentinel">
 <meta property="og:url" content="https://focus-sentinel.win/press">
@@ -262,7 +262,7 @@
       <div class="body">
         <p class="line"><span>Platform</span><span>macOS 26 or later</span></p>
         <div class="rule"></div>
-        <p class="line"><span>Data</span><span>Stays on the Mac</span></p>
+        <p class="line"><span>Data</span><span>Local first, opt in for more</span></p>
         <div class="rule"></div>
         <p class="line"><span>Licence</span><span>MIT, source published at release</span></p>
       </div>
@@ -276,10 +276,10 @@
         <h2 class="reveal">The facts, in one place.</h2>
         <dl class="facts reveal" style="--i:1">
           <div><dt>Name</dt><dd><b>Focus Sentinel</b>. In the app and in running text after first mention, <b>Focus</b>.</dd></div>
-          <div><dt>What it is</dt><dd>A local-only macOS companion that keeps one priority in view, notices when the app in front drifts from it, and asks before it assumes.</dd></div>
+          <div><dt>What it is</dt><dd>A local-first macOS companion that keeps one priority in view, notices when the app in front drifts from it, and asks before it assumes.</dd></div>
           <div><dt>Platform</dt><dd>macOS 26 or later. Built and tested on Apple silicon.</dd></div>
           <div><dt>Status</dt><dd>Not yet released. The first signed, notarised build ships through the <a href="https://github.com/crmitchelmore/focus-sentinel/issues/12">release tracker, issue 12</a>.</dd></div>
-          <div><dt>Data</dt><dd>Local only. No account, no sync, no usage reports. Focus never connects to the internet and has no updater.</dd></div>
+          <div><dt>Data</dt><dd>Local first. No account, no sync, no usage reports, and nothing leaves the Mac by default. Update checks and the Decision-1 remote judge go online only if the person switches them on; opting in to the judge gives it everything the app knows, for sharper judgement.</dd></div>
           <div><dt>Licence</dt><dd>MIT. The source is published with the first release.</dd></div>
           <div><dt>Source</dt><dd><a href="https://github.com/crmitchelmore/focus-sentinel">github.com/crmitchelmore/focus-sentinel</a></dd></div>
           <div><dt>Website</dt><dd><a href="https://focus-sentinel.win/">focus-sentinel.win</a></dd></div>
@@ -299,14 +299,14 @@
           <article class="copyblock reveal" style="--i:2">
             <header><p class="eyebrow">Short · 36 words</p><button class="copy" type="button" data-copy="short"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="5" y="5" width="8.5" height="8.5" rx="1.5"/><path d="M3 10.5V3.8C3 3.3 3.3 3 3.8 3h6.7"/></svg><span>Copy</span></button></header>
             <div class="words" id="short">
-              <p>Focus Sentinel is a local-only Mac companion that keeps one priority in view, notices when work drifts, and asks before it assumes. It will be open source under the MIT licence and requires macOS 26 or later.</p>
+              <p>Focus Sentinel is a local-first Mac companion that keeps one priority in view, notices when work drifts, and asks before it assumes. It will be open source under the MIT licence and requires macOS 26 or later.</p>
             </div>
           </article>
           <article class="copyblock reveal" style="--i:3">
             <header><p class="eyebrow">Long · 149 words</p><button class="copy" type="button" data-copy="long"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="5" y="5" width="8.5" height="8.5" rx="1.5"/><path d="M3 10.5V3.8C3 3.3 3.3 3 3.8 3h6.7"/></svg><span>Copy</span></button></header>
             <div class="words" id="long">
               <p>Focus Sentinel is a macOS companion that keeps one priority in view. You write the priority as one sentence, start a session, timeboxed if you like, and Focus watches which app is in front. When the work drifts, its menu-bar mark changes; drift longer and a small panel names the app and offers a way back. When Focus cannot tell, it asks, and the answer becomes a rule, so it stops asking.</p>
-              <p>It blocks nothing and keeps no score. It stays quiet on calls, while an app is full screen, while you are away and in the quiet hours you set. Everything stays on the Mac: no account, no sync, no usage reports, and no network at all. Focus never connects to the internet and has no updater.</p>
+              <p>It blocks nothing and keeps no score. It stays quiet on calls, while an app is full screen, while you are away and in the quiet hours you set. It is local first: no account, no sync, no usage reports, and nothing leaves the Mac unless you opt in. Turn on the remote judge and Focus can share everything it knows with Microsoft's Decision-1 model for far sharper judgement.</p>
               <p>Focus Sentinel will be open source under the MIT licence and requires macOS 26 or later. It is made by Chris Mitchelmore.</p>
             </div>
           </article>
@@ -357,24 +357,24 @@
     <div class="wrap split">
       <p class="eyebrow reveal">Privacy</p>
       <div>
-        <h2 class="reveal">What it reads, and what it never does.</h2>
+        <h2 class="reveal">Local first. More power if you opt in.</h2>
         <p class="intro measure reveal" style="--i:1">Drawn from the app's own Privacy settings. The build gate checks the shipped binary for networking code on every run.</p>
         <ul class="promises">
           <li class="reveal" style="--i:2">
-            <h3>What it reads</h3>
-            <p>Which app is active: its name, never its windows. This version does not read which website a browser is showing.</p>
+            <h3>What it reads by default</h3>
+            <p>Which app is active, by name. Accessibility, Screen Recording and the calendar are each off until the person switches them on, and raw window titles are never stored.</p>
           </li>
           <li class="reveal" style="--i:3">
-            <h3>What it never reads</h3>
-            <p>Window titles, full web addresses, file paths, document names, or anything you type.</p>
+            <h3>Nothing leaves without consent</h3>
+            <p>No account, no sync, no usage reports. Export the record from the File menu; delete everything from Privacy settings.</p>
           </li>
           <li class="reveal" style="--i:4">
-            <h3>No network</h3>
-            <p>Focus never connects to the internet and has no updater. When a new version is out, people download it themselves.</p>
+            <h3>Online only if you opt in</h3>
+            <p>Update checks send the app's name and version. Both they and the remote judge are off by default.</p>
           </li>
           <li class="reveal" style="--i:2">
-            <h3>Nothing leaves the Mac</h3>
-            <p>No account, no sync, no usage reports. Export the record from the File menu; delete everything from Privacy settings.</p>
+            <h3>Opt in for the full picture</h3>
+            <p>With Ask Decision-1 on, Focus may send Microsoft's Decision-1 model everything it knows that helps: priorities and their context, the window in front, busy times and tasks. It can only keep Focus quiet, and nothing is sent from password managers or private windows.</p>
           </li>
         </ul>
       </div>

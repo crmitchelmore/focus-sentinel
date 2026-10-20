@@ -3507,13 +3507,13 @@
       }
     },
     "settings.privacy.noNetwork" : {
-      "comment" : "Privacy pane disclosure: the app reaches the network only for update checks, switched on in General settings (F-122, focus-h8jf), and the opt-in remote judge, switched on in this pane. Linted of the product by the boundaries stage.",
+      "comment" : "Privacy pane disclosure: the app reaches the network only for what the person switched on — update checks in General settings (F-122, focus-h8jf) and the opt-in remote judge in this pane. Linted of the product by the boundaries stage. Revised for the opt-in privacy posture (2026-10-20).",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Focus never connects to the internet unless you turn on update checks in General settings, or Ask Decision-1 below."
+            "value" : "Focus connects to the internet only for what you switch on: update checks in General settings, and Ask Decision-1 below."
           }
         }
       }
@@ -3687,13 +3687,13 @@
       }
     },
     "settings.privacy.statement" : {
-      "comment" : "The local-only privacy statement shown in the Privacy settings tab.",
+      "comment" : "PENDING HUMAN APPROVAL (D-11): revised for the owner's opt-in privacy posture (2026-10-20): local first, nothing leaves the Mac unless the person switches it on, and the remote judge may see everything the app knows. The local-first privacy statement shown in the Privacy settings tab.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Your data stays on this Mac. Focus has no account or sync and sends no usage reports. Your priorities, sessions and rules are stored here:"
+            "value" : "Focus works on this Mac first. It has no account or sync, sends no usage reports, and nothing leaves this Mac unless you switch it on below. Your priorities, sessions and rules are stored here:"
           }
         }
       }
@@ -3999,13 +3999,13 @@
       }
     },
     "settings.privacy.grant.accessibility.note" : {
-      "comment" : "PENDING HUMAN APPROVAL (D-11): revised for issue #24, when the reading widened to every app. Note under the Accessibility switch.",
+      "comment" : "PENDING HUMAN APPROVAL (D-11): revised for the owner's opt-in privacy posture (2026-10-20): local first, nothing leaves the Mac unless the person switches it on, and the remote judge may see everything the app knows. Note under the Accessibility switch (issue #24): on device unless the remote judge is on.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "With Accessibility, Focus reads what is selected in the app in front — the window's title, or the chat, mailbox or folder you picked — to tell which task you are on. It reads only when it is about to ask you something, never in password managers or private windows, and keeps a short name on this Mac that never leaves it. Switching this on asks macOS; macOS asks you."
+            "value" : "With Accessibility, Focus reads what is selected in the app in front — the window's title, or the chat, mailbox or folder you picked — to tell which task you are on. It reads only when it is about to ask you something, never in password managers or private windows, and keeps only a short name for it. What it reads stays on this Mac unless you also switch on Ask Decision-1 below. Switching this on asks macOS; macOS asks you."
           }
         }
       }
@@ -4071,13 +4071,13 @@
       }
     },
     "settings.privacy.grants.explanation" : {
-      "comment" : "PENDING HUMAN APPROVAL (D-11): new copy, not yet reviewed by the user. Explanation under the grants heading.",
+      "comment" : "PENDING HUMAN APPROVAL (D-11): revised for the owner's opt-in privacy posture (2026-10-20): local first, nothing leaves the Mac unless the person switches it on, and the remote judge may see everything the app knows. Explanation under the grants heading.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Focus asks macOS for nothing unless you switch it on here. Everything above works without any of these, and switching one off stops Focus using it."
+            "value" : "Focus asks macOS for nothing unless you switch it on here. Everything above works without any of these; each one you give lets Focus see more and judge better, and switching one off stops Focus using it."
           }
         }
       }
@@ -5859,13 +5859,13 @@
       }
     },
     "shell.walkthrough.settings.privacy" : {
-      "comment" : "Walkthrough page 7: the Privacy pane (capability table, retention, the two opt-in grants). The last sentence is the conditional zero-grant rule of focus-exdi.4.",
+      "comment" : "Walkthrough page 7: the Privacy pane (capability table, retention, the opt-in grants and the remote judge). The last sentence is the opt-in posture of 2026-10-20: nothing asked and nothing sent unless switched on.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Privacy settings list every signal Focus reads, how long it keeps activity, and two permissions you can switch on. Focus asks for nothing unless you switch it on."
+            "value" : "Privacy settings list every signal Focus reads, how long it keeps activity, the permissions you can give and Ask Decision-1. Focus asks for nothing and sends nothing unless you switch it on."
           }
         }
       }
@@ -5955,13 +5955,13 @@
       }
     },
     "shell.firstRun.permissions" : {
-      "comment" : "First-run sheet: the permissions posture.",
+      "comment" : "PENDING HUMAN APPROVAL (D-11): revised for the owner's opt-in privacy posture (2026-10-20): local first, nothing leaves the Mac unless the person switches it on, and the remote judge may see everything the app knows. First-run sheet: the opt-in posture — nothing asked and nothing sent unless switched on.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Focus does not request Screen Recording or Accessibility permission in this version."
+            "value" : "Focus asks macOS for nothing unless you switch it on in Privacy settings, and nothing leaves this Mac unless you switch on Ask Decision-1 there. Each one you switch on gives Focus more to go on."
           }
         }
       }
@@ -6039,13 +6039,13 @@
       }
     },
     "shell.about.credits" : {
-      "comment" : "The About panel's credits paragraph: what the app is, and the privacy posture that is the whole shape of the product.",
+      "comment" : "The About panel's credits paragraph: what the app is, and the privacy posture that is the whole shape of the product — local first, more with the person's opt-in (2026-10-20). The self-check requires the words \"does not read\" and \"stays on this Mac\".",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Focus keeps track of your current priority and nudges you when the current content appears unrelated. It reads the active app. With your Accessibility opt-in, it also identifies the selected view or browser page on this Mac. Browser answers can apply to one page, a path or a domain. Raw titles, URL credentials, queries and fragments are not stored. Focus does not take screenshots or record what you type. Your data stays on this Mac."
+            "value" : "Focus keeps track of your current priority and nudges you when the current content appears unrelated. It reads the active app. With your Accessibility opt-in, it also identifies the selected view or browser page. Browser answers can apply to one page, a path or a domain. Raw titles, URL credentials, queries and fragments are not stored. Focus does not read what you type or take screenshots. Local first: your data stays on this Mac unless you switch on Ask Decision-1, which lets Microsoft's Decision-1 see what Focus knows so it can judge your work better."
           }
         }
       }
@@ -7837,13 +7837,13 @@
       }
     },
     "settings.privacy.grant.accessibility.help" : {
-      "comment" : "Tooltip on the Accessibility grant opt-in switch. Revised for issue #24: the grant is read, on device, by the selected-item reader, in any app.",
+      "comment" : "Tooltip on the Accessibility grant opt-in switch. Revised for the opt-in privacy posture (2026-10-20): read on device, and shared only with the remote judge when that is switched on.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Allows the app to ask macOS for Accessibility access, then read what is selected in the app in front, on this Mac only."
+            "value" : "Allows the app to ask macOS for Accessibility access, then read what is selected in the app in front. It stays on this Mac unless you switch on Ask Decision-1."
           }
         }
       }
@@ -7861,25 +7861,25 @@
       }
     },
     "settings.privacy.remoteJudge.note" : {
-      "comment" : "PENDING HUMAN APPROVAL (D-11): note under the remote-judge switch. Says what is sent, where, and what it needs.",
+      "comment" : "PENDING HUMAN APPROVAL (D-11): revised for the owner's opt-in privacy posture (2026-10-20): local first, nothing leaves the Mac unless the person switches it on, and the remote judge may see everything the app knows. Note under the remote-judge switch: off keeps everything local; on may send everything the app knows. Says what may be sent, where, and what it needs.",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "When the rules cannot tell, Focus sends your priority and what the app in front shows — its title, address, file and visible text — to Microsoft's Decision-1 on Azure, which answers whether it is part of the work. It can only keep Focus quiet, never make it speak. Nothing is sent from password managers or private windows, nothing sent is kept, and it needs Accessibility above and a signed-in Azure CLI."
+            "value" : "Off, nothing Focus knows leaves this Mac. On, Focus judges your work far better: when its own rules cannot tell, it may send Microsoft's Decision-1 on Azure everything it knows that helps — your priorities and their context, what the app in front shows (its title, selected item, address, file and visible text), your busy times and your tasks. It can only keep Focus quiet, never make it speak. Nothing is sent from password managers or private windows, nothing sent is kept, and it needs Accessibility above and a signed-in Azure CLI."
           }
         }
       }
     },
     "settings.privacy.remoteJudge.help" : {
-      "comment" : "Tooltip on the remote-judge switch.",
+      "comment" : "Tooltip on the remote-judge switch. Revised for the opt-in privacy posture (2026-10-20).",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sends the window in front to Microsoft's Decision-1 when the rules cannot tell whether it is part of your work."
+            "value" : "Lets Microsoft's Decision-1 see what Focus knows — your priorities, the window in front, your busy times and your tasks — when the rules cannot tell whether a window is part of your work."
           }
         }
       }

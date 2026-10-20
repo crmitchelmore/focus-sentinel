@@ -15,7 +15,7 @@ the limited fields were measured and are shown in brackets after each one.
 
 **Title** (77 chars):
 
-> Show HN: Focus Sentinel – a local-only Mac app that asks before it nudges you
+> Show HN: Focus Sentinel – a local-first Mac app that asks before it nudges you
 
 **Body:**
 
@@ -38,11 +38,12 @@ the limited fields were measured and are shown in brackets after each one.
 > - The judgement is deterministic. A missing match can never, on its own, produce "unrelated":
 >   Focus only calls something off task when you have told it what on task looks like. Otherwise
 >   it asks or stays quiet.
-> - It reads the active app's identity and nothing else. No window titles, URLs, screenshots or
->   keystrokes. This version does not read which site a browser is showing.
-> - It never connects to the internet: no account, no telemetry, no updater, no network
->   entitlement, zero third-party dependencies. A 27-stage build gate checks the shipped binary
->   for networking symbols on every run.
+> - By default it reads the active app's identity and nothing else. Window titles need the
+>   Accessibility switch, and nothing is ever a screenshot or a keystroke.
+> - Local first: no account, no telemetry, and nothing leaves the Mac by default. Update checks
+>   and an opt-in remote judge (Microsoft's Decision-1) are the only network uses, and opting in
+>   to the judge gives it everything the app knows. A build gate confines networking to those
+>   two on every run.
 > - It asks macOS for no permissions unless you switch the ask on. It stays quiet on calls (a live
 >   microphone), in full screen, when you are away, in quiet hours, and after a daily limit.
 > - There are no scores or streaks. History is a ledger of what the app did and why, and you can
@@ -62,9 +63,9 @@ the limited fields were measured and are shown in brackets after each one.
 
 **Description** (206 chars):
 
-> A local-only Mac companion. Write today's priority in one sentence. Focus notices which app is
+> A local-first Mac companion. Write today's priority in one sentence. Focus notices which app is
 > in front, asks when unsure, and remembers your answer. It blocks nothing, keeps no score and
-> never goes online.
+> shares nothing unless you opt in.
 
 **Maker's first comment:**
 
@@ -75,9 +76,9 @@ the limited fields were measured and are shown in brackets after each one.
 > thing I said I'd do today and asks a plain question when it can't tell.
 >
 > A few things it deliberately does not do:
-> • It never connects to the internet, needs no account, and asks for no permissions unless you
->   switch that on.
-> • It reads which app is active, never window titles, web addresses or what you type.
+> • It needs no account, and nothing leaves the Mac or is asked of macOS unless you switch that
+>   on. Opt in and it gets much sharper.
+> • By default it reads which app is active, not window titles, web addresses or what you type.
 > • It keeps no score, no streaks and no "productive hours".
 > • It never blocks, hides or closes anything.
 >
@@ -102,8 +103,8 @@ the limited fields were measured and are shown in brackets after each one.
    and offers a way back. Nothing is blocked or closed.
 5. It stays quiet on calls (a live microphone), in full screen, when you're away, in quiet hours,
    and after a daily limit. "Interrupt me less" keeps everything in the menu bar.
-6. It never connects to the internet. No account, no telemetry, no updater. It reads which app is
-   active, never window titles, URLs or keystrokes. Export or delete everything.
+6. Local first. No account, no telemetry, nothing leaves the Mac unless you opt in. By default it
+   reads which app is active, not window titles, URLs or keystrokes. Export or delete everything.
 7. No score, no streaks. Just a plain record of what it did and why. macOS 26+. [PRICE] [LINK]
 
 ---
@@ -121,8 +122,8 @@ the limited fields were measured and are shown in brackets after each one.
 > It nudges only after a sustained drift, stays quiet on calls and during presentations, and
 > keeps no score: no streaks, no productivity percentage.
 >
-> It is also local-only. It never connects to the internet, needs no account, asks for no
-> permissions by default, and lets you export or delete everything.
+> It is also local first. Nothing leaves the Mac unless you opt in, it needs no account, asks for
+> no permissions by default, and lets you export or delete everything.
 >
 > macOS 26 or later. [PRICE]. [LINK]
 
@@ -130,7 +131,7 @@ the limited fields were measured and are shown in brackets after each one.
 
 ## r/macapps
 
-**Title:** [Release] Focus Sentinel: a local-only menu-bar companion that keeps one priority in
+**Title:** [Release] Focus Sentinel: a local-first menu-bar companion that keeps one priority in
 view and asks before it nudges (macOS 26)
 
 > Hi r/macapps. I'm the developer.
@@ -177,8 +178,8 @@ Before posting, check the Shortcuts actions run on the notarised build (`claims-
 > in front, and asks a small question when it can't tell whether that app is part of the work.
 > If you drift for a while, it offers a way back. It never blocks anything and never keeps score.
 >
-> Everything stays on your Mac. Focus never connects to the internet, needs no account, and asks
-> for no permissions unless you switch the ask on.
+> It is local first. Nothing leaves your Mac, it needs no account, and it asks for no permissions
+> unless you switch them on, and each one you switch on makes it sharper.
 >
 > It needs macOS 26 or later. [PRICE]. Download: [LINK]
 >
@@ -234,10 +235,11 @@ download pages until that changes.
 > Start a session that is open-ended, a fixed length, or finished by a time of day. Pause, take a
 > break, or log a detour. The timer lives in the menu bar.
 >
-> YOUR DATA STAYS ON THIS MAC
-> No account, no sync, no usage reports. Focus never connects to the internet. It reads which app
-> is active, never window titles, web addresses, file names or what you type. It asks macOS for
-> no permissions unless you switch the ask on. Choose how long records are kept, export your
+> LOCAL FIRST, MORE IF YOU OPT IN
+> No account, no sync, no usage reports, and nothing leaves your Mac unless you switch it on. By
+> default it reads which app is active, not window titles, web addresses, file names or what you
+> type. It asks macOS for no permissions unless you switch the ask on, and an opt-in remote judge
+> can see everything Focus knows for sharper judgement. Choose how long records are kept, export your
 > activity and settings, or delete everything.
 >
 > ALSO

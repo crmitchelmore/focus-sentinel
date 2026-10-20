@@ -8,7 +8,7 @@ filled in before this goes out.
 | | |
 |---|---|
 | **Name** | Focus Sentinel. Shorten to "Focus" only after the first mention, and never write "Focus Mode". |
-| **What it is** | A local-only Mac companion that keeps one priority in view and asks, rather than accuses, when the app in front drifts from it |
+| **What it is** | A local-first Mac companion that keeps one priority in view and asks, rather than accuses, when the app in front drifts from it |
 | **Developer** | Chris Mitchelmore (independent) |
 | **Platform** | macOS (menu-bar app with a small window) |
 | **Requirements** | macOS 26 or later. Tested on Apple silicon. |
@@ -18,7 +18,7 @@ filled in before this goes out.
 | **Status** | Not yet released. Release tracker: GitHub issue #12. A Developer ID signed, notarised build is still to come. |
 | **Category** | Productivity |
 | **Language** | English (British spelling) |
-| **Network** | None. No account, sync, telemetry or updater, and no network entitlement. |
+| **Network** | None by default. No account, sync or telemetry. Update checks and the Decision-1 remote judge are opt-in; opting in to the judge gives it everything the app knows, for sharper judgement. |
 | **Permissions** | None by default. Accessibility and Screen Recording can be switched on in Privacy settings, but nothing in this version uses them. |
 | **Data** | One local file in `~/Library/Application Support/com.chrismitchelmore.FocusSentinel/`. You choose how long it is kept (7, 30 or 90 days, or forever), and you can export or delete all of it. |
 | **Third-party code** | None. Zero package dependencies. |
@@ -46,10 +46,10 @@ filled in before this goes out.
 
 **Short (about 50 words)**
 
-> Focus Sentinel is a local-only companion for the Mac. Write today's priority as one sentence,
+> Focus Sentinel is a local-first companion for the Mac. Write today's priority as one sentence,
 > and Focus keeps it in view, notices which app is in front, and asks a plain question when it
-> cannot tell. It blocks nothing, keeps no score, asks for no permissions by default and never
-> connects to the internet.
+> cannot tell. It blocks nothing, keeps no score, and asks for no permissions and
+> shares nothing unless you opt in.
 
 **Long (about 110 words)**
 
@@ -58,8 +58,8 @@ filled in before this goes out.
 > timer and compares the app in front with it. When it cannot tell whether an app is part of the
 > work, it asks, and remembers your answer as a rule you can read. A nudge comes only after a
 > sustained drift. It offers a way back and never blocks anything. Focus stays quiet on calls, in
-> full screen, when you are away and in quiet hours. It keeps no score, reads no window titles,
-> web addresses or keystrokes, and never connects to the internet. It requires macOS 26.
+> full screen, when you are away and in quiet hours. It keeps no score. It is local first: nothing
+> leaves the Mac unless you opt in, and opting in buys sharper judgement. It requires macOS 26.
 
 ## Founder quote
 
@@ -98,7 +98,7 @@ or capture by hand.
 | 5 | **Nudge panel** | "[app] has been active for [time]" and "Back to [app]" | Describes, never scolds |
 | 6 | **Cockpit, Details tab** | Context section with keyword, site and file chips; "Rules for this priority" with an app rule | Avoid showing a dragged app chip until the drag bug is fixed (`claims-audit.md`, W8) |
 | 7 | **History window** | Rows for a question, a nudge and a "No nudge" interval, with "This was a distraction" | No totals anywhere, which is the point |
-| 8 | **Privacy settings, top** | "Your data stays on this Mac…", "Focus never connects to the internet.", data file path and Show in Finder, retention choices | The trust shot |
+| 8 | **Privacy settings, top** | "Focus works on this Mac first…", "Focus connects to the internet only for what you switch on…", data file path and Show in Finder, retention choices | The trust shot |
 | 9 | **Privacy settings, permissions** | Capability table "Available on this Mac", and both permission switches **off** with their notes | — |
 | 10 | **Nudges settings** | Today's limits, quiet hours, Interrupt me less, where nudges appear | — |
 | 11 | **Timings and thresholds** | A few dials with "Shipped:" values | For power users |

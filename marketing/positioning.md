@@ -9,8 +9,8 @@ app in front seems to have drifted from it.**
 
 ## 25 words
 
-A local-only Mac companion for one written priority. It notices which app is in front, asks when
-unsure, never blocks anything, keeps no score, and never goes online.
+A local-first Mac companion for one written priority. It notices which app is in front, asks when
+unsure, never blocks anything, keeps no score, and shares nothing unless you opt in.
 
 ## 50 words
 
@@ -26,7 +26,7 @@ connects to the internet.
 | **Writers and researchers** | One question stays open all day, and a browser tab takes twenty minutes before anyone notices. | Keeps the sentence in view. A drift first changes the menu-bar mark, and a panel follows only if it lasts. |
 | **Engineers and designers** | The work spans an editor, a terminal, a few sites and some files. A blocker cannot tell work from distraction in the same app. | You name the context. Focus asks about anything it cannot place, once per app per priority, and remembers the answer as a rule you can read. |
 | **People on calls** | Pop-ups during a call or a shared screen are embarrassing. | Quiet while a microphone is live, while an app is full screen, while you are away, and in quiet hours you set. |
-| **The privacy-first** | Most focus tools want an account, cloud sync or Screen Recording. | No account and no network. It asks for no permission unless you switch the ask on. It reads the app's name only, stays out of password managers and banking apps, and lets you export or delete everything. |
+| **The privacy-first** | Most focus tools want an account, cloud sync or Screen Recording. | No account, and nothing leaves the Mac unless you opt in. It asks for no permission unless you switch the ask on, and each one you switch on makes it sharper. By default it reads the app's name only; it stays out of password managers and banking apps, and lets you export or delete everything. |
 | **People burnt by gamified tools** | Streaks and scores turn a bad afternoon into a verdict. | No score, no streak, no daily total. History is a plain ledger of what Focus did and why. |
 
 ## How it differs: categories, not competitors
@@ -48,7 +48,7 @@ distraction unless you have told it what your work looks like. If it is unsure, 
 
 | objection | answer |
 |---|---|
-| "This is surveillance." | It reads which app is active and nothing else. No window titles, web addresses, file names, screenshots or keystrokes. It never connects to the internet. Privacy settings list every signal it can see. |
+| "This is surveillance." | By default it reads which app is active and nothing else, and nothing leaves the Mac. Anything more (window titles, the calendar, the remote judge) is a switch you turn on yourself, and Privacy settings say what each one lets it see and send. It never records screenshots or keystrokes. |
 | "I need a blocker, not a nudge." | Then use a blocker. Focus is for work that lives in the same apps as the distractions, where blocking breaks the work. |
 | "It'll nag me." | It has a daily limit (eight interruptions by default), quiet hours, silence on calls and in full screen, and an "Interrupt me less" switch that keeps everything in the menu bar. Snooze or dismiss any panel. |
 | "Can it tell YouTube from documentation?" | Not in this version. Focus judges apps, not tabs. It does not read which site a browser shows. For a browser it asks you, and it remembers your answer for that priority. |
@@ -67,7 +67,8 @@ distraction unless you have told it what your work looks like. If it is unsure, 
    rule you can read. It nudges only when you have told it what the work looks like.
 3. **Quiet when it should be.** Daily limit, calls, full screen, away, quiet hours, and Interrupt
    me less.
-4. **Your data stays on this Mac.** No network, no account, no permissions by default. Private
+4. **Local first, more if you opt in.** No account, no network and no permissions by default.
+   Switch on the remote judge and it can share everything it knows for sharper judgement. Private
    apps are left alone. Export or delete everything.
 5. **Nothing is scored.** No streaks or tallies. History records what the app did, not how you
    did.
@@ -80,7 +81,7 @@ distraction unless you have told it what your work looks like. If it is unsure, 
 | notices, asks, a small question | catches, detects distraction, polices | Never accusatory |
 | nudge, a way back | alert, warning, violation | Calm |
 | drift, away from the priority | slacking, procrastinating, wasting time | No judgement |
-| on this Mac, local-only, never connects to the internet | secure, military-grade, private by design (alone) | Specific claims beat adjectives |
+| on this Mac, local first, nothing leaves unless you opt in | secure, military-grade, private by design (alone) | Specific claims beat adjectives |
 | timebox, time left, time over | deadline pressure, beat the clock | Never stops you |
 | rules you can read | smart, intelligent, learns your habits | It is deterministic |
 | record, History | tracking, analytics, insights, score, streak | It keeps no score |
