@@ -55,6 +55,9 @@ public struct ShellCommands: Commands {
             } label: {
                 Text(ShellStrings.resource(.commandAbout))
             }
+            // Where every Sparkle app puts it: the app menu, straight after About. Like About it
+            // is unbound and not a keyboard-reference row.
+            CheckForUpdatesButton(commandCenter: commandCenter)
         }
 
         CommandGroup(replacing: .newItem) {
@@ -78,14 +81,6 @@ public struct ShellCommands: Commands {
             // again, and before this nothing in the application could ask for it by id.
             let _ = commandCenter.registerWindowOpener { openWindow(id: $0) }
             actionButtons(in: .file)
-            Divider()
-            // Like About, this unbound application command is not a keyboard-reference row.
-            Button {
-                commandCenter.checkForUpdates()
-            } label: {
-                Text(ShellStrings.resource(.settingsUpdatesCheckNow))
-            }
-            .disabled(!commandCenter.canCheckForUpdates)
         }
 
         // The View menu, materialised the same way the File menu is. `after: .sidebar` puts the
@@ -183,6 +178,25 @@ private struct ShellActionButton: View {
         }
         .modifier(ShortcutModifier(shortcut: action.shortcut))
         .disabled(!action.isAvailable(in: commandCenter.world))
+    }
+}
+
+/// **The app menu's update check, as a view so its enabled state is observed.**
+///
+/// A `Commands` body does not track `@Observable` reads, so a `.disabled` evaluated there kept
+/// whatever it read when the menu was first built — before the composition registered the
+/// updater — and the item stayed greyed out for the life of the process. A `View` body is
+/// tracked, the same way `ShellActionButton` follows the command world.
+struct CheckForUpdatesButton: View {
+    let commandCenter: FocusCommandCenter
+
+    var body: some View {
+        Button {
+            commandCenter.checkForUpdates()
+        } label: {
+            Text(ShellStrings.resource(.commandCheckForUpdates))
+        }
+        .disabled(!commandCenter.canCheckForUpdates)
     }
 }
 

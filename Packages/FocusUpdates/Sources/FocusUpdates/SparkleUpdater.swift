@@ -10,6 +10,8 @@ protocol SparkleControlling: AnyObject {
     var automaticallyChecksForUpdates: Bool { get set }
     func start() throws
     func checkForUpdates()
+    /// Calls `onChange` whenever Sparkle's own `canCheckForUpdates` moves; the token keeps it alive.
+    func observeAvailability(_ onChange: @escaping @MainActor () -> Void) -> AnyObject?
 }
 
 extension SPUStandardUpdaterController: SparkleControlling {
@@ -22,6 +24,14 @@ extension SPUStandardUpdaterController: SparkleControlling {
 
     func start() throws { try updater.start() }
     func checkForUpdates() { checkForUpdates(nil) }
+
+    func observeAvailability(_ onChange: @escaping @MainActor () -> Void) -> AnyObject? {
+        // `canCheckForUpdates` is KVO-compliant and moves on Sparkle's main-queue callbacks:
+        // false when a background check or download starts, true when it ends or is shown.
+        updater.observe(\.canCheckForUpdates, options: [.new]) { _, _ in
+            Task { @MainActor in onChange() }
+        }
+    }
 }
 
 /// **The Sparkle-backed updater, inert until asked** (focus-h8jf).
@@ -32,7 +42,7 @@ extension SPUStandardUpdaterController: SparkleControlling {
 /// is called Sparkle schedules nothing, reads no feed and opens no socket; it is a framework in
 /// memory. The two verbs on `SoftwareUpdating` are the only two callers of `startUpdater()` in
 /// this repository, and both are reached from a control the person operated: the General pane's
-/// switch and the manual check in Settings or the File menu. That is the shape the owner's
+/// switch and the manual check in Settings or the app menu. That is the shape the owner's
 /// ruling on grants gave (focus-exdi.4), applied to the network: **the app asks for nothing unless the person
 /// switched that ask on.**
 ///
@@ -56,6 +66,7 @@ public final class SparkleUpdater: NSObject, SoftwareUpdating {
     private let reportStartupError: (Error) -> Void
     private let logger = Logger(subsystem: "com.chrismitchelmore.FocusSentinel", category: "updates")
     private var controller: (any SparkleControlling)?
+    private var availabilityObservation: AnyObject?
     private var automaticChecks = false
     public private(set) var isStarted = false
     public private(set) var lastFailure: SoftwareUpdateFailure?
@@ -131,6 +142,12 @@ public final class SparkleUpdater: NSObject, SoftwareUpdating {
         }
         let controller = controller ?? makeController(self)
         self.controller = controller
+        if availabilityObservation == nil {
+            // Without this the menu only heard about the end of a cycle, never its start.
+            availabilityObservation = controller.observeAvailability { [weak self] in
+                self?.onStatusChange?()
+            }
+        }
         // Apply the store's choice BEFORE starting: Sparkle may remember a different choice.
         controller.automaticallyChecksForUpdates = automaticChecks
         do {

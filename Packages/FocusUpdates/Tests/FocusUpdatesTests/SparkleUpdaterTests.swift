@@ -64,6 +64,30 @@ struct SparkleUpdaterTests {
         #expect(controller.manualChecks == 2)
     }
 
+    @Test("Sparkle's own availability changes reach the status callback, observed once")
+    func availabilityChangesAreHeard() {
+        let controller = SparkleControllerDouble()
+        let updater = SparkleUpdater(
+            train: .stable,
+            checksAutomatically: false,
+            makeController: { _ in controller },
+            reportStartupError: { _ in }
+        )
+        var changes = 0
+        updater.onStatusChange = { changes += 1 }
+        updater.setAutomaticChecks(true)
+        updater.setAutomaticChecks(true)
+        #expect(controller.availabilityObservers.count == 1)
+
+        changes = 0
+        controller.sparkleAvailabilityChanged(to: false)
+        #expect(changes == 1)
+        #expect(!updater.canCheckForUpdates)
+        controller.sparkleAvailabilityChanged(to: true)
+        #expect(changes == 2)
+        #expect(updater.canCheckForUpdates)
+    }
+
     @Test("a manual check clears Sparkle's remembered automatic opt-in before starting")
     func manualCheckDoesNotEnableScheduledChecks() {
         let controller = SparkleControllerDouble()
@@ -171,4 +195,15 @@ private final class SparkleControllerDouble: SparkleControlling {
     }
 
     func checkForUpdates() { manualChecks += 1 }
+
+    private(set) var availabilityObservers: [@MainActor () -> Void] = []
+    func observeAvailability(_ onChange: @escaping @MainActor () -> Void) -> AnyObject? {
+        availabilityObservers.append(onChange)
+        return NSObject()
+    }
+
+    func sparkleAvailabilityChanged(to value: Bool) {
+        canCheckForUpdates = value
+        availabilityObservers.forEach { $0() }
+    }
 }

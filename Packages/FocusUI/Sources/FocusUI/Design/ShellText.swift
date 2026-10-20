@@ -67,6 +67,8 @@ public enum ShellStringKey: String, Sendable, CaseIterable, Hashable {
     /// The app menu's About item, replacing SwiftUI's — which draws a title this app's catalog
     /// does not own and opens a panel with nothing in it (focus-odz.3).
     case commandAbout = "shell.command.about"
+    /// Sparkle's conventional app-menu item, straight after About.
+    case commandCheckForUpdates = "shell.command.checkForUpdates"
     /// F-119's switch, as a menu verb. The cockpit's control reads positively ("Watch what I
     /// am working on"); a menu item has to name the *act*, so this one does.
     case commandPauseSensing = "shell.command.pauseSensing"

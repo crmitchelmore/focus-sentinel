@@ -1557,7 +1557,7 @@ preview, a plain Xcode.app build — is Stable, which is what every build before
 Sparkle's standard controller with `startingUpdater: false` and starts it from exactly two verbs:
 the *Check for updates automatically* switch in Settings ▸ General,
 which stores the choice in `SoftwareUpdatePreferenceRecord` (schema v11) and is read back at the
-next launch, and *Check for updates now* in Settings or the File menu. The manual check does not
+next launch, and *Check for updates now* in Settings or *Check for Updates…* in the app menu, after About. The manual check does not
 enable automatic checks, including when Sparkle remembers an older opt-in. Off is the shipped
 state, and no stored preference means off. A failed startup remains retryable rather than marking the updater as
 started. Settings reports configuration, connection and unavailable-feed failures separately.

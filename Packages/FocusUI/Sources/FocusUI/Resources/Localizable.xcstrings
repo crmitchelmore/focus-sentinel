@@ -6074,6 +6074,18 @@
         }
       }
     },
+    "shell.command.checkForUpdates" : {
+      "comment" : "App menu item, after About, that checks the release feed for a newer version now.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check for Updates…"
+          }
+        }
+      }
+    },
     "shell.command.closeWindow" : {
       "comment" : "File menu item that closes the frontmost window.",
       "extractionState" : "manual",
