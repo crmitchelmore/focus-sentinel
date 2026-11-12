@@ -15,6 +15,8 @@ Chris: "just ship direct to prod for now, we're still in early development so ne
 
 The UI-test rule above still holds. Shipping runs no UI tests, and Chris validates the UI himself.
 
+This is the repository's explicit git and release policy, so it takes precedence over the conservative git profile in the Beads blocks below. A current user or orchestrator instruction not to commit, push or release still wins.
+
 This project uses **bd** (beads) for issue tracking. Run `bd prime` for full workflow context.
 
 > **Architecture in one line:** Issues live in a local Dolt database
@@ -40,7 +42,7 @@ bd dolt push          # Push beads data to remote
 
 ## Non-Interactive Shell Commands
 
-**ALWAYS use non-interactive flags** with file operations to avoid hanging on confirmation prompts.
+Use non-interactive flags with file operations so a confirmation prompt cannot hang the agent.
 
 Shell commands like `cp`, `mv`, and `rm` may be aliased to include `-i` (interactive) mode on some systems, causing the agent to hang indefinitely waiting for y/n input.
 
@@ -162,8 +164,8 @@ Interface Guidelines and WWDC sessions.
 
 ## Learnings
 
-Driver notes from the work itself, newest first. `CLAUDE.md` points here; keep the two files
-mirrored for anything substantive.
+Driver notes from the work itself, newest first. `CLAUDE.md` imports this file, so record
+learnings here only.
 
 
 ### 2026-10-20 — the privacy posture is local first, opt in for more (supersedes "on device only")
@@ -230,12 +232,19 @@ mirrored for anything substantive.
   was lensed. Put `.glassEffect(.regular, in:)` on the view whose content sits on the glass
   (the tab row); SwiftUI draws that content in front. One glass shape needs no container.
 
-### 2026-10-16 — Liquid Glass, rethought for legibility (supersedes the entry below it)
+### 2026-10-16 — Liquid Glass, rethought for legibility
 
 - **The strategy is `Design/LiquidGlass.md`; read it before touching a surface.** Three layers:
   the ground is solid, content is opaque, and only function (navigation and floating chrome) is
   glass. The first pass put glass on buttons and cards over a bloom ground, and teal text on
   teal-tinted glass was illegible. Apple's guidance is glass on the navigation layer only.
+- **Glass is a token decision, not a call-site one.** `DesignTokens.drawsGlass(for:)`
+  (`Design/LiquidGlass.swift`) is true only where `material(for:provenance: .summoned)` is
+  `.material` and Increase Contrast is off; every glass helper reads it and falls back to an
+  opaque fill. The uninvited nudge panels never draw glass.
+- **Whitespace separates cards; `CompanionSeparator` separates inside one.** No `Divider()`
+  between two cards; inside a card a faint Mist rule, the system divider wherever the person
+  asked for firm edges.
 - **Ground and pane invert by scheme.** Bench is the lighter role in Light and the darker one in
   Dark, so `DesignTokens.groundRole(for:)` (Light Inlay, Dark Bench) and `paneRole(for:)`
   (Light Bench, Dark Inlay) choose them. Panes always rise off the ground. `DesignTokenTests`
@@ -249,26 +258,6 @@ mirrored for anything substantive.
   `glassBackdrop` is gone; screens use `contentGround(_:)`.
 - **Every snapshot baseline moved again.** Re-record through the UI lane only with Chris's
   confirmation.
-
-### 2026-10-16 — Liquid Glass on the summoned surfaces (superseded: glass buttons and glass cards were withdrawn)
-
-- **Glass is a token decision, not a call-site one.** `DesignTokens.drawsGlass(for:)`
-  (`Design/LiquidGlass.swift`) is true only where `material(for:provenance: .summoned)` is
-  `.material` and Increase Contrast is off; every helper (`glassBackdrop`, `softSlab`,
-  `softField`, `CompanionSeparator`, `CompanionButtonStyle`, `CompanionSurface`, `shellSurface`'s
-  `.material` case) reads it and falls back to the old opaque Inlay/Bench fills and hairlines.
-- **Glass on controls and navigation only, never on content** (Apple's Tahoe guidance, and the
-  cleanliness pass the same day). Cards are borderless soft Bench panes with a Light-only lift
-  and a faint Spruce wash for the accented one; fields and the popover status row are soft
-  neutral fills. Glass cards under glass buttons was glass on glass, and read muddy.
-- **Whitespace separates cards; `CompanionSeparator` separates inside one.** No `Divider()`
-  between two cards; inside a card a faint Mist rule, the system divider where glass is off.
-- **Uninvited surfaces stay opaque.** The nudge panels never draw glass; `material(for:provenance:)`
-  is unchanged and its tests still pin it.
-- **One `GlassEffectContainer` only, in the cockpit tab bar**, so the selected-tab lozenge morphs
-  between tabs. A root container would merge glass buttons into the glass cards under them.
-- **Every snapshot baseline moved.** Re-record through the UI lane only with Chris's confirmation;
-  check first whether `ImageRenderer` rasterises `glassEffect` at all.
 
 ### 2026-10-16 — time from other sources, through the bridge (issue #31)
 
@@ -336,7 +325,8 @@ mirrored for anything substantive.
   or sensitive, so the session started paused. Pin `sensingHost.frontmostPayload`. An in-memory
   root's `activeStoreURL` is nil; compare against it, not `FocusStore.applicationSupportURL`.
 - **Never run UI tests on Chris's Mac.** FocusHost's whole `swift test` presents windows; run a
-  pure suite with `--filter`, and run the rest on the bravo runner through Local CI.
+  pure suite with `--filter`, and run the rest on the bravo runner through Local CI, after
+  Chris confirms (the UI-test rule at the top of this file).
 
 ### 2026-10-15 — the owner's ruling: read the selected item through Accessibility, on device (issue #24)
 
@@ -352,8 +342,7 @@ mirrored for anything substantive.
   application only; reduced to a short normalised subject before storage, never persisting the
   raw title; the AX use selectors confined to one registered reader file and proven from both
   sides, as `SystemGrantRequester.swift` is for the request selectors. README ▸ `grants` carries
-  the ruling. Until the work lands, a lint that still bans the use selectors is describing the
-  shipped build, not a mistake.
+  the ruling.
 - **Landed:** `FocusCore/Sensing/SelectedItem.swift` reduces a title to a `<bundle>::<label>`
   `titleToken` subject (≤48 characters, raw title dropped); `FocusHost/SelectedItemReader.swift`
   is the one AX use file (`Config/grant-use-sites.txt`, `check-grants.sh`, R-33b). A `titleToken`
@@ -494,9 +483,9 @@ mirrored for anything substantive.
   view is one AppKit does not show. Verified live on this machine with `cliclick m:x,y`, a 2.5 s
   wait and `screencapture -R`: the enabled Resume glyph showed "Resume session. Picks up where it
   was paused." and the disabled *Open at login* row showed its reason sentence (evidence in
-  `/Volumes/Memory/archive/focus-tooltips-evidence/`). The catalog is edited by script with
-  `json.dumps(d, indent=2, ensure_ascii=False, separators=(",", " : "))` and insertion order
-  kept — that reproduces the file byte for byte; `sort_keys=True` rewrites the whole file.
+  `/Volumes/Memory/archive/focus-tooltips-evidence/`). Edit the catalog by inserting or
+  replacing text; it no longer round-trips through `json.dumps` (see the 2026-10-16 remote
+  judge entry).
 - **The session verbs are glyphs; the verb is the accessibility label.** `SessionControls` and
   the menu-bar popover draw `play.fill` / `pause.fill` / `cup.and.saucer.fill` /
   `arrow.triangle.branch` / `arrow.uturn.left` / `stop.fill` / `checkmark`, with
