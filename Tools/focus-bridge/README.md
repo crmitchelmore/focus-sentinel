@@ -37,7 +37,12 @@ the app's dependency graph, `check-boundaries.sh` and `check-forbidden.sh` (the 
   write), never into the store. The app reads only each block's kind, start and end.
 - **Summaries leave out the activity log.** `status` and `sessions` give the priority, the session
   and the minutes. Only `export` writes the full `focus-sentinel.data` document, which includes
-  activity events, and it writes them to a file the caller names.
+  activity events, and it writes them to a file the caller names. The file is `0600`, and an
+  existing file is replaced only when it is an earlier `focus-sentinel.data` export; any other
+  file at that path is refused, never overwritten.
+- **Task titles are someone else's words.** `focus_list_tasks` returns GitHub titles, tags and URLs
+  as written upstream. The tool description and server instructions tell agents to treat them as
+  untrusted data, never as instructions.
 
 ## Install
 
@@ -162,7 +167,7 @@ error, with the message on stderr. 2 for a usage error.
 |---|---|---|
 | `focus_status` | reads | current priority (with `issue` when the intent starts `#<n> `, and its `context` as `kind:value`), the `standing` priorities (main first, `isCurrent`), open session, today's totals |
 | `focus_sessions` | reads | sessions with the focused seconds for each (focus phase only), filterable by `since`, `issue` and `limit` |
-| `focus_export` | writes a file the caller names | path, size, counts (not the contents) |
+| `focus_export` | writes a `0600` file the caller names; refuses an existing file unless it is an earlier export | path, size, counts (not the contents) |
 | `focus_propose_priority` | opens `focus://start` (confirmation required); optional `context` items | the URL, and whether it was opened |
 | `focus_set_priorities` | opens `focus://priorities` (confirmation required); one main and up to two secondary, each with `done_when` and `context` | the URL, and whether it was opened |
 | `focus_add_context` | opens `focus://context` (confirmation required); adds to the current priority, skipping items it already has | the URL, and whether it was opened |
