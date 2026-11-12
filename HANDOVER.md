@@ -1,5 +1,9 @@
 # Focus Sentinel — Handover, 8 September 2026
 
+This is a dated snapshot. Since it was written, PR #1 has merged and Developer ID signing and
+notarisation run in `release-mac.yml` through `scripts/sign-and-notarise.sh`. For current
+status use `bd` and `AGENTS.md` ▸ Learnings.
+
 The table below records the 5 September baseline at `c1a7f79`. On 8 September the integrated
 local gate at `02927ed` passed all 27 stages and 2,289 tests, with the cockpit redesign included.
 App Intents now execute all three actions through Shortcuts when the app carries this Mac's
@@ -59,8 +63,8 @@ On 15 October 2026 Chris delegated approval of the calendar-feature copy (focus-
    scripts/live-nudge-drive.sh > /private/tmp/focus-live-nudge.log 2>&1; echo "EXIT=$?"
    ```
    Read every frame under that directory, sign or refuse criteria 4 and 5 in `.agents/evidence/e05/README.md`, then `bd close focus-wh5`. If the kept derived data is gone, any green gate run with `FOCUS_KEEP_DERIVED_DATA=1` produces another.
-2. **Finish hosted verification** (`focus-a9dm`); the cockpit redesign is integrated. Then review and merge [PR #1](https://github.com/chrismitchelmore/focus-sentinel/pull/1), retaining the gate evidence and release artefact.
-3. **Developer ID**, for a notarised distribution: a Developer ID Application identity and notarisation credentials are not present on this Mac. `scripts/package-release.sh` packages the already-signed app; it does not sign or notarise. A notarised release needs an explicit signing and notarisation workflow and verification of its output.
+2. **Finish hosted verification** (`focus-a9dm`); the cockpit redesign is integrated. [PR #1](https://github.com/crmitchelmore/focus-sentinel/pull/1) has since merged.
+3. **Developer ID**, for a notarised distribution: a Developer ID Application identity and notarisation credentials are not present on this Mac. `scripts/package-release.sh` packages the already-signed app; it does not sign or notarise. A notarised release needs an explicit signing and notarisation workflow and verification of its output. (Since built: `scripts/sign-and-notarise.sh`, run by `release-mac.yml`.)
 4. **Use the app for two weeks** and watch the direction document's own falsifier (`.agents/plans/epic-e11-identity-direction.md` §4): if rung-2 return-to-task decays towards the ambient baseline, the fix is cadence in `InterventionPolicy`, not copy.
 5. **e11b follow-ups**: the `"%@" is waiting.` title is on probation with a flat fallback drafted; the colour-literal lint (S2 AC-3) was not built.
 6. **e06b**, if a prompt or OS change makes `seduced == 0` reachable: flip `ModelTierRelease.composesTheRung`, record the green run under `.agents/evidence/e06/`, update the README's cascade table.
