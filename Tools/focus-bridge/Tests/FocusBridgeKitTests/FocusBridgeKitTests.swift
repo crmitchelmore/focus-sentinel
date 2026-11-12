@@ -380,3 +380,61 @@ struct TimeBlockTests {
         #expect(TimeBlockStore.defaultDirectory(environment: ["FOCUS_TIME_BLOCKS": "/tmp/tb"]).path == "/tmp/tb")
     }
 }
+
+struct ExportFileTests {
+    private func directory() throws -> URL {
+        let dir = FileManager.default.temporaryDirectory.appending(path: "focus-bridge-export-\(UUID())")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir
+    }
+
+    private func mode(_ url: URL) throws -> Int {
+        try #require(FileManager.default.attributesOfItem(atPath: url.path)[.posixPermissions] as? Int)
+    }
+
+    private let export = Data(#"{"manifest":{"format":"focus-sentinel.data","version":1}}"#.utf8)
+
+    @Test func aNewExportIsReadableOnlyByThePerson() throws {
+        let dir = try directory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let url = dir.appending(path: "focus.json")
+
+        try ExportFile.write(export, to: url.path)
+
+        #expect(try Data(contentsOf: url) == export)
+        #expect(try mode(url) == 0o600)
+        #expect(try FileManager.default.contentsOfDirectory(atPath: dir.path) == ["focus.json"])
+    }
+
+    @Test func anEarlierExportIsReplacedAndTightened() throws {
+        let dir = try directory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let url = dir.appending(path: "focus.json")
+        try export.write(to: url)
+        try FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: url.path)
+        let newer = Data(#"{"manifest":{"format":"focus-sentinel.data","version":1},"sessions":[]}"#.utf8)
+
+        try ExportFile.write(newer, to: url.path)
+
+        #expect(try Data(contentsOf: url) == newer)
+        #expect(try mode(url) == 0o600)
+    }
+
+    @Test func anyOtherExistingFileIsRefusedAndLeftAlone() throws {
+        let dir = try directory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let other = dir.appending(path: "notes.txt")
+        let original = Data("not an export".utf8)
+        try original.write(to: other)
+        let link = dir.appending(path: "link.json")
+        let target = dir.appending(path: "target.json")
+        try export.write(to: target)
+        try FileManager.default.createSymbolicLink(at: link, withDestinationURL: target)
+
+        #expect(throws: BridgeError.self) { try ExportFile.write(export, to: other.path) }
+        #expect(throws: BridgeError.self) { try ExportFile.write(export, to: link.path) }
+        #expect(try Data(contentsOf: other) == original)
+        #expect(try FileManager.default.destinationOfSymbolicLink(atPath: link.path) == target.path)
+        #expect(try FileManager.default.contentsOfDirectory(atPath: dir.path).sorted() == ["link.json", "notes.txt", "target.json"])
+    }
+}

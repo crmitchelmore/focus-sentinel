@@ -145,7 +145,7 @@ func main() async {
         case "export":
             let data = try Summaries.encoder().encode(Snapshot.read(store: store, now: now).document)
             if let out = option("--out", in: rest) {
-                try data.write(to: URL(fileURLWithPath: (out as NSString).expandingTildeInPath), options: .atomic)
+                try ExportFile.write(data, to: (out as NSString).expandingTildeInPath)
                 FileHandle.standardError.write(Data("wrote \(data.count) bytes to \(out)\n".utf8))
             } else {
                 FileHandle.standardOutput.write(data + Data("\n".utf8))
