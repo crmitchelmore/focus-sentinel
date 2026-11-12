@@ -141,6 +141,25 @@ bd prime                # Refresh Beads context
 **Architecture in one line:** issues live in a local Dolt DB; sync uses `refs/dolt/data` on your git remote; `.beads/issues.jsonl` is a passive export. See https://github.com/gastownhall/beads/blob/main/docs/SYNC_CONCEPTS.md for details and anti-patterns.
 <!-- END BEADS CODEX SETUP -->
 
+## Apple documentation (Sosumi)
+
+Apple Developer documentation needs JavaScript, so agents can't read
+`developer.apple.com` directly. Use [Sosumi](https://sosumi.ai) instead, and
+check Apple APIs against it rather than relying on memory. That covers Swift,
+SwiftUI, UIKit, AppKit and Foundation, along with API availability, the Human
+Interface Guidelines and WWDC sessions.
+
+- **MCP:** `https://sosumi.ai/mcp` (Streamable HTTP). Tools:
+  `searchAppleDocumentation`, `fetchAppleDocumentation`,
+  `fetchAppleVideoTranscript` and `fetchExternalDocumentation`.
+- **HTTP:** swap the host, so `https://developer.apple.com/documentation/swiftui/view`
+  becomes `https://sosumi.ai/documentation/swiftui/view`. Use
+  `https://sosumi.ai/external/<url>` for other Swift-DocC sites.
+- **CLI:** `npx @nshipster/sosumi search "SwiftData"`, or
+  `npx @nshipster/sosumi fetch /documentation/swift/array`.
+- **Skill:** `https://sosumi.ai/SKILL.md`, installed in `~/.agents/skills/sosumi`
+  and `~/.claude/skills/sosumi`.
+
 ## Learnings
 
 Driver notes from the work itself, newest first. `CLAUDE.md` points here; keep the two files
