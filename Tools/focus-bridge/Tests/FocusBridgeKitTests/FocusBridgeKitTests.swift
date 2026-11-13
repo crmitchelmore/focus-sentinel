@@ -227,6 +227,25 @@ struct MCPServerTests {
         #expect(reply["id"] as? String == "a")
     }
 
+    @Test func everyToolIsAnnotatedAndTheDestructiveOnesNeedConfirm() async throws {
+        let reply = try await object(server().handle(#"{"jsonrpc":"2.0","id":1,"method":"tools/list"}"#))
+        let tools = try #require((reply["result"] as? [String: Any])?["tools"] as? [[String: Any]])
+        for tool in tools {
+            let name = try #require(tool["name"] as? String)
+            let hints = try #require(tool["annotations"] as? [String: Any], "\(name)")
+            let readOnly = try #require(hints["readOnlyHint"] as? Bool, "\(name)")
+            if !readOnly {
+                #expect(hints["destructiveHint"] is Bool, "\(name)")
+                #expect(hints["idempotentHint"] is Bool, "\(name)")
+            }
+            let schema = try #require(tool["inputSchema"] as? [String: Any])
+            let required = schema["required"] as? [String] ?? []
+            let destructive = ["focus_clear_time_blocks", "focus_complete_task", "focus_remove_task_source"].contains(name)
+            #expect(required.contains("confirm") == destructive, "\(name)")
+            if destructive { #expect(hints["destructiveHint"] as? Bool == true, "\(name)") }
+        }
+    }
+
     @Test func aStoreFailureIsAToolErrorNotAProtocolError() async throws {
         let reply = try await object(server().handle(
             #"{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"focus_status","arguments":{}}}"#
@@ -368,11 +387,23 @@ struct TimeBlockTests {
         let server = server(dir)
         _ = try await call(server, "focus_add_time_block", ["source": "a", "kind": "busy", "duration_minutes": 5])
         _ = try await call(server, "focus_add_time_block", ["source": "b", "kind": "busy", "duration_minutes": 5])
-        let cleared = try await call(server, "focus_clear_time_blocks", ["source": "a"])
+        let cleared = try await call(server, "focus_clear_time_blocks", ["source": "a", "confirm": true])
         #expect(cleared.text.contains("\"a\""))
         #expect(try TimeBlockStore(directory: dir).list(now: Self.now).map(\.source) == ["b"])
-        _ = try await call(server, "focus_clear_time_blocks", [:])
+        _ = try await call(server, "focus_clear_time_blocks", ["confirm": true])
         #expect(try TimeBlockStore(directory: dir).list(now: Self.now).isEmpty)
+    }
+
+    @Test(arguments: [[:], ["confirm": false], ["confirm": "true"], ["confirm": 1]] as [[String: any Sendable]])
+    func clearingWithoutConfirmIsRefusedAndKeepsTheBlocks(_ arguments: [String: any Sendable]) async throws {
+        let dir = directory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let server = server(dir)
+        _ = try await call(server, "focus_add_time_block", ["source": "a", "kind": "busy", "duration_minutes": 5])
+        let refused = try await call(server, "focus_clear_time_blocks", arguments)
+        #expect(refused.isError)
+        #expect(refused.text.contains("confirm: true"))
+        #expect(try TimeBlockStore(directory: dir).list(now: Self.now).map(\.source) == ["a"])
     }
 
     @Test func theDefaultDirectorySitsBesideTheStore() {

@@ -498,7 +498,12 @@ struct TaskToolTests {
         #expect(items.first?["key"] as? String == key)
         #expect(items.first?["pinned"] as? Bool == false)
 
-        let completed = try await call(server, "focus_complete_task", ["key": key])
+        let unconfirmed = try await call(server, "focus_complete_task", ["key": key])
+        #expect(unconfirmed.isError)
+        let stillOpen = try await call(server, "focus_list_tasks")
+        #expect(((stillOpen.json as? [String: Any])?["items"] as? [Any])?.count == 1)
+
+        let completed = try await call(server, "focus_complete_task", ["key": key, "confirm": true])
         #expect(!completed.isError, "\(completed.json)")
         let open = try await call(server, "focus_list_tasks")
         #expect(((open.json as? [String: Any])?["items"] as? [Any])?.isEmpty == true)
@@ -545,12 +550,17 @@ struct TaskToolTests {
         #expect((created.json as? [String: Any])?["key"] as? String == "work-os/99")
         #expect((created.json as? [String: Any])?["pending"] as? Bool == false)
 
-        let completed = try await call(server, "focus_complete_task", ["key": "work-os/99"])
+        let completed = try await call(server, "focus_complete_task", ["key": "work-os/99", "confirm": true])
         #expect((completed.json as? [String: Any])?["pending"] as? Bool == false, "\(completed.json)")
         let patch = try #require(transport.requests.first { $0.httpMethod == "PATCH" })
         #expect(patch.url?.path == "/repos/octo/work-os/issues/99")
 
-        let removed = try await call(server, "focus_remove_task_source", ["name": "work-os"])
+        let unconfirmed = try await call(server, "focus_remove_task_source", ["name": "work-os"])
+        #expect(unconfirmed.isError)
+        let kept = try await call(server, "focus_list_task_sources")
+        #expect((kept.json as? [[String: Any]])?.count == 1)
+
+        let removed = try await call(server, "focus_remove_task_source", ["name": "work-os", "confirm": true])
         #expect(!removed.isError)
         let after = try await call(server, "focus_create_task", ["title": "Back to local"])
         #expect(((after.json as? [String: Any])?["key"] as? String)?.hasPrefix("local/") == true)

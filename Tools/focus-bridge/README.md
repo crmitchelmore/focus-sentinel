@@ -174,14 +174,23 @@ error, with the message on stderr. 2 for a usage error.
 | `focus_set_time_blocks` | writes the source's file, replacing it | the source, the count kept, the path |
 | `focus_add_time_block` | adds one block to the source's file (same `id` replaces) | the source, the count, the path |
 | `focus_list_time_blocks` | reads the files, optionally one `source` | each source's blocks |
-| `focus_clear_time_blocks` | deletes one source's file, or every file when `source` is omitted | the sources removed |
+| `focus_clear_time_blocks` | deletes one source's file, or every file when `source` is omitted; needs `confirm: true` | the sources removed |
 | `focus_list_tasks` | reads the mirror; filter by `tags` (any of), `source`, `include_done`, `pinned_only` | `items` (key, title, url, reference, tags, state, pinned, pinnedToCurrentPriority, pending), `sources` with their `lastError`, every tag |
 | `focus_create_task` | adds to `source` (default: the default source, else local) with `tags`; `pin_to_current_priority` | the new key, and whether it is still pending |
-| `focus_complete_task` | completes `key` upstream (`reopen: true` reopens) | the key, state and whether it is pending |
+| `focus_complete_task` | completes `key` upstream (`reopen: true` reopens); needs `confirm: true` | the key, state and whether it is pending |
 | `focus_sync_tasks` | sends queued changes and fetches every source, or one `source` | the sync summary above |
 | `focus_list_task_sources` | reads `config.json` and each source's status | name, provider, settings, tags, enabled, `isDefaultForCreate`, last sync and error |
 | `focus_add_task_source` | adds or replaces a source (`name`, `provider`, `settings`, `tags`, `make_default`) | the source as stored |
-| `focus_remove_task_source` | removes a source, its mirrored file, its queued actions and its pins | what was removed |
+| `focus_remove_task_source` | removes a source, its mirrored file, its queued actions and its pins; needs `confirm: true` | what was removed |
+
+Every tool carries MCP annotations: `readOnlyHint` on the readers, and `destructiveHint` and
+`idempotentHint` on the writers. The three tools that close or delete something
+(`focus_complete_task`, `focus_clear_time_blocks`, `focus_remove_task_source`) are marked
+destructive and refuse to run, changing nothing, unless the call carries `confirm: true`. An
+agent should send it only when the person asked for that change, so text in an issue title or
+an email cannot complete a task or drop a source on its own. The server is a plain stdio loop
+and cannot ask the client for an MCP elicitation mid-call, so the confirmation is an argument.
+The `focus-bridge` command line is unchanged.
 
 Context reaches the app in two ways. Items sent with a new priority are attached to it when the
 person presses Replace. `focus_add_context` adds to the priority that is current when the person
