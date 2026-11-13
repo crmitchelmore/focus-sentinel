@@ -178,7 +178,7 @@ class ReleaseConfigurationTests(unittest.TestCase):
                 else:
                     env.pop("SPARKLE_PRIVATE_KEY", None)
                 result = subprocess.run(
-                    ["/bin/zsh", str(script), "0.1.0", "9", str(dmg),
+                    ["/bin/zsh", "-f", str(script), "0.1.0", "9", str(dmg),
                      "https://example.test/feed", "https://example.test/archive"],
                     env=env, capture_output=True, text=True, check=False,
                 )
